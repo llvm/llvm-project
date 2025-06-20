@@ -75,6 +75,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <limits>
 #include <set>
 #include <vector>
 using namespace llvm;
@@ -123,10 +124,10 @@ class CompressInstEmitter {
   const RecordKeeper &Records;
   const CodeGenTarget Target;
   std::vector<CompressPat> CompressPatterns;
-
   void addDagOperandMapping(const Record *Rec, const DagInit *Dag,
                             const CodeGenInstruction &Inst,
-                            IndexedMap<OpData> &OperandMap, bool IsSourceInst);
+                            IndexedMap<OpData> &OperandMap, bool IsSourceInst,
+                            unsigned *SourceLastTiedOpPtr);
   void evaluateCompressPat(const Record *Compress);
   void emitCompressInstEmitter(raw_ostream &OS, EmitterType EType);
   bool validateTypes(const Record *DagOpType, const Record *InstOpType,
@@ -143,7 +144,8 @@ class CompressInstEmitter {
                                 IndexedMap<OpData> &SourceOperandMap,
                                 IndexedMap<OpData> &DestOperandMap,
                                 StringMap<unsigned> &SourceOperands,
-                                const CodeGenInstruction &DestInst);
+                                const CodeGenInstruction &DestInst,
+                                unsigned SourceLastTiedOp);
 
 public:
   CompressInstEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
@@ -206,7 +208,8 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                                                const DagInit *Dag,
                                                const CodeGenInstruction &Inst,
                                                IndexedMap<OpData> &OperandMap,
-                                               bool IsSourceInst) {
+                                               bool IsSourceInst,
+                                               unsigned *SourceLastTiedOpPtr) {
   unsigned NumMIOperands = 0;
   for (const auto &Op : Inst.Operands)
     NumMIOperands += Op.MINumOperands;
@@ -219,12 +222,16 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
   // are represented.
   unsigned TiedCount = 0;
   unsigned OpNo = 0;
+  if (IsSourceInst)
+    *SourceLastTiedOpPtr = std::numeric_limits<unsigned int>::max();
   for (const auto &Opnd : Inst.Operands) {
     int TiedOpIdx = Opnd.getTiedRegister();
     if (-1 != TiedOpIdx) {
       // Set the entry in OperandMap for the tied operand we're skipping.
       OperandMap[OpNo].Kind = OperandMap[TiedOpIdx].Kind;
       OperandMap[OpNo].Data = OperandMap[TiedOpIdx].Data;
+      if (IsSourceInst)
+        *SourceLastTiedOpPtr = OpNo;
       ++OpNo;
       ++TiedCount;
       continue;
@@ -289,15 +296,23 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
 static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
                              bool IsSource) {
   unsigned NumMIOperands = 0;
-  for (const auto &Op : Inst.Operands)
+
+  // Use this to count number of tied Operands in Source Inst in this function.
+  // This counter is required here to error out when there is a Source
+  // Inst with two or more tied operands.
+  unsigned SourceInstTiedOpCount = 0;
+  for (const auto &Op : Inst.Operands) {
     NumMIOperands += Op.MINumOperands;
+    if (Op.getTiedRegister() != -1)
+      SourceInstTiedOpCount++;
+  }
 
   if (Dag->getNumArgs() == NumMIOperands)
     return true;
 
-  // Source instructions are non compressed instructions and don't have tied
-  // operands.
-  if (IsSource)
+  // Source instructions are non compressed instructions and have at most one
+  // tied operand.
+  if (IsSource && (SourceInstTiedOpCount >= 2))
     PrintFatalError(Inst.TheDef->getLoc(),
                     "Input operands for Inst '" + Inst.TheDef->getName() +
                         "' and input Dag operand count mismatch");
@@ -381,7 +396,8 @@ void CompressInstEmitter::createDagOperandMapping(
 void CompressInstEmitter::createInstOperandMapping(
     const Record *Rec, const DagInit *SourceDag, const DagInit *DestDag,
     IndexedMap<OpData> &SourceOperandMap, IndexedMap<OpData> &DestOperandMap,
-    StringMap<unsigned> &SourceOperands, const CodeGenInstruction &DestInst) {
+    StringMap<unsigned> &SourceOperands, const CodeGenInstruction &DestInst,
+    unsigned SourceLastTiedOp) {
   // TiedCount keeps track of the number of operands skipped in Inst
   // operands list to get to the corresponding Dag operand.
   unsigned TiedCount = 0;
@@ -422,10 +438,18 @@ void CompressInstEmitter::createInstOperandMapping(
       assert(DestDag->getArgNameStr(DagArgIdx) ==
                  SourceDag->getArgNameStr(SourceOp->getValue()) &&
              "Incorrect operand mapping detected!\n");
-      DestOperandMap[OpNo].Data.Operand = SourceOp->getValue();
-      SourceOperandMap[SourceOp->getValue()].Data.Operand = OpNo;
-      LLVM_DEBUG(dbgs() << "    " << SourceOp->getValue() << " ====> " << OpNo
-                        << "\n");
+
+      // Following four lines ensure the correct handling of a single tied
+      // operand in the Source Inst. SourceDagOp points to the position of
+      // appropriate Dag argument which is not correct in presence of tied
+      // operand in the Source Inst and must be incremented by 1 to reflect
+      // correct position of the operand in Source Inst
+      unsigned SourceDagOp = SourceOp->getValue();
+      if (SourceDagOp >= SourceLastTiedOp)
+        SourceDagOp++;
+      DestOperandMap[OpNo].Data.Operand = SourceDagOp;
+      SourceOperandMap[SourceDagOp].Data.Operand = OpNo;
+      LLVM_DEBUG(dbgs() << "    " << SourceDagOp << " ====> " << OpNo << "\n");
     }
   }
 }
@@ -484,15 +508,16 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   // Fill the mapping from the source to destination instructions.
 
   IndexedMap<OpData> SourceOperandMap;
+  unsigned SourceLastTiedOp; // postion of the last tied operand in Source Inst
   // Create a mapping between source Dag operands and source Inst operands.
   addDagOperandMapping(Rec, SourceDag, SourceInst, SourceOperandMap,
-                       /*IsSourceInst*/ true);
+                       /*IsSourceInst*/ true, &SourceLastTiedOp);
 
   IndexedMap<OpData> DestOperandMap;
   // Create a mapping between destination Dag operands and destination Inst
   // operands.
   addDagOperandMapping(Rec, DestDag, DestInst, DestOperandMap,
-                       /*IsSourceInst*/ false);
+                       /*IsSourceInst*/ false, nullptr);
 
   StringMap<unsigned> SourceOperands;
   StringMap<unsigned> DestOperands;
@@ -500,7 +525,8 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
                           SourceOperandMap);
   // Create operand mapping between the source and destination instructions.
   createInstOperandMapping(Rec, SourceDag, DestDag, SourceOperandMap,
-                           DestOperandMap, SourceOperands, DestInst);
+                           DestOperandMap, SourceOperands, DestInst,
+                           SourceLastTiedOp);
 
   // Get the target features for the CompressPat.
   std::vector<const Record *> PatReqFeatures;
