@@ -2750,6 +2750,90 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
   return Success;
 }
 
+/// Translate a call or callbr to a target intrinsic.
+/// Depending on whether TLI->getTgtMemIntrinsic() is true, TgtMemIntrinsicInfo
+/// is a pointer to the correspondingly populated IntrinsicInfo object.
+/// Otherwise, this pointer is null.
+bool IRTranslator::translateTargetIntrinsic(
+    const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
+    TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo) {
+  ArrayRef<Register> ResultRegs;
+  if (!CB.getType()->isVoidTy())
+    ResultRegs = getOrCreateVRegs(CB);
+
+  // Ignore the callsite attributes. Backend code is most likely not expecting
+  // an intrinsic to sometimes have side effects and sometimes not.
+  MachineInstrBuilder MIB = MIRBuilder.buildIntrinsic(ID, ResultRegs);
+  if (isa<FPMathOperator>(CB))
+    MIB->copyIRFlags(CB);
+
+  for (const auto &Arg : enumerate(CB.args())) {
+    // If this is required to be an immediate, don't materialize it in a
+    // register.
+    if (CB.paramHasAttr(Arg.index(), Attribute::ImmArg)) {
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg.value())) {
+        // imm arguments are more convenient than cimm (and realistically
+        // probably sufficient), so use them.
+        assert(CI->getBitWidth() <= 64 &&
+               "large intrinsic immediates not handled");
+        MIB.addImm(CI->getSExtValue());
+      } else {
+        MIB.addFPImm(cast<ConstantFP>(Arg.value()));
+      }
+    } else if (auto *MDVal = dyn_cast<MetadataAsValue>(Arg.value())) {
+      auto *MD = MDVal->getMetadata();
+      auto *MDN = dyn_cast<MDNode>(MD);
+      if (!MDN) {
+        if (auto *ConstMD = dyn_cast<ConstantAsMetadata>(MD))
+          MDN = MDNode::get(MF->getFunction().getContext(), ConstMD);
+        else // This was probably an MDString.
+          return false;
+      }
+      MIB.addMetadata(MDN);
+    } else {
+      ArrayRef<Register> VRegs = getOrCreateVRegs(*Arg.value());
+      if (VRegs.size() > 1)
+        return false;
+      MIB.addUse(VRegs[0]);
+    }
+  }
+
+  // Add a MachineMemOperand if it is a target mem intrinsic.
+  if (TgtMemIntrinsicInfo) {
+    const Function *F = CB.getCalledFunction();
+
+    Align Alignment = TgtMemIntrinsicInfo->align.value_or(DL->getABITypeAlign(
+        TgtMemIntrinsicInfo->memVT.getTypeForEVT(F->getContext())));
+    LLT MemTy =
+        TgtMemIntrinsicInfo->memVT.isSimple()
+            ? getLLTForMVT(TgtMemIntrinsicInfo->memVT.getSimpleVT())
+            : LLT::scalar(TgtMemIntrinsicInfo->memVT.getStoreSizeInBits());
+
+    // TODO: We currently just fallback to address space 0 if getTgtMemIntrinsic
+    //       didn't yield anything useful.
+    MachinePointerInfo MPI;
+    if (TgtMemIntrinsicInfo->ptrVal)
+      MPI = MachinePointerInfo(TgtMemIntrinsicInfo->ptrVal,
+                               TgtMemIntrinsicInfo->offset);
+    else if (TgtMemIntrinsicInfo->fallbackAddressSpace)
+      MPI = MachinePointerInfo(*TgtMemIntrinsicInfo->fallbackAddressSpace);
+    MIB.addMemOperand(MF->getMachineMemOperand(
+        MPI, TgtMemIntrinsicInfo->flags, MemTy, Alignment, CB.getAAMetadata(),
+        /*Ranges=*/nullptr, TgtMemIntrinsicInfo->ssid,
+        TgtMemIntrinsicInfo->order, TgtMemIntrinsicInfo->failureOrder));
+  }
+
+  if (CB.isConvergent()) {
+    if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+      auto *Token = Bundle->Inputs[0].get();
+      Register TokenReg = getOrCreateVReg(*Token);
+      MIB.addUse(TokenReg, RegState::Implicit);
+    }
+  }
+
+  return true;
+}
+
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (containsBF16Type(U))
     return false;
@@ -2789,78 +2873,12 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
 
-  ArrayRef<Register> ResultRegs;
-  if (!CI.getType()->isVoidTy())
-    ResultRegs = getOrCreateVRegs(CI);
-
-  // Ignore the callsite attributes. Backend code is most likely not expecting
-  // an intrinsic to sometimes have side effects and sometimes not.
-  MachineInstrBuilder MIB = MIRBuilder.buildIntrinsic(ID, ResultRegs);
-  if (isa<FPMathOperator>(CI))
-    MIB->copyIRFlags(CI);
-
-  for (const auto &Arg : enumerate(CI.args())) {
-    // If this is required to be an immediate, don't materialize it in a
-    // register.
-    if (CI.paramHasAttr(Arg.index(), Attribute::ImmArg)) {
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg.value())) {
-        // imm arguments are more convenient than cimm (and realistically
-        // probably sufficient), so use them.
-        assert(CI->getBitWidth() <= 64 &&
-               "large intrinsic immediates not handled");
-        MIB.addImm(CI->getSExtValue());
-      } else {
-        MIB.addFPImm(cast<ConstantFP>(Arg.value()));
-      }
-    } else if (auto *MDVal = dyn_cast<MetadataAsValue>(Arg.value())) {
-      auto *MD = MDVal->getMetadata();
-      auto *MDN = dyn_cast<MDNode>(MD);
-      if (!MDN) {
-        if (auto *ConstMD = dyn_cast<ConstantAsMetadata>(MD))
-          MDN = MDNode::get(MF->getFunction().getContext(), ConstMD);
-        else // This was probably an MDString.
-          return false;
-      }
-      MIB.addMetadata(MDN);
-    } else {
-      ArrayRef<Register> VRegs = getOrCreateVRegs(*Arg.value());
-      if (VRegs.size() > 1)
-        return false;
-      MIB.addUse(VRegs[0]);
-    }
-  }
-
-  // Add a MachineMemOperand if it is a target mem intrinsic.
   TargetLowering::IntrinsicInfo Info;
   // TODO: Add a GlobalISel version of getTgtMemIntrinsic.
-  if (TLI->getTgtMemIntrinsic(Info, CI, *MF, ID)) {
-    Align Alignment = Info.align.value_or(
-        DL->getABITypeAlign(Info.memVT.getTypeForEVT(F->getContext())));
-    LLT MemTy = Info.memVT.isSimple()
-                    ? getLLTForMVT(Info.memVT.getSimpleVT())
-                    : LLT::scalar(Info.memVT.getStoreSizeInBits());
+  bool IsTgtMemIntrinsic = TLI->getTgtMemIntrinsic(Info, CI, *MF, ID);
 
-    // TODO: We currently just fallback to address space 0 if getTgtMemIntrinsic
-    //       didn't yield anything useful.
-    MachinePointerInfo MPI;
-    if (Info.ptrVal)
-      MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
-    else if (Info.fallbackAddressSpace)
-      MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    MIB.addMemOperand(MF->getMachineMemOperand(
-        MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata(),
-        /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder));
-  }
-
-  if (CI.isConvergent()) {
-    if (auto Bundle = CI.getOperandBundle(LLVMContext::OB_convergencectrl)) {
-      auto *Token = Bundle->Inputs[0].get();
-      Register TokenReg = getOrCreateVReg(*Token);
-      MIB.addUse(TokenReg, RegState::Implicit);
-    }
-  }
-
-  return true;
+  return translateTargetIntrinsic(CI, ID, MIRBuilder,
+                                  IsTgtMemIntrinsic ? &Info : nullptr);
 }
 
 bool IRTranslator::findUnwindDestinations(
@@ -3006,10 +3024,59 @@ bool IRTranslator::translateInvoke(const User &U,
   return true;
 }
 
+/// The intrinsics currently supported by callbr are implicit control flow
+/// intrinsics such as amdgcn.kill.
 bool IRTranslator::translateCallBr(const User &U,
                                    MachineIRBuilder &MIRBuilder) {
-  // FIXME: Implement this.
-  return false;
+  if (containsBF16Type(U))
+    return false; // see translateCall
+
+  const CallBrInst &I = cast<CallBrInst>(U);
+  MachineBasicBlock *CallBrMBB = &MIRBuilder.getMBB();
+
+  // FIXME: inline asm not yet supported
+  if (I.isInlineAsm()) {
+    if (I.hasOperandBundlesOtherThan(
+            {LLVMContext::OB_deopt, LLVMContext::OB_funclet}))
+      reportFatalUsageError(
+          "cannot lower callbrs with arbitrary operand bundles!");
+    return false;
+  }
+  if (I.getIntrinsicID() == Intrinsic::not_intrinsic)
+    return false;
+  if (!translateTargetIntrinsic(I, I.getIntrinsicID(), MIRBuilder))
+    return false;
+
+  // Retrieve successors.
+  SmallPtrSet<BasicBlock *, 8> Dests;
+  Dests.insert(I.getDefaultDest());
+  MachineBasicBlock *Return = &getMBB(*I.getDefaultDest());
+
+  // Update successor info.
+  addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
+  // TODO: For most of the cases where there is an intrinsic callbr, we're
+  // having exactly one indirect target, which will be unreachable. As soon as
+  // this changes, we might need to enhance
+  // Target->setIsInlineAsmBrIndirectTarget or add something similar for
+  // intrinsic indirect branches.
+  if (I.isInlineAsm()) {
+    for (BasicBlock *Dest : I.getIndirectDests()) {
+      MachineBasicBlock *Target = &getMBB(*Dest);
+      Target->setIsInlineAsmBrIndirectTarget();
+      // If we introduce a type of asm goto statement that is permitted to use
+      // an indirect call instruction to jump to its labels, then we should add
+      // a call to Target->setMachineBlockAddressTaken() here, to mark the
+      // target block as requiring a BTI.
+
+      Target->setLabelMustBeEmitted();
+      // Don't add duplicate machine successors.
+      if (Dests.insert(Dest).second)
+        addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+    }
+  }
+  CallBrMBB->normalizeSuccProbs();
+
+  return true;
 }
 
 bool IRTranslator::translateLandingPad(const User &U,
