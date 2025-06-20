@@ -2022,7 +2022,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
         /*Summary=*/nullptr,
         PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
-  // Optimize globals again after we ran the inliner.
+  MPM.addPass(
+      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+
+  // Optimize globals again after we ran the inliner and function attribute
+  // inference.
   MPM.addPass(GlobalOptPass());
 
   // Run the OpenMPOpt pass again after global optimizations.
@@ -2074,9 +2078,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Run a few AA driver optimizations here and now to cleanup the code.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM),
                                                 PTO.EagerlyInvalidateAnalyses));
-
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // MainFPM.
