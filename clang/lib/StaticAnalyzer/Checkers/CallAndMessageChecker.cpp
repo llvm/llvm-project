@@ -259,7 +259,7 @@ public:
         if (T->getAsStructureType()) {
           if (Find(FR))
             return true;
-        } else {
+        } else if (!I->isUnnamedBitField()){
           SVal V = StoreMgr.getBinding(store, loc::MemRegionVal(FR));
           if (V.isUndef())
             return true;
