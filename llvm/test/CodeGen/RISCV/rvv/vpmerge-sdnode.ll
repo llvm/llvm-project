@@ -51,8 +51,8 @@ define <vscale x 2 x i1> @vpmerge_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    vmsltu.vx v12, v10, a0
-; RV64-NEXT:    vmand.mm v9, v9, v12
+; RV64-NEXT:    vmsltu.vx v10, v10, a0
+; RV64-NEXT:    vmand.mm v9, v9, v10
 ; RV64-NEXT:    vmandn.mm v8, v8, v9
 ; RV64-NEXT:    vmand.mm v9, v0, v9
 ; RV64-NEXT:    vmor.mm v0, v9, v8
@@ -66,8 +66,8 @@ define <vscale x 4 x i1> @vpmerge_nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vid.v v10
-; RV32-NEXT:    vmsltu.vx v12, v10, a0
-; RV32-NEXT:    vmand.mm v9, v9, v12
+; RV32-NEXT:    vmsltu.vx v10, v10, a0
+; RV32-NEXT:    vmand.mm v9, v9, v10
 ; RV32-NEXT:    vmandn.mm v8, v8, v9
 ; RV32-NEXT:    vmand.mm v9, v0, v9
 ; RV32-NEXT:    vmor.mm v0, v9, v8

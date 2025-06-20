@@ -954,8 +954,8 @@ define void @vpscatter_baseidx_v8i64(<8 x i64> %val, ptr %base, <8 x i64> %idxs,
 ; RV32-LABEL: vpscatter_baseidx_v8i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vnsrl.wi v16, v12, 0
-; RV32-NEXT:    vsll.vi v12, v16, 3
+; RV32-NEXT:    vnsrl.wi v12, v12, 0
+; RV32-NEXT:    vsll.vi v12, v12, 3
 ; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
@@ -1721,8 +1721,8 @@ define void @vpscatter_baseidx_v8f64(<8 x double> %val, ptr %base, <8 x i64> %id
 ; RV32-LABEL: vpscatter_baseidx_v8f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vnsrl.wi v16, v12, 0
-; RV32-NEXT:    vsll.vi v12, v16, 3
+; RV32-NEXT:    vnsrl.wi v12, v12, 0
+; RV32-NEXT:    vsll.vi v12, v12, 3
 ; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret

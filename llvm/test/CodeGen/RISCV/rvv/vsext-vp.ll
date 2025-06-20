@@ -128,8 +128,8 @@ define <vscale x 2 x i64> @vsext_nxv2i32_nxv2i64(<vscale x 2 x i32> %a, <vscale 
 ; CHECK-LABEL: vsext_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsext.vf2 v8, v10, v0.t
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsext.vf2 v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i64> %v
@@ -139,8 +139,8 @@ define <vscale x 2 x i64> @vsext_nxv2i32_nxv2i64_unmasked(<vscale x 2 x i32> %a,
 ; CHECK-LABEL: vsext_nxv2i32_nxv2i64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsext.vf2 v8, v10
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsext.vf2 v8, v9
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i64> %v

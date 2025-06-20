@@ -6,9 +6,9 @@ define <vscale x 4 x i5> @trunc_nxv4i32_to_nxv4i5(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: trunc_nxv4i32_to_nxv4i5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = trunc <vscale x 4 x i32> %a to <vscale x 4 x i5>
   ret <vscale x 4 x i5> %v

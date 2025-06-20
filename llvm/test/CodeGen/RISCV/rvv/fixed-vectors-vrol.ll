@@ -1016,8 +1016,8 @@ define <4 x i64> @vrol_vx_v4i64(<4 x i64> %a, i64 %b) {
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v14, 0
-; RV32-NEXT:    vwsub.vx v12, v14, a0
+; RV32-NEXT:    vmv.v.i v13, 0
+; RV32-NEXT:    vwsub.vx v12, v13, a0
 ; RV32-NEXT:    li a0, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vx v10, v10, a0
@@ -1081,8 +1081,8 @@ define <8 x i64> @vrol_vx_v8i64(<8 x i64> %a, i64 %b) {
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v20, 0
-; RV32-NEXT:    vwsub.vx v16, v20, a0
+; RV32-NEXT:    vmv.v.i v18, 0
+; RV32-NEXT:    vwsub.vx v16, v18, a0
 ; RV32-NEXT:    li a0, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vx v12, v12, a0

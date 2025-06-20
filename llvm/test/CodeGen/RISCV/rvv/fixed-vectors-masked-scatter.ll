@@ -5563,8 +5563,8 @@ define void @mscatter_baseidx_v8i64(<8 x i64> %val, ptr %base, <8 x i64> %idxs, 
 ; RV32V-LABEL: mscatter_baseidx_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32V-NEXT:    vnsrl.wi v16, v12, 0
-; RV32V-NEXT:    vsll.vi v12, v16, 3
+; RV32V-NEXT:    vnsrl.wi v12, v12, 0
+; RV32V-NEXT:    vsll.vi v12, v12, 3
 ; RV32V-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; RV32V-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32V-NEXT:    ret
@@ -11720,8 +11720,8 @@ define void @mscatter_baseidx_v8f64(<8 x double> %val, ptr %base, <8 x i64> %idx
 ; RV32V-LABEL: mscatter_baseidx_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32V-NEXT:    vnsrl.wi v16, v12, 0
-; RV32V-NEXT:    vsll.vi v12, v16, 3
+; RV32V-NEXT:    vnsrl.wi v12, v12, 0
+; RV32V-NEXT:    vsll.vi v12, v12, 3
 ; RV32V-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; RV32V-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32V-NEXT:    ret

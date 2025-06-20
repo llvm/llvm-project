@@ -63,8 +63,7 @@ define {<4 x i32>, <4 x i32>} @vector_deinterleave_v4i32_vv8i32(<8 x i32> %vec) 
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wx v10, v8, a0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 0
-; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vmv.v.v v9, v10
 ; CHECK-NEXT:    ret
 %retval = call {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v8i32(<8 x i32> %vec)
@@ -449,8 +448,7 @@ define {<4 x float>, <4 x float>} @vector_deinterleave_v4f32_v8f32(<8 x float> %
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wx v10, v8, a0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 0
-; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vmv.v.v v9, v10
 ; CHECK-NEXT:    ret
 %retval = call {<4 x float>, <4 x float>} @llvm.vector.deinterleave2.v8f32(<8 x float> %vec)

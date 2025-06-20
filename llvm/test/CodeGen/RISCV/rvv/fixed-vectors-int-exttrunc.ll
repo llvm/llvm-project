@@ -49,8 +49,8 @@ define void @sext_v32i8_v32i32(ptr %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vle8.v v16, (a0)
-; CHECK-NEXT:    vsext.vf4 v8, v16
+; CHECK-NEXT:    vle8.v v14, (a0)
+; CHECK-NEXT:    vsext.vf4 v8, v14
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
@@ -80,9 +80,9 @@ define void @trunc_v8i8_v8i32(ptr %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, ptr %x

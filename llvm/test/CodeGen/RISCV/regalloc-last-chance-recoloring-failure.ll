@@ -49,13 +49,13 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
+; CHECK-NEXT:    vl4r.v v12, (a0) # vscale x 32-byte Folded Reload
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vl4r.v v20, (a0) # vscale x 32-byte Folded Reload
+; CHECK-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwsub.wv v8, v24, v16
+; CHECK-NEXT:    vfwsub.wv v8, v24, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v24, v8, v0.t
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -109,15 +109,15 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    addi a0, a0, 16
 ; SUBREGLIVENESS-NEXT:    csrr a1, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a1, a1, 2
-; SUBREGLIVENESS-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
+; SUBREGLIVENESS-NEXT:    vl4r.v v12, (a0) # vscale x 32-byte Folded Reload
 ; SUBREGLIVENESS-NEXT:    add a0, a0, a1
-; SUBREGLIVENESS-NEXT:    vl4r.v v20, (a0) # vscale x 32-byte Folded Reload
+; SUBREGLIVENESS-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
 ; SUBREGLIVENESS-NEXT:    addi a0, sp, 16
-; SUBREGLIVENESS-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; SUBREGLIVENESS-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
-; SUBREGLIVENESS-NEXT:    vfwsub.wv v8, v24, v16
+; SUBREGLIVENESS-NEXT:    vfwsub.wv v8, v16, v12
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, zero, e32, m8, tu, mu
-; SUBREGLIVENESS-NEXT:    vfdiv.vv v8, v24, v8, v0.t
+; SUBREGLIVENESS-NEXT:    vfdiv.vv v8, v16, v8, v0.t
 ; SUBREGLIVENESS-NEXT:    vse32.v v8, (a0)
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 4

@@ -543,8 +543,8 @@ define bfloat @extractelt_v8bf16_idx(<8 x bfloat> %a, i32 zeroext %idx) nounwind
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v10, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfncvtbf16.f.f.w v10, v8
-; CHECK-NEXT:    vslidedown.vx v8, v10, a0
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v8
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
@@ -556,8 +556,8 @@ define bfloat @extractelt_v8bf16_idx(<8 x bfloat> %a, i32 zeroext %idx) nounwind
 ; VISNI-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VISNI-NEXT:    vfadd.vv v8, v10, v10
 ; VISNI-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; VISNI-NEXT:    vfncvtbf16.f.f.w v10, v8
-; VISNI-NEXT:    vslidedown.vx v8, v10, a0
+; VISNI-NEXT:    vfncvtbf16.f.f.w v8, v8
+; VISNI-NEXT:    vslidedown.vx v8, v8, a0
 ; VISNI-NEXT:    vmv.x.s a0, v8
 ; VISNI-NEXT:    fmv.h.x fa0, a0
 ; VISNI-NEXT:    ret
@@ -582,8 +582,8 @@ define half @extractelt_v8f16_idx(<8 x half> %a, i32 zeroext %idx) nounwind {
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfadd.vv v8, v10, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v8
-; ZVFHMIN-NEXT:    vslidedown.vx v8, v10, a0
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v8
+; ZVFHMIN-NEXT:    vslidedown.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vmv.x.s a0, v8
 ; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZVFHMIN-NEXT:    ret
@@ -740,8 +740,8 @@ define bfloat @extractelt_v16bf16_idx(<16 x bfloat> %a, i32 zeroext %idx) nounwi
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v12, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v8
-; CHECK-NEXT:    vslidedown.vx v8, v12, a0
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v8
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
@@ -753,8 +753,8 @@ define bfloat @extractelt_v16bf16_idx(<16 x bfloat> %a, i32 zeroext %idx) nounwi
 ; VISNI-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; VISNI-NEXT:    vfadd.vv v8, v12, v12
 ; VISNI-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; VISNI-NEXT:    vfncvtbf16.f.f.w v12, v8
-; VISNI-NEXT:    vslidedown.vx v8, v12, a0
+; VISNI-NEXT:    vfncvtbf16.f.f.w v8, v8
+; VISNI-NEXT:    vslidedown.vx v8, v8, a0
 ; VISNI-NEXT:    vmv.x.s a0, v8
 ; VISNI-NEXT:    fmv.h.x fa0, a0
 ; VISNI-NEXT:    ret
@@ -779,8 +779,8 @@ define half @extractelt_v16f16_idx(<16 x half> %a, i32 zeroext %idx) nounwind {
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfadd.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v8
-; ZVFHMIN-NEXT:    vslidedown.vx v8, v12, a0
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v8
+; ZVFHMIN-NEXT:    vslidedown.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vmv.x.s a0, v8
 ; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZVFHMIN-NEXT:    ret

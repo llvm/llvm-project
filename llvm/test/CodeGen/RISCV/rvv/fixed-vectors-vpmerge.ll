@@ -26,8 +26,8 @@ define <4 x i1> @vpmerge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 ze
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    vmsltu.vx v12, v10, a0
-; RV64-NEXT:    vmand.mm v9, v9, v12
+; RV64-NEXT:    vmsltu.vx v10, v10, a0
+; RV64-NEXT:    vmand.mm v9, v9, v10
 ; RV64-NEXT:    vmandn.mm v8, v8, v9
 ; RV64-NEXT:    vmand.mm v9, v0, v9
 ; RV64-NEXT:    vmor.mm v0, v9, v8
@@ -48,8 +48,8 @@ define <4 x i1> @vpmerge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 ze
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64ZVFHMIN-NEXT:    vid.v v10
-; RV64ZVFHMIN-NEXT:    vmsltu.vx v12, v10, a0
-; RV64ZVFHMIN-NEXT:    vmand.mm v9, v9, v12
+; RV64ZVFHMIN-NEXT:    vmsltu.vx v10, v10, a0
+; RV64ZVFHMIN-NEXT:    vmand.mm v9, v9, v10
 ; RV64ZVFHMIN-NEXT:    vmandn.mm v8, v8, v9
 ; RV64ZVFHMIN-NEXT:    vmand.mm v9, v0, v9
 ; RV64ZVFHMIN-NEXT:    vmor.mm v0, v9, v8
@@ -63,8 +63,8 @@ define <8 x i1> @vpmerge_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 ze
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vid.v v10
-; RV32-NEXT:    vmsltu.vx v12, v10, a0
-; RV32-NEXT:    vmand.mm v9, v9, v12
+; RV32-NEXT:    vmsltu.vx v10, v10, a0
+; RV32-NEXT:    vmand.mm v9, v9, v10
 ; RV32-NEXT:    vmandn.mm v8, v8, v9
 ; RV32-NEXT:    vmand.mm v9, v0, v9
 ; RV32-NEXT:    vmor.mm v0, v9, v8
@@ -85,8 +85,8 @@ define <8 x i1> @vpmerge_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 ze
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32ZVFHMIN-NEXT:    vid.v v10
-; RV32ZVFHMIN-NEXT:    vmsltu.vx v12, v10, a0
-; RV32ZVFHMIN-NEXT:    vmand.mm v9, v9, v12
+; RV32ZVFHMIN-NEXT:    vmsltu.vx v10, v10, a0
+; RV32ZVFHMIN-NEXT:    vmand.mm v9, v9, v10
 ; RV32ZVFHMIN-NEXT:    vmandn.mm v8, v8, v9
 ; RV32ZVFHMIN-NEXT:    vmand.mm v9, v0, v9
 ; RV32ZVFHMIN-NEXT:    vmor.mm v0, v9, v8
