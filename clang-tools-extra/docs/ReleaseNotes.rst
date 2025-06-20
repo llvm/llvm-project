@@ -154,6 +154,11 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`modernize-replace-with-std-copy
+  <clang-tidy/checks/modernize-replace-with-std-copy>` check.
+
+  Tries to replace calls to ``memmove`` and ``memcpy`` with an equivalent call to ``std::copy_n``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
