@@ -1114,7 +1114,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Class =
           llvm::dxil::ResourceClass(llvm::to_underlying(Descriptor->Type));
       Info.Space = Descriptor->Space;
-      Info.Vis = Descriptor->Visibility;
+      Info.Visibility = Descriptor->Visibility;
       Infos.push_back(Info);
     }
   }
@@ -1153,9 +1153,10 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
   auto ReportOverlap = [this, Loc, &HadOverlap](const RangeInfo *Info,
                                                 const RangeInfo *OInfo) {
     HadOverlap = true;
-    auto CommonVis = Info->Vis == llvm::hlsl::rootsig::ShaderVisibility::All
-                         ? OInfo->Vis
-                         : Info->Vis;
+    auto CommonVis =
+        Info->Visibility == llvm::hlsl::rootsig::ShaderVisibility::All
+            ? OInfo->Visibility
+            : Info->Visibility;
     this->Diag(Loc, diag::err_hlsl_resource_range_overlap)
         << llvm::to_underlying(Info->Class) << Info->LowerBound
         << Info->UpperBound << llvm::to_underlying(OInfo->Class)
@@ -1172,7 +1173,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
     }
 
     // 3A: Insert range info into corresponding Visibility ResourceRange
-    ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Vis)];
+    ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Visibility)];
     if (std::optional<const RangeInfo *> Overlapping = VisRange.insert(Info))
       ReportOverlap(&Info, Overlapping.value());
 
@@ -1187,7 +1188,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
     // ResourceRanges in the former case and it will be an ArrayRef to just the
     // all visiblity ResourceRange in the latter case.
     MutableArrayRef<ResourceRange> OverlapRanges =
-        Info.Vis == llvm::hlsl::rootsig::ShaderVisibility::All
+        Info.Visibility == llvm::hlsl::rootsig::ShaderVisibility::All
             ? MutableArrayRef<ResourceRange>{Ranges}.drop_front()
             : MutableArrayRef<ResourceRange>{Ranges}.take_front();
 

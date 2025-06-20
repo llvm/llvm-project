@@ -72,7 +72,7 @@ private:
 };
 
 struct RangeInfo {
-  const static uint32_t Unbounded = static_cast<uint32_t>(-1);
+  const static uint32_t Unbounded = ~0u;
 
   // Interval information
   uint32_t LowerBound;
@@ -81,7 +81,7 @@ struct RangeInfo {
   // Information retained for diagnostics
   llvm::dxil::ResourceClass Class;
   uint32_t Space;
-  ShaderVisibility Vis;
+  ShaderVisibility Visibility;
 };
 
 class ResourceRange {
