@@ -9291,12 +9291,20 @@ def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>
 def hlsl_rootsig_ver :
   Option<["-"], "hlsl-rootsig-ver", KIND_SEPARATE>,
   Group<dxc_Group>,
-  Visibility<[ClangOption, CC1Option, DXCOption]>,
+  Visibility<[ClangOption, CC1Option]>,
   HelpText<"Root Signature Version">,
   Values<"rootsig_1_0,rootsig_1_1">,
   NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
   NormalizedValues<["V1_0", "V1_1"]>,
   MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
+def dxc_rootsig_ver :
+  Option<["-"], "force-rootsig-ver", KIND_SEPARATE>,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option, DXCOption]>,
+  HelpText<"Root Signature Version">,
+  Values<"rootsig_1_0,rootsig_1_1">,
+  NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
+  NormalizedValues<["V1_0", "V1_1"]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,
