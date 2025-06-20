@@ -84,7 +84,6 @@ def SimplifyMinMaxAffineOpsOp :
 
     This transform consumes the target handle and does not produce any results.
     This transforms never produces errors.
-
   }];
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs);
