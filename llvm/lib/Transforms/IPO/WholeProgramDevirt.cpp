@@ -1450,6 +1450,22 @@ void DevirtModule::tryICallBranchFunnel(
   if (!HasNonDevirt)
     return;
 
+  // If any GV is AvailableExternally, not to generate branch.funnel.
+  // NOTE: It is to avoid crash in LowerTypeTest.
+  // If the branch.funnel is generated, because GV.isDeclarationForLinker(),
+  // in LowerTypeTestsModule::lower(), its GlobalTypeMember would NOT
+  // be saved in GlobalTypeMembers[&GV]. Then crash happens in
+  // buildBitSetsFromDisjointSet due to GlobalTypeMembers[&GV] is NULL.
+  // Even doing experiment to save it in GlobalTypeMembers[&GV] and
+  // making GlobalTypeMembers[&GV] be not NULL, crash could avoid from
+  // buildBitSetsFromDisjointSet. But still report_fatal_error in Verifier
+  // or SelectionDAGBuilder later, because operands linkage type consistency
+  // check of icall.branch.funnel can not pass.
+  for (auto &T : TargetsForSlot) {
+    if (T.TM->Bits->GV->hasAvailableExternallyLinkage())
+      return;
+  }
+
   FunctionType *FT =
       FunctionType::get(Type::getVoidTy(M.getContext()), {Int8PtrTy}, true);
   Function *JT;
