@@ -503,6 +503,11 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
                                 const Twine &Name = "") {
       auto It = PI.DeclarationCache.try_emplace(Op->getType());
       if (It.second) {
+        // The number of named values is used to detect if a new declaration
+        // was added. If so, that declaration is tracked so that it can be
+        // removed when the analysis is done. The corner case were a new
+        // declaration results in a name clash and the old name being renamed
+        // is not considered as that represents an invalid module.
         auto NumDecls = F.getParent()->getNumNamedValues();
         Function *IF = Intrinsic::getOrInsertDeclaration(
             F.getParent(), Intrinsic::ssa_copy, Op->getType());
@@ -517,11 +522,6 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
     // to ensure we dominate all uses except assume itself. Always insert
     // right before the terminator or after the assume, so that we insert in
     // proper order in the case of multiple predicateinfo in the same block.
-    // The number of named values is used to detect if a new declaration was
-    // added. If so, that declaration is tracked so that it can be removed when
-    // the analysis is done. The corner case were a new declaration results in
-    // a name clash and the old name being renamed is not considered as that
-    // represents an invalid module.
     if (isa<PredicateWithEdge>(ValInfo)) {
       IRBuilder<> B(getBranchTerminator(ValInfo));
       CallInst *PIC =
