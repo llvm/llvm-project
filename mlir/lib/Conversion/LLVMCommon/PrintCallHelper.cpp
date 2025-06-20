@@ -17,6 +17,10 @@
 using namespace mlir;
 using namespace llvm;
 
+/// Check if a given symbol name is already in use within the module operation.
+/// If no symbol with such name is present, then the same identifier is
+/// returned. Otherwise, a unique and yet unused identifier is computed starting
+/// from the requested one.
 static std::string
 ensureSymbolNameIsUnique(ModuleOp moduleOp, StringRef symbolName,
                          SymbolTableCollection *symbolTables = nullptr) {
