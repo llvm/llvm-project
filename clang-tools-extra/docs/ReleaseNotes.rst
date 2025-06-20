@@ -228,6 +228,16 @@ Changes in existing checks
   <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
   on ``operator""`` with template parameters.
 
+- Improved :doc:`modernize-make-shared
+  <clang-tidy/checks/modernize/make-shared>` check by adding a new option 
+  `MakeSmartPtrType` to specify the corresponding smart pointer type, with a
+  default value of `::std::shared_ptr`.
+
+- Improved :doc:`modernize-make-unique
+  <clang-tidy/checks/modernize/make-unique>` check by adding a new option 
+  `MakeSmartPtrType` to specify the corresponding smart pointer type, with a
+  default value of `::std::unique_ptr`.
+
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
   for function or variable in header file which contains macro expansion and
