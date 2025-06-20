@@ -8461,11 +8461,12 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                                     ? &AMDGPU::VGPR_16RegClass
                                                     : &AMDGPU::VGPR_32RegClass);
     auto NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
-                        .addImm(0) // src0_modifiers
+                        .add(Inst.getOperand(1)) // src0_modifiers
                         .add(Inst.getOperand(2))
-                        .addImm(0)  // clamp
-                        .addImm(0); // omod
-    if (ST.useRealTrue16Insts())
+                        .add(Inst.getOperand(3)) // clamp
+                        .add(Inst.getOperand(4)) // omod
+                        .setMIFlags(Inst.getFlags());
+    if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::op_sel))
       NewInstr.addImm(0); // opsel0
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
     legalizeOperandsVALUt16(*NewInstr, MRI);
@@ -10407,7 +10408,7 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX10:
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
-    return SIEncodingFamily::GFX11;
+    return ST.isGFX1170() ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
 #if LLPC_BUILD_NPI
     return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
@@ -10509,6 +10510,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  if (MCOp == (uint16_t)-1 && ST.isGFX1170())
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
 #if LLPC_BUILD_NPI
   if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts())

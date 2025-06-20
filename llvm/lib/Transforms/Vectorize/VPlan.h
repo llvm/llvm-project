@@ -1304,24 +1304,15 @@ protected:
 class VPWidenRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   unsigned Opcode;
 
-protected:
-  VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
-                ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(I),
-        Opcode(I.getOpcode()) {}
-
-  VPWidenRecipe(unsigned VPDefOpcode, unsigned Opcode,
-                ArrayRef<VPValue *> Operands, bool NUW, bool NSW, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, WrapFlagsTy(NUW, NSW), DL),
+public:
+  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
         Opcode(Opcode) {}
 
-public:
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
-      : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
-
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands, bool NUW,
-                bool NSW, DebugLoc DL)
-      : VPWidenRecipe(VPDef::VPWidenSC, Opcode, Operands, NUW, NSW, DL) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPIRMetadata(I),
+        Opcode(I.getOpcode()) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -1951,12 +1942,13 @@ public:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their vector values.
+/// producing their vector values. This is an abstract recipe and must be
+/// converted to concrete recipes before executing.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
-  bool isUnrolled() const { return getNumOperands() == 6; }
+  bool isUnrolled() const { return getNumOperands() == 5; }
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -1992,9 +1984,10 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
 
-  /// Generate the vectorized and scalarized versions of the phi node as
-  /// needed by their users.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("cannot execute this recipe, should be expanded via "
+                     "expandVPWidenIntOrFpInductionRecipe");
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2004,16 +1997,6 @@ public:
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
-
-  // TODO: Remove once VPWidenIntOrFpInduction is fully expanded in
-  // convertToConcreteRecipes.
-  VPInstructionWithType *getStepVector() {
-    auto *StepVector =
-        cast<VPInstructionWithType>(getOperand(3)->getDefiningRecipe());
-    assert(StepVector->getOpcode() == VPInstruction::StepVector &&
-           "step vector operand must be a VPInstruction::StepVector");
-    return StepVector;
-  }
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction

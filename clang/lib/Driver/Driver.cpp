@@ -33,7 +33,6 @@
 #include "ToolChains/Linux.h"
 #include "ToolChains/MSP430.h"
 #include "ToolChains/MSVC.h"
-#include "ToolChains/Managarm.h"
 #include "ToolChains/MinGW.h"
 #include "ToolChains/MipsLinux.h"
 #include "ToolChains/NaCl.h"
@@ -6851,9 +6850,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::Fuchsia:
       TC = std::make_unique<toolchains::Fuchsia>(*this, Target, Args);
       break;
-    case llvm::Triple::Managarm:
-      TC = std::make_unique<toolchains::Managarm>(*this, Target, Args);
-      break;
     case llvm::Triple::Solaris:
       TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);
       break;
@@ -6861,11 +6857,17 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       TC = std::make_unique<toolchains::NVPTXToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::AMDHSA: {
-      bool DL =
-          usesInput(Args, types::isOpenCL) || usesInput(Args, types::isLLVMIR);
-      TC = DL ? std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args)
-              : std::make_unique<toolchains::AMDGPUToolChain>(*this, Target,
-                                                              Args);
+      if (Target.getArch() == llvm::Triple::spirv64) {
+        TC = std::make_unique<toolchains::SPIRVAMDToolChain>(*this, Target,
+                                                             Args);
+      } else {
+        bool DL = usesInput(Args, types::isOpenCL) ||
+                  usesInput(Args, types::isLLVMIR);
+        TC = DL ? std::make_unique<toolchains::ROCMToolChain>(*this, Target,
+                                                              Args)
+                : std::make_unique<toolchains::AMDGPUToolChain>(*this, Target,
+                                                                Args);
+      }
       break;
     }
     case llvm::Triple::AMDPAL:

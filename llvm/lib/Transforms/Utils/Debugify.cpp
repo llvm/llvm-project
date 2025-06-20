@@ -353,7 +353,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
 
         // Cllect dbg.values and dbg.declare.
         if (DebugifyLevel > Level::Locations) {
-          auto HandleDbgVariable = [&](auto *DbgVar) {
+          auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
             // Skip inlined variables.
@@ -368,13 +368,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
           };
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
-          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-            HandleDbgVariable(DVI);
         }
-
-        // Skip debug instructions other than dbg.value and dbg.declare.
-        if (isa<DbgInfoIntrinsic>(&I))
-          continue;
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
         DebugInfoBeforePass.InstToDelete.insert({&I, &I});
@@ -597,7 +591,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
         // Collect dbg.values and dbg.declares.
         if (DebugifyLevel > Level::Locations) {
-          auto HandleDbgVariable = [&](auto *DbgVar) {
+          auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
             // Skip inlined variables.
@@ -612,13 +606,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
           };
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
-          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-            HandleDbgVariable(DVI);
         }
-
-        // Skip debug instructions other than dbg.value and dbg.declare.
-        if (isa<DbgInfoIntrinsic>(&I))
-          continue;
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
 

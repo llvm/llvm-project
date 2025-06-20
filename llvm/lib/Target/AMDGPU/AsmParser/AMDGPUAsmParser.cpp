@@ -39,6 +39,7 @@
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
@@ -3200,9 +3201,8 @@ struct RegInfo {
 
 static constexpr RegInfo RegularRegisters[] = {
 #if LLPC_BUILD_NPI
-    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR},  {{"ttmp"}, IS_TTMP},
-    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR},  {{"idx"}, IS_IDX_REG},
-    {{"g1"}, IS_VGPR},  {{"g2"}, IS_VGPR}, {{"g3"}, IS_VGPR}};
+    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR}, {{"ttmp"}, IS_TTMP},
+    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR}, {{"idx"}, IS_IDX_REG}};
 #else /* LLPC_BUILD_NPI */
   {{"v"},    IS_VGPR},
   {{"s"},    IS_SGPR},
@@ -3249,6 +3249,10 @@ AMDGPUAsmParser::isRegister(const AsmToken &Token,
   // A single register like s0 or a range of registers like s[0:1]
 
   StringRef Str = Token.getString();
+#if LLPC_BUILD_NPI
+  if (Str == "g1" || Str == "g2" || Str == "g3")
+    return true;
+#endif /* LLPC_BUILD_NPI */
   const RegInfo *Reg = getRegularRegInfo(Str);
   if (Reg) {
     StringRef RegName = Reg->Name;
@@ -3406,17 +3410,34 @@ MCRegister AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
   StringRef RegName = getTokenStr();
   auto Loc = getLoc();
 
+#if LLPC_BUILD_NPI
+  StringRef RegSuffix = "";
+  if (RegName == "g1" || RegName == "g2" || RegName == "g3") {
+    RegKind = IS_VGPR;
+  } else {
+    const RegInfo *RI = getRegularRegInfo(RegName);
+    if (!RI) {
+      Error(Loc, "invalid register name");
+      return MCRegister();
+    }
+    RegKind = RI->Kind;
+    RegSuffix = RegName.substr(RI->Name.size());
+#else /* LLPC_BUILD_NPI */
   const RegInfo *RI = getRegularRegInfo(RegName);
   if (!RI) {
     Error(Loc, "invalid register name");
     return MCRegister();
+#endif /* LLPC_BUILD_NPI */
   }
 
   Tokens.push_back(getToken());
   lex(); // skip register name
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   RegKind = RI->Kind;
   StringRef RegSuffix = RegName.substr(RI->Name.size());
+#endif /* LLPC_BUILD_NPI */
   unsigned SubReg = NoSubRegister;
   if (!RegSuffix.empty()) {
     if (RegSuffix.consume_back(".l"))
@@ -4457,8 +4478,7 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
 
   // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
-  bool SkipSrc = (isGFX1170() &&
-                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx11) ||
+  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1170 ||
 #if LLPC_BUILD_NPI
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 ||
@@ -5274,10 +5294,15 @@ bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
     if (!Op->isReg())
       continue;
     unsigned Reg = Op->getReg();
-    if (!isGFX13Plus() && AMDGPU::isVGPR(Reg, MRI) &&
-        AMDGPU::getHWRegIndex(Reg, MRI) > 255) {
-      Error(getRegLoc(Reg, Operands), "register index is out of range");
-      return false;
+    if (AMDGPU::isVGPR(Reg, MRI)) {
+      unsigned RegIdx = AMDGPU::getHWRegIndex(Reg, MRI);
+      unsigned RegWidth =
+          getRegBitWidth(getVGPRPhysRegClass(Reg, MRI)->getID());
+      if (RegIdx >= 0x100 ||
+          (!isGFX1250Plus() && RegIdx + RegWidth / 32 > 0x100)) {
+        Error(getRegLoc(Reg, Operands), "register index is out of range");
+        return false;
+      }
     }
   }
   return true;
@@ -11419,7 +11444,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 }
 
 /// Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAMDGPUAsmParser() {
   RegisterMCAsmParser<AMDGPUAsmParser> A(getTheR600Target());
   RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
 }

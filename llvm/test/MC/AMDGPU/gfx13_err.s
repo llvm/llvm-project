@@ -99,3 +99,8 @@ s_mov_to_global_b64 s[5:6], s[10:11]
 
 s_mov_to_global_b64 exec, s[10:11]
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
+
+v_cvt_f32_f64 g123, v[0:1]
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-ERR-NEXT:{{^}}v_cvt_f32_f64 g123, v[0:1]
+// GFX13-ERR-NEXT:{{^}}              ^

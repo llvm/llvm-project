@@ -635,6 +635,82 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
 INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
                          ::testing::ValuesIn(g_demangling_parts_test_cases));
 
+struct DemangledNameInfoTestCase {
+  DemangledNameInfo expected_info;
+  bool valid_basename;
+  bool valid_scope;
+  bool valid_arguments;
+  bool valid_qualifiers;
+  bool valid_prefix;
+  bool valid_suffix;
+};
+
+DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
+    // clang-format off
+   {
+    { /*.BasenameRange=*/{0, 10}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 0},
+      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+    },
+      /*valid_basename=*/true, /*valid_scope=*/false, /*valid_arguments=*/false,
+      /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
+   },
+   {
+    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 10}, /*.ArgumentsRange=*/{0, 0},
+      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+    },
+      /*valid_basename=*/false, /*valid_scope=*/true, /*valid_arguments=*/false,
+      /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
+   },
+   {
+    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 10},
+      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+    },
+      /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/true,
+      /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
+   },
+   {
+    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 0},
+      /*.QualifiersRange=*/{0, 10}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+    },
+      /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
+      /*valid_qualifiers=*/true, /*valid_prefix=*/false, /*valid_suffix=*/false,
+   },
+   {
+    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 0},
+      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 10}, /*.SuffixRange=*/{0, 0}
+    },
+      /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
+      /*valid_qualifiers=*/false, /*valid_prefix=*/true, /*valid_suffix=*/false,
+   },
+   {
+    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 0},
+      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 10}
+    },
+      /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
+      /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/true,
+   },
+    // clang-format on
+};
+
+struct DemangledNameInfoTestFixture
+    : public ::testing::TestWithParam<DemangledNameInfoTestCase> {};
+
+TEST_P(DemangledNameInfoTestFixture, DemangledNameInfoRanges) {
+  const auto &[info, valid_basename, valid_scope, valid_arguments,
+               valid_qualifiers, valid_prefix, valid_suffix] = GetParam();
+
+  ASSERT_EQ(info.hasBasename(), valid_basename);
+  ASSERT_EQ(info.hasScope(), valid_scope);
+  ASSERT_EQ(info.hasArguments(), valid_arguments);
+  ASSERT_EQ(info.hasQualifiers(), valid_qualifiers);
+  ASSERT_EQ(info.hasPrefix(), valid_prefix);
+  ASSERT_EQ(info.hasSuffix(), valid_suffix);
+}
+
+INSTANTIATE_TEST_SUITE_P(DemangledNameInfoRangesTests,
+                         DemangledNameInfoTestFixture,
+                         ::testing::ValuesIn(g_demangled_name_info_test_cases));
+
 struct DemanglingInfoCorrectnessTestCase {
   const char *mangled;
   const char *demangled;

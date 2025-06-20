@@ -30,10 +30,11 @@ def SIEncodingFamily {
   int GFX90A = 8;
   int GFX940 = 9;
   int GFX11 = 10;
-  int GFX12 = 11;
+  int GFX1170 = 11;
+  int GFX12 = 12;
 #ifdef LLPC_BUILD_NPI
-  int GFX1250 = 12;
-  int GFX13 = 13;
+  int GFX1250 = 13;
+  int GFX13 = 14;
 #endif /* LLPC_BUILD_NPI */
 }
 
@@ -52,17 +53,15 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
 def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
 def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+#endif /* LLPC_BUILD_NPI */
 def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX1170Gen       : GFXGen<isGFX1170Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX1170>;
+#ifdef LLPC_BUILD_NPI
 def GFX11Not12_50Gen : GFXGen<isGFX11Not12_50, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-def GFX1170Gen       : GFXGen<isGFX11Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX11>;
+#endif /* LLPC_BUILD_NPI */
+def GFX11Not11_70Gen : GFXGen<isGFX11Not11_70, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX11Gen         : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
-#else /* LLPC_BUILD_NPI */
-def GFX12Gen   : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX1170Gen : GFXGen<isGFX11Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX11>;
-def GFX11Gen   : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-def GFX10Gen   : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
-#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // SI DAG Nodes
@@ -2623,43 +2622,6 @@ class getAsmVOP3P <bit HasDst, int NumSrcArgs, bit HasNeg,
   string ret = dst#src0#src1#src2#opsel#mods#clamp;
 }
 
-#ifdef LLPC_BUILD_NPI
-// FIXME-TRUE16 AsmVOP3OpSel will be deprecated after all
-// VOP3 16 bit instructions are replaced to true16 format
-class getAsmVOP3OpSel <int NumSrcArgs,
-                       bit HasClamp,
-                       bit HasOMod,
-                       bit Src0HasMods,
-                       bit Src1HasMods,
-                       bit Src2HasMods,
-                       bit HasByteSel = 0,
-                       bit HasBitOp3 = 0> {
-  string dst = "$vdst";
-
-  string isrc0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
-  string isrc1 = !if(!eq(NumSrcArgs, 1), "",
-                     !if(!eq(NumSrcArgs, 2), " $src1",
-                                             " $src1,"));
-  string isrc2 = !if(!eq(NumSrcArgs, 3), " $src2", "");
-
-  string fsrc0 = !if(!eq(NumSrcArgs, 1), "$src0_modifiers", "$src0_modifiers,");
-  string fsrc1 = !if(!eq(NumSrcArgs, 1), "",
-                     !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
-                                             " $src1_modifiers,"));
-  string fsrc2 = !if(!eq(NumSrcArgs, 3), " $src2_modifiers", "");
-
-  string src0 = !if(Src0HasMods, fsrc0, isrc0);
-  string src1 = !if(Src1HasMods, fsrc1, isrc1);
-  string src2 = !if(Src2HasMods, fsrc2, isrc2);
-
-  string bytesel = !if(HasByteSel, "$byte_sel", "");
-  string clamp = !if(HasClamp, "$clamp", "");
-  string omod = !if(HasOMod, "$omod", "");
-  string bitop3 = !if(HasBitOp3, "$bitop3", "");
-  string ret = dst#", "#src0#src1#src2#bitop3#"$op_sel"#bytesel#clamp#omod;
-}
-
-#endif /* LLPC_BUILD_NPI */
 class getAsmDPP <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT = i32> {
   string dst = !if(HasDst,
                    !if(!eq(DstVT.Size, 1),
@@ -3130,22 +3092,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   // the asm operand name via this HasModifiers flag
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0Mods, HasSrc1Mods,
-   HasSrc2Mods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
+   HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0FloatMods, HasSrc1FloatMods,
+   HasSrc2FloatMods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
-#ifdef LLPC_BUILD_NPI
-  field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
-                                              HasClamp,
-                                              HasOMod,
-                                              HasSrc0FloatMods,
-                                              HasSrc1FloatMods,
-                                              HasSrc2FloatMods,
-                                              HasFP8ByteSel,
-                                              HasBitOp3>.ret;
-#else /* LLPC_BUILD_NPI */
-  field string AsmVOP3OpSel = AsmVOP3Base;
-#endif /* LLPC_BUILD_NPI */
   field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
   field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
@@ -3642,6 +3592,7 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX90A)],
                    [!cast<string>(SIEncodingFamily.GFX940)],
                    [!cast<string>(SIEncodingFamily.GFX11)],
+                   [!cast<string>(SIEncodingFamily.GFX1170)],
 #ifdef LLPC_BUILD_NPI
                    [!cast<string>(SIEncodingFamily.GFX12)],
                    [!cast<string>(SIEncodingFamily.GFX1250)],

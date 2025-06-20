@@ -426,10 +426,7 @@ static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
     return Reg;
 
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
-  // On GFX13, since MIA is available, we always can figure out full 10-bit
-  // vgpr#. No need to print a vgpr operand with a comment, i.e. "v0 /*v256*/".
-  if (!STI.hasFeature(AMDGPU::FeatureVGPRIndexingRegisters))
-    Idx = Idx % 0x100;
+  Idx %= 0x100;
   return RC->getRegister(Idx);
 }
 
@@ -540,17 +537,16 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
 #endif
 
 #if LLPC_BUILD_NPI
-  std::string OpndStr;
-  llvm::raw_string_ostream TmpO(OpndStr);
-
   unsigned PrintReg = getRegForPrinting(Reg, STI, MRI);
-  TmpO << getRegisterName(PrintReg);
+  std::string PrintRegName = getRegisterName(PrintReg);
+  modifyVGPRNameUsingIndex(PrintRegName, IdxReg);
+  O << PrintRegName;
 
-  if (PrintReg != Reg.id())
-    TmpO << " /*" << getRegisterName(Reg) << "*/";
-
-  modifyVGPRNameUsingIndex(OpndStr, IdxReg);
-  O << OpndStr;
+  if (PrintReg != Reg.id()) {
+    std::string RegName = getRegisterName(Reg);
+    modifyVGPRNameUsingIndex(RegName, IdxReg);
+    O << " /*" << RegName << "*/";
+  }
 }
 
 void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, unsigned Opc,
