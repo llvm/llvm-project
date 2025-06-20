@@ -14,8 +14,8 @@ function(add_offload_test_device_code test_filename test_name)
     check_cxx_compiler_flag(
       "--target=nvptx64-nvidia-cuda -march=native --cuda-path=${cuda_path}" PLATFORM_HAS_NVPTX)
 
-    if(OFFLOAD_TESTS_FORCE_NVIDIA_ARCH)
-      set(nvptx_arch "${OFFLOAD_TESTS_FORCE_NVIDIA_ARCH}")
+    if(OFFLOAD_TESTS_FORCE_NVPTX_ARCH)
+      set(nvptx_arch "${OFFLOAD_TESTS_FORCE_NVPTX_ARCH}")
     elseif(PLATFORM_HAS_NVPTX)
       set(nvptx_arch "native")
     endif()
@@ -81,7 +81,7 @@ function(add_offload_unittest test_dirname)
   target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
 endfunction()
 
-set(OFFLOAD_TESTS_FORCE_NVIDIA_ARCH "" CACHE STRING
+set(OFFLOAD_TESTS_FORCE_NVPTX_ARCH "" CACHE STRING
   "Force building of NVPTX device code for Offload unit tests with the given arch, e.g. sm_61")
 set(OFFLOAD_TESTS_FORCE_AMDGPU_ARCH "" CACHE STRING
   "Force building of AMDGPU device code for Offload unit tests with the given arch, e.g. gfx1030")
