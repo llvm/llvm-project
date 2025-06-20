@@ -83,12 +83,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // todo: AVX512 bool vector predicate types
 
   // implicit/constants
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
-      .legalFor({p0, s1, s8, s16, s32, s64})
-      .legalFor(Is64Bit, {s128});
   // 32/64-bits needs support for s64/s128 to handle cases:
   // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
   // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+      .legalFor({p0, s1, s8, s16, s32, s64})
+      .legalFor(Is64Bit, {s128});
 
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({p0, s8, s16, s32})
