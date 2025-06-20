@@ -7,7 +7,7 @@ define void @test_as_arg(i8 %a, i8 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[COND_END:.*]], label %[[COND_FALSE:.*]]
 ; CHECK:       [[COND_FALSE]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[B]], [[A]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[SUB]] to i16
 ; CHECK-NEXT:    call void @subroutine(i16 [[CONV]])
 ; CHECK-NEXT:    br label %[[COND_END]]
 ; CHECK:       [[COND_END]]:
@@ -37,7 +37,7 @@ define i16 @test_as_retval(i8 %a, i8 %b) {
 ; CHECK-NEXT:    ret i16 0
 ; CHECK:       [[COND_FALSE]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[B]], [[A]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[SUB]] to i16
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
   %cmp = icmp sgt i8 %a, %b
