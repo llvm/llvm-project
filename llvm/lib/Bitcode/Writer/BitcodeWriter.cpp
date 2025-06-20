@@ -244,6 +244,7 @@ public:
 
 protected:
   void writePerModuleGlobalValueSummary();
+  void writeGUIDList();
 
 private:
   void writePerModuleFunctionSummaryRecord(
@@ -1582,6 +1583,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {
@@ -4790,6 +4793,26 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Stream.ExitBlock();
 }
 
+void ModuleBitcodeWriterBase::writeGUIDList() {
+  std::vector<uint64_t> GUIDs;
+  GUIDs.reserve(M.global_size() + M.size() + M.alias_size());
+
+  for (const GlobalValue &GV : M.global_objects()) {
+    if (GV.isDeclaration()) {
+      GUIDs.push_back(
+          GlobalValue::getGUIDAssumingExternalLinkage(GV.getName()));
+    } else {
+      GUIDs.push_back(GV.getGUID());
+    }
+  }
+  for (const GlobalAlias &GA : M.aliases()) {
+    // Equivalent to the above loop, as GlobalAliases are always definitions.
+    GUIDs.push_back(GA.getGUID());
+  }
+
+  Stream.EmitRecord(bitc::MODULE_CODE_GUIDLIST, GUIDs);
+}
+
 /// Emit the combined summary section into the combined index file.
 void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 4);
@@ -5577,6 +5600,8 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {
