@@ -7,7 +7,7 @@
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
 ; RUN: opt --thinlto-bc -o %t1a.o %s
 ; RUN: opt --thinlto-bc -o %t2a.o %S/Inputs/devirt_vcall_vis_shared_def.ll
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -18,7 +18,7 @@
 ;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
 ; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t1b.o %s
 ; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t2b.o %S/Inputs/devirt_vcall_vis_shared_def.ll
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -28,7 +28,7 @@
 ;; Regular LTO WPD
 ; RUN: opt -o %t1c.o %s
 ; RUN: opt -o %t2c.o %S/Inputs/devirt_vcall_vis_shared_def.ll
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -39,11 +39,11 @@
 
 ;; Check that WPD fails with when linking against a shared library
 ;; containing the strong defs of the vtables.
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   %t2c.o -o %t.so -shared
 
 ;; Index based WPD
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t1a.o %t.so -o %t4a \
@@ -51,7 +51,7 @@
 
 ;; Hybrid WPD
 ; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t4.o %s
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t1b.o %t.so -o %t4b \
@@ -59,7 +59,7 @@
 
 ;; Regular LTO WPD
 ; RUN: opt -o %t4.o %s
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t1c.o %t.so -o %t4c \
