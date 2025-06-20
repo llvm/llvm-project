@@ -34,14 +34,15 @@ class TestFrameVarDILMemberOf(TestBase):
         self.expect(
             "frame variable 'sp->foo'",
             error=True,
-            substrs=["\"foo\" is not a member of \"(Sx *) sp\""],
+            substrs=['"foo" is not a member of "(Sx *) sp"'],
         )
 
         self.expect(
             "frame variable 'sp.x'",
             error=True,
-            substrs=["member reference type 'Sx *' is a "
-                     "pointer; did you mean to use '->'"],
+            substrs=[
+                "member reference type 'Sx *' is a pointer; did you mean to use '->'"]
+            ,
         )
 
         # Test for record typedefs.

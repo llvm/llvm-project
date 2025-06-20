@@ -30,7 +30,7 @@ class TestFrameVarDILMemberOfAnonymousMember(TestBase):
         self.expect(
             "frame variable 'b.x'",
             error=True,
-            substrs=["\"x\" is not a member of \"(B) b\""],
+            substrs=['"x" is not a member of "(B) b"'],
         )
         #self.expect_var_path("b.y", value="0")
         self.expect_var_path("b.z", value="3")
@@ -49,12 +49,12 @@ class TestFrameVarDILMemberOfAnonymousMember(TestBase):
         self.expect(
             "frame variable 'e.x'",
             error=True,
-            substrs=["\"x\" is not a member of \"(E) e\""],
+            substrs=['"x" is not a member of "(E) e"'],
         )
         self.expect(
             "frame variable 'f.x'",
             error=True,
-            substrs=["\"x\" is not a member of \"(F) f\""],
+            substrs=['"x" is not a member of "(F) f"'],
         )
         self.expect_var_path("f.named_field.x", value="12")
 
@@ -64,12 +64,12 @@ class TestFrameVarDILMemberOfAnonymousMember(TestBase):
         self.expect(
             "frame variable 'derb.x'",
             error=True,
-            substrs=["\"x\" is not a member of \"(DerivedB) derb\""],
+            substrs=['"x" is not a member of "(DerivedB) derb"'],
         )
         self.expect(
             "frame variable 'derb.y'",
             error=True,
-            substrs=["\"y\" is not a member of \"(DerivedB) derb\""],
+            substrs=['"y" is not a member of "(DerivedB) derb"'],
         )
         self.expect_var_path("derb.w", value="14")
         self.expect_var_path("derb.k", value="15")
