@@ -642,6 +642,8 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
+- Improve the diagnostics for placement new expression when const-qualified
+  object was passed as the storage argument.
 
 Improvements to Clang's time-trace
 ----------------------------------
