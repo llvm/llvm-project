@@ -93,17 +93,14 @@ define i32 @combine_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i3
 define i32 @combine_undef_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: combine_undef_add_8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.s[1], w1
-; CHECK-NEXT:    uhadd v0.4h, v0.4h, v0.4h
-; CHECK-NEXT:    mov v1.s[2], w2
-; CHECK-NEXT:    mov v1.s[3], w3
-; CHECK-NEXT:    xtn v2.4h, v1.4s
-; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
-; CHECK-NEXT:    uhadd v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    uaddlv s0, v1.8h
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.s[1], w1
+; CHECK-NEXT:    mov v0.s[2], w2
+; CHECK-NEXT:    mov v0.s[3], w3
+; CHECK-NEXT:    uzp2 v1.8h, v0.8h, v0.8h
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uaddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %a1 = insertelement <8 x i32> poison, i32 %a, i32 0
