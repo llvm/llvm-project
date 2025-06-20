@@ -142,3 +142,21 @@ func.func @test_signature_conversion_no_converter() {
   }) : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @context_aware_conversion()
+func.func @context_aware_conversion() {
+  // Case 1: Convert i37 --> i38.
+  // CHECK: %[[cast0:.*]] = builtin.unrealized_conversion_cast %{{.*}} : i37 to i38
+  // CHECK: "test.legal_op_d"(%[[cast0]]) : (i38) -> ()
+  %0 = "test.context_op"() {increment = 1 : i64} : () -> (i37)
+  "test.replace_with_legal_op"(%0) : (i37) -> ()
+
+  // Case 2: Convert i37 --> i39.
+  // CHECK: %[[cast1:.*]] = builtin.unrealized_conversion_cast %{{.*}} : i37 to i39
+  // CHECK: "test.legal_op_d"(%[[cast1]]) : (i39) -> ()
+  %1 = "test.context_op"() {increment = 2 : i64} : () -> (i37)
+  "test.replace_with_legal_op"(%1) : (i37) -> ()
+  return
+}

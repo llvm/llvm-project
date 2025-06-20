@@ -1827,9 +1827,9 @@ struct TestReplaceWithLegalOp : public ConversionPattern {
       : ConversionPattern(converter, "test.replace_with_legal_op",
                           /*benefit=*/1, ctx) {}
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<LegalOpD>(op, operands[0]);
+    rewriter.replaceOpWithNewOp<LegalOpD>(op, operands[0].front());
     return success();
   }
 };
@@ -1865,7 +1865,7 @@ struct TestTypeConversionDriver
       return nullptr;
     });
     converter.addConversion([](IntegerType type, SmallVectorImpl<Type> &) {
-      // Drop all integer types.
+      // Drop all other integer types.
       return success();
     });
     converter.addConversion(
@@ -1902,6 +1902,19 @@ struct TestTypeConversionDriver
           results.push_back(result);
           return success();
         });
+    converter.addConversion([](Value v) -> std::optional<Type> {
+      auto intType = dyn_cast<IntegerType>(v.getType());
+      if (!intType || intType.getWidth() != 37)
+        return std::nullopt;
+      Operation *op = v.getDefiningOp();
+      if (!op)
+        return std::nullopt;
+      auto incrementAttr = op->getAttrOfType<IntegerAttr>("increment");
+      if (!incrementAttr)
+        return std::nullopt;
+      return IntegerType::get(v.getContext(),
+                              intType.getWidth() + incrementAttr.getInt());
+    });
 
     /// Add the legal set of type materializations.
     converter.addSourceMaterialization([](OpBuilder &builder, Type resultType,
@@ -1922,9 +1935,19 @@ struct TestTypeConversionDriver
       // Otherwise, fail.
       return nullptr;
     });
+    // Materialize i37 to any desired type with unrealized_conversion_cast.
+    converter.addTargetMaterialization([](OpBuilder &builder, Type type,
+                                          ValueRange inputs,
+                                          Location loc) -> Value {
+      if (inputs.size() != 1 || !inputs[0].getType().isInteger(37))
+        return Value();
+      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+          .getResult(0);
+    });
 
     // Initialize the conversion target.
     mlir::ConversionTarget target(getContext());
+    target.addLegalOp(OperationName("test.context_op", &getContext()));
     target.addLegalOp<LegalOpD>();
     target.addDynamicallyLegalOp<TestTypeProducerOp>([](TestTypeProducerOp op) {
       auto recursiveType = dyn_cast<test::TestRecursiveType>(op.getType());
