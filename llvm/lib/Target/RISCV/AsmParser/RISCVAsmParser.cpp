@@ -36,6 +36,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -857,10 +858,6 @@ public:
     return SignExtend64<32>(Imm);
   }
 
-  bool isSImm11Lsb0() const {
-    return isSImmPred([](int64_t Imm) { return isShiftedInt<10, 1>(Imm); });
-  }
-
   bool isSImm12() const {
     if (!isImm())
       return false;
@@ -1547,7 +1544,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm11:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 10),
                                       (1 << 10) - 1);
-  case Match_InvalidSImm11Lsb0:
+  case Match_InvalidBareSImm11Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 10), (1 << 10) - 2,
         "immediate must be a multiple of 2 bytes in the range");
@@ -4021,7 +4018,8 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeRISCVAsmParser() {
   RegisterMCAsmParser<RISCVAsmParser> X(getTheRISCV32Target());
   RegisterMCAsmParser<RISCVAsmParser> Y(getTheRISCV64Target());
 }

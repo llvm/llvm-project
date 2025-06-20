@@ -1346,6 +1346,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         isa<ScalableVectorType>(I->getType()))
       break;
 
+    unsigned NumElts = DemandedElts.getBitWidth();
+    bool IsLE = Q.DL.isLittleEndian();
     // Look through a cast from narrow vector elements to wider type.
     // Examples: v4i32 -> v2i64, v3i8 -> v24
     unsigned SubBitWidth = SrcVecTy->getScalarSizeInBits();
@@ -1364,7 +1366,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
       //
       // The known bits of each sub-element are then inserted into place
       // (dependent on endian) to form the full result of known bits.
-      unsigned NumElts = DemandedElts.getBitWidth();
       unsigned SubScale = BitWidth / SubBitWidth;
       APInt SubDemandedElts = APInt::getZero(NumElts * SubScale);
       for (unsigned i = 0; i != NumElts; ++i) {
@@ -1376,8 +1377,30 @@ static void computeKnownBitsFromOperator(const Operator *I,
       for (unsigned i = 0; i != SubScale; ++i) {
         computeKnownBits(I->getOperand(0), SubDemandedElts.shl(i), KnownSrc, Q,
                          Depth + 1);
-        unsigned ShiftElt = Q.DL.isLittleEndian() ? i : SubScale - 1 - i;
+        unsigned ShiftElt = IsLE ? i : SubScale - 1 - i;
         Known.insertBits(KnownSrc, ShiftElt * SubBitWidth);
+      }
+    }
+    // Look through a cast from wider vector elements to narrow type.
+    // Examples: v2i64 -> v4i32
+    if (SubBitWidth % BitWidth == 0) {
+      unsigned SubScale = SubBitWidth / BitWidth;
+      KnownBits KnownSrc(SubBitWidth);
+      APInt SubDemandedElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumElts / SubScale);
+      computeKnownBits(I->getOperand(0), SubDemandedElts, KnownSrc, Q,
+                       Depth + 1);
+
+      Known.Zero.setAllBits();
+      Known.One.setAllBits();
+      for (unsigned i = 0; i != SubScale; ++i) {
+        if (DemandedElts[i]) {
+          unsigned Shifts = IsLE ? i : NumElts - 1 - i;
+          unsigned Offset = (Shifts % SubScale) * BitWidth;
+          Known = Known.intersectWith(KnownSrc.extractBits(BitWidth, Offset));
+          if (Known.isUnknown())
+            break;
+        }
       }
     }
     break;
@@ -7846,8 +7869,6 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(
    iterator_range<BasicBlock::const_iterator> Range, unsigned ScanLimit) {
   assert(ScanLimit && "scan limit must be non-zero");
   for (const Instruction &I : Range) {
-    if (isa<DbgInfoIntrinsic>(I))
-        continue;
     if (--ScanLimit == 0)
       return false;
     if (!isGuaranteedToTransferExecutionToSuccessor(&I))
@@ -8050,8 +8071,6 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
     // well-defined operands.
 
     for (const auto &I : make_range(Begin, End)) {
-      if (isa<DbgInfoIntrinsic>(I))
-        continue;
       if (--ScanLimit == 0)
         break;
 
@@ -8076,8 +8095,6 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
 
   while (true) {
     for (const auto &I : make_range(Begin, End)) {
-      if (isa<DbgInfoIntrinsic>(I))
-        continue;
       if (--ScanLimit == 0)
         return false;
       if (mustTriggerUB(&I, YieldsPoison))

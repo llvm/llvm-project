@@ -116,6 +116,19 @@ AVR::Fixups AVRMCExpr::getFixupKind() const {
   return Kind;
 }
 
+void AVRMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                      const MCSpecifierExpr &Expr) const {
+  auto &E = static_cast<const AVRMCExpr &>(Expr);
+  assert(E.getSpecifier() != AVR::S_AVR_NONE);
+  OS << E.getName() << '(';
+  if (E.isNegated())
+    OS << '-' << '(';
+  printExpr(OS, *E.getSubExpr());
+  if (E.isNegated())
+    OS << ')';
+  OS << ')';
+}
+
 int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
   if (Negated)
     Value *= -1;
@@ -164,15 +177,19 @@ int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
   return static_cast<uint64_t>(Value) & 0xff;
 }
 
-bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
-                                          const MCAssembler *Asm) const {
+// bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
+//                                           const MCAssembler *Asm) const {
+bool AVRMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                             MCValue &Result,
+                                             const MCAssembler *Asm) const {
+  auto &E = static_cast<const AVRMCExpr &>(Expr);
   MCValue Value;
-  bool isRelocatable = getSubExpr()->evaluateAsRelocatable(Value, Asm);
+  bool isRelocatable = E.getSubExpr()->evaluateAsRelocatable(Value, Asm);
   if (!isRelocatable)
     return false;
 
   if (Value.isAbsolute()) {
-    Result = MCValue::get(evaluateAsInt64(Value.getConstant()));
+    Result = MCValue::get(E.evaluateAsInt64(Value.getConstant()));
   } else {
     if (!Asm || !Asm->hasLayout())
       return false;
@@ -181,7 +198,7 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
     if (Value.getSpecifier() != MCSymbolRefExpr::VK_None)
       return false;
     assert(!Value.getSubSym());
-    if (specifier == AVR::S_PM)
+    if (E.getSpecifier() == AVR::S_PM)
       Spec = AVR::S_PM;
 
     // TODO: don't attach specifier to MCSymbolRefExpr.

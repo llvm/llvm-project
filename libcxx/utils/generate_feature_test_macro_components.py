@@ -373,6 +373,11 @@ feature_test_macros = [
             "headers": ["iterator"],
         },
         {
+            "name": "__cpp_lib_constexpr_list",
+            "values": {"c++26": 202502},
+            "headers": ["list"],
+        },
+        {
             "name": "__cpp_lib_constexpr_memory",
             "values": {"c++20": 201811, "c++23": 202202},
             "headers": ["memory"],
@@ -426,8 +431,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constrained_equality",
-            "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
-            "headers": ["optional", "tuple", "utility", "variant"],
+            "values": {
+                # "c++26": 202403,  # P2944R3: Comparisons for reference_wrapper
+                "c++26": 202411,  # P3379R0: Constrain std::expected equality operators
+            },
+            "headers": ["expected", "optional", "tuple", "utility", "variant"],
             "unimplemented": True,
         },
         {

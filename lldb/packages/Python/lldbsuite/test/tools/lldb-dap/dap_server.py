@@ -1050,8 +1050,12 @@ class DebugCommunication(object):
             self._update_verified_breakpoints(response["body"]["breakpoints"])
         return response
 
-    def request_setExceptionBreakpoints(self, filters):
+    def request_setExceptionBreakpoints(
+        self, *, filters: list[str] = [], filter_options: list[dict] = []
+    ):
         args_dict = {"filters": filters}
+        if filter_options:
+            args_dict["filterOptions"] = filter_options
         command_dict = {
             "command": "setExceptionBreakpoints",
             "type": "request",

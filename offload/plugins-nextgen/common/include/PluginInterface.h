@@ -17,6 +17,7 @@
 #include <list>
 #include <map>
 #include <shared_mutex>
+#include <variant>
 #include <vector>
 
 #include "ExclusiveAccess.h"
@@ -122,7 +123,8 @@ struct InfoTreeNode {
   static constexpr uint64_t IndentSize = 4;
 
   std::string Key;
-  std::string Value;
+  using VariantType = std::variant<uint64_t, std::string, bool, std::monostate>;
+  VariantType Value;
   std::string Units;
   // Need to specify a default value number of elements here as `InfoTreeNode`'s
   // size is unknown. This is a vector (rather than a Key->Value map) since:
@@ -131,15 +133,15 @@ struct InfoTreeNode {
   // * The same key can appear multiple times
   std::unique_ptr<llvm::SmallVector<InfoTreeNode, 8>> Children;
 
-  InfoTreeNode() : InfoTreeNode("", "", "") {}
-  InfoTreeNode(std::string Key, std::string Value, std::string Units)
+  InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
+  InfoTreeNode(std::string Key, VariantType Value, std::string Units)
       : Key(Key), Value(Value), Units(Units) {}
 
   /// Add a new info entry as a child of this node. The entry requires at least
   /// a key string in \p Key. The value in \p Value is optional and can be any
   /// type that is representable as a string. The units in \p Units is optional
   /// and must be a string.
-  template <typename T = std::string>
+  template <typename T = std::monostate>
   InfoTreeNode *add(std::string Key, T Value = T(),
                     const std::string &Units = std::string()) {
     assert(!Key.empty() && "Invalid info key");
@@ -147,15 +149,15 @@ struct InfoTreeNode {
     if (!Children)
       Children = std::make_unique<llvm::SmallVector<InfoTreeNode, 8>>();
 
-    std::string ValueStr;
-    if constexpr (std::is_same_v<T, bool>)
-      ValueStr = Value ? "Yes" : "No";
+    VariantType ValueVariant;
+    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, std::monostate>)
+      ValueVariant = Value;
     else if constexpr (std::is_arithmetic_v<T>)
-      ValueStr = std::to_string(Value);
+      ValueVariant = static_cast<uint64_t>(Value);
     else
-      ValueStr = Value;
+      ValueVariant = std::string{Value};
 
-    return &Children->emplace_back(Key, ValueStr, Units);
+    return &Children->emplace_back(Key, ValueVariant, Units);
   }
 
   std::optional<InfoTreeNode *> get(StringRef Key) {
@@ -184,8 +186,23 @@ private:
           MaxKeySize - (Key.size() + KeyIndentSize) + IndentSize;
 
       llvm::outs() << std::string(KeyIndentSize, ' ') << Key
-                   << std::string(ValIndentSize, ' ') << Value
-                   << (Units.empty() ? "" : " ") << Units << "\n";
+                   << std::string(ValIndentSize, ' ');
+      std::visit(
+          [](auto &&V) {
+            using T = std::decay_t<decltype(V)>;
+            if constexpr (std::is_same_v<T, std::string>)
+              llvm::outs() << V;
+            else if constexpr (std::is_same_v<T, bool>)
+              llvm::outs() << (V ? "Yes" : "No");
+            else if constexpr (std::is_same_v<T, uint64_t>)
+              llvm::outs() << V;
+            else if constexpr (std::is_same_v<T, std::monostate>) {
+              // Do nothing
+            } else
+              static_assert(false, "doPrint visit not exhaustive");
+          },
+          Value);
+      llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
     }
 
     // Print children
