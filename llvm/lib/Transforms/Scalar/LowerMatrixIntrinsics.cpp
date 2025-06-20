@@ -1140,6 +1140,9 @@ public:
     // Fourth, pre-process all the PHINode's. The incoming values will be
     // assigned later in VisitPHI.
     for (Instruction *Inst : MatrixInsts) {
+      if (FusedInsts.count(Inst))
+        continue;
+
       auto *PHI = dyn_cast<PHINode>(Inst);
       if (!PHI)
         continue;

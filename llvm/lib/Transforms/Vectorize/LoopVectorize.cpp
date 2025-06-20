@@ -1377,11 +1377,9 @@ public:
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override forced styles if needed.
-    // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
-                      TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-                      !EnableVPlanNativePath;
+                      TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -7679,6 +7677,8 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+    // FIXME: See test Transforms/LoopVectorize/branch-weights.ll. I don't
+    // think the MainLoopStep is correct.
     unsigned MainLoopStep = UF * VF.getKnownMinValue();
     unsigned EpilogueLoopStep =
         EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
@@ -8234,7 +8234,7 @@ bool VPRecipeBuilder::getScaledReductions(
           [&](ElementCount VF) {
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), A->getType(), B->getType(), PHI->getType(),
-                VF, OpAExtend, OpBExtend, BinOp->getOpcode());
+                VF, OpAExtend, OpBExtend, BinOp->getOpcode(), CM.CostKind);
             return Cost.isValid();
           },
           Range)) {
