@@ -1163,6 +1163,14 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     });
     return;
   }
+
+  VPInstruction *OpVPI;
+  if (match(Def, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                     m_VPInstruction(OpVPI))) &&
+      OpVPI->isVectorToScalar()) {
+    Def->replaceAllUsesWith(OpVPI);
+    return;
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
