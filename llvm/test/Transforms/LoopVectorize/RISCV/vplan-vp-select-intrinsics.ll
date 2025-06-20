@@ -20,14 +20,14 @@
  ; IF-EVL-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 
  ; IF-EVL:      ir-bb<vector.ph>:
- ; IF-EVL-NEXT:   IR   %4 = call i64 @llvm.vscale.i64()
- ; IF-EVL-NEXT:   IR   %5 = mul nuw i64 %4, 4
- ; IF-EVL-NEXT:   IR   %6 = sub i64 %5, 1
- ; IF-EVL-NEXT:   IR   %n.rnd.up = add i64 %N, %6
- ; IF-EVL-NEXT:   IR   %n.mod.vf = urem i64 %n.rnd.up, %5
+ ; IF-EVL-NEXT:   IR   %0 = call i64 @llvm.vscale.i64()
+ ; IF-EVL-NEXT:   IR   %1 = mul nuw i64 %0, 4
+ ; IF-EVL-NEXT:   IR   %2 = sub i64 %1, 1
+ ; IF-EVL-NEXT:   IR   %n.rnd.up = add i64 %N, %2
+ ; IF-EVL-NEXT:   IR   %n.mod.vf = urem i64 %n.rnd.up, %1
  ; IF-EVL-NEXT:   IR   %n.vec = sub i64 %n.rnd.up, %n.mod.vf
- ; IF-EVL-NEXT:   IR   %7 = call i64 @llvm.vscale.i64()
- ; IF-EVL-NEXT:   IR   %8 = mul nuw i64 %7, 4
+ ; IF-EVL-NEXT:   IR   %3 = call i64 @llvm.vscale.i64()
+ ; IF-EVL-NEXT:   IR   %4 = mul nuw i64 %3, 4
  ; IF-EVL-NEXT: Successor(s): vector.body
  ; IF-EVL-EMPTY:
  ; IF-EVL-NEXT: vector.body:
