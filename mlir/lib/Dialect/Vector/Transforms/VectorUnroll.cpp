@@ -57,10 +57,10 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
 // Compute the new indices by adding `offsets` to `originalIndices`.
 // If m < n (m = offsets.size(), n = originalIndices.size()),
 // then only the trailing m values in `originalIndices` are updated.
-static SmallVector<Value> computeIndices(PatternRewriter &rewriter,
-                                         Location loc,
-                                         ArrayRef<Value> originalIndices,
-                                         ArrayRef<int64_t> offsets) {
+static SmallVector<Value> sliceLoadStoreIndices(PatternRewriter &rewriter,
+                                                Location loc,
+                                                OperandRange originalIndices,
+                                                ArrayRef<int64_t> offsets) {
   assert(offsets.size() <= originalIndices.size() &&
          "Offsets should not exceed the number of original indices");
   SmallVector<Value> indices(originalIndices);
@@ -662,8 +662,6 @@ struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
   LogicalResult matchAndRewrite(vector::LoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
     VectorType vecType = loadOp.getVectorType();
-    if (vecType.getRank() <= 1)
-      return failure();
 
     auto targetShape = getTargetShape(options, loadOp);
     if (!targetShape)
@@ -676,9 +674,6 @@ struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
     Value result = rewriter.create<arith::ConstantOp>(
         loc, vecType, rewriter.getZeroAttr(vecType));
 
-    SmallVector<Value> originalIndices(loadOp.getIndices().begin(),
-                                       loadOp.getIndices().end());
-
     SmallVector<int64_t> loopOrder =
         getUnrollOrder(originalShape.size(), loadOp, options);
 
@@ -688,11 +683,11 @@ struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(originalShape, *targetShape, loopOrder)) {
       SmallVector<Value> indices =
-          computeIndices(rewriter, loc, originalIndices, offsets);
-      Value slice = rewriter.create<vector::LoadOp>(loc, targetVecType,
-                                                    loadOp.getBase(), indices);
+          sliceLoadStoreIndices(rewriter, loc, loadOp.getIndices(), offsets);
+      Value slicedLoad = rewriter.create<vector::LoadOp>(
+          loc, targetVecType, loadOp.getBase(), indices);
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, slice, result, offsets, strides);
+          loc, slicedLoad, result, offsets, strides);
     }
     rewriter.replaceOp(loadOp, result);
     return success();
@@ -711,8 +706,6 @@ struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
   LogicalResult matchAndRewrite(vector::StoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
     VectorType vecType = storeOp.getVectorType();
-    if (vecType.getRank() <= 1)
-      return failure();
 
     auto targetShape = getTargetShape(options, storeOp);
     if (!targetShape)
@@ -725,16 +718,13 @@ struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
     Value base = storeOp.getBase();
     Value vector = storeOp.getValueToStore();
 
-    SmallVector<Value> originalIndices(storeOp.getIndices().begin(),
-                                       storeOp.getIndices().end());
-
     SmallVector<int64_t> loopOrder =
         getUnrollOrder(originalShape.size(), storeOp, options);
 
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(originalShape, *targetShape, loopOrder)) {
       SmallVector<Value> indices =
-          computeIndices(rewriter, loc, originalIndices, offsets);
+          sliceLoadStoreIndices(rewriter, loc, storeOp.getIndices(), offsets);
       Value slice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
           loc, vector, offsets, *targetShape, strides);
       rewriter.create<vector::StoreOp>(loc, slice, base, indices);
