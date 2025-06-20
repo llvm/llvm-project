@@ -1271,7 +1271,7 @@ def Arith_ScalingExtFOp
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_TruncIOp : Op<Arith_Dialect, "trunci",
+def Arith_TruncIOp : Arith_Op<"trunci",
     [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
      DeclareOpInterfaceMethods<CastOpInterface>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
