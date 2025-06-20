@@ -14,7 +14,6 @@ add_lldb_library(lldbDAP
   DAPLog.cpp
   EventHelper.cpp
   ExceptionBreakpoint.cpp
-  FifoFiles.cpp
   FunctionBreakpoint.cpp
   InstructionBreakpoint.cpp
   JSONUtils.cpp
@@ -22,7 +21,6 @@ add_lldb_library(lldbDAP
   OutputRedirector.cpp
   ProgressEvent.cpp
   ProtocolUtils.cpp
-  RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
   Variables.cpp
