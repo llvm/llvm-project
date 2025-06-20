@@ -90,8 +90,19 @@ class ProcessSaveCoreTestCase(TestBase):
                 pass
 
     def test_help(self):
-        """Test that help shows minidump as an option in plugin-names."""
+        """Test that help shows an option in plugin-names and style."""
         self.expect(
             "help process save-core",
             substrs=["process save-core", "<plugin>", "Values:", "minidump"],
+        )
+
+        self.expect(
+            "help process save-core",
+            substrs=[
+                "process save-core",
+                "<corefile-style>",
+                "Values:",
+                "full",
+                "stack",
+            ],
         )
