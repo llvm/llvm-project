@@ -245,7 +245,7 @@ def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVE_or_SME
-    : Predicate<"Subtarget->hasSVE() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
+    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable()">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
 def HasNonStreamingSVE_or_SME2p2
@@ -253,6 +253,12 @@ def HasNonStreamingSVE_or_SME2p2
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2p2),
                 "sve or sme2p2">;
+def HasNonStreamingSVE_or_SSVE_FEXPA
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_FEXPA())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSSVE_FEXPA),
+                "sve or ssve-fexpa">;
+
 def HasSVE2_or_SME
     : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME),
@@ -264,40 +270,41 @@ def HasSVE2_or_SME2
 def HasNonStreamingSVE2_or_SSVE_AES
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
-                AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_AES), "sve2 or ssve-aes">;
+                AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_AES),
+                "sve2 or ssve-aes">;
+
 def HasSVE2p1_or_SME
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
-                 AssemblerPredicateWithAll<(any_of FeatureSME, FeatureSVE2p1), "sme or sve2p1">;
+                AssemblerPredicateWithAll<(any_of FeatureSME, FeatureSVE2p1),
+                "sme or sve2p1">;
 def HasSVE2p1_or_SME2
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
-                 AssemblerPredicateWithAll<(any_of FeatureSME2, FeatureSVE2p1), "sme2 or sve2p1">;
+                AssemblerPredicateWithAll<(any_of FeatureSME2, FeatureSVE2p1),
+                "sme2 or sve2p1">;
 def HasSVE2p1_or_SME2p1
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME2p1())">,
-                 AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
+                AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1),
+                "sme2p1 or sve2p1">;
+
 def HasSVE2p2_or_SME2p2
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())">,
-                 AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2), "sme2p2 or sve2p2">;
-def HasNonStreamingSVE2p1_or_SSVE_AES
-    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()) ||"
-                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
-                AssemblerPredicateWithAll<(any_of FeatureSVE2p1, FeatureSSVE_AES), "sve2p1 or ssve-aes">;
-def HasSMEF16F16_or_SMEF8F16
-    : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
-                AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
-                "sme-f16f16 or sme-f8f16">;
+                AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2),
+                "sme2p2 or sve2p2">;
 def HasNonStreamingSVE2p2_or_SME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
                 "sme2p2 or sve2p2">;
+
+def HasSMEF16F16_or_SMEF8F16
+    : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
+                AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
+                "sme-f16f16 or sme-f8f16">;
 def HasNonStreamingSVE2_or_SSVE_BitPerm
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_BitPerm())">,
-                AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_BitPerm), "sve2 or ssve-bitperm">;
-def HasNonStreamingSVE_or_SSVE_FEXPA
-    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
-                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_FEXPA())">,
-                AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSSVE_FEXPA), "sve or ssve-fexpa">;
+                AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_BitPerm),
+                "sve2 or ssve-bitperm">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // so don't need the additional check for 'isNeonAvailable'.
@@ -865,7 +872,7 @@ def AArch64uzp2      : SDNode<"AArch64ISD::UZP2", SDT_AArch64Zip>;
 def AArch64trn1      : SDNode<"AArch64ISD::TRN1", SDT_AArch64Zip>;
 def AArch64trn2      : SDNode<"AArch64ISD::TRN2", SDT_AArch64Zip>;
 
-// Vector immedate moves
+// Vector immediate moves
 def AArch64movi_edit : SDNode<"AArch64ISD::MOVIedit", SDT_AArch64MOVIedit>;
 def AArch64movi_shift : SDNode<"AArch64ISD::MOVIshift", SDT_AArch64MOVIshift>;
 def AArch64movi_msl : SDNode<"AArch64ISD::MOVImsl", SDT_AArch64MOVIshift>;
@@ -1487,7 +1494,7 @@ let Predicates = [HasPCDPHINT] in {
 }
 
 // In order to be able to write readable assembly, LLVM should accept assembly
-// inputs that use Branch Target Indentification mnemonics, even with BTI disabled.
+// inputs that use Branch Target Identification mnemonics, even with BTI disabled.
 // However, in order to be compatible with other assemblers (e.g. GAS), LLVM
 // should not emit these mnemonics unless BTI is enabled.
 def : InstAlias<"bti",  (HINT 32), 0>;
@@ -1710,6 +1717,11 @@ multiclass SIMDSUDOTIndex {
 }
 
 defm SUDOTlane : SIMDSUDOTIndex;
+
+def : Pat<(v2i32 (partial_reduce_sumla v2i32:$Acc, v8i8:$LHS, v8i8:$RHS)),
+              (USDOTv8i8 $Acc, $RHS, $LHS)>;
+def : Pat<(v4i32 (partial_reduce_sumla v4i32:$Acc, v16i8:$LHS, v16i8:$RHS)),
+              (USDOTv16i8 $Acc, $RHS, $LHS)>;
 
 }
 
@@ -4937,39 +4949,42 @@ def : Pat<(post_truncsti8 GPR64:$Rt, GPR64sp:$addr, simm9:$off),
 def : Pat<(post_store (bf16 FPR16:$Rt), GPR64sp:$addr, simm9:$off),
           (STRHpost FPR16:$Rt, GPR64sp:$addr, simm9:$off)>;
 
-def : Pat<(post_store (v8i8 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v4i16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v2i32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v2f32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v1i64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v1f64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v4f16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v4bf16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+let Predicates = [IsLE] in {
+  // We must use ST1 to store vectors in big-endian.
+  def : Pat<(post_store(v8i8 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v4i16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v2i32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v2f32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v1i64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v1f64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v4f16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v4bf16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
 
-def : Pat<(post_store (v16i8 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v8i16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v4i32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v4f32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v2i64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v2f64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(post_store (v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v16i8 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v8i16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v4i32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v4f32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v2i64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v2f64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store(v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Load/store exclusive instructions.
@@ -8919,6 +8934,21 @@ def : St1Pat<v8i8,  ST1Onev8b>;
 def : St1Pat<v4i16, ST1Onev4h>;
 def : St1Pat<v2i32, ST1Onev2s>;
 def : St1Pat<v1i64, ST1Onev1d>;
+
+class St1PostPat<ValueType ty, Instruction INST, int off>
+    : Pat<(post_store ty:$Vt, GPR64sp:$Rn, (i64 off)),
+          (INST ty:$Vt, GPR64sp:$Rn, XZR)>;
+
+let Predicates = [IsBE] in {
+  def : St1PostPat<v16i8, ST1Onev16b_POST, 16>;
+  def : St1PostPat<v8i16, ST1Onev8h_POST, 16>;
+  def : St1PostPat<v4i32, ST1Onev4s_POST, 16>;
+  def : St1PostPat<v2i64, ST1Onev2d_POST, 16>;
+  def : St1PostPat<v8i8, ST1Onev8b_POST, 8>;
+  def : St1PostPat<v4i16, ST1Onev4h_POST, 8>;
+  def : St1PostPat<v2i32, ST1Onev2s_POST, 8>;
+  def : St1PostPat<v1i64, ST1Onev1d_POST, 8>;
+}
 
 //---
 // Single-element

@@ -64,8 +64,6 @@ static cl::opt<bool> AllowIncompleteIR(
         "Allow incomplete IR on a best effort basis (references to unknown "
         "metadata will be dropped)"));
 
-LLVM_ABI extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-
 static std::string getTypeString(Type *T) {
   std::string Result;
   raw_string_ostream Tmp(Result);
@@ -442,8 +440,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeModuleFlags(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
-
-  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
 
   if (!Slots)
     return false;
@@ -6908,8 +6904,6 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       if (SeenOldDbgInfoFormat)
         return error(Lex.getLoc(), "debug record should not appear in a module "
                                    "containing debug info intrinsics");
-      if (!SeenNewDbgInfoFormat)
-        M->setNewDbgInfoFormatFlag(true);
       SeenNewDbgInfoFormat = true;
       Lex.Lex();
 
@@ -8338,8 +8332,6 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
       return error(CallLoc, "llvm.dbg intrinsic should not appear in a module "
                             "using non-intrinsic debug info");
     }
-    if (!SeenOldDbgInfoFormat)
-      M->setNewDbgInfoFormatFlag(false);
     SeenOldDbgInfoFormat = true;
   }
   CI->setAttributes(PAL);

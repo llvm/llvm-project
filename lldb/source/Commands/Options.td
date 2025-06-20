@@ -683,6 +683,11 @@ let Command = "platform shell" in {
     Desc<"Shell interpreter path. This is the binary used to run the command.">;
 }
 
+let Command = "plugin list" in {
+  def plugin_list_json : Option<"json", "j">,
+                         Desc<"Output the plugin list in json format.">;
+}
+
 let Command = "process launch" in {
   def process_launch_stop_at_entry : Option<"stop-at-entry", "s">,
     Desc<"Stop at the entry point of the program when launching a process.">;
@@ -1484,5 +1489,11 @@ let Command = "statistics dump" in {
     "scripts executed during a debug session. "
     "Defaults to true, unless the '--summary' mode is enabled, in which case "
     "this is turned off unless specified.">;
-
+  def statistics_dump_plugins
+      : Option<"plugins", "p">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"Dump statistics for known plugins including name, order, and "
+             "enabled state. Defaults to true for both summary and default "
+             "mode.">;
 }

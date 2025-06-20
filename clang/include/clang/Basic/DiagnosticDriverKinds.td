@@ -206,6 +206,8 @@ def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
   "invalid version number in '%0'">;
+def err_drv_invalid_version_number_inferred
+    : Error<"invalid version number '%0' inferred from '%1'">;
 def err_drv_missing_version_number : Error<"missing version number in '%0'">;
 def err_drv_kcfi_arity_unsupported_target : Error<
   "target '%0' is unsupported by -fsanitize-kcfi-arity">;

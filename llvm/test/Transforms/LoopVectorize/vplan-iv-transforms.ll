@@ -65,3 +65,68 @@ loop.latch:
 exit:
   ret void
 }
+
+; Check that VPWidenIntOrFPInductionRecipe is expanded into smaller recipes in
+; the final VPlan.
+define void @iv_expand(ptr %p, i64 %n) {
+; CHECK-LABEL: LV: Checking a loop in 'iv_expand'
+; CHECK:      VPlan 'Initial VPlan for VF={8},UF>=1' {
+; CHECK:      <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION  ir<0>, ir<1>, vp<%0>
+; CHECK-NEXT:     vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
+; CHECK-NEXT:     CLONE ir<%q> = getelementptr ir<%p>, vp<%4>
+; CHECK-NEXT:     vp<%5> = vector-pointer ir<%q>
+; CHECK-NEXT:     WIDEN ir<%x> = load vp<%5>
+; CHECK-NEXT:     WIDEN ir<%y> = add ir<%x>, ir<%iv>
+; CHECK-NEXT:     vp<%6> = vector-pointer ir<%q>
+; CHECK-NEXT:     WIDEN store vp<%6>, ir<%y>
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%3>, vp<%1>
+; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%2>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK:      VPlan 'Final VPlan for VF={8},UF={1}'
+; CHECK:      ir-bb<vector.ph>:
+; CHECK-NEXT:     IR   %n.mod.vf = urem i64 %n, 8
+; CHECK-NEXT:     IR   %n.vec = sub i64 %n, %n.mod.vf
+; CHECK-NEXT:     EMIT vp<[[STEP_VECTOR:%.+]]> = step-vector
+; CHECK-NEXT:     EMIT vp<[[BROADCAST_0:%.+]]> = broadcast ir<0>
+; CHECK-NEXT:     EMIT vp<[[BROADCAST_1:%.+]]> = broadcast ir<1>
+; CHECK-NEXT:     EMIT vp<[[MUL:%.+]]> = mul vp<[[STEP_VECTOR]]>, vp<[[BROADCAST_1]]>
+; CHECK-NEXT:     EMIT vp<[[INDUCTION:%.+]]> = add vp<[[BROADCAST_0]]>, vp<[[MUL]]>
+; CHECK-NEXT:     EMIT vp<[[TRUNC:%.+]]> = trunc ir<8> to i64
+; CHECK-NEXT:     EMIT vp<[[INC:%.+]]> = mul ir<1>, vp<[[TRUNC]]>
+; CHECK-NEXT:     EMIT vp<[[BROADCAST_INC:%.+]]> = broadcast vp<[[INC]]>
+; CHECK-NEXT: Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT-SCALAR vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[INDUCTION]]>, ir-bb<vector.ph> ], [ vp<%vec.ind.next>, vector.body ]
+; CHECK-NEXT:   CLONE ir<%q> = getelementptr ir<%p>, vp<[[SCALAR_PHI]]>
+; CHECK-NEXT:   vp<[[VEC_PTR_1:%.+]]> = vector-pointer ir<%q>
+; CHECK-NEXT:   WIDEN ir<%x> = load vp<[[VEC_PTR_1]]>
+; CHECK-NEXT:   WIDEN ir<%y> = add ir<%x>, ir<%iv>
+; CHECK-NEXT:   vp<[[VEC_PTR_2:%.+]]> = vector-pointer ir<%q>
+; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR_2]]>, ir<%y>
+; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<[[SCALAR_PHI]]>, ir<8>
+; CHECK-NEXT:   EMIT vp<%vec.ind.next> = add ir<%iv>, vp<[[BROADCAST_INC]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+; CHECK-NEXT: Successor(s): middle.block, vector.body
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %q = getelementptr i64, ptr %p, i64 %iv
+  %x = load i64, ptr %q
+  %y = add i64 %x, %iv
+  store i64 %y, ptr %q
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}

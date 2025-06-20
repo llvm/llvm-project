@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/SourceManager.h"
@@ -1644,4 +1645,11 @@ void clang::InitializePreprocessor(Preprocessor &PP,
 
   // Copy PredefinedBuffer into the Preprocessor.
   PP.setPredefines(std::move(PredefineBuffer));
+
+  // Match gcc behavior regarding gnu-line-directive diagnostics, assuming that
+  // '-x <*>-cpp-output' is analogous to '-fpreprocessed'.
+  if (FEOpts.DashX.isPreprocessed()) {
+    PP.getDiagnostics().setSeverity(diag::ext_pp_gnu_line_directive,
+                                    diag::Severity::Ignored, SourceLocation());
+  }
 }
