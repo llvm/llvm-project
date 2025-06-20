@@ -56,7 +56,7 @@ mlir::convertFromAttribute(int8_t &storage, Attribute attr,
     emitError() << "expected IntegerAttr for key `value`";
     return failure();
   }
-  storage = valueAttr.getValue().getZExtValue();
+  storage = valueAttr.getValue().getSExtValue();
   return success();
 }
 
