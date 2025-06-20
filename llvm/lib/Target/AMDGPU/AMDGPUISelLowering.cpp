@@ -4161,7 +4161,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
-  // for C >= 32
+  // For C >= 32
   // i64 (sra x, C) -> (build_pair (sra hi_32(x), C - 32), sra hi_32(x), 31))
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
@@ -4182,7 +4182,6 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   SDValue ShiftAmt;
   if (CRHS) {
     unsigned RHSVal = CRHS->getZExtValue();
-
     ShiftAmt = DAG.getConstant(RHSVal - TargetScalarType.getSizeInBits(), SL,
                                TargetType);
   } else if (Known.getMinValue().getZExtValue() ==
