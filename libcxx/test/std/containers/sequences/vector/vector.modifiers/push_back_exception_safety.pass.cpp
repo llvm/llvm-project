@@ -11,6 +11,7 @@
 // void push_back(const value_type& x);
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "asan_testing.h"
@@ -93,7 +94,7 @@ int main(int, char**) {
     try {
       v.push_back(0);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42); // Strong exception safety guarantee

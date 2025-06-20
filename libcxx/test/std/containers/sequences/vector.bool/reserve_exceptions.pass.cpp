@@ -19,7 +19,7 @@
 
 #include "test_allocator.h"
 
-void test() {
+int main(int, char**) {
   {
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.reserve(5);
@@ -36,8 +36,8 @@ void test() {
     }
   }
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size(), true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size(), true);
     try {
       v.reserve(v.max_size() + 1);
       assert(false);
@@ -60,9 +60,6 @@ void test() {
         assert(v[i] == a[i]);
     }
   }
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }

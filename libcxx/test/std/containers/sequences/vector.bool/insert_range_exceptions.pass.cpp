@@ -16,18 +16,19 @@
 //   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "../insert_range_sequence_containers.h"
 #include "test_allocator.h"
 
-void test() {
+int main(int, char**) {
   // Note: `test_insert_range_exception_safety_throwing_copy` doesn't apply because copying booleans cannot throw.
   test_insert_range_exception_safety_throwing_allocator<std::vector, bool>();
 
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size() - 2, true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size() - 2, true);
     bool a[] = {true, false, true};
     try {
       v.insert_range(v.end(), a);
@@ -39,8 +40,8 @@ void test() {
     }
   }
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size() - 2, false);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size() - 2, false);
     bool a[] = {true, false, true};
     try {
       v.insert_range(v.begin(), a);
@@ -52,21 +53,17 @@ void test() {
     }
   }
   {
-    std::vector<bool, limited_allocator<bool, 10> > v(10, true);
-    bool a[10 * 65536] = {};
+    std::vector<bool, limited_allocator<bool, 10> > v(5, true);
+    bool a[v.max_size()] = {};
     try {
       v.insert_range(v.begin() + v.size() / 2, a);
       assert(false);
-    } catch (...) {
-      assert(v.size() == 10);
+    } catch (const std::length_error&) {
+      assert(v.size() == 5);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
     }
   }
-}
-
-int main(int, char**) {
-  test();
 
   return 0;
 }

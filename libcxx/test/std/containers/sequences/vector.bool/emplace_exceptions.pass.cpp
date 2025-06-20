@@ -15,51 +15,48 @@
 // template <class... Args> iterator emplace(const_iterator pos, Args&&... args);
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "test_allocator.h"
 
-void test() {
+int main(int, char**) {
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size(), true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size(), true);
     try {
       v.emplace(v.begin(), true);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
     }
   }
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size(), true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size(), true);
     try {
       v.emplace(v.end(), true);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
     }
   }
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size(), true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size(), true);
     try {
       v.emplace(v.begin() + v.size() / 2, true);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
     }
   }
-}
-
-int main(int, char**) {
-  test();
 
   return 0;
 }

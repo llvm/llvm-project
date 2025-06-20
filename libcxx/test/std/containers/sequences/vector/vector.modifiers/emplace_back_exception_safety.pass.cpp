@@ -15,6 +15,7 @@
 //     reference emplace_back(Args&&... args); // reference in C++17
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "test_allocator.h"
@@ -24,7 +25,7 @@ int main(int, char**) {
   try {
     v.emplace_back(0);
     assert(false);
-  } catch (...) {
+  } catch (const std::length_error&) {
     assert(v.size() == v.max_size());
     for (std::size_t i = 0; i != v.size(); ++i)
       assert(v[i] == 42); // Strong exception safety guarantee

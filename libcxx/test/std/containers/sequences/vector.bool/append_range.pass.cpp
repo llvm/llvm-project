@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "../insert_range_sequence_containers.h"
+#include "test_allocator.h"
 #include "test_macros.h"
 
 // Tested cases:
@@ -55,6 +56,15 @@ constexpr bool test() {
 
       v.append_range(in);
       assert(std::ranges::equal(v, std::vector<bool>{0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1}));
+    }
+
+    { // Ensure that appending an empty range has no effect
+      std::vector<bool, limited_allocator<bool, 10> > v;
+      v.resize(v.max_size(), true);
+      std::vector<bool> a;
+      v.append_range(a);
+      for (std::size_t i = 0; i < v.size(); ++i)
+        assert(v[i] == true);
     }
   }
 

@@ -18,68 +18,69 @@
 //   iterator insert(const_iterator position, Iter first, Iter last);
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "test_allocator.h"
 #include "test_macros.h"
 
-void test() {
+int main(int, char**) {
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size(), true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size(), true);
     try {
       v.insert(v.begin(), false);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
     }
   }
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size(), false);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size(), false);
     try {
       v.insert(v.end(), 0);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == false);
     }
   }
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size(), true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size(), true);
     try {
       v.insert(v.begin() + v.size() / 2, false);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
     }
   }
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size(), true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size(), true);
     try {
       v.insert(v.begin(), 1, false);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
     }
   }
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size() - 2, true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size() - 2, true);
     bool a[] = {true, false, true};
     try {
       v.insert(v.begin() + v.size() / 2, std::begin(a), std::end(a));
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size() - 2);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
@@ -87,22 +88,18 @@ void test() {
   }
 #if TEST_STD_VER >= 11
   {
-    using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-    Vec v(Vec().max_size() - 2, true);
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    v.resize(v.max_size() - 2, true);
     try {
       v.insert(v.begin(), {true, false, true});
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size() - 2);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == true);
     }
   }
 #endif
-}
-
-int main(int, char**) {
-  test();
 
   return 0;
 }
