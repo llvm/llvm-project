@@ -210,6 +210,16 @@ add_header_library(
 )
 
 add_header_library(
+  comparision_operations
+  HDRS
+    ComparisionOperations.h
+  DEPENDS
+    .fp_bits
+    .fenv_impl
+    libc.src.__support.config
+)
+
+add_header_library(
   hypot
   HDRS
     Hypot.h
