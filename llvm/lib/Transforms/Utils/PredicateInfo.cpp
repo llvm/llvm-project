@@ -283,8 +283,7 @@ public:
 
 bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
                                           const ValueDFS &VDUse) const {
-  if (Stack.empty())
-    return false;
+  assert(!Stack.empty() && "Should not be called with empty stack");
   // If it's a phi only use, make sure it's for this phi node edge, and that the
   // use is in a phi node.  If it's anything else, and the top of the stack is
   // a LN_Last def, we need to pop the stack.  We deliberately sort phi uses
@@ -677,21 +676,17 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
       LLVM_DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
                         << VD.DFSOut << ")\n");
 
-      bool ShouldPush = (VD.Def || PossibleCopy);
-      bool OutOfScope = !stackIsInScope(RenameStack, VD);
-      if (OutOfScope || ShouldPush) {
-        // Sync to our current scope.
-        popStackUntilDFSScope(RenameStack, VD);
-        if (ShouldPush) {
-          RenameStack.push_back(VD);
-        }
+      // Sync to our current scope.
+      popStackUntilDFSScope(RenameStack, VD);
+
+      if (VD.Def || PossibleCopy) {
+        RenameStack.push_back(VD);
+        continue;
       }
+
       // If we get to this point, and the stack is empty we must have a use
       // with no renaming needed, just skip it.
       if (RenameStack.empty())
-        continue;
-      // Skip values, only want to rename the uses
-      if (VD.Def || PossibleCopy)
         continue;
       if (!DebugCounter::shouldExecute(RenameCounter)) {
         LLVM_DEBUG(dbgs() << "Skipping execution due to debug counter\n");
