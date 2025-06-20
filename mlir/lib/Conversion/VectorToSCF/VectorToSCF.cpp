@@ -1352,7 +1352,7 @@ struct UnrollTransferReadConversion
               // vector.insert does not accept rank-0 as the non-indexed
               // argument. Extract the scalar before inserting.
               valToInser = b.create<vector::ExtractOp>(loc, valToInser,
-                                                     SmallVector<int64_t>());
+                                                       SmallVector<int64_t>());
             }
             return b.create<vector::InsertOp>(loc, valToInser, vec,
                                               insertionIndices);
