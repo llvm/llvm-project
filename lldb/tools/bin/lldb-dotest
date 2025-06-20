@@ -1,0 +1,60 @@
+#!/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9
+import os
+import subprocess
+import sys
+
+dotest_path = '/Users/anth/Developer/llvm-project/lldb/test/API/dotest.py'
+dotest_common_args_str = '-u;CXXFLAGS;-u;CFLAGS'
+dotest_user_args_str = ''
+arch = 'arm64'
+executable = '/Users/anth/Developer/llvm-project/lldb/tools/./bin/lldb'
+compiler = '/Users/anth/Developer/llvm-project/lldb/tools/./bin/clang'
+dsymutil = '/Users/anth/Developer/llvm-project/lldb/tools/./bin/dsymutil'
+make = '/usr/bin/make'
+lldb_build_dir = '/Users/anth/Developer/llvm-project/lldb/tools/lldb-test-build.noindex'
+lldb_build_intel_pt = "0"
+lldb_framework_dir = ""
+lldb_libs_dir = "/Users/anth/Developer/llvm-project/lldb/tools/./lib"
+llvm_tools_dir = "/Users/anth/Developer/llvm-project/lldb/tools/./bin"
+lldb_obj_root = "/Users/anth/Developer/llvm-project/lldb/tools/tools/lldb"
+has_libcxx = 1
+libcxx_libs_dir = "/Users/anth/Developer/llvm-project/lldb/tools/lib"
+libcxx_include_dir = "/Users/anth/Developer/llvm-project/lldb/tools/include/c++/v1"
+libcxx_include_target_dir = ""
+cmake_build_type = "Release"
+
+if __name__ == '__main__':
+    wrapper_args = sys.argv[1:]
+    dotest_args = []
+    # split on an empty string will produce [''] and if you
+    # add that to the command, it will be treated as a directory...
+    if dotest_common_args_str:
+        dotest_args.extend(dotest_common_args_str.split(';'))
+    if dotest_user_args_str:
+        dotest_args.extend(dotest_user_args_str.split(';'))
+    # Build dotest.py command.
+    cmd = [sys.executable, dotest_path]
+    cmd.extend(['--arch', arch])
+    cmd.extend(dotest_args)
+    cmd.extend(['--build-dir', lldb_build_dir])
+    cmd.extend(['--executable', executable])
+    cmd.extend(['--compiler', compiler])
+    cmd.extend(['--dsymutil', dsymutil])
+    cmd.extend(['--make', make])
+    cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
+    cmd.extend(['--llvm-tools-dir', llvm_tools_dir])
+    if has_libcxx:
+        cmd.extend(['--libcxx-include-dir', libcxx_include_dir])
+        if libcxx_include_target_dir:
+            cmd.extend(['--libcxx-include-target-dir', libcxx_include_target_dir])
+        cmd.extend(['--libcxx-library-dir', libcxx_libs_dir])
+    if lldb_framework_dir:
+        cmd.extend(['--framework', lldb_framework_dir])
+    if lldb_build_intel_pt == "1":
+        cmd.extend(['--enable-plugin', 'intel-pt'])
+    cmd.extend(['--lldb-obj-root', lldb_obj_root])
+    cmd.extend(['--cmake-build-type', cmake_build_type])
+    cmd.extend(wrapper_args)
+    # Invoke dotest.py and return exit code.
+    print(' '.join(cmd))
+    sys.exit(subprocess.call(cmd))
