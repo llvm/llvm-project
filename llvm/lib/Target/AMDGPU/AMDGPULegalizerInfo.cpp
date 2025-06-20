@@ -957,12 +957,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
   }
 
-  auto &MinNumMaxNum = getActionDefinitionsBuilder({
-      G_FMINNUM, G_FMAXNUM, G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
-
-  // TODO: These should be custom lowered and are directly legal with IEEE=0
-  auto &MinimumNumMaximumNum =
-      getActionDefinitionsBuilder({G_FMINIMUMNUM, G_FMAXIMUMNUM});
+  auto &MinNumMaxNum = getActionDefinitionsBuilder(
+      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM, G_FMINNUM_IEEE,
+       G_FMAXNUM_IEEE});
 
   if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.customFor(FPTypesPK16)
@@ -979,8 +976,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(0, S32, S64)
       .scalarize(0);
   }
-
-  MinimumNumMaximumNum.lower();
 
   if (ST.hasVOP3PInsts())
     FPOpActions.clampMaxNumElementsStrict(0, S16, 2);
@@ -2162,6 +2157,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeFPTOI(MI, MRI, B, false);
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINIMUMNUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     return legalizeMinNumMaxNum(Helper, MI);
@@ -2741,9 +2738,17 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
                         MI.getOpcode() == AMDGPU::G_FMAXNUM_IEEE;
 
   // With ieee_mode disabled, the instructions have the correct behavior
-  // already for G_FMINNUM/G_FMAXNUM
-  if (!MFI->getMode().IEEE)
+  // already for G_FMINIMUMNUM/G_FMAXIMUMNUM.
+  //
+  // FIXME: G_FMINNUM/G_FMAXNUM should match the behavior with ieee_mode
+  // enabled.
+  if (!MFI->getMode().IEEE) {
+    if (MI.getOpcode() == AMDGPU::G_FMINIMUMNUM ||
+        MI.getOpcode() == AMDGPU::G_FMAXIMUMNUM)
+      return true;
+
     return !IsIEEEOp;
+  }
 
   if (IsIEEEOp)
     return true;

@@ -43,19 +43,19 @@ struct ExceptionBreakpointsFilter {
 
   /// A help text providing additional information about the exception filter.
   /// This string is typically shown as a hover and can be translated.
-  std::optional<std::string> description;
+  std::string description;
 
   /// Initial value of the filter option. If not specified a value false is
   /// assumed.
-  std::optional<bool> defaultState;
+  bool defaultState = false;
 
   /// Controls whether a condition can be specified for this filter option. If
   /// false or missing, a condition can not be set.
-  std::optional<bool> supportsCondition;
+  bool supportsCondition = false;
 
   /// A help text providing information about the condition. This string is
   /// shown as the placeholder text for a text box and can be translated.
-  std::optional<std::string> conditionDescription;
+  std::string conditionDescription;
 };
 bool fromJSON(const llvm::json::Value &, ExceptionBreakpointsFilter &,
               llvm::json::Path);
@@ -253,18 +253,17 @@ struct Capabilities {
 
   /// Available exception filter options for the `setExceptionBreakpoints`
   /// request.
-  std::optional<std::vector<ExceptionBreakpointsFilter>>
-      exceptionBreakpointFilters;
+  std::vector<ExceptionBreakpointsFilter> exceptionBreakpointFilters;
 
   /// The set of characters that should trigger completion in a REPL. If not
   /// specified, the UI should assume the `.` character.
-  std::optional<std::vector<std::string>> completionTriggerCharacters;
+  std::vector<std::string> completionTriggerCharacters;
 
   /// The set of additional module information exposed by the debug adapter.
-  std::optional<std::vector<ColumnDescriptor>> additionalModuleColumns;
+  std::vector<ColumnDescriptor> additionalModuleColumns;
 
   /// Checksum algorithms supported by the debug adapter.
-  std::optional<std::vector<ChecksumAlgorithm>> supportedChecksumAlgorithms;
+  std::vector<ChecksumAlgorithm> supportedChecksumAlgorithms;
 
   /// Modes of breakpoints supported by the debug adapter, such as 'hardware' or
   /// 'software'. If present, the client may allow the user to select a mode and
@@ -272,18 +271,38 @@ struct Capabilities {
   ///
   /// Clients may present the first applicable mode in this array as the
   /// 'default' mode in gestures that set breakpoints.
-  std::optional<std::vector<BreakpointMode>> breakpointModes;
+  std::vector<BreakpointMode> breakpointModes;
 
   /// lldb-dap Extensions
   /// @{
 
   /// The version of the adapter.
-  std::optional<std::string> lldbExtVersion;
+  std::string lldbExtVersion;
 
   /// @}
 };
 bool fromJSON(const llvm::json::Value &, Capabilities &, llvm::json::Path);
 llvm::json::Value toJSON(const Capabilities &);
+
+/// An `ExceptionFilterOptions` is used to specify an exception filter together
+/// with a condition for the `setExceptionBreakpoints` request.
+struct ExceptionFilterOptions {
+  /// ID of an exception filter returned by the `exceptionBreakpointFilters`
+  /// capability.
+  std::string filterId;
+
+  /// An expression for conditional exceptions.
+  /// The exception breaks into the debugger if the result of the condition is
+  /// true.
+  std::string condition;
+
+  /// The mode of this exception breakpoint. If defined, this must be one of the
+  /// `breakpointModes` the debug adapter advertised in its `Capabilities`.
+  std::string mode;
+};
+bool fromJSON(const llvm::json::Value &, ExceptionFilterOptions &,
+              llvm::json::Path);
+llvm::json::Value toJSON(const ExceptionFilterOptions &);
 
 /// A `Source` is a descriptor for source code. It is returned from the debug
 /// adapter as part of a `StackFrame` and it is used by clients when specifying

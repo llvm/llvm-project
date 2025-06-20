@@ -18,9 +18,8 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-static Operation *createOp(MLIRContext *context,
-                           ArrayRef<Value> operands = std::nullopt,
-                           ArrayRef<Type> resultTypes = std::nullopt,
+static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
+                           ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
   return Operation::create(
