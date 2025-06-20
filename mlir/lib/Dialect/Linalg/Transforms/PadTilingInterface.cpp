@@ -155,11 +155,13 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
   return paddedShape;
 }
 
-FailureOr<SmallVector<OpFoldResult>> linalg::computeLinalgPaddedShape(
+FailureOr<SmallVector<OpFoldResult>>
+linalg::computeDomainAndOperandsAffineMapTransferInterfacePaddedShape(
     RewriterBase &rewriter, OpOperand &operandToPad,
     ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options) {
-  auto linalgOp = llvm::dyn_cast<LinalgOp>(operandToPad.getOwner());
-  if (!linalgOp)
+  auto transferOp = llvm::dyn_cast<DomainAndOperandsAffineMapTransferInterface>(
+      operandToPad.getOwner());
+  if (!transferOp)
     return failure();
 
   // clang-format off
@@ -173,7 +175,7 @@ FailureOr<SmallVector<OpFoldResult>> linalg::computeLinalgPaddedShape(
   for (const Range &range : iterationDomain)
     loopUpperBounds.push_back(range.size);
 
-  AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&operandToPad);
+  AffineMap indexingMap = transferOp.getMatchingIndexingMap(&operandToPad);
   return computePaddedShape(
       rewriter, cast<TypedValue<RankedTensorType>>(operandToPad.get()),
       indexingMap, loopUpperBounds, options);
