@@ -5,7 +5,7 @@
 @implementation A
 - (id):(int)x :(int)y {
     int z;
-    if (self = [self :x :y]) {} // expected-warning{{using the result of an assignment as a condition without parentheses}} \
+    if (self = [self :x :y]) {} // expected-warning{{using the result of an assignment as a truth value without parentheses}} \
     // expected-note{{use '==' to turn this assignment into an equality comparison}} \
     // expected-note{{place parentheses around the assignment to silence this warning}}
     return self;
