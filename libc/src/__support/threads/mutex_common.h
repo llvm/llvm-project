@@ -19,6 +19,8 @@ enum class MutexError : int {
   TIMEOUT,
   UNLOCK_WITHOUT_LOCK,
   BAD_LOCK_STATE,
+  DEADLOCK,
+  MAX_RECURSION,
 };
 
 } // namespace LIBC_NAMESPACE_DECL
