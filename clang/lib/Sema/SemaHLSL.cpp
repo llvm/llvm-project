@@ -1187,12 +1187,12 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
     // OverlapRanges will be an ArrayRef to all non-all visibility
     // ResourceRanges in the former case and it will be an ArrayRef to just the
     // all visiblity ResourceRange in the latter case.
-    MutableArrayRef<ResourceRange> OverlapRanges =
+    ArrayRef<ResourceRange> OverlapRanges =
         Info.Visibility == llvm::hlsl::rootsig::ShaderVisibility::All
-            ? MutableArrayRef<ResourceRange>{Ranges}.drop_front()
-            : MutableArrayRef<ResourceRange>{Ranges}.take_front();
+            ? ArrayRef<ResourceRange>{Ranges}.drop_front()
+            : ArrayRef<ResourceRange>{Ranges}.take_front();
 
-    for (ResourceRange &Range : OverlapRanges)
+    for (const ResourceRange &Range : OverlapRanges)
       if (std::optional<const RangeInfo *> Overlapping =
               Range.getOverlapping(Info))
         ReportOverlap(&Info, Overlapping.value());
