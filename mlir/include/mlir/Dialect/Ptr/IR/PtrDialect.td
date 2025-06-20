@@ -63,6 +63,10 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
       return $_get(memorySpace.getContext(), memorySpace);
     }]>
   ];
+  let extraClassDeclaration = [{
+    /// Best effort size for analysis purposes.
+    unsigned getAnalysisSizeInBytes() { return 8; }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
