@@ -890,7 +890,7 @@ public:
     return *this;
   }
 
-  template <class _ValueTp, __enable_if_t<__is_same_uncvref<_ValueTp, value_type>::value, int> = 0>
+  template <class _ValueTp, __enable_if_t<is_same<__remove_cvref_t<_ValueTp>, value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI __hash_value_type& operator=(_ValueTp&& __v) {
     __ref() = std::forward<_ValueTp>(__v);
     return *this;
