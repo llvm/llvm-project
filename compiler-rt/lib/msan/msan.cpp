@@ -352,10 +352,46 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
 
 using namespace __msan;
 
+static inline void PrintFaultingInstructionIfRequested(char *instname) {
+  if (__msan::flags()->print_faulting_instruction) {
+    Printf("Instruction that failed the shadow check: %s\n", instname);
+    Printf("\n");
+  }
+}
+
+static inline void WarnIfPrintFaultingInstructionRequested() {
+  if (__msan::flags()->print_faulting_instruction) {
+    Printf(
+        "Error: print_faulting_instruction requested but code was not "
+        "instrumented with -mllvm -embed-faulting-instruction.\n");
+    Printf("\n");
+  }
+}
+
+#define MSAN_MAYBE_WARNING_INSTNAME(type, size, instname)                    \
+  void __msan_maybe_warning_instname_##size(type s, u32 o, char *instname) { \
+    GET_CALLER_PC_BP;                                                        \
+    if (UNLIKELY(s)) {                                                       \
+      if (instname)                                                          \
+        PrintFaultingInstructionIfRequested(instname);                       \
+      PrintWarningWithOrigin(pc, bp, o);                                     \
+      if (__msan::flags()->halt_on_error) {                                  \
+        Printf("Exiting\n");                                                 \
+        Die();                                                               \
+      }                                                                      \
+    }                                                                        \
+  }
+
+MSAN_MAYBE_WARNING_INSTNAME(u8, 1, instname)
+MSAN_MAYBE_WARNING_INSTNAME(u16, 2, instname)
+MSAN_MAYBE_WARNING_INSTNAME(u32, 4, instname)
+MSAN_MAYBE_WARNING_INSTNAME(u64, 8, instname)
+
 #define MSAN_MAYBE_WARNING(type, size)              \
   void __msan_maybe_warning_##size(type s, u32 o) { \
     GET_CALLER_PC_BP;                               \
     if (UNLIKELY(s)) {                              \
+      WarnIfPrintFaultingInstructionRequested();    \
       PrintWarningWithOrigin(pc, bp, o);            \
       if (__msan::flags()->halt_on_error) {         \
         Printf("Exiting\n");                        \
@@ -386,44 +422,88 @@ MSAN_MAYBE_STORE_ORIGIN(u16, 2)
 MSAN_MAYBE_STORE_ORIGIN(u32, 4)
 MSAN_MAYBE_STORE_ORIGIN(u64, 8)
 
-void __msan_warning() {
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, 0);
-  if (__msan::flags()->halt_on_error) {
-    if (__msan::flags()->print_stats)
-      ReportStats();
-    Printf("Exiting\n");
-    Die();
+// These macros to reuse the function body are kludgy, but are better than the
+// alternatives:
+// - call a common function: this pollutes the stack traces
+// - have x_instname() be a simple macro wrapper around x(): the
+//   instrumentation pass expects function symbols
+// - add instname as a parameter everywhere (with a check whether instname is
+//   null): this pollutes the fastpath
+// - duplicate the function body: redundancy is redundant
+#define __MSAN_WARNING_BODY             \
+  GET_CALLER_PC_BP;                     \
+  PrintWarningWithOrigin(pc, bp, 0);    \
+  if (__msan::flags()->halt_on_error) { \
+    if (__msan::flags()->print_stats)   \
+      ReportStats();                    \
+    Printf("Exiting\n");                \
+    Die();                              \
   }
+
+void __msan_warning() {
+  WarnIfPrintFaultingInstructionRequested();
+  __MSAN_WARNING_BODY
 }
+
+void __msan_warning_instname(char *instname) {
+  PrintFaultingInstructionIfRequested(instname);
+  __MSAN_WARNING_BODY
+}
+
+#define __MSAN_WARNING_NORETURN_BODY \
+  GET_CALLER_PC_BP;                  \
+  PrintWarningWithOrigin(pc, bp, 0); \
+  if (__msan::flags()->print_stats)  \
+    ReportStats();                   \
+  Printf("Exiting\n");               \
+  Die();
 
 void __msan_warning_noreturn() {
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, 0);
-  if (__msan::flags()->print_stats)
-    ReportStats();
-  Printf("Exiting\n");
-  Die();
+  WarnIfPrintFaultingInstructionRequested();
+  __MSAN_WARNING_NORETURN_BODY
 }
+
+void __msan_warning_noreturn_instname(char *instname) {
+  PrintFaultingInstructionIfRequested(instname);
+  __MSAN_WARNING_NORETURN_BODY
+}
+
+#define __MSAN_WARNING_WITH_ORIGIN_BODY(origin) \
+  GET_CALLER_PC_BP;                             \
+  PrintWarningWithOrigin(pc, bp, origin);       \
+  if (__msan::flags()->halt_on_error) {         \
+    if (__msan::flags()->print_stats)           \
+      ReportStats();                            \
+    Printf("Exiting\n");                        \
+    Die();                                      \
+  }
 
 void __msan_warning_with_origin(u32 origin) {
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, origin);
-  if (__msan::flags()->halt_on_error) {
-    if (__msan::flags()->print_stats)
-      ReportStats();
-    Printf("Exiting\n");
-    Die();
-  }
+  WarnIfPrintFaultingInstructionRequested();
+  __MSAN_WARNING_WITH_ORIGIN_BODY(origin)
 }
 
-void __msan_warning_with_origin_noreturn(u32 origin) {
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, origin);
-  if (__msan::flags()->print_stats)
-    ReportStats();
-  Printf("Exiting\n");
+void __msan_warning_with_origin_instname(u32 origin, char *instname) {
+  PrintFaultingInstructionIfRequested(instname);
+  __MSAN_WARNING_WITH_ORIGIN_BODY(origin)
+}
+
+#define __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin) \
+  GET_CALLER_PC_BP;                                      \
+  PrintWarningWithOrigin(pc, bp, origin);                \
+  if (__msan::flags()->print_stats)                      \
+    ReportStats();                                       \
+  Printf("Exiting\n");                                   \
   Die();
+
+void __msan_warning_with_origin_noreturn(u32 origin) {
+  WarnIfPrintFaultingInstructionRequested();
+  __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin)
+}
+
+void __msan_warning_with_origin_noreturn_instname(u32 origin, char *instname) {
+  PrintFaultingInstructionIfRequested(instname);
+  __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin)
 }
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
