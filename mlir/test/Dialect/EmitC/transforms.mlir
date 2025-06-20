@@ -135,21 +135,18 @@ func.func @single_result_requirement() -> (i32, i32) {
 // CHECK-SAME:                                    %[[VAL_1:.*]]: !emitc.ptr<i32>) -> i1 {
 // CHECK:           %[[VAL_2:.*]] = "emitc.constant"() <{value = 0 : i64}> : () -> i64
 // CHECK:           %[[VAL_3:.*]] = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
-// CHECK:           %[[VAL_4:.*]] = emitc.expression : i32 {
-// CHECK:             %[[VAL_5:.*]] = load %[[VAL_3]] : <i32>
-// CHECK:             yield %[[VAL_5]] : i32
+// CHECK:           %[[VAL_4:.*]] = emitc.subscript %[[VAL_1]]{{\[}}%[[VAL_2]]] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
+// CHECK:           %[[VAL_5:.*]] = emitc.expression : i32 {
+// CHECK:             %[[VAL_6:.*]] = load %[[VAL_4]] : <i32>
+// CHECK:             yield %[[VAL_6]] : i32
 // CHECK:           }
-// CHECK:           %[[VAL_6:.*]] = emitc.subscript %[[VAL_1]]{{\[}}%[[VAL_2]]] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
-// CHECK:           %[[VAL_7:.*]] = emitc.expression : i32 {
-// CHECK:             %[[VAL_8:.*]] = load %[[VAL_6]] : <i32>
-// CHECK:             yield %[[VAL_8]] : i32
+// CHECK:           %[[VAL_7:.*]] = emitc.expression : i1 {
+// CHECK:             %[[VAL_8:.*]] = load %[[VAL_3]] : <i32>
+// CHECK:             %[[VAL_9:.*]] = add %[[VAL_8]], %[[VAL_5]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_10:.*]] = cmp lt, %[[VAL_9]], %[[VAL_0]] : (i32, i32) -> i1
+// CHECK:             yield %[[VAL_10]] : i1
 // CHECK:           }
-// CHECK:           %[[VAL_9:.*]] = emitc.expression : i1 {
-// CHECK:             %[[VAL_10:.*]] = add %[[VAL_4]], %[[VAL_7]] : (i32, i32) -> i32
-// CHECK:             %[[VAL_11:.*]] = cmp lt, %[[VAL_10]], %[[VAL_0]] : (i32, i32) -> i1
-// CHECK:             yield %[[VAL_11]] : i1
-// CHECK:           }
-// CHECK:           return %[[VAL_9]] : i1
+// CHECK:           return %[[VAL_7]] : i1
 // CHECK:         }
 
 
