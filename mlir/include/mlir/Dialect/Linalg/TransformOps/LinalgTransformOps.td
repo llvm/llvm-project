@@ -106,6 +106,17 @@ def ApplyFoldAddIntoDestPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyHoistVectorTransferPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.hoist_vector_transfer",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Finds pattern to hoist the  possible vector transfer reads/writes outside the reduction and k-loop
+ for a batch reduce matmul operation.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyPadVectorizationPatternsOp : Op<Transform_Dialect,
     "apply_patterns.linalg.pad_vectorization",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
