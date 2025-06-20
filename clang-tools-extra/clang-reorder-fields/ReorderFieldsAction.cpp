@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReorderFieldsAction.h"
+#include "utils/Designator.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -23,6 +24,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <string>
 
 namespace clang {
@@ -81,7 +83,44 @@ getNewFieldsOrder(const RecordDecl *Definition,
   return NewFieldsOrder;
 }
 
+struct ReorderedStruct {
+public:
+  ReorderedStruct(const RecordDecl *Decl, ArrayRef<unsigned> NewFieldsOrder)
+      : Definition(Decl), NewFieldsOrder(NewFieldsOrder),
+        NewFieldsPositions(NewFieldsOrder.size()) {
+    for (unsigned I = 0; I < NewFieldsPositions.size(); ++I)
+      NewFieldsPositions[NewFieldsOrder[I]] = I;
+  }
+
+  const RecordDecl *Definition;
+  ArrayRef<unsigned> NewFieldsOrder;
+  SmallVector<unsigned, 4> NewFieldsPositions;
+};
+
 // FIXME: error-handling
+/// Replaces a range of source code by the specified text.
+static void
+addReplacement(SourceRange Old, StringRef New, const ASTContext &Context,
+               std::map<std::string, tooling::Replacements> &Replacements) {
+  tooling::Replacement R(Context.getSourceManager(),
+                         CharSourceRange::getTokenRange(Old), New,
+                         Context.getLangOpts());
+  consumeError(Replacements[std::string(R.getFilePath())].add(R));
+}
+
+/// Replaces one range of source code by another and adds a prefix.
+static void
+addReplacement(SourceRange Old, SourceRange New, StringRef Prefix,
+               const ASTContext &Context,
+               std::map<std::string, tooling::Replacements> &Replacements) {
+  std::string NewText =
+      (Prefix + Lexer::getSourceText(CharSourceRange::getTokenRange(New),
+                                     Context.getSourceManager(),
+                                     Context.getLangOpts()))
+          .str();
+  addReplacement(Old, NewText, Context, Replacements);
+}
+
 /// Replaces one range of source code by another.
 static void
 addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
@@ -93,10 +132,7 @@ addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
   StringRef NewText =
       Lexer::getSourceText(CharSourceRange::getTokenRange(New),
                            Context.getSourceManager(), Context.getLangOpts());
-  tooling::Replacement R(Context.getSourceManager(),
-                         CharSourceRange::getTokenRange(Old), NewText,
-                         Context.getLangOpts());
-  consumeError(Replacements[std::string(R.getFilePath())].add(R));
+  addReplacement(Old, NewText.str(), Context, Replacements);
 }
 
 /// Find all member fields used in the given init-list initializer expr
@@ -198,33 +234,33 @@ static SourceRange getFullFieldSourceRange(const FieldDecl &Field,
 /// different accesses (public/protected/private) is not supported.
 /// \returns true on success.
 static bool reorderFieldsInDefinition(
-    const RecordDecl *Definition, ArrayRef<unsigned> NewFieldsOrder,
-    const ASTContext &Context,
+    const ReorderedStruct &RS, const ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
-  assert(Definition && "Definition is null");
+  assert(RS.Definition && "Definition is null");
 
   SmallVector<const FieldDecl *, 10> Fields;
-  for (const auto *Field : Definition->fields())
+  for (const auto *Field : RS.Definition->fields())
     Fields.push_back(Field);
 
   // Check that the permutation of the fields doesn't change the accesses
-  for (const auto *Field : Definition->fields()) {
+  for (const auto *Field : RS.Definition->fields()) {
     const auto FieldIndex = Field->getFieldIndex();
-    if (Field->getAccess() != Fields[NewFieldsOrder[FieldIndex]]->getAccess()) {
+    if (Field->getAccess() !=
+        Fields[RS.NewFieldsOrder[FieldIndex]]->getAccess()) {
       llvm::errs() << "Currently reordering of fields with different accesses "
                       "is not supported\n";
       return false;
     }
   }
 
-  for (const auto *Field : Definition->fields()) {
+  for (const auto *Field : RS.Definition->fields()) {
     const auto FieldIndex = Field->getFieldIndex();
-    if (FieldIndex == NewFieldsOrder[FieldIndex])
+    if (FieldIndex == RS.NewFieldsOrder[FieldIndex])
       continue;
-    addReplacement(
-        getFullFieldSourceRange(*Field, Context),
-        getFullFieldSourceRange(*Fields[NewFieldsOrder[FieldIndex]], Context),
-        Context, Replacements);
+    addReplacement(getFullFieldSourceRange(*Field, Context),
+                   getFullFieldSourceRange(
+                       *Fields[RS.NewFieldsOrder[FieldIndex]], Context),
+                   Context, Replacements);
   }
   return true;
 }
@@ -235,7 +271,7 @@ static bool reorderFieldsInDefinition(
 /// fields. Thus, we need to ensure that we reorder just the initializers that
 /// are present.
 static void reorderFieldsInConstructor(
-    const CXXConstructorDecl *CtorDecl, ArrayRef<unsigned> NewFieldsOrder,
+    const CXXConstructorDecl *CtorDecl, const ReorderedStruct &RS,
     ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
   assert(CtorDecl && "Constructor declaration is null");
@@ -247,10 +283,6 @@ static void reorderFieldsInConstructor(
   // Thus this assert needs to be after the previous checks.
   assert(CtorDecl->isThisDeclarationADefinition() && "Not a definition");
 
-  SmallVector<unsigned, 10> NewFieldsPositions(NewFieldsOrder.size());
-  for (unsigned i = 0, e = NewFieldsOrder.size(); i < e; ++i)
-    NewFieldsPositions[NewFieldsOrder[i]] = i;
-
   SmallVector<const CXXCtorInitializer *, 10> OldWrittenInitializersOrder;
   SmallVector<const CXXCtorInitializer *, 10> NewWrittenInitializersOrder;
   for (const auto *Initializer : CtorDecl->inits()) {
@@ -261,8 +293,8 @@ static void reorderFieldsInConstructor(
     const FieldDecl *ThisM = Initializer->getMember();
     const auto UsedMembers = findMembersUsedInInitExpr(Initializer, Context);
     for (const FieldDecl *UM : UsedMembers) {
-      if (NewFieldsPositions[UM->getFieldIndex()] >
-          NewFieldsPositions[ThisM->getFieldIndex()]) {
+      if (RS.NewFieldsPositions[UM->getFieldIndex()] >
+          RS.NewFieldsPositions[ThisM->getFieldIndex()]) {
         DiagnosticsEngine &DiagEngine = Context.getDiagnostics();
         auto Description = ("reordering field " + UM->getName() + " after " +
                             ThisM->getName() + " makes " + UM->getName() +
@@ -280,8 +312,8 @@ static void reorderFieldsInConstructor(
   auto ByFieldNewPosition = [&](const CXXCtorInitializer *LHS,
                                 const CXXCtorInitializer *RHS) {
     assert(LHS && RHS);
-    return NewFieldsPositions[LHS->getMember()->getFieldIndex()] <
-           NewFieldsPositions[RHS->getMember()->getFieldIndex()];
+    return RS.NewFieldsPositions[LHS->getMember()->getFieldIndex()] <
+           RS.NewFieldsPositions[RHS->getMember()->getFieldIndex()];
   };
   llvm::sort(NewWrittenInitializersOrder, ByFieldNewPosition);
   assert(OldWrittenInitializersOrder.size() ==
@@ -293,35 +325,213 @@ static void reorderFieldsInConstructor(
                      Replacements);
 }
 
+/// Replacement for broken InitListExpr::isExplicit function.
+/// TODO: Remove when InitListExpr::isExplicit is fixed.
+static bool isImplicitILE(const InitListExpr *ILE, const ASTContext &Context) {
+  // The ILE is implicit if either:
+  // - The left brace loc of the ILE matches the start of first init expression
+  //   (for non designated decls)
+  // - The right brace loc of the ILE matches the end of first init expression
+  //   (for designated decls)
+  // The first init expression should be taken from the syntactic form, but
+  // since the ILE could be implicit, there might not be a syntactic form.
+  // For that reason we have to check against all init expressions.
+  for (const Expr *Init : ILE->inits()) {
+    if (ILE->getLBraceLoc() == Init->getBeginLoc() ||
+        ILE->getRBraceLoc() == Init->getEndLoc())
+      return true;
+  }
+  return false;
+}
+
+/// Compares compatible designators according to the new struct order.
+/// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0 if
+/// they are equal.
+static int cmpDesignators(const DesignatorIter &Lhs, const DesignatorIter &Rhs,
+                          const ReorderedStruct &Struct) {
+  if (Lhs.getTag() == DesignatorIter::STRUCT) {
+    assert(Rhs.getTag() == DesignatorIter::STRUCT &&
+           "Incompatible designators");
+    assert(Lhs.getStructDecl() == Rhs.getStructDecl() &&
+           "Incompatible structs");
+    // Use the new layout for reordered struct.
+    if (Struct.Definition == Lhs.getStructDecl()) {
+      return Struct.NewFieldsPositions[Lhs.getStructIter()->getFieldIndex()] -
+             Struct.NewFieldsPositions[Rhs.getStructIter()->getFieldIndex()];
+    }
+    return Lhs.getStructIter()->getFieldIndex() -
+           Rhs.getStructIter()->getFieldIndex();
+  } else {
+    // Array designators can be compared to array range designators.
+    assert((Rhs.getTag() == DesignatorIter::ARRAY ||
+            Rhs.getTag() == DesignatorIter::ARRAY_RANGE) &&
+           "Incompatible designators");
+    size_t LhsIdx = Lhs.getTag() == DesignatorIter::ARRAY
+                        ? Lhs.getArrayIndex()
+                        : Lhs.getArrayRangeStart();
+    size_t RhsIdx = Rhs.getTag() == DesignatorIter::ARRAY
+                        ? Rhs.getArrayIndex()
+                        : Rhs.getArrayRangeStart();
+    return LhsIdx - RhsIdx;
+  }
+  llvm_unreachable("Invalid designator tag");
+}
+
+/// Compares compatible designator lists according to the new struct order.
+/// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0 if
+/// they are equal.
+static int cmpDesignatorLists(const Designators &Lhs, const Designators &Rhs,
+                              const ReorderedStruct &Reorders) {
+  for (unsigned Idx = 0, Size = std::min(Lhs.size(), Rhs.size()); Idx < Size;
+       ++Idx) {
+    int DesignatorComp = cmpDesignators(Lhs[Idx], Rhs[Idx], Reorders);
+    // If the current designators are not equal, return the result
+    if (DesignatorComp != 0)
+      return DesignatorComp;
+    // Otherwise, continue to the next pair.
+  }
+  // If all common designators were equal, compare the sizes of the designator
+  // lists.
+  return Lhs.size() - Rhs.size();
+}
+
+/// Finds the semantic form of the first explicit ancestor of the given
+/// initializer list including itself.
+static const InitListExpr *getExplicitILE(const InitListExpr *ILE,
+                                          ASTContext &Context) {
+  if (!isImplicitILE(ILE, Context))
+    return ILE;
+  const InitListExpr *TopLevelILE = ILE;
+  DynTypedNodeList Parents = Context.getParents(*TopLevelILE);
+  while (!Parents.empty() && Parents.begin()->get<InitListExpr>()) {
+    TopLevelILE = Parents.begin()->get<InitListExpr>();
+    Parents = Context.getParents(*TopLevelILE);
+    if (!isImplicitILE(TopLevelILE, Context))
+      break;
+  }
+  if (!TopLevelILE->isSemanticForm()) {
+    return TopLevelILE->getSemanticForm();
+  }
+  return TopLevelILE;
+}
+
 /// Reorders initializers in the brace initialization of an aggregate.
 ///
 /// At the moment partial initialization is not supported.
 /// \returns true on success
 static bool reorderFieldsInInitListExpr(
-    const InitListExpr *InitListEx, ArrayRef<unsigned> NewFieldsOrder,
-    const ASTContext &Context,
+    const InitListExpr *InitListEx, const ReorderedStruct &RS,
+    ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
   assert(InitListEx && "Init list expression is null");
-  // We care only about InitListExprs which originate from source code.
-  // Implicit InitListExprs are created by the semantic analyzer.
-  if (!InitListEx->isExplicit())
+  // Only process semantic forms of initializer lists.
+  if (!InitListEx->isSemanticForm()) {
     return true;
-  // The method InitListExpr::getSyntacticForm may return nullptr indicating
-  // that the current initializer list also serves as its syntactic form.
-  if (const auto *SyntacticForm = InitListEx->getSyntacticForm())
-    InitListEx = SyntacticForm;
+  }
+
   // If there are no initializers we do not need to change anything.
   if (!InitListEx->getNumInits())
     return true;
-  if (InitListEx->getNumInits() != NewFieldsOrder.size()) {
-    llvm::errs() << "Currently only full initialization is supported\n";
-    return false;
+
+  // We care only about InitListExprs which originate from source code.
+  // Implicit InitListExprs are created by the semantic analyzer.
+  // We find the first parent InitListExpr that exists in source code and
+  // process it. This is necessary because of designated initializer lists and
+  // possible omitted braces.
+  InitListEx = getExplicitILE(InitListEx, Context);
+
+  // Find if there are any designated initializations or implicit values. If all
+  // initializers are present and none have designators then just reorder them
+  // normally. Otherwise, designators are added to all initializers and they are
+  // sorted in the new order.
+  bool ShouldAddDesignators = false;
+  // The method InitListExpr::getSyntacticForm may return nullptr indicating
+  // that the current initializer list also serves as its syntactic form.
+  const InitListExpr *SyntacticInitListEx = InitListEx;
+  if (const InitListExpr *SynILE = InitListEx->getSyntacticForm()) {
+    // Do not rewrite zero initializers. This check is only valid for syntactic
+    // forms.
+    if (SynILE->isIdiomaticZeroInitializer(Context.getLangOpts()))
+      return true;
+
+    ShouldAddDesignators = InitListEx->getNumInits() != SynILE->getNumInits() ||
+                           llvm::any_of(SynILE->inits(), [](const Expr *Init) {
+                             return isa<DesignatedInitExpr>(Init);
+                           });
+
+    SyntacticInitListEx = SynILE;
+  } else {
+    // If there is no syntactic form, there can be no designators. Instead,
+    // there might be implicit values.
+    ShouldAddDesignators =
+        (RS.NewFieldsOrder.size() != InitListEx->getNumInits()) ||
+        llvm::any_of(InitListEx->inits(), [&Context](const Expr *Init) {
+          return isa<ImplicitValueInitExpr>(Init) ||
+                 (isa<InitListExpr>(Init) &&
+                  isImplicitILE(dyn_cast<InitListExpr>(Init), Context));
+        });
   }
-  for (unsigned i = 0, e = InitListEx->getNumInits(); i < e; ++i)
-    if (i != NewFieldsOrder[i])
-      addReplacement(InitListEx->getInit(i)->getSourceRange(),
-                     InitListEx->getInit(NewFieldsOrder[i])->getSourceRange(),
-                     Context, Replacements);
+
+  if (ShouldAddDesignators) {
+    // Designators are only supported from C++20.
+    if (Context.getLangOpts().CPlusPlus && !Context.getLangOpts().CPlusPlus20) {
+      llvm::errs()
+          << "Currently only full initialization is supported for C++\n";
+      return false;
+    }
+
+    // Handle case when some fields are designated. Some fields can be
+    // missing. Insert any missing designators and reorder the expressions
+    // according to the new order.
+    Designators CurrentDesignators{};
+    // Remember each initializer expression along with its designators. They are
+    // sorted later to determine the correct order.
+    std::vector<std::pair<Designators, const Expr *>> Rewrites;
+    for (const Expr *Init : SyntacticInitListEx->inits()) {
+      if (const auto *DIE = dyn_cast_or_null<DesignatedInitExpr>(Init)) {
+        CurrentDesignators = {DIE, SyntacticInitListEx, Context};
+
+        // Use the child of the DesignatedInitExpr. This way designators are
+        // always replaced.
+        Rewrites.push_back({CurrentDesignators, DIE->getInit()});
+      } else {
+        // Find the next field.
+        if (!CurrentDesignators.increment(SyntacticInitListEx, Init, Context)) {
+          llvm::errs() << "Unsupported initializer list\n";
+          return false;
+        }
+
+        // Do not rewrite implicit values. They just had to be processed to
+        // find the correct designator.
+        if (!isa<ImplicitValueInitExpr>(Init))
+          Rewrites.push_back({CurrentDesignators, Init});
+      }
+    }
+
+    // Sort the designators according to the new order.
+    llvm::sort(Rewrites, [&RS](const auto &Lhs, const auto &Rhs) {
+      return cmpDesignatorLists(Lhs.first, Rhs.first, RS) < 0;
+    });
+
+    for (unsigned i = 0, e = Rewrites.size(); i < e; ++i) {
+      addReplacement(SyntacticInitListEx->getInit(i)->getSourceRange(),
+                     Rewrites[i].second->getSourceRange(),
+                     Rewrites[i].first.toString(), Context, Replacements);
+    }
+  } else {
+    // Handle excess initializers by leaving them unchanged.
+    assert(SyntacticInitListEx->getNumInits() >= InitListEx->getNumInits());
+
+    // All field initializers are present and none have designators. They can be
+    // reordered normally.
+    for (unsigned i = 0, e = RS.NewFieldsOrder.size(); i < e; ++i) {
+      if (i != RS.NewFieldsOrder[i])
+        addReplacement(SyntacticInitListEx->getInit(i)->getSourceRange(),
+                       SyntacticInitListEx->getInit(RS.NewFieldsOrder[i])
+                           ->getSourceRange(),
+                       Context, Replacements);
+    }
+  }
   return true;
 }
 
@@ -349,7 +559,9 @@ public:
         getNewFieldsOrder(RD, DesiredFieldsOrder);
     if (NewFieldsOrder.empty())
       return;
-    if (!reorderFieldsInDefinition(RD, NewFieldsOrder, Context, Replacements))
+    ReorderedStruct RS{RD, NewFieldsOrder};
+
+    if (!reorderFieldsInDefinition(RS, Context, Replacements))
       return;
 
     // CXXRD will be nullptr if C code (not C++) is being processed.
@@ -357,24 +569,25 @@ public:
     if (CXXRD)
       for (const auto *C : CXXRD->ctors())
         if (const auto *D = dyn_cast<CXXConstructorDecl>(C->getDefinition()))
-          reorderFieldsInConstructor(cast<const CXXConstructorDecl>(D),
-                                     NewFieldsOrder, Context, Replacements);
+          reorderFieldsInConstructor(cast<const CXXConstructorDecl>(D), RS,
+                                     Context, Replacements);
 
     // We only need to reorder init list expressions for
     // plain C structs or C++ aggregate types.
     // For other types the order of constructor parameters is used,
     // which we don't change at the moment.
     // Now (v0) partial initialization is not supported.
-    if (!CXXRD || CXXRD->isAggregate())
+    if (!CXXRD || CXXRD->isAggregate()) {
       for (auto Result :
            match(initListExpr(hasType(equalsNode(RD))).bind("initListExpr"),
                  Context))
         if (!reorderFieldsInInitListExpr(
-                Result.getNodeAs<InitListExpr>("initListExpr"), NewFieldsOrder,
-                Context, Replacements)) {
+                Result.getNodeAs<InitListExpr>("initListExpr"), RS, Context,
+                Replacements)) {
           Replacements.clear();
           return;
         }
+    }
   }
 };
 } // end anonymous namespace
