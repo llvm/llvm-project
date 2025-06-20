@@ -32,6 +32,7 @@ class CXXDestructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class MangleContext;
+struct ReturnAdjustment;
 
 namespace CodeGen {
 class CGCallee;
