@@ -1702,12 +1702,16 @@ class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags,
                                  public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
 
+  int64_t Stride;
+
 public:
   VPVectorEndPointerRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
-                           GEPNoWrapFlags GEPFlags, DebugLoc DL)
+                           int64_t Stride, GEPNoWrapFlags GEPFlags, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorEndPointerSC,
                             ArrayRef<VPValue *>({Ptr, VF}), GEPFlags, DL),
-        IndexedTy(IndexedTy) {}
+        IndexedTy(IndexedTy), Stride(Stride) {
+    assert(Stride != 0 && "Unexpected stride");
+  }
 
   VP_CLASSOF_IMPL(VPDef::VPVectorEndPointerSC)
 
@@ -1739,7 +1743,8 @@ public:
 
   VPVectorEndPointerRecipe *clone() override {
     return new VPVectorEndPointerRecipe(getOperand(0), getVFValue(), IndexedTy,
-                                        getGEPNoWrapFlags(), getDebugLoc());
+                                        Stride, getGEPNoWrapFlags(),
+                                        getDebugLoc());
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

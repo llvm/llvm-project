@@ -2193,12 +2193,12 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
+static Type *getGEPIndexTy(bool IsScalable, bool IsReverse, bool IsUnitStride,
                            unsigned CurrentPart, IRBuilderBase &Builder) {
   // Use i32 for the gep index type when the value is constant,
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  return IsScalable && (IsReverse || CurrentPart > 0)
+  return !IsUnitStride || (IsScalable && (IsReverse || CurrentPart > 0))
              ? DL.getIndexType(Builder.getPtrTy(0))
              : Builder.getInt32Ty();
 }
@@ -2206,18 +2206,21 @@ static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
+  bool IsUnitStride = Stride == 1 || Stride == -1;
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ true,
-                                CurrentPart, Builder);
+                                IsUnitStride, CurrentPart, Builder);
 
   // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
   if (IndexTy != RunTimeVF->getType())
     RunTimeVF = Builder.CreateZExtOrTrunc(RunTimeVF, IndexTy);
-  // NumElt = -CurrentPart * RunTimeVF
+  // NumElt = Stride * CurrentPart * RunTimeVF
   Value *NumElt = Builder.CreateMul(
-      ConstantInt::get(IndexTy, -(int64_t)CurrentPart), RunTimeVF);
-  // LastLane = 1 - RunTimeVF
-  Value *LastLane = Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
+      ConstantInt::get(IndexTy, Stride * (int64_t)CurrentPart), RunTimeVF);
+  // LastLane = Stride * (RunTimeVF - 1)
+  Value *LastLane = Builder.CreateSub(RunTimeVF, ConstantInt::get(IndexTy, 1));
+  if (Stride != 1)
+    LastLane = Builder.CreateMul(ConstantInt::get(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
@@ -2242,7 +2245,7 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
-                                CurrentPart, Builder);
+                                /*IsUnitStride*/ true, CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
