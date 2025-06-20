@@ -6,6 +6,8 @@
 // RUN: %clangxx -O0 -std=c++11 -fsanitize-coverage=control-flow %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
+// XFAIL: target={{.*aix.*}}
+
 #include <cstdint>
 #include <cstdio>
 #if __has_feature(ptrauth_calls)

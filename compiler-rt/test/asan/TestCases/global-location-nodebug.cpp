@@ -10,8 +10,10 @@
 
 /// Solaris ld -S has different semantics, so enforce -fuse-ld= for
 /// configurations that default to GNU ld.
-// XFAIL: target={{.*solaris.*}}
+/// AIX ld -S has different semnatics.
+// XFAIL: target={{.*solaris.*|.*aix.*}}
 // XFAIL: msvc
+
 // CHECK: AddressSanitizer: global-buffer-overflow
 // CLASS_STATIC-NO-G: 0x{{.*}} is located 4 bytes after global variable '{{.*}}C::array{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
 // GLOB-NO-G: 0x{{.*}} is located 4 bytes after global variable '{{.*}}global{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
