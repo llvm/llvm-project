@@ -32,6 +32,7 @@ enum Value {
   SGPRSpill = 1,
   ScalableVector = 2,
   WasmLocal = 3,
+  ScalablePredVector = 4,
   NoAlloc = 255
 };
 }
