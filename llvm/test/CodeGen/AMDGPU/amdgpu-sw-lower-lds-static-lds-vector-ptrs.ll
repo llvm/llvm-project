@@ -6,8 +6,8 @@
 @lds_var2 = internal addrspace(3) global i32 poison
 
 ;.
-; CHECK: @llvm.amdgcn.sw.lds.example = internal addrspace(3) global ptr poison, no_sanitize_address, align 4, !absolute_symbol [[META0:![0-9]+]]
-; CHECK: @llvm.amdgcn.sw.lds.example.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.example.md.type { %llvm.amdgcn.sw.lds.example.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.example.md.item { i32 32, i32 4, i32 32 }, %llvm.amdgcn.sw.lds.example.md.item { i32 64, i32 4, i32 32 } }, no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.example = internal addrspace(3) global ptr poison, align 4, !absolute_symbol [[META0:![0-9]+]]
+; CHECK: @llvm.amdgcn.sw.lds.example.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.example.md.type { %llvm.amdgcn.sw.lds.example.md.item { i32 0, i32 8, i32 8 }, %llvm.amdgcn.sw.lds.example.md.item { i32 8, i32 4, i32 4 }, %llvm.amdgcn.sw.lds.example.md.item { i32 12, i32 4, i32 4 } }
 ;.
 define amdgpu_kernel void @example() sanitize_address {
 ; CHECK-LABEL: define amdgpu_kernel void @example(
@@ -25,20 +25,8 @@ define amdgpu_kernel void @example() sanitize_address {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_EXAMPLE_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.example.md, i32 0, i32 2, i32 2), align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress(i32 0)
-; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP13:%.*]] = call ptr addrspace(1) @__ockl_dm_alloc(i64 [[TMP9]])
 ; CHECK-NEXT:    store ptr addrspace(1) [[TMP13]], ptr addrspace(3) @llvm.amdgcn.sw.lds.example, align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 8
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr addrspace(1) [[TMP14]] to i64
-; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP15]], i64 24)
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 36
-; CHECK-NEXT:    [[TMP17:%.*]] = ptrtoint ptr addrspace(1) [[TMP16]] to i64
-; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP17]], i64 28)
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 68
-; CHECK-NEXT:    [[TMP19:%.*]] = ptrtoint ptr addrspace(1) [[TMP18]] to i64
-; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP19]], i64 28)
 ; CHECK-NEXT:    br label %[[ENTRY]]
 ; CHECK:       [[ENTRY]]:
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
@@ -62,10 +50,8 @@ define amdgpu_kernel void @example() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
-; CHECK-NEXT:    [[TMP33:%.*]] = call ptr @llvm.returnaddress(i32 0)
-; CHECK-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP33]] to i64
 ; CHECK-NEXT:    [[TMP35:%.*]] = ptrtoint ptr addrspace(1) [[TMP20]] to i64
-; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP35]], i64 [[TMP34]])
+; CHECK-NEXT:    call void @__ockl_dm_dealloc(i64 [[TMP35]])
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
@@ -87,8 +73,7 @@ entry:
 ;.
 ; CHECK: attributes #[[ATTR0]] = { sanitize_address "amdgpu-lds-size"="8" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 1}
 ; CHECK: [[META1:![0-9]+]] = !{i32 4, !"nosanitize_address", i32 1}
