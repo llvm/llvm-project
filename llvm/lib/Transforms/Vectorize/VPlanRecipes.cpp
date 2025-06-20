@@ -459,8 +459,10 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
     return 2;
   case Instruction::Select:
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindLastIVResult:
+  case VPInstruction::ReductionStartVector:
     return 3;
+  case VPInstruction::ComputeFindLastIVResult:
+    return 4;
   case Instruction::Call:
   case Instruction::GetElementPtr:
   case Instruction::PHI:
