@@ -355,7 +355,6 @@ using namespace __msan;
 // N.B. Only [shadow, shadow+size) is defined. shadow is *not* a pointer into
 // an MSan shadow region.
 static void print_shadow_value(void *shadow, u64 size) {
-  Printf("\n");
   Printf("Shadow value (%llu byte%s):", size, size == 1 ? "" : "s");
   for (unsigned int i = 0; i < size; i++) {
     if (i % 4 == 0)
@@ -377,9 +376,9 @@ static void print_shadow_value(void *shadow, u64 size) {
     GET_CALLER_PC_BP;                                \
                                                      \
     if (UNLIKELY(s)) {                               \
-      PrintWarningWithOrigin(pc, bp, o);             \
       if (Verbosity() >= 1)                          \
         print_shadow_value((void *)(&s), sizeof(s)); \
+      PrintWarningWithOrigin(pc, bp, o);             \
       if (__msan::flags()->halt_on_error) {          \
         Printf("Exiting\n");                         \
         Die();                                       \
@@ -406,9 +405,9 @@ void __msan_maybe_warning_N(void *shadow, u64 size, u32 o) {
   }
 
   if (UNLIKELY(!allZero)) {
-    PrintWarningWithOrigin(pc, bp, o);
     if (Verbosity() >= 1)
       print_shadow_value(shadow, size);
+    PrintWarningWithOrigin(pc, bp, o);
     if (__msan::flags()->halt_on_error) {
       Printf("Exiting\n");
       Die();
