@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
@@ -158,6 +159,15 @@ public:
       const CXXRecordDecl *derivedClass,
       llvm::iterator_range<CastExpr::path_const_iterator> path);
 
+  /// Get the CIR attributes and calling convention to use for a particular
+  /// function type.
+  ///
+  /// \param calleeInfo - The callee information these attributes are being
+  /// constructed for. If valid, the attributes applied to this decl may
+  /// contribute to the function attributes and calling convention.
+  void constructAttributeList(CIRGenCalleeInfo calleeInfo,
+                              cir::SideEffect &sideEffect);
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -300,6 +310,10 @@ public:
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
+
+  /// Given a builtin id for a function like "__builtin_fabsf", return a
+  /// Function* for "fabsf".
+  cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);

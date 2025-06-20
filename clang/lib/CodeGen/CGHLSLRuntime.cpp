@@ -375,6 +375,7 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
   addSPIRVBuiltinDecoration(GV, BuiltInID);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
 }
 
@@ -468,14 +469,6 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr))
       addRootSignature(RSAttr->getSignatureDecl()->getRootElements(), EntryFn,
                        M);
-  }
-}
-
-void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
-                                              llvm::Function *Fn) {
-  if (FD->isInExportDeclContext()) {
-    const StringRef ExportAttrKindStr = "hlsl.export";
-    Fn->addFnAttr(ExportAttrKindStr);
   }
 }
 

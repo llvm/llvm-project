@@ -396,6 +396,8 @@ namespace {
     bool PromoteLoad(SDValue Op);
 
     SDValue foldShiftToAvg(SDNode *N);
+    // Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+    SDValue foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT);
 
     SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
                                 SDValue RHS, SDValue True, SDValue False,
@@ -7204,6 +7206,37 @@ static SDValue foldLogicTreeOfShifts(SDNode *N, SDValue LeftHand,
   return DAG.getNode(LogicOpcode, DL, VT, CombinedShifts, W);
 }
 
+/// Fold "masked merge" expressions like `(m & x) | (~m & y)` and its DeMorgan
+/// variant `(~m | x) & (m | y)` into the equivalent `((x ^ y) & m) ^ y)`
+/// pattern. This is typically a better representation for targets without a
+/// fused "and-not" operation.
+static SDValue foldMaskedMerge(SDNode *Node, SelectionDAG &DAG,
+                               const TargetLowering &TLI, const SDLoc &DL) {
+  // Note that masked-merge variants using XOR or ADD expressions are
+  // normalized to OR by InstCombine so we only check for OR or AND.
+  assert((Node->getOpcode() == ISD::OR || Node->getOpcode() == ISD::AND) &&
+         "Must be called with ISD::OR or ISD::AND node");
+
+  // If the target supports and-not, don't fold this.
+  if (TLI.hasAndNot(SDValue(Node, 0)))
+    return SDValue();
+
+  SDValue M, X, Y;
+
+  if (sd_match(Node,
+               m_Or(m_OneUse(m_And(m_OneUse(m_Not(m_Value(M))), m_Value(Y))),
+                    m_OneUse(m_And(m_Deferred(M), m_Value(X))))) ||
+      sd_match(Node,
+               m_And(m_OneUse(m_Or(m_OneUse(m_Not(m_Value(M))), m_Value(X))),
+                     m_OneUse(m_Or(m_Deferred(M), m_Value(Y)))))) {
+    EVT VT = M.getValueType();
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, X, Y);
+    SDValue And = DAG.getNode(ISD::AND, DL, VT, Xor, M);
+    return DAG.getNode(ISD::XOR, DL, VT, And, Y);
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -7541,6 +7574,12 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return DAG.getNode(ISD::AND, DL, VT, X,
                          DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y, Z), VT));
 
+  // Fold (and X, (add (not Y), Z)) -> (and X, (not (sub Y, Z)))
+  // Fold (and X, (sub (not Y), Z)) -> (and X, (not (add Y, Z)))
+  if (TLI.hasAndNot(SDValue(N, 0)))
+    if (SDValue Folded = foldBitwiseOpWithNeg(N, DL, VT))
+      return Folded;
+
   // Fold (and (srl X, C), 1) -> (srl X, BW-1) for signbit extraction
   // If we are shifting down an extended sign bit, see if we can simplify
   // this to shifting the MSB directly to expose further simplifications.
@@ -7642,6 +7681,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // folding
   if (LegalOperations || VT.isVector())
     if (SDValue R = foldLogicTreeOfShifts(N, N0, N1, DAG))
+      return R;
+
+  if (VT.isScalarInteger() && VT != MVT::i1)
+    if (SDValue R = foldMaskedMerge(N, DAG, TLI, DL))
       return R;
 
   return SDValue();
@@ -8125,32 +8168,6 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
     }
   }
 
-  return SDValue();
-}
-
-/// Fold "masked merge" expressions like `(m & x) | (~m & y)` into the
-/// equivalent `((x ^ y) & m) ^ y)` pattern.
-/// This is typically a better representation for targets without a fused
-/// "and-not" operation.
-static SDValue foldMaskedMerge(SDNode *Node, SelectionDAG &DAG,
-                               const TargetLowering &TLI, const SDLoc &DL) {
-  // Note that masked-merge variants using XOR or ADD expressions are
-  // normalized to OR by InstCombine so we only check for OR.
-  assert(Node->getOpcode() == ISD::OR && "Must be called with ISD::OR node");
-
-  // If the target supports and-not, don't fold this.
-  if (TLI.hasAndNot(SDValue(Node, 0)))
-    return SDValue();
-
-  SDValue M, X, Y;
-  if (sd_match(Node,
-               m_Or(m_OneUse(m_And(m_OneUse(m_Not(m_Value(M))), m_Value(Y))),
-                    m_OneUse(m_And(m_Deferred(M), m_Value(X)))))) {
-    EVT VT = M.getValueType();
-    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, X, Y);
-    SDValue And = DAG.getNode(ISD::AND, DL, VT, Xor, M);
-    return DAG.getNode(ISD::XOR, DL, VT, And, Y);
-  }
   return SDValue();
 }
 
@@ -11252,19 +11269,13 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
   if (N->getOpcode() == ISD::TRUNCATE)
     N = N->getOperand(0).getNode();
 
-  if (N->getOpcode() != ISD::ABS)
-    return SDValue();
-
   EVT VT = N->getValueType(0);
-  SDValue AbsOp1 = N->getOperand(0);
   SDValue Op0, Op1;
 
-  if (AbsOp1.getOpcode() != ISD::SUB)
+  if (!sd_match(N, m_Abs(m_Sub(m_Value(Op0), m_Value(Op1)))))
     return SDValue();
 
-  Op0 = AbsOp1.getOperand(0);
-  Op1 = AbsOp1.getOperand(1);
-
+  SDValue AbsOp0 = N->getOperand(0);
   unsigned Opc0 = Op0.getOpcode();
 
   // Check if the operands of the sub are (zero|sign)-extended.
@@ -11274,7 +11285,7 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
        Opc0 != ISD::SIGN_EXTEND_INREG)) {
     // fold (abs (sub nsw x, y)) -> abds(x, y)
     // Don't fold this for unsupported types as we lose the NSW handling.
-    if (AbsOp1->getFlags().hasNoSignedWrap() && hasOperation(ISD::ABDS, VT) &&
+    if (AbsOp0->getFlags().hasNoSignedWrap() && hasOperation(ISD::ABDS, VT) &&
         TLI.preferABDSToABSWithNSW(VT)) {
       SDValue ABD = DAG.getNode(ISD::ABDS, DL, VT, Op0, Op1);
       return DAG.getZExtOrTrunc(ABD, DL, SrcVT);
@@ -11650,6 +11661,22 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N) {
     return SDValue();
 
   return DAG.getNode(FloorISD, SDLoc(N), N->getValueType(0), {A, B});
+}
+
+SDValue DAGCombiner::foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT) {
+  unsigned Opc = N->getOpcode();
+  SDValue X, Y, Z;
+  if (sd_match(
+          N, m_BitwiseLogic(m_Value(X), m_Add(m_Not(m_Value(Y)), m_Value(Z)))))
+    return DAG.getNode(Opc, DL, VT, X,
+                       DAG.getNOT(DL, DAG.getNode(ISD::SUB, DL, VT, Y, Z), VT));
+
+  if (sd_match(N, m_BitwiseLogic(m_Value(X), m_Sub(m_OneUse(m_Not(m_Value(Y))),
+                                                   m_Value(Z)))))
+    return DAG.getNode(Opc, DL, VT, X,
+                       DAG.getNOT(DL, DAG.getNode(ISD::ADD, DL, VT, Y, Z), VT));
+
+  return SDValue();
 }
 
 /// Generate Min/Max node
@@ -15712,8 +15739,12 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       N0.getOpcode() == ISD::SIGN_EXTEND ||
       N0.getOpcode() == ISD::ANY_EXTEND) {
     // if the source is smaller than the dest, we still need an extend.
-    if (N0.getOperand(0).getValueType().bitsLT(VT))
-      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0));
+    if (N0.getOperand(0).getValueType().bitsLT(VT)) {
+      SDNodeFlags Flags;
+      if (N0.getOpcode() == ISD::ZERO_EXTEND)
+        Flags.setNonNeg(N0->getFlags().hasNonNeg());
+      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0), Flags);
+    }
     // if the source is larger than the dest, than we just need the truncate.
     if (N0.getOperand(0).getValueType().bitsGT(VT))
       return DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
