@@ -13,16 +13,15 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define i16 @test_bitcast_2xi8_i16(<2 x i8> %a) {
 ; CHECK-LABEL: test_bitcast_2xi8_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_bitcast_2xi8_i16_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_bitcast_2xi8_i16_param_0];
+; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; CHECK-NEXT:    shl.b16 %rs3, %rs2, 8;
-; CHECK-NEXT:    and.b16 %rs4, %rs1, 255;
-; CHECK-NEXT:    or.b16 %rs5, %rs4, %rs3;
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs5;
+; CHECK-NEXT:    or.b16 %rs4, %rs1, %rs3;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %res = bitcast <2 x i8> %a to i16

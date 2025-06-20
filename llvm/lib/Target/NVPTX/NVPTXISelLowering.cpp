@@ -370,7 +370,7 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
       } else if (EltVT.getSimpleVT() == MVT::i8 && NumElts == 2) {
         // v2i8 is promoted to v2i16
         NumElts = 1;
-        EltVT = MVT::v2i16;
+        EltVT = MVT::v2i8;
       }
       for (unsigned j = 0; j != NumElts; ++j) {
         ValueVTs.push_back(EltVT);
@@ -3373,10 +3373,6 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       }
       InVals.push_back(P);
     } else {
-      bool aggregateIsPacked = false;
-      if (StructType *STy = dyn_cast<StructType>(Ty))
-        aggregateIsPacked = STy->isPacked();
-
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
       ComputePTXValueVTs(*this, DL, Ty, VTs, &Offsets, 0);
@@ -3403,14 +3399,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
         SDValue VecAddr = DAG.getObjectPtrOffset(
             dl, ArgSymbol, TypeSize::getFixed(Offsets[I]));
 
-        const MaybeAlign PartAlign = [&]() -> MaybeAlign {
-          if (aggregateIsPacked)
-            return Align(1);
-          if (NumElts != 1)
-            return std::nullopt;
-          Align PartAlign = DAG.getEVTAlign(EltVT);
-          return commonAlignment(PartAlign, Offsets[I]);
-        }();
+        const MaybeAlign PartAlign = commonAlignment(ArgAlign, Offsets[I]);
         SDValue P =
             DAG.getLoad(VecVT, dl, Root, VecAddr,
                         MachinePointerInfo(ADDRESS_SPACE_PARAM), PartAlign,
@@ -3422,14 +3411,14 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           SDValue Elt = DAG.getNode(LoadVT.isVector() ? ISD::EXTRACT_SUBVECTOR
                                                       : ISD::EXTRACT_VECTOR_ELT,
                                     dl, LoadVT, P,
-                                    DAG.getIntPtrConstant(J * PackingAmt, dl));
+                                    DAG.getVectorIdxConstant(J * PackingAmt, dl));
 
           // Extend or truncate the element if necessary (e.g. an i8 is loaded
           // into an i16 register)
           const EVT ExpactedVT = ArgIns[I + J].VT;
-          assert((Elt.getValueType().bitsEq(ExpactedVT) ||
-                  (ExpactedVT.isScalarInteger() &&
-                   Elt.getValueType().isScalarInteger())) &&
+          assert((Elt.getValueType() == ExpactedVT ||
+                  (ExpactedVT.isInteger() &&
+                   Elt.getValueType().isInteger())) &&
                  "Non-integer argument type size mismatch");
           if (ExpactedVT.bitsGT(Elt.getValueType()))
             Elt = DAG.getNode(getExtOpcode(ArgIns[I + J].Flags), dl, ExpactedVT,
