@@ -7364,17 +7364,14 @@ public:
                               ArrayRef<Expr *> SubExprs);
   static RecoveryExpr *CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs);
 
-  ArrayRef<Expr *> subExpressions() {
-    auto *B = getTrailingObjects<Expr *>();
-    return llvm::ArrayRef(B, B + NumExprs);
-  }
+  ArrayRef<Expr *> subExpressions() { return getTrailingObjects(NumExprs); }
 
   ArrayRef<const Expr *> subExpressions() const {
     return const_cast<RecoveryExpr *>(this)->subExpressions();
   }
 
   child_range children() {
-    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects());
     return child_range(B, B + NumExprs);
   }
 
