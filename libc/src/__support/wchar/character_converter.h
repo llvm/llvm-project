@@ -26,7 +26,6 @@ public:
   CharacterConverter(mbstate *mbstate);
 
   void clear();
-  bool isComplete();
   bool isFull();
   bool isEmpty();
 
