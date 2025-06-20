@@ -22,6 +22,7 @@ class Module;
 class ModulePass;
 class Pass;
 class raw_ostream;
+class TargetMachine;
 
 /// Create and return a pass that writes the module to the specified
 /// ostream. Note that this pass is designed for use with the legacy pass
@@ -31,7 +32,8 @@ class raw_ostream;
 /// reproduced when deserialized.
 LLVM_ABI ModulePass *
 createBitcodeWriterPass(raw_ostream &Str,
-                        bool ShouldPreserveUseListOrder = false);
+                        bool ShouldPreserveUseListOrder = false,
+                        const TargetMachine *TM = nullptr);
 
 /// Check whether a pass is a BitcodeWriterPass.
 LLVM_ABI bool isBitcodeWriterPass(Pass *P);
@@ -45,6 +47,7 @@ class BitcodeWriterPass : public PassInfoMixin<BitcodeWriterPass> {
   bool ShouldPreserveUseListOrder;
   bool EmitSummaryIndex;
   bool EmitModuleHash;
+  const TargetMachine *TM;
 
 public:
   /// Construct a bitcode writer pass around a particular output stream.
@@ -57,9 +60,11 @@ public:
   explicit BitcodeWriterPass(raw_ostream &OS,
                              bool ShouldPreserveUseListOrder = false,
                              bool EmitSummaryIndex = false,
-                             bool EmitModuleHash = false)
+                             bool EmitModuleHash = false,
+                             const TargetMachine *TM = nullptr)
       : OS(OS), ShouldPreserveUseListOrder(ShouldPreserveUseListOrder),
-  EmitSummaryIndex(EmitSummaryIndex), EmitModuleHash(EmitModuleHash) {}
+        EmitSummaryIndex(EmitSummaryIndex), EmitModuleHash(EmitModuleHash),
+        TM(TM) {}
 
   /// Run the bitcode writer pass, and output the module to the selected
   /// output stream.
