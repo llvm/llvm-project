@@ -35,7 +35,7 @@ define i64 @test(i32 noundef signext %c, i32 noundef signext %d) {
 ; PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
 ; PIC-NEXT:    ld a0, 0(a0)
 ; PIC-NEXT:    mul a0, a1, a0
-; PIC-NEXT:    ori a0, a0, 127
+; PIC-NEXT:    addi a0, a0, 127
 ; PIC-NEXT:    mul a0, a1, a0
 ; PIC-NEXT:  .Lpcrel_hi1:
 ; PIC-NEXT:    auipc a2, %pcrel_hi(.LCPI0_1)
