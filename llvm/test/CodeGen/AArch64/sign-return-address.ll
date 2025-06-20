@@ -149,6 +149,92 @@ define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstac
   ret i32 %call
 }
 
+; By default, pac-ret hardening respects shrink-wrapping optimization.
+define void @shrink_wrap_sign_non_leaf(i32 %x, i32 %cond) "sign-return-address"="non-leaf" {
+; COMPAT-LABEL: shrink_wrap_sign_non_leaf:
+; COMPAT:       // %bb.0: // %entry
+; COMPAT-NEXT:    cbz w1, .LBB8_2
+; COMPAT-NEXT:  // %bb.1: // %common.ret
+; COMPAT-NEXT:    ret
+; COMPAT-NEXT:  .LBB8_2: // %if.then
+; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_negate_ra_state
+; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; COMPAT-NEXT:    .cfi_offset w30, -16
+; COMPAT-NEXT:    bl foo
+; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; COMPAT-NEXT:    hint #29
+; COMPAT-NEXT:    ret
+;
+; V83A-LABEL: shrink_wrap_sign_non_leaf:
+; V83A:       // %bb.0: // %entry
+; V83A-NEXT:    cbz w1, .LBB8_2
+; V83A-NEXT:  // %bb.1: // %common.ret
+; V83A-NEXT:    ret
+; V83A-NEXT:  .LBB8_2: // %if.then
+; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
+; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_def_cfa_offset 16
+; V83A-NEXT:    .cfi_offset w30, -16
+; V83A-NEXT:    bl foo
+; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; V83A-NEXT:    retaa
+entry:
+  %cond.bool = icmp eq i32 %cond, 0
+  br i1 %cond.bool, label %if.then, label %if.else
+if.then:
+  %call = call i32 @foo(i32 %x)
+  ret void
+if.else:
+  ret void
+}
+
+; When "+leaf" is specified to harden everything, pac-ret hardens the entire
+; function, ignoring shrink-wrapping.
+define void @shrink_wrap_sign_all(i32 %x, i32 %cond) "sign-return-address"="all" {
+; COMPAT-LABEL: shrink_wrap_sign_all:
+; COMPAT:       // %bb.0: // %entry
+; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_negate_ra_state
+; COMPAT-NEXT:    cbz w1, .LBB9_2
+; COMPAT-NEXT:  // %bb.1: // %common.ret
+; COMPAT-NEXT:    hint #29
+; COMPAT-NEXT:    ret
+; COMPAT-NEXT:  .LBB9_2: // %if.then
+; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; COMPAT-NEXT:    .cfi_offset w30, -16
+; COMPAT-NEXT:    bl foo
+; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; COMPAT-NEXT:    hint #29
+; COMPAT-NEXT:    ret
+;
+; V83A-LABEL: shrink_wrap_sign_all:
+; V83A:       // %bb.0: // %entry
+; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
+; V83A-NEXT:    cbz w1, .LBB9_2
+; V83A-NEXT:  // %bb.1: // %common.ret
+; V83A-NEXT:    retaa
+; V83A-NEXT:  .LBB9_2: // %if.then
+; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_def_cfa_offset 16
+; V83A-NEXT:    .cfi_offset w30, -16
+; V83A-NEXT:    bl foo
+; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; V83A-NEXT:    retaa
+entry:
+  %cond.bool = icmp eq i32 %cond, 0
+  br i1 %cond.bool, label %if.then, label %if.else
+if.then:
+  %call = call i32 @foo(i32 %x)
+  ret void
+if.else:
+  ret void
+}
+
 define i32 @leaf_sign_all_v83(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" {
 ; CHECK-LABEL: leaf_sign_all_v83:
 ; CHECK:       // %bb.0:
