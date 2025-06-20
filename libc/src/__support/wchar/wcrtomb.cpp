@@ -26,12 +26,8 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
 
   CharacterConverter cr(ps);
 
-  // when s is nullptr, this is equivalent to wcrtomb(buf, L'\0', ps)
-  char buf[sizeof(wchar_t) / sizeof(char)];
-  if (s == nullptr) {
-    s = buf;
-    wc = L'\0';
-  }
+  if (s == nullptr)
+    return Error(-1);
 
   int status = cr.push(static_cast<char32_t>(wc));
   if (status != 0)
@@ -41,7 +37,7 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
   while (!cr.isComplete()) {
     auto utf8 = cr.pop_utf8(); // can never fail as long as the push succeeded
     LIBC_ASSERT(utf8.has_value());
-    
+
     *s = utf8.value();
     s++;
     count++;
