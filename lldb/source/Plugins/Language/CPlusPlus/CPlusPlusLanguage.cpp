@@ -378,7 +378,7 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
   if (!info_or_err) {
     LLDB_LOG_ERROR(
         GetLog(LLDBLog::Language), info_or_err.takeError(),
-        "Failed to handle ${function.basename} frame-format variable: {0}");
+        "Failed to handle ${{function.basename}} frame-format variable: {0}");
     return false;
   }
   auto [demangled_name, info] = *info_or_err;
@@ -1917,7 +1917,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     if (!scope_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), scope_or_err.takeError(),
-          "Failed to handle ${function.scope} frame-format variable: {0}");
+          "Failed to handle ${{function.scope}} frame-format variable: {0}");
       return false;
     }
 
@@ -1931,7 +1931,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     if (!name_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), name_or_err.takeError(),
-          "Failed to handle ${function.basename} frame-format variable: {0}");
+          "Failed to handle ${{function.basename}} frame-format variable: {0}");
       return false;
     }
 
@@ -1945,7 +1945,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     if (!template_args_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language),
                      template_args_or_err.takeError(),
-                     "Failed to handle ${function.template-arguments} "
+                     "Failed to handle ${{function.template-arguments}} "
                      "frame-format variable: {0}");
       return false;
     }
@@ -1982,7 +1982,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     auto return_rhs_or_err = GetDemangledReturnTypeRHS(sc);
     if (!return_rhs_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_rhs_or_err.takeError(),
-                     "Failed to handle ${function.return-right} frame-format "
+                     "Failed to handle ${{function.return-right}} frame-format "
                      "variable: {0}");
       return false;
     }
@@ -1995,7 +1995,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     auto return_lhs_or_err = GetDemangledReturnTypeLHS(sc);
     if (!return_lhs_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_lhs_or_err.takeError(),
-                     "Failed to handle ${function.return-left} frame-format "
+                     "Failed to handle ${{function.return-left}} frame-format "
                      "variable: {0}");
       return false;
     }
@@ -2009,7 +2009,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     if (!quals_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), quals_or_err.takeError(),
-          "Failed to handle ${function.qualifiers} frame-format variable: {0}");
+          "Failed to handle ${{function.qualifiers}} frame-format variable: {0}");
       return false;
     }
 
@@ -2022,7 +2022,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     if (!suffix_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), suffix_or_err.takeError(),
-          "Failed to handle ${function.suffix} frame-format variable: {0}");
+          "Failed to handle ${{function.suffix}} frame-format variable: {0}");
       return false;
     }
 
