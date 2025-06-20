@@ -89,18 +89,18 @@ private:
 };
 
 /// RAII object calling stackPush/stackPop on construction/destruction.
-/// HOST_CLASS could be a StateStack or some other class which forwards calls to
+/// HostClass could be a StateStack or some other class which forwards calls to
 /// one.
-template <typename T, typename HOST_CLASS>
+template <typename T, typename HostClass = StateStack>
 struct SaveStateStack {
   template <typename... Args>
-  explicit SaveStateStack(HOST_CLASS &host, Args &&...args) : host(host) {
+  explicit SaveStateStack(HostClass &host, Args &&...args) : host(host) {
     host.template stackPush<T>(std::forward<Args>(args)...);
   }
   ~SaveStateStack() { host.stackPop(); }
 
 private:
-  HOST_CLASS &host;
+  HostClass &host;
 };
 
 } // namespace mlir
