@@ -32,18 +32,20 @@ void __global__ copy_param_to_global(S *global, S param) {
 // PTX:        st.global.b32
 }
 
-// PTX-LABEL: .entry _Z19copy_param_to_localPU3AS51SS_(
-void __global__ copy_param_to_local(__attribute__((address_space(5))) S *local,
-                                    S param) {
-  __builtin_memcpy(local, &param, sizeof(S));
+// PTX-LABEL: .func  (.param .b32 func_retval0) _Z19copy_param_to_local1Si(
+int __device__ copy_param_to_local(S param, int i) {
+  S local;
+  __builtin_memcpy(&local, &param, sizeof(S));
 // PTX:        ld.param.b32
 // PTX:        st.local.b32
+  return local.data[i];
 }
 
-// PTX-LABEL: .func _Z21copy_local_to_genericP1SPU3AS5S_(
-void __device__ copy_local_to_generic(S *generic,
-                                     __attribute__((address_space(5))) S *src) {
-  __builtin_memcpy(generic, src, sizeof(S));
+// PTX-LABEL: .func _Z21copy_local_to_genericP1Sii(
+void __device__ copy_local_to_generic(S *generic, int i, int j) {
+  S src = {{0, i, 2*i, 3*i, 4*i, 5*i, 6*i, 7*i}};
+  src.data[j] = src.data[j+1];
+  __builtin_memcpy(generic, &src, sizeof(S));
 // PTX:        ld.local.b32
 // PTX:        st.b32
 }

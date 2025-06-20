@@ -1,5 +1,6 @@
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_60 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 | %ptxas -arch=sm_60 - %}
+; RUN: llc < %s -mcpu=sm_60 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mcpu=sm_60 | %ptxas -arch=sm_60 - %}
+target triple = "nvptx64-nvidia-nvcl"
 
 %struct.Large = type { [16 x double] }
 
