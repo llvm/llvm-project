@@ -2319,7 +2319,8 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
     getLexer().Lex();
   } while (parseOptionalToken(AsmToken::Comma));
 
-  if (!getLexer().is(AsmToken::EndOfStatement) || State == VTypeState::SeenNothingYet)
+  if (!getLexer().is(AsmToken::EndOfStatement) ||
+      State == VTypeState::SeenNothingYet)
     return generateVTypeError(S);
 
   RISCVVType::VLMUL VLMUL = RISCVVType::encodeLMUL(Lmul, Fractional);
