@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTCOMPLEXTOROCDL
@@ -21,36 +20,38 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-struct FloatTypeResolver {
-  std::optional<bool> operator()(Type type) const {
-    auto elementType = cast<FloatType>(type);
-    if (!isa<Float32Type, Float64Type>(elementType))
-      return {};
-    return elementType.getIntOrFloatBitWidth() == 64;
-  }
-};
 
-template <typename Op, typename TypeResolver = FloatTypeResolver>
-struct ScalarOpToROCDLCall : public OpRewritePattern<Op> {
+template <typename Op>
+// Pattern to convert Complex ops to ROCDL function calls.
+struct ComplexOpToROCDLCall : public OpRewritePattern<Op> {
   using OpRewritePattern<Op>::OpRewritePattern;
-  ScalarOpToROCDLCall(MLIRContext *context, StringRef floatFunc,
-                      StringRef doubleFunc, PatternBenefit benefit)
+  ComplexOpToROCDLCall(MLIRContext *context, StringRef floatFunc,
+                       StringRef doubleFunc, PatternBenefit benefit = 1)
       : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
         doubleFunc(doubleFunc) {}
 
   LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final {
-    auto module = SymbolTable::getNearestSymbolTable(op);
-    auto isDouble = TypeResolver()(op.getType());
-    if (!isDouble.has_value())
+    Operation *symTable = SymbolTable::getNearestSymbolTable(op);
+    Type resType = op.getType();
+    if (auto complexType = dyn_cast<ComplexType>(resType))
+      resType = complexType.getElementType();
+    FloatType floatTy = dyn_cast<FloatType>(resType);
+    if (!floatTy)
       return failure();
 
-    auto name = *isDouble ? doubleFunc : floatFunc;
+    StringRef name;
+    if (floatTy.isF64())
+      name = doubleFunc;
+    else if (floatTy.isF32())
+      name = floatFunc;
+    else
+      return failure();
 
     auto opFunc = dyn_cast_or_null<SymbolOpInterface>(
-        SymbolTable::lookupSymbolIn(module, name));
+        SymbolTable::lookupSymbolIn(symTable, name));
     if (!opFunc) {
       OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(&module->getRegion(0).front());
+      rewriter.setInsertionPointToStart(&symTable->getRegion(0).front());
       auto funcTy = FunctionType::get(
           rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
       opFunc =
@@ -67,10 +68,12 @@ private:
 };
 } // namespace
 
-void mlir::populateComplexToROCDLConversionPatterns(RewritePatternSet &patterns,
-                                                    PatternBenefit benefit) {
-  patterns.add<ScalarOpToROCDLCall<complex::AbsOp>>(
-      patterns.getContext(), "__ocml_cabs_f32", "__ocml_cabs_f64", benefit);
+void mlir::populateComplexToROCDLConversionPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ComplexOpToROCDLCall<complex::AbsOp>>(
+      patterns.getContext(), "__ocml_cabs_f32", "__ocml_cabs_f64");
+  patterns.add<ComplexOpToROCDLCall<complex::ExpOp>>(
+      patterns.getContext(), "__ocml_cexp_f32", "__ocml_cexp_f64");
 }
 
 namespace {
@@ -81,14 +84,14 @@ struct ConvertComplexToROCDLPass
 } // namespace
 
 void ConvertComplexToROCDLPass::runOnOperation() {
-  auto module = getOperation();
+  Operation *op = getOperation();
 
   RewritePatternSet patterns(&getContext());
-  populateComplexToROCDLConversionPatterns(patterns, /*benefit=*/1);
+  populateComplexToROCDLConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
-  target.addIllegalOp<complex::AbsOp>();
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  target.addIllegalOp<complex::AbsOp, complex::ExpOp>();
+  if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
 }

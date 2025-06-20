@@ -4146,7 +4146,7 @@ public:
     // conversions that affect the ModuleOp, e.g. create new
     // function operations in it. We have to run such conversions
     // as passes here.
-    mlir::OpPassManager mathConvertionPM("builtin.module");
+    mlir::OpPassManager mathConversionPM("builtin.module");
 
     bool isAMDGCN = fir::getTargetTriple(mod).isAMDGCN();
     // If compiling for AMD target some math operations must be lowered to AMD
@@ -4154,8 +4154,8 @@ public:
     // is handled in the mathToLLVM conversion. The lowering to libm calls is
     // not needed since all math operations are handled this way.
     if (isAMDGCN) {
-      mathConvertionPM.addPass(mlir::createConvertMathToROCDL());
-      mathConvertionPM.addPass(mlir::createConvertComplexToROCDL());
+      mathConversionPM.addPass(mlir::createConvertMathToROCDL());
+      mathConversionPM.addPass(mlir::createConvertComplexToROCDL());
     }
 
     // Convert math::FPowI operations to inline implementation
@@ -4163,7 +4163,7 @@ public:
     // it will be lowered to LLVM intrinsic operation by a later conversion.
     mlir::ConvertMathToFuncsOptions mathToFuncsOptions{};
     mathToFuncsOptions.minWidthOfFPowIExponent = 33;
-    mathConvertionPM.addPass(
+    mathConversionPM.addPass(
         mlir::createConvertMathToFuncs(mathToFuncsOptions));
 
     mlir::ConvertComplexToStandardPassOptions complexToStandardOptions{};
@@ -4176,15 +4176,15 @@ public:
       complexToStandardOptions.complexRange =
           mlir::complex::ComplexRangeFlags::improved;
     }
-    mathConvertionPM.addPass(
+    mathConversionPM.addPass(
         mlir::createConvertComplexToStandardPass(complexToStandardOptions));
 
     // Convert Math dialect operations into LLVM dialect operations.
     // There is no way to prefer MathToLLVM patterns over MathToLibm
     // patterns (applied below), so we have to run MathToLLVM conversion here.
-    mathConvertionPM.addNestedPass<mlir::func::FuncOp>(
+    mathConversionPM.addNestedPass<mlir::func::FuncOp>(
         mlir::createConvertMathToLLVMPass());
-    if (mlir::failed(runPipeline(mathConvertionPM, mod)))
+    if (mlir::failed(runPipeline(mathConversionPM, mod)))
       return signalPassFailure();
 
     std::optional<mlir::DataLayout> dl =

@@ -20,8 +20,7 @@ class RewritePatternSet;
 
 /// Populate the given list with patterns that convert from Complex to ROCDL
 /// calls.
-void populateComplexToROCDLConversionPatterns(RewritePatternSet &patterns,
-                                              PatternBenefit benefit);
+void populateComplexToROCDLConversionPatterns(RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_COMPLEXTOROCDL_COMPLEXTOROCDL_H_
