@@ -391,14 +391,13 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
       Mask |= FlagT::DATA_STATIC;
       Mask |= FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
     }
-
-    if (!IsSampler)
-      return (Flags & ~Mask) == FlagT::NONE;
-    return false;
+    return (Flags & ~Mask) == FlagT::NONE;
   }
 
   // When no descriptor flag is set, any data flag is allowed.
-  return (Flags & ~DataFlags) == FlagT::NONE;
+  if (!IsSampler)
+    return (Flags & ~DataFlags) == FlagT::NONE;
+  return (Flags & ~FlagT::NONE) == FlagT::NONE;
 }
 
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
