@@ -1885,7 +1885,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureBVHDualAndBVH8Insts
+   FeatureBVHDualAndBVH8Insts,
+   FeatureRealTrue16Insts
    ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
