@@ -303,16 +303,29 @@ def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 0, VGPR_32:$src, 0, VGPR_32:$inactive, (IMPLICIT_DEF))>;
 
-let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
-  def WAVE_REDUCE_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
-    (ins VSrc_b32: $src, VSrc_b32:$strategy),
-    [(set i32:$sdst, (int_amdgcn_wave_reduce_umin i32:$src, i32:$strategy))]> {
+// clang-format off
+defvar int_amdgcn_wave_reduce_ = "int_amdgcn_wave_reduce_";
+multiclass
+    AMDGPUWaveReducePseudoGenerator<string Op, string DataType> {
+  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
+    def !toupper(Op) #"_PSEUDO_" #DataType
+        : VPseudoInstSI<(outs SGPR_32 : $sdst),
+                        (ins VSrc_b32 : $src, VSrc_b32 : $strategy),
+                        [(set i32 : $sdst, (!cast<AMDGPUWaveReduce>(int_amdgcn_wave_reduce_ #Op) i32 : $src, i32 : $strategy))]> {}
   }
+}
+// clang-format on
 
-  def WAVE_REDUCE_UMAX_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
-    (ins VSrc_b32: $src, VSrc_b32:$strategy),
-    [(set i32:$sdst, (int_amdgcn_wave_reduce_umax i32:$src, i32:$strategy))]> {
-  }
+// Input list : [Operation_name,
+//              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B)]
+defvar Operations = [
+  ["umin", "U32"], ["min", "I32"], ["umax", "U32"], ["max", "I32"],
+  ["add", "I32"], ["sub", "I32"], ["and", "B32"], ["or", "B32"],
+  ["xor", "B32"]
+];
+
+foreach Op = Operations in {
+  defm WAVE_REDUCE_ : AMDGPUWaveReducePseudoGenerator<Op[0], Op[1]>;
 }
 
 let usesCustomInserter = 1, Defs = [VCC] in {
