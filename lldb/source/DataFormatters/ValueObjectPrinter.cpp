@@ -632,6 +632,27 @@ void ValueObjectPrinter::PrintChild(
   }
 }
 
+static uint32_t determineMaxChildren(bool ignore_cap, uint32_t cur_depth,
+                                     TargetSP target_sp) {
+  if (ignore_cap)
+    return UINT32_MAX;
+
+  const auto [max_num_children, max_is_default] =
+      target_sp->GetMaximumNumberOfChildrenToDisplay();
+
+  // Special handling for printing values at the top level (such as variables).
+  // The original default value for target.max-children-count was 256. The
+  // default has since been reduced, to avoid printing too much data. However,
+  // users will naturally have expectations that all children are shown for top
+  // level values. The following code keeps 256 as the max count for top level
+  // values (unless customized).
+  const uint32_t top_level_max_num_childen = 256;
+  if (cur_depth == 0 && max_is_default)
+    return top_level_max_num_childen;
+
+  return max_num_children;
+}
+
 llvm::Expected<uint32_t>
 ValueObjectPrinter::GetMaxNumChildrenToPrint(bool &print_dotdotdot) {
   ValueObject &synth_valobj = GetValueObjectForChildrenGeneration();
@@ -640,10 +661,8 @@ ValueObjectPrinter::GetMaxNumChildrenToPrint(bool &print_dotdotdot) {
     return m_options.m_pointer_as_array.m_element_count;
 
   const uint32_t max_num_children =
-      m_options.m_ignore_cap ? UINT32_MAX
-                             : GetMostSpecializedValue()
-                                   .GetTargetSP()
-                                   ->GetMaximumNumberOfChildrenToDisplay();
+      determineMaxChildren(m_options.m_ignore_cap, m_curr_depth,
+                           GetMostSpecializedValue().GetTargetSP());
   // Ask for one more child than the maximum to see if we should print "...".
   auto num_children_or_err = synth_valobj.GetNumChildren(
       llvm::SaturatingAdd(max_num_children, uint32_t(1)));

@@ -186,7 +186,7 @@ public:
 
   uint32_t GetMaxZeroPaddingInFloatFormat() const;
 
-  uint32_t GetMaximumNumberOfChildrenToDisplay() const;
+  std::pair<uint32_t, bool> GetMaximumNumberOfChildrenToDisplay() const;
 
   /// Get the max depth value, augmented with a bool to indicate whether the
   /// depth is the default.
