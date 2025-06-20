@@ -170,6 +170,13 @@ createSeparateConstOffsetFromGEPPass(bool LowerGEP = false);
 
 //===----------------------------------------------------------------------===//
 //
+// SinkGEPConstOffset - Sink constant offsets down the GEP chain to the tail for
+// reduction of register usage.
+//
+FunctionPass *createSinkGEPConstOffsetPass();
+
+//===----------------------------------------------------------------------===//
+//
 // SpeculativeExecution - Aggressively hoist instructions to enable
 // speculative execution on targets where branches are expensive.
 //
