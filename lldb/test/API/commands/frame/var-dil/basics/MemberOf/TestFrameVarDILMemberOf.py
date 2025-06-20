@@ -41,8 +41,8 @@ class TestFrameVarDILMemberOf(TestBase):
             "frame variable 'sp.x'",
             error=True,
             substrs=[
-                "member reference type 'Sx *' is a pointer; did you mean to use '->'"]
-            ,
+                "member reference type 'Sx *' is a pointer; did you mean to use '->'"
+            ],
         )
 
         # Test for record typedefs.
