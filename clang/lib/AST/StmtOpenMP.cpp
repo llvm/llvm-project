@@ -522,15 +522,15 @@ OMPFuseDirective *OMPFuseDirective::Create(
       NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
-  // The number of top level canonical nests could 
+  // The number of top level canonical nests could
   // not match the total number of generated loops
   // Example:
   // Before fusion:
-  //   for (int i = 0; i < N; ++i)   
-  //     for (int j = 0; j < M; ++j) 
+  //   for (int i = 0; i < N; ++i)
+  //     for (int j = 0; j < M; ++j)
   //       A[i][j] = i + j;
-  //   
-  //   for (int k = 0; k < P; ++k) 
+  //
+  //   for (int k = 0; k < P; ++k)
   //     B[k] = k * 2;
   // Here, NumLoopNests = 2, but NumLoops = 3.
   Dir->setNumGeneratedLoopNests(NumLoopNests);
