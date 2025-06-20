@@ -1767,8 +1767,7 @@ def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
            "%Replaceable{replaceable}|"
-           "%TriviallyCopyable{trivially copyable}|"
-           "%Constructible{constructible with provided types}"
+           "%TriviallyCopyable{trivially copyable}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1780,7 +1779,7 @@ def note_unsatisfied_trait_reason
            "%HasArcLifetime{has an ARC lifetime qualifier}|"
            "%VLA{is a variably-modified type}|"
            "%VBase{has a virtual base %1}|"
-           "%NotScalarOrClass{not %select{a|an array of objects of}1 scalar or "
+           "%NotScalarOrClass{is not %select{a|an array of objects of}1 scalar or "
            "class type}|"
            "%NTRBase{has a non-trivially-relocatable base %1}|"
            "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
@@ -1798,10 +1797,7 @@ def note_unsatisfied_trait_reason
            "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}|"
-           "%FunctionType{is a function type}|"
-           "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%sub{select_special_member_kind}1}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -6267,14 +6263,19 @@ def warn_static_local_in_extern_inline : Warning<
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
 
-def warn_possible_object_duplication_mutable : Warning<
-  "%0 may be duplicated when built into a shared library: "
-  "it is mutable, has hidden visibility, and external linkage">,
-  InGroup<UniqueObjectDuplication>, DefaultIgnore;
-def warn_possible_object_duplication_init : Warning<
-  "initialization of %0 may run twice when built into a shared library: "
-  "it has hidden visibility and external linkage">,
-  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+def warn_possible_object_duplication_mutable
+    : Warning<"%0 may be duplicated when built into a shared library: "
+              "it is mutable, with external linkage and "
+              "%select{hidden visibility|no import/export annotation}1">,
+      InGroup<UniqueObjectDuplication>,
+      DefaultIgnore;
+def warn_possible_object_duplication_init
+    : Warning<"initialization of %0 may run twice when built into a shared "
+              "library: "
+              "it has external linkage and "
+              "%select{hidden visibility|no import/export annotation}1">,
+      InGroup<UniqueObjectDuplication>,
+      DefaultIgnore;
 
 def ext_redefinition_of_typedef : ExtWarn<
   "redefinition of typedef %0 is a C11 feature">,
@@ -12925,6 +12926,10 @@ def err_spirv_enum_not_int : Error<
    "%0{storage class} argument for SPIR-V builtin is not a 32-bits integer">;
 def err_spirv_enum_not_valid : Error<
    "invalid value for %select{storage class}0 argument">;
+
+def err_specialization_const
+    : Error<"variable with 'vk::constant_id' attribute must be a const "
+            "int/float/enum/bool and be initialized with a literal">;
 
 // errors of expect.with.probability
 def err_probability_not_constant_float : Error<

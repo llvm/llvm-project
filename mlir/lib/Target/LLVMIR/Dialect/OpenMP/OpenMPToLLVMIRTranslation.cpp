@@ -2294,8 +2294,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     if (!privateVarOrErr)
       return handleError(privateVarOrErr, *taskOp.getOperation());
 
-    llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+    setInsertPointForPossiblyEmptyBlock(builder);
 
     // TODO: this is a bit of a hack for Fortran character boxes.
     // Character boxes are passed by value into the init region and then the

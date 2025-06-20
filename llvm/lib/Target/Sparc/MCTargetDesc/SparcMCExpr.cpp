@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -21,25 +21,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "sparcmcexpr"
-
-const SparcMCExpr *Sparc::createSpecifierExpr(MCContext &Ctx,
-                                              const MCExpr *Expr, uint16_t S) {
-  return new (Ctx) SparcMCExpr(Expr, S);
-}
-
-const SparcMCExpr *Sparc::createSpecifierExpr(MCContext &Ctx,
-                                              const MCSymbol *Sym, uint16_t S) {
-  return new (Ctx) SparcMCExpr(MCSymbolRefExpr::create(Sym, Ctx), S);
-}
-
-void SparcMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  StringRef S = Sparc::getSpecifierName(specifier);
-  if (!S.empty())
-    OS << '%' << S << '(';
-  getSubExpr()->print(OS, MAI);
-  if (!S.empty())
-    OS << ')';
-}
 
 StringRef Sparc::getSpecifierName(uint16_t S) {
   // clang-format off

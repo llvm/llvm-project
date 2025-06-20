@@ -142,8 +142,8 @@ attributes #0 = { nounwind }
 
 ; GCN: amdpal.pipelines:
 ; GCN-NEXT:  - .registers:
-; GFX8-NEXT:     '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf010a{{$}}
-; GFX9-NEXT:    '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf014a{{$}}
+; SDAG-NEXT:     '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
+; GISEL-NEXT:    '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
 ; GCN-NEXT:      '0x2e13 (COMPUTE_PGM_RSRC2)': 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
@@ -164,13 +164,13 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:      multiple_stack:
 ; GCN-NEXT:        .backend_stack_size: 0x24{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GCN-NEXT:        .sgpr_count:     0x1{{$}}
+; GCN-NEXT:        .sgpr_count:     0x21{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x24{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x3{{$}}
 ; GCN-NEXT:      no_stack:
 ; GCN-NEXT:        .backend_stack_size: 0{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GCN-NEXT:        .sgpr_count:     0x1{{$}}
+; GCN-NEXT:        .sgpr_count:     0x20{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x1{{$}}
 ; GCN-NEXT:      no_stack_call:
@@ -203,7 +203,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:      simple_lds:
 ; GCN-NEXT:        .backend_stack_size: 0{{$}}
 ; GCN-NEXT:        .lds_size:       0x100{{$}}
-; GCN-NEXT:        .sgpr_count:     0x1{{$}}
+; GCN-NEXT:        .sgpr_count:     0x20{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x1{{$}}
 ; GCN-NEXT:      simple_lds_recurse:
@@ -215,7 +215,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:      simple_stack:
 ; GCN-NEXT:        .backend_stack_size: 0x14{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GCN-NEXT:        .sgpr_count:     0x1{{$}}
+; GCN-NEXT:        .sgpr_count:     0x21{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x14{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x2{{$}}
 ; GCN-NEXT:      simple_stack_call:

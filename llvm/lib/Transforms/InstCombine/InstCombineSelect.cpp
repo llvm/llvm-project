@@ -1879,9 +1879,9 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
 
 /// Fold `X Pred C1 ? X BOp C2 : C1 BOp C2` to `min/max(X, C1) BOp C2`.
 /// This allows for better canonicalization.
-static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
-                                           Value *FalseVal,
-                                           IRBuilderBase &Builder) {
+Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
+                                                      Value *TrueVal,
+                                                      Value *FalseVal) {
   Constant *C1, *C2, *C3;
   Value *X;
   CmpPredicate Predicate;
@@ -1945,11 +1945,29 @@ static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
     return nullptr;
   }
 
-  Intrinsic::ID IntrinsicID = getMinMaxIntrinsic(SPF);
-  Value *Intrinsic = Builder.CreateBinaryIntrinsic(IntrinsicID, X, RHS);
-  return IsIntrinsic ? Builder.CreateBinaryIntrinsic(Opcode, Intrinsic, C2)
-                     : Builder.CreateBinOp(Instruction::BinaryOps(Opcode),
-                                           Intrinsic, C2);
+  Intrinsic::ID MinMaxID = getMinMaxIntrinsic(SPF);
+  Value *MinMax = Builder.CreateBinaryIntrinsic(MinMaxID, X, RHS);
+  if (IsIntrinsic)
+    return Builder.CreateBinaryIntrinsic(Opcode, MinMax, C2);
+
+  const auto BinOpc = Instruction::BinaryOps(Opcode);
+  Value *BinOp = Builder.CreateBinOp(BinOpc, MinMax, C2);
+
+  // If we can attach no-wrap flags to the new instruction, do so if the
+  // old instruction had them and C1 BinOp C2 does not overflow.
+  if (Instruction *BinOpInst = dyn_cast<Instruction>(BinOp)) {
+    if (BinOpc == Instruction::Add || BinOpc == Instruction::Sub ||
+        BinOpc == Instruction::Mul) {
+      Instruction *OldBinOp = cast<BinaryOperator>(TrueVal);
+      if (OldBinOp->hasNoSignedWrap() &&
+          willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned=*/true))
+        BinOpInst->setHasNoSignedWrap();
+      if (OldBinOp->hasNoUnsignedWrap() &&
+          willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned=*/false))
+        BinOpInst->setHasNoUnsignedWrap();
+    }
+  }
+  return BinOp;
 }
 
 /// Visit a SelectInst that has an ICmpInst as its first operand.
@@ -2027,7 +2045,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Value *V = foldAbsDiff(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
-  if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal, Builder))
+  if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
@@ -3630,6 +3648,28 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
 
   if (!LHS->getType()->isIntOrIntVectorTy())
     return nullptr;
+
+  // If there is no -1, 0 or 1 at TV, then invert the select statement and try
+  // to canonicalize to one of the forms above
+  if (!isa<Constant>(TV)) {
+    if (!isa<Constant>(FV))
+      return nullptr;
+    Pred = ICmpInst::getInverseCmpPredicate(Pred);
+    std::swap(TV, FV);
+  }
+
+  if (ICmpInst::isNonStrictPredicate(Pred)) {
+    if (Constant *C = dyn_cast<Constant>(RHS)) {
+      auto FlippedPredAndConst =
+          getFlippedStrictnessPredicateAndConstant(Pred, C);
+      if (!FlippedPredAndConst)
+        return nullptr;
+      Pred = FlippedPredAndConst->first;
+      RHS = FlippedPredAndConst->second;
+    } else {
+      return nullptr;
+    }
+  }
 
   // Try to swap operands and the predicate. We need to be careful when doing
   // so because two of the patterns have opposite predicates, so use the

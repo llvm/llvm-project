@@ -243,10 +243,9 @@ define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
 ; CHECK-LABEL: @first_order_recurrence_using_induction(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDUCTION1:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[TMP3]], 0
-; CHECK-NEXT:    [[INDUCTION1]] = add i32 [[TMP3]], 1
+; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-NEXT:    store i32 [[INDUCTION]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], %n.vec
