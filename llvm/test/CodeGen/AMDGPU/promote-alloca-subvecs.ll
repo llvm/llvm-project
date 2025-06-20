@@ -330,6 +330,172 @@ entry:
   ret void
 }
 
+define <2 x ptr addrspace(1)> @test_subvector_ptralloca_8(<2 x ptr addrspace(1)> %val) {
+; CHECK-LABEL: define <2 x ptr addrspace(1)> @test_subvector_ptralloca_8
+; CHECK-SAME: (<2 x ptr addrspace(1)> [[VAL:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[VAL]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <4 x i32> [[TMP2]] to <4 x ptr addrspace(5)>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x ptr addrspace(5)> undef, ptr addrspace(5) [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP5]], ptr addrspace(5) [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP7]], ptr addrspace(5) [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP3]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP9]], ptr addrspace(5) [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x ptr addrspace(5)> poison, ptr addrspace(5) [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x ptr addrspace(5)> [[TMP12]], ptr addrspace(5) [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr addrspace(5)> [[TMP13]], ptr addrspace(5) [[TMP8]], i64 2
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr addrspace(5)> [[TMP14]], ptr addrspace(5) [[TMP10]], i64 3
+; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint <4 x ptr addrspace(5)> [[TMP15]] to <4 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i32> [[TMP16]] to i128
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i128 [[TMP17]] to <2 x i64>
+; CHECK-NEXT:    [[TMP19:%.*]] = inttoptr <2 x i64> [[TMP18]] to <2 x ptr addrspace(1)>
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[TMP19]]
+;
+entry:
+  %stack = alloca [8 x ptr addrspace(5)], align 4, addrspace(5)
+  store <2 x ptr addrspace(1)> %val, ptr addrspace(5) %stack
+  %L = load <2 x ptr addrspace(1)>, ptr addrspace(5) %stack, align 16
+  ret <2 x ptr addrspace(1)> %L
+}
+
+define <2 x ptr addrspace(1)> @test_subvector_ptralloca_4(<2 x ptr addrspace(1)> %val) {
+; CHECK-LABEL: define <2 x ptr addrspace(1)> @test_subvector_ptralloca_4
+; CHECK-SAME: (<2 x ptr addrspace(1)> [[VAL:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[VAL]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <4 x i32> [[TMP2]] to <4 x ptr addrspace(5)>
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[VAL]]
+;
+entry:
+  %stack = alloca [4 x ptr addrspace(5)], align 4, addrspace(5)
+  store <2 x ptr addrspace(1)> %val, ptr addrspace(5) %stack
+  %L = load <2 x ptr addrspace(1)>, ptr addrspace(5) %stack, align 16
+  ret <2 x ptr addrspace(1)> %L
+}
+
+define <2 x ptr addrspace(1)> @test_vector_ptralloca_2_3to1(<2 x ptr addrspace(1)> %val) {
+; CHECK-LABEL: define <2 x ptr addrspace(1)> @test_vector_ptralloca_2_3to1
+; CHECK-SAME: (<2 x ptr addrspace(1)> [[VAL:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[VAL]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <4 x i32> [[TMP2]] to <4 x ptr addrspace(3)>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr addrspace(3)> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr addrspace(3)> undef, ptr addrspace(3) [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr addrspace(3)> [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr addrspace(3)> [[TMP5]], ptr addrspace(3) [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x ptr addrspace(3)> poison, ptr addrspace(3) [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x ptr addrspace(3)> [[TMP8]], ptr addrspace(3) [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint <4 x ptr addrspace(3)> [[TMP9]] to <4 x i32>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to i128
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i128 [[TMP11]] to <2 x i64>
+; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr <2 x i64> [[TMP12]] to <2 x ptr addrspace(1)>
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[TMP13]]
+;
+entry:
+  %stack = alloca [2 x ptr addrspace(3)], align 4, addrspace(3)
+  store <2 x ptr addrspace(1)> %val, ptr addrspace(3) %stack
+  %L = load <2 x ptr addrspace(1)>, ptr addrspace(3) %stack, align 16
+  ret <2 x ptr addrspace(1)> %L
+}
+
+define <2 x ptr addrspace(5)> @test_subvector_ptralloca_2_1to5(<2 x ptr addrspace(5)> %val) {
+; CHECK-LABEL: define <2 x ptr addrspace(5)> @test_subvector_ptralloca_2_1to5
+; CHECK-SAME: (<2 x ptr addrspace(5)> [[VAL:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(5)> [[VAL]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <1 x i64> [[TMP2]] to <1 x ptr addrspace(1)>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <1 x ptr addrspace(1)> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x ptr addrspace(1)> undef, ptr addrspace(1) [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <1 x ptr addrspace(1)> poison, ptr addrspace(1) [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint <1 x ptr addrspace(1)> [[TMP6]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[TMP8]] to <2 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr <2 x i32> [[TMP9]] to <2 x ptr addrspace(5)>
+; CHECK-NEXT:    ret <2 x ptr addrspace(5)> [[TMP10]]
+;
+entry:
+  %stack = alloca [8 x ptr addrspace(1)], align 4, addrspace(1)
+  store <2 x ptr addrspace(5)> %val, ptr addrspace(1) %stack
+  %L = load <2 x ptr addrspace(5)>, ptr addrspace(1) %stack, align 16
+  ret <2 x ptr addrspace(5)> %L
+}
+
+define <2 x ptr addrspace(270)> @test_subvector_ptralloca_8_3to270(<2 x ptr addrspace(270)> %val) {
+; CHECK-LABEL: define <2 x ptr addrspace(270)> @test_subvector_ptralloca_8_3to270
+; CHECK-SAME: (<2 x ptr addrspace(270)> [[VAL:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(270)> [[VAL]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <4 x i32> [[TMP2]] to <4 x ptr addrspace(3)>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr addrspace(3)> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x ptr addrspace(3)> undef, ptr addrspace(3) [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr addrspace(3)> [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x ptr addrspace(3)> [[TMP5]], ptr addrspace(3) [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x ptr addrspace(3)> [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x ptr addrspace(3)> [[TMP7]], ptr addrspace(3) [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr addrspace(3)> [[TMP3]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x ptr addrspace(3)> [[TMP9]], ptr addrspace(3) [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x ptr addrspace(3)> poison, ptr addrspace(3) [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x ptr addrspace(3)> [[TMP12]], ptr addrspace(3) [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr addrspace(3)> [[TMP13]], ptr addrspace(3) [[TMP8]], i64 2
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr addrspace(3)> [[TMP14]], ptr addrspace(3) [[TMP10]], i64 3
+; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint <4 x ptr addrspace(3)> [[TMP15]] to <4 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i32> [[TMP16]] to i128
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i128 [[TMP17]] to <2 x i64>
+; CHECK-NEXT:    [[TMP19:%.*]] = inttoptr <2 x i64> [[TMP18]] to <2 x ptr addrspace(270)>
+; CHECK-NEXT:    ret <2 x ptr addrspace(270)> [[TMP19]]
+;
+entry:
+  %stack = alloca [8 x ptr addrspace(3)], align 4, addrspace(3)
+  store <2 x ptr addrspace(270)> %val, ptr addrspace(3) %stack
+  %L = load <2 x ptr addrspace(270)>, ptr addrspace(3) %stack, align 16
+  ret <2 x ptr addrspace(270)> %L
+}
+
+define ptr @test_subvector_ptralloca_2_scalar(ptr %val) {
+; CHECK-LABEL: define ptr @test_subvector_ptralloca_2_scalar
+; CHECK-SAME: (ptr [[VAL:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[VAL]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <2 x i32> [[TMP1]] to <2 x ptr addrspace(3)>
+; CHECK-NEXT:    ret ptr [[VAL]]
+;
+entry:
+  %stack = alloca <2 x ptr addrspace(3)>, align 8, addrspace(3)
+  store ptr %val, ptr addrspace(3) %stack
+  %L = load ptr, ptr addrspace(3) %stack, align 8
+  ret ptr %L
+}
+
+define ptr @test_subvector_ptralloca_1_scalar(ptr %val) {
+; CHECK-LABEL: define ptr @test_subvector_ptralloca_1_scalar
+; CHECK-SAME: (ptr [[VAL:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <1 x ptr addrspace(3)>, align 8, addrspace(3)
+; CHECK-NEXT:    store ptr [[VAL]], ptr addrspace(3) [[STACK]], align 8
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr addrspace(3) [[STACK]], align 8
+; CHECK-NEXT:    ret ptr [[L]]
+;
+entry:
+  %stack = alloca <1 x ptr addrspace(3)>, align 8, addrspace(3)
+  store ptr %val, ptr addrspace(3) %stack
+  %L = load ptr, ptr addrspace(3) %stack, align 8
+  ret ptr %L
+}
+
 define void @test_out_of_bounds_subvec(<2 x i64> %val) {
 ; CHECK-LABEL: define void @test_out_of_bounds_subvec
 ; CHECK-SAME: (<2 x i64> [[VAL:%.*]]) {
