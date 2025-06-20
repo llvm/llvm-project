@@ -322,7 +322,7 @@ public:
   using iterator = RowContainer::iterator;
   using const_iterator = RowContainer::const_iterator;
 
-  UnwindTable(RowContainer Rows) : Rows(Rows) {}
+  UnwindTable(RowContainer &&Rows) : Rows(std::move(Rows)) {}
 
   size_t size() const { return Rows.size(); }
   iterator begin() { return Rows.begin(); }
