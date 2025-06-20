@@ -15,7 +15,7 @@
 
 #else // Overlay mode
 
-#include "hdr/wchar_overlay.h"
+#error "type not available in overlay mode"
 
 #endif // LLVM_LIBC_FULL_BUILD
 

@@ -15,6 +15,7 @@
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -39,6 +40,8 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
   size_t count = 0;
   while (!cr.isComplete()) {
     auto utf8 = cr.pop_utf8(); // can never fail as long as the push succeeded
+    LIBC_ASSERT(utf8.has_value());
+    
     *s = utf8.value();
     s++;
     count++;
