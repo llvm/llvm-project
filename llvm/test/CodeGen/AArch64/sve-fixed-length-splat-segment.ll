@@ -23,8 +23,8 @@ define void @concat_i16q_256(<8 x i16> %data, ptr %addr) #0 {
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
-  %splat = shufflevector <8 x i16> poison, <8 x i16> %data, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
-                                                                        i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %splat = shufflevector <8 x i16> %data, <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                        i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <16 x i16> %splat, ptr %addr, align 1
   ret void
 }
@@ -49,8 +49,8 @@ define void @concat_i64q_256(<2 x i64> %data, ptr %addr) #0 {
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
-  %splat = shufflevector <2 x i64> poison, <2 x i64> %data, <4 x i32> <i32 2, i32 3,
-                                                                       i32 2, i32 3>
+  %splat = shufflevector <2 x i64> %data, <2 x i64> poison, <4 x i32> <i32 0, i32 1,
+                                                                       i32 0, i32 1>
   store <4 x i64> %splat, ptr %addr, align 1
   ret void
 }
@@ -62,8 +62,8 @@ define void @concat_f16q_256(<8 x half> %data, ptr %addr) #0 {
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
-  %splat = shufflevector <8 x half> poison, <8 x half> %data, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
-                                                                          i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %splat = shufflevector <8 x half> %data, <8 x half> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                          i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <16 x half> %splat, ptr %addr, align 1
   ret void
 }
@@ -73,8 +73,8 @@ define void @concat_bf16q_256(<8 x bfloat> %data, ptr %addr) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
-  %splat = shufflevector <8 x bfloat> poison, <8 x bfloat> %data, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
-                                                                              i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %splat = shufflevector <8 x bfloat> %data, <8 x bfloat> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                              i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <16 x bfloat> %splat, ptr %addr, align 1
   ret void
 }
@@ -99,8 +99,8 @@ define void @concat_f64q_256(<2 x double> %data, ptr %addr) #0 {
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
-  %splat = shufflevector <2 x double> poison, <2 x double> %data, <4 x i32> <i32 2, i32 3,
-                                                                             i32 2, i32 3>
+  %splat = shufflevector <2 x double> %data, <2 x double> poison, <4 x i32> <i32 0, i32 1,
+                                                                             i32 0, i32 1>
   store <4 x double> %splat, ptr %addr, align 1
   ret void
 }
