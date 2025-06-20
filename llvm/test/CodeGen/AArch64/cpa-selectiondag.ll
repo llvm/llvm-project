@@ -660,10 +660,14 @@ entry:
 
 @a = hidden global [2 x [1 x [2 x i8]]] [[1 x [2 x i8]] [[2 x i8] c"\01\01"], [1 x [2 x i8]] [[2 x i8] c"\01\01"]], align 1
 @b = hidden global i16 0, align 2
+@.str = private unnamed_addr constant [7 x i8] c"hello\0A\00", align 1
 
 define hidden void @multidim() {
 ; CHECK-CPA-O0-LABEL: multidim:
 ; CHECK-CPA-O0:       // %bb.0: // %entry
+; CHECK-CPA-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-CPA-O0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-CPA-O0-NEXT:    .cfi_offset w30, -16
 ; CHECK-CPA-O0-NEXT:    adrp x8, b
 ; CHECK-CPA-O0-NEXT:    ldrh w9, [x8, :lo12:b]
 ; CHECK-CPA-O0-NEXT:    mov w8, w9
@@ -681,17 +685,44 @@ define hidden void @multidim() {
 ; CHECK-CPA-O0-NEXT:    ldrb w8, [x8]
 ; CHECK-CPA-O0-NEXT:    cbz w8, .LBB14_2
 ; CHECK-CPA-O0-NEXT:    b .LBB14_1
-; CHECK-CPA-O0-NEXT:  .LBB14_1: // %if.then
+; CHECK-CPA-O0-NEXT:  .LBB14_1:
+; CHECK-CPA-O0-NEXT:    adrp x0, .L.str
+; CHECK-CPA-O0-NEXT:    add x0, x0, :lo12:.L.str
+; CHECK-CPA-O0-NEXT:    bl printf
 ; CHECK-CPA-O0-NEXT:    b .LBB14_2
-; CHECK-CPA-O0-NEXT:  .LBB14_2: // %if.end
+; CHECK-CPA-O0-NEXT:  .LBB14_2:
+; CHECK-CPA-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-CPA-O0-NEXT:    ret
 ;
 ; CHECK-CPA-O3-LABEL: multidim:
 ; CHECK-CPA-O3:       // %bb.0: // %entry
+; CHECK-CPA-O3-NEXT:    adrp x8, b
+; CHECK-CPA-O3-NEXT:    mov w9, #2 // =0x2
+; CHECK-CPA-O3-NEXT:    adrp x10, a
+; CHECK-CPA-O3-NEXT:    add x10, x10, :lo12:a
+; CHECK-CPA-O3-NEXT:    ldrh w8, [x8, :lo12:b]
+; CHECK-CPA-O3-NEXT:    addpt x9, x10, x9
+; CHECK-CPA-O3-NEXT:    addpt x9, x9, x8, lsl #1
+; CHECK-CPA-O3-NEXT:    add x8, x8, #1
+; CHECK-CPA-O3-NEXT:    addpt x8, x9, x8
+; CHECK-CPA-O3-NEXT:    ldrb w8, [x8]
+; CHECK-CPA-O3-NEXT:    cbz w8, .LBB14_2
+; CHECK-CPA-O3-NEXT:  // %bb.1:
+; CHECK-CPA-O3-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-CPA-O3-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-CPA-O3-NEXT:    .cfi_offset w30, -16
+; CHECK-CPA-O3-NEXT:    adrp x0, .L.str
+; CHECK-CPA-O3-NEXT:    add x0, x0, :lo12:.L.str
+; CHECK-CPA-O3-NEXT:    bl printf
+; CHECK-CPA-O3-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-CPA-O3-NEXT:  .LBB14_2:
 ; CHECK-CPA-O3-NEXT:    ret
 ;
 ; CHECK-NOCPA-O0-LABEL: multidim:
 ; CHECK-NOCPA-O0:       // %bb.0: // %entry
+; CHECK-NOCPA-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NOCPA-O0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOCPA-O0-NEXT:    .cfi_offset w30, -16
 ; CHECK-NOCPA-O0-NEXT:    adrp x8, b
 ; CHECK-NOCPA-O0-NEXT:    ldrh w9, [x8, :lo12:b]
 ; CHECK-NOCPA-O0-NEXT:    adrp x8, a
@@ -704,35 +735,58 @@ define hidden void @multidim() {
 ; CHECK-NOCPA-O0-NEXT:    ldrb w8, [x8, #2]
 ; CHECK-NOCPA-O0-NEXT:    cbz w8, .LBB14_2
 ; CHECK-NOCPA-O0-NEXT:    b .LBB14_1
-; CHECK-NOCPA-O0-NEXT:  .LBB14_1: // %if.then
+; CHECK-NOCPA-O0-NEXT:  .LBB14_1:
+; CHECK-NOCPA-O0-NEXT:    adrp x0, .L.str
+; CHECK-NOCPA-O0-NEXT:    add x0, x0, :lo12:.L.str
+; CHECK-NOCPA-O0-NEXT:    bl printf
 ; CHECK-NOCPA-O0-NEXT:    b .LBB14_2
-; CHECK-NOCPA-O0-NEXT:  .LBB14_2: // %if.end
+; CHECK-NOCPA-O0-NEXT:  .LBB14_2:
+; CHECK-NOCPA-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NOCPA-O0-NEXT:    ret
 ;
 ; CHECK-NOCPA-O3-LABEL: multidim:
 ; CHECK-NOCPA-O3:       // %bb.0: // %entry
+; CHECK-NOCPA-O3-NEXT:    adrp x8, b
+; CHECK-NOCPA-O3-NEXT:    adrp x9, a
+; CHECK-NOCPA-O3-NEXT:    add x9, x9, :lo12:a
+; CHECK-NOCPA-O3-NEXT:    ldrh w8, [x8, :lo12:b]
+; CHECK-NOCPA-O3-NEXT:    add x9, x9, x8, lsl #1
+; CHECK-NOCPA-O3-NEXT:    add x8, x9, x8
+; CHECK-NOCPA-O3-NEXT:    ldrb w8, [x8, #3]
+; CHECK-NOCPA-O3-NEXT:    cbz w8, .LBB14_2
+; CHECK-NOCPA-O3-NEXT:  // %bb.1:
+; CHECK-NOCPA-O3-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NOCPA-O3-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOCPA-O3-NEXT:    .cfi_offset w30, -16
+; CHECK-NOCPA-O3-NEXT:    adrp x0, .L.str
+; CHECK-NOCPA-O3-NEXT:    add x0, x0, :lo12:.L.str
+; CHECK-NOCPA-O3-NEXT:    bl printf
+; CHECK-NOCPA-O3-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NOCPA-O3-NEXT:  .LBB14_2:
 ; CHECK-NOCPA-O3-NEXT:    ret
 entry:
-  %0 = load i16, ptr @b, align 2
-  %idxprom = zext i16 %0 to i64
-  %arrayidx = getelementptr inbounds [1 x [2 x i8]], ptr getelementptr inbounds ([2 x [1 x [2 x i8]]], ptr @a, i64 0, i64 1), i64 0, i64 %idxprom
   %1 = load i16, ptr @b, align 2
-  %conv = zext i16 %1 to i32
-  %add = add nsw i32 %conv, 1
-  %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds [2 x i8], ptr %arrayidx, i64 0, i64 %idxprom1
-  %2 = load i8, ptr %arrayidx2, align 1
-  %tobool = icmp ne i8 %2, 0
-  br i1 %tobool, label %if.then, label %if.end
+  %2 = zext i16 %1 to i64
+  %3 = getelementptr inbounds nuw [1 x [2 x i8]], ptr getelementptr inbounds ([2 x [1 x [2 x i8]]], ptr @a, i64 0, i64 1), i64 0, i64 %2
+  %4 = load i16, ptr @b, align 2
+  %5 = zext i16 %4 to i32
+  %6 = add nsw i32 %5, 1
+  %7 = sext i32 %6 to i64
+  %8 = getelementptr inbounds [2 x i8], ptr %3, i64 0, i64 %7
+  %9 = load i8, ptr %8, align 1
+  %10 = icmp ne i8 %9, 0
+  br i1 %10, label %11, label %13
 
-if.then:
-  br label %if.end
+11:
+  %12 = call i32 (ptr, ...) @printf(ptr noundef @.str)
+  br label %13
 
-if.end:
+13:
   ret void
 }
 
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
+declare i32 @printf(ptr noundef, ...) #1
 
 !6 = !{i64 0, i64 8, !7, i64 8, i64 8, !7, i64 16, i64 8, !7, i64 24, i64 8, !7, i64 32, i64 8, !7, i64 40, i64 8, !7}
 !7 = !{!8, !8, i64 0}
