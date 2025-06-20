@@ -75,14 +75,12 @@ LValue ComplexExprEmitter::emitBinAssignLValue(const BinaryOperator *e,
 mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
                                          QualType destTy) {
   switch (ck) {
-  case CK_LValueToRValue: {
+  case CK_LValueToRValue:
     return Visit(op);
-  }
   default:
     cgf.cgm.errorNYI("ComplexType Cast");
     break;
   }
-
   return {};
 }
 
