@@ -393,9 +393,9 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
 /// one.
 static unsigned getVFScaleFactor(VPRecipeBase *R) {
   if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
-    return RR->getVFScaleFactor().getFixedValue();
+    return RR->getVFScaleFactor();
   if (auto *RR = dyn_cast<VPReductionRecipe>(R))
-    return RR->getVFScaleFactor().getFixedValue();
+    return RR->getVFScaleFactor();
   assert(
       (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
                                      VPInstruction::ReductionStartVector) &&

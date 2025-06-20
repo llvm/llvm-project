@@ -8281,10 +8281,10 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       // If the PHI is used by a partial reduction, set the scale factor.
       bool UseInLoopReduction = CM.isInLoopReduction(Phi);
       bool UseOrderedReductions = CM.useOrderedReductions(RdxDesc);
-      auto ScaleFactor = ElementCount::getFixed(
+      auto ScaleFactor =
           (UseOrderedReductions || UseInLoopReduction)
               ? 0
-              : getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1));
+              : getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
       PhiRecipe = new VPReductionPHIRecipe(Phi, RdxDesc, *StartV,
                                            CM.isInLoopReduction(Phi),
                                            UseOrderedReductions, ScaleFactor);
@@ -8320,8 +8320,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     return tryToWidenMemory(Instr, Operands, Range);
 
   if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
-    return tryToCreatePartialReduction(
-        Instr, Operands, ElementCount::getFixed(ScaleFactor.value()));
+    return tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8344,7 +8343,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
 VPRecipeBase *
 VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
                                              ArrayRef<VPValue *> Operands,
-                                             ElementCount ScaleFactor) {
+                                             unsigned ScaleFactor) {
   assert(Operands.size() == 2 &&
          "Unexpected number of operands for partial reduction");
 
@@ -9145,8 +9144,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                                ? RdxDesc.getFastMathFlags()
                                : FastMathFlags();
       bool UseOrderedReductions = CM.useOrderedReductions(RdxDesc);
-      ElementCount VFScaleFactor =
-          ElementCount::getFixed(!UseOrderedReductions);
+      unsigned VFScaleFactor = !UseOrderedReductions;
       auto *RedRecipe = new VPReductionRecipe(
           Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
           UseOrderedReductions, VFScaleFactor, CurrentLinkI->getDebugLoc());
