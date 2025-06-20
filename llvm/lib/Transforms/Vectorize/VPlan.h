@@ -2039,14 +2039,16 @@ class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
 
 public:
   /// Create a new VPWidenPointerInductionRecipe for \p Phi with start value \p
-  /// Start and VF \p VF.
+  /// Start and the number of elements unrolled \p NumUnrolledElems, typically
+  /// VF*UF.
   VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
-                                VPValue *VF, const InductionDescriptor &IndDesc,
+                                VPValue *NumUnrolledElems,
+                                const InductionDescriptor &IndDesc,
                                 bool IsScalarAfterVectorization, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenPointerInductionSC, Phi, Start,
                                Step, IndDesc, DL),
         IsScalarAfterVectorization(IsScalarAfterVectorization) {
-    addOperand(VF);
+    addOperand(NumUnrolledElems);
   }
 
   ~VPWidenPointerInductionRecipe() override = default;

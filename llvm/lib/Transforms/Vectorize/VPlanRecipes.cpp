@@ -3536,7 +3536,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
   Value *ScalarStepValue = State.get(getStepValue(), VPLane(0));
   Type *PhiType = State.TypeAnalysis.inferScalarType(getStepValue());
-  Value *RuntimeVF = State.get(getOperand(2), true);
+  Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
   // Add induction update using an incorrect block temporarily. The phi node
   // will be fixed after VPlan execution. Note that at this point the latch
   // block cannot be used, as it does not exist yet.
@@ -3545,8 +3545,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   if (CurrentPart == 0) {
     // The recipe represents the first part of the pointer induction. Create the
     // GEP to increment the phi across all unrolled parts.
-    Value *NumUnrolledElems =
-        State.get(&getParent()->getPlan()->getVFxUF(), true);
+    Value *NumUnrolledElems = State.get(getOperand(2), true);
 
     Value *InductionGEP = GetElementPtrInst::Create(
         State.Builder.getInt8Ty(), NewPointerPhi,
