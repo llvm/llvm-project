@@ -25,7 +25,7 @@ struct mbstate {
     Increases with each push(...) until it reaches total_bytes
     Decreases with each pop(...) until it reaches 0
   */
-  uint8_t bytes_stored;
+  uint8_t bytes_stored = 0;
 
   // Total number of bytes that will be needed to represent this character
   uint8_t total_bytes = 0;

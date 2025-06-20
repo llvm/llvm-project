@@ -9,6 +9,7 @@
 #include "src/wchar/wcrtomb.h"
 
 #include "hdr/types/mbstate_t.h"
+#include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"

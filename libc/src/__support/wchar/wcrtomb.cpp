@@ -34,7 +34,7 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
     return Error(status);
 
   size_t count = 0;
-  while (!cr.isComplete()) {
+  while (!cr.isEmpty()) {
     auto utf8 = cr.pop_utf8(); // can never fail as long as the push succeeded
     LIBC_ASSERT(utf8.has_value());
 
