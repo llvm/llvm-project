@@ -1633,7 +1633,7 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
   return FnType->getReturnType();
 }
 
-std::pair<const NamedDecl *, const Attr *>
+std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
 CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
   // If the callee is marked nodiscard, return that attribute
   if (const Decl *D = getCalleeDecl())
@@ -2847,12 +2847,11 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
       return true;
     }
 
-    if (const ObjCMethodDecl *MD = ME->getMethodDecl())
-      if (MD->hasAttr<WarnUnusedResultAttr>()) {
-        WarnE = this;
-        Loc = getExprLoc();
-        return true;
-      }
+    if (ME->hasUnusedResultAttr(Ctx)) {
+      WarnE = this;
+      Loc = getExprLoc();
+      return true;
+    }
 
     return false;
   }
