@@ -182,9 +182,9 @@ define amdgpu_kernel void @uniform_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
 entry:
-    %result = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 %in, i32 1)
-    store i32 %result, ptr addrspace(1) %out
-    ret void
+  %result = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 %in, i32 1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
 }
 
 define amdgpu_kernel void @const_value(ptr addrspace(1) %out) {
@@ -337,10 +337,10 @@ define amdgpu_kernel void @const_value(ptr addrspace(1) %out) {
 ; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
-    entry:
-    %result = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 123, i32 1)
-    store i32 %result, ptr addrspace(1) %out
-    ret void
+entry:
+  %result = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 123, i32 1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
 }
 
 define amdgpu_kernel void @poison_value(ptr addrspace(1) %out, i32 %in) {
@@ -493,9 +493,9 @@ define amdgpu_kernel void @poison_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
 entry:
-    %result = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 poison, i32 1)
-    store i32 %result, ptr addrspace(1) %out
-    ret void
+  %result = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 poison, i32 1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
 }
 
 define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out) {
@@ -735,10 +735,10 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out) {
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
 entry:
-    %id.x = call i32 @llvm.amdgcn.workitem.id.x()
-    %result = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 %id.x, i32 1)
-    store i32 %result, ptr addrspace(1) %out
-    ret void
+  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+  %result = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 %id.x, i32 1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
 }
 
 define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
@@ -1208,7 +1208,7 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX1132GISEL-NEXT:    s_endpgm
-    entry:
+entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %d_cmp = icmp ult i32 %tid, 16
   br i1 %d_cmp, label %if, label %else
