@@ -5423,6 +5423,14 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM: {
+    // Set SCC to true, in case the barrier instruction gets converted to a NOP.
+    BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
+            TII->get(AMDGPU::S_CMP_EQ_U32))
+        .addImm(0)
+        .addImm(0);
+    return BB;
+  }
   case AMDGPU::GET_GROUPSTATICSIZE: {
     assert(getTargetMachine().getTargetTriple().getOS() == Triple::AMDHSA ||
            getTargetMachine().getTargetTriple().getOS() == Triple::AMDPAL);
