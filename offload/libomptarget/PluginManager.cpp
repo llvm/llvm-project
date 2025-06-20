@@ -128,6 +128,12 @@ void PluginManager::initializeAllDevices() {
       initializeDevice(Plugin, DeviceId);
     }
   }
+  // After all plugins are initialized, register atExit cleanup handlers
+  std::atexit([]() {
+    // Interop cleanup should be done before the plugins are deinitialized as
+    // the backend libraries may be already unloaded.
+    PM->InteropTbl.clear();
+  });
 }
 
 // Returns a pointer to the binary descriptor, upgrading from a legacy format if
