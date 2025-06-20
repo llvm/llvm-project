@@ -224,6 +224,9 @@ public:
                                              const APInt &DemandedElts,
                                              APInt &UndefElts) const;
 
+  Instruction *hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
+                                                IntrinsicInst &II) const;
+
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
@@ -278,6 +281,13 @@ public:
   void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override;
+
+  enum class KnownIEEEMode { Unknown, On, Off };
+
+  /// Return KnownIEEEMode::On if we know if the use context can assume
+  /// "amdgpu-ieee"="true" and KnownIEEEMode::Off if we can assume
+  /// "amdgpu-ieee"="false".
+  KnownIEEEMode fpenvIEEEMode(const Instruction &I) const;
 };
 
 } // end namespace llvm

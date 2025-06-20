@@ -348,6 +348,10 @@ public:
   virtual Fortran::lower::SymbolBox
   lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) = 0;
 
+  /// Find the symbol in the inner-most level of the local map or return null.
+  virtual Fortran::lower::SymbolBox
+  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) = 0;
+
   /// Return the mlir::SymbolTable associated to the ModuleOp.
   /// Look-ups are faster using it than using module.lookup<>,
   /// but the module op should be queried in case of failure

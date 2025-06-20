@@ -206,6 +206,9 @@ def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
   "invalid version number in '%0'">;
+def err_drv_invalid_version_number_inferred
+    : Error<"invalid version number '%0' inferred from '%1'">;
+def err_drv_missing_version_number : Error<"missing version number in '%0'">;
 def err_drv_kcfi_arity_unsupported_target : Error<
   "target '%0' is unsupported by -fsanitize-kcfi-arity">;
 def err_drv_no_linker_llvm_support : Error<
@@ -478,6 +481,9 @@ def warn_ignoring_ftabstop_value : Warning<
 def warn_drv_overriding_option : Warning<
   "overriding '%0' option with '%1'">,
   InGroup<DiagGroup<"overriding-option">>;
+def warn_drv_overriding_deployment_version
+    : Warning<"overriding deployment version from '%0' to '%1'">,
+      InGroup<DiagGroup<"overriding-deployment-version">>;
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
@@ -669,6 +675,10 @@ def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
 def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"
   " characters, hyphens, and underscores">;
+
+def note_command_line_code_loc_requirement
+    : Note<"-code-completion-at=<file>:<line>:<column> requires <line> and "
+           "<column> to be integers greater than zero">;
 
 def warn_drv_global_isel_incomplete : Warning<
   "-fglobal-isel support for the '%0' architecture is incomplete">,

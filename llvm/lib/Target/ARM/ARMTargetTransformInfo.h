@@ -54,7 +54,7 @@ namespace TPLoop {
 enum MemTransfer { ForceDisabled = 0, ForceEnabled, Allow };
 }
 
-class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
+class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -230,8 +230,7 @@ public:
 
   bool preferInLoopReduction(RecurKind Kind, Type *Ty) const override;
 
-  bool preferPredicatedReductionSelect(unsigned Opcode,
-                                       Type *Ty) const override;
+  bool preferPredicatedReductionSelect() const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override {
     return false;

@@ -68,7 +68,6 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
 OpFoldResult memref::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto memrefType = llvm::cast<MemRefType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (memrefType.isDynamicDim(dim))
     return builder.createOrFold<memref::DimOp>(loc, value, dim);
 
@@ -399,8 +398,9 @@ static bool isOpItselfPotentialAutomaticAllocation(Operation *op) {
 /// and is only followed by a terminator. This prevents
 /// extending the lifetime of allocations.
 static bool lastNonTerminatorInRegion(Operation *op) {
-  return op->getNextNode() == op->getBlock()->getTerminator() &&
-         llvm::hasSingleElement(op->getParentRegion()->getBlocks());
+  return op->getBlock()->mightHaveTerminator() &&
+         op->getNextNode() == op->getBlock()->getTerminator() &&
+         op->getParentRegion()->hasOneBlock();
 }
 
 /// Inline an AllocaScopeOp if either the direct parent is an allocation scope
@@ -526,6 +526,20 @@ LogicalResult AssumeAlignmentOp::verify() {
   if (!llvm::isPowerOf2_32(getAlignment()))
     return emitOpError("alignment must be power of 2");
   return success();
+}
+
+void AssumeAlignmentOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "assume_align");
+}
+
+OpFoldResult AssumeAlignmentOp::fold(FoldAdaptor adaptor) {
+  auto source = getMemref().getDefiningOp<AssumeAlignmentOp>();
+  if (!source)
+    return {};
+  if (source.getAlignment() != getAlignment())
+    return {};
+  return getMemref();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1890,9 +1904,7 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
     // reinterpret_cast(subview(x)) -> reinterpret_cast(x) if subview offsets
     // are 0.
     if (auto prev = src.getDefiningOp<SubViewOp>())
-      if (llvm::all_of(prev.getMixedOffsets(), [](OpFoldResult val) {
-            return isConstantIntValue(val, 0);
-          }))
+      if (llvm::all_of(prev.getMixedOffsets(), isZeroInteger))
         return prev.getSource();
 
     return nullptr;
@@ -2009,7 +2021,7 @@ public:
       // Second, check the sizes.
       if (!llvm::equal(extractStridedMetadata.getConstifiedMixedSizes(),
                        op.getConstifiedMixedSizes()))
-          return false;
+        return false;
 
       // Finally, check the offset.
       assert(op.getMixedOffsets().size() == 1 &&
@@ -3286,11 +3298,9 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
     auto srcSizes = srcSubview.getMixedSizes();
     auto sizes = getMixedSizes();
     auto offsets = getMixedOffsets();
-    bool allOffsetsZero = llvm::all_of(
-        offsets, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); });
+    bool allOffsetsZero = llvm::all_of(offsets, isZeroInteger);
     auto strides = getMixedStrides();
-    bool allStridesOne = llvm::all_of(
-        strides, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); });
+    bool allStridesOne = llvm::all_of(strides, isOneInteger);
     bool allSizesSame = llvm::equal(sizes, srcSizes);
     if (allOffsetsZero && allStridesOne && allSizesSame &&
         resultMemrefType == sourceMemrefType)

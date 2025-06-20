@@ -1748,11 +1748,12 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  assert(std::is_sorted(CSI.begin(), CSI.end(),
-                        [](const CalleeSavedInfo &A, const CalleeSavedInfo &B) {
-                          return A.getReg() < B.getReg();
-                        }) &&
-         "Callee saved registers not sorted");
+  assert(
+      llvm::is_sorted(CSI,
+                      [](const CalleeSavedInfo &A, const CalleeSavedInfo &B) {
+                        return A.getReg() < B.getReg();
+                      }) &&
+      "Callee saved registers not sorted");
 
   auto CanUseBlockOps = [&](const CalleeSavedInfo &CSI) {
     return !CSI.isSpilledToReg() &&

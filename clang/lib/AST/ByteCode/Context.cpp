@@ -21,7 +21,14 @@
 using namespace clang;
 using namespace clang::interp;
 
-Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {}
+Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {
+  this->ShortWidth = Ctx.getTargetInfo().getShortWidth();
+  this->IntWidth = Ctx.getTargetInfo().getIntWidth();
+  this->LongWidth = Ctx.getTargetInfo().getLongWidth();
+  this->LongLongWidth = Ctx.getTargetInfo().getLongLongWidth();
+  assert(Ctx.getTargetInfo().getCharWidth() == 8 &&
+         "We're assuming 8 bit chars");
+}
 
 Context::~Context() {}
 
@@ -37,11 +44,12 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   Compiler<ByteCodeEmitter>(*this, *P).compileFunc(
       FD, const_cast<Function *>(Func));
 
+  ++EvalID;
   // And run it.
   if (!Run(Parent, Func))
     return false;
 
-  return Func->isConstexpr();
+  return Func->isValid();
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
@@ -134,65 +142,182 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
+template <typename ResultT>
+bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
+                                 const Expr *PtrExpr, ResultT &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  // Evaluate size value.
+  APValue SizeValue;
+  if (!evaluateAsRValue(Parent, SizeExpr, SizeValue))
+    return false;
+
+  if (!SizeValue.isInt())
+    return false;
+  uint64_t Size = SizeValue.getInt().getZExtValue();
+
+  auto PtrRes = C.interpretAsPointer(PtrExpr, [&](const Pointer &Ptr) {
+    if (Size == 0) {
+      if constexpr (std::is_same_v<ResultT, APValue>)
+        Result = APValue(APValue::UninitArray{}, 0, 0);
+      return true;
+    }
+
+    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+      return false;
+
+    // Must be char.
+    if (Ptr.getFieldDesc()->getElemSize() != 1 /*bytes*/)
+      return false;
+
+    if (Size > Ptr.getNumElems()) {
+      Parent.FFDiag(SizeExpr, diag::note_constexpr_access_past_end) << AK_Read;
+      Size = Ptr.getNumElems();
+    }
+
+    if constexpr (std::is_same_v<ResultT, APValue>) {
+      QualType CharTy = PtrExpr->getType()->getPointeeType();
+      Result = APValue(APValue::UninitArray{}, Size, Size);
+      for (uint64_t I = 0; I != Size; ++I) {
+        if (std::optional<APValue> ElemVal =
+                Ptr.atIndex(I).toRValue(*this, CharTy))
+          Result.getArrayInitializedElt(I) = *ElemVal;
+        else
+          return false;
+      }
+    } else {
+      assert((std::is_same_v<ResultT, std::string>));
+      if (Size < Result.max_size())
+        Result.resize(Size);
+      Result.assign(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+    }
+
+    return true;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+
+  return true;
+}
+
+bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                                const Expr *PtrExpr, APValue &Result) {
+  assert(SizeExpr);
+  assert(PtrExpr);
+
+  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
+bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                                const Expr *PtrExpr, std::string &Result) {
+  assert(SizeExpr);
+  assert(PtrExpr);
+
+  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
+static PrimType integralTypeToPrimTypeS(unsigned BitWidth) {
+  switch (BitWidth) {
+  case 64:
+    return PT_Sint64;
+  case 32:
+    return PT_Sint32;
+  case 16:
+    return PT_Sint16;
+  case 8:
+    return PT_Sint8;
+  default:
+    return PT_IntAPS;
+  }
+  llvm_unreachable("Unhandled BitWidth");
+}
+
+static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
+  switch (BitWidth) {
+  case 64:
+    return PT_Uint64;
+  case 32:
+    return PT_Uint32;
+  case 16:
+    return PT_Uint16;
+  case 8:
+    return PT_Uint8;
+  default:
+    return PT_IntAP;
+  }
+  llvm_unreachable("Unhandled BitWidth");
+}
+
 std::optional<PrimType> Context::classify(QualType T) const {
-  if (T->isBooleanType())
-    return PT_Bool;
 
-  // We map these to primitive arrays.
-  if (T->isAnyComplexType() || T->isVectorType())
-    return std::nullopt;
-
-  if (T->isSignedIntegerOrEnumerationType()) {
-    switch (Ctx.getIntWidth(T)) {
-    case 64:
-      return PT_Sint64;
-    case 32:
-      return PT_Sint32;
-    case 16:
-      return PT_Sint16;
-    case 8:
-      return PT_Sint8;
-    default:
-      return PT_IntAPS;
-    }
-  }
-
-  if (T->isUnsignedIntegerOrEnumerationType()) {
-    switch (Ctx.getIntWidth(T)) {
-    case 64:
-      return PT_Uint64;
-    case 32:
-      return PT_Uint32;
-    case 16:
-      return PT_Uint16;
-    case 8:
-      return PT_Uint8;
-    case 1:
-      // Might happen for enum types.
+  if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
+    auto Kind = BT->getKind();
+    if (Kind == BuiltinType::Bool)
       return PT_Bool;
-    default:
-      return PT_IntAP;
-    }
+    if (Kind == BuiltinType::NullPtr)
+      return PT_Ptr;
+    if (Kind == BuiltinType::BoundMember)
+      return PT_MemberPtr;
+
+    // Just trying to avoid the ASTContext::getIntWidth call below.
+    if (Kind == BuiltinType::Short)
+      return integralTypeToPrimTypeS(this->ShortWidth);
+    if (Kind == BuiltinType::UShort)
+      return integralTypeToPrimTypeU(this->ShortWidth);
+
+    if (Kind == BuiltinType::Int)
+      return integralTypeToPrimTypeS(this->IntWidth);
+    if (Kind == BuiltinType::UInt)
+      return integralTypeToPrimTypeU(this->IntWidth);
+    if (Kind == BuiltinType::Long)
+      return integralTypeToPrimTypeS(this->LongWidth);
+    if (Kind == BuiltinType::ULong)
+      return integralTypeToPrimTypeU(this->LongWidth);
+    if (Kind == BuiltinType::LongLong)
+      return integralTypeToPrimTypeS(this->LongLongWidth);
+    if (Kind == BuiltinType::ULongLong)
+      return integralTypeToPrimTypeU(this->LongLongWidth);
+
+    if (Kind == BuiltinType::SChar || Kind == BuiltinType::Char_S)
+      return integralTypeToPrimTypeS(8);
+    if (Kind == BuiltinType::UChar || Kind == BuiltinType::Char_U ||
+        Kind == BuiltinType::Char8)
+      return integralTypeToPrimTypeU(8);
+
+    if (BT->isSignedInteger())
+      return integralTypeToPrimTypeS(Ctx.getIntWidth(T));
+    if (BT->isUnsignedInteger())
+      return integralTypeToPrimTypeU(Ctx.getIntWidth(T));
+
+    if (BT->isFloatingPoint())
+      return PT_Float;
   }
 
-  if (T->isNullPtrType())
+  if (T->isPointerOrReferenceType())
     return PT_Ptr;
 
-  if (T->isFloatingType())
-    return PT_Float;
-
-  if (T->isSpecificBuiltinType(BuiltinType::BoundMember) ||
-      T->isMemberPointerType())
+  if (T->isMemberPointerType())
     return PT_MemberPtr;
 
-  if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
-      T->isFunctionType() || T->isBlockPointerType())
-    return PT_Ptr;
+  if (const auto *BT = T->getAs<BitIntType>()) {
+    if (BT->isSigned())
+      return integralTypeToPrimTypeS(BT->getNumBits());
+    return integralTypeToPrimTypeU(BT->getNumBits());
+  }
 
-  if (T->isPointerOrReferenceType() || T->isObjCObjectPointerType())
-    return PT_Ptr;
+  if (const auto *ET = T->getAs<EnumType>()) {
+    const auto *D = ET->getDecl();
+    if (!D->isComplete())
+      return std::nullopt;
+    return classify(D->getIntegerType());
+  }
 
   if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
@@ -200,9 +325,13 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
+  if (T->isObjCObjectPointerType() || T->isBlockPointerType())
+    return PT_Ptr;
+
   if (T->isFixedPointType())
     return PT_FixedPoint;
 
+  // Vector and complex types get here.
   return std::nullopt;
 }
 

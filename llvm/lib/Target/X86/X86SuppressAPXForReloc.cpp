@@ -25,9 +25,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -65,9 +63,8 @@ FunctionPass *llvm::createX86SuppressAPXForRelocationPass() {
   return new X86SuppressAPXForRelocationPass();
 }
 
-static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
+static void suppressEGPRRegClass(MachineRegisterInfo *MRI, MachineInstr &MI,
                                  const X86Subtarget &ST, unsigned int OpNum) {
-  MachineRegisterInfo *MRI = &MF.getRegInfo();
   Register Reg = MI.getOperand(OpNum).getReg();
   if (!Reg.isVirtual()) {
     assert(!X86II::isApxExtendedReg(Reg) && "APX EGPR is used unexpectedly.");
@@ -79,11 +76,30 @@ static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
   MRI->setRegClass(Reg, NewRC);
 }
 
+// Suppress EGPR in operand 0 of uses to avoid APX relocation types emitted. The
+// register in operand 0 of instruction with relocation may be replaced with
+// operand 0 of uses which may be EGPR. That may lead to emit APX relocation
+// types which breaks the backward compatibility with builtin linkers on
+// existing OS. For example, the register in operand 0 of instruction with
+// relocation is used in PHI instruction, and it may be replaced with operand 0
+// of PHI instruction after PHI elimination and Machine Copy Propagation pass.
+static void suppressEGPRRegClassInRegAndUses(MachineRegisterInfo *MRI,
+                                             MachineInstr &MI,
+                                             const X86Subtarget &ST,
+                                             unsigned int OpNum) {
+  suppressEGPRRegClass(MRI, MI, ST, OpNum);
+  Register Reg = MI.getOperand(OpNum).getReg();
+  for (MachineInstr &Use : MRI->use_instructions(Reg))
+    if (Use.getOpcode() == X86::PHI)
+      suppressEGPRRegClass(MRI, Use, ST, 0);
+}
+
 static bool handleInstructionWithEGPR(MachineFunction &MF,
                                       const X86Subtarget &ST) {
   if (!ST.hasEGPR())
     return false;
 
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto suppressEGPRInInstrWithReloc = [&](MachineInstr &MI,
                                           ArrayRef<unsigned> OpNoArray) {
     int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
@@ -94,7 +110,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
       LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                         << MI);
       for (unsigned OpNo : OpNoArray)
-        suppressEGPRRegClass(MF, MI, ST, OpNo);
+        suppressEGPRRegClassInRegAndUses(MRI, MI, ST, OpNo);
       LLVM_DEBUG(dbgs() << "to:\n  " << MI << "\n");
     }
   };
@@ -155,13 +171,20 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
       switch (Opcode) {
       case X86::ADD64rm_NF:
       case X86::ADD64mr_NF_ND:
-      case X86::ADD64rm_NF_ND:
-        llvm_unreachable("Unexpected NF instruction!");
+      case X86::ADD64rm_NF_ND: {
+        int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                      X86II::getOperandBias(MI.getDesc());
+        const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
+          llvm_unreachable("Unexpected NF instruction!");
+        break;
+      }
       case X86::ADD64rm_ND: {
         int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
                       X86II::getOperandBias(MI.getDesc());
         const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
-        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
+        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
+            MO.getTargetFlags() == X86II::MO_GOTPCREL) {
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
@@ -172,7 +195,7 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
           MI.getOperand(1).setReg(Reg);
           const MCInstrDesc &NewDesc = TII->get(X86::ADD64rm);
           MI.setDesc(NewDesc);
-          suppressEGPRRegClass(MF, MI, ST, 0);
+          suppressEGPRRegClassInRegAndUses(MRI, MI, ST, 0);
           MI.tieOperands(0, 1);
           LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMIB << "\n");
           LLVM_DEBUG(dbgs() << "  " << MI << "\n");
@@ -185,7 +208,7 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
-          suppressEGPRRegClass(MF, MI, ST, 0);
+          suppressEGPRRegClassInRegAndUses(MRI, MI, ST, 0);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
           [[maybe_unused]] MachineInstrBuilder CopyMIB =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),

@@ -15,14 +15,9 @@
 
 namespace mlir {
 
-bool isZeroIndex(OpFoldResult v) {
-  if (!v)
-    return false;
-  std::optional<int64_t> constint = getConstantIntValue(v);
-  if (!constint)
-    return false;
-  return *constint == 0;
-}
+bool isZeroInteger(OpFoldResult v) { return isConstantIntValue(v, 0); }
+
+bool isOneInteger(OpFoldResult v) { return isConstantIntValue(v, 1); }
 
 std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
            SmallVector<OpFoldResult>>
@@ -147,8 +142,7 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
 }
 
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
-  auto val = getConstantIntValue(ofr);
-  return val && *val == value;
+  return getConstantIntValue(ofr) == value;
 }
 
 bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
@@ -237,8 +231,8 @@ getValuesSortedByKeyImpl(ArrayRef<K> keys, ArrayRef<V> values,
     return SmallVector<V>{values};
   assert(keys.size() == values.size() && "unexpected mismatching sizes");
   auto indices = llvm::to_vector(llvm::seq<int64_t>(0, values.size()));
-  std::sort(indices.begin(), indices.end(),
-            [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
+  llvm::sort(indices,
+             [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
   SmallVector<V> res;
   res.reserve(values.size());
   for (int64_t i = 0, e = indices.size(); i < e; ++i)

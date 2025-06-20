@@ -612,7 +612,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl,
                                                    TemplateTemplateParmDecl>
     templateTemplateParmDecl;
 
-/// Matches public C++ declarations and C++ base specifers that specify public
+/// Matches public C++ declarations and C++ base specifiers that specify public
 /// inheritance.
 ///
 /// Examples:
@@ -635,7 +635,7 @@ AST_POLYMORPHIC_MATCHER(isPublic,
   return getAccessSpecifier(Node) == AS_public;
 }
 
-/// Matches protected C++ declarations and C++ base specifers that specify
+/// Matches protected C++ declarations and C++ base specifiers that specify
 /// protected inheritance.
 ///
 /// Examples:
@@ -657,8 +657,8 @@ AST_POLYMORPHIC_MATCHER(isProtected,
   return getAccessSpecifier(Node) == AS_protected;
 }
 
-/// Matches private C++ declarations and C++ base specifers that specify private
-/// inheritance.
+/// Matches private C++ declarations and C++ base specifiers that specify
+/// private inheritance.
 ///
 /// Examples:
 /// \code
@@ -1212,7 +1212,7 @@ AST_MATCHER_P(TemplateArgument, refersToIntegralType,
 /// Matches a TemplateArgument of integral type with a given value.
 ///
 /// Note that 'Value' is a string as the template argument's value is
-/// an arbitrary precision integer. 'Value' must be euqal to the canonical
+/// an arbitrary precision integer. 'Value' must be equal to the canonical
 /// representation of that integral value in base 10.
 ///
 /// Given
@@ -5689,7 +5689,7 @@ AST_POLYMORPHIC_MATCHER_P(equalsBoundNode,
   // FIXME: Figure out whether it makes sense to allow this
   // on any other node types.
   // For *Loc it probably does not make sense, as those seem
-  // unique. For NestedNameSepcifier it might make sense, as
+  // unique. For NestedNameSpecifier it might make sense, as
   // those also have pointer identity, but I'm not sure whether
   // they're ever reused.
   internal::NotEqualsBoundNodePredicate Predicate;
@@ -6322,7 +6322,7 @@ AST_MATCHER_P(CXXMethodDecl, forEachOverridden,
   return Matched;
 }
 
-/// Matches declarations of virtual methods and C++ base specifers that specify
+/// Matches declarations of virtual methods and C++ base specifiers that specify
 /// virtual inheritance.
 ///
 /// Example:
@@ -7710,7 +7710,7 @@ extern const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
 /// \endcode
 extern const AstTypeMatcher<DecayedType> decayedType;
 
-/// Matches the decayed type, whoes decayed type matches \c InnerMatcher
+/// Matches the decayed type, whose decayed type matches \c InnerMatcher
 AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
               InnerType) {
   return InnerType.matches(Node.getDecayedType(), Finder, Builder);
@@ -7750,7 +7750,7 @@ extern const AstTypeMatcher<DependentTemplateSpecializationType>
 ///   }
 /// \endcode
 ///
-/// \c cxxRcordDecl(hasDeclContext(namedDecl(hasName("M")))) matches the
+/// \c cxxRecordDecl(hasDeclContext(namedDecl(hasName("M")))) matches the
 /// declaration of \c class \c D.
 AST_MATCHER_P(Decl, hasDeclContext, internal::Matcher<Decl>, InnerMatcher) {
   const DeclContext *DC = Node.getDeclContext();
@@ -8464,7 +8464,7 @@ AST_MATCHER_P(Stmt, forCallable, internal::Matcher<Decl>, InnerMatcher) {
 /// \endcode
 ///
 /// Example matches f() because it has external formal linkage despite being
-/// unique to the translation unit as though it has internal likage
+/// unique to the translation unit as though it has internal linkage
 /// (matcher = functionDecl(hasExternalFormalLinkage()))
 ///
 /// \code

@@ -68,7 +68,8 @@ getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
       Category != SPIRV::OperandCategory::FunctionControlOperand &&
       Category != SPIRV::OperandCategory::MemorySemanticsOperand &&
       Category != SPIRV::OperandCategory::MemoryOperandOperand &&
-      Category != SPIRV::OperandCategory::KernelProfilingInfoOperand)
+      Category != SPIRV::OperandCategory::KernelProfilingInfoOperand &&
+      Category != SPIRV::OperandCategory::SpecConstantOpOperandsOperand)
     return "UNKNOWN";
   // Value that encodes many enum values (one bit per enum value).
   std::string Name;

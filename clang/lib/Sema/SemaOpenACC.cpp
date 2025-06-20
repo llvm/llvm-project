@@ -757,11 +757,12 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
                    !OriginalBaseTy->isConstantArrayType() &&
                    !OriginalBaseTy->isDependentSizedArrayType()))) {
     bool IsArray = !OriginalBaseTy.isNull() && OriginalBaseTy->isArrayType();
-    Diag(ColonLoc, diag::err_acc_subarray_no_length) << IsArray;
+    SourceLocation DiagLoc = ColonLoc.isInvalid() ? LBLoc : ColonLoc;
+    Diag(DiagLoc, diag::err_acc_subarray_no_length) << IsArray;
     // Fill in a dummy 'length' so that when we instantiate this we don't
     // double-diagnose here.
     ExprResult Recovery = SemaRef.CreateRecoveryExpr(
-        ColonLoc, SourceLocation(), ArrayRef<Expr *>(), Context.IntTy);
+        DiagLoc, SourceLocation(), ArrayRef<Expr *>(), Context.IntTy);
     Length = Recovery.isUsable() ? Recovery.get() : nullptr;
   }
 
@@ -1755,7 +1756,7 @@ ExprResult SemaOpenACC::ActOnRoutineName(Expr *RoutineName) {
   return ExprError();
 }
 void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
-  if (!VD->isStaticLocal() || !getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || VD->isInvalidDecl() || !VD->isStaticLocal())
     return;
 
   // This cast should be safe, since a static-local can only happen in a
@@ -2259,7 +2260,8 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
           (*cast<OpenACCBindClause>(*BindItr)) !=
               (*cast<OpenACCBindClause>(*OtherBindItr))) {
         Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_unnamed_bind);
-        Diag((*OtherBindItr)->getEndLoc(), diag::note_acc_previous_clause_here);
+        Diag((*OtherBindItr)->getEndLoc(), diag::note_acc_previous_clause_here)
+            << (*BindItr)->getClauseKind();
         return;
       }
     }
@@ -2273,7 +2275,8 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
     if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
         RA && RA->getRange().getEnd().isValid()) {
       Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
-      Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here);
+      Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here)
+          << "bind";
       return;
     }
   }
@@ -2318,7 +2321,8 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
           if (OtherBindItr != RA->Clauses.end()) {
             Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
             Diag((*OtherBindItr)->getEndLoc(),
-                 diag::note_acc_previous_clause_here);
+                 diag::note_acc_previous_clause_here)
+                << (*BindItr)->getClauseKind();
             return nullptr;
           }
         }
@@ -2326,7 +2330,8 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
         if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
             RA && RA->getRange().getEnd().isValid()) {
           Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
-          Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here);
+          Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here)
+              << (*BindItr)->getClauseKind();
           return nullptr;
         }
       }

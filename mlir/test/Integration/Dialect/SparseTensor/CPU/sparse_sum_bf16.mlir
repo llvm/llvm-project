@@ -30,8 +30,6 @@
 // Do the same run, but now with  VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-// UNSUPPORTED: target=aarch64{{.*}}, mlir_arm_emulator
-
 !Filename = !llvm.ptr
 
 #SparseMatrix = #sparse_tensor.encoding<{

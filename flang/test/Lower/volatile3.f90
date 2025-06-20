@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc --strict-fir-volatile-verifier %s -o - | FileCheck %s
 
 ! Test that all combinations of volatile pointer and target are properly lowered -
 ! note that a volatile pointer implies that the target is volatile, even if not specified

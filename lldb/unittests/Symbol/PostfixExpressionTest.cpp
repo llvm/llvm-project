@@ -159,8 +159,8 @@ static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
 
   std::string result;
   llvm::raw_string_ostream os(result);
-  llvm::DWARFExpression(extractor, addr_size, llvm::dwarf::DWARF32)
-      .print(os, llvm::DIDumpOptions(), nullptr);
+  llvm::DWARFExpression E(extractor, addr_size, llvm::dwarf::DWARF32);
+  llvm::DWARFExpressionPrinter::print(&E, os, llvm::DIDumpOptions(), nullptr);
   return result;
 }
 

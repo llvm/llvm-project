@@ -33,7 +33,6 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
             self.runCmd("settings set auto-one-line-summaries true", check=False)
 
         # Execute the cleanup function during test case tear down.

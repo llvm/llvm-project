@@ -10,9 +10,8 @@
 #include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
-#include <mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h>
-#include <mlir/Analysis/DataFlow/DeadCodeAnalysis.h>
 #include <mlir/Analysis/DataFlow/SparseAnalysis.h>
+#include <mlir/Analysis/DataFlow/Utils.h>
 #include <mlir/Analysis/DataFlowFramework.h>
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/Value.h>
@@ -51,7 +50,11 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 /// A value is considered "live" iff it:
 ///   (1) has memory effects OR
 ///   (2) is returned by a public function OR
-///   (3) is used to compute a value of type (1) or (2).
+///   (3) is used to compute a value of type (1) or (2) OR
+///   (4) is returned by a return-like op whose parent isn't a callable
+///       nor a RegionBranchOpInterface (e.g.: linalg.yield, gpu.yield,...)
+///       These ops have their own semantics, so we conservatively mark the
+///       the yield value as live.
 /// It is also to be noted that a value could be of multiple types (1/2/3) at
 /// the same time.
 ///
@@ -73,8 +76,8 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 LogicalResult
 LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
                                  ArrayRef<const Liveness *> results) {
-  // This marks values of type (1.a) liveness as "live".
-  if (!isMemoryEffectFree(op)) {
+  // This marks values of type (1.a) and (4) liveness as "live".
+  if (!isMemoryEffectFree(op) || op->hasTrait<OpTrait::ReturnLike>()) {
     for (auto *operand : operands)
       propagateIfChanged(operand, operand->markLive());
   }
@@ -245,8 +248,7 @@ void LivenessAnalysis::setToExitState(Liveness *lattice) {
 RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
   SymbolTableCollection symbolTable;
 
-  solver.load<DeadCodeAnalysis>();
-  solver.load<SparseConstantPropagation>();
+  loadBaselineAnalyses(solver);
   solver.load<LivenessAnalysis>(symbolTable);
   (void)solver.initializeAndRun(op);
 }

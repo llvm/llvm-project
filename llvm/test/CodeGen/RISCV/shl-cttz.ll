@@ -158,11 +158,11 @@ define i16 @shl_cttz_i16(i16 %x, i16 %y) {
 ; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    lui a3, 5
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    addiw a2, a3, 1365
+; RV64I-NEXT:    addi a2, a3, 1365
 ; RV64I-NEXT:    srli a3, a1, 1
 ; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    lui a3, 3
-; RV64I-NEXT:    addiw a3, a3, 819
+; RV64I-NEXT:    addi a3, a3, 819
 ; RV64I-NEXT:    sub a1, a1, a2
 ; RV64I-NEXT:    and a2, a1, a3
 ; RV64I-NEXT:    srli a1, a1, 2
@@ -228,11 +228,11 @@ define i16 @shl_cttz_constant_i16(i16 %y) {
 ; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    lui a2, 5
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    addiw a1, a2, 1365
+; RV64I-NEXT:    addi a1, a2, 1365
 ; RV64I-NEXT:    srli a2, a0, 1
 ; RV64I-NEXT:    and a1, a2, a1
 ; RV64I-NEXT:    lui a2, 3
-; RV64I-NEXT:    addiw a2, a2, 819
+; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    and a1, a0, a2
 ; RV64I-NEXT:    srli a0, a0, 2

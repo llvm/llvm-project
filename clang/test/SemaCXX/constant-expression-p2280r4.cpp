@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++23 -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter %s
 // RUN: %clang_cc1 -std=c++23 -verify=expected,interpreter %s -fexperimental-new-constant-interpreter
 
 using size_t = decltype(sizeof(0));
@@ -177,4 +177,88 @@ namespace extern_reference_used_as_unknown {
   extern int &x;
   int y;
   constinit int& g = (x,y); // expected-warning {{left operand of comma operator has no effect}}
+}
+
+namespace GH139452 {
+struct Dummy {
+  explicit operator bool() const noexcept { return true; }
+};
+
+struct Base { int error; };
+struct Derived : virtual Base { };
+
+template <class R>
+constexpr R get_value() {
+    const auto& derived_val = Derived{};
+    if (derived_val.error != 0)
+        /* nothing */;
+    return R{};
+}
+
+int f() {
+    return !get_value<Dummy>(); // contextually convert the function call result to bool
+}
+}
+
+namespace uninit_reference_used {
+  int y;
+  constexpr int &r = r; // expected-error {{must be initialized by a constant expression}} \
+  // expected-note {{initializer of 'r' is not a constant expression}} \
+  // expected-note {{declared here}}
+  constexpr int &rr = (rr, y);
+  constexpr int &g() {
+    int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
+    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    return x;
+  }
+  constexpr int &gg = g(); // expected-error {{must be initialized by a constant expression}} \
+  // expected-note {{in call to 'g()'}}
+  constexpr int g2() {
+    int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
+    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    return x;
+  }
+  constexpr int gg2 = g2(); // expected-error {{must be initialized by a constant expression}} \
+  // expected-note {{in call to 'g2()'}}
+  constexpr int &g3() {
+    int &x = (x,y); // expected-warning{{left operand of comma operator has no effect}} \
+    // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}}
+    return x;
+  }
+  constexpr int &gg3 = g3(); // nointerpreter-error {{must be initialized by a constant expression}} \
+  // nointerpreter-note {{in call to 'g3()'}}
+  typedef decltype(sizeof(1)) uintptr_t;
+  constexpr uintptr_t g4() {
+    uintptr_t * &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
+    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    *(uintptr_t*)x = 10;
+    return 3;
+  }
+  constexpr uintptr_t gg4 = g4(); // expected-error {{must be initialized by a constant expression}} \
+  // expected-note {{in call to 'g4()'}}
+  constexpr int g5() {
+    int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}} \
+    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    return 3;
+  }
+  constexpr uintptr_t gg5 = g5(); // expected-error {{must be initialized by a constant expression}} \
+  // expected-note {{in call to 'g5()'}}
+
+}
+
+namespace param_reference {
+  constexpr int arbitrary = -12345;
+  constexpr void f(const int &x = arbitrary) { // expected-note {{declared here}}
+    constexpr const int &v1 = x; // expected-error {{must be initialized by a constant expression}} \
+    // expected-note {{reference to 'x' is not a constant expression}}
+    constexpr const int &v2 = (x, arbitrary); // expected-warning {{left operand of comma operator has no effect}}
+    constexpr int v3 = x; // expected-error {{must be initialized by a constant expression}}
+    static_assert(x==arbitrary); // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert(&x - &x == 0);
+  }
 }

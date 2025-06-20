@@ -466,7 +466,7 @@ llvm::Value *CodeGenFunction::EmitFP8NeonFDOTCall(
   if (ExtendLaneArg) {
     auto *VT = llvm::FixedVectorType::get(Int8Ty, 16);
     Ops[2] = Builder.CreateInsertVector(VT, PoisonValue::get(VT), Ops[2],
-                                        Builder.getInt64(0));
+                                        uint64_t(0));
   }
   return EmitFP8NeonCall(IID, Tys, Ops, E, name);
 }
@@ -478,7 +478,7 @@ llvm::Value *CodeGenFunction::EmitFP8NeonFMLACall(
   if (ExtendLaneArg) {
     auto *VT = llvm::FixedVectorType::get(Int8Ty, 16);
     Ops[2] = Builder.CreateInsertVector(VT, PoisonValue::get(VT), Ops[2],
-                                        Builder.getInt64(0));
+                                        uint64_t(0));
   }
   const unsigned ElemCount = Ops[0]->getType()->getPrimitiveSizeInBits() /
                              RetTy->getPrimitiveSizeInBits();
@@ -502,7 +502,7 @@ Value *CodeGenFunction::EmitFP8NeonCvtCall(unsigned IID, llvm::Type *Ty0,
     // Op[0] is mfloat8x16_t, but the intrinsic converts only the lower part of
     // the vector.
     Tys[1] = llvm::FixedVectorType::get(Int8Ty, 8);
-    Ops[0] = Builder.CreateExtractVector(Tys[1], Ops[0], Builder.getInt64(0));
+    Ops[0] = Builder.CreateExtractVector(Tys[1], Ops[0], uint64_t(0));
   }
   return EmitFP8NeonCall(IID, Tys, Ops, E, name);
 }
@@ -2624,22 +2624,26 @@ static bool HasExtraNeonArgument(unsigned BuiltinID) {
   case NEON::BI__builtin_neon_vget_lane_bf16:
   case NEON::BI__builtin_neon_vget_lane_i32:
   case NEON::BI__builtin_neon_vget_lane_i64:
+  case NEON::BI__builtin_neon_vget_lane_mf8:
   case NEON::BI__builtin_neon_vget_lane_f32:
   case NEON::BI__builtin_neon_vgetq_lane_i8:
   case NEON::BI__builtin_neon_vgetq_lane_i16:
   case NEON::BI__builtin_neon_vgetq_lane_bf16:
   case NEON::BI__builtin_neon_vgetq_lane_i32:
   case NEON::BI__builtin_neon_vgetq_lane_i64:
+  case NEON::BI__builtin_neon_vgetq_lane_mf8:
   case NEON::BI__builtin_neon_vgetq_lane_f32:
   case NEON::BI__builtin_neon_vduph_lane_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_bf16:
   case NEON::BI__builtin_neon_vset_lane_i8:
+  case NEON::BI__builtin_neon_vset_lane_mf8:
   case NEON::BI__builtin_neon_vset_lane_i16:
   case NEON::BI__builtin_neon_vset_lane_bf16:
   case NEON::BI__builtin_neon_vset_lane_i32:
   case NEON::BI__builtin_neon_vset_lane_i64:
   case NEON::BI__builtin_neon_vset_lane_f32:
   case NEON::BI__builtin_neon_vsetq_lane_i8:
+  case NEON::BI__builtin_neon_vsetq_lane_mf8:
   case NEON::BI__builtin_neon_vsetq_lane_i16:
   case NEON::BI__builtin_neon_vsetq_lane_bf16:
   case NEON::BI__builtin_neon_vsetq_lane_i32:
@@ -4179,8 +4183,16 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
                                           unsigned IntrinsicID,
                                           bool IsZExtReturn) {
   QualType LangPTy = E->getArg(1)->getType();
-  llvm::Type *MemEltTy = CGM.getTypes().ConvertTypeForMem(
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
       LangPTy->castAs<PointerType>()->getPointeeType());
+
+  // Mfloat8 types is stored as a vector, so extra work
+  // to extract sclar element type is necessary.
+  if (MemEltTy->isVectorTy()) {
+    assert(MemEltTy == FixedVectorType::get(Int8Ty, 1) &&
+           "Only <1 x i8> expected");
+    MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
+  }
 
   // The vector type that is returned may be different from the
   // eventual type loaded from memory.
@@ -4226,8 +4238,16 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
                                            SmallVectorImpl<Value *> &Ops,
                                            unsigned IntrinsicID) {
   QualType LangPTy = E->getArg(1)->getType();
-  llvm::Type *MemEltTy = CGM.getTypes().ConvertTypeForMem(
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
       LangPTy->castAs<PointerType>()->getPointeeType());
+
+  // Mfloat8 types is stored as a vector, so extra work
+  // to extract sclar element type is necessary.
+  if (MemEltTy->isVectorTy()) {
+    assert(MemEltTy == FixedVectorType::get(Int8Ty, 1) &&
+           "Only <1 x i8> expected");
+    MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
+  }
 
   // The vector type that is stored may be different from the
   // eventual type stored to memory.
@@ -4727,7 +4747,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
 
     llvm::Type *OverloadedTy = getSVEVectorForElementType(EltTy);
     Value *InsertSubVec = Builder.CreateInsertVector(
-        OverloadedTy, PoisonValue::get(OverloadedTy), Vec, Builder.getInt64(0));
+        OverloadedTy, PoisonValue::get(OverloadedTy), Vec, uint64_t(0));
 
     Function *F =
         CGM.getIntrinsic(Intrinsic::aarch64_sve_dupq_lane, OverloadedTy);
@@ -4772,12 +4792,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svlen_u32:
   case SVE::BI__builtin_sve_svlen_u64: {
     SVETypeFlags TF(Builtin->TypeModifier);
-    auto VTy = cast<llvm::VectorType>(getSVEType(TF));
-    auto *NumEls =
-        llvm::ConstantInt::get(Ty, VTy->getElementCount().getKnownMinValue());
-
-    Function *F = CGM.getIntrinsic(Intrinsic::vscale, Ty);
-    return Builder.CreateMul(NumEls, Builder.CreateCall(F));
+    return Builder.CreateElementCount(Ty, getSVEType(TF)->getElementCount());
   }
 
   case SVE::BI__builtin_sve_svtbl2_u8:
@@ -4793,8 +4808,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svtbl2_f32:
   case SVE::BI__builtin_sve_svtbl2_f64: {
     SVETypeFlags TF(Builtin->TypeModifier);
-    auto VTy = cast<llvm::ScalableVectorType>(getSVEType(TF));
-    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_tbl2, VTy);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_tbl2, getSVEType(TF));
     return Builder.CreateCall(F, Ops);
   }
 
@@ -4810,7 +4824,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svset_neonq_f32:
   case SVE::BI__builtin_sve_svset_neonq_f64:
   case SVE::BI__builtin_sve_svset_neonq_bf16: {
-    return Builder.CreateInsertVector(Ty, Ops[0], Ops[1], Builder.getInt64(0));
+    return Builder.CreateInsertVector(Ty, Ops[0], Ops[1], uint64_t(0));
   }
 
   case SVE::BI__builtin_sve_svget_neonq_s8:
@@ -4825,7 +4839,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svget_neonq_f32:
   case SVE::BI__builtin_sve_svget_neonq_f64:
   case SVE::BI__builtin_sve_svget_neonq_bf16: {
-    return Builder.CreateExtractVector(Ty, Ops[0], Builder.getInt64(0));
+    return Builder.CreateExtractVector(Ty, Ops[0], uint64_t(0));
   }
 
   case SVE::BI__builtin_sve_svdup_neonq_s8:
@@ -4841,7 +4855,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svdup_neonq_f64:
   case SVE::BI__builtin_sve_svdup_neonq_bf16: {
     Value *Insert = Builder.CreateInsertVector(Ty, PoisonValue::get(Ty), Ops[0],
-                                               Builder.getInt64(0));
+                                               uint64_t(0));
     return Builder.CreateIntrinsic(Intrinsic::aarch64_sve_dupq_lane, {Ty},
                                    {Insert, Builder.getInt64(0)});
   }
@@ -6162,6 +6176,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         Builder.CreateBitCast(Ops[1], llvm::FixedVectorType::get(DoubleTy, 1));
     Ops.push_back(EmitScalarExpr(E->getArg(2)));
     return Builder.CreateInsertElement(Ops[1], Ops[0], Ops[2], "vset_lane");
+  case NEON::BI__builtin_neon_vset_lane_mf8:
+  case NEON::BI__builtin_neon_vsetq_lane_mf8:
+    Ops.push_back(EmitScalarExpr(E->getArg(2)));
+    // The input vector type needs a cast to scalar type.
+    Ops[0] =
+        Builder.CreateBitCast(Ops[0], llvm::Type::getInt8Ty(getLLVMContext()));
+    return Builder.CreateInsertElement(Ops[1], Ops[0], Ops[2], "vset_lane");
   case NEON::BI__builtin_neon_vsetq_lane_f64:
     // The vector type needs a cast for the v2f64 variant.
     Ops[1] =
@@ -6181,6 +6202,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         Builder.CreateBitCast(Ops[0], llvm::FixedVectorType::get(Int8Ty, 16));
     return Builder.CreateExtractElement(Ops[0], EmitScalarExpr(E->getArg(1)),
                                         "vgetq_lane");
+  case NEON::BI__builtin_neon_vget_lane_mf8:
+  case NEON::BI__builtin_neon_vdupb_lane_mf8:
+  case NEON::BI__builtin_neon_vgetq_lane_mf8:
+  case NEON::BI__builtin_neon_vdupb_laneq_mf8:
+    return Builder.CreateExtractElement(Ops[0], EmitScalarExpr(E->getArg(1)),
+                                        "vget_lane");
   case NEON::BI__builtin_neon_vget_lane_i16:
   case NEON::BI__builtin_neon_vduph_lane_i16:
     Ops[0] =
@@ -7630,6 +7657,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vuqadd");
   }
 
+  case NEON::BI__builtin_neon_vluti2_laneq_mf8:
   case NEON::BI__builtin_neon_vluti2_laneq_bf16:
   case NEON::BI__builtin_neon_vluti2_laneq_f16:
   case NEON::BI__builtin_neon_vluti2_laneq_p16:
@@ -7645,6 +7673,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                              /*isQuad*/ false));
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vluti2_laneq");
   }
+  case NEON::BI__builtin_neon_vluti2q_laneq_mf8:
   case NEON::BI__builtin_neon_vluti2q_laneq_bf16:
   case NEON::BI__builtin_neon_vluti2q_laneq_f16:
   case NEON::BI__builtin_neon_vluti2q_laneq_p16:
@@ -7660,6 +7689,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                              /*isQuad*/ true));
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vluti2_laneq");
   }
+  case NEON::BI__builtin_neon_vluti2_lane_mf8:
   case NEON::BI__builtin_neon_vluti2_lane_bf16:
   case NEON::BI__builtin_neon_vluti2_lane_f16:
   case NEON::BI__builtin_neon_vluti2_lane_p16:
@@ -7675,6 +7705,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                              /*isQuad*/ false));
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vluti2_lane");
   }
+  case NEON::BI__builtin_neon_vluti2q_lane_mf8:
   case NEON::BI__builtin_neon_vluti2q_lane_bf16:
   case NEON::BI__builtin_neon_vluti2q_lane_f16:
   case NEON::BI__builtin_neon_vluti2q_lane_p16:
@@ -7690,12 +7721,14 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                              /*isQuad*/ true));
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vluti2_lane");
   }
+  case NEON::BI__builtin_neon_vluti4q_lane_mf8:
   case NEON::BI__builtin_neon_vluti4q_lane_p8:
   case NEON::BI__builtin_neon_vluti4q_lane_s8:
   case NEON::BI__builtin_neon_vluti4q_lane_u8: {
     Int = Intrinsic::aarch64_neon_vluti4q_lane;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vluti4q_lane");
   }
+  case NEON::BI__builtin_neon_vluti4q_laneq_mf8:
   case NEON::BI__builtin_neon_vluti4q_laneq_p8:
   case NEON::BI__builtin_neon_vluti4q_laneq_s8:
   case NEON::BI__builtin_neon_vluti4q_laneq_u8: {
@@ -7767,7 +7800,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vcvt_high_mf8_f32_fpm: {
     llvm::Type *Ty = llvm::FixedVectorType::get(Int8Ty, 16);
     Ops[0] = Builder.CreateInsertVector(Ty, PoisonValue::get(Ty), Ops[0],
-                                        Builder.getInt64(0));
+                                        uint64_t(0));
     return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_fcvtn2, Ty,
                               Ops[1]->getType(), false, Ops, E, "vfcvtn2");
   }

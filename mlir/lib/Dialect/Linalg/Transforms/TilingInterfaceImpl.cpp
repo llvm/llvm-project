@@ -369,7 +369,7 @@ struct LinalgOpPartialReductionInterface
 
     SmallVector<OpFoldResult> tiledShape;
     for (auto [tileSize, dimSize] : llvm::zip_equal(sizes, shape)) {
-      if (isZeroIndex(tileSize)) {
+      if (isZeroInteger(tileSize)) {
         tiledShape.push_back(dimSize);
       } else {
         tiledShape.push_back(tileSize);
@@ -511,7 +511,7 @@ struct LinalgOpPartialReductionInterface
       for (auto [resultNum, dimExpr] :
            llvm::enumerate(partialMap.getResults())) {
         unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
-        if (llvm::find(reductionDims, dim) != reductionDims.end()) {
+        if (llvm::is_contained(reductionDims, dim)) {
           partialReductionDims.push_back(resultNum);
         }
       }
@@ -553,7 +553,7 @@ struct LinalgOpPartialReductionInterface
       unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
       resultSizes.push_back(sizes[dim]);
 
-      if (llvm::find(reductionDims, dim) != reductionDims.end()) {
+      if (llvm::is_contained(reductionDims, dim)) {
         // Reduction dims are reduced, and are always outputed in the same
         // place. So use offset 0 for them.
         resultOffsets.push_back(b.getIndexAttr(0));
@@ -732,7 +732,7 @@ struct PackOpTiling
     // iterated or inner dims are not tiled. Otherwise, it will generate a
     // sequence of non-trivial ops (for partial tiles).
     for (auto offset : offsets.take_back(numTiles))
-      if (!isConstantIntValue(offset, 0))
+      if (!isZeroInteger(offset))
         return failure();
 
     for (auto iter :
@@ -1187,7 +1187,6 @@ struct UnPackOpTiling
         loc, unPackOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(extractDestSlice);
 
-    SmallVector<OpFoldResult> inputOffsets, inputSizes;
     strides.append(unPackOp.getSourceRank() - outputRank, oneAttr);
     // Create slice of the source operand.
     auto extractSourceSlice = b.create<tensor::ExtractSliceOp>(

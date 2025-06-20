@@ -3,6 +3,7 @@ Test lldb data formatter subsystem.
 """
 
 
+from typing import Optional
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -16,10 +17,19 @@ class StdVBoolDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
+    @skip
     @add_test_categories(["libstdcxx"])
     def test_with_run_command(self):
+        self.with_run_command()
+
+    @add_test_categories(["libstdcxx"])
+    def test_with_run_command_debug(self):
+        build_args = {"CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
+        self.with_run_command(build_args)
+
+    def with_run_command(self, dictionary: Optional[dict] = None):
         """Test that that file and class static variables display correctly."""
-        self.build()
+        self.build(dictionary=dictionary)
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
@@ -42,13 +52,12 @@ class StdVBoolDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
         self.expect(
-            "frame variable vBool",
+            "frame variable -A vBool",
             substrs=[
                 "size=49",
                 "[0] = false",
@@ -62,7 +71,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         )
 
         self.expect(
-            "expr vBool",
+            "expr -A -- vBool",
             substrs=[
                 "size=49",
                 "[0] = false",

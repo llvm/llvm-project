@@ -25,7 +25,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__decay)
+#if __has_builtin(__decay) && !defined(_LIBCPP_COMPILER_GCC)
 template <class _Tp>
 using __decay_t _LIBCPP_NODEBUG = __decay(_Tp);
 
