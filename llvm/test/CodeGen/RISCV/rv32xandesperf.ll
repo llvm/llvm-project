@@ -2,6 +2,184 @@
 ; RUN: llc -O0 -mtriple=riscv32 -mattr=+xandesperf -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
+; NDS.BBC
+
+define i32 @bbc(i32 %a) nounwind {
+; CHECK-LABEL: bbc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 15
+; CHECK-NEXT:    bgez a0, .LBB0_2
+; CHECK-NEXT:    j .LBB0_1
+; CHECK-NEXT:  .LBB0_1: # %f
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_2: # %t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %mask = shl i32 1, 16
+  %and = and i32 %a, %mask
+  %tst = icmp eq i32 %and, 0
+  br i1 %tst, label %t, label %f
+f:
+  ret i32 0
+t:
+  ret i32 1
+}
+
+define i32 @select_bbc(i32 %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: select_bbc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    slli a0, a0, 15
+; CHECK-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    bgez a0, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %mask = shl i32 1, 16
+  %and = and i32 %a, %mask
+  %tst = icmp eq i32 %and, 0
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+; NDS.BBS
+
+define i32 @bbs(i32 %a) nounwind {
+; CHECK-LABEL: bbs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 15
+; CHECK-NEXT:    bltz a0, .LBB2_2
+; CHECK-NEXT:    j .LBB2_1
+; CHECK-NEXT:  .LBB2_1: # %f
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_2: # %t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %mask = shl i32 1, 16
+  %and = and i32 %a, %mask
+  %tst = icmp ne i32 %and, 0
+  br i1 %tst, label %t, label %f
+f:
+  ret i32 0
+t:
+  ret i32 1
+}
+
+define i32 @select_bbs(i32 %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: select_bbs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    slli a0, a0, 15
+; CHECK-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    bltz a0, .LBB3_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %mask = shl i32 1, 16
+  %and = and i32 %a, %mask
+  %tst = icmp ne i32 %and, 0
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+; NDS.BEQC
+
+define i32 @beqc(i32 %a) nounwind {
+; CHECK-LABEL: beqc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    beq a0, a1, .LBB4_2
+; CHECK-NEXT:    j .LBB4_1
+; CHECK-NEXT:  .LBB4_1: # %f
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB4_2: # %t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %tst = icmp eq i32 %a, 5
+  br i1 %tst, label %t, label %f
+f:
+  ret i32 0
+t:
+  ret i32 1
+}
+
+define i32 @select_beqc(i32 %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: select_beqc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    beq a0, a1, .LBB5_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %tst = icmp eq i32 %a, 5
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+; NDS.BNEC
+
+define i32 @bnec(i32 %a) nounwind {
+; CHECK-LABEL: bnec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    bne a0, a1, .LBB6_2
+; CHECK-NEXT:    j .LBB6_1
+; CHECK-NEXT:  .LBB6_1: # %f
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB6_2: # %t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %tst = icmp ne i32 %a, 5
+  br i1 %tst, label %t, label %f
+f:
+  ret i32 0
+t:
+  ret i32 1
+}
+
+define i32 @select_bnec(i32 %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: select_bnec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    bne a0, a1, .LBB7_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %tst = icmp ne i32 %a, 5
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
 ; NDS.BFOZ
 
 ; MSB >= LSB
