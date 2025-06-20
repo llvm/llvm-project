@@ -26,7 +26,7 @@ namespace sys {
 
 /// This function runs all the registered interrupt handlers, including the
 /// removal of files registered by RemoveFileOnSignal.
-LLVM_ABI void RunInterruptHandlers();
+LLVM_ABI void RunInterruptHandlers(bool ExecuteSignalHandlers);
 
 /// This function registers signal handlers to ensure that if a signal gets
 /// delivered that the named file is removed.
