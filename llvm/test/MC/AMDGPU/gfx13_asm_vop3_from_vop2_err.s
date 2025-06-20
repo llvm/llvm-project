@@ -1,15 +1,5 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX13-ERR --implicit-check-not=error: --strict-whitespace %s
 
-v_add_nc_u64_e64_dpp v[2:3], v[2:3], v[4:5] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-ERR-NEXT:{{^}}v_add_nc_u64_e64_dpp v[2:3], v[2:3], v[4:5] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-ERR-NEXT:{{^}}                                            ^
-
-v_sub_nc_u64_e64_dpp v[2:3], v[2:3], v[4:5] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-ERR-NEXT:{{^}}v_sub_nc_u64_e64_dpp v[2:3], v[2:3], v[4:5] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-ERR-NEXT:{{^}}                                            ^
-
 v_fmac_f64_e64_dpp v[4:5], v[2:3], v[4:5] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX13-ERR-NEXT:{{^}}v_fmac_f64_e64_dpp v[4:5], v[2:3], v[4:5] dpp8:[7,6,5,4,3,2,1,0]
@@ -35,16 +25,6 @@ v_lshlrev_b64_e64_dpp v[4:5], v2, v[4:5] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX13-ERR-NEXT:{{^}}v_lshlrev_b64_e64_dpp v[4:5], v2, v[4:5] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-ERR-NEXT:{{^}}                                         ^
-
-v_add_nc_u64_e64_dpp v[4:5], v[2:3], v[4:5] quad_perm:[3,2,1,0]
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
-// GFX13-ERR-NEXT:{{^}}v_add_nc_u64_e64_dpp v[4:5], v[2:3], v[4:5] quad_perm:[3,2,1,0]
-// GFX13-ERR-NEXT:{{^}}                                            ^
-
-v_sub_nc_u64_e64_dpp v[4:5], v[2:3], v[4:5] quad_perm:[3,2,1,0]
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
-// GFX13-ERR-NEXT:{{^}}v_sub_nc_u64_e64_dpp v[4:5], v[2:3], v[4:5] quad_perm:[3,2,1,0]
-// GFX13-ERR-NEXT:{{^}}                                            ^
 
 v_fmac_f64_e64_dpp v[4:5], v[2:3], v[4:5] quad_perm:[3,2,1,0]
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share

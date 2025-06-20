@@ -28,23 +28,15 @@ define amdgpu_ps void @cluster_load_async_to_lds_b8_vaddr(ptr addrspace(1) %gadd
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b8 v2, v[0:1], off offset:16 th:TH_LOAD_NT
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
-; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b8_vaddr:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
-; GFX1300-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1300-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b8 v2, v[0:1], off offset:16 th:TH_LOAD_NT
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b8_vaddr:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1300-GISEL-NEXT:    s_mov_b32 m0, s0
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b8 v2, v[0:1], off offset:16 th:TH_LOAD_NT
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: cluster_load_async_to_lds_b8_vaddr:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX1300-NEXT:    s_mov_b32 m0, s0
+; GFX1300-NEXT:    global_load_async_mcast_to_lds_b8 v2, v[0:1], off offset:16 th:TH_LOAD_NT
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
   call void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 1, i32 %mask)
@@ -68,21 +60,14 @@ define amdgpu_ps void @cluster_load_async_to_lds_b8_vaddr_imm_mask(ptr addrspace
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b8 v2, v[0:1], off offset:16
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
-; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b8_vaddr_imm_mask:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
-; GFX1300-SDAG-NEXT:    s_mov_b32 m0, 15
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b8 v2, v[0:1], off offset:16
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b8_vaddr_imm_mask:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    s_mov_b32 m0, 15
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b8 v2, v[0:1], off offset:16
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: cluster_load_async_to_lds_b8_vaddr_imm_mask:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    s_mov_b32 m0, 15
+; GFX1300-NEXT:    global_load_async_mcast_to_lds_b8 v2, v[0:1], off offset:16
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
   call void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 0, i32 15)
@@ -142,23 +127,15 @@ define amdgpu_ps void @cluster_load_async_to_lds_b32_vaddr(ptr addrspace(1) %gad
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b32 v2, v[0:1], off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
-; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b32_vaddr:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
-; GFX1300-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1300-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b32 v2, v[0:1], off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b32_vaddr:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1300-GISEL-NEXT:    s_mov_b32 m0, s0
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b32 v2, v[0:1], off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: cluster_load_async_to_lds_b32_vaddr:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX1300-NEXT:    s_mov_b32 m0, s0
+; GFX1300-NEXT:    global_load_async_mcast_to_lds_b32 v2, v[0:1], off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
   call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 10, i32 %mask)
@@ -182,21 +159,14 @@ define amdgpu_ps void @cluster_load_async_to_lds_b32_vaddr_imm_mask(ptr addrspac
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b32 v2, v[0:1], off offset:16
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
-; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b32_vaddr_imm_mask:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
-; GFX1300-SDAG-NEXT:    s_mov_b32 m0, 15
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b32 v2, v[0:1], off offset:16
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b32_vaddr_imm_mask:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    s_mov_b32 m0, 15
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b32 v2, v[0:1], off offset:16
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: cluster_load_async_to_lds_b32_vaddr_imm_mask:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    s_mov_b32 m0, 15
+; GFX1300-NEXT:    global_load_async_mcast_to_lds_b32 v2, v[0:1], off offset:16
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
   call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 0, i32 15)
@@ -256,23 +226,15 @@ define amdgpu_ps void @cluster_load_async_to_lds_b64_vaddr(ptr addrspace(1) %gad
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b64 v2, v[0:1], off offset:16 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
-; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b64_vaddr:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
-; GFX1300-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1300-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b64 v2, v[0:1], off offset:16 th:TH_LOAD_NT_HT scope:SCOPE_DEV
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b64_vaddr:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1300-GISEL-NEXT:    s_mov_b32 m0, s0
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b64 v2, v[0:1], off offset:16 th:TH_LOAD_NT_HT scope:SCOPE_DEV
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: cluster_load_async_to_lds_b64_vaddr:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX1300-NEXT:    s_mov_b32 m0, s0
+; GFX1300-NEXT:    global_load_async_mcast_to_lds_b64 v2, v[0:1], off offset:16 th:TH_LOAD_NT_HT scope:SCOPE_DEV
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
   call void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 22, i32 %mask)
@@ -296,21 +258,14 @@ define amdgpu_ps void @cluster_load_async_to_lds_b64_vaddr_imm_mask( ptr addrspa
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b64 v2, v[0:1], off offset:16
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
-; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b64_vaddr_imm_mask:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
-; GFX1300-SDAG-NEXT:    s_movk_i32 m0, 0x7f
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b64 v2, v[0:1], off offset:16
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b64_vaddr_imm_mask:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    s_movk_i32 m0, 0x7f
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b64 v2, v[0:1], off offset:16
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: cluster_load_async_to_lds_b64_vaddr_imm_mask:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    s_movk_i32 m0, 0x7f
+; GFX1300-NEXT:    global_load_async_mcast_to_lds_b64 v2, v[0:1], off offset:16
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
   call void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 0, i32 127)
@@ -370,23 +325,15 @@ define amdgpu_ps void @cluster_load_async_to_lds_b128_vaddr(ptr addrspace(1) %ga
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b128 v2, v[0:1], off offset:16 th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
-; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b128_vaddr:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
-; GFX1300-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1300-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b128 v2, v[0:1], off offset:16 th:TH_LOAD_BYPASS scope:SCOPE_SYS
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b128_vaddr:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1300-GISEL-NEXT:    s_mov_b32 m0, s0
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b128 v2, v[0:1], off offset:16 th:TH_LOAD_BYPASS scope:SCOPE_SYS
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: cluster_load_async_to_lds_b128_vaddr:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX1300-NEXT:    s_mov_b32 m0, s0
+; GFX1300-NEXT:    global_load_async_mcast_to_lds_b128 v2, v[0:1], off offset:16 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
   call void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 27, i32 %mask)
@@ -410,21 +357,14 @@ define amdgpu_ps void @cluster_load_async_to_lds_b128_vaddr_imm_mask(ptr addrspa
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b128 v2, v[0:1], off offset:16
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
-; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b128_vaddr_imm_mask:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
-; GFX1300-SDAG-NEXT:    s_movk_i32 m0, 0x7f
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b128 v2, v[0:1], off offset:16
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b128_vaddr_imm_mask:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    s_movk_i32 m0, 0x7f
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b128 v2, v[0:1], off offset:16
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: cluster_load_async_to_lds_b128_vaddr_imm_mask:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    s_movk_i32 m0, 0x7f
+; GFX1300-NEXT:    global_load_async_mcast_to_lds_b128 v2, v[0:1], off offset:16
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
   call void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 0, i32 127)
@@ -531,8 +471,11 @@ define amdgpu_ps void @cluster_load_async_to_lds_b64_saddr_no_scale_offset(ptr a
 ; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b64_saddr_no_scale_offset:
 ; GFX1300-SDAG:       ; %bb.0: ; %entry
 ; GFX1300-SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-SDAG-NEXT:    v_lshlrev_b64_e32 v[1:2], 2, v[1:2]
+; GFX1300-SDAG-NEXT:    v_add_co_u32 v1, vcc_lo, s0, v1
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-SDAG-NEXT:    v_lshl_add_u64 v[1:2], v[1:2], 2, s[0:1]
+; GFX1300-SDAG-NEXT:    v_add_co_ci_u32_e64 v2, null, s1, v2, vcc_lo
 ; GFX1300-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b64 v0, v[1:2], off offset:16 th:TH_LOAD_NT
 ; GFX1300-SDAG-NEXT:    s_endpgm

@@ -2286,8 +2286,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureBVHDualAndBVH8Insts,
-   FeatureLshlAddU64Inst,
-   FeatureAddSubU64Insts,
    FeatureWMMA128bInsts,
    FeatureIEEEMinimumMaximumInsts,
 ]>;
