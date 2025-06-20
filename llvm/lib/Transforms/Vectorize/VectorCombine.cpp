@@ -128,6 +128,7 @@ private:
   bool foldShuffleOfShuffles(Instruction &I);
   bool foldShuffleOfIntrinsics(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
+  bool foldShuffleExt(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
@@ -2791,6 +2792,60 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   return true;
 }
 
+bool VectorCombine::foldShuffleExt(Instruction &I) {
+  // Try to fold vector zero- and sign-extends split across multiple operations
+  // into a single extend.
+
+  // Check if we have ZEXT/SEXT (SHUFFLE (ZEXT/SEXT %src), _, identity-mask),
+  // with an identity mask extracting the first sub-vector.
+  Value *Src;
+  ArrayRef<int> Mask;
+  if (!match(&I, m_OneUse(m_Shuffle(m_OneUse(m_ZExtOrSExt(m_Value(Src))),
+                                    m_Value(), m_Mask(Mask)))) ||
+      !cast<ShuffleVectorInst>(&I)->isIdentityWithExtract())
+    return false;
+  auto *InnerExt = cast<Instruction>(I.getOperand(0));
+  auto *OuterExt = cast<Instruction>(*I.user_begin());
+  if (!isa<SExtInst, ZExtInst>(OuterExt))
+    return false;
+
+  // If the inner extend is a sign extend and the outer one isnt (i.e. a
+  // zero-extend), don't fold. If the first one is zero-extend, it doesn't
+  // matter if the second one is a sign- or zero-extend.
+  if (isa<SExtInst>(InnerExt) && !isa<SExtInst>(OuterExt))
+    return false;
+
+  auto *DstTy = cast<FixedVectorType>(OuterExt->getType());
+  auto *SrcTy =
+      FixedVectorType::get(InnerExt->getOperand(0)->getType()->getScalarType(),
+                           DstTy->getNumElements());
+
+  // Don't perform the fold if the cost of the new extend is worse than the cost
+  // of the 2 original extends.
+  InstructionCost OriginalCost =
+      TTI.getCastInstrCost(InnerExt->getOpcode(), SrcTy, InnerExt->getType(),
+                           TTI::CastContextHint::None) +
+      TTI.getCastInstrCost(InnerExt->getOpcode(), SrcTy, InnerExt->getType(),
+                           TTI::CastContextHint::None);
+  InstructionCost NewCost = TTI.getCastInstrCost(
+      InnerExt->getOpcode(), SrcTy, DstTy, TTI::CastContextHint::None);
+  if (NewCost > OriginalCost)
+    return false;
+
+  // Convert to a shuffle of the input feeding a single wide extend.
+  Builder.SetInsertPoint(*OuterExt->getInsertionPointAfterDef());
+  auto *NewIns =
+      Builder.CreateShuffleVector(Src, PoisonValue::get(Src->getType()), Mask);
+  auto *NewExt =
+      isa<ZExtInst>(InnerExt)
+          ? Builder.CreateZExt(NewIns, DstTy, "vec.ext", InnerExt->hasNonNeg())
+          : Builder.CreateSExt(NewIns, DstTy, "vec.ext");
+  OuterExt->replaceAllUsesWith(NewExt);
+  replaceValue(*OuterExt, *NewExt);
+  Worklist.pushValue(NewExt);
+  return true;
+}
+
 /// Given a commutative reduction, the order of the input lanes does not alter
 /// the results. We can use this to remove certain shuffles feeding the
 /// reduction, removing the need to shuffle at all.
@@ -3565,6 +3620,7 @@ bool VectorCombine::run() {
         break;
       case Instruction::ShuffleVector:
         MadeChange |= widenSubvectorLoad(I);
+        MadeChange |= foldShuffleExt(I);
         break;
       default:
         break;
