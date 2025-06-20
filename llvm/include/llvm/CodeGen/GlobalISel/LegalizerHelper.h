@@ -295,6 +295,11 @@ private:
   getNeutralElementForVecReduce(unsigned Opcode, MachineIRBuilder &MIRBuilder,
                                 LLT Ty);
 
+  LegalizeResult simpleLibcallSinCos(MachineInstr &MI,
+                                     MachineIRBuilder &MIRBuilder,
+                                     unsigned Size, Type *OpType,
+                                     LostDebugLocObserver &LocObserver);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
