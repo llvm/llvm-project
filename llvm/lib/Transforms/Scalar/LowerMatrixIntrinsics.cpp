@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -41,6 +42,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
@@ -325,6 +327,25 @@ computeShapeInfoForInst(Instruction *I,
       return OpShape->second;
   }
 
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul:
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fmin:
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+      return ShapeInfo(1, 1);
+    default:
+      break;
+    }
+  }
+
   if (isUniformShape(I) || isa<SelectInst>(I)) {
     auto Ops = I->operands();
     auto ShapedOps = isa<SelectInst>(I) ? drop_begin(Ops) : Ops;
@@ -468,7 +489,7 @@ class LowerMatrixIntrinsics {
       return make_range(Vectors.begin(), Vectors.end());
     }
 
-    iterator_range<SmallVector<Value *, 8>::iterator> vectors() {
+    iterator_range<SmallVector<Value *, 8>::const_iterator> vectors() const {
       return make_range(Vectors.begin(), Vectors.end());
     }
 
@@ -701,7 +722,31 @@ public:
       case Intrinsic::matrix_transpose:
       case Intrinsic::matrix_column_major_load:
       case Intrinsic::matrix_column_major_store:
+      case Intrinsic::vector_reduce_fmax:
+      case Intrinsic::vector_reduce_fmaximum:
+      case Intrinsic::vector_reduce_fmin:
+      case Intrinsic::vector_reduce_fminimum:
+      case Intrinsic::vector_reduce_add:
+      case Intrinsic::vector_reduce_and:
+      case Intrinsic::vector_reduce_mul:
+      case Intrinsic::vector_reduce_or:
+      case Intrinsic::vector_reduce_xor:
         return true;
+      case Intrinsic::vector_reduce_fadd:
+      case Intrinsic::vector_reduce_fmul: {
+        FastMathFlags FMF = getFastMathFlags(Inst);
+        if (Inst->getType()->isFloatingPointTy() && !FMF.allowReassoc())
+          return false;
+
+        if (match(Inst, m_Intrinsic<Intrinsic::vector_reduce_fadd>(
+                            m_Unless(m_AnyZeroFP()), m_Value())))
+          return false;
+
+        if (match(Inst, m_Intrinsic<Intrinsic::vector_reduce_fmul>(
+                            m_Unless(m_FPOne()), m_Value())))
+          return false;
+        return true;
+      }
       default:
         return isUniformShape(II);
       }
@@ -1268,6 +1313,134 @@ public:
       return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                      Result.getNumVectors());
     }
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul:
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fmin:
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor: {
+      IRBuilder<> Builder(Inst);
+
+      FastMathFlags FMF = getFastMathFlags(Inst);
+      Value *Start = nullptr;
+      Value *Op = nullptr;
+      switch (Inst->getIntrinsicID()) {
+      case Intrinsic::vector_reduce_fadd:
+      case Intrinsic::vector_reduce_fmul: {
+        Start = Inst->getOperand(0);
+        Op = Inst->getOperand(1);
+      } break;
+      case Intrinsic::vector_reduce_fmax:
+      case Intrinsic::vector_reduce_fmaximum:
+      case Intrinsic::vector_reduce_fmin:
+      case Intrinsic::vector_reduce_fminimum:
+      case Intrinsic::vector_reduce_add:
+      case Intrinsic::vector_reduce_and:
+      case Intrinsic::vector_reduce_mul:
+      case Intrinsic::vector_reduce_or:
+      case Intrinsic::vector_reduce_xor:
+        Op = Inst->getOperand(0);
+        break;
+      default:
+        llvm_unreachable("unexpected intrinsic");
+      }
+
+      auto *I = Inst2ColumnMatrix.find(Op);
+      assert(I != Inst2ColumnMatrix.end());
+      const MatrixTy &M = I->second;
+
+      auto CreateVReduce = [&](Value *LHS, Value *RHS) {
+        switch (Inst->getIntrinsicID()) {
+        case Intrinsic::vector_reduce_add:
+          return Builder.CreateAdd(LHS, RHS);
+        case Intrinsic::vector_reduce_and:
+          return Builder.CreateAnd(LHS, RHS);
+        case Intrinsic::vector_reduce_fadd:
+          return Builder.CreateFAdd(LHS, RHS);
+        case Intrinsic::vector_reduce_fmax:
+          return Builder.CreateMaximum(LHS, RHS);
+        case Intrinsic::vector_reduce_fmaximum:
+          return Builder.CreateMaximumNum(LHS, RHS);
+        case Intrinsic::vector_reduce_fmin:
+          return Builder.CreateMinimum(LHS, RHS);
+        case Intrinsic::vector_reduce_fminimum:
+          return Builder.CreateMinimumNum(LHS, RHS);
+        case Intrinsic::vector_reduce_fmul:
+          return Builder.CreateFMul(LHS, RHS);
+        case Intrinsic::vector_reduce_mul:
+          return Builder.CreateMul(LHS, RHS);
+        case Intrinsic::vector_reduce_or:
+          return Builder.CreateOr(LHS, RHS);
+        case Intrinsic::vector_reduce_xor:
+          return Builder.CreateXor(LHS, RHS);
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        }
+      };
+
+      Value *ResultV;
+      if (Inst->getIntrinsicID() == Intrinsic::vector_reduce_fadd ||
+          Inst->getIntrinsicID() == Intrinsic::vector_reduce_fmul) {
+        ResultV = Builder.CreateVectorSplat(
+            ElementCount::getFixed(M.getStride()), Start);
+        for (auto &Vector : M.vectors()) {
+          ResultV = CreateVReduce(ResultV, Vector);
+          if (isa<FPMathOperator>(ResultV))
+            if (auto *ResultVI = dyn_cast<Instruction>(ResultV))
+              ResultVI->setFastMathFlags(FMF);
+        }
+      } else {
+        ResultV = M.getVector(0);
+        for (auto &Vector : drop_begin(M.vectors())) {
+          ResultV = CreateVReduce(ResultV, Vector);
+          if (isa<FPMathOperator>(ResultV))
+            if (auto *ResultVI = dyn_cast<Instruction>(ResultV))
+              ResultVI->setFastMathFlags(FMF);
+        }
+      }
+
+      auto CreateHReduce = [&](Value *V) {
+        switch (Inst->getIntrinsicID()) {
+        case Intrinsic::vector_reduce_add:
+          return Builder.CreateAddReduce(V);
+        case Intrinsic::vector_reduce_and:
+          return Builder.CreateAndReduce(V);
+        case Intrinsic::vector_reduce_fadd:
+          return Builder.CreateFAddReduce(Start, V);
+        case Intrinsic::vector_reduce_fmax:
+          return Builder.CreateFPMaxReduce(V);
+        case Intrinsic::vector_reduce_fmaximum:
+          return Builder.CreateFPMaximumReduce(V);
+        case Intrinsic::vector_reduce_fmin:
+          return Builder.CreateFPMinReduce(V);
+        case Intrinsic::vector_reduce_fminimum:
+          return Builder.CreateFPMinimumReduce(V);
+        case Intrinsic::vector_reduce_fmul:
+          return Builder.CreateFMulReduce(Start, V);
+        case Intrinsic::vector_reduce_mul:
+          return Builder.CreateMulReduce(V);
+        case Intrinsic::vector_reduce_or:
+          return Builder.CreateOrReduce(V);
+        case Intrinsic::vector_reduce_xor:
+          return Builder.CreateXorReduce(V);
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        }
+      };
+
+      Value *Result = CreateHReduce(ResultV);
+      if (isa<FPMathOperator>(Result))
+        if (auto *ResultI = dyn_cast<Instruction>(Result))
+          ResultI->setFastMathFlags(FMF);
+      Inst->replaceAllUsesWith(Result);
+      Result->takeName(Inst);
+      return MatrixTy{Result};
+    } break;
     default:
       break;
     }
