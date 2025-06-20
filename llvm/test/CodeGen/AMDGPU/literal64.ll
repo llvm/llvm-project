@@ -268,10 +268,10 @@ define amdgpu_ps <2 x float> @v_cndmask(double %a) {
 ; GCN-SDAG-LABEL: v_cndmask:
 ; GCN-SDAG:       ; %bb.0:
 ; GCN-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, 0x40632000
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x40632000
+; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0x40690333, v2, vcc_lo
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
-; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0x40690333, v1, vcc_lo
 ; GCN-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_cndmask:
