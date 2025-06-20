@@ -176,6 +176,9 @@ static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
 }
 
 static bool isNonRenamableLocal(const GlobalValue &GV) {
+  if (isa<Function>(&GV)) {
+    return false;
+  }
   return GV.hasSection() && GV.hasLocalLinkage();
 }
 
