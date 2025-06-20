@@ -2967,9 +2967,14 @@ define void @non_loop(i32 %arg) {
 ; CHECK:       preheader:
 ; CHECK-NEXT:    br label %header
 ; CHECK:       header:
+; CHECK-NEXT:    br i1 true, label %latchExit, label %latch
+; CHECK:       latch:
+; CHECK-NEXT:    br label %latchExit
+; CHECK:       latchExit:
+; CHECK-NEXT:    %i2.ph = phi i32 [ %arg, %header ], [ -1, %latch ]
 ; CHECK-NEXT:    br label %returnblock
 ; CHECK:       returnblock:
-; CHECK-NEXT:    %i2 = phi i32 [ -1, %entry ], [ %arg, %header ]
+; CHECK-NEXT:    %i2 = phi i32 [ -1, %entry ], [ %i2.ph, %latchExit ]
 ; CHECK-NEXT:    ret void
 ;
 

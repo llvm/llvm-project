@@ -1314,7 +1314,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     });
 
     ValueToValueMapTy VMap;
-    if (peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
+    if (peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, &TTI, DT, &AC, PreserveLCSSA,
                  VMap)) {
       simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
       // If the loop was peeled, we already "used up" the profile information
@@ -1624,7 +1624,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   // unrolled.
   for (const auto &L : LI) {
     Changed |=
-        simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
+        simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, &TTI, false /* PreserveLCSSA */);
     Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 

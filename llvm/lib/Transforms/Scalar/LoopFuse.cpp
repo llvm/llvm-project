@@ -791,7 +791,7 @@ private:
 
     ValueToValueMapTy VMap;
     FC0.Peeled =
-        peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
+        peelLoop(FC0.L, PeelCount, false, &LI, &SE, &TTI, DT, &AC, true, VMap);
     if (FC0.Peeled) {
       LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
@@ -2084,7 +2084,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   bool Changed = false;
   for (auto &L : LI) {
     Changed |=
-        simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
+        simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, &TTI, false /* PreserveLCSSA */);
   }
   if (Changed)
     PDT.recalculate(F);

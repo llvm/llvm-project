@@ -460,8 +460,8 @@ static void DisableAllLoopOptsOnLoop(Loop &L) {
 LoopConstrainer::LoopConstrainer(Loop &L, LoopInfo &LI,
                                  function_ref<void(Loop *, bool)> LPMAddNewLoop,
                                  const LoopStructure &LS, ScalarEvolution &SE,
-                                 DominatorTree &DT, Type *T, SubRanges SR)
-    : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()), SE(SE),
+                                 TargetTransformInfo &TTI, DominatorTree &DT, Type *T, SubRanges SR)
+    : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()), SE(SE), TTI(TTI),
       DT(DT), LI(LI), LPMAddNewLoop(LPMAddNewLoop), OriginalLoop(L), RangeTy(T),
       MainLoopStructure(LS), SR(SR) {}
 
@@ -872,7 +872,7 @@ bool LoopConstrainer::run() {
   // This function canonicalizes the loop into Loop-Simplify and LCSSA forms.
   auto CanonicalizeLoop = [&](Loop *L, bool IsOriginalLoop) {
     formLCSSARecursively(*L, DT, &LI, &SE);
-    simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr, true);
+    simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr, &TTI, true);
     // Pre/post loops are slow paths, we do not need to perform any loop
     // optimizations on them.
     if (!IsOriginalLoop)

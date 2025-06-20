@@ -645,7 +645,7 @@ static bool eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI,
                                       BlockFrequencyInfo *BFI,
                                       ProfileSummaryInfo *PSI,
                                       ScalarEvolution *SE, AssumptionCache *AC,
-                                      LoopAccessInfoManager &LAIs) {
+                                      LoopAccessInfoManager &LAIs, const TargetTransformInfo *TTI) {
   // Build up a worklist of inner-loops to transform to avoid iterator
   // invalidation.
   // FIXME: This logic comes from other passes that actually change the loop
@@ -657,7 +657,7 @@ static bool eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI,
 
   for (Loop *TopLevelLoop : LI)
     for (Loop *L : depth_first(TopLevelLoop)) {
-      Changed |= simplifyLoop(L, &DT, &LI, SE, AC, /*MSSAU*/ nullptr, false);
+      Changed |= simplifyLoop(L, &DT, &LI, SE, AC, /*MSSAU*/ nullptr, TTI, false);
       // We only handle inner-most loops.
       if (L->isInnermost())
         Worklist.push_back(L);
@@ -692,8 +692,9 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
   LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  bool Changed = eliminateLoadsAcrossLoops(F, LI, DT, BFI, PSI, &SE, &AC, LAIs);
+  bool Changed = eliminateLoadsAcrossLoops(F, LI, DT, BFI, PSI, &SE, &AC, LAIs, &TTI);
 
   if (!Changed)
     return PreservedAnalyses::all();
