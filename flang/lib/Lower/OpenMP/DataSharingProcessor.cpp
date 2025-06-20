@@ -215,7 +215,7 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       return false;
 
     // The handling of linear clause is deferred to the OpenMP
-    // IRBuilder which is responsible for all it's aspects,
+    // IRBuilder which is responsible for all its aspects,
     // including privatization. Privatizing linear variables at this point would
     // cause the following structure:
     //
