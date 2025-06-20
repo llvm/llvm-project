@@ -398,8 +398,6 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             def A(self, packet):
                 return "E28"
 
-        #self.runCmd("log enable -f /tmp/lldb.log gdb-remote all")
-        #self.runCmd("settings set plugin.process.gdb-remote.packet-timeout 1")
         self.server.responder = MyResponder()
 
         target = self.createTarget("a.yaml")
