@@ -99,9 +99,6 @@ public:
   bool operator>=(Integral RHS) const { return V >= RHS.V; }
   bool operator==(Integral RHS) const { return V == RHS.V; }
   bool operator!=(Integral RHS) const { return V != RHS.V; }
-  bool operator>=(unsigned RHS) const {
-    return static_cast<unsigned>(V) >= RHS;
-  }
 
   bool operator>(unsigned RHS) const {
     return V >= 0 && static_cast<unsigned>(V) > RHS;

@@ -12,6 +12,8 @@
 # RUN: link_fdata %s %t %t.pa-ext PREAGG-EXT
 # Return trace to a landing pad/entry point call continuation
 # RUN: link_fdata %s %t %t.pa-pret PREAGG-PRET
+# External return to a landing pad/entry point call continuation
+# RUN: link_fdata %s %t %t.pa-eret PREAGG-ERET
 # RUN-DISABLED: link_fdata %s %t %t.pa-plt PREAGG-PLT
 
 # RUN: llvm-strip --strip-unneeded %t -o %t.strip
@@ -47,6 +49,12 @@
 ## Check pre-aggregated return traces from external location attach call
 ## continuation fallthrough count to landing pad (stripped, landing pad)
 # RUN: llvm-bolt %t.strip --pa -p %t.pa-pret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+
+## Same for external return type
+# RUN: llvm-bolt %t --pa -p %t.pa-eret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+# RUN: llvm-bolt %t.strip --pa -p %t.pa-eret -o %t.out \
 # RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
 
 ## Check pre-aggregated traces don't report zero-sized PLT fall-through as
@@ -105,6 +113,8 @@ Ltmp4_br:
 # PREAGG-EXT: T X:0 #Ltmp3# #Ltmp3_br# 1
 ## Pre-aggregated return trace
 # PREAGG-PRET: R X:0 #Ltmp3# #Ltmp3_br# 1
+## External return
+# PREAGG-ERET: r #Ltmp3# #Ltmp3_br# 1
 
 # CHECK-ATTACH:      callq foo
 # CHECK-ATTACH-NEXT: count: 1

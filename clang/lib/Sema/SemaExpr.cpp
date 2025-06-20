@@ -21212,7 +21212,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     }
     if (TST.isNull())
       TST = Context.getTemplateSpecializationType(
-          TN, ULE->template_arguments(), /*CanonicalArgs=*/std::nullopt,
+          TN, ULE->template_arguments(), /*CanonicalArgs=*/{},
           HasAnyDependentTA ? Context.DependentTy : Context.IntTy);
     QualType ET =
         Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS, TST);

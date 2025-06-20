@@ -48,7 +48,6 @@ def ArgUint64 : ArgType { let Name = "uint64_t"; }
 def ArgIntAP : ArgType { let Name = "IntegralAP<false>"; let AsRef = true; }
 def ArgIntAPS : ArgType { let Name = "IntegralAP<true>"; let AsRef = true; }
 def ArgFloat : ArgType { let Name = "Floating"; let AsRef = true; }
-
 def ArgBool : ArgType { let Name = "bool"; }
 def ArgFixedPoint : ArgType { let Name = "FixedPoint"; let AsRef = true; }
 
@@ -89,9 +88,6 @@ def IntegerAndFixedTypeClass : TypeClass {
                Uint32, Sint64, Uint64, IntAP, IntAPS, FixedPoint];
 }
 
-def IntegralTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Bool]);
-}
 def FixedSizeIntegralTypeClass : TypeClass {
   let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
                Uint32, Sint64, Uint64, Bool];
@@ -269,12 +265,11 @@ def ConstSint32 : ConstOpcode<Sint32, ArgSint32>;
 def ConstUint32 : ConstOpcode<Uint32, ArgUint32>;
 def ConstSint64 : ConstOpcode<Sint64, ArgSint64>;
 def ConstUint64 : ConstOpcode<Uint64, ArgUint64>;
-def ConstIntAP : ConstOpcode<IntAP, ArgIntAP>;
-def ConstIntAPS : ConstOpcode<IntAPS, ArgIntAPS>;
+def ConstFloat : ConstOpcode<Float, ArgFloat>;
+def constIntAP : ConstOpcode<IntAP, ArgIntAP>;
+def constIntAPS : ConstOpcode<IntAPS, ArgIntAPS>;
 def ConstBool : ConstOpcode<Bool, ArgBool>;
 def ConstFixedPoint : ConstOpcode<FixedPoint, ArgFixedPoint>;
-
-def ConstFloat : Opcode { let Args = [ArgFloat]; }
 
 // [] -> [Integer]
 def Zero : Opcode {
@@ -333,7 +328,6 @@ def GetMemberPtrBasePop : Opcode {
 
 def FinishInitPop : Opcode;
 def FinishInit    : Opcode;
-def FinishInitGlobal : Opcode;
 
 def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool, ArgTypePtr]; }
 
@@ -395,7 +389,7 @@ class AccessOpcode : Opcode {
 }
 
 class BitFieldOpcode : Opcode {
-  let Types = [IntegralTypeClass];
+  let Types = [AluTypeClass];
   let Args = [ArgRecordField];
   let HasGroup = 1;
 }
