@@ -2329,16 +2329,15 @@ define amdgpu_kernel void @amd_kernel_v16i8(<16 x i8> %arg0) {
 ; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX1250-NEXT:    s_lshl_b32 s8, s8, 16
 ; GFX1250-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX1250-NEXT:    s_lshl_b32 s6, s6, 16
 ; GFX1250-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX1250-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX1250-NEXT:    s_lshl_b32 s5, s6, 16
 ; GFX1250-NEXT:    s_or_b32 s3, s3, s10
-; GFX1250-NEXT:    s_or_b32 s2, s2, s8
+; GFX1250-NEXT:    s_or_b32 s1, s1, s6
 ; GFX1250-NEXT:    s_or_b32 s0, s0, s4
-; GFX1250-NEXT:    s_or_b32 s1, s1, s5
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX1250-NEXT:    s_or_b32 s2, s2, s8
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX1250-NEXT:    global_store_b128 v[4:5], v[0:3], off
 ; GFX1250-NEXT:    s_endpgm
 entry:

@@ -5,11 +5,11 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900,GFX9-SDAG,GFX900-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900,GFX9-GISEL,GFX900-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX900,GFX900-SDAG %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX900,GFX900-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX9,GFX950,GFX9-SDAG,GFX950-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX9,GFX950,GFX9-GISEL,GFX950-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX950,GFX950-SDAG %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX950,GFX950-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX10,GFX10-SDAG %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
@@ -61,21 +61,37 @@ define half @v_maximumnum_f16(half %x, half %y) {
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f16:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f16:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f16:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f16:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f16:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f16:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f16:
 ; GFX10-SDAG:       ; %bb.0:
@@ -209,11 +225,17 @@ define half @v_maximumnum_f16_nnan(half %x, half %y) {
 ; GFX8-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f16_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f16_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f16_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f16_nnan:
 ; GFX10:       ; %bb.0:
@@ -272,12 +294,19 @@ define half @v_maximumnum_f16_1.0(half %x) {
 ; GFX8-NEXT:    v_max_f16_e32 v0, 1.0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f16_1.0:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f16_e32 v0, 1.0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f16_1.0:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX900-NEXT:    v_max_f16_e32 v0, 1.0, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f16_1.0:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX950-NEXT:    v_max_f16_e32 v0, 1.0, v0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f16_1.0:
 ; GFX10:       ; %bb.0:
@@ -362,21 +391,37 @@ define float @v_maximumnum_f32(float %x, float %y) {
 ; GFX8-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f32:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f32:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f32:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f32:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f32:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f32:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f32:
 ; GFX10-SDAG:       ; %bb.0:
@@ -450,11 +495,17 @@ define float @v_maximumnum_f32_nnan(float %x, float %y) {
 ; GFX8-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f32_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f32_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f32_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f32_nnan:
 ; GFX10:       ; %bb.0:
@@ -514,21 +565,37 @@ define double @v_maximumnum_f64(double %x, double %y) {
 ; GFX8-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f64:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX9-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX9-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f64:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX900-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX900-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f64:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX9-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX9-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f64:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX900-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX900-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f64:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f64:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f64:
 ; GFX10-SDAG:       ; %bb.0:
@@ -606,11 +673,17 @@ define double @v_maximumnum_f64_nnan(double %x, double %y) {
 ; GFX8-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f64_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f64_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f64_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f64_nnan:
 ; GFX10:       ; %bb.0:
@@ -652,12 +725,19 @@ define float @v_maximumnum_f32_1.0(float %x) {
 ; GFX8-NEXT:    v_max_f32_e32 v0, 1.0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f32_1.0:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f32_e32 v0, 1.0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f32_1.0:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-NEXT:    v_max_f32_e32 v0, 1.0, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f32_1.0:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-NEXT:    v_max_f32_e32 v0, 1.0, v0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f32_1.0:
 ; GFX10:       ; %bb.0:
@@ -706,13 +786,21 @@ define float @v_maximumnum_f32_rhs_not_snan(float %x, float %y) {
 ; GFX8-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f32_rhs_not_snan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f32_rhs_not_snan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f32_rhs_not_snan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f32_rhs_not_snan:
 ; GFX10:       ; %bb.0:
@@ -763,13 +851,21 @@ define float @v_maximumnum_f32_lhs_not_snan(float %x, float %y) {
 ; GFX8-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f32_lhs_not_snan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f32_lhs_not_snan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f32_lhs_not_snan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f32_lhs_not_snan:
 ; GFX10:       ; %bb.0:
@@ -820,13 +916,21 @@ define float @v_maximumnum_f32_both_operands_not_snan(float %x, float %y) {
 ; GFX8-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f32_both_operands_not_snan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f32_both_operands_not_snan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f32_both_operands_not_snan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f32_both_operands_not_snan:
 ; GFX10:       ; %bb.0:
@@ -876,12 +980,19 @@ define double @v_maximumnum_f64_1.0(double %x) {
 ; GFX8-NEXT:    v_max_f64 v[0:1], v[0:1], 1.0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f64_1.0:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], 1.0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f64_1.0:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX900-NEXT:    v_max_f64 v[0:1], v[0:1], 1.0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f64_1.0:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-NEXT:    v_max_f64 v[0:1], v[0:1], 1.0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f64_1.0:
 ; GFX10:       ; %bb.0:
@@ -2176,21 +2287,37 @@ define float @v_maximumnum_f32_fabs_rhs(float %x, float %y) {
 ; GFX8-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f32_fabs_rhs:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f32_fabs_rhs:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f32_fabs_rhs:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f32_fabs_rhs:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f32_fabs_rhs:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f32_fabs_rhs:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f32_fabs_rhs:
 ; GFX10-SDAG:       ; %bb.0:
@@ -2289,21 +2416,37 @@ define float @v_maximumnum_f32_fneg_fabs_rhs(float %x, float %y) {
 ; GFX8-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f32_fneg_fabs_rhs:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f32_e64 v1, -|v1|, -|v1|
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f32_fneg_fabs_rhs:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f32_e64 v1, -|v1|, -|v1|
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f32_fneg_fabs_rhs:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f32_e64 v1, -|v1|, -|v1|
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f32_fneg_fabs_rhs:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f32_e64 v1, -|v1|, -|v1|
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f32_fneg_fabs_rhs:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f32_e64 v1, -|v1|, -|v1|
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f32_fneg_fabs_rhs:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f32_e64 v1, -|v1|, -|v1|
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f32_fneg_fabs_rhs:
 ; GFX10-SDAG:       ; %bb.0:
@@ -2403,21 +2546,37 @@ define float @v_maximumnum_f32_fabs(float %x, float %y) {
 ; GFX8-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f32_fabs:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
-; GFX9-SDAG-NEXT:    v_max_f32_e64 v0, |v0|, |v0|
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f32_fabs:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
+; GFX900-SDAG-NEXT:    v_max_f32_e64 v0, |v0|, |v0|
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f32_fabs:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f32_e64 v0, |v0|, |v0|
-; GFX9-GISEL-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f32_fabs:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f32_e64 v0, |v0|, |v0|
+; GFX900-GISEL-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f32_fabs:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
+; GFX950-SDAG-NEXT:    v_max_f32_e64 v0, |v0|, |v0|
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f32_fabs:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f32_e64 v0, |v0|, |v0|
+; GFX950-GISEL-NEXT:    v_max_f32_e64 v1, |v1|, |v1|
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f32_fabs:
 ; GFX10-SDAG:       ; %bb.0:
@@ -2517,21 +2676,37 @@ define float @v_maximumnum_f32_fneg(float %x, float %y) {
 ; GFX8-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f32_fneg:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f32_e64 v1, -v1, -v1
-; GFX9-SDAG-NEXT:    v_max_f32_e64 v0, -v0, -v0
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f32_fneg:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f32_e64 v1, -v1, -v1
+; GFX900-SDAG-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f32_fneg:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
-; GFX9-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f32_fneg:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GFX900-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f32_fneg:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f32_e64 v1, -v1, -v1
+; GFX950-SDAG-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f32_fneg:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GFX950-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f32_fneg:
 ; GFX10-SDAG:       ; %bb.0:
@@ -2633,21 +2808,37 @@ define half @v_maximumnum_f16_fabs_rhs(half %x, half %y) {
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f16_fabs_rhs:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f16_fabs_rhs:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f16_fabs_rhs:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f16_fabs_rhs:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f16_fabs_rhs:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f16_fabs_rhs:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f16_fabs_rhs:
 ; GFX10-SDAG:       ; %bb.0:
@@ -2792,21 +2983,37 @@ define half @v_maximumnum_f16_fneg_fabs_rhs(half %x, half %y) {
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
 ; GFX10-SDAG:       ; %bb.0:
@@ -2952,21 +3159,37 @@ define half @v_maximumnum_f16_fabs(half %x, half %y) {
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f16_fabs:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
-; GFX9-SDAG-NEXT:    v_max_f16_e64 v0, |v0|, |v0|
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f16_fabs:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX900-SDAG-NEXT:    v_max_f16_e64 v0, |v0|, |v0|
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f16_fabs:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f16_e64 v0, |v0|, |v0|
-; GFX9-GISEL-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f16_fabs:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f16_e64 v0, |v0|, |v0|
+; GFX900-GISEL-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f16_fabs:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX950-SDAG-NEXT:    v_max_f16_e64 v0, |v0|, |v0|
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f16_fabs:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f16_e64 v0, |v0|, |v0|
+; GFX950-GISEL-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f16_fabs:
 ; GFX10-SDAG:       ; %bb.0:
@@ -3112,21 +3335,37 @@ define half @v_maximumnum_f16_fneg(half %x, half %y) {
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f16_fneg:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f16_e64 v1, -v1, -v1
-; GFX9-SDAG-NEXT:    v_max_f16_e64 v0, -v0, -v0
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f16_fneg:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f16_e64 v1, -v1, -v1
+; GFX900-SDAG-NEXT:    v_max_f16_e64 v0, -v0, -v0
+; GFX900-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f16_fneg:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f16_e64 v0, -v0, -v0
-; GFX9-GISEL-NEXT:    v_max_f16_e64 v1, -v1, -v1
-; GFX9-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f16_fneg:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f16_e64 v0, -v0, -v0
+; GFX900-GISEL-NEXT:    v_max_f16_e64 v1, -v1, -v1
+; GFX900-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f16_fneg:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f16_e64 v1, -v1, -v1
+; GFX950-SDAG-NEXT:    v_max_f16_e64 v0, -v0, -v0
+; GFX950-SDAG-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f16_fneg:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f16_e64 v0, -v0, -v0
+; GFX950-GISEL-NEXT:    v_max_f16_e64 v1, -v1, -v1
+; GFX950-GISEL-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f16_fneg:
 ; GFX10-SDAG:       ; %bb.0:
@@ -3270,21 +3509,37 @@ define double @v_maximumnum_f64_fneg(double %x, double %y) {
 ; GFX8-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_f64_fneg:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f64 v[2:3], -v[2:3], -v[2:3]
-; GFX9-SDAG-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
-; GFX9-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_f64_fneg:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f64 v[2:3], -v[2:3], -v[2:3]
+; GFX900-SDAG-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
+; GFX900-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_f64_fneg:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
-; GFX9-GISEL-NEXT:    v_max_f64 v[2:3], -v[2:3], -v[2:3]
-; GFX9-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_f64_fneg:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
+; GFX900-GISEL-NEXT:    v_max_f64 v[2:3], -v[2:3], -v[2:3]
+; GFX900-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_f64_fneg:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], -v[2:3], -v[2:3]
+; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
+; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_f64_fneg:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
+; GFX950-GISEL-NEXT:    v_max_f64 v[2:3], -v[2:3], -v[2:3]
+; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_f64_fneg:
 ; GFX10-SDAG:       ; %bb.0:
@@ -3558,11 +3813,17 @@ define <2 x half> @v_maximumnum_v2f16_nnan(<2 x half> %x, <2 x half> %y) {
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v2f16_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v2f16_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v2f16_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v2f16_nnan:
 ; GFX10:       ; %bb.0:
@@ -3662,16 +3923,16 @@ define <3 x half> @v_maximumnum_v3f16(<3 x half> %x, <3 x half> %y) {
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v4, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_v3f16:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_v3f16:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-GISEL-LABEL: v_maximumnum_v3f16:
 ; GFX900-GISEL:       ; %bb.0:
@@ -3683,6 +3944,17 @@ define <3 x half> @v_maximumnum_v3f16(<3 x half> %x, <3 x half> %y) {
 ; GFX900-GISEL-NEXT:    v_pk_max_f16 v2, v3, v3
 ; GFX900-GISEL-NEXT:    v_pk_max_f16 v1, v1, v2
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v3f16:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: v_maximumnum_v3f16:
 ; GFX950-GISEL:       ; %bb.0:
@@ -3838,19 +4110,33 @@ define <3 x half> @v_maximumnum_v3f16_nnan(<3 x half> %x, <3 x half> %y) {
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v4, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_v3f16_nnan:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_v3f16_nnan:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_v3f16_nnan:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX9-GISEL-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_v3f16_nnan:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX900-GISEL-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v3f16_nnan:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_v3f16_nnan:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v3f16_nnan:
 ; GFX10:       ; %bb.0:
@@ -4185,12 +4471,19 @@ define <4 x half> @v_maximumnum_v4f16_nnan(<4 x half> %x, <4 x half> %y) {
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v2, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v4f16_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v4f16_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX900-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v4f16_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX950-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v4f16_nnan:
 ; GFX10:       ; %bb.0:
@@ -6784,27 +7077,49 @@ define <2 x float> @v_maximumnum_v2f32(<2 x float> %x, <2 x float> %y) {
 ; GFX8-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_v2f32:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v2
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v2, v3, v3
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, v1, v2
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_v2f32:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v2, v3, v3
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_v2f32:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v2
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v2, v3, v3
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_v2f32:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v2, v3, v3
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v2f32:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v2, v3, v3
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_v2f32:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v2, v3, v3
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_v2f32:
 ; GFX10-SDAG:       ; %bb.0:
@@ -6890,12 +7205,19 @@ define <2 x float> @v_maximumnum_v2f32_nnan(<2 x float> %x, <2 x float> %y) {
 ; GFX8-NEXT:    v_max_f32_e32 v1, v1, v3
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v2f32_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v2
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v3
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v2f32_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_max_f32_e32 v1, v1, v3
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v2f32_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX950-NEXT:    v_max_f32_e32 v1, v1, v3
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v2f32_nnan:
 ; GFX10:       ; %bb.0:
@@ -6980,33 +7302,61 @@ define <3 x float> @v_maximumnum_v3f32(<3 x float> %x, <3 x float> %y) {
 ; GFX8-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_v3f32:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v3
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v3, v4, v4
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, v1, v3
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v3, v5, v5
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v2, v2, v3
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_v3f32:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v3
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v3, v4, v4
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v1, v1, v3
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v3, v5, v5
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v2, v2, v3
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_v3f32:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v3
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v3, v4, v4
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, v1, v3
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v3, v5, v5
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_v3f32:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v3
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v3, v4, v4
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v1, v1, v3
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v3, v5, v5
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v3f32:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v3
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v3, v4, v4
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v3
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v3, v5, v5
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v2, v2, v3
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_v3f32:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v3
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v3, v4, v4
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v1, v1, v3
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v3, v5, v5
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_v3f32:
 ; GFX10-SDAG:       ; %bb.0:
@@ -7108,13 +7458,21 @@ define <3 x float> @v_maximumnum_v3f32_nnan(<3 x float> %x, <3 x float> %y) {
 ; GFX8-NEXT:    v_max_f32_e32 v2, v2, v5
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v3f32_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v3
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v4
-; GFX9-NEXT:    v_max_f32_e32 v2, v2, v5
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v3f32_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v3
+; GFX900-NEXT:    v_max_f32_e32 v1, v1, v4
+; GFX900-NEXT:    v_max_f32_e32 v2, v2, v5
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v3f32_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v3
+; GFX950-NEXT:    v_max_f32_e32 v1, v1, v4
+; GFX950-NEXT:    v_max_f32_e32 v2, v2, v5
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v3f32_nnan:
 ; GFX10:       ; %bb.0:
@@ -7214,39 +7572,73 @@ define <4 x float> @v_maximumnum_v4f32(<4 x float> %x, <4 x float> %y) {
 ; GFX8-GISEL-NEXT:    v_max_f32_e32 v3, v3, v4
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_v4f32:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v4, v4, v4
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v4
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v4, v5, v5
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, v1, v4
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v4, v6, v6
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v2, v2, v4
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v4, v7, v7
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
-; GFX9-SDAG-NEXT:    v_max_f32_e32 v3, v3, v4
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_v4f32:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v4, v4, v4
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v0, v0, v4
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v4, v5, v5
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v1, v1, v4
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v4, v6, v6
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v2, v2, v4
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v4, v7, v7
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX900-SDAG-NEXT:    v_max_f32_e32 v3, v3, v4
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_v4f32:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v4, v4, v4
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v4
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v4, v5, v5
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, v1, v4
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v4, v6, v6
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v2, v2, v4
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v4, v7, v7
-; GFX9-GISEL-NEXT:    v_max_f32_e32 v3, v3, v4
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_v4f32:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v4, v4, v4
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v0, v0, v4
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v4, v5, v5
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v1, v1, v4
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v4, v6, v6
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v2, v2, v4
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v4, v7, v7
+; GFX900-GISEL-NEXT:    v_max_f32_e32 v3, v3, v4
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v4f32:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v4, v4, v4
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v4
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v4, v5, v5
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v4
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v4, v6, v6
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v2, v2, v4
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v4, v7, v7
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v3, v3, v4
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_v4f32:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v4, v4, v4
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v0, v0, v4
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v4, v5, v5
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v1, v1, v4
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v4, v6, v6
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v2, v2, v4
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v4, v7, v7
+; GFX950-GISEL-NEXT:    v_max_f32_e32 v3, v3, v4
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: v_maximumnum_v4f32:
 ; GFX10-SDAG:       ; %bb.0:
@@ -7360,14 +7752,23 @@ define <4 x float> @v_maximumnum_v4f32_nnan(<4 x float> %x, <4 x float> %y) {
 ; GFX8-NEXT:    v_max_f32_e32 v3, v3, v7
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v4f32_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v4
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v5
-; GFX9-NEXT:    v_max_f32_e32 v2, v2, v6
-; GFX9-NEXT:    v_max_f32_e32 v3, v3, v7
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v4f32_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v4
+; GFX900-NEXT:    v_max_f32_e32 v1, v1, v5
+; GFX900-NEXT:    v_max_f32_e32 v2, v2, v6
+; GFX900-NEXT:    v_max_f32_e32 v3, v3, v7
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v4f32_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v4
+; GFX950-NEXT:    v_max_f32_e32 v1, v1, v5
+; GFX950-NEXT:    v_max_f32_e32 v2, v2, v6
+; GFX950-NEXT:    v_max_f32_e32 v3, v3, v7
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v4f32_nnan:
 ; GFX10:       ; %bb.0:
@@ -7469,12 +7870,12 @@ define <2 x double> @v_maximumnum_v2f64(<2 x double> %x, <2 x double> %y) {
 ; GFX950-SDAG-LABEL: v_maximumnum_v2f64:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[6:7]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
-; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[6:7], v[6:7]
-; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: v_maximumnum_v2f64:
@@ -7584,12 +7985,26 @@ define <2 x double> @v_maximumnum_v2f64_nnan(<2 x double> %x, <2 x double> %y) {
 ; GFX8-NEXT:    v_max_f64 v[2:3], v[2:3], v[6:7]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v2f64_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
-; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[6:7]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v2f64_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX900-NEXT:    v_max_f64 v[2:3], v[2:3], v[6:7]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v2f64_nnan:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[6:7]
+; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_v2f64_nnan:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX950-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[6:7]
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v2f64_nnan:
 ; GFX10:       ; %bb.0:
@@ -7707,15 +8122,15 @@ define <3 x double> @v_maximumnum_v3f64(<3 x double> %x, <3 x double> %y) {
 ; GFX950-SDAG-LABEL: v_maximumnum_v3f64:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f64 v[10:11], v[10:11], v[10:11]
+; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX950-SDAG-NEXT:    v_max_f64 v[8:9], v[8:9], v[8:9]
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[10:11]
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[8:9]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[6:7]
-; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[8:9], v[8:9]
-; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[6:7]
-; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[10:11], v[10:11]
-; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[6:7]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: v_maximumnum_v3f64:
@@ -7848,13 +8263,29 @@ define <3 x double> @v_maximumnum_v3f64_nnan(<3 x double> %x, <3 x double> %y) {
 ; GFX8-NEXT:    v_max_f64 v[4:5], v[4:5], v[10:11]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v3f64_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[6:7]
-; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[8:9]
-; GFX9-NEXT:    v_max_f64 v[4:5], v[4:5], v[10:11]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v3f64_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f64 v[0:1], v[0:1], v[6:7]
+; GFX900-NEXT:    v_max_f64 v[2:3], v[2:3], v[8:9]
+; GFX900-NEXT:    v_max_f64 v[4:5], v[4:5], v[10:11]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v3f64_nnan:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[10:11]
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[8:9]
+; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[6:7]
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_v3f64_nnan:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[6:7]
+; GFX950-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[8:9]
+; GFX950-GISEL-NEXT:    v_max_f64 v[4:5], v[4:5], v[10:11]
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v3f64_nnan:
 ; GFX10:       ; %bb.0:
@@ -7993,18 +8424,18 @@ define <4 x double> @v_maximumnum_v4f64(<4 x double> %x, <4 x double> %y) {
 ; GFX950-SDAG-LABEL: v_maximumnum_v4f64:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f64 v[14:15], v[14:15], v[14:15]
+; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
+; GFX950-SDAG-NEXT:    v_max_f64 v[12:13], v[12:13], v[12:13]
+; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX950-SDAG-NEXT:    v_max_f64 v[10:11], v[10:11], v[10:11]
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[8:9], v[8:9], v[8:9]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[6:7], v[14:15]
+; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[12:13]
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[10:11]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[8:9]
-; GFX950-SDAG-NEXT:    v_max_f64 v[8:9], v[10:11], v[10:11]
-; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[8:9]
-; GFX950-SDAG-NEXT:    v_max_f64 v[8:9], v[12:13], v[12:13]
-; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[8:9]
-; GFX950-SDAG-NEXT:    v_max_f64 v[8:9], v[14:15], v[14:15]
-; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
-; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[6:7], v[8:9]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: v_maximumnum_v4f64:
@@ -8160,14 +8591,32 @@ define <4 x double> @v_maximumnum_v4f64_nnan(<4 x double> %x, <4 x double> %y) {
 ; GFX8-NEXT:    v_max_f64 v[6:7], v[6:7], v[14:15]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v4f64_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[8:9]
-; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[10:11]
-; GFX9-NEXT:    v_max_f64 v[4:5], v[4:5], v[12:13]
-; GFX9-NEXT:    v_max_f64 v[6:7], v[6:7], v[14:15]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v4f64_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f64 v[0:1], v[0:1], v[8:9]
+; GFX900-NEXT:    v_max_f64 v[2:3], v[2:3], v[10:11]
+; GFX900-NEXT:    v_max_f64 v[4:5], v[4:5], v[12:13]
+; GFX900-NEXT:    v_max_f64 v[6:7], v[6:7], v[14:15]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v4f64_nnan:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_max_f64 v[6:7], v[6:7], v[14:15]
+; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[4:5], v[12:13]
+; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[10:11]
+; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[8:9]
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_v4f64_nnan:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[8:9]
+; GFX950-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[10:11]
+; GFX950-GISEL-NEXT:    v_max_f64 v[4:5], v[4:5], v[12:13]
+; GFX950-GISEL-NEXT:    v_max_f64 v[6:7], v[6:7], v[14:15]
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v4f64_nnan:
 ; GFX10:       ; %bb.0:
@@ -8228,11 +8677,17 @@ define half @v_maximumnum_f16_no_ieee(half %x, half %y) #0 {
 ; GFX8-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f16_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f16_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f16_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f16_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8332,11 +8787,17 @@ define half @v_maximumnum_f16_nan_no_ieee(half %x, half %y) #0 {
 ; GFX8-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f16_nan_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f16_nan_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8392,11 +8853,17 @@ define float @v_maximumnum_f32_no_ieee(float %x, float %y) #0 {
 ; GFX8-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f32_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f32_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f32_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f32_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8450,11 +8917,17 @@ define float @v_maximumnum_f32_nnan_no_ieee(float %x, float %y) #0 {
 ; GFX8-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f32_nnan_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f32_nnan_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f32_nnan_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f32_nnan_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8494,11 +8967,17 @@ define double @v_maximumnum_f64_no_ieee(double %x, double %y) #0 {
 ; GFX8-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f64_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f64_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f64_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f64_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8554,11 +9033,17 @@ define double @v_maximumnum_f64_nnan_no_ieee(double %x, double %y) #0 {
 ; GFX8-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_f64_nnan_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_f64_nnan_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_f64_nnan_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_f64_nnan_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8636,11 +9121,17 @@ define <2 x half> @v_maximumnum_v2f16_no_ieee(<2 x half> %x, <2 x half> %y) #0 {
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v2f16_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v2f16_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8734,11 +9225,17 @@ define <2 x half> @v_maximumnum_v2f16_nnan_no_ieee(<2 x half> %x, <2 x half> %y)
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8826,19 +9323,33 @@ define <3 x half> @v_maximumnum_v3f16_nnan_no_ieee(<3 x half> %x, <3 x half> %y)
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v4, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: v_maximumnum_v3f16_nnan_no_ieee:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_maximumnum_v3f16_nnan_no_ieee:
+; GFX900-SDAG:       ; %bb.0:
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: v_maximumnum_v3f16_nnan_no_ieee:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX9-GISEL-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-GISEL-LABEL: v_maximumnum_v3f16_nnan_no_ieee:
+; GFX900-GISEL:       ; %bb.0:
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX900-GISEL-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-SDAG-LABEL: v_maximumnum_v3f16_nnan_no_ieee:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_maximumnum_v3f16_nnan_no_ieee:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v3f16_nnan_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8949,12 +9460,19 @@ define <4 x half> @v_maximumnum_v4f16_nnan_no_ieee(<4 x half> %x, <4 x half> %y)
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v2, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_maximumnum_v4f16_nnan_no_ieee:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_maximumnum_v4f16_nnan_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX900-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v4f16_nnan_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX950-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_maximumnum_v4f16_nnan_no_ieee:
 ; GFX10:       ; %bb.0:
@@ -8985,6 +9503,3 @@ define <4 x half> @v_maximumnum_v4f16_nnan_no_ieee(<4 x half> %x, <4 x half> %y)
 }
 
 attributes #0 = { "amdgpu-ieee"="false" }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX900: {{.*}}
-; GFX950: {{.*}}
