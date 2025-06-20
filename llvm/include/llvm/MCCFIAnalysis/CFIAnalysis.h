@@ -29,11 +29,11 @@ class CFIAnalysis {
 private:
   // The CFI analysis only keeps track and cares about super registers, not the
   // subregisters. All reads to/writes from subregisters and considered the same
-  // operation to super registers. Other operations like loading and stores are
-  // considered only if they are exactly doing the operation to or from a super
-  // register.
-  // As en example, if you spill a sub register to stack, the CFI analysis does
-  // not consider that a register spilling.
+  // operation to super registers.
+  // TODO Other operations like loading and stores are considered only if they
+  // TODO are exactly doing the operation to or from a super register. As an
+  // TODO example, if you spill a sub register to stack, the CFI analysis does
+  // TODO not consider that a register spilling.
   bool isSuperReg(MCPhysReg Reg);
 
   SmallVector<std::pair<MCPhysReg, MCRegisterClass const *>> getAllSuperRegs();
@@ -48,22 +48,19 @@ public:
   void update(const MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives);
 
 private:
-  void checkRegDiff(
-      const MCInst &Inst, UnwindInfoHistory::DWARFRegType Reg,
-      const dwarf::UnwindTable::const_iterator &PrevState,
-      const dwarf::UnwindTable::const_iterator &NextState,
-      const dwarf::UnwindLocation
-          &PrevRegState, // TODO maybe should get them from prev next state
-      const dwarf::UnwindLocation
-          &NextRegState, // TODO themselves instead of by arguments.
-      const std::set<UnwindInfoHistory::DWARFRegType> &Reads,
-      const std::set<UnwindInfoHistory::DWARFRegType> &Writes);
+  void checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
+                    const dwarf::UnwindTable::const_iterator &PrevRow,
+                    const dwarf::UnwindTable::const_iterator &NextRow,
+                    const dwarf::UnwindLocation &PrevRegLoc,
+                    const dwarf::UnwindLocation &NextRegLoc,
+                    const std::set<DWARFRegType> &Reads,
+                    const std::set<DWARFRegType> &Writes);
 
   void checkCFADiff(const MCInst &Inst,
-                    const dwarf::UnwindTable::const_iterator &PrevState,
-                    const dwarf::UnwindTable::const_iterator &NextState,
-                    const std::set<UnwindInfoHistory::DWARFRegType> &Reads,
-                    const std::set<UnwindInfoHistory::DWARFRegType> &Writes);
+                    const dwarf::UnwindTable::const_iterator &PrevRow,
+                    const dwarf::UnwindTable::const_iterator &NextRow,
+                    const std::set<DWARFRegType> &Reads,
+                    const std::set<DWARFRegType> &Writes);
 };
 
 } // namespace llvm

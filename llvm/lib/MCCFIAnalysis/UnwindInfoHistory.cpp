@@ -19,31 +19,6 @@ UnwindInfoHistory::getCurrentUnwindRow() const {
   return --Table.end();
 }
 
-std::optional<UnwindInfoHistory::DWARFRegType>
-UnwindInfoHistory::getReferenceRegisterForUnwindInfoOfRegister(
-    const dwarf::UnwindTable::const_iterator &UnwindRow, DWARFRegType Reg) {
-  auto UnwinLoc = UnwindRow->getRegisterLocations().getRegisterLocation(Reg);
-  assert(UnwinLoc &&
-         "The register should be tracked inside the register states");
-
-  switch (UnwinLoc->getLocation()) {
-  case dwarf::UnwindLocation::Location::Undefined:
-  case dwarf::UnwindLocation::Location::Constant:
-  case dwarf::UnwindLocation::Location::Unspecified:
-  case dwarf::UnwindLocation::Location::DWARFExpr:
-    // TODO here should look into expr and find the registers.
-    return std::nullopt;
-  case dwarf::UnwindLocation::Location::Same:
-    return Reg;
-  case dwarf::UnwindLocation::Location::RegPlusOffset:
-    return UnwinLoc->getRegister();
-  case dwarf::UnwindLocation::Location::CFAPlusOffset:
-    // TODO check if it's ok to assume CFA is always depending on other
-    // TODO register, if yes assert it here!
-    return UnwindRow->getCFAValue().getRegister();
-  }
-}
-
 void UnwindInfoHistory::update(const MCCFIInstruction &CFIDirective) {
   auto DwarfOperations = convert(CFIDirective);
   if (!DwarfOperations) {
@@ -60,7 +35,9 @@ void UnwindInfoHistory::update(const MCCFIInstruction &CFIDirective) {
         CFIDirective.getLoc(),
         formatv("could not parse this CFI directive due to: {0}",
                 toString(std::move(Err))));
-    assert(false);
+
+    // Proceed the analysis by ignoring this CFI directive.
+    return;
   }
   Table.insertRow(Row);
 }
