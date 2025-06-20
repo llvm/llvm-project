@@ -605,23 +605,11 @@ static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
 
   Value *CheckBit = nullptr;
   for (User *U : make_early_inc_range(Orig->users())) {
-    if (auto *Ret = dyn_cast<ReturnInst>(U)) {
-      // For return instructions, we need to handle the case where the function
-      // is directly returning the result of the call
-      Type *RetTy = Ret->getFunction()->getReturnType();
-      Value *StructRet = PoisonValue::get(RetTy);
-      StructRet = Builder.CreateInsertValue(StructRet, Result, {0});
-      Value *CheckBitForRet = Builder.CreateExtractValue(Load, {1});
-      StructRet = Builder.CreateInsertValue(StructRet, CheckBitForRet, {1});
-      Ret->setOperand(0, StructRet);
-      continue;
-    }
+    // If it's not a ExtractValueInst, we don't know how to
+    // handle it
     auto *EVI = dyn_cast<ExtractValueInst>(U);
-    if (!EVI) {
-      // If it's not a ReturnInst or ExtractValueInst, we don't know how to
-      // handle it
+    if (!EVI)
       llvm_unreachable("Unexpected user of typedbufferload");
-    }
 
     ArrayRef<unsigned> Indices = EVI->getIndices();
     assert(Indices.size() == 1);

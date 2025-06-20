@@ -1,6 +1,6 @@
 ; RUN: opt -S -dxil-intrinsic-expansion %s | FileCheck %s
 
-target triple = "dxil-pc-shadermodel6.2-compute"
+target triple = "dxil-pc-shadermodel6.6-compute"
 
 define void @loadf64() {
   ; check the handle from binding is unchanged
