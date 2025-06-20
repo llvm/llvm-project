@@ -96,3 +96,11 @@ func.func private @badllvmlinkage(i32) attributes { "llvm.linkage" = 3 : i64 } /
 func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true, "llvm.emit_c_interface" } {
   return
 }
+
+// -----
+
+// Check that no_inline attribute is propagated from func::FuncOp to LLVM::LLVMFuncOp
+// CHECK-LABEL: llvm.func @func_with_noinline(%arg0: i32) attributes {no_inline}
+func.func @func_with_noinline(%arg0: i32) attributes { no_inline } {
+  return
+}
