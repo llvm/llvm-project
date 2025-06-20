@@ -81,7 +81,7 @@ TEST(MergeTest, mergeRecordInfos) {
   One.IsTypeDef = true;
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  One.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  One.DefLoc = Location(10, 10, "test.cpp");
 
   One.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
   One.TagType = TagTypeKind::Class;
@@ -103,7 +103,7 @@ TEST(MergeTest, mergeRecordInfos) {
   Two.Name = "r";
   Two.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Two.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  Two.Loc.emplace_back(12, 12, "test.cpp");
 
   Two.TagType = TagTypeKind::Class;
 
@@ -123,8 +123,8 @@ TEST(MergeTest, mergeRecordInfos) {
   Expected->IsTypeDef = true;
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Expected->DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  Expected->Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  Expected->DefLoc = Location(10, 10, "test.cpp");
+  Expected->Loc.emplace_back(12, 12, "test.cpp");
 
   Expected->Members.emplace_back(TypeInfo("int"), "X",
                                  AccessSpecifier::AS_private);
@@ -158,19 +158,19 @@ TEST(MergeTest, mergeFunctionInfos) {
   One.Name = "f";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  One.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  One.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  One.DefLoc = Location(10, 10, "test.cpp");
+  One.Loc.emplace_back(12, 12, "test.cpp");
 
   One.IsMethod = true;
   One.Parent = Reference(EmptySID, "Parent", InfoType::IT_namespace);
 
   One.Description.emplace_back();
-  auto OneFullComment = &One.Description.back();
-  OneFullComment->Kind = "FullComment";
+  auto *OneFullComment = &One.Description.back();
+  OneFullComment->Kind = CommentKind::CK_FullComment;
   auto OneParagraphComment = std::make_unique<CommentInfo>();
-  OneParagraphComment->Kind = "ParagraphComment";
+  OneParagraphComment->Kind = CommentKind::CK_ParagraphComment;
   auto OneTextComment = std::make_unique<CommentInfo>();
-  OneTextComment->Kind = "TextComment";
+  OneTextComment->Kind = CommentKind::CK_TextComment;
   OneTextComment->Text = "This is a text comment.";
   OneParagraphComment->Children.push_back(std::move(OneTextComment));
   OneFullComment->Children.push_back(std::move(OneParagraphComment));
@@ -179,18 +179,18 @@ TEST(MergeTest, mergeFunctionInfos) {
   Two.Name = "f";
   Two.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Two.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  Two.Loc.emplace_back(12, 12, "test.cpp");
 
   Two.ReturnType = TypeInfo("void");
   Two.Params.emplace_back(TypeInfo("int"), "P");
 
   Two.Description.emplace_back();
-  auto TwoFullComment = &Two.Description.back();
-  TwoFullComment->Kind = "FullComment";
+  auto *TwoFullComment = &Two.Description.back();
+  TwoFullComment->Kind = CommentKind::CK_FullComment;
   auto TwoParagraphComment = std::make_unique<CommentInfo>();
-  TwoParagraphComment->Kind = "ParagraphComment";
+  TwoParagraphComment->Kind = CommentKind::CK_ParagraphComment;
   auto TwoTextComment = std::make_unique<CommentInfo>();
-  TwoTextComment->Kind = "TextComment";
+  TwoTextComment->Kind = CommentKind::CK_TextComment;
   TwoTextComment->Text = "This is a text comment.";
   TwoParagraphComment->Children.push_back(std::move(TwoTextComment));
   TwoFullComment->Children.push_back(std::move(TwoParagraphComment));
@@ -203,8 +203,8 @@ TEST(MergeTest, mergeFunctionInfos) {
   Expected->Name = "f";
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Expected->DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  Expected->Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  Expected->DefLoc = Location(10, 10, "test.cpp");
+  Expected->Loc.emplace_back(12, 12, "test.cpp");
 
   Expected->ReturnType = TypeInfo("void");
   Expected->Params.emplace_back(TypeInfo("int"), "P");
@@ -212,12 +212,12 @@ TEST(MergeTest, mergeFunctionInfos) {
   Expected->Parent = Reference(EmptySID, "Parent", InfoType::IT_namespace);
 
   Expected->Description.emplace_back();
-  auto ExpectedFullComment = &Expected->Description.back();
-  ExpectedFullComment->Kind = "FullComment";
+  auto *ExpectedFullComment = &Expected->Description.back();
+  ExpectedFullComment->Kind = CommentKind::CK_FullComment;
   auto ExpectedParagraphComment = std::make_unique<CommentInfo>();
-  ExpectedParagraphComment->Kind = "ParagraphComment";
+  ExpectedParagraphComment->Kind = CommentKind::CK_ParagraphComment;
   auto ExpectedTextComment = std::make_unique<CommentInfo>();
-  ExpectedTextComment->Kind = "TextComment";
+  ExpectedTextComment->Kind = CommentKind::CK_TextComment;
   ExpectedTextComment->Text = "This is a text comment.";
   ExpectedParagraphComment->Children.push_back(std::move(ExpectedTextComment));
   ExpectedFullComment->Children.push_back(std::move(ExpectedParagraphComment));
@@ -233,8 +233,8 @@ TEST(MergeTest, mergeEnumInfos) {
   One.Name = "e";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  One.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  One.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  One.DefLoc = Location(10, 10, "test.cpp");
+  One.Loc.emplace_back(12, 12, "test.cpp");
 
   One.Scoped = true;
 
@@ -242,7 +242,7 @@ TEST(MergeTest, mergeEnumInfos) {
   Two.Name = "e";
   Two.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Two.Loc.emplace_back(20, llvm::SmallString<16>{"test.cpp"});
+  Two.Loc.emplace_back(20, 20, "test.cpp");
 
   Two.Members.emplace_back("X");
   Two.Members.emplace_back("Y");
@@ -255,9 +255,9 @@ TEST(MergeTest, mergeEnumInfos) {
   Expected->Name = "e";
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Expected->DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  Expected->Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
-  Expected->Loc.emplace_back(20, llvm::SmallString<16>{"test.cpp"});
+  Expected->DefLoc = Location(10, 10, "test.cpp");
+  Expected->Loc.emplace_back(12, 12, "test.cpp");
+  Expected->Loc.emplace_back(20, 20, "test.cpp");
 
   Expected->Members.emplace_back("X");
   Expected->Members.emplace_back("Y");

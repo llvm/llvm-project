@@ -9,7 +9,6 @@
 #include "TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
 
 namespace clang::tidy::utils::type_traits {
@@ -42,8 +41,7 @@ std::optional<bool> isExpensiveToCopy(QualType Type,
     return std::nullopt;
   return !Type.isTriviallyCopyableType(Context) &&
          !classHasTrivialCopyAndDestroy(Type) &&
-         !hasDeletedCopyConstructor(Type) &&
-         !Type->isObjCLifetimeType();
+         !hasDeletedCopyConstructor(Type) && !Type->isObjCLifetimeType();
 }
 
 bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,

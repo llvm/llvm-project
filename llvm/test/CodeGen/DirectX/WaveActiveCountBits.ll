@@ -2,7 +2,7 @@
 
 define void @main(i1 %expr) {
 entry:
-; CHECK: call i32 @dx.op.waveAllOp(i32 135, i1 %expr)
+; CHECK: call i32 @dx.op.waveAllOp(i32 135, i1 %expr){{$}}
   %0 = call i32 @llvm.dx.wave.active.countbits(i1 %expr)
   ret void
 }

@@ -17,6 +17,7 @@
 #include "NVPTX.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
 namespace NVPTXISD {
@@ -55,12 +56,22 @@ enum NodeType : unsigned {
   FSHR_CLAMP,
   MUL_WIDE_SIGNED,
   MUL_WIDE_UNSIGNED,
-  IMAD,
   SETP_F16X2,
   SETP_BF16X2,
   BFE,
   BFI,
   PRMT,
+
+  /// This node is similar to ISD::BUILD_VECTOR except that the output may be
+  /// implicitly bitcast to a scalar. This allows for the representation of
+  /// packing move instructions for vector types which are not legal i.e. v2i32
+  BUILD_VECTOR,
+
+  /// This node is the inverse of NVPTX::BUILD_VECTOR. It takes a single value
+  /// which may be a scalar and unpacks it into multiple values by implicitly
+  /// converting it to a vector.
+  UNPACK_VECTOR,
+
   FCOPYSIGN,
   DYNAMIC_STACKALLOC,
   STACKRESTORE,
@@ -68,15 +79,21 @@ enum NodeType : unsigned {
   BrxStart,
   BrxItem,
   BrxEnd,
+  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED,
+  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X,
+  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y,
+  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z,
   Dummy,
 
   FIRST_MEMORY_OPCODE,
   LoadV2 = FIRST_MEMORY_OPCODE,
   LoadV4,
+  LoadV8,
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
   StoreV2,
   StoreV4,
+  StoreV8,
   LoadParam,
   LoadParamV2,
   LoadParamV4,
@@ -176,11 +193,11 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
-  std::string
-  getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
-               const SmallVectorImpl<ISD::OutputArg> &, MaybeAlign retAlignment,
-               std::optional<std::pair<unsigned, const APInt &>> VAInfo,
-               const CallBase &CB, unsigned UniqueCallSite) const;
+  std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
+                           const SmallVectorImpl<ISD::OutputArg> &,
+                           MaybeAlign RetAlign,
+                           std::optional<unsigned> FirstVAArg,
+                           const CallBase &CB, unsigned UniqueCallSite) const;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -203,15 +220,13 @@ public:
 
   // Get the degree of precision we want from 32-bit floating point division
   // operations.
-  //
-  //  0 - Use ptx div.approx
-  //  1 - Use ptx.div.full (approximate, but less so than div.approx)
-  //  2 - Use IEEE-compliant div instructions, if available.
-  int getDivF32Level() const;
+  NVPTX::DivPrecisionLevel getDivF32Level(const MachineFunction &MF,
+                                          const SDNode &N) const;
 
   // Get whether we should use a precise or approximate 32-bit floating point
   // sqrt instruction.
-  bool usePrecSqrtF32() const;
+  bool usePrecSqrtF32(const MachineFunction &MF,
+                      const SDNode *N = nullptr) const;
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
@@ -224,7 +239,7 @@ public:
   unsigned combineRepeatedFPDivisors() const override { return 2; }
 
   bool allowFMA(MachineFunction &MF, CodeGenOptLevel OptLevel) const;
-  bool allowUnsafeFPMath(MachineFunction &MF) const;
+  bool allowUnsafeFPMath(const MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT) const override {
@@ -261,10 +276,26 @@ public:
     return true;
   }
 
+  bool shouldInsertFencesForAtomic(const Instruction *) const override;
+
+  AtomicOrdering
+  atomicOperationOrderAfterFenceSplit(const Instruction *I) const override;
+
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                 AtomicOrdering Ord) const override;
+
+  unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                     EVT ToVT) const override;
+
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
+  mutable unsigned GlobalUniqueCallSite;
+
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
 
+  SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
@@ -278,6 +309,8 @@ private:
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND32(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND64(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue PromoteBinOpIfF32FTZ(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
@@ -294,8 +327,6 @@ private:
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 

@@ -6,11 +6,15 @@ set(intel_jit_profiling )
 if( LLVM_USE_INTEL_JITEVENTS )
   set(intel_jit_profiling IntelJITProfiling)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../IntelJITProfiling)
-  include_directories(${PROJECT_BINARY_DIR}/ittapi/include/ )
+  if(NOT DEFINED ITTAPI_SOURCE_DIR)
+      set(ITTAPI_SOURCE_DIR ${PROJECT_BINARY_DIR})
+  endif()
+  include_directories(${ITTAPI_SOURCE_DIR}/ittapi/include/ )
 endif()
 
 add_llvm_component_library(LLVMOrcTargetProcess
   ExecutorSharedMemoryMapperService.cpp
+  DefaultHostBootstrapValues.cpp
   JITLoaderGDB.cpp
   JITLoaderPerf.cpp
   JITLoaderVTune.cpp
@@ -20,6 +24,7 @@ add_llvm_component_library(LLVMOrcTargetProcess
   SimpleExecutorMemoryManager.cpp
   SimpleRemoteEPCServer.cpp
   TargetExecutionUtils.cpp
+  UnwindInfoManager.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc

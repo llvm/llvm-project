@@ -878,8 +878,18 @@ private:
             lower::pft::Evaluation *target{
                 labelEvaluationMap->find(label)->second};
             assert(target && "missing branch target evaluation");
-            if (!target->isA<parser::FormatStmt>())
+            if (!target->isA<parser::FormatStmt>()) {
               target->isNewBlock = true;
+              for (lower::pft::Evaluation *parent = target->parentConstruct;
+                   parent; parent = parent->parentConstruct) {
+                parent->isUnstructured = true;
+                // The exit of an enclosing DO or IF construct is a new block.
+                if (parent->constructExit &&
+                    (parent->isA<parser::DoConstruct>() ||
+                     parent->isA<parser::IfConstruct>()))
+                  parent->constructExit->isNewBlock = true;
+              }
+            }
             auto iter = assignSymbolLabelMap->find(*sym);
             if (iter == assignSymbolLabelMap->end()) {
               lower::pft::LabelSet labelSet{};

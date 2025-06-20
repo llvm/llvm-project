@@ -28,7 +28,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_EXPANDSTRIDEDMETADATA
+#define GEN_PASS_DEF_EXPANDSTRIDEDMETADATAPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -68,9 +68,9 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   auto newExtractStridedMetadata =
       rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
-  auto [sourceStrides, sourceOffset] = getStridesAndOffset(sourceType);
+  auto [sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
 #ifndef NDEBUG
-  auto [resultStrides, resultOffset] = getStridesAndOffset(subview.getType());
+  auto [resultStrides, resultOffset] = subview.getType().getStridesAndOffset();
 #endif // NDEBUG
 
   // Compute the new strides and offset from the base strides and offset:
@@ -363,7 +363,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   // Collect the statically known information about the original stride.
   Value source = expandShape.getSrc();
   auto sourceType = cast<MemRefType>(source.getType());
-  auto [strides, offset] = getStridesAndOffset(sourceType);
+  auto [strides, offset] = sourceType.getStridesAndOffset();
 
   OpFoldResult origStride = ShapedType::isDynamic(strides[groupId])
                                 ? origStrides[groupId]
@@ -503,9 +503,8 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
   Value source = collapseShape.getSrc();
   auto sourceType = cast<MemRefType>(source.getType());
 
-  auto [strides, offset] = getStridesAndOffset(sourceType);
+  auto [strides, offset] = sourceType.getStridesAndOffset();
 
-  SmallVector<OpFoldResult> groupStrides;
   ArrayRef<int64_t> srcShape = sourceType.getShape();
 
   OpFoldResult lastValidStride = nullptr;
@@ -528,7 +527,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
     // but we still have to make the type system happy.
     MemRefType collapsedType = collapseShape.getResultType();
     auto [collapsedStrides, collapsedOffset] =
-        getStridesAndOffset(collapsedType);
+        collapsedType.getStridesAndOffset();
     int64_t finalStride = collapsedStrides[groupId];
     if (ShapedType::isDynamic(finalStride)) {
       // Look for a dynamic stride. At this point we don't know which one is
@@ -581,7 +580,7 @@ static FailureOr<StridedMetadata> resolveReshapeStridedMetadata(
       rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
   // Collect statically known information.
-  auto [strides, offset] = getStridesAndOffset(sourceType);
+  auto [strides, offset] = sourceType.getStridesAndOffset();
   MemRefType reshapeType = reshape.getResultType();
   unsigned reshapeRank = reshapeType.getRank();
 
@@ -920,6 +919,35 @@ public:
   }
 };
 
+/// Pattern to replace `extract_strided_metadata(assume_alignment)`
+///
+/// With
+/// \verbatim
+/// extract_strided_metadata(memref)
+/// \endverbatim
+///
+/// Since `assume_alignment` is a view-like op that does not modify the
+/// underlying buffer, offset, sizes, or strides, extracting strided metadata
+/// from its result is equivalent to extracting it from its source. This
+/// canonicalization removes the unnecessary indirection.
+struct ExtractStridedMetadataOpAssumeAlignmentFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+public:
+  using OpRewritePattern<memref::ExtractStridedMetadataOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
+                                PatternRewriter &rewriter) const override {
+    auto assumeAlignmentOp =
+        op.getSource().getDefiningOp<memref::AssumeAlignmentOp>();
+    if (!assumeAlignmentOp)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<memref::ExtractStridedMetadataOp>(
+        op, assumeAlignmentOp.getViewSource());
+    return success();
+  }
+};
+
 /// Rewrite memref.extract_aligned_pointer_as_index of a ViewLikeOp to the
 /// source of the ViewLikeOp.
 class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
@@ -1068,7 +1096,7 @@ class ExtractStridedMetadataOpCastFolder
                  : ofr;
     };
 
-    auto [sourceStrides, sourceOffset] = getStridesAndOffset(memrefType);
+    auto [sourceStrides, sourceOffset] = memrefType.getStridesAndOffset();
     assert(sourceStrides.size() == rank && "unexpected number of strides");
 
     // Register the new offset.
@@ -1186,6 +1214,7 @@ void memref::populateExpandStridedMetadataPatterns(
                ExtractStridedMetadataOpSubviewFolder,
                ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpMemorySpaceCastFolder,
+               ExtractStridedMetadataOpAssumeAlignmentFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
 }
@@ -1202,6 +1231,7 @@ void memref::populateResolveExtractStridedMetadataPatterns(
                ExtractStridedMetadataOpReinterpretCastFolder,
                ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpMemorySpaceCastFolder,
+               ExtractStridedMetadataOpAssumeAlignmentFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
 }
@@ -1213,7 +1243,7 @@ void memref::populateResolveExtractStridedMetadataPatterns(
 namespace {
 
 struct ExpandStridedMetadataPass final
-    : public memref::impl::ExpandStridedMetadataBase<
+    : public memref::impl::ExpandStridedMetadataPassBase<
           ExpandStridedMetadataPass> {
   void runOnOperation() override;
 };
@@ -1224,8 +1254,4 @@ void ExpandStridedMetadataPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateExpandStridedMetadataPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> memref::createExpandStridedMetadataPass() {
-  return std::make_unique<ExpandStridedMetadataPass>();
 }

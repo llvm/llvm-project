@@ -129,7 +129,7 @@ void Instruction::insertBefore(Instruction *BeforeI) {
 
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
-    I->insertBefore(BeforeTopI);
+    I->insertBefore(BeforeTopI->getIterator());
 }
 
 void Instruction::insertAfter(Instruction *AfterI) {
@@ -926,21 +926,26 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
   }
 }
 
-CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
-                         Context &Ctx, const Twine &Name) {
+Value *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
+                       Context &Ctx, const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
-  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
-  if (dyn_cast<llvm::ICmpInst>(LLVMI))
-    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
-  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
+  auto *LLVMV = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
+  // It may have been folded into a constant.
+  if (auto *LLVMC = dyn_cast<llvm::Constant>(LLVMV))
+    return Ctx.getOrCreateConstant(LLVMC);
+  if (isa<llvm::ICmpInst>(LLVMV))
+    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMV));
+  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMV));
 }
-CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
-                                        const Instruction *F,
-                                        InsertPosition Pos, Context &Ctx,
-                                        const Twine &Name) {
-  CmpInst *Inst = create(P, S1, S2, Pos, Ctx, Name);
-  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
-  return Inst;
+
+Value *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
+                                      const Instruction *F, InsertPosition Pos,
+                                      Context &Ctx, const Twine &Name) {
+  Value *V = create(P, S1, S2, Pos, Ctx, Name);
+  if (auto *C = dyn_cast<Constant>(V))
+    return C;
+  cast<llvm::CmpInst>(V->Val)->copyIRFlags(F->Val);
+  return V;
 }
 
 Type *CmpInst::makeCmpResultType(Type *OpndType) {

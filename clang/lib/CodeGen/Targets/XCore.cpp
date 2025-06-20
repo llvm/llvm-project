@@ -149,7 +149,7 @@ RValue XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   llvm::Type *ArgTy = CGT.ConvertType(Ty);
   if (AI.canHaveCoerceToType() && !AI.getCoerceToType())
     AI.setCoerceToType(ArgTy);
-  llvm::Type *ArgPtrTy = llvm::PointerType::getUnqual(ArgTy);
+  llvm::Type *ArgPtrTy = llvm::PointerType::getUnqual(ArgTy->getContext());
 
   Address Val = Address::invalid();
   CharUnits ArgSize = CharUnits::Zero();
@@ -343,7 +343,7 @@ static bool extractFieldType(SmallVectorImpl<FieldEncoding> &FE,
     if (Field->isBitField()) {
       Enc += "b(";
       llvm::raw_svector_ostream OS(Enc);
-      OS << Field->getBitWidthValue(CGM.getContext());
+      OS << Field->getBitWidthValue();
       Enc += ':';
     }
     if (!appendType(Enc, Field->getType(), CGM, TSC))

@@ -546,10 +546,10 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
                              ? OrigOp
                              : (RenameStack.end() - Start - 1)->Def;
     // For edge predicates, we can just place the operand in the block before
-    // the terminator.  For assume, we have to place it right before the assume
-    // to ensure we dominate all of our uses.  Always insert right before the
-    // relevant instruction (terminator, assume), so that we insert in proper
-    // order in the case of multiple predicateinfo in the same block.
+    // the terminator. For assume, we have to place it right after the assume
+    // to ensure we dominate all uses except assume itself. Always insert
+    // right before the terminator or after the assume, so that we insert in
+    // proper order in the case of multiple predicateinfo in the same block.
     // The number of named values is used to detect if a new declaration was
     // added. If so, that declaration is tracked so that it can be removed when
     // the analysis is done. The corner case were a new declaration results in
@@ -622,7 +622,7 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
       // The predicate info for branches always come first, they will get
       // materialized in the split block at the top of the block.
       // The predicate info for assumes will be somewhere in the middle,
-      // it will get materialized in front of the assume.
+      // it will get materialized right after the assume.
       if (const auto *PAssume = dyn_cast<PredicateAssume>(PossibleCopy)) {
         VD.LocalNum = LN_Middle;
         DomTreeNode *DomNode = DT.getNode(PAssume->AssumeInst->getParent());
@@ -728,16 +728,12 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
 
 PredicateInfoBuilder::ValueInfo &
 PredicateInfoBuilder::getOrCreateValueInfo(Value *Operand) {
-  auto OIN = ValueInfoNums.find(Operand);
-  if (OIN == ValueInfoNums.end()) {
-    // This will grow it
+  auto Res = ValueInfoNums.try_emplace(Operand, ValueInfos.size());
+  if (Res.second) {
+    // Allocate space for new ValueInfo.
     ValueInfos.resize(ValueInfos.size() + 1);
-    // This will use the new size and give us a 0 based number of the info
-    auto InsertResult = ValueInfoNums.insert({Operand, ValueInfos.size() - 1});
-    assert(InsertResult.second && "Value info number already existed?");
-    return ValueInfos[InsertResult.first->second];
   }
-  return ValueInfos[OIN->second];
+  return ValueInfos[Res.first->second];
 }
 
 const PredicateInfoBuilder::ValueInfo &

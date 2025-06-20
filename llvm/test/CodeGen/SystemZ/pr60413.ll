@@ -40,38 +40,38 @@ define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-NEXT:    vn %v0, %v0, %v6
 ; CHECK-NEXT:    vn %v4, %v4, %v6
 ; CHECK-NEXT:    vperm %v1, %v1, %v1, %v5
-; CHECK-NEXT:    vn %v5, %v1, %v6
-; CHECK-NEXT:    vperm %v1, %v0, %v3, %v2
-; CHECK-NEXT:    vn %v2, %v1, %v6
-; CHECK-NEXT:    vrepif %v1, 127
-; CHECK-NEXT:    vchlf %v3, %v5, %v1
-; CHECK-NEXT:    vlgvf %r3, %v3, 1
-; CHECK-NEXT:    vlgvf %r2, %v3, 0
+; CHECK-NEXT:    vn %v1, %v1, %v6
+; CHECK-NEXT:    vperm %v2, %v0, %v3, %v2
+; CHECK-NEXT:    vn %v2, %v2, %v6
+; CHECK-NEXT:    vrepif %v3, 127
+; CHECK-NEXT:    vchlf %v1, %v1, %v3
+; CHECK-NEXT:    vlgvf %r3, %v1, 1
+; CHECK-NEXT:    vlgvf %r2, %v1, 0
 ; CHECK-NEXT:    risbg %r2, %r2, 48, 176, 15
 ; CHECK-NEXT:    rosbg %r2, %r3, 49, 49, 14
-; CHECK-NEXT:    vlgvf %r3, %v3, 2
+; CHECK-NEXT:    vlgvf %r3, %v1, 2
 ; CHECK-NEXT:    rosbg %r2, %r3, 50, 50, 13
-; CHECK-NEXT:    vlgvf %r3, %v3, 3
+; CHECK-NEXT:    vlgvf %r3, %v1, 3
 ; CHECK-NEXT:    rosbg %r2, %r3, 51, 51, 12
-; CHECK-NEXT:    vchlf %v3, %v4, %v1
-; CHECK-NEXT:    vlgvf %r3, %v3, 0
+; CHECK-NEXT:    vchlf %v1, %v4, %v3
+; CHECK-NEXT:    vlgvf %r3, %v1, 0
 ; CHECK-NEXT:    rosbg %r2, %r3, 52, 52, 11
-; CHECK-NEXT:    vlgvf %r3, %v3, 1
+; CHECK-NEXT:    vlgvf %r3, %v1, 1
 ; CHECK-NEXT:    rosbg %r2, %r3, 53, 53, 10
-; CHECK-NEXT:    vlgvf %r3, %v3, 2
+; CHECK-NEXT:    vlgvf %r3, %v1, 2
 ; CHECK-NEXT:    rosbg %r2, %r3, 54, 54, 9
-; CHECK-NEXT:    vlgvf %r3, %v3, 3
+; CHECK-NEXT:    vlgvf %r3, %v1, 3
 ; CHECK-NEXT:    rosbg %r2, %r3, 55, 55, 8
-; CHECK-NEXT:    vchlf %v2, %v2, %v1
-; CHECK-NEXT:    vlgvf %r3, %v2, 0
+; CHECK-NEXT:    vchlf %v1, %v2, %v3
+; CHECK-NEXT:    vlgvf %r3, %v1, 0
 ; CHECK-NEXT:    rosbg %r2, %r3, 56, 56, 7
-; CHECK-NEXT:    vlgvf %r3, %v2, 1
+; CHECK-NEXT:    vlgvf %r3, %v1, 1
 ; CHECK-NEXT:    rosbg %r2, %r3, 57, 57, 6
-; CHECK-NEXT:    vlgvf %r3, %v2, 2
+; CHECK-NEXT:    vlgvf %r3, %v1, 2
 ; CHECK-NEXT:    rosbg %r2, %r3, 58, 58, 5
-; CHECK-NEXT:    vlgvf %r3, %v2, 3
+; CHECK-NEXT:    vlgvf %r3, %v1, 3
 ; CHECK-NEXT:    rosbg %r2, %r3, 59, 59, 4
-; CHECK-NEXT:    vchlf %v0, %v0, %v1
+; CHECK-NEXT:    vchlf %v0, %v0, %v3
 ; CHECK-NEXT:    vlgvf %r3, %v0, 0
 ; CHECK-NEXT:    rosbg %r2, %r3, 60, 60, 3
 ; CHECK-NEXT:    vlgvf %r3, %v0, 1

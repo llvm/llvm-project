@@ -315,7 +315,7 @@ TEST_F(MemorySSATest, MoveAStore) {
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
   // Move the store
-  SideStore->moveBefore(Entry->getTerminator());
+  SideStore->moveBefore(Entry->getTerminator()->getIterator());
   MemoryAccess *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
   MemoryAccess *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
   MemoryAccess *NewStoreAccess = Updater.createMemoryAccessAfter(
@@ -351,7 +351,7 @@ TEST_F(MemorySSATest, MoveAStoreUpdater) {
   MemorySSAUpdater Updater(&MSSA);
 
   // Move the store
-  SideStore->moveBefore(Entry->getTerminator());
+  SideStore->moveBefore(Entry->getTerminator()->getIterator());
   auto *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
   auto *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
   auto *NewStoreAccess = Updater.createMemoryAccessAfter(
@@ -461,7 +461,7 @@ TEST_F(MemorySSATest, MoveAStoreAllAround) {
   EXPECT_EQ(MergePhi->getIncomingValue(0), EntryStoreAccess);
   EXPECT_EQ(MergePhi->getIncomingValue(1), SideStoreAccess);
   // Now move it before the load
-  SideStore->moveBefore(MergeLoad);
+  SideStore->moveBefore(MergeLoad->getIterator());
   Updater.moveBefore(SideStoreAccess, LoadAccess);
   EXPECT_EQ(MergePhi->getIncomingValue(0), EntryStoreAccess);
   EXPECT_EQ(MergePhi->getIncomingValue(1), EntryStoreAccess);
@@ -840,7 +840,7 @@ TEST_F(MemorySSATest, MoveAboveMemoryDef) {
   MemorySSAWalker &Walker = *Analyses->Walker;
 
   MemorySSAUpdater Updater(&MSSA);
-  StoreC->moveBefore(StoreB);
+  StoreC->moveBefore(StoreB->getIterator());
   Updater.moveBefore(cast<MemoryDef>(MSSA.getMemoryAccess(StoreC)),
                      cast<MemoryDef>(MSSA.getMemoryAccess(StoreB)));
 
@@ -874,7 +874,6 @@ TEST_F(MemorySSATest, Irreducible) {
   // }
   // use(x)
 
-  SmallVector<PHINode *, 8> Inserted;
   IRBuilder<> B(C);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
@@ -1578,7 +1577,7 @@ TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
   for (auto &BB : *F) {
     if (BB.getName() == "exit") {
       // Get the store instruction
-      auto *SI = BB.getFirstNonPHI();
+      auto *SI = &*BB.getFirstNonPHIIt();
       // Get the memory access and location
       MemoryAccess *MA = MSSA.getMemoryAccess(SI);
       MemoryLocation ML = MemoryLocation::get(SI);
@@ -1702,7 +1701,7 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
     // Move %v1 before the terminator of %header.i.check
     BasicBlock *BB = getBasicBlockByName(*F, "header.i.check");
     Instruction *LI = getInstructionByName(*F, "v1");
-    LI->moveBefore(BB->getTerminator());
+    LI->moveBefore(BB->getTerminator()->getIterator());
     if (MemoryUseOrDef *MUD = MSSA.getMemoryAccess(LI))
       Updater.moveToPlace(MUD, BB, MemorySSA::BeforeTerminator);
 
@@ -1725,7 +1724,7 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
     // Move %v2 before the terminator of %preheader.i
     BasicBlock *BB = getBasicBlockByName(*F, "preheader.i");
     Instruction *LI = getInstructionByName(*F, "v2");
-    LI->moveBefore(BB->getTerminator());
+    LI->moveBefore(BB->getTerminator()->getIterator());
     // Check that there is no assertion of "Incomplete phi during partial
     // rename"
     if (MemoryUseOrDef *MUD = MSSA.getMemoryAccess(LI))

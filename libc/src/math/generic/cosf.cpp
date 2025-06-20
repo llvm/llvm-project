@@ -20,6 +20,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Exceptional cases for cosf.
 static constexpr size_t N_EXCEPTS = 6;
 
@@ -38,6 +39,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> COSF_EXCEPTS{{
     // x = 0x1.ddebdep120, cos(x) = 0x1.114438p-1 (RZ)
     {0x7beef5ef, 0x3f08a21c, 1, 0, 0},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -101,18 +103,25 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
     // |x| < 2^-125. For targets without FMA instructions, we simply use
     // double for intermediate results as it is more efficient than using an
     // emulated version of FMA.
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
     return fputil::multiply_add(xbits.get_val(), -0x1.0p-25f, 1.0f);
 #else
     return static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, 1.0));
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (auto r = COSF_EXCEPTS.lookup(x_abs); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // x is inf or nan.
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+
     if (x_abs == 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);

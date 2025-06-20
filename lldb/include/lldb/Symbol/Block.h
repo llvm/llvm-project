@@ -40,7 +40,7 @@ namespace lldb_private {
 /// blocks.
 class Block : public UserID, public SymbolContextScope {
 public:
-  typedef RangeVector<uint32_t, uint32_t, 1> RangeList;
+  typedef RangeVector<int32_t, uint32_t, 1> RangeList;
   typedef RangeList::Entry Range;
 
   // Creates a block representing the whole function. Only meant to be used from
@@ -77,6 +77,8 @@ public:
   Function *CalculateSymbolContextFunction() override;
 
   Block *CalculateSymbolContextBlock() override;
+
+  Function &GetFunction();
 
   /// Check if an offset is in one of the block offset ranges.
   ///
@@ -352,7 +354,12 @@ protected:
   // Member variables.
   SymbolContextScope &m_parent_scope;
   collection m_children;
+
+  /// Address ranges of this block. They are relative to the function entry
+  /// point so one must add/subtract GetFunction().GetAddress().GetFileAddress()
+  /// when converting from/to to the AddressRange representation.
   RangeList m_ranges;
+
   lldb::InlineFunctionInfoSP m_inlineInfoSP; ///< Inlined function information.
   lldb::VariableListSP m_variable_list_sp; ///< The variable list for all local,
                                            ///static and parameter variables

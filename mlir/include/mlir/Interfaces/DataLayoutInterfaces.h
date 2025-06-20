@@ -19,6 +19,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace mlir {
@@ -34,6 +35,8 @@ using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
 using TargetDeviceSpecListRef = llvm::ArrayRef<TargetDeviceSpecInterface>;
 using TargetDeviceSpecEntry = std::pair<StringAttr, TargetDeviceSpecInterface>;
+using DataLayoutIdentifiedEntryMap =
+    ::llvm::MapVector<::mlir::StringAttr, ::mlir::DataLayoutEntryInterface>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
 class ModuleOp;
@@ -74,9 +77,17 @@ getDefaultIndexBitwidth(Type type, const DataLayout &dataLayout,
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultEndianness(DataLayoutEntryInterface entry);
 
+/// Default handler for the default memory space request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultMemorySpace(DataLayoutEntryInterface entry);
+
 /// Default handler for alloca memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
+
+/// Default handler for mangling mode request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultManglingMode(DataLayoutEntryInterface entry);
 
 /// Default handler for program memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
@@ -89,6 +100,14 @@ Attribute getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry);
 /// Default handler for the stack alignment request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
+
+/// Default handler for the function pointer alignment request. Dispatches to
+/// the DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultFunctionPointerAlignment(DataLayoutEntryInterface entry);
+
+/// Default handler for the legal int widths request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultLegalIntWidths(DataLayoutEntryInterface entry);
 
 /// Returns the value of the property from the specified DataLayoutEntry. If the
 /// property is missing from the entry, returns std::nullopt.
@@ -227,8 +246,14 @@ public:
   /// Returns the specified endianness.
   Attribute getEndianness() const;
 
+  /// Returns the default memory space used for memory operations.
+  Attribute getDefaultMemorySpace() const;
+
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
+
+  /// Returns the mangling mode.
+  Attribute getManglingMode() const;
 
   /// Returns the memory space used for program memory operations.
   Attribute getProgramMemorySpace() const;
@@ -241,6 +266,12 @@ public:
   /// prevent dynamic stack alignment. Returns zero if the stack alignment is
   /// unspecified.
   uint64_t getStackAlignment() const;
+
+  /// Returns function pointer alignment.
+  Attribute getFunctionPointerAlignment() const;
+
+  /// Returns the legal int widths.
+  Attribute getLegalIntWidths() const;
 
   /// Returns the value of the specified property if the property is defined for
   /// the given device ID, otherwise returns std::nullopt.
@@ -276,13 +307,20 @@ private:
 
   /// Cache for the endianness.
   mutable std::optional<Attribute> endianness;
-  /// Cache for alloca, global, and program memory spaces.
+  /// Cache for the mangling mode.
+  mutable std::optional<Attribute> manglingMode;
+  /// Cache for default, alloca, global, and program memory spaces.
+  mutable std::optional<Attribute> defaultMemorySpace;
   mutable std::optional<Attribute> allocaMemorySpace;
   mutable std::optional<Attribute> programMemorySpace;
   mutable std::optional<Attribute> globalMemorySpace;
 
   /// Cache for stack alignment.
   mutable std::optional<uint64_t> stackAlignment;
+  /// Cache for function pointer alignment.
+  mutable std::optional<Attribute> functionPointerAlignment;
+  /// Cache for legal int widths.
+  mutable std::optional<Attribute> legalIntWidths;
 };
 
 } // namespace mlir

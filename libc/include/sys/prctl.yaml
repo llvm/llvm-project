@@ -1,4 +1,5 @@
-header: sys-prctl.h
+header: sys/prctl.h
+header_template: prctl.h.def
 macros: []
 types: []
 enums: []

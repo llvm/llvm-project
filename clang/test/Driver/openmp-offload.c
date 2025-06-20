@@ -184,13 +184,13 @@
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -g %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NEW-DRIVER-DEBUG %s
 
-// CHK-NEW-DRIVER-DEBUG: clang-linker-wrapper{{.*}} "--device-debug"
+// CHK-NEW-DRIVER-DEBUG: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-g"
 
 /// Check arguments to the linker wrapper
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
 // RUN:     -mllvm -abc %s 2>&1 | FileCheck -check-prefix=CHK-NEW-DRIVER-MLLVM %s
 
-// CHK-NEW-DRIVER-MLLVM: clang-linker-wrapper{{.*}} "-abc"
+// CHK-NEW-DRIVER-MLLVM: clang-linker-wrapper{{.*}} "--device-linker=powerpc64le-ibm-linux-gnu=-mllvm" "--device-linker=powerpc64le-ibm-linux-gnu=-abc"
 
 //
 // Ensure that we generate the correct bindings for '-fsyntax-only' for OpenMP.
@@ -208,3 +208,26 @@
 // RUN:     -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHK-SYNTAX-ONLY-ARGS %s
 // CHK-SYNTAX-ONLY-ARGS: "-cc1" "-triple" "powerpc64le-ibm-linux-gnu"{{.*}}"-fsyntax-only"
 // CHK-SYNTAX-ONLY-ARGS: "-cc1" "-triple" "powerpc64le-unknown-linux"{{.*}}"-fsyntax-only"
+
+//
+// Ensure `-foffload-lto` is forwarded properly.
+//
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
+// RUN:     -foffload-lto %s 2>&1 | FileCheck -check-prefix=CHK-DEVICE-LTO-FULL %s
+// CHK-DEVICE-LTO-FULL: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-flto=full"
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
+// RUN:     -foffload-lto=thin %s 2>&1 | FileCheck -check-prefix=CHK-DEVICE-LTO-THIN %s
+// CHK-DEVICE-LTO-THIN: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-flto=thin"
+
+//
+// Check forwarding architectures to non-GPU targets
+//
+// RUN:   %clang -### --target=aarch64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=aarch64-unknown-linux-gnu \
+// RUN:     --offload-arch=a64fx %s 2>&1 | FileCheck -check-prefix=CHK-CPU-ARCH-A %s
+// CHK-CPU-ARCH-A: "-cc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-target-cpu" "generic"
+// CHK-CPU-ARCH-A: "-cc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-target-cpu" "a64fx"
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=x86_64-unknown-linux-gnu \
+// RUN:     --offload-arch=znver4 %s 2>&1 | FileCheck -check-prefix=CHK-CPU-ARCH-X %s
+// CHK-CPU-ARCH-X: "-cc1" "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-target-cpu" "x86-64"
+// CHK-CPU-ARCH-X: "-cc1" "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-target-cpu" "znver4"

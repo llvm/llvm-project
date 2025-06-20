@@ -201,9 +201,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (isTargetWindows())
     NoARM = true;
 
-  if (isAAPCS_ABI())
+  if (TM.isAAPCS_ABI())
     stackAlignment = Align(8);
-  if (isTargetNaCl() || isAAPCS16_ABI())
+  if (isTargetNaCl() || TM.isAAPCS16_ABI())
     stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::
@@ -225,9 +225,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // case.
 
   SupportsTailCall = !isThumb1Only() || hasV8MBaselineOps();
-
-  if (isTargetMachO() && isTargetIOS() && getTargetTriple().isOSVersionLT(5, 0))
-    SupportsTailCall = false;
 
   switch (IT) {
   case DefaultIT:
@@ -321,22 +318,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     PartialUpdateClearance = 12;
     break;
   }
-}
-
-bool ARMSubtarget::isTargetHardFloat() const { return TM.isTargetHardFloat(); }
-
-bool ARMSubtarget::isAPCS_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_APCS;
-}
-bool ARMSubtarget::isAAPCS_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS ||
-         TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-}
-bool ARMSubtarget::isAAPCS16_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
 }
 
 bool ARMSubtarget::isROPI() const {
@@ -478,7 +459,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
 }
 
 bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               unsigned PhysReg) const {
+                                               MCRegister PhysReg) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of
@@ -492,8 +473,6 @@ ARMSubtarget::PushPopSplitVariation
 ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const std::vector<CalleeSavedInfo> CSI =
-      MF.getFrameInfo().getCalleeSavedInfo();
 
   // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
   // cannot use high registers except for lr.

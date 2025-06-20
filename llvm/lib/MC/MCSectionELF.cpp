@@ -118,6 +118,9 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   } else if (T.isARM() || T.isThumb()) {
     if (Flags & ELF::SHF_ARM_PURECODE)
       OS << 'y';
+  } else if (T.isAArch64()) {
+    if (Flags & ELF::SHF_AARCH64_PURECODE)
+      OS << 'y';
   } else if (Arch == Triple::hexagon) {
     if (Flags & ELF::SHF_HEX_GPREL)
       OS << 's';

@@ -369,19 +369,13 @@ entry:
   ret void
 }
 
-;; BUILD_VECTOR through stack.
 ;; If `isShuffleMaskLegal` returns true, it will lead to an infinite loop.
 define void @extract1_i32_zext_insert0_i64_undef(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: extract1_i32_zext_insert0_i64_undef:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; CHECK-NEXT:    st.d $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
+; CHECK-NEXT:    vsrli.d $vr0, $vr0, 32
 ; CHECK-NEXT:    vst $vr0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x i32>, ptr %src
   %e = extractelement <4 x i32> %v, i32 1

@@ -142,7 +142,7 @@ struct PDLIndexSymbol {
       const ast::Name *declName = decl->getName();
       return declName ? declName->getLoc() : decl->getLoc();
     }
-    return definition.get<const ods::Operation *>()->getLoc();
+    return cast<const ods::Operation *>(definition)->getLoc();
   }
 
   /// The main definition of the symbol.
@@ -386,7 +386,7 @@ PDLDocument::PDLDocument(const lsp::URIForFile &uri, StringRef contents,
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
-  includeDirs.insert(includeDirs.end(), extraDirs.begin(), extraDirs.end());
+  llvm::append_range(includeDirs, extraDirs);
 
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
@@ -470,7 +470,7 @@ PDLDocument::findHover(const lsp::URIForFile &uri,
   if (const auto *op =
           llvm::dyn_cast_if_present<const ods::Operation *>(symbol->definition))
     return buildHoverForOpName(op, hoverRange);
-  const auto *decl = symbol->definition.get<const ast::Decl *>();
+  const auto *decl = cast<const ast::Decl *>(symbol->definition);
   return findHover(decl, hoverRange);
 }
 

@@ -63,10 +63,10 @@ bool matchFilePath(StringRef Pattern, StringRef FilePath) {
       if (I == EOP) // `Pattern` ends with a star.
         return Globstar || NoMoreSeparatorsInFilePath;
       if (Pattern[I] != Separator) {
-        Globstar = false;
         // `Pattern` ends with a lone backslash.
         if (Pattern[I] == '\\' && ++I == EOP)
           return false;
+        Globstar = false;
       }
       // The star is followed by a (possibly escaped) `Separator`.
       if (Pattern[I] == Separator) {

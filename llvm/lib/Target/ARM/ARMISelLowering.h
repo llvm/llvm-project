@@ -34,6 +34,7 @@
 
 namespace llvm {
 
+class ARMBaseTargetMachine;
 class ARMSubtarget;
 class DataLayout;
 class FastISel;
@@ -414,6 +415,8 @@ class VectorType;
     explicit ARMTargetLowering(const TargetMachine &TM,
                                const ARMSubtarget &STI);
 
+    const ARMBaseTargetMachine &getTM() const;
+
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
 
@@ -716,6 +719,11 @@ class VectorType;
       return true;
     }
 
+    bool supportSplitCSR(MachineFunction *MF) const override {
+      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+             MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
+    }
+
     bool hasStandaloneRem(EVT VT) const override {
       return HasStandaloneRem;
     }
@@ -758,8 +766,9 @@ class VectorType;
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
 
-    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                              EVT VT) const override;
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                              unsigned SelectOpcode, SDValue X,
+                                              SDValue Y) const override;
 
     bool preferIncOfAddToSubOfNot(EVT VT) const override;
 
@@ -913,11 +922,6 @@ class VectorType;
                             SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
                             SDValue ThisVal, bool isCmseNSCall) const;
 
-    bool supportSplitCSR(MachineFunction *MF) const override {
-      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
-          MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
-    }
-
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;
     void insertCopiesSplitCSR(
       MachineBasicBlock *Entry,
@@ -965,7 +969,7 @@ class VectorType;
     bool CanLowerReturn(CallingConv::ID CallConv,
                         MachineFunction &MF, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

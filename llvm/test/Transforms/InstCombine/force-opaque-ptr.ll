@@ -20,7 +20,13 @@ define ptr @gep_constexpr_gv_2() {
 ; Silly expression to get an inttoptr that does not combine with the GEP.
 define ptr @gep_constexpr_inttoptr() {
 ; CHECK-LABEL: @gep_constexpr_inttoptr(
-; CHECK-NEXT:    ret ptr getelementptr (i8, ptr inttoptr (i64 mul (i64 ptrtoint (ptr @g to i64), i64 2) to ptr), i64 20)
+; CHECK-NEXT:    [[MUL:%.*]] = shl i64 ptrtoint (ptr @g to i64), 1
+; CHECK-NEXT:    [[INTTOPTR:%.*]] = inttoptr i64 [[MUL]] to ptr
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[INTTOPTR]], i64 20
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
-  ret ptr getelementptr([16 x i16], ptr inttoptr (i64 mul (i64 ptrtoint (ptr @g to i64), i64 2) to ptr), i64 0, i64 10)
+  %mul = mul i64 ptrtoint (ptr @g to i64), 2
+  %inttoptr = inttoptr i64 %mul to ptr
+  %gep = getelementptr [16 x i16], ptr %inttoptr, i64 0, i64 10
+  ret ptr %gep
 }

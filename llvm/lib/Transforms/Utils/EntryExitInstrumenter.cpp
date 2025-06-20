@@ -63,6 +63,11 @@ static void insertCall(Function &CurFn, StringRef Func,
                                   false));
       CallInst *Call = CallInst::Create(Fn, RetAddr, "", InsertionPt);
       Call->setDebugLoc(DL);
+    } else if (TargetTriple.isSystemZ()) {
+      // skip insertion for `mcount` on SystemZ. This will be handled later in
+      // `emitPrologue`. Add custom attribute to denote this.
+      CurFn.addFnAttr(
+          llvm::Attribute::get(C, "systemz-instrument-function-entry", Func));
     } else {
       FunctionCallee Fn = M.getOrInsertFunction(Func, Type::getVoidTy(C));
       CallInst *Call = CallInst::Create(Fn, "", InsertionPt);
@@ -101,6 +106,12 @@ static bool runOnFunction(Function &F, bool PostInlining) {
   // function call will clobber these registers. Simply skip naked functions for
   // all targets.
   if (F.hasFnAttribute(Attribute::Naked))
+    return false;
+
+  // available_externally functions may not have definitions external to the
+  // module (e.g. gnu::always_inline). Instrumenting them might lead to linker
+  // errors if they are optimized out. Skip them like GCC.
+  if (F.hasAvailableExternallyLinkage())
     return false;
 
   StringRef EntryAttr = PostInlining ? "instrument-function-entry-inlined"

@@ -71,7 +71,7 @@ struct Section {
   }
 
   bool hasValidOffset() const {
-    return !(isVirtualSection() || (OriginalOffset && *OriginalOffset == 0));
+    return !(isVirtualSection() || OriginalOffset == 0);
   }
 };
 

@@ -348,7 +348,7 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
   BL->removeOperand(SecondOpIdxToRemove);
   // Now copy over the implicit operands from the original IndirectCall
   BL->copyImplicitOps(MF, IndirectCall);
-  MF.moveCallSiteInfo(&IndirectCall, BL);
+  MF.moveAdditionalCallInfo(&IndirectCall, BL);
   // Also add the register called in the IndirectCall as being used in the
   // called thunk.
   BL->addOperand(MachineOperand::CreateReg(Reg, false /*isDef*/, true /*isImp*/,

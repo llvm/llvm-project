@@ -818,23 +818,6 @@ define double @maxnum_f64(double %a, double %b) nounwind {
   ret double %1
 }
 
-; TODO: FMINNAN and FMAXNAN aren't handled in
-; SelectionDAGLegalize::ExpandNode.
-
-; declare double @llvm.minimum.f64(double, double)
-
-; define double @fminimum_f64(double %a, double %b) nounwind {
-;   %1 = call double @llvm.minimum.f64(double %a, double %b)
-;   ret double %1
-; }
-
-; declare double @llvm.maximum.f64(double, double)
-
-; define double @fmaximum_f64(double %a, double %b) nounwind {
-;   %1 = call double @llvm.maximum.f64(double %a, double %b)
-;   ret double %1
-; }
-
 declare double @llvm.copysign.f64(double, double)
 
 define double @copysign_f64(double %a, double %b) nounwind {

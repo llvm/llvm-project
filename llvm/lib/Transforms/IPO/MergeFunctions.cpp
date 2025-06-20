@@ -94,7 +94,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -283,9 +282,10 @@ private:
   // Replace G with an alias to F (deleting function G)
   void writeAlias(Function *F, Function *G);
 
-  // Replace G with an alias to F if possible, or a thunk to F if possible.
-  // Returns false if neither is the case.
-  bool writeThunkOrAlias(Function *F, Function *G);
+  // If needed, replace G with an alias to F if possible, or a thunk to F if
+  // profitable. Returns false if neither is the case. If \p G is not needed
+  // (i.e. it is discardable and not used), \p G is removed directly.
+  bool writeThunkOrAliasIfNeeded(Function *F, Function *G);
 
   /// Replace function F with function G in the function tree.
   void replaceFunctionInTree(const FunctionNode &FN, Function *G);
@@ -320,7 +320,7 @@ bool MergeFunctionsPass::runOnModule(Module &M) {
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
-  MF.getUsed().insert(UsedV.begin(), UsedV.end());
+  MF.getUsed().insert_range(UsedV);
   return MF.run(M);
 }
 
@@ -508,33 +508,6 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
       U.set(New);
     }
   }
-}
-
-// Helper for writeThunk,
-// Selects proper bitcast operation,
-// but a bit simpler then CastInst::getCastOpcode.
-static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
-  Type *SrcTy = V->getType();
-  if (SrcTy->isStructTy()) {
-    assert(DestTy->isStructTy());
-    assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements());
-    Value *Result = PoisonValue::get(DestTy);
-    for (unsigned int I = 0, E = SrcTy->getStructNumElements(); I < E; ++I) {
-      Value *Element =
-          createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
-                     DestTy->getStructElementType(I));
-
-      Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
-    }
-    return Result;
-  }
-  assert(!DestTy->isStructTy());
-  if (SrcTy->isIntegerTy() && DestTy->isPointerTy())
-    return Builder.CreateIntToPtr(V, DestTy);
-  else if (SrcTy->isPointerTy() && DestTy->isIntegerTy())
-    return Builder.CreatePtrToInt(V, DestTy);
-  else
-    return Builder.CreateBitCast(V, DestTy);
 }
 
 // Erase the instructions in PDIUnrelatedWL as they are unrelated to the
@@ -778,7 +751,6 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
     NewG = Function::Create(G->getFunctionType(), G->getLinkage(),
                             G->getAddressSpace(), "", G->getParent());
     NewG->setComdat(G->getComdat());
-    NewG->IsNewDbgInfoFormat = G->IsNewDbgInfoFormat;
     BB = BasicBlock::Create(F->getContext(), "", NewG);
   }
 
@@ -788,7 +760,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   unsigned i = 0;
   FunctionType *FFTy = F->getFunctionType();
   for (Argument &AI : H->args()) {
-    Args.push_back(createCast(Builder, &AI, FFTy->getParamType(i)));
+    Args.push_back(Builder.CreateAggregateCast(&AI, FFTy->getParamType(i)));
     ++i;
   }
 
@@ -803,7 +775,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   if (H->getReturnType()->isVoidTy()) {
     RI = Builder.CreateRetVoid();
   } else {
-    RI = Builder.CreateRet(createCast(Builder, CI, H->getReturnType()));
+    RI = Builder.CreateRet(Builder.CreateAggregateCast(CI, H->getReturnType()));
   }
 
   if (MergeFunctionsPDI) {
@@ -875,9 +847,14 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
   ++NumAliasesWritten;
 }
 
-// Replace G with an alias to F if possible, or a thunk to F if
-// profitable. Returns false if neither is the case.
-bool MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
+// If needed, replace G with an alias to F if possible, or a thunk to F if
+// profitable. Returns false if neither is the case. If \p G is not needed (i.e.
+// it is discardable and unused), \p G is removed directly.
+bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
+  if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
+    G->eraseFromParent();
+    return true;
+  }
   if (canCreateAliasFor(G)) {
     writeAlias(F, G);
     return true;
@@ -889,14 +866,25 @@ bool MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
   return false;
 }
 
+/// Returns true if \p F is either weak_odr or linkonce_odr.
+static bool isODR(const Function *F) {
+  return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
+}
+
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
-  if (F->isInterposable()) {
-    assert(G->isInterposable());
 
-    // Both writeThunkOrAlias() calls below must succeed, either because we can
-    // create aliases for G and NewF, or because a thunk for F is profitable.
-    // F here has the same signature as NewF below, so that's what we check.
+  // Create a new thunk that both F and G can call, if F cannot call G directly.
+  // That is the case if F is either interposable or if G is either weak_odr or
+  // linkonce_odr.
+  if (F->isInterposable() || (isODR(F) && isODR(G))) {
+    assert((!isODR(G) || isODR(F)) &&
+           "if G is ODR, F must also be ODR due to ordering");
+
+    // Both writeThunkOrAliasIfNeeded() calls below must succeed, either because
+    // we can create aliases for G and NewF, or because a thunk for F is
+    // profitable. F here has the same signature as NewF below, so that's what
+    // we check.
     if (!canCreateThunkFor(F) &&
         (!canCreateAliasFor(F) || !canCreateAliasFor(G)))
       return;
@@ -906,20 +894,28 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
                                       F->getAddressSpace(), "", F->getParent());
     NewF->copyAttributesFrom(F);
     NewF->takeName(F);
-    NewF->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
+    NewF->setComdat(F->getComdat());
+    F->setComdat(nullptr);
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
-    // We collect alignment before writeThunkOrAlias that overwrites NewF and
-    // G's content.
+    // If G or NewF are (weak|linkonce)_odr, update all callers to call the
+    // thunk.
+    if (isODR(G))
+      replaceDirectCallers(G, F);
+    if (isODR(F))
+      replaceDirectCallers(NewF, F);
+
+    // We collect alignment before writeThunkOrAliasIfNeeded that overwrites
+    // NewF and G's content.
     const MaybeAlign NewFAlign = NewF->getAlign();
     const MaybeAlign GAlign = G->getAlign();
 
-    writeThunkOrAlias(F, G);
-    writeThunkOrAlias(F, NewF);
+    writeThunkOrAliasIfNeeded(F, G);
+    writeThunkOrAliasIfNeeded(F, NewF);
 
     if (NewFAlign || GAlign)
       F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
@@ -958,7 +954,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
       return;
     }
 
-    if (writeThunkOrAlias(F, G)) {
+    if (writeThunkOrAliasIfNeeded(F, G)) {
       ++NumFunctionsMerged;
     }
   }
@@ -986,16 +982,24 @@ void MergeFunctions::replaceFunctionInTree(const FunctionNode &FN,
 
 // Ordering for functions that are equal under FunctionComparator
 static bool isFuncOrderCorrect(const Function *F, const Function *G) {
+  if (isODR(F) != isODR(G)) {
+    // ODR functions before non-ODR functions. A ODR function can call a non-ODR
+    // function if it is not interposable, but not the other way around.
+    return isODR(G);
+  }
+
   if (F->isInterposable() != G->isInterposable()) {
     // Strong before weak, because the weak function may call the strong
     // one, but not the other way around.
     return !F->isInterposable();
   }
+
   if (F->hasLocalLinkage() != G->hasLocalLinkage()) {
     // External before local, because we definitely have to keep the external
     // function, but may be able to drop the local one.
     return !F->hasLocalLinkage();
   }
+
   // Impose a total order (by name) on the replacement of functions. This is
   // important when operating on more than one module independently to prevent
   // cycles of thunks calling each other when the modules are linked together.

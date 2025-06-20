@@ -34,6 +34,8 @@
 // CHECK-NEXT:     FEAT_LRCPC2                                            Enable Armv8.4-A RCPC instructions with Immediate Offsets
 // CHECK-NEXT:     FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     FEAT_LSE2                                              Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules
+// FIXME: Apple M4 does not have FEAT_MPAM, but it is currently marked as
+// non-optional in llvm's understanding of Armv8.4-A
 // CHECK-NEXT:     FEAT_MPAM                                              Enable Armv8.4-A Memory system Partitioning and Monitoring extension
 // CHECK-NEXT:     FEAT_NV, FEAT_NV2                                      Enable Armv8.4-A Nested Virtualization Enchancement
 // CHECK-NEXT:     FEAT_PAN                                               Enable Armv8.1-A Privileged Access-Never extension
@@ -43,6 +45,8 @@
 // CHECK-NEXT:     FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     FEAT_SB                                                Enable Armv8.5-A Speculation Barrier
+// FIXME: Apple M4 does not have FEAT_SEL2, but it is currently marked as
+// non-optional in llvm's understanding of Armv8.4-A
 // CHECK-NEXT:     FEAT_SEL2                                              Enable Armv8.4-A Secure Exception Level 2 extension
 // CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
 // CHECK-NEXT:     FEAT_SHA3, FEAT_SHA512                                 Enable SHA512 and SHA3 support
@@ -51,7 +55,6 @@
 // CHECK-NEXT:     FEAT_SME_F64F64                                        Enable Scalable Matrix Extension (SME) F64F64 instructions
 // CHECK-NEXT:     FEAT_SME_I16I64                                        Enable Scalable Matrix Extension (SME) I16I64 instructions
 // CHECK-NEXT:     FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
-// CHECK-NEXT:     FEAT_SPEv1p2                                           Enable extra register in the Statistical Profiling Extension
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState

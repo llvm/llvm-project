@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestDiagnoseInheritance(TestBase):
-    @skipUnlessDarwin
+    @expectedFailureAll(oslist=["windows"])
     @skipIf(
         archs=no_match(["x86_64"])
     )  # <rdar://problem/33842388> frame diagnose doesn't work for armv7 or arm64

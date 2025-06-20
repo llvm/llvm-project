@@ -14,11 +14,10 @@
 
 #include "DeviceTypes.h"
 
-extern "C" {
+namespace ompx {
 
-int memcmp(const void *lhs, const void *rhs, size_t count);
-void memset(void *dst, int C, size_t count);
-int printf(const char *format, ...);
-}
+int printf(const char *Format, ...);
+
+} // namespace ompx
 
 #endif

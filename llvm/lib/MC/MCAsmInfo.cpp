@@ -17,6 +17,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -48,9 +50,6 @@ MCAsmInfo::MCAsmInfo() {
   LinkerPrivateGlobalPrefix = "";
   InlineAsmStart = "APP";
   InlineAsmEnd = "NO_APP";
-  Code16Directive = ".code16";
-  Code32Directive = ".code32";
-  Code64Directive = ".code64";
   ZeroDirective = "\t.zero\t";
   AsciiDirective = "\t.ascii\t";
   AscizDirective = "\t.asciz\t";
@@ -123,4 +122,48 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
   // FIXME: Does .section .bss/.data/.text work everywhere??
   return SectionName == ".text" || SectionName == ".data" ||
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
+}
+
+void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
+  assert(SpecifierToName.empty() && "cannot initialize twice");
+  for (auto Desc : Descs) {
+    [[maybe_unused]] auto It =
+        SpecifierToName.try_emplace(Desc.Kind, Desc.Name);
+    assert(It.second && "duplicate Kind");
+    [[maybe_unused]] auto It2 =
+        NameToSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
+    // Workaround for VK_PPC_L/VK_PPC_LO ("l").
+    assert(It2.second || Desc.Name == "l");
+  }
+}
+
+StringRef MCAsmInfo::getSpecifierName(uint32_t S) const {
+  auto It = SpecifierToName.find(S);
+  assert(It != SpecifierToName.end() &&
+         "ensure the specifier is set in initializeVariantKinds");
+  return It->second;
+}
+
+std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
+  auto It = NameToSpecifier.find(Name.lower());
+  if (It != NameToSpecifier.end())
+    return It->second;
+  return {};
+}
+
+void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
+  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr))
+    printSpecifierExpr(OS, *SE);
+  else
+    Expr.print(OS, this);
+}
+
+bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &E,
+                                          MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  if (!E.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  Res.setSpecifier(E.getSpecifier());
+  return !Res.getSubSym();
 }

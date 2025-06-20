@@ -20,6 +20,8 @@ extern "C++"
   {
     static const nsIID & GetIID ()
     {
+      static const nsIID i = {};
+      return i;
     }
   };
 }
@@ -31,6 +33,8 @@ class nsIDOMEventListener:public nsISupports
 {
 public:static const nsIID & GetIID ()
   {
+    static const nsIID i = {};
+    return i;
   }
   virtual nsresult
     __attribute__ ((regparm (0), cdecl)) HandleEvent (nsIDOMEvent * event) =
@@ -42,6 +46,7 @@ public:static const nsIID & GetIID ()
   {
     static const nsIID iid = {
     };
+    return iid;
   }
   virtual nsresult
     __attribute__ ((regparm (0),

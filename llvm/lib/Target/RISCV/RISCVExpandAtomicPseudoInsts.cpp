@@ -34,9 +34,7 @@ public:
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVExpandAtomicPseudo() : MachineFunctionPass(ID) {
-    initializeRISCVExpandAtomicPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVExpandAtomicPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -733,10 +731,6 @@ bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
 INITIALIZE_PASS(RISCVExpandAtomicPseudo, "riscv-expand-atomic-pseudo",
                 RISCV_EXPAND_ATOMIC_PSEUDO_NAME, false, false)
 
-namespace llvm {
-
-FunctionPass *createRISCVExpandAtomicPseudoPass() {
+FunctionPass *llvm::createRISCVExpandAtomicPseudoPass() {
   return new RISCVExpandAtomicPseudo();
 }
-
-} // end of namespace llvm

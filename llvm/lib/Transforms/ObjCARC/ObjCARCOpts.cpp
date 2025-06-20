@@ -583,7 +583,8 @@ class ObjCARCOpt {
       const ColorVector &CV = BlockEHColors.find(BB)->second;
       assert(CV.size() > 0 && "Uncolored block");
       for (BasicBlock *EHPadBB : CV)
-        if (auto *EHPad = dyn_cast<FuncletPadInst>(EHPadBB->getFirstNonPHI())) {
+        if (auto *EHPad =
+                dyn_cast<FuncletPadInst>(EHPadBB->getFirstNonPHIIt())) {
           OpBundles.emplace_back("funclet", EHPad);
           return;
         }
@@ -1762,21 +1763,15 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
                            DenseMap<Value *, RRInfo> &Releases,
                            SmallVectorImpl<Instruction *> &DeadInsts,
                            Module *M) {
-  Type *ArgTy = Arg->getType();
-  Type *ParamTy = PointerType::getUnqual(Type::getInt8Ty(ArgTy->getContext()));
-
   LLVM_DEBUG(dbgs() << "== ObjCARCOpt::MoveCalls ==\n");
 
   // Insert the new retain and release calls.
   for (Instruction *InsertPt : ReleasesToMove.ReverseInsertPts) {
-    Value *MyArg = ArgTy == ParamTy ? Arg
-                                    : new BitCastInst(Arg, ParamTy, "",
-                                                      InsertPt->getIterator());
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
     CallInst *Call =
-        CallInst::Create(Decl, MyArg, BundleList, "", InsertPt->getIterator());
+        CallInst::Create(Decl, Arg, BundleList, "", InsertPt->getIterator());
     Call->setDoesNotThrow();
     Call->setTailCall();
 
@@ -1786,14 +1781,11 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
                       << *InsertPt << "\n");
   }
   for (Instruction *InsertPt : RetainsToMove.ReverseInsertPts) {
-    Value *MyArg = ArgTy == ParamTy ? Arg
-                                    : new BitCastInst(Arg, ParamTy, "",
-                                                      InsertPt->getIterator());
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
     CallInst *Call =
-        CallInst::Create(Decl, MyArg, BundleList, "", InsertPt->getIterator());
+        CallInst::Create(Decl, Arg, BundleList, "", InsertPt->getIterator());
     // Attach a clang.imprecise_release metadata tag, if appropriate.
     if (MDNode *M = ReleasesToMove.ReleaseMetadata)
       Call->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease), M);
@@ -2309,11 +2301,8 @@ FindPredecessorRetainWithSafePath(const Value *Arg, BasicBlock *BB,
 /// Look for an ``autorelease'' instruction dependent on Arg such that there are
 /// no instructions dependent on Arg that need a positive ref count in between
 /// the autorelease and the ret.
-static CallInst *
-FindPredecessorAutoreleaseWithSafePath(const Value *Arg, BasicBlock *BB,
-                                       ReturnInst *Ret,
-                                       ProvenanceAnalysis &PA) {
-  SmallPtrSet<Instruction *, 4> DepInsts;
+static CallInst *FindPredecessorAutoreleaseWithSafePath(
+    const Value *Arg, BasicBlock *BB, ReturnInst *Ret, ProvenanceAnalysis &PA) {
   auto *Autorelease = dyn_cast_or_null<CallInst>(
       findSingleDependency(NeedsPositiveRetainCount, Arg, BB, Ret, PA));
 
@@ -2434,7 +2423,7 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
     return false;
 
   Changed = CFGChanged = false;
-  BundledRetainClaimRVs BRV(/*ContractPass=*/false);
+  BundledRetainClaimRVs BRV(EP, /*ContractPass=*/false, /*UseClaimRV=*/false);
   BundledInsts = &BRV;
 
   LLVM_DEBUG(dbgs() << "<<< ObjCARCOpt: Visiting Function: " << F.getName()

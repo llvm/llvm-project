@@ -261,8 +261,8 @@ static const std::vector<TensorSpec> TrainingOnlyFeatures{
 static const std::vector<TensorSpec> getInputFeatures() {
   std::vector<TensorSpec> InputSpecs;
   for (size_t I = 0; I < NumberOfFeatures; ++I)
-    InputSpecs.push_back(TensorSpec::createSpec<int64_t>(
-        TFFeedPrefix + FeatureMap[I].name(), FeatureMap[I].shape()));
+    InputSpecs.push_back(
+        TensorSpec(TFFeedPrefix + FeatureMap[I].name(), FeatureMap[I]));
   append_range(InputSpecs, TrainingOnlyFeatures);
   return InputSpecs;
 }

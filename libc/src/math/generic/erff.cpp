@@ -135,12 +135,17 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
     int sign = xbits.is_neg() ? 1 : 0;
 
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       return (x_abs > 0x7f80'0000) ? x : ONE[sign];
     }
 
     return ONE[sign] + SMALL[sign];
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Exceptional mask = common 0 bits of 2 exceptional values.
   constexpr uint32_t EXCEPT_MASK = 0x809a'6184U;
 
@@ -155,6 +160,7 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
     if (x_abs == 0U)
       return x;
   }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // Polynomial approximation:
   //   erf(x) ~ x * (c0 + c1 * x^2 + c2 * x^4 + ... + c7 * x^14)

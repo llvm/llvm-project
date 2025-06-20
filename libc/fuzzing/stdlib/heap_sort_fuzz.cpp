@@ -10,21 +10,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/heap_sort.h"
+#include "src/stdlib/qsort_util.h"
 #include <stdint.h>
 
-static int int_compare(const void *l, const void *r) {
-  int li = *reinterpret_cast<const int *>(l);
-  int ri = *reinterpret_cast<const int *>(r);
-  if (li == ri)
-    return 0;
-  if (li > ri)
-    return 1;
-  return -1;
-}
-
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-
   const size_t array_size = size / sizeof(int);
   if (array_size == 0)
     return 0;
@@ -34,14 +23,22 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   for (size_t i = 0; i < array_size; ++i)
     array[i] = data_as_int[i];
 
-  auto arr = LIBC_NAMESPACE::internal::Array(
-      reinterpret_cast<uint8_t *>(array), array_size, sizeof(int), int_compare);
+  const auto is_less = [](const void *a_ptr,
+                          const void *b_ptr) noexcept -> bool {
+    const int &a = *static_cast<const int *>(a_ptr);
+    const int &b = *static_cast<const int *>(b_ptr);
 
-  LIBC_NAMESPACE::internal::heap_sort(arr);
+    return a < b;
+  };
 
-  for (size_t i = 0; i < array_size - 1; ++i)
+  constexpr bool USE_QUICKSORT = false;
+  LIBC_NAMESPACE::internal::unstable_sort_impl<USE_QUICKSORT>(
+      array, array_size, sizeof(int), is_less);
+
+  for (size_t i = 0; i < array_size - 1; ++i) {
     if (array[i] > array[i + 1])
       __builtin_trap();
+  }
 
   delete[] array;
   return 0;

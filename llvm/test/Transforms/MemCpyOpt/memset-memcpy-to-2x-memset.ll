@@ -73,11 +73,10 @@ define void @test_different_source_gep(ptr %dst1, ptr %dst2, i8 %c) {
 ; CHECK-LABEL: @test_different_source_gep(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST1:%.*]], i8 [[C:%.*]], i64 128, i1 false)
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[DST1]], i64 64
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[P]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST2:%.*]], i8 [[C]], i64 64, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr %dst1, i8 %c, i64 128, i1 false)
-  ; FIXME: We could optimize this as well.
   %p = getelementptr i8, ptr %dst1, i64 64
   call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %p, i64 64, i1 false)
   ret void

@@ -2975,7 +2975,6 @@ SDNode *IntegerCompareEliminator::tryEXTEND(SDNode *N) {
   if (!WideRes)
     return nullptr;
 
-  SDLoc dl(N);
   bool Input32Bit = WideRes.getValueType() == MVT::i32;
   bool Output32Bit = N->getValueType(0) == MVT::i32;
 
@@ -5473,10 +5472,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // generate secure plt code for TLS symbols.
     getGlobalBaseReg();
   } break;
-  case PPCISD::CALL: {
-    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
-        !TM.isPositionIndependent() || !Subtarget->isSecurePlt() ||
-        !Subtarget->isTargetELF())
+  case PPCISD::CALL:
+  case PPCISD::CALL_RM: {
+    if (Subtarget->isPPC64() || !TM.isPositionIndependent() ||
+        !Subtarget->isSecurePlt() || !Subtarget->isTargetELF())
       break;
 
     SDValue Op = N->getOperand(1);
@@ -5489,8 +5488,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       if (ES->getTargetFlags() == PPCII::MO_PLT)
         getGlobalBaseReg();
     }
-  }
-    break;
+  } break;
 
   case PPCISD::GlobalBaseReg:
     ReplaceNode(N, getGlobalBaseReg());
@@ -7237,7 +7235,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7254,7 +7252,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7270,7 +7268,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7288,10 +7286,10 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     if (Op1OK)
-      ToPromote.insert(ToPromote2.begin(), ToPromote2.end());
+      ToPromote.insert_range(ToPromote2);
 
     return true;
   }
@@ -7311,7 +7309,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     return true;
   }
@@ -7860,8 +7858,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         if (!isInt<16>(Offset))
           continue;
 
-        ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
-                                            ImmOpnd.getValueType());
+        ImmOpnd = CurDAG->getSignedTargetConstant(Offset, SDLoc(ImmOpnd),
+                                                  ImmOpnd.getValueType());
       } else if (Offset != 0) {
         // This optimization is performed for non-TOC-based local-[exec|dynamic]
         // accesses.

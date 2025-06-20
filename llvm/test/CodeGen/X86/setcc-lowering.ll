@@ -11,7 +11,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) nounwind {
 ; AVX1-LABEL: pr25080:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}+16(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
@@ -38,7 +38,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) nounwind {
 ; KNL-32-NEXT:    movb $15, %al
 ; KNL-32-NEXT:    kmovw %eax, %k1
 ; KNL-32-NEXT:    korw %k1, %k0, %k1
-; KNL-32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-32-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; KNL-32-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-32-NEXT:    retl

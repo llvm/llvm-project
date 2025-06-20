@@ -141,7 +141,7 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP1:%.*]] = fadd <8 x float> zeroinitializer, zeroinitializer
 ; POWEROF2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 1, i32 2>
 ; POWEROF2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 5, i32 6>
-; POWEROF2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 4, i32 0>
+; POWEROF2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 0, i32 4>
 ; POWEROF2-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> [[TMP2]], i64 0)
 ; POWEROF2-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP5]], <2 x float> [[TMP3]], i64 2)
 ; POWEROF2-NEXT:    br label [[TMP8:%.*]]
@@ -156,10 +156,10 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; POWEROF2-NEXT:    [[TMP14:%.*]] = call <2 x float> @llvm.vector.extract.v2f32.v4f32(<4 x float> [[TMP10]], i64 2)
 ; POWEROF2-NEXT:    [[TMP15:%.*]] = fmul <2 x float> zeroinitializer, [[TMP14]]
-; POWEROF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
-; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP16]]
 ; POWEROF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
-; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP18]], 0.000000e+00
+; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP18]]
+; POWEROF2-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
+; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP30]], 0.000000e+00
 ; POWEROF2-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i32 0
 ; POWEROF2-NEXT:    [[TMP21:%.*]] = fadd reassoc nsz float [[TMP20]], [[TMP17]]
 ; POWEROF2-NEXT:    [[TMP22:%.*]] = extractelement <2 x float> [[TMP15]], i32 0
@@ -230,4 +230,41 @@ define ptr @test4() {
   %27 = tail call float @llvm.sqrt.f32(float %25)
   %28 = tail call float @llvm.sqrt.f32(float %26)
   ret ptr null
+}
+
+define i32 @test5() {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x double> @llvm.vector.insert.v4f64.v2f64(<4 x double> poison, <2 x double> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.vector.insert.v4f64.v2f64(<4 x double> [[TMP0]], <2 x double> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv <4 x double> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> poison, <2 x double> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP3]], <2 x double> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP4]], <2 x double> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP5]], <2 x double> zeroinitializer, i64 6)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> poison, <2 x double> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP7]], <2 x double> zeroinitializer, i64 6)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v4f64(<8 x double> poison, <4 x double> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x double> [[TMP9]], <8 x double> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 2, i32 3, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <8 x double> [[TMP6]], [[TMP10]]
+; CHECK-NEXT:    br label [[FOR_END47:%.*]]
+; CHECK:       for.end47:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <8 x double> [ [[TMP11]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %div0 = fdiv <2 x double> zeroinitializer, zeroinitializer
+  %div1 = fdiv <2 x double> zeroinitializer, zeroinitializer
+  %add0 = fadd <2 x double> zeroinitializer, %div0
+  %add1 = fadd <2 x double> zeroinitializer, zeroinitializer
+  %add2 = fadd <2 x double> %div1, zeroinitializer
+  %add3 = fadd <2 x double> zeroinitializer, zeroinitializer
+  br label %for.end47
+
+for.end47:                                        ; preds = %entry
+  %add0.lcssa = phi <2 x double> [ %add0, %entry ]
+  %add1.lcssa = phi <2 x double> [ %add1, %entry ]
+  %add2.lcssa = phi <2 x double> [ %add2, %entry ]
+  %add3.lcssa = phi <2 x double> [ %add3, %entry ]
+  ret i32 0
 }

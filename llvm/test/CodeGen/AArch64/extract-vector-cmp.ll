@@ -58,10 +58,11 @@ define i128 @extract_icmp_v1i128(ptr %p) {
 ; CHECK-LABEL: extract_icmp_v1i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp x9, x8, [x0]
-; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    orr x8, x9, x8
 ; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    sbfx x0, x8, #0, #1
+; CHECK-NEXT:    mov x1, x0
 ; CHECK-NEXT:    ret
   %load = load <1 x i128>, ptr %p, align 16
   %cmp = icmp eq <1 x i128> %load, zeroinitializer
@@ -141,6 +142,26 @@ for.cond.cleanup:
 }
 
 
+; TODO: Combine the sbfx(cset) into a csetm
+define i32 @issue_121372(<4 x i32> %v) {
+; CHECK-LABEL: issue_121372:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    sbfx w8, w8, #0, #1
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csetm w0, lt
+; CHECK-NEXT:    ret
+  %cmp_ule = icmp ule <4 x i32> %v, zeroinitializer
+  %sext_v4i1 = sext <4 x i1> %cmp_ule to <4 x i32>
+  %cmp_sge = icmp sge <4 x i32> zeroinitializer, %sext_v4i1
+  %ext = extractelement <4 x i1> %cmp_sge, i32 0
+  %res = sext i1 %ext to i32
+  ret i32 %res
+}
+
+
 ; Negative tests
 
 define i1 @extract_icmp_v4i32_splat_rhs(<4 x i32> %a, i32 %b) {
@@ -163,17 +184,16 @@ define i1 @extract_icmp_v4i32_splat_rhs_mul_use(<4 x i32> %a, ptr %p) {
 ; CHECK-LABEL: extract_icmp_v4i32_splat_rhs_mul_use:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #235
-; CHECK-NEXT:    adrp x9, .LCPI7_0
+; CHECK-NEXT:    adrp x8, .LCPI8_0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI7_0]
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    xtn v1.4h, v0.4s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    umov w9, v1.h[1]
-; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    str b0, [x8]
 ; CHECK-NEXT:    and w0, w9, #0x1
-; CHECK-NEXT:    strb w10, [x8]
 ; CHECK-NEXT:    ret
   %icmp = icmp ult <4 x i32> %a, splat(i32 235)
   %ext = extractelement <4 x i1> %icmp, i32 1

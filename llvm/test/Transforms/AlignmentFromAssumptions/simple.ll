@@ -4,7 +4,7 @@ target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 
 define i32 @foo(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @foo
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 32) ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 32
@@ -18,7 +18,7 @@ entry:
 
 define i32 @foo2(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @foo2
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 32, i32 24) ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 -2
@@ -34,7 +34,7 @@ entry:
 
 define i32 @foo2a(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @foo2a
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 32, i32 28) ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
@@ -51,7 +51,7 @@ entry:
 ; TODO: this can be 8-bytes aligned
 define i32 @foo2b(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @foo2b
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 32, i32 28) ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 -1
@@ -67,7 +67,7 @@ entry:
 
 define i32 @goo(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @goo
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 32, i32 0) ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 32
@@ -81,7 +81,7 @@ entry:
 
 define i32 @hoo(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @hoo
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32, i32 0) ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -127,7 +127,7 @@ for.end:                                          ; preds = %for.body
 ;         load(a, i0+i1+i2+32)
 define void @hoo2(ptr nocapture %a, i64 %id, i64 %num) {
 ; CHECK-LABEL: define void @hoo2
-; CHECK-SAME: (ptr nocapture [[A:%.*]], i64 [[ID:%.*]], i64 [[NUM:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], i64 [[ID:%.*]], i64 [[NUM:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i8 32, i64 0) ]
 ; CHECK-NEXT:    [[ID_MUL:%.*]] = shl nsw i64 [[ID]], 6
@@ -203,7 +203,7 @@ return:
 
 define i32 @joo(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @joo
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i8 32, i8 0) ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -243,7 +243,7 @@ for.end:                                          ; preds = %for.body
 
 define i32 @koo(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @koo
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -283,7 +283,7 @@ for.end:                                          ; preds = %for.body
 
 define i32 @koo2(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @koo2
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i128 32, i128 0) ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -323,53 +323,53 @@ for.end:                                          ; preds = %for.body
 
 define i32 @moo(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @moo
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i16 32) ]
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 32 [[A]], i8 0, i64 64, i1 false)
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   tail call void @llvm.assume(i1 true) ["align"(ptr %a, i16 32)]
   tail call void @llvm.memset.p0.i64(ptr align 4 %a, i8 0, i64 64, i1 false)
-  ret i32 undef
+  ret i32 0
 }
 
 define i32 @moo2(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: define i32 @moo2
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[B]], i32 128) ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i16 32) ]
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 32 [[A]], ptr align 128 [[B]], i64 64, i1 false)
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   tail call void @llvm.assume(i1 true) ["align"(ptr %b, i32 128)]
   tail call void @llvm.assume(i1 true) ["align"(ptr %a, i16 32)]
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 64, i1 false)
-  ret i32 undef
+  ret i32 0
 }
 
 define i32 @moo3(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: define i32 @moo3
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i16 32), "align"(ptr [[B]], i32 128) ]
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 32 [[A]], ptr align 128 [[B]], i64 64, i1 false)
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   tail call void @llvm.assume(i1 true) ["align"(ptr %a, i16 32), "align"(ptr %b, i32 128)]
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 64, i1 false)
-  ret i32 undef
+  ret i32 0
 }
 
 
 ; Variable alignments appear to be legal, don't crash
 define i32 @pr51680(ptr nocapture %a, i32 %align) {
 ; CHECK-LABEL: define i32 @pr51680
-; CHECK-SAME: (ptr nocapture [[A:%.*]], i32 [[ALIGN:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], i32 [[ALIGN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 [[ALIGN]]) ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
@@ -383,7 +383,7 @@ entry:
 
 define i32 @pr64687(ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @pr64687
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 123) ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4

@@ -75,12 +75,15 @@ void hoistBuffersFromLoops(Operation *op);
 /// additional buffer allocations.
 LogicalResult insertTensorCopies(Operation *op,
                                  const OneShotBufferizationOptions &options,
+                                 const BufferizationState &bufferizationState,
                                  BufferizationStatistics *statistics = nullptr);
 
 /// Resolve RaW and other conflicts by inserting bufferization.alloc_tensor ops.
 /// After applying this transform, the IR can be bufferized without inserting
 /// additional buffer allocations.
-LogicalResult insertTensorCopies(Operation *op, const AnalysisState &state);
+LogicalResult insertTensorCopies(Operation *op,
+                                 const AnalysisState &analysisState,
+                                 const BufferizationState &bufferizationState);
 
 /// Populate patterns to lower tensor.empty ops to bufferization.alloc_tensor
 /// ops.

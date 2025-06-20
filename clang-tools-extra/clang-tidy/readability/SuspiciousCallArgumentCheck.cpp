@@ -12,7 +12,6 @@
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
-#include <sstream>
 
 using namespace clang::ast_matchers;
 namespace optutils = clang::tidy::utils::options;

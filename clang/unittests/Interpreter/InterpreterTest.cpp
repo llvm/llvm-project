@@ -43,7 +43,7 @@ static std::unique_ptr<Interpreter>
 createInterpreter(const Args &ExtraArgs = {},
                   DiagnosticConsumer *Client = nullptr) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
-  ClangArgs.insert(ClangArgs.end(), ExtraArgs.begin(), ExtraArgs.end());
+  llvm::append_range(ClangArgs, ExtraArgs);
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgs);
   auto CI = cantFail(CB.CreateCpp());
@@ -95,8 +95,9 @@ TEST_F(InterpreterTest, Errors) {
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
-      DiagnosticsOS, new DiagnosticOptions());
+  DiagnosticOptions DiagOpts;
+  auto DiagPrinter =
+      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
 
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
   auto Err = Interp->Parse("intentional_error v1 = 42; ").takeError();
@@ -106,6 +107,13 @@ TEST_F(InterpreterTest, Errors) {
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 
   auto RecoverErr = Interp->Parse("int var1 = 42;");
+  EXPECT_TRUE(!!RecoverErr);
+
+  Err = Interp->Parse("try { throw 1; } catch { 0; }").takeError();
+  EXPECT_THAT(DiagnosticOutput, HasSubstr("error: expected '('"));
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  RecoverErr = Interp->Parse("var1 = 424;");
   EXPECT_TRUE(!!RecoverErr);
 }
 
@@ -119,8 +127,9 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
-      DiagnosticsOS, new DiagnosticOptions());
+  DiagnosticOptions DiagOpts;
+  auto DiagPrinter =
+      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
 
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
   auto R1 = Interp->Parse(
@@ -141,8 +150,9 @@ TEST_F(InterpreterTest, UndoCommand) {
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
-      DiagnosticsOS, new DiagnosticOptions());
+  DiagnosticOptions DiagOpts;
+  auto DiagPrinter =
+      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
 
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
 

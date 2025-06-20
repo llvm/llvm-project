@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 
 static mlir::FunctionType
@@ -715,6 +716,17 @@ void Fortran::lower::CallInterface<T>::declare() {
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
 
       setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
+
+      if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
+        if (const auto &info{
+                sym->GetUltimate()
+                    .detailsIf<Fortran::semantics::SubprogramDetails>()}) {
+          if (!info->openACCRoutineInfos().empty()) {
+            genOpenACCRoutineConstruct(converter, module, func,
+                                       info->openACCRoutineInfos());
+          }
+        }
+      }
     }
   }
 }
@@ -1111,10 +1123,7 @@ private:
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
       isValueAttr = true; // TODO: do we want an mlir::Attribute as well?
-    if (obj.attrs.test(Attrs::Volatile)) {
-      TODO(loc, "VOLATILE in procedure interface");
-      addMLIRAttr(fir::getVolatileAttrName());
-    }
+
     // obj.attrs.test(Attrs::Asynchronous) does not impact the way the argument
     // is passed given flang implement asynch IO synchronously. However, it's
     // added to determine whether the argument is captured.
@@ -1132,10 +1141,7 @@ private:
 
     // TODO: intents that require special care (e.g finalization)
 
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    const Fortran::evaluate::characteristics::TypeAndShape::Attrs &shapeAttrs =
-        obj.type.attrs();
-    if (shapeAttrs.test(ShapeAttr::Coarray))
+    if (obj.type.corank() > 0)
       TODO(loc, "coarray: dummy argument coarray in procedure interface");
 
     // So far assume that if the argument cannot be passed by implicit interface
@@ -1154,7 +1160,8 @@ private:
 
     if (obj.attrs.test(Attrs::Allocatable) || obj.attrs.test(Attrs::Pointer)) {
       // Pass as fir.ref<fir.box> or fir.ref<fir.class>
-      mlir::Type boxRefType = fir::ReferenceType::get(boxType);
+      const bool isVolatile = obj.attrs.test(Attrs::Volatile);
+      mlir::Type boxRefType = fir::ReferenceType::get(boxType, isVolatile);
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);

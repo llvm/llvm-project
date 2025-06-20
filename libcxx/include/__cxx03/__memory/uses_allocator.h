@@ -42,11 +42,6 @@ struct __uses_allocator<_Tp, _Alloc, false> : public false_type {};
 template <class _Tp, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator : public __uses_allocator<_Tp, _Alloc> {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp, class _Alloc>
-inline constexpr bool uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H

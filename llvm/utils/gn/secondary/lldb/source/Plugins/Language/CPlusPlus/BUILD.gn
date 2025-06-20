@@ -1,3 +1,14 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("LanguageCPlusPlusProperties") {
+  args = [ "-gen-lldb-property-defs" ]
+}
+
+lldb_tablegen("LanguageCPlusPlusPropertiesEnum") {
+  args = [ "-gen-lldb-property-enum-defs" ]
+  td_file = "LanguageCPlusPlusProperties.td"
+}
+
 static_library("CPlusPlus") {
   output_name = "lldbPluginCPlusPlusLanguage"
   configs += [
@@ -5,6 +16,8 @@ static_library("CPlusPlus") {
     "//llvm/utils/gn/build:lldb_code",
   ]
   deps = [
+    ":LanguageCPlusPlusProperties",
+    ":LanguageCPlusPlusPropertiesEnum",
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",
     "//lldb/source/Host",

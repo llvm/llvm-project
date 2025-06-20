@@ -31,6 +31,7 @@ class FileEntry;
 struct HeaderFileInfo;
 class HeaderSearch;
 class ObjCMethodDecl;
+class Module;
 
 namespace serialization {
 
@@ -38,9 +39,8 @@ class ModuleFile;
 
 namespace reader {
 
-/// Class that performs name lookup into a DeclContext stored
-/// in an AST file.
-class ASTDeclContextNameLookupTrait {
+class ASTDeclContextNameLookupTraitBase {
+protected:
   ASTReader &Reader;
   ModuleFile &F;
 
@@ -69,7 +69,7 @@ public:
         }
 
         // Switch to tracking found IDs in the set.
-        Found.insert(Data.begin(), Data.end());
+        Found.insert_range(Data);
       }
 
       if (Found.insert(ID).second)
@@ -80,11 +80,37 @@ public:
   using offset_type = unsigned;
   using file_type = ModuleFile *;
 
+protected:
+  explicit ASTDeclContextNameLookupTraitBase(ASTReader &Reader, ModuleFile &F)
+      : Reader(Reader), F(F) {}
+
+public:
+  static std::pair<unsigned, unsigned>
+  ReadKeyDataLength(const unsigned char *&d);
+
+  void ReadDataIntoImpl(const unsigned char *d, unsigned DataLen,
+                        data_type_builder &Val);
+
+  static void MergeDataInto(const data_type &From, data_type_builder &To) {
+    To.Data.reserve(To.Data.size() + From.size());
+    for (GlobalDeclID ID : From)
+      To.insert(ID);
+  }
+
+  file_type ReadFileRef(const unsigned char *&d);
+
+  DeclarationNameKey ReadKeyBase(const unsigned char *&d);
+};
+
+/// Class that performs name lookup into a DeclContext stored
+/// in an AST file.
+class ASTDeclContextNameLookupTrait : public ASTDeclContextNameLookupTraitBase {
+public:
+  explicit ASTDeclContextNameLookupTrait(ASTReader &Reader, ModuleFile &F)
+      : ASTDeclContextNameLookupTraitBase(Reader, F) {}
+
   using external_key_type = DeclarationName;
   using internal_key_type = DeclarationNameKey;
-
-  explicit ASTDeclContextNameLookupTrait(ASTReader &Reader, ModuleFile &F)
-      : Reader(Reader), F(F) {}
 
   static bool EqualKey(const internal_key_type &a, const internal_key_type &b) {
     return a == b;
@@ -98,25 +124,39 @@ public:
     return Name;
   }
 
-  static std::pair<unsigned, unsigned>
-  ReadKeyDataLength(const unsigned char *&d);
-
   internal_key_type ReadKey(const unsigned char *d, unsigned);
 
   void ReadDataInto(internal_key_type, const unsigned char *d,
                     unsigned DataLen, data_type_builder &Val);
-
-  static void MergeDataInto(const data_type &From, data_type_builder &To) {
-    To.Data.reserve(To.Data.size() + From.size());
-    for (GlobalDeclID ID : From)
-      To.insert(ID);
-  }
-
-  file_type ReadFileRef(const unsigned char *&d);
 };
 
 struct DeclContextLookupTable {
   MultiOnDiskHashTable<ASTDeclContextNameLookupTrait> Table;
+};
+
+class ModuleLocalNameLookupTrait : public ASTDeclContextNameLookupTraitBase {
+public:
+  explicit ModuleLocalNameLookupTrait(ASTReader &Reader, ModuleFile &F)
+      : ASTDeclContextNameLookupTraitBase(Reader, F) {}
+
+  using external_key_type = std::pair<DeclarationName, const Module *>;
+  using internal_key_type = std::pair<DeclarationNameKey, unsigned>;
+
+  static bool EqualKey(const internal_key_type &a, const internal_key_type &b) {
+    return a == b;
+  }
+
+  static hash_value_type ComputeHash(const internal_key_type &Key);
+  static internal_key_type GetInternalKey(const external_key_type &Key);
+
+  internal_key_type ReadKey(const unsigned char *d, unsigned);
+
+  void ReadDataInto(internal_key_type, const unsigned char *d, unsigned DataLen,
+                    data_type_builder &Val);
+};
+
+struct ModuleLocalLookupTable {
+  MultiOnDiskHashTable<ModuleLocalNameLookupTrait> Table;
 };
 
 using LazySpecializationInfo = GlobalDeclID;
@@ -151,7 +191,7 @@ public:
         }
 
         // Switch to tracking found IDs in the set.
-        Found.insert(Data.begin(), Data.end());
+        Found.insert_range(Data);
       }
 
       if (Found.insert(Info).second)
@@ -246,6 +286,8 @@ class ASTIdentifierLookupTrait : public ASTIdentifierLookupTraitBase {
   // identifier that was constructed before the AST file was read.
   IdentifierInfo *KnownII;
 
+  bool hasMacroDefinitionInDependencies = false;
+
 public:
   using data_type = IdentifierInfo *;
 
@@ -260,6 +302,10 @@ public:
   IdentifierID ReadIdentifierID(const unsigned char *d);
 
   ASTReader &getReader() const { return Reader; }
+
+  bool hasMoreInformationInDependencies() const {
+    return hasMacroDefinitionInDependencies;
+  }
 };
 
 /// The on-disk hash table used to contain information about

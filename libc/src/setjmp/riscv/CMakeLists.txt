@@ -11,6 +11,22 @@ add_entrypoint_object(
     -fomit-frame-pointer
 )
 
+if (TARGET libc.src.setjmp.sigsetjmp_epilogue)
+  add_entrypoint_object(
+    sigsetjmp
+    SRCS
+      sigsetjmp.cpp
+    HDRS
+      ../sigsetjmp.h
+    DEPENDS
+      libc.hdr.types.jmp_buf
+      libc.hdr.types.sigset_t
+      libc.hdr.offsetof_macros
+      libc.src.setjmp.sigsetjmp_epilogue
+      libc.src.setjmp.setjmp
+  )
+endif()
+
 add_entrypoint_object(
   longjmp
   SRCS

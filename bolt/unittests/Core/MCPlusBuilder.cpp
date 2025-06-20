@@ -8,6 +8,7 @@
 
 #ifdef AARCH64_AVAILABLE
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #endif // AARCH64_AVAILABLE
 
 #ifdef X86_AVAILABLE
@@ -19,6 +20,7 @@
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -37,12 +39,15 @@ struct MCPlusBuilderTester : public testing::TestWithParam<Triple::ArchType> {
 
 protected:
   void initalizeLLVM() {
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllDisassemblers();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllAsmPrinters();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
+
+#include "bolt/Core/TargetConfig.def"
   }
 
   void prepareElf() {
@@ -59,24 +64,36 @@ protected:
     Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
         ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
-        ObjFile->getFileName(), nullptr, true,
-        DWARFContext::create(*ObjFile.get()), {llvm::outs(), llvm::errs()}));
+        ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
+        {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
         createMCPlusBuilder(GetParam(), BC->MIA.get(), BC->MII.get(),
                             BC->MRI.get(), BC->STI.get())));
   }
 
+  void assertRegMask(const BitVector &RegMask,
+                     std::initializer_list<MCPhysReg> ExpectedRegs) {
+    ASSERT_EQ(RegMask.count(), ExpectedRegs.size());
+    for (MCPhysReg Reg : ExpectedRegs)
+      ASSERT_TRUE(RegMask[Reg]) << "Expected " << BC->MRI->getName(Reg) << ".";
+  }
+
+  void assertRegMask(std::function<void(BitVector &)> FillRegMask,
+                     std::initializer_list<MCPhysReg> ExpectedRegs) {
+    BitVector RegMask(BC->MRI->getNumRegs());
+    FillRegMask(RegMask);
+    assertRegMask(RegMask, ExpectedRegs);
+  }
+
   void testRegAliases(Triple::ArchType Arch, uint64_t Register,
-                      uint64_t *Aliases, size_t Count,
+                      std::initializer_list<MCPhysReg> ExpectedAliases,
                       bool OnlySmaller = false) {
     if (GetParam() != Arch)
       GTEST_SKIP();
 
     const BitVector &BV = BC->MIB->getAliases(Register, OnlySmaller);
-    ASSERT_EQ(BV.count(), Count);
-    for (size_t I = 0; I < Count; ++I)
-      ASSERT_TRUE(BV[Aliases[I]]);
+    assertRegMask(BV, ExpectedAliases);
   }
 
   char ElfBuf[sizeof(typename ELF64LE::Ehdr)] = {};
@@ -91,17 +108,157 @@ INSTANTIATE_TEST_SUITE_P(AArch64, MCPlusBuilderTester,
                          ::testing::Values(Triple::aarch64));
 
 TEST_P(MCPlusBuilderTester, AliasX0) {
-  uint64_t AliasesX0[] = {AArch64::W0,    AArch64::W0_HI,
-                          AArch64::X0,    AArch64::W0_W1,
-                          AArch64::X0_X1, AArch64::X0_X1_X2_X3_X4_X5_X6_X7};
-  size_t AliasesX0Count = sizeof(AliasesX0) / sizeof(*AliasesX0);
-  testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count);
+  testRegAliases(Triple::aarch64, AArch64::X0,
+                 {AArch64::W0, AArch64::W0_HI, AArch64::X0, AArch64::W0_W1,
+                  AArch64::X0_X1, AArch64::X0_X1_X2_X3_X4_X5_X6_X7});
 }
 
 TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
-  uint64_t AliasesX0[] = {AArch64::W0, AArch64::W0_HI, AArch64::X0};
-  size_t AliasesX0Count = sizeof(AliasesX0) / sizeof(*AliasesX0);
-  testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count, true);
+  testRegAliases(Triple::aarch64, AArch64::X0,
+                 {AArch64::W0, AArch64::W0_HI, AArch64::X0},
+                 /*OnlySmaller=*/true);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::SUBSXri);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 2);
+  ASSERT_EQ(II->getOperand(3).getImm(), 0);
+  II++;
+  ASSERT_EQ(II->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::EQ);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
+  ASSERT_EQ(Label, BB->getLabel());
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJNE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::SUBSXri);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 2);
+  ASSERT_EQ(II->getOperand(3).getImm(), 0);
+  II++;
+  ASSERT_EQ(II->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::NE);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
+  ASSERT_EQ(Label, BB->getLabel());
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsImplicitDef) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // adds x0, x5, #42
+  MCInst Inst = MCInstBuilder(AArch64::ADDSXri)
+                    .addReg(AArch64::X0)
+                    .addReg(AArch64::X5)
+                    .addImm(42)
+                    .addImm(0);
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+                {AArch64::NZCV, AArch64::W0, AArch64::X0, AArch64::W0_HI,
+                 AArch64::X0_X1_X2_X3_X4_X5_X6_X7, AArch64::W0_W1,
+                 AArch64::X0_X1});
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+      {AArch64::NZCV, AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5,
+       AArch64::W0_HI, AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); },
+                {AArch64::NZCV, AArch64::W0, AArch64::X0, AArch64::W0_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsImplicitUse) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // b.eq <label>
+  MCInst Inst =
+      MCInstBuilder(AArch64::Bcc)
+          .addImm(AArch64CC::EQ)
+          .addImm(0); // <label> - should be Expr, but immediate 0 works too.
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+                {});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+                {AArch64::NZCV});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); }, {});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::NZCV});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::NZCV});
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsMultipleDefs) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // ldr x0, [x5], #16
+  MCInst Inst = MCInstBuilder(AArch64::LDRXpost)
+                    .addReg(AArch64::X5)
+                    .addReg(AArch64::X0)
+                    .addReg(AArch64::X5)
+                    .addImm(16);
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+      {AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5, AArch64::W0_HI,
+       AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+      {AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5, AArch64::W0_HI,
+       AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); },
+                {AArch64::W0, AArch64::X0, AArch64::W0_HI, AArch64::W5,
+                 AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
 }
 
 #endif // AARCH64_AVAILABLE
@@ -112,15 +269,13 @@ INSTANTIATE_TEST_SUITE_P(X86, MCPlusBuilderTester,
                          ::testing::Values(Triple::x86_64));
 
 TEST_P(MCPlusBuilderTester, AliasAX) {
-  uint64_t AliasesAX[] = {X86::RAX, X86::EAX, X86::AX, X86::AL, X86::AH};
-  size_t AliasesAXCount = sizeof(AliasesAX) / sizeof(*AliasesAX);
-  testRegAliases(Triple::x86_64, X86::AX, AliasesAX, AliasesAXCount);
+  testRegAliases(Triple::x86_64, X86::AX,
+                 {X86::RAX, X86::EAX, X86::AX, X86::AL, X86::AH});
 }
 
 TEST_P(MCPlusBuilderTester, AliasSmallerAX) {
-  uint64_t AliasesAX[] = {X86::AX, X86::AL, X86::AH};
-  size_t AliasesAXCount = sizeof(AliasesAX) / sizeof(*AliasesAX);
-  testRegAliases(Triple::x86_64, X86::AX, AliasesAX, AliasesAXCount, true);
+  testRegAliases(Triple::x86_64, X86::AX, {X86::AX, X86::AL, X86::AH},
+                 /*OnlySmaller=*/true);
 }
 
 TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
@@ -138,6 +293,50 @@ TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
   ASSERT_EQ(II->getOpcode(), X86::CMP32ri8);
   ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
   ASSERT_EQ(II->getOperand(1).getImm(), 1);
+}
+
+TEST_P(MCPlusBuilderTester, X86_CmpJE) {
+  if (GetParam() != Triple::x86_64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), X86::CMP64ri8);
+  ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
+  ASSERT_EQ(II->getOperand(1).getImm(), 2);
+  II++;
+  ASSERT_EQ(II->getOpcode(), X86::JCC_1);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 0);
+  ASSERT_EQ(Label, BB->getLabel());
+  ASSERT_EQ(II->getOperand(1).getImm(), X86::COND_E);
+}
+
+TEST_P(MCPlusBuilderTester, X86_CmpJNE) {
+  if (GetParam() != Triple::x86_64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJNE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), X86::CMP64ri8);
+  ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
+  ASSERT_EQ(II->getOperand(1).getImm(), 2);
+  II++;
+  ASSERT_EQ(II->getOpcode(), X86::JCC_1);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 0);
+  ASSERT_EQ(Label, BB->getLabel());
+  ASSERT_EQ(II->getOperand(1).getImm(), X86::COND_NE);
 }
 
 #endif // X86_AVAILABLE

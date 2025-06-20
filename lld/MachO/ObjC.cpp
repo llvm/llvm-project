@@ -17,7 +17,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -543,7 +542,7 @@ ObjcCategoryMerger::tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
   if (!reloc)
     return nullptr;
 
-  Symbol *sym = reloc->referent.dyn_cast<Symbol *>();
+  Symbol *sym = dyn_cast_if_present<Symbol *>(reloc->referent);
 
   if (reloc->addend && sym) {
     assert(isa<Defined>(sym) && "Expected defined for non-zero addend");

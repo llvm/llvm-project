@@ -24,28 +24,32 @@
 
 struct ThrowingDtorComp {
   bool operator()(const auto&, const auto&) const;
-  ~ThrowingDtorComp() noexcept(false);
+  ~ThrowingDtorComp() noexcept(false) {}
 };
 
 int main(int, char**) {
   {
     using C = std::flat_map<MoveOnly, MoveOnly>;
     static_assert(std::is_nothrow_destructible_v<C>);
+    C c;
   }
   {
     using V = std::vector<MoveOnly, test_allocator<MoveOnly>>;
     using C = std::flat_map<MoveOnly, MoveOnly, std::less<MoveOnly>, V, V>;
     static_assert(std::is_nothrow_destructible_v<C>);
+    C c;
   }
   {
     using V = std::deque<MoveOnly, other_allocator<MoveOnly>>;
     using C = std::flat_map<MoveOnly, MoveOnly, std::greater<MoveOnly>, V, V>;
     static_assert(std::is_nothrow_destructible_v<C>);
+    C c;
   }
 #if defined(_LIBCPP_VERSION)
   {
     using C = std::flat_map<MoveOnly, MoveOnly, ThrowingDtorComp>;
     static_assert(!std::is_nothrow_destructible_v<C>);
+    C c;
   }
 #endif // _LIBCPP_VERSION
 

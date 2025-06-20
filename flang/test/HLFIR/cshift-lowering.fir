@@ -21,11 +21,11 @@ func.func @cshift1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %a
 // CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_10:.*]] = fir.embox %[[VAL_8]](%[[VAL_9]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 // CHECK:           fir.store %[[VAL_10]] to %[[VAL_5]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-// CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<i32>
+// CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_11]] : (i32) -> i64
-// CHECK:           %[[VAL_17:.*]] = fir.call @_FortranACshiftVector(%[[VAL_13]], %[[VAL_14]], %[[VAL_15]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
+// CHECK:           fir.call @_FortranACshiftVector(%[[VAL_13]], %[[VAL_14]], %[[VAL_15]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> ()
 
 // 2d boxed array shift by scalar
 func.func @cshift2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, %arg1: i32 {fir.bindc_name = "sh"}) {
@@ -53,7 +53,7 @@ func.func @cshift2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, 
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_8]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_12]] : (!fir.box<i32>) -> !fir.box<none>
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_4]] : (index) -> i32
-// CHECK:           %[[VAL_19:.*]] = fir.call @_FortranACshift(%[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %[[VAL_17]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:           fir.call @_FortranACshift(%[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %[[VAL_17]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 
 // 2d boxed array shift by boxed array
 func.func @cshift3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "sh"}) {
@@ -80,7 +80,7 @@ func.func @cshift3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, 
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_7]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_8]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_4]] : (index) -> i32
-// CHECK:           %[[VAL_18:.*]] = fir.call @_FortranACshift(%[[VAL_13]], %[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:           fir.call @_FortranACshift(%[[VAL_13]], %[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 
 // 2d boxed array shift by array expr
 func.func @cshift4(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, %arg1: !hlfir.expr<?xi32> {fir.bindc_name = "sh"}) {
@@ -110,7 +110,7 @@ func.func @cshift4(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, 
 // CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_7]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_4]] : (index) -> i32
-// CHECK:           %[[VAL_22:.*]] = fir.call @_FortranACshift(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:           fir.call @_FortranACshift(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 
 // 2d array expr shift by array expr
 func.func @cshift5(%arg0: !hlfir.expr<?x?xi32> {fir.bindc_name = "a"}, %arg1: !hlfir.expr<?xi32> {fir.bindc_name = "sh"}) {
@@ -144,7 +144,7 @@ func.func @cshift5(%arg0: !hlfir.expr<?x?xi32> {fir.bindc_name = "a"}, %arg1: !h
 // CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_4]] : (index) -> i32
-// CHECK:           %[[VAL_27:.*]] = fir.call @_FortranACshift(%[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:           fir.call @_FortranACshift(%[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 
 // 2d array expr shift by array expr with explicit dim
 func.func @cshift6(%arg0: !hlfir.expr<?x?xi32> {fir.bindc_name = "a"}, %arg1: !hlfir.expr<?xi32> {fir.bindc_name = "sh"}, %dim : i16) {
@@ -179,7 +179,7 @@ func.func @cshift6(%arg0: !hlfir.expr<?x?xi32> {fir.bindc_name = "a"}, %arg1: !h
 // CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_17]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_26:.*]] = fir.convert %[[VAL_22]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-// CHECK:           %[[VAL_28:.*]] = fir.call @_FortranACshift(%[[VAL_24]], %[[VAL_25]], %[[VAL_26]], %[[VAL_15]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:           fir.call @_FortranACshift(%[[VAL_24]], %[[VAL_25]], %[[VAL_26]], %[[VAL_15]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 
 // shift of polymorphic array
 func.func @cshift7(%arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, %arg1: !fir.ref<f32>) {
@@ -214,4 +214,4 @@ func.func @cshift7(%arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_11]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>) -> !fir.box<none>
 // CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_15]] : (i32) -> i64
-// CHECK:           %[[VAL_21:.*]] = fir.call @_FortranACshiftVector(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
+// CHECK:           fir.call @_FortranACshiftVector(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> ()

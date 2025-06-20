@@ -32,6 +32,26 @@ enum E2 : S<E2>::I { e };
 #endif
 } // namespace cwg2516
 
+namespace cwg2517 { // cwg2517: 21
+#if __cplusplus >= 202002L
+template<typename ArrayType>
+concept LargeArray = requires (ArrayType my_array) {
+  requires my_array.size() > 5;
+};
+
+struct Big {
+  constexpr int size() const { return 100; }
+};
+
+struct Small {
+  constexpr int size() const { return 3; }
+};
+
+static_assert(LargeArray<Big>);
+static_assert(!LargeArray<Small>);
+#endif
+} // namespace cwg2517
+
 namespace cwg2518 { // cwg2518: 17
 
 #if __cplusplus >= 201103L
@@ -71,7 +91,7 @@ int test_specialization() {
 }
 #endif
 
-}
+} // namespace cwg2518
 
 namespace cwg2521 { // cwg2521: 17
 #if __cplusplus >= 201103L
@@ -86,8 +106,8 @@ operator""  _div();
 // since-cxx11-warning@-1 {{identifier '_div' preceded by whitespace in a literal operator declaration is deprecated}}
 
 using ::cwg2521::operator"" _\u03C0___;
+// since-cxx11-warning@-1 {{identifier '_π___' preceded by whitespace in a literal operator declaration is deprecated}}
 using ::cwg2521::operator""_div;
-// since-cxx11-warning@-2 {{identifier '_π___' preceded by whitespace in a literal operator declaration is deprecated}}
 
 long double operator"" _RESERVED(long double);
 // since-cxx11-warning@-1 {{identifier '_RESERVED' preceded by whitespace in a literal operator declaration is deprecated}}
@@ -120,8 +140,8 @@ struct S2 {
 #endif
 } // namespace cwg2547
 
-#if __cplusplus >= 202302L
 namespace cwg2553 { // cwg2553: 18 review 2023-07-14
+#if __cplusplus >= 202302L
 struct B {
   virtual void f(this B&); 
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
@@ -134,12 +154,11 @@ struct D : B {
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
   //   since-cxx23-note@#cwg2553-g {{overridden virtual function is here}}
 };
-
-}
 #endif
+} // namespace cwg2553
 
-#if __cplusplus >= 202302L
 namespace cwg2554 { // cwg2554: 18 review 2021-12-10
+#if __cplusplus >= 202302L
 struct B {
   virtual void f(); // #cwg2554-g
 };
@@ -161,12 +180,11 @@ struct D3 : B {
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
   //   since-cxx23-note@#cwg2554-g {{overridden virtual function is here}}
 };
-
-}
 #endif
+} // namespace cwg2554
 
-#if __cplusplus >= 202302L
 namespace cwg2561 { // cwg2561: no
+#if __cplusplus >= 202302L
 struct C {
     constexpr C(auto) { }
 };
@@ -178,10 +196,8 @@ void foo() {
     static_assert(fp(1) == 1);
     static_assert((&decltype(b)::operator())(1) == 1);
 }
-
-}
 #endif
-
+} // namespace cwg2561
 
 namespace cwg2565 { // cwg2565: 16 open 2023-06-07
 #if __cplusplus >= 202002L
@@ -210,7 +226,7 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
   struct TwoParamsStruct{};
 
   using TPSU = TwoParamsStruct<void, void>;
-  // since-cxx20-error@-1 {{constraints not satisfied for class template 'TwoParamsStruct'}}
+  // since-cxx20-error@-1 {{constraints not satisfied for class template 'TwoParamsStruct' [with T = void, U = void]}}
   //   since-cxx20-note@#cwg2565-TPSREQ {{because 'TwoParams<void, void>' evaluated to false}}
   //   since-cxx20-note@#cwg2565-TPC {{because 'b' would be invalid: argument may not have 'void' type}}
 
@@ -222,15 +238,15 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
   struct VariadicStruct{};
 
   using VSU = VariadicStruct<void, int, char, double>;
-  // since-cxx20-error@-1 {{constraints not satisfied for class template 'VariadicStruct'}}
+  // since-cxx20-error@-1 {{constraints not satisfied for class template 'VariadicStruct' [with T = void, U = <int, char, double>]}}
   //   since-cxx20-note@#cwg2565-VSREQ {{because 'Variadic<void, int, char, double>' evaluated to false}}
   //   since-cxx20-note@#cwg2565-VC {{because 'b' would be invalid: argument may not have 'void' type}}
 
   template<typename T>
   concept ErrorRequires = requires (ErrorRequires auto x) {
-  // since-cxx20-error@-1 {{a concept definition cannot refer to itself}} \
-  // since-cxx20-error@-1 {{'auto' not allowed in requires expression parameter}} \
-  // since-cxx20-note@-1 {{declared here}}
+  // since-cxx20-error@-1 {{a concept definition cannot refer to itself}}
+  //   since-cxx20-note@-2 {{declared here}}
+  // since-cxx20-error@-3 {{'auto' not allowed in requires expression parameter}}
     x;
   };
   static_assert(ErrorRequires<int>);
@@ -238,20 +254,20 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
   //   since-cxx20-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
   template<typename T>
-  concept NestedErrorInRequires = requires (T x) { //
-    // since-cxx20-note@-1 {{declared here}}
+  concept NestedErrorInRequires = requires (T x) { // #cwg2565-NEIR
     requires requires (NestedErrorInRequires auto y) {
-    // since-cxx20-error@-1 {{a concept definition cannot refer to itself}} \
-    // since-cxx20-error@-1 {{'auto' not allowed in requires expression parameter}}
+    // since-cxx20-error@-1 {{a concept definition cannot refer to itself}}
+    //   since-cxx20-note@#cwg2565-NEIR {{declared here}}
+    // since-cxx20-error@-3 {{'auto' not allowed in requires expression parameter}}
       y;
     };
   };
   static_assert(NestedErrorInRequires<int>);
-  // expected-error@-1 {{static assertion failed}}
-  //   expected-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // since-cxx20-error@-1 {{static assertion failed}}
+  //   since-cxx20-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
 #endif
-}
+} // namespace cwg2565
 
 namespace cwg2583 { // cwg2583: 19
 #if __cplusplus >= 201103L
@@ -290,10 +306,10 @@ struct X {
   // e.g., "if an explicit object parameter is used it must be of type reference to 'X'"
   X& operator=(this int, const X&) = default;
   // since-cxx23-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
-  // since-cxx23-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+  //   since-cxx23-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
   X& operator=(this X, const X&) = default;
   // since-cxx23-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
-  // since-cxx23-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+  //   since-cxx23-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
 };
 struct Y {
   void operator=(this int, const Y&); // This is copy constructor, suppresses implicit declaration
@@ -372,8 +388,5 @@ union U {
 };
 static_assert(!__is_literal(U), "");
 #endif
-
-
-
 #endif
-}
+} // namespace cwg2598

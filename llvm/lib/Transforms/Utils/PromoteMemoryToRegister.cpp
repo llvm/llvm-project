@@ -119,7 +119,8 @@ static void createDebugValue(DIBuilder &DIB, Value *NewValue,
                              DILocalVariable *Variable,
                              DIExpression *Expression, const DILocation *DI,
                              Instruction *InsertBefore) {
-  DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI, InsertBefore);
+  DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI,
+                              InsertBefore->getIterator());
 }
 
 /// Helper for updating assignment tracking debug info when promoting allocas.
@@ -280,18 +281,48 @@ struct AllocaInfo {
   }
 };
 
+template <typename T> class VectorWithUndo {
+  SmallVector<T, 8> Vals;
+  SmallVector<std::pair<size_t, T>, 8> Undo;
+
+public:
+  void undo(size_t S) {
+    assert(S <= Undo.size());
+    while (S < Undo.size()) {
+      Vals[Undo.back().first] = Undo.back().second;
+      Undo.pop_back();
+    }
+  }
+
+  void resize(size_t Sz) { Vals.resize(Sz); }
+
+  size_t undoSize() const { return Undo.size(); }
+
+  const T &operator[](size_t Idx) const { return Vals[Idx]; }
+
+  void set(size_t Idx, const T &Val) {
+    if (Vals[Idx] == Val)
+      return;
+    Undo.emplace_back(Idx, Vals[Idx]);
+    Vals[Idx] = Val;
+  }
+
+  void init(size_t Idx, const T &Val) {
+    assert(Undo.empty());
+    Vals[Idx] = Val;
+  }
+};
+
 /// Data package used by RenamePass().
 struct RenamePassData {
-  using ValVector = std::vector<Value *>;
-  using LocationVector = std::vector<DebugLoc>;
-
-  RenamePassData(BasicBlock *B, BasicBlock *P, ValVector V, LocationVector L)
-      : BB(B), Pred(P), Values(std::move(V)), Locations(std::move(L)) {}
+  RenamePassData(BasicBlock *B, BasicBlock *P, size_t V, size_t L)
+      : BB(B), Pred(P), UndoVals(V), UndoLocs(L) {}
 
   BasicBlock *BB;
   BasicBlock *Pred;
-  ValVector Values;
-  LocationVector Locations;
+
+  size_t UndoVals;
+  size_t UndoLocs;
 };
 
 /// This assigns and keeps a per-bb relative ordering of load/store
@@ -391,6 +422,15 @@ struct PromoteMem2Reg {
   /// number.
   SmallVector<unsigned> BBNumPreds;
 
+  /// The state of incoming values for the current DFS step.
+  VectorWithUndo<Value *> IncomingVals;
+
+  /// The state of incoming locations for the current DFS step.
+  VectorWithUndo<DebugLoc> IncomingLocs;
+
+  // DFS work stack.
+  SmallVector<RenamePassData, 8> Worklist;
+
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
   bool NoSignedZeros = false;
 
@@ -422,10 +462,7 @@ private:
   void ComputeLiveInBlocks(AllocaInst *AI, AllocaInfo &Info,
                            const SmallPtrSetImpl<BasicBlock *> &DefBlocks,
                            SmallPtrSetImpl<BasicBlock *> &LiveInBlocks);
-  void RenamePass(BasicBlock *BB, BasicBlock *Pred,
-                  RenamePassData::ValVector &IncVals,
-                  RenamePassData::LocationVector &IncLocs,
-                  std::vector<RenamePassData> &Worklist);
+  void RenamePass(BasicBlock *BB, BasicBlock *Pred);
   bool QueuePhiNode(BasicBlock *BB, unsigned AllocaIdx, unsigned &Version);
 
   /// Delete dbg.assigns that have been demoted to dbg.values.
@@ -437,6 +474,19 @@ private:
       DVR->eraseFromParent();
     DVRAssignsToDelete.clear();
   }
+
+  void pushToWorklist(BasicBlock *BB, BasicBlock *Pred) {
+    Worklist.emplace_back(BB, Pred, IncomingVals.undoSize(),
+                          IncomingLocs.undoSize());
+  }
+
+  RenamePassData popFromWorklist() {
+    RenamePassData R = Worklist.back();
+    Worklist.pop_back();
+    IncomingVals.undo(R.UndoVals);
+    IncomingLocs.undo(R.UndoLocs);
+    return R;
+  }
 };
 
 } // end anonymous namespace
@@ -447,9 +497,9 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
       Intrinsic::getOrInsertDeclaration(LI->getModule(), Intrinsic::assume);
   ICmpInst *LoadNotNull = new ICmpInst(ICmpInst::ICMP_NE, LI,
                                        Constant::getNullValue(LI->getType()));
-  LoadNotNull->insertAfter(LI);
+  LoadNotNull->insertAfter(LI->getIterator());
   CallInst *CI = CallInst::Create(AssumeIntrinsic, {LoadNotNull});
-  CI->insertAfter(LoadNotNull);
+  CI->insertAfter(LoadNotNull->getIterator());
   AC->registerAssumption(cast<AssumeInst>(CI));
 }
 
@@ -814,8 +864,8 @@ void PromoteMem2Reg::run() {
     AllocaLookup[Allocas[AllocaNum]] = AllocaNum;
 
     // Unique the set of defining blocks for efficient lookup.
-    SmallPtrSet<BasicBlock *, 32> DefBlocks(Info.DefiningBlocks.begin(),
-                                            Info.DefiningBlocks.end());
+    SmallPtrSet<BasicBlock *, 32> DefBlocks(llvm::from_range,
+                                            Info.DefiningBlocks);
 
     // Determine which blocks the value is live in.  These are blocks which lead
     // to uses.
@@ -848,28 +898,24 @@ void PromoteMem2Reg::run() {
   // Set the incoming values for the basic block to be null values for all of
   // the alloca's.  We do this in case there is a load of a value that has not
   // been stored yet.  In this case, it will get this null value.
-  RenamePassData::ValVector Values(Allocas.size());
+  IncomingVals.resize(Allocas.size());
   for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
-    Values[i] = UndefValue::get(Allocas[i]->getAllocatedType());
+    IncomingVals.init(i, UndefValue::get(Allocas[i]->getAllocatedType()));
 
   // When handling debug info, treat all incoming values as if they have unknown
   // locations until proven otherwise.
-  RenamePassData::LocationVector Locations(Allocas.size());
+  IncomingLocs.resize(Allocas.size());
 
   // The renamer uses the Visited set to avoid infinite loops.
-  Visited.resize(F.getMaxBlockNumber());
+  Visited.resize(F.getMaxBlockNumber(), false);
 
-  // Walks all basic blocks in the function performing the SSA rename algorithm
-  // and inserting the phi nodes we marked as necessary
-  std::vector<RenamePassData> RenamePassWorkList;
-  RenamePassWorkList.emplace_back(&F.front(), nullptr, std::move(Values),
-                                  std::move(Locations));
+  // Add the entry block to the worklist, with a null predecessor.
+  pushToWorklist(&F.front(), nullptr);
+
   do {
-    RenamePassData RPD = std::move(RenamePassWorkList.back());
-    RenamePassWorkList.pop_back();
-    // RenamePass may add new worklist entries.
-    RenamePass(RPD.BB, RPD.Pred, RPD.Values, RPD.Locations, RenamePassWorkList);
-  } while (!RenamePassWorkList.empty());
+    RenamePassData RPD = popFromWorklist();
+    RenamePass(RPD.BB, RPD.Pred);
+  } while (!Worklist.empty());
 
   // Remove the allocas themselves from the function.
   for (Instruction *A : Allocas) {
@@ -930,13 +976,10 @@ void PromoteMem2Reg::run() {
   // hasn't traversed.  If this is the case, the PHI nodes may not
   // have incoming values for all predecessors.  Loop over all PHI nodes we have
   // created, inserting poison values if they are missing any incoming values.
-  for (DenseMap<std::pair<unsigned, unsigned>, PHINode *>::iterator
-           I = NewPhiNodes.begin(),
-           E = NewPhiNodes.end();
-       I != E; ++I) {
+  for (const auto &PhiNode : NewPhiNodes) {
     // We want to do this once per basic block.  As such, only process a block
     // when we find the PHI that is the first entry in the block.
-    PHINode *SomePHI = I->second;
+    PHINode *SomePHI = PhiNode.second;
     BasicBlock *BB = SomePHI->getParent();
     if (&BB->front() != SomePHI)
       continue;
@@ -1097,11 +1140,7 @@ static void updateForIncomingValueLocation(PHINode *PN, DebugLoc DL,
 ///
 /// IncomingVals indicates what value each Alloca contains on exit from the
 /// predecessor block Pred.
-void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred,
-                                RenamePassData::ValVector &IncomingVals,
-                                RenamePassData::LocationVector &IncomingLocs,
-                                std::vector<RenamePassData> &Worklist) {
-NextIteration:
+void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
   // If we are inserting any phi nodes into this BB, they will already be in the
   // block.
   if (PHINode *APN = dyn_cast<PHINode>(BB->begin())) {
@@ -1141,7 +1180,7 @@ NextIteration:
           APN->setHasNoSignedZeros(true);
 
         // The currently active variable for this block is now the PHI.
-        IncomingVals[AllocaNo] = APN;
+        IncomingVals.set(AllocaNo, APN);
         AllocaATInfo[AllocaNo].updateForNewPhi(APN, DIB);
         auto ConvertDbgDeclares = [&](auto &Container) {
           for (auto *DbgItem : Container)
@@ -1199,10 +1238,10 @@ NextIteration:
 
       // what value were we writing?
       unsigned AllocaNo = ai->second;
-      IncomingVals[AllocaNo] = SI->getOperand(0);
+      IncomingVals.set(AllocaNo, SI->getOperand(0));
 
       // Record debuginfo for the store before removing it.
-      IncomingLocs[AllocaNo] = SI->getDebugLoc();
+      IncomingLocs.set(AllocaNo, SI->getDebugLoc());
       AllocaATInfo[AllocaNo].updateForDeletedStore(SI, DIB, &DbgAssignsToDelete,
                                                    &DVRAssignsToDelete);
       auto ConvertDbgDeclares = [&](auto &Container) {
@@ -1217,24 +1256,13 @@ NextIteration:
   }
 
   // 'Recurse' to our successors.
-  succ_iterator I = succ_begin(BB), E = succ_end(BB);
-  if (I == E)
-    return;
 
   // Keep track of the successors so we don't visit the same successor twice
   SmallPtrSet<BasicBlock *, 8> VisitedSuccs;
 
-  // Handle the first successor without using the worklist.
-  VisitedSuccs.insert(*I);
-  Pred = BB;
-  BB = *I;
-  ++I;
-
-  for (; I != E; ++I)
-    if (VisitedSuccs.insert(*I).second)
-      Worklist.emplace_back(*I, Pred, IncomingVals, IncomingLocs);
-
-  goto NextIteration;
+  for (BasicBlock *S : reverse(successors(BB)))
+    if (VisitedSuccs.insert(S).second)
+      pushToWorklist(S, BB);
 }
 
 void llvm::PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,

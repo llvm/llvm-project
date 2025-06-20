@@ -9,11 +9,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 
+#include "lldb/Target/ThreadCollection.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/RangeMap.h"
 
 #include <optional>
-#include <set>
 #include <string>
 #include <unordered_set>
 
@@ -46,6 +46,10 @@ public:
   const MemoryRanges &GetCoreFileMemoryRanges() const;
 
   void AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);
+
+  lldb_private::ThreadCollection::collection GetThreadsToSave() const;
+
+  llvm::Expected<uint64_t> GetCurrentSizeInBytes();
 
   void Clear();
 

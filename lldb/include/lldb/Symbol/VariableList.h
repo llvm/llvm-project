@@ -24,6 +24,9 @@ public:
   VariableList();
   virtual ~VariableList();
 
+  VariableList(VariableList &&) = default;
+  VariableList &operator=(VariableList &&) = default;
+
   void AddVariable(const lldb::VariableSP &var_sp);
 
   bool AddVariableIfUnique(const lldb::VariableSP &var_sp);

@@ -17,14 +17,10 @@ using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {
-  // Create a dummy frame for the interpreter which does not have locals.
-  S.Current =
-      new InterpFrame(S, /*Func=*/nullptr, /*Caller=*/nullptr, CodePtr(), 0);
-}
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
 EvalEmitter::~EvalEmitter() {
-  for (auto &[K, V] : Locals) {
+  for (auto &V : Locals) {
     Block *B = reinterpret_cast<Block *>(V.get());
     if (B->isInitialized())
       B->invokeDtor();
@@ -76,6 +72,24 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   return std::move(this->EvalResult);
 }
 
+EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
+                                                 PtrCallback PtrCB) {
+
+  S.setEvalLocation(E->getExprLoc());
+  this->ConvertResultToRValue = false;
+  this->CheckFullyInitialized = false;
+  this->PtrCB = PtrCB;
+  EvalResult.setSource(E);
+
+  if (!this->visitExpr(E, /*DestroyToplevelScope=*/true)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
+    EvalResult.setInvalid();
+  }
+
+  return std::move(this->EvalResult);
+}
+
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
@@ -98,7 +112,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
 
   // Register the local.
   unsigned Off = Locals.size();
-  Locals.insert({Off, std::move(Memory)});
+  Locals.push_back(std::move(Memory));
   return {Off, D};
 }
 
@@ -131,6 +145,29 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
   return true;
 }
 
+bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  size_t StackSizeBefore = S.Stk.size();
+  const Expr *Arg = E->getArg(0);
+  if (!this->visit(Arg)) {
+    S.Stk.clearTo(StackSizeBefore);
+
+    if (S.inConstantContext() || Arg->HasSideEffects(S.getASTContext()))
+      return this->emitBool(false, E);
+    return Invalid(S, OpPC);
+  }
+
+  PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
+  if (T == PT_Ptr) {
+    const auto &Ptr = S.Stk.pop<Pointer>();
+    return this->emitBool(CheckBCPResult(S, Ptr), E);
+  }
+
+  // Otherwise, this is fine!
+  if (!this->emitPop(T, E))
+    return false;
+  return this->emitBool(true, E);
+}
+
 template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   if (!isActive())
     return true;
@@ -145,6 +182,15 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.isFunctionPointer()) {
+    EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
+    return true;
+  }
+
+  // If we're returning a raw pointer, call our callback.
+  if (this->PtrCB)
+    return (*this->PtrCB)(Ptr);
 
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;
@@ -174,17 +220,12 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
+    if (!Ptr.isLive() && !Ptr.isTemporary())
+      return false;
+
     EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
   }
 
-  return true;
-}
-template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
-  if (!isActive())
-    return true;
-
-  // Function pointers cannot be converted to rvalues.
-  EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
 

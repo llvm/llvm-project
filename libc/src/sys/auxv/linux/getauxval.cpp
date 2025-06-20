@@ -8,23 +8,29 @@
 
 #include "src/sys/auxv/getauxval.h"
 #include "config/app.h"
+#include "hdr/fcntl_macros.h"
+#include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <linux/auxvec.h>
 
 // for guarded initialization
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
 
+// -----------------------------------------------------------------------------
+// TODO: This file should not include other public libc functions. Calling other
+// public libc functions is an antipattern within LLVM-libc. This needs to be
+// cleaned up. DO NOT COPY THIS.
+// -----------------------------------------------------------------------------
+
 // for mallocing the global auxv
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 
 // for reading /proc/self/auxv
-#include "src/fcntl/open.h"
 #include "src/sys/prctl/prctl.h"
-#include "src/unistd/close.h"
 #include "src/unistd/read.h"
 
 // getauxval will work either with or without __cxa_atexit support.
@@ -60,17 +66,18 @@ public:
   constexpr static size_t AUXV_MMAP_SIZE = sizeof(AuxEntry) * MAX_AUXV_ENTRIES;
 
   AuxvMMapGuard()
-      : ptr(mmap(nullptr, AUXV_MMAP_SIZE, PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
+      : ptr(LIBC_NAMESPACE::mmap(nullptr, AUXV_MMAP_SIZE,
+                                 PROT_READ | PROT_WRITE,
+                                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
   ~AuxvMMapGuard() {
     if (ptr != MAP_FAILED)
-      munmap(ptr, AUXV_MMAP_SIZE);
+      LIBC_NAMESPACE::munmap(ptr, AUXV_MMAP_SIZE);
   }
   void submit_to_global() {
     // atexit may fail, we do not set it to global in that case.
     int ret = __cxa_atexit(
         [](void *) {
-          munmap(auxv, AUXV_MMAP_SIZE);
+          LIBC_NAMESPACE::munmap(auxv, AUXV_MMAP_SIZE);
           auxv = nullptr;
         },
         nullptr, nullptr);
@@ -90,10 +97,16 @@ private:
 
 class AuxvFdGuard {
 public:
-  AuxvFdGuard() : fd(open("/proc/self/auxv", O_RDONLY | O_CLOEXEC)) {}
+  AuxvFdGuard() {
+    auto result = internal::open("/proc/self/auxv", O_RDONLY | O_CLOEXEC);
+    if (!result.has_value())
+      fd = -1;
+
+    fd = result.value();
+  }
   ~AuxvFdGuard() {
     if (fd != -1)
-      close(fd);
+      internal::close(fd);
   }
   bool valid() const { return fd != -1; }
   int get() const { return fd; }
@@ -135,7 +148,8 @@ static void initialize_auxv_once(void) {
   bool error_detected = false;
   // Read until we use up all the available space or we finish reading the file.
   while (available_size != 0) {
-    ssize_t bytes_read = read(fd_guard.get(), buf, available_size);
+    ssize_t bytes_read =
+        LIBC_NAMESPACE::read(fd_guard.get(), buf, available_size);
     if (bytes_read <= 0) {
       if (libc_errno == EINTR)
         continue;
@@ -158,7 +172,7 @@ static AuxEntry read_entry(int fd) {
   size_t size = sizeof(AuxEntry);
   char *ptr = reinterpret_cast<char *>(&buf);
   while (size > 0) {
-    ssize_t ret = read(fd, ptr, size);
+    ssize_t ret = LIBC_NAMESPACE::read(fd, ptr, size);
     if (ret < 0) {
       if (libc_errno == EINTR)
         continue;
@@ -195,7 +209,8 @@ LLVM_LIBC_FUNCTION(unsigned long, getauxval, (unsigned long id)) {
     return search_auxv(app.auxv_ptr, id);
 
   static FutexWordType once_flag;
-  callonce(reinterpret_cast<CallOnceFlag *>(&once_flag), initialize_auxv_once);
+  LIBC_NAMESPACE::callonce(reinterpret_cast<CallOnceFlag *>(&once_flag),
+                           initialize_auxv_once);
   if (auxv != nullptr)
     return search_auxv(auxv, id);
 

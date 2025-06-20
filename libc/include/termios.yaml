@@ -1,4 +1,5 @@
 header: termios.h
+header_template: termios.h.def
 macros: []
 types:
   - type_name: tcflag_t

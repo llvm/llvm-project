@@ -216,7 +216,7 @@ public:
 
   void Sort() {
     if (m_entries.size() > 1)
-      std::stable_sort(m_entries.begin(), m_entries.end());
+      llvm::stable_sort(m_entries);
   }
 
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
@@ -380,6 +380,25 @@ public:
     return nullptr;
   }
 
+  const Entry *FindEntryThatIntersects(const Entry &range) const {
+#ifdef ASSERT_RANGEMAP_ARE_SORTED
+    assert(IsSorted());
+#endif
+    if (!m_entries.empty()) {
+      typename Collection::const_iterator begin = m_entries.begin();
+      typename Collection::const_iterator end = m_entries.end();
+      typename Collection::const_iterator pos =
+          std::lower_bound(begin, end, range, BaseLessThan);
+
+      while (pos != begin && pos[-1].DoesIntersect(range))
+        --pos;
+
+      if (pos != end && pos->DoesIntersect(range))
+        return &(*pos);
+    }
+    return nullptr;
+  }
+
   using const_iterator = typename Collection::const_iterator;
   const_iterator begin() const { return m_entries.begin(); }
   const_iterator end() const { return m_entries.end(); }
@@ -465,14 +484,14 @@ public:
 
   void Sort() {
     if (m_entries.size() > 1)
-      std::stable_sort(m_entries.begin(), m_entries.end(),
-                       [&compare = m_compare](const Entry &a, const Entry &b) {
-                         if (a.base != b.base)
-                           return a.base < b.base;
-                         if (a.size != b.size)
-                           return a.size < b.size;
-                         return compare(a.data, b.data);
-                       });
+      llvm::stable_sort(m_entries,
+                        [&compare = m_compare](const Entry &a, const Entry &b) {
+                          if (a.base != b.base)
+                            return a.base < b.base;
+                          if (a.size != b.size)
+                            return a.size < b.size;
+                          return compare(a.data, b.data);
+                        });
     if (!m_entries.empty())
       ComputeUpperBounds(0, m_entries.size());
   }
@@ -493,36 +512,27 @@ public:
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
     assert(IsSorted());
 #endif
-    typename Collection::iterator pos;
-    typename Collection::iterator end;
-    typename Collection::iterator prev;
-    bool can_combine = false;
-    // First we determine if we can combine any of the Entry objects so we
-    // don't end up allocating and making a new collection for no reason
-    for (pos = m_entries.begin(), end = m_entries.end(), prev = end; pos != end;
-         prev = pos++) {
-      if (prev != end && prev->data == pos->data) {
-        can_combine = true;
-        break;
-      }
-    }
+    auto first_intersect = std::adjacent_find(
+        m_entries.begin(), m_entries.end(), [](const Entry &a, const Entry &b) {
+          return a.DoesAdjoinOrIntersect(b) && a.data == b.data;
+        });
 
-    // We can combine at least one entry, then we make a new collection and
-    // populate it accordingly, and then swap it into place.
-    if (can_combine) {
-      Collection minimal_ranges;
-      for (pos = m_entries.begin(), end = m_entries.end(), prev = end;
-           pos != end; prev = pos++) {
-        if (prev != end && prev->data == pos->data)
-          minimal_ranges.back().SetRangeEnd(pos->GetRangeEnd());
-        else
-          minimal_ranges.push_back(*pos);
-      }
-      // Use the swap technique in case our new vector is much smaller. We must
-      // swap when using the STL because std::vector objects never release or
-      // reduce the memory once it has been allocated/reserved.
-      m_entries.swap(minimal_ranges);
+    if (first_intersect == m_entries.end())
+      return;
+
+    // We can combine at least one entry. Make a new collection and populate it
+    // accordingly, and then swap it into place.
+    auto pos = std::next(first_intersect);
+    Collection minimal_ranges(m_entries.begin(), pos);
+    for (; pos != m_entries.end(); ++pos) {
+      Entry &back = minimal_ranges.back();
+      if (back.DoesAdjoinOrIntersect(*pos) && back.data == pos->data)
+        back.SetRangeEnd(std::max(back.GetRangeEnd(), pos->GetRangeEnd()));
+      else
+        minimal_ranges.push_back(*pos);
     }
+    m_entries.swap(minimal_ranges);
+    ComputeUpperBounds(0, m_entries.size());
   }
 
   void Clear() { m_entries.clear(); }

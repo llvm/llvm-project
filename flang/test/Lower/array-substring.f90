@@ -24,9 +24,8 @@
 ! CHECK:         %[[VAL_16:.*]] = fir.array_coor %[[VAL_7]](%[[VAL_9]]) {{\[}}%[[VAL_10]]] %[[VAL_15]] : (!fir.ref<!fir.array<1x!fir.char<1,12>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<!fir.char<1,12>>
 ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<!fir.array<12x!fir.char<1>>>
 ! CHECK:         %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_17]], %[[VAL_2]] : (!fir.ref<!fir.array<12x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_20:.*]] = fir.array_coor %[[VAL_11]](%[[VAL_9]]) %[[VAL_15]] : (!fir.ref<!fir.array<1x!fir.char<1,8>>>, !fir.shape<1>, index) -> !fir.ref<!fir.char<1,8>>
-! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_4]] : (index) -> i64
 ! CHECK:         %[[VAL_24:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_23]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32

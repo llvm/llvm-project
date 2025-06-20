@@ -86,67 +86,75 @@ void UnwindTable::Initialize() {
 void UnwindTable::ModuleWasUpdated() {
   std::lock_guard<std::mutex> guard(m_mutex);
   m_scanned_all_unwind_sources = false;
+  m_unwinds.clear();
 }
 
 UnwindTable::~UnwindTable() = default;
 
-std::optional<AddressRange>
-UnwindTable::GetAddressRange(const Address &addr, const SymbolContext &sc) {
+AddressRanges UnwindTable::GetAddressRanges(const Address &addr,
+                                            const SymbolContext &sc) {
   AddressRange range;
 
   // First check the unwind info from the object file plugin
   if (m_object_file_unwind_up &&
       m_object_file_unwind_up->GetAddressRange(addr, range))
-    return range;
+    return {range};
 
   // Check the symbol context
-  if (sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
-                         false, range) &&
-      range.GetBaseAddress().IsValid())
-    return range;
+  AddressRanges result;
+  for (size_t idx = 0;
+       sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, idx,
+                          false, range) &&
+       range.GetBaseAddress().IsValid();
+       ++idx)
+    result.push_back(range);
+  if (!result.empty())
+    return result;
 
   // Does the eh_frame unwind info has a function bounds for this addr?
   if (m_eh_frame_up && m_eh_frame_up->GetAddressRange(addr, range))
-    return range;
+    return {range};
 
   // Try debug_frame as well
   if (m_debug_frame_up && m_debug_frame_up->GetAddressRange(addr, range))
-    return range;
+    return {range};
 
-  return std::nullopt;
+  return {};
+}
+
+static Address GetFunctionOrSymbolAddress(const Address &addr,
+                                          const SymbolContext &sc) {
+  if (Address result = sc.GetFunctionOrSymbolAddress(); result.IsValid())
+    return result;
+  return addr;
 }
 
 FuncUnwindersSP
 UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
-                                               SymbolContext &sc) {
+                                               const SymbolContext &sc) {
   Initialize();
 
   std::lock_guard<std::mutex> guard(m_mutex);
 
   // There is an UnwindTable per object file, so we can safely use file handles
   addr_t file_addr = addr.GetFileAddress();
-  iterator end = m_unwinds.end();
-  iterator insert_pos = end;
-  if (!m_unwinds.empty()) {
-    insert_pos = m_unwinds.lower_bound(file_addr);
-    iterator pos = insert_pos;
-    if ((pos == m_unwinds.end()) ||
-        (pos != m_unwinds.begin() &&
-         pos->second->GetFunctionStartAddress() != addr))
-      --pos;
-
+  iterator insert_pos = m_unwinds.upper_bound(file_addr);
+  if (insert_pos != m_unwinds.begin()) {
+    auto pos = std::prev(insert_pos);
     if (pos->second->ContainsAddress(addr))
       return pos->second;
   }
 
-  auto range_or = GetAddressRange(addr, sc);
-  if (!range_or)
+  Address start_addr = GetFunctionOrSymbolAddress(addr, sc);
+  AddressRanges ranges = GetAddressRanges(addr, sc);
+  if (ranges.empty())
     return nullptr;
 
-  FuncUnwindersSP func_unwinder_sp(new FuncUnwinders(*this, *range_or));
-  m_unwinds.insert(insert_pos,
-                   std::make_pair(range_or->GetBaseAddress().GetFileAddress(),
-                                  func_unwinder_sp));
+  auto func_unwinder_sp =
+      std::make_shared<FuncUnwinders>(*this, start_addr, ranges);
+  for (const AddressRange &range : ranges)
+    m_unwinds.emplace_hint(insert_pos, range.GetBaseAddress().GetFileAddress(),
+                           func_unwinder_sp);
   return func_unwinder_sp;
 }
 
@@ -158,11 +166,12 @@ FuncUnwindersSP UnwindTable::GetUncachedFuncUnwindersContainingAddress(
     const Address &addr, const SymbolContext &sc) {
   Initialize();
 
-  auto range_or = GetAddressRange(addr, sc);
-  if (!range_or)
+  Address start_addr = GetFunctionOrSymbolAddress(addr, sc);
+  AddressRanges ranges = GetAddressRanges(addr, sc);
+  if (ranges.empty())
     return nullptr;
 
-  return std::make_shared<FuncUnwinders>(*this, *range_or);
+  return std::make_shared<FuncUnwinders>(*this, start_addr, std::move(ranges));
 }
 
 void UnwindTable::Dump(Stream &s) {

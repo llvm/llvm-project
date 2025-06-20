@@ -252,8 +252,8 @@ define void @baz() nounwind {
 ; LARGEDESC_SCH:       # %bb.0:
 ; LARGEDESC_SCH-NEXT:    addi.d $sp, $sp, -16
 ; LARGEDESC_SCH-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LARGEDESC_SCH-NEXT:    addi.d $a1, $zero, %desc_pc_lo12(gd)
 ; LARGEDESC_SCH-NEXT:    pcalau12i $a0, %desc_pc_hi20(gd)
+; LARGEDESC_SCH-NEXT:    addi.d $a1, $zero, %desc_pc_lo12(gd)
 ; LARGEDESC_SCH-NEXT:    lu32i.d $a1, %desc64_pc_lo20(gd)
 ; LARGEDESC_SCH-NEXT:    lu52i.d $a1, $a1, %desc64_pc_hi12(gd)
 ; LARGEDESC_SCH-NEXT:    add.d $a0, $a0, $a1

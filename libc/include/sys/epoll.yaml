@@ -1,4 +1,5 @@
-header: sys-epoll.h
+header: sys/epoll.h
+header_template: epoll.h.def
 macros: []
 types:
   - type_name: struct_epoll_event

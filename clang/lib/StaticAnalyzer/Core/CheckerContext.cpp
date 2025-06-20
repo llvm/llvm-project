@@ -55,7 +55,7 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (BId != 0) {
     if (Name.empty())
       return true;
-    StringRef BName = FD->getASTContext().BuiltinInfo.getName(BId);
+    std::string BName = FD->getASTContext().BuiltinInfo.getName(BId);
     size_t start = BName.find(Name);
     if (start != StringRef::npos) {
       // Accept exact match.
@@ -67,10 +67,10 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
       //   _xxxxx_
       //   ^     ^ lookbehind and lookahead characters
 
-      const auto MatchPredecessor = [=]() -> bool {
+      const auto MatchPredecessor = [&]() -> bool {
         return start <= 0 || !llvm::isAlpha(BName[start - 1]);
       };
-      const auto MatchSuccessor = [=]() -> bool {
+      const auto MatchSuccessor = [&]() -> bool {
         std::size_t LookbehindPlace = start + Name.size();
         return LookbehindPlace >= BName.size() ||
                !llvm::isAlpha(BName[LookbehindPlace]);

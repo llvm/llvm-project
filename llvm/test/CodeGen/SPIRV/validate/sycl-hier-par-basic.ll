@@ -2,7 +2,7 @@
 ; that reproduced multiple cases of the issues when OpPhi's result type mismatches with operand types.
 ; The only pass criterion is that spirv-val considers output valid.
 
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 
 %struct.PFWGFunctor = type { i64, i64, i32, i32, %"class.sycl::_V1::accessor" }
 %"class.sycl::_V1::accessor" = type { %"class.sycl::_V1::detail::AccessorImplDevice", %union.anon }

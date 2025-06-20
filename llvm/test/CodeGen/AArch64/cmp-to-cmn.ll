@@ -31,7 +31,6 @@ entry:
 define i1 @test_EQ_IlsEbT(i64 %a, i16 %b) {
 ; CHECK-LABEL: test_EQ_IlsEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    cmn x0, w1, sxth
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -45,7 +44,6 @@ entry:
 define i1 @test_EQ_IlcEbT(i64 %a, i8 %b) {
 ; CHECK-LABEL: test_EQ_IlcEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    cmn x0, w1, uxtb
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -110,7 +108,6 @@ entry:
 define i1 @test_EQ_IslEbT(i16 %a, i64 %b) {
 ; CHECK-LABEL: test_EQ_IslEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmn x1, w0, sxth
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -167,7 +164,6 @@ entry:
 define i1 @test_EQ_IclEbT(i8 %a, i64 %b) {
 ; CHECK-LABEL: test_EQ_IclEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmn x1, w0, uxtb
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -249,7 +245,6 @@ entry:
 define i1 @test_NE_IlsEbT(i64 %a, i16 %b) {
 ; CHECK-LABEL: test_NE_IlsEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    cmn x0, w1, sxth
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -263,7 +258,6 @@ entry:
 define i1 @test_NE_IlcEbT(i64 %a, i8 %b) {
 ; CHECK-LABEL: test_NE_IlcEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    cmn x0, w1, uxtb
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -328,7 +322,6 @@ entry:
 define i1 @test_NE_IslEbT(i16 %a, i64 %b) {
 ; CHECK-LABEL: test_NE_IslEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmn x1, w0, sxth
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -385,7 +378,6 @@ entry:
 define i1 @test_NE_IclEbT(i8 %a, i64 %b) {
 ; CHECK-LABEL: test_NE_IclEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmn x1, w0, uxtb
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -436,5 +428,223 @@ entry:
   %conv1 = zext i8 %b to i32
   %add = sub nsw i32 0, %conv1
   %cmp = icmp ne i32 %conv, %add
+  ret i1 %cmp
+}
+
+define i1 @cmn_large_imm(i32 %a) {
+; CHECK-LABEL: cmn_large_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #64765 // =0xfcfd
+; CHECK-NEXT:    movk w8, #64764, lsl #16
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt i32 %a, -50529027
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_slt(i32 %x) {
+; CHECK-LABEL: almost_immediate_neg_slt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, le
+; CHECK-NEXT:    ret
+  %cmp = icmp slt i32 %x, -16707583
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_slt_64(i64 %x) {
+; CHECK-LABEL: almost_immediate_neg_slt_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, le
+; CHECK-NEXT:    ret
+  %cmp = icmp slt i64 %x, -16707583
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_sge(i32 %x) {
+; CHECK-LABEL: almost_immediate_neg_sge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %cmp = icmp sge i32 %x, -16707583
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_sge_64(i64 %x) {
+; CHECK-LABEL: almost_immediate_neg_sge_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %cmp = icmp sge i64 %x, -16707583
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_uge(i32 %x) {
+; CHECK-LABEL: almost_immediate_neg_uge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    ret
+  %cmp = icmp uge i32 %x, -16707583
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_uge_64(i64 %x) {
+; CHECK-LABEL: almost_immediate_neg_uge_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    ret
+  %cmp = icmp uge i64 %x, -16707583
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_ult(i32 %x) {
+; CHECK-LABEL: almost_immediate_neg_ult:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, ls
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i32 %x, -16707583
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_ult_64(i64 %x) {
+; CHECK-LABEL: almost_immediate_neg_ult_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, ls
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i64 %x, -16707583
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_sle(i32 %x) {
+; CHECK-LABEL: almost_immediate_neg_sle:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
+  %cmp = icmp sle i32 %x, -16773121
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_sle_64(i64 %x) {
+; CHECK-LABEL: almost_immediate_neg_sle_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
+  %cmp = icmp sle i64 %x, -16773121
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_sgt(i32 %x) {
+; CHECK-LABEL: almost_immediate_neg_sgt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt i32 %x, -16773121
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_sgt_64(i64 %x) {
+; CHECK-LABEL: almost_immediate_neg_sgt_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt i64 %x, -16773121
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_ule(i32 %x) {
+; CHECK-LABEL: almost_immediate_neg_ule:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %cmp = icmp ule i32 %x, -16773121
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_ule_64(i64 %x) {
+; CHECK-LABEL: almost_immediate_neg_ule_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %cmp = icmp ule i64 %x, -16773121
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_ugt(i32 %x) {
+; CHECK-LABEL: almost_immediate_neg_ugt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, hs
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i32 %x, -16773121
+  ret i1 %cmp
+}
+
+define i1 @almost_immediate_neg_ugt_64(i64 %x) {
+; CHECK-LABEL: almost_immediate_neg_ugt_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, hs
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i64 %x, -16773121
+  ret i1 %cmp
+}
+
+define i1 @cmn_nsw(i32 %a, i32 %b) {
+; CHECK-LABEL: cmn_nsw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, w1
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %sub = sub nsw i32 0, %b
+  %cmp = icmp sgt i32 %a, %sub
+  ret i1 %cmp
+}
+
+define i1 @cmn_nsw_64(i64 %a, i64 %b) {
+; CHECK-LABEL: cmn_nsw_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, x1
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %sub = sub nsw i64 0, %b
+  %cmp = icmp sgt i64 %a, %sub
+  ret i1 %cmp
+}
+
+define i1 @cmn_nsw_neg(i32 %a, i32 %b) {
+; CHECK-LABEL: cmn_nsw_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %sub = sub i32 0, %b
+  %cmp = icmp sgt i32 %a, %sub
+  ret i1 %cmp
+}
+
+define i1 @cmn_nsw_neg_64(i64 %a, i64 %b) {
+; CHECK-LABEL: cmn_nsw_neg_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    cmp x0, x8
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %sub = sub i64 0, %b
+  %cmp = icmp sgt i64 %a, %sub
   ret i1 %cmp
 }
