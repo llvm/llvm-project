@@ -9,6 +9,7 @@
 #ifndef SCUDO_SIZE_CLASS_ALLOCATOR_H_
 #define SCUDO_SIZE_CLASS_ALLOCATOR_H_
 
+#include "flags.h"
 #include "internal_defs.h"
 #include "list.h"
 #include "platform.h"
@@ -28,6 +29,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     if (LIKELY(S))
       S->link(&Stats);
     Allocator = A;
+    ZeroOnDealloc = getFlags()->zero_on_dealloc;
     initAllocator();
   }
 
@@ -59,6 +61,11 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 
   bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
+
+    if (SizeClassAllocator::ZeroOnDealloc || ZeroOnDealloc) {
+      memset(P, 0, SizeClassAllocator::getSizeByClassId(ClassId));
+    }
+
     PerClass *C = &PerClassArray[ClassId];
 
     // If the cache is full, drain half of blocks back to the main allocator.
@@ -145,6 +152,7 @@ private:
   PerClass PerClassArray[NumClasses] = {};
   LocalStats Stats;
   SizeClassAllocator *Allocator = nullptr;
+  bool ZeroOnDealloc = false;
 
   NOINLINE void initAllocator() {
     for (uptr I = 0; I < NumClasses; I++) {
@@ -188,6 +196,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorNoCache {
     if (LIKELY(S))
       S->link(&Stats);
     Allocator = A;
+    ZeroOnDealloc = getFlags()->zero_on_dealloc;
     initAllocator();
   }
 
@@ -210,6 +219,10 @@ template <class SizeClassAllocator> struct SizeClassAllocatorNoCache {
 
   bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
+
+    if (SizeClassAllocator::ZeroOnDealloc || ZeroOnDealloc) {
+      memset(P, 0, SizeClassAllocator::getSizeByClassId(ClassId));
+    }
 
     if (ClassId == BatchClassId)
       return deallocateBatchClassBlock(P);
@@ -288,6 +301,7 @@ private:
   CompactPtrT BatchClassStorage[SizeClassMap::MaxNumCachedHint] = {};
   LocalStats Stats;
   SizeClassAllocator *Allocator = nullptr;
+  bool ZeroOnDealloc = false;
 
   bool deallocateBatchClassBlock(void *P) {
     PerClass *C = &PerClassArray[BatchClassId];
