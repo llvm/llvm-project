@@ -576,3 +576,21 @@ int f() {
   //expected-note@-2 {{read of non-const variable 'a' is not allowed in a constant expression}}
 }
 }
+
+#if __cplusplus >= 202302L
+namespace GH135281 {
+  struct B {
+    const void* p;
+    consteval B() : p{this} {}
+  };
+  B b;
+  B b2{};
+  B &&b3{};
+  void f() {
+    static B b4;
+    B b5; // expected-error {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+          // expected-note {{pointer to temporary is not a constant expression}} \
+          // expected-note {{temporary created here}}
+  }
+}
+#endif
