@@ -9300,7 +9300,7 @@ def hlsl_rootsig_ver :
 def dxc_rootsig_ver :
   Option<["-"], "force-rootsig-ver", KIND_SEPARATE>,
   Group<dxc_Group>,
-  Visibility<[ClangOption, CC1Option, DXCOption]>,
+  Visibility<[DXCOption]>,
   HelpText<"Root Signature Version">,
   Values<"rootsig_1_0,rootsig_1_1">,
   NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
