@@ -532,3 +532,19 @@ module {
 // CHECK: memref.alloca_scope
 // CHECK: memref.store
 // CHECK-NOT: memref.alloca_scope.return
+
+// -----
+
+// CHECK-LABEL: func.func @test_atomic_yield
+func.func @test_atomic_yield(%I: memref<10xf32>, %idx : index) {
+  // CHECK: memref.generic_atomic_rmw
+  %x = memref.generic_atomic_rmw %I[%idx] : memref<10xf32> {
+  ^bb0(%current_value : f32):
+    // CHECK: arith.constant
+    %c1 = arith.constant 1.0 : f32
+    // CHECK: memref.atomic_yield
+    memref.atomic_yield %c1 : f32
+  }
+  func.return
+}
+
