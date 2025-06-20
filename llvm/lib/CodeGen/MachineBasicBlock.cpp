@@ -596,6 +596,7 @@ void MachineBasicBlock::printAsOperand(raw_ostream &OS,
 }
 
 void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
+  assert(Reg.isPhysical());
   LiveInVector::iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   if (I == LiveIns.end())
@@ -614,6 +615,7 @@ MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
 }
 
 bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
+  assert(Reg.isPhysical());
   livein_iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   return I != livein_end() && (I->LaneMask & LaneMask).any();
@@ -1655,6 +1657,7 @@ MachineBasicBlock::LivenessQueryResult
 MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
                                            MCRegister Reg, const_iterator Before,
                                            unsigned Neighborhood) const {
+  assert(Reg.isPhysical());
   unsigned N = Neighborhood;
 
   // Try searching forwards from Before, looking for reads or defs.
