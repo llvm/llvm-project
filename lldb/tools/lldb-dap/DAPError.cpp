@@ -16,8 +16,7 @@ namespace lldb_dap {
 char DAPError::ID;
 
 DAPError::DAPError(std::string message, std::error_code EC, bool show_user,
-                   std::optional<std::string> url,
-                   std::optional<std::string> url_label)
+                   std::string url, std::string url_label)
     : m_message(message), m_ec(EC), m_show_user(show_user), m_url(url),
       m_url_label(url_label) {}
 

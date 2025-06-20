@@ -5,6 +5,9 @@ add_lldb_unittest(DAPTests
   Handler/ContinueTest.cpp
   JSONUtilsTest.cpp
   LLDBUtilsTest.cpp
+  ProtocolBaseTest.cpp
+  ProtocolEventsTest.cpp
+  ProtocolRequestsTest.cpp
   ProtocolTypesTest.cpp
   TestBase.cpp
   VariablesTest.cpp
