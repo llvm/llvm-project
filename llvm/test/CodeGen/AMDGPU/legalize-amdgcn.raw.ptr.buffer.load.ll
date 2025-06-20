@@ -66,19 +66,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -170,19 +166,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__sgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -274,19 +266,15 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -378,19 +366,15 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__vgpr_soffset(ptr
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -482,19 +466,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -586,19 +566,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -690,19 +666,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -794,19 +766,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -898,19 +866,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1002,19 +966,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1109,19 +1069,15 @@ define <2 x float> @raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1143,10 +1099,10 @@ define <2 x float> @raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub0
-  ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub1
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
-  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY11]]
+  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub0
+  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub1
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY6]]
+  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY7]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %val = call <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <2 x float> %val
@@ -1220,19 +1176,15 @@ define <3 x float> @raw_ptr_buffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %35, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %31, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1254,12 +1206,12 @@ define <3 x float> @raw_ptr_buffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub0
-  ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub1
-  ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub2
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
-  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY11]]
-  ; GFX1250-NEXT:   $vgpr2 = COPY [[COPY12]]
+  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub0
+  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub1
+  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub2
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY6]]
+  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY7]]
+  ; GFX1250-NEXT:   $vgpr2 = COPY [[COPY8]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
   %val = call <3 x float> @llvm.amdgcn.raw.ptr.buffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <3 x float> %val
@@ -1335,19 +1287,15 @@ define <4 x float> @raw_ptr_buffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %36, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1369,14 +1317,14 @@ define <4 x float> @raw_ptr_buffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub0
-  ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub1
-  ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub2
-  ; GFX1250-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub3
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
-  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY11]]
-  ; GFX1250-NEXT:   $vgpr2 = COPY [[COPY12]]
-  ; GFX1250-NEXT:   $vgpr3 = COPY [[COPY13]]
+  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub0
+  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub1
+  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub2
+  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub3
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY6]]
+  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY7]]
+  ; GFX1250-NEXT:   $vgpr2 = COPY [[COPY8]]
+  ; GFX1250-NEXT:   $vgpr3 = COPY [[COPY9]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %val = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <4 x float> %val
@@ -1446,19 +1394,15 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %33, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %29, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1480,8 +1424,8 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
+  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY6]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
@@ -1550,19 +1494,15 @@ define <2 x half> @raw_ptr_buffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1656,19 +1596,15 @@ define <4 x half> @raw_ptr_buffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1690,10 +1626,10 @@ define <4 x half> @raw_ptr_buffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub0
-  ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub1
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
-  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY11]]
+  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub0
+  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub1
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY6]]
+  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY7]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %val = call <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.v4f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <4 x half> %val
@@ -1762,19 +1698,15 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zext
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1867,19 +1799,15 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sext
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -1972,19 +1900,15 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zex
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2077,19 +2001,15 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sex
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2184,19 +2104,15 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %33, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %29, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2218,8 +2134,8 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
+  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY6]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
@@ -2289,19 +2205,15 @@ define float @raw_ptr_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %32, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %28, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2392,19 +2304,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vdpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY6]], %subreg.sub2, killed [[COPY5]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %31, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %27, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2493,19 +2401,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY6]], %subreg.sub2, killed [[COPY5]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %31, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %27, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2595,19 +2499,15 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY6]], %subreg.sub2, killed [[COPY5]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %31, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %27, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2693,12 +2593,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soffset0(ptr a
   ; GFX1250-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1, killed [[COPY5]], %subreg.sub2, killed [[COPY4]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 58720256, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -2706,7 +2602,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soffset0(ptr a
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %30, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %26, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2795,12 +2691,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; GFX1250-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -2809,7 +2701,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -2901,12 +2793,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
   ; GFX1250-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -2915,7 +2803,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -3009,12 +2897,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX1250-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -3023,7 +2907,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -3111,12 +2995,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY6]], %subreg.sub2, killed [[COPY5]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -3124,7 +3004,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %31, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %27, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -3209,12 +3089,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY6]], %subreg.sub2, killed [[COPY5]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX1250-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -3222,7 +3098,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %31, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %27, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -3313,12 +3189,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; GFX1250-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -3327,7 +3199,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -3421,12 +3293,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
   ; GFX1250-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -3435,7 +3303,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -3529,12 +3397,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX1250-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -3543,7 +3407,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -3638,12 +3502,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5000
   ; GFX1250-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -3652,7 +3512,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
@@ -3747,12 +3607,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX1250-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
+  ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1, killed [[REG_SEQUENCE]], %subreg.sub2_sub3
   ; GFX1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5000
   ; GFX1250-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -3761,7 +3617,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %34, %bb.2
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_2]], %bb.0, %30, %bb.2
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub0, implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE2]].sub1, implicit $exec
   ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1

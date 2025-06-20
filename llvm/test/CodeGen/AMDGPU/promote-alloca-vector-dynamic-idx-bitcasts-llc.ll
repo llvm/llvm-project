@@ -14,38 +14,23 @@ define amdgpu_kernel void @test_bitcast_llc_v128i8_v16i8(ptr addrspace(1) %out, 
 ; GFX9-NEXT:    v_perm_b32 v0, s0, s0, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX9-NEXT:    s_lshl_b32 s2, s2, 2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
-; GFX9-NEXT:    v_mov_b32_e32 v2, v0
-; GFX9-NEXT:    v_mov_b32_e32 v3, v0
-; GFX9-NEXT:    v_mov_b32_e32 v4, v0
-; GFX9-NEXT:    v_mov_b32_e32 v5, v0
-; GFX9-NEXT:    v_mov_b32_e32 v6, v0
-; GFX9-NEXT:    v_mov_b32_e32 v7, v0
-; GFX9-NEXT:    v_mov_b32_e32 v8, v0
-; GFX9-NEXT:    v_mov_b32_e32 v9, v0
-; GFX9-NEXT:    v_mov_b32_e32 v10, v0
-; GFX9-NEXT:    v_mov_b32_e32 v11, v0
-; GFX9-NEXT:    v_mov_b32_e32 v12, v0
-; GFX9-NEXT:    v_mov_b32_e32 v13, v0
-; GFX9-NEXT:    v_mov_b32_e32 v14, v0
-; GFX9-NEXT:    v_mov_b32_e32 v15, v0
-; GFX9-NEXT:    v_mov_b32_e32 v16, v0
-; GFX9-NEXT:    v_mov_b32_e32 v17, v0
-; GFX9-NEXT:    v_mov_b32_e32 v18, v0
-; GFX9-NEXT:    v_mov_b32_e32 v19, v0
-; GFX9-NEXT:    v_mov_b32_e32 v20, v0
-; GFX9-NEXT:    v_mov_b32_e32 v21, v0
-; GFX9-NEXT:    v_mov_b32_e32 v22, v0
-; GFX9-NEXT:    v_mov_b32_e32 v23, v0
-; GFX9-NEXT:    v_mov_b32_e32 v24, v0
-; GFX9-NEXT:    v_mov_b32_e32 v25, v0
-; GFX9-NEXT:    v_mov_b32_e32 v26, v0
-; GFX9-NEXT:    v_mov_b32_e32 v27, v0
-; GFX9-NEXT:    v_mov_b32_e32 v28, v0
-; GFX9-NEXT:    v_mov_b32_e32 v29, v0
-; GFX9-NEXT:    v_mov_b32_e32 v30, v0
-; GFX9-NEXT:    v_mov_b32_e32 v31, v0
+; GFX9-NEXT:    s_lshl_b32 s2, s2, 2
+; GFX9-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[6:7], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[8:9], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[10:11], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[12:13], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[14:15], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[16:17], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[18:19], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[20:21], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[22:23], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[24:25], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[26:27], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[28:29], v[0:1]
+; GFX9-NEXT:    v_mov_b64_e32 v[30:31], v[0:1]
 ; GFX9-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
 ; GFX9-NEXT:    v_mov_b32_e32 v35, v3
 ; GFX9-NEXT:    v_mov_b32_e32 v34, v2

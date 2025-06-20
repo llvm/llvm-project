@@ -9011,12 +9011,12 @@ define <2 x double> @v_minimumnum_v2f64(<2 x double> %x, <2 x double> %y) #1 {
 ; GFX950-LABEL: v_minimumnum_v2f64:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
+; GFX950-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX950-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[6:7]
 ; GFX950-NEXT:    v_min_f64 v[0:1], v[0:1], v[4:5]
-; GFX950-NEXT:    v_max_f64 v[4:5], v[6:7], v[6:7]
-; GFX950-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[4:5]
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_minimumnum_v2f64:
@@ -9195,12 +9195,19 @@ define <2 x double> @v_minimumnum_v2f64_nnan(<2 x double> %x, <2 x double> %y) #
 ; GFX8-NEXT:    v_min_f64 v[2:3], v[2:3], v[6:7]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_minimumnum_v2f64_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_min_f64 v[0:1], v[0:1], v[4:5]
-; GFX9-NEXT:    v_min_f64 v[2:3], v[2:3], v[6:7]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_minimumnum_v2f64_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_min_f64 v[0:1], v[0:1], v[4:5]
+; GFX900-NEXT:    v_min_f64 v[2:3], v[2:3], v[6:7]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_minimumnum_v2f64_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[6:7]
+; GFX950-NEXT:    v_min_f64 v[0:1], v[0:1], v[4:5]
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_minimumnum_v2f64_nnan:
 ; GFX10:       ; %bb.0:
@@ -9297,15 +9304,15 @@ define <3 x double> @v_minimumnum_v3f64(<3 x double> %x, <3 x double> %y) #1 {
 ; GFX950-LABEL: v_minimumnum_v3f64:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f64 v[10:11], v[10:11], v[10:11]
+; GFX950-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX950-NEXT:    v_max_f64 v[8:9], v[8:9], v[8:9]
+; GFX950-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
 ; GFX950-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-NEXT:    v_min_f64 v[4:5], v[4:5], v[10:11]
+; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[8:9]
 ; GFX950-NEXT:    v_min_f64 v[0:1], v[0:1], v[6:7]
-; GFX950-NEXT:    v_max_f64 v[6:7], v[8:9], v[8:9]
-; GFX950-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[6:7]
-; GFX950-NEXT:    v_max_f64 v[6:7], v[10:11], v[10:11]
-; GFX950-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX950-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_minimumnum_v3f64:
@@ -9532,13 +9539,21 @@ define <3 x double> @v_minimumnum_v3f64_nnan(<3 x double> %x, <3 x double> %y) #
 ; GFX8-NEXT:    v_min_f64 v[4:5], v[4:5], v[10:11]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_minimumnum_v3f64_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_min_f64 v[0:1], v[0:1], v[6:7]
-; GFX9-NEXT:    v_min_f64 v[2:3], v[2:3], v[8:9]
-; GFX9-NEXT:    v_min_f64 v[4:5], v[4:5], v[10:11]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_minimumnum_v3f64_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_min_f64 v[0:1], v[0:1], v[6:7]
+; GFX900-NEXT:    v_min_f64 v[2:3], v[2:3], v[8:9]
+; GFX900-NEXT:    v_min_f64 v[4:5], v[4:5], v[10:11]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_minimumnum_v3f64_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_min_f64 v[4:5], v[4:5], v[10:11]
+; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[8:9]
+; GFX950-NEXT:    v_min_f64 v[0:1], v[0:1], v[6:7]
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_minimumnum_v3f64_nnan:
 ; GFX10:       ; %bb.0:
@@ -9643,18 +9658,18 @@ define <4 x double> @v_minimumnum_v4f64(<4 x double> %x, <4 x double> %y) #1 {
 ; GFX950-LABEL: v_minimumnum_v4f64:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_max_f64 v[14:15], v[14:15], v[14:15]
+; GFX950-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
+; GFX950-NEXT:    v_max_f64 v[12:13], v[12:13], v[12:13]
+; GFX950-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX950-NEXT:    v_max_f64 v[10:11], v[10:11], v[10:11]
+; GFX950-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-NEXT:    v_max_f64 v[8:9], v[8:9], v[8:9]
 ; GFX950-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX950-NEXT:    v_min_f64 v[6:7], v[6:7], v[14:15]
+; GFX950-NEXT:    v_min_f64 v[4:5], v[4:5], v[12:13]
+; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[10:11]
 ; GFX950-NEXT:    v_min_f64 v[0:1], v[0:1], v[8:9]
-; GFX950-NEXT:    v_max_f64 v[8:9], v[10:11], v[10:11]
-; GFX950-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[8:9]
-; GFX950-NEXT:    v_max_f64 v[8:9], v[12:13], v[12:13]
-; GFX950-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX950-NEXT:    v_min_f64 v[4:5], v[4:5], v[8:9]
-; GFX950-NEXT:    v_max_f64 v[8:9], v[14:15], v[14:15]
-; GFX950-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
-; GFX950-NEXT:    v_min_f64 v[6:7], v[6:7], v[8:9]
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_minimumnum_v4f64:
@@ -9917,14 +9932,23 @@ define <4 x double> @v_minimumnum_v4f64_nnan(<4 x double> %x, <4 x double> %y) #
 ; GFX8-NEXT:    v_min_f64 v[6:7], v[6:7], v[14:15]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_minimumnum_v4f64_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_min_f64 v[0:1], v[0:1], v[8:9]
-; GFX9-NEXT:    v_min_f64 v[2:3], v[2:3], v[10:11]
-; GFX9-NEXT:    v_min_f64 v[4:5], v[4:5], v[12:13]
-; GFX9-NEXT:    v_min_f64 v[6:7], v[6:7], v[14:15]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_minimumnum_v4f64_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_min_f64 v[0:1], v[0:1], v[8:9]
+; GFX900-NEXT:    v_min_f64 v[2:3], v[2:3], v[10:11]
+; GFX900-NEXT:    v_min_f64 v[4:5], v[4:5], v[12:13]
+; GFX900-NEXT:    v_min_f64 v[6:7], v[6:7], v[14:15]
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_minimumnum_v4f64_nnan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_min_f64 v[6:7], v[6:7], v[14:15]
+; GFX950-NEXT:    v_min_f64 v[4:5], v[4:5], v[12:13]
+; GFX950-NEXT:    v_min_f64 v[2:3], v[2:3], v[10:11]
+; GFX950-NEXT:    v_min_f64 v[0:1], v[0:1], v[8:9]
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_minimumnum_v4f64_nnan:
 ; GFX10:       ; %bb.0:
