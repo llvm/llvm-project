@@ -19,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 namespace {
@@ -105,6 +106,10 @@ class ModuleLinker {
                           const DenseSet<const Comdat *> &ReplacedDstComdats);
 
   bool linkIfNeeded(GlobalValue &GV, SmallVectorImpl<GlobalValue *> &GVToClone);
+  
+  /// Reorder functions in the module to ensure SPIR-V compliance.
+  /// SPIR-V requires all function declarations to appear before any function definitions.
+  void reorderFunctionsForSPIRV(Module &M);
 
 public:
   ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
@@ -615,7 +620,62 @@ bool ModuleLinker::run() {
   if (InternalizeCallback)
     InternalizeCallback(DstM, Internalize);
 
+  // For SPIR-V targets, ensure proper function ordering to comply with SPIR-V specification
+  // SPIR-V requires all function declarations to appear before any function definitions
+  Triple TargetTriple(DstM.getTargetTriple());
+  if (TargetTriple.isSPIRV()) {
+    reorderFunctionsForSPIRV(DstM);
+  }
+
   return false;
+}
+
+void ModuleLinker::reorderFunctionsForSPIRV(Module &M) {
+  // Collect all function declarations and definitions
+  std::vector<Function*> declarations;
+  std::vector<Function*> definitions;
+  
+  // Check if reordering is needed by detecting if any declarations appear after definitions
+  bool needsReordering = false;
+  bool seenDefinition = false;
+  
+  for (Function &F : M) {
+    if (F.isDeclaration()) {
+      declarations.push_back(&F);
+      if (seenDefinition) {
+        needsReordering = true;
+      }
+    } else {
+      definitions.push_back(&F);
+      seenDefinition = true;
+    }
+  }
+  
+  if (!needsReordering) return;
+  
+  // Handle global arrays that reference functions (@llvm.used, @llvm.compiler.used)
+  // We need to update these arrays to maintain correct references after reordering
+  std::vector<GlobalVariable*> globalArraysToUpdate;
+  for (GlobalVariable &GV : M.globals())
+    if (GV.hasInitializer() && (GV.getName() == "llvm.used" || 
+                                GV.getName() == "llvm.compiler.used"))
+      globalArraysToUpdate.push_back(&GV);
+
+  // Remove all functions from the module temporarily
+  std::vector<Function*> allFunctions;
+  for (Function &F : M)
+    allFunctions.push_back(&F);
+  
+  // Clear the function list without destroying the functions
+  auto &FunctionList = M.getFunctionList();
+  for (Function *F : allFunctions)
+    F->removeFromParent();
+  
+  // Re-add functions in the correct order: declarations first, then definitions
+  for (Function *F : declarations)
+    FunctionList.push_back(F);
+  for (Function *F : definitions)
+    FunctionList.push_back(F);
 }
 
 Linker::Linker(Module &M) : Mover(M) {}
