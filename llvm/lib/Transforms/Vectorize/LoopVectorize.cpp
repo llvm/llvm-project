@@ -1364,38 +1364,33 @@ public:
       return;
     }
 
-    if (!ForceTailFoldingStyle.getNumOccurrences()) {
-      ChosenTailFoldingStyle = {
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
-      return;
-    }
+    // Default to TTI preference, but allow command line override.
+    ChosenTailFoldingStyle = {
+        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
+        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
+    if (ForceTailFoldingStyle.getNumOccurrences())
+      ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
+                                ForceTailFoldingStyle.getValue()};
 
-    // Set styles when forced.
-    ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
-                              ForceTailFoldingStyle.getValue()};
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override forced styles if needed.
-    // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
-                      TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-                      !EnableVPlanNativePath;
-    if (!EVLIsLegal) {
-      // If for some reason EVL mode is unsupported, fallback to
-      // DataWithoutLaneMask to try to vectorize the loop with folded tail
-      // in a generic way.
-      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                                TailFoldingStyle::DataWithoutLaneMask};
-      LLVM_DEBUG(
-          dbgs()
-          << "LV: Preference for VP intrinsics indicated. Will "
-             "not try to generate VP Intrinsics "
-          << (UserIC > 1
-                  ? "since interleave count specified is greater than 1.\n"
-                  : "due to non-interleaving reasons.\n"));
-    }
+                      TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
+    if (EVLIsLegal)
+      return;
+    // If for some reason EVL mode is unsupported, fallback to
+    // DataWithoutLaneMask to try to vectorize the loop with folded tail
+    // in a generic way.
+    ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
+                              TailFoldingStyle::DataWithoutLaneMask};
+    LLVM_DEBUG(
+        dbgs() << "LV: Preference for VP intrinsics indicated. Will "
+                  "not try to generate VP Intrinsics "
+               << (UserIC > 1
+                       ? "since interleave count specified is greater than 1.\n"
+                       : "due to non-interleaving reasons.\n"));
   }
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
@@ -3109,14 +3104,14 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
     // is correct.  The easiest form of the later is to require that all values
     // stored are the same.
     return !(Legal->isInvariant(getLoadStorePointerOperand(I)) &&
-             TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
+             Legal->isInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem:
     // If the divisor is loop-invariant no predication is needed.
-    return !TheLoop->isLoopInvariant(I->getOperand(1));
+    return !Legal->isInvariant(I->getOperand(1));
   }
 }
 
@@ -7685,6 +7680,8 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+    // FIXME: See test Transforms/LoopVectorize/branch-weights.ll. I don't
+    // think the MainLoopStep is correct.
     unsigned MainLoopStep = UF * VF.getKnownMinValue();
     unsigned EpilogueLoopStep =
         EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
@@ -7829,7 +7826,7 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
     VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep(),
                                                            *PSE.getSE());
     return new VPWidenPointerInductionRecipe(
-        Phi, Operands[0], Step, *II,
+        Phi, Operands[0], Step, &Plan.getVFxUF(), *II,
         LoopVectorizationPlanner::getDecisionAndClampRange(
             [&](ElementCount VF) {
               return CM.isScalarAfterVectorization(Phi, VF);
@@ -8240,7 +8237,7 @@ bool VPRecipeBuilder::getScaledReductions(
           [&](ElementCount VF) {
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), A->getType(), B->getType(), PHI->getType(),
-                VF, OpAExtend, OpBExtend, BinOp->getOpcode());
+                VF, OpAExtend, OpBExtend, BinOp->getOpcode(), CM.CostKind);
             return Cost.isValid();
           },
           Range)) {

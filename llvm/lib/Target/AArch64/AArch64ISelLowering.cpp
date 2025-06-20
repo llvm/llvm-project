@@ -1762,7 +1762,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto Opcode :
          {ISD::FCEIL, ISD::FDIV, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
-          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC, ISD::SETCC}) {
+          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC, ISD::SETCC,
+          ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMAXIMUM,
+          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMINIMUM}) {
       setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
       setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
@@ -7138,8 +7140,7 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   switch (CC) {
   default:
     NestReg = 0x0f; // X15
-    LLVM_FALLTHROUGH;
-  case CallingConv::ARM64EC_Thunk_Native:
+    break;
   case CallingConv::ARM64EC_Thunk_X64:
     // Must be kept in sync with AArch64CallingConv.td
     NestReg = 0x04; // X4
@@ -7633,7 +7634,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                      bool IsVarArg) const {
   switch (CC) {
   default:
-    report_fatal_error("Unsupported calling convention.");
+    reportFatalUsageError("unsupported calling convention");
   case CallingConv::GHC:
     return CC_AArch64_GHC;
   case CallingConv::PreserveNone:
@@ -7742,6 +7743,12 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   unsigned NumArgs = Ins.size();
   Function::const_arg_iterator CurOrigArg = F.arg_begin();
   unsigned CurArgIdx = 0;
+  bool UseVarArgCC = false;
+  if (IsWin64)
+    UseVarArgCC = isVarArg;
+
+  CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, UseVarArgCC);
+
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ValVT = Ins[i].VT;
     if (Ins[i].isOrigArg()) {
@@ -7758,10 +7765,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       else if (ActualMVT == MVT::i16)
         ValVT = MVT::i16;
     }
-    bool UseVarArgCC = false;
-    if (IsWin64)
-      UseVarArgCC = isVarArg;
-    CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, UseVarArgCC);
     bool Res =
         AssignFn(i, ValVT, ValVT, CCValAssign::Full, Ins[i].Flags, CCInfo);
     assert(!Res && "Call operand has unhandled type");
@@ -8430,6 +8433,8 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
         ArgVT = MVT::i16;
     }
 
+    // FIXME: CCAssignFnForCall should be called once, for the call and not per
+    // argument. This logic should exactly mirror LowerFormalArguments.
     CCAssignFn *AssignFn = TLI.CCAssignFnForCall(CalleeCC, UseVarArgCC);
     bool Res = AssignFn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo);
     assert(!Res && "Call operand has unhandled type");
@@ -16866,14 +16871,14 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     if (SrcWidth * 4 <= DstWidth) {
       if (all_of(I->users(), [&](auto *U) {
             auto *SingleUser = cast<Instruction>(&*U);
-            return (
-                match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
-                (match(SingleUser,
-                       m_Intrinsic<
-                           Intrinsic::experimental_vector_partial_reduce_add>(
-                           m_Value(), m_Specific(I))) &&
-                 !shouldExpandPartialReductionIntrinsic(
-                     cast<IntrinsicInst>(SingleUser))));
+            if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
+              return true;
+            if (match(SingleUser,
+                      m_Intrinsic<
+                          Intrinsic::experimental_vector_partial_reduce_add>(
+                          m_Value(), m_Specific(I))))
+              return true;
+            return false;
           }))
         return false;
     }
@@ -27081,7 +27086,7 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
     // only allow an offset that's equal to the store size.
     EVT MemType = cast<MemSDNode>(N)->getMemoryVT();
     if (!Subtarget->isLittleEndian() && MemType.isVector() &&
-        RHSC != MemType.getStoreSize())
+        (uint64_t)RHSC != MemType.getStoreSize())
       return false;
     // Always emit pre-inc/post-inc addressing mode. Use negated constant offset
     // when dealing with subtraction.
@@ -29352,6 +29357,16 @@ SDValue AArch64TargetLowering::LowerFixedLengthConcatVectorsToSVE(
   auto SrcOp2 = Op.getOperand(1);
   EVT VT = Op.getValueType();
   EVT SrcVT = SrcOp1.getValueType();
+
+  // Match a splat of 128b segments that fit in a single register.
+  if (SrcVT.is128BitVector() && all_equal(Op.getNode()->op_values())) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+    SDValue Splat =
+        DAG.getNode(AArch64ISD::DUPLANE128, DL, ContainerVT,
+                    convertToScalableVector(DAG, ContainerVT, SrcOp1),
+                    DAG.getConstant(0, DL, MVT::i64, /*isTarget=*/true));
+    return convertFromScalableVector(DAG, VT, Splat);
+  }
 
   if (NumOperands > 2) {
     SmallVector<SDValue, 4> Ops;

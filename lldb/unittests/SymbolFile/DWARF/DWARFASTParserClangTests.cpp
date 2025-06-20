@@ -889,18 +889,32 @@ DWARF:
   ASSERT_TRUE(context_die.IsValid());
   ASSERT_EQ(context_die.Tag(), DW_TAG_structure_type);
 
-  auto subprogram_definition = context_die.GetSibling();
-  ASSERT_TRUE(subprogram_definition.IsValid());
-  ASSERT_EQ(subprogram_definition.Tag(), DW_TAG_subprogram);
-  ASSERT_FALSE(subprogram_definition.GetAttributeValueAsOptionalUnsigned(
-      DW_AT_external));
+  {
+    auto decl_die = context_die.GetFirstChild();
+    ASSERT_TRUE(decl_die.IsValid());
+    ASSERT_EQ(decl_die.Tag(), DW_TAG_subprogram);
+    ASSERT_TRUE(decl_die.GetAttributeValueAsOptionalUnsigned(DW_AT_external));
 
-  auto param_die = subprogram_definition.GetFirstChild();
-  ASSERT_TRUE(param_die.IsValid());
+    auto param_die = decl_die.GetFirstChild();
+    ASSERT_TRUE(param_die.IsValid());
 
-  ParsedDWARFTypeAttributes attrs(subprogram_definition);
-  EXPECT_TRUE(attrs.object_pointer.IsValid());
-  EXPECT_EQ(attrs.object_pointer, param_die);
+    EXPECT_EQ(param_die,
+              ast_parser.GetCXXObjectParameter(decl_die, context_die));
+  }
+
+  {
+    auto subprogram_definition = context_die.GetSibling();
+    ASSERT_TRUE(subprogram_definition.IsValid());
+    ASSERT_EQ(subprogram_definition.Tag(), DW_TAG_subprogram);
+    ASSERT_FALSE(subprogram_definition.GetAttributeValueAsOptionalUnsigned(
+        DW_AT_external));
+
+    auto param_die = subprogram_definition.GetFirstChild();
+    ASSERT_TRUE(param_die.IsValid());
+
+    EXPECT_EQ(param_die, ast_parser.GetCXXObjectParameter(subprogram_definition,
+                                                          context_die));
+  }
 }
 
 TEST_F(DWARFASTParserClangTests, TestParseSubroutine_ExplicitObjectParameter) {
