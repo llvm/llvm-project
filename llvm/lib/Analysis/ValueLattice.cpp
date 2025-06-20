@@ -40,15 +40,21 @@ ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
 
   // Integer constants are represented as ConstantRanges with single
   // elements.
-  if (!isConstantRange() || !Other.isConstantRange())
-    return nullptr;
-
-  const auto &CR = getConstantRange();
-  const auto &OtherCR = Other.getConstantRange();
-  if (CR.icmp(Pred, OtherCR))
-    return ConstantInt::getTrue(Ty);
-  if (CR.icmp(CmpInst::getInversePredicate(Pred), OtherCR))
-    return ConstantInt::getFalse(Ty);
+  if (isConstantRange() && Other.isConstantRange()) {
+    const auto &CR = getConstantRange();
+    const auto &OtherCR = Other.getConstantRange();
+    if (CR.icmp(Pred, OtherCR))
+      return ConstantInt::getTrue(Ty);
+    if (CR.icmp(CmpInst::getInversePredicate(Pred), OtherCR))
+      return ConstantInt::getFalse(Ty);
+  } else if (isConstantFPRange() && Other.isConstantFPRange()) {
+    const auto &CR = getConstantFPRange();
+    const auto &OtherCR = Other.getConstantFPRange();
+    if (CR.fcmp(Pred, OtherCR))
+      return ConstantInt::getTrue(Ty);
+    if (CR.fcmp(CmpInst::getInversePredicate(Pred), OtherCR))
+      return ConstantInt::getFalse(Ty);
+  }
 
   return nullptr;
 }
@@ -56,6 +62,9 @@ ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
 static bool hasSingleValue(const ValueLatticeElement &Val) {
   if (Val.isConstantRange() && Val.getConstantRange().isSingleElement())
     // Integer constants are single element ranges
+    return true;
+  if (Val.isConstantFPRange() && Val.getConstantFPRange().isSingleElement())
+    // Floating point constants are single element ranges
     return true;
   return Val.isConstant();
 }
@@ -94,19 +103,30 @@ ValueLatticeElement::intersect(const ValueLatticeElement &Other) const {
     return Other;
 
   // Could be either constant range or not constant here.
-  if (!isConstantRange() || !Other.isConstantRange()) {
-    // TODO: Arbitrary choice, could be improved
-    return *this;
+  if (isConstantRange() && Other.isConstantRange()) {
+    // Intersect two constant ranges
+    ConstantRange Range =
+        getConstantRange().intersectWith(Other.getConstantRange());
+    // Note: An empty range is implicitly converted to unknown or undef
+    // depending on MayIncludeUndef internally.
+    return ValueLatticeElement::getRange(
+        std::move(Range), /*MayIncludeUndef=*/isConstantRangeIncludingUndef() ||
+                              Other.isConstantRangeIncludingUndef());
+  }
+  if (isConstantFPRange() && Other.isConstantFPRange()) {
+    // Intersect two constant ranges
+    ConstantFPRange Range =
+        getConstantFPRange().intersectWith(Other.getConstantFPRange());
+    // Note: An empty range is implicitly converted to unknown or undef
+    // depending on MayIncludeUndef internally.
+    return ValueLatticeElement::getFPRange(
+        std::move(Range),
+        /*MayIncludeUndef=*/isConstantFPRangeIncludingUndef() ||
+            Other.isConstantFPRangeIncludingUndef());
   }
 
-  // Intersect two constant ranges
-  ConstantRange Range =
-      getConstantRange().intersectWith(Other.getConstantRange());
-  // Note: An empty range is implicitly converted to unknown or undef depending
-  // on MayIncludeUndef internally.
-  return ValueLatticeElement::getRange(
-      std::move(Range), /*MayIncludeUndef=*/isConstantRangeIncludingUndef() ||
-                            Other.isConstantRangeIncludingUndef());
+  // TODO: Arbitrary choice, could be improved
+  return *this;
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val) {
@@ -125,9 +145,15 @@ raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val) {
               << Val.getConstantRange(true).getLower() << ", "
               << Val.getConstantRange(true).getUpper() << ">";
 
+  if (Val.isConstantFPRangeIncludingUndef())
+    return OS << "constantfprange incl. undef " << Val.getConstantFPRange(true);
+
   if (Val.isConstantRange())
     return OS << "constantrange<" << Val.getConstantRange().getLower() << ", "
               << Val.getConstantRange().getUpper() << ">";
+  if (Val.isConstantFPRange())
+    return OS << "constantfprange " << Val.getConstantFPRange(true);
+
   return OS << "constant<" << *Val.getConstant() << ">";
 }
 } // end namespace llvm
