@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Value printing runtime raw value and type info.
+// Value class for capturing raw runtime values along with their type
+// information.
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,7 +60,7 @@ public:
   explicit Value(ExecutorAddr OpaqueType);
   Value(const Value &RHS);
   Value(Value &&RHS);
-    Value() = default;
+  Value() = default;
   Value(ExecutorAddr OpaqueType);
   Value(const Value &RHS);
   Value(Value &&RHS) noexcept;
@@ -76,12 +77,8 @@ public:
   type get##name() const { return Data.m_##name; }
   BUILTIN_TYPES
 #undef X
-  void setPtrOrObj(void *Ptr) {
-    Data.m_Ptr = ExecutorSymbolDef::fromPtr(Ptr);
-  }
-  void setPtrOrObj(ExecutorSymbolDef Ptr) {
-    Data.m_Ptr = Ptr;
-  }
+  void setPtrOrObj(void *Ptr) { Data.m_Ptr = ExecutorSymbolDef::fromPtr(Ptr); }
+  void setPtrOrObj(ExecutorSymbolDef Ptr) { Data.m_Ptr = Ptr; }
   ExecutorSymbolDef getPtrOrObj() const {
     assert(ValueKind == K_PtrOrObj);
     return Data.m_Ptr;
