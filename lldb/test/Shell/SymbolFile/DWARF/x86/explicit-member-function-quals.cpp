@@ -20,8 +20,8 @@
 // CHECK-NEXT: }
 
 struct Foo {
-  [[gnu::always_inline]] void Method(this Foo) {}
-  [[gnu::always_inline]] void cMethod(this Foo const &) {}
-  [[gnu::always_inline]] void vMethod(this Foo volatile &) {}
-  [[gnu::always_inline]] void cvMethod(this Foo const volatile &) {}
+  void Method(this Foo) {}
+  void cMethod(this Foo const &) {}
+  void vMethod(this Foo volatile &) {}
+  void cvMethod(this Foo const volatile &) {}
 } f;
