@@ -49,10 +49,10 @@
 # CHECK-SYMS: l  F .text.cold.1   [[#]] dummy.cold.1
 # CHECK-SYMS: l  F .text.cold.2   [[#]] dummy.cold.2
 
-# CHECK-REGISTER: BOLT-INFO: marking chain.cold.0/1(*2) as a fragment of chain/2(*2)
 # CHECK-REGISTER: BOLT-INFO: marking dummy.cold.0/1(*2) as a fragment of dummy
 # CHECK-REGISTER: BOLT-INFO: marking dummy.cold.1/1(*2) as a fragment of dummy
 # CHECK-REGISTER: BOLT-INFO: marking dummy.cold.2/1(*2) as a fragment of dummy
+# CHECK-REGISTER: BOLT-INFO: marking chain.cold.0/1(*2) as a fragment of chain/2(*2)
 
 # CHECK-FDATA: 0 [unknown] 0 1 chain/chain.s/2 10 0 1
 # CHECK-YAML: - name: 'chain/chain.s/2'
