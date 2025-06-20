@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISIONOPERATIONS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISIONOPERATIONS_H
 
-#include "FEnvImpl.h" // raise_except_if_required
-#include "FPBits.h" // FPBits<T>
+#include "FEnvImpl.h"                    // raise_except_if_required
+#include "FPBits.h"                      // FPBits<T>
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {
