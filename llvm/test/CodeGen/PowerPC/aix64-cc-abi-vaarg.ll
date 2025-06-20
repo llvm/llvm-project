@@ -96,16 +96,16 @@ define double @double_va_arg(double %a, ...) local_unnamed_addr  {
 ; CHECK-LABEL: double_va_arg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi 3, 1, 56
-; CHECK-NEXT:    std 4, 56(1)
-; CHECK-NEXT:    std 3, -8(1)
+; CHECK-NEXT:    lfd 0, 56(1)
 ; CHECK-NEXT:    std 3, -16(1)
-; CHECK-NEXT:    addi 3, 1, 64
+; CHECK-NEXT:    fadd 0, 0, 1
 ; CHECK-NEXT:    std 3, -8(1)
 ; CHECK-NEXT:    ld 3, -16(1)
-; CHECK-NEXT:    lfd 0, 56(1)
+; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    addi 4, 1, 64
+; CHECK-NEXT:    std 4, -8(1)
 ; CHECK-NEXT:    addi 4, 3, 8
 ; CHECK-NEXT:    std 5, 64(1)
-; CHECK-NEXT:    fadd 0, 0, 1
 ; CHECK-NEXT:    std 6, 72(1)
 ; CHECK-NEXT:    std 7, 80(1)
 ; CHECK-NEXT:    std 8, 88(1)
