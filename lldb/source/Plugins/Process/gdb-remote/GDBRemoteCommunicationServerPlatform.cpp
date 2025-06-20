@@ -94,7 +94,16 @@ GDBRemoteCommunicationServerPlatform::~GDBRemoteCommunicationServerPlatform() =
 Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     const lldb_private::Args &args, lldb::pid_t &pid, std::string &socket_name,
     shared_fd_t fd) {
-  std::ostringstream url;
+  Log *log = GetLog(LLDBLog::Platform);
+
+  ProcessLaunchInfo debugserver_launch_info;
+  // Do not run in a new session so that it can not linger after the platform
+  // closes.
+  debugserver_launch_info.SetLaunchInSeparateProcessGroup(false);
+  debugserver_launch_info.SetMonitorProcessCallback(
+      [](lldb::pid_t, int, int) {});
+
+  Status error;
   if (fd == SharedSocket::kInvalidFD) {
     if (m_socket_protocol == Socket::ProtocolTcp) {
       // Just check that GDBServer exists. GDBServer must be launched after
@@ -104,30 +113,21 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
       return Status();
     }
 
+    std::ostringstream url;
     // debugserver does not accept the URL scheme prefix.
 #if !defined(__APPLE__)
     url << Socket::FindSchemeByProtocol(m_socket_protocol) << "://";
 #endif
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
     url << socket_name;
+    error = StartDebugserverProcess(url.str(), nullptr, debugserver_launch_info,
+                                    &args);
   } else {
     if (m_socket_protocol != Socket::ProtocolTcp)
       return Status::FromErrorString("protocol must be tcp");
+    error =
+        StartDebugserverProcess(fd, nullptr, debugserver_launch_info, &args);
   }
-
-  // Spawn a debugserver and try to get the port it listens to.
-  ProcessLaunchInfo debugserver_launch_info;
-  Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOG(log, "Launching debugserver url='{0}', fd={1}...", url.str(), fd);
-
-  // Do not run in a new session so that it can not linger after the platform
-  // closes.
-  debugserver_launch_info.SetLaunchInSeparateProcessGroup(false);
-  debugserver_launch_info.SetMonitorProcessCallback(
-      [](lldb::pid_t, int, int) {});
-
-  Status error = StartDebugserverProcess(
-      url.str().c_str(), nullptr, debugserver_launch_info, nullptr, &args, fd);
 
   if (error.Success()) {
     pid = debugserver_launch_info.GetProcessID();
