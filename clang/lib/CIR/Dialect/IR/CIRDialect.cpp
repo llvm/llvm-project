@@ -92,6 +92,46 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
 // Helpers
 //===----------------------------------------------------------------------===//
 
+// Parses one of the keywords provided in the list `keywords` and returns the
+// position of the parsed keyword in the list. If none of the keywords from the
+// list is parsed, returns -1.
+static int parseOptionalKeywordAlternative(AsmParser &parser,
+                                           ArrayRef<llvm::StringRef> keywords) {
+  for (auto en : llvm::enumerate(keywords)) {
+    if (succeeded(parser.parseOptionalKeyword(en.value())))
+      return en.index();
+  }
+  return -1;
+}
+
+namespace {
+template <typename Ty> struct EnumTraits {};
+
+#define REGISTER_ENUM_TYPE(Ty)                                                 \
+  template <> struct EnumTraits<cir::Ty> {                                     \
+    static llvm::StringRef stringify(cir::Ty value) {                          \
+      return stringify##Ty(value);                                             \
+    }                                                                          \
+    static unsigned getMaxEnumVal() { return cir::getMaxEnumValFor##Ty(); }    \
+  }
+
+REGISTER_ENUM_TYPE(SideEffect);
+} // namespace
+
+/// Parse an enum from the keyword, return failure if the keyword is not found.
+template <typename EnumTy, typename RetTy = EnumTy>
+static ParseResult parseCIRKeyword(AsmParser &parser, RetTy &result) {
+  llvm::SmallVector<llvm::StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return failure();
+  result = static_cast<RetTy>(index);
+  return success();
+}
+
 // Check if a region's termination omission is valid and, if so, creates and
 // inserts the omitted terminator into the region.
 static LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
@@ -534,6 +574,18 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseRParen())
     return mlir::failure();
 
+  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    cir::SideEffect sideEffect;
+    if (parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
+    result.addAttribute("side_effect", attr);
+  }
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return ::mlir::failure();
 
@@ -556,7 +608,8 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
 static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer) {
+                            mlir::OpAsmPrinter &printer,
+                            cir::SideEffect sideEffect) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -572,7 +625,13 @@ static void printCallCommon(mlir::Operation *op,
   }
   printer << "(" << ops << ")";
 
-  printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
+  if (sideEffect != cir::SideEffect::All) {
+    printer << " side_effect(";
+    printer << stringifySideEffect(sideEffect);
+    printer << ")";
+  }
+
+  printer.printOptionalAttrDict(op->getAttrs(), {"callee", "side_effect"});
 
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
@@ -586,7 +645,8 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  printCallCommon(*this, getCalleeAttr(), indirectCallee, p);
+  cir::SideEffect sideEffect = getSideEffect();
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, sideEffect);
 }
 
 static LogicalResult
@@ -1533,6 +1593,16 @@ LogicalResult cir::GetMemberOp::verify() {
 // VecCreateOp
 //===----------------------------------------------------------------------===//
 
+OpFoldResult cir::VecCreateOp::fold(FoldAdaptor adaptor) {
+  if (llvm::any_of(getElements(), [](mlir::Value value) {
+        return !mlir::isa<cir::ConstantOp>(value.getDefiningOp());
+      }))
+    return {};
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), adaptor.getElements()));
+}
+
 LogicalResult cir::VecCreateOp::verify() {
   // Verify that the number of arguments matches the number of elements in the
   // vector, and that the type of all the arguments matches the type of the
@@ -1580,6 +1650,170 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// VecCmpOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
+  auto lhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
+  auto rhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
+  if (!lhsVecAttr || !rhsVecAttr)
+    return {};
+
+  mlir::Type inputElemTy =
+      mlir::cast<cir::VectorType>(lhsVecAttr.getType()).getElementType();
+  if (!isAnyIntegerOrFloatingPointType(inputElemTy))
+    return {};
+
+  cir::CmpOpKind opKind = adaptor.getKind();
+  mlir::ArrayAttr lhsVecElhs = lhsVecAttr.getElts();
+  mlir::ArrayAttr rhsVecElhs = rhsVecAttr.getElts();
+  uint64_t vecSize = lhsVecElhs.size();
+
+  SmallVector<mlir::Attribute, 16> elements(vecSize);
+  bool isIntAttr = vecSize && mlir::isa<cir::IntAttr>(lhsVecElhs[0]);
+  for (uint64_t i = 0; i < vecSize; i++) {
+    mlir::Attribute lhsAttr = lhsVecElhs[i];
+    mlir::Attribute rhsAttr = rhsVecElhs[i];
+    int cmpResult = 0;
+    switch (opKind) {
+    case cir::CmpOpKind::lt: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::le: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::gt: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::ge: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::eq: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() ==
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() ==
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::ne: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() !=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() !=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    }
+
+    elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);
+  }
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
+}
+
+//===----------------------------------------------------------------------===//
+// VecShuffleOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
+  auto vec1Attr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getVec1());
+  auto vec2Attr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getVec2());
+  if (!vec1Attr || !vec2Attr)
+    return {};
+
+  mlir::Type vec1ElemTy =
+      mlir::cast<cir::VectorType>(vec1Attr.getType()).getElementType();
+
+  mlir::ArrayAttr vec1Elts = vec1Attr.getElts();
+  mlir::ArrayAttr vec2Elts = vec2Attr.getElts();
+  mlir::ArrayAttr indicesElts = adaptor.getIndices();
+
+  SmallVector<mlir::Attribute, 16> elements;
+  elements.reserve(indicesElts.size());
+
+  uint64_t vec1Size = vec1Elts.size();
+  for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
+    if (idxAttr.getSInt() == -1) {
+      elements.push_back(cir::UndefAttr::get(vec1ElemTy));
+      continue;
+    }
+
+    uint64_t idxValue = idxAttr.getUInt();
+    elements.push_back(idxValue < vec1Size ? vec1Elts[idxValue]
+                                           : vec2Elts[idxValue - vec1Size]);
+  }
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
+}
+
+LogicalResult cir::VecShuffleOp::verify() {
+  // The number of elements in the indices array must match the number of
+  // elements in the result type.
+  if (getIndices().size() != getResult().getType().getSize()) {
+    return emitOpError() << ": the number of elements in " << getIndices()
+                         << " and " << getResult().getType() << " don't match";
+  }
+
+  // The element types of the two input vectors and of the result type must
+  // match.
+  if (getVec1().getType().getElementType() !=
+      getResult().getType().getElementType()) {
+    return emitOpError() << ": element types of " << getVec1().getType()
+                         << " and " << getResult().getType() << " don't match";
+  }
+
+  const uint64_t maxValidIndex =
+      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  if (llvm::any_of(
+          getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
+            return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
+          })) {
+    return emitOpError() << ": index for __builtin_shufflevector must be "
+                            "less than the total number of vector elements";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleDynamicOp
 //===----------------------------------------------------------------------===//
 
@@ -1590,7 +1824,6 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
       mlir::isa_and_nonnull<cir::ConstVectorAttr>(indices)) {
     auto vecAttr = mlir::cast<cir::ConstVectorAttr>(vec);
     auto indicesAttr = mlir::cast<cir::ConstVectorAttr>(indices);
-    auto vecTy = mlir::cast<cir::VectorType>(vecAttr.getType());
 
     mlir::ArrayAttr vecElts = vecAttr.getElts();
     mlir::ArrayAttr indicesElts = indicesAttr.getElts();
@@ -1608,7 +1841,7 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
     }
 
     return cir::ConstVectorAttr::get(
-        vecTy, mlir::ArrayAttr::get(getContext(), elements));
+        getType(), mlir::ArrayAttr::get(getContext(), elements));
   }
 
   return {};
@@ -1639,6 +1872,65 @@ LogicalResult cir::VecTernaryOp::verify() {
                          << " don't match";
   }
   return success();
+}
+
+OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute cond = adaptor.getCond();
+  mlir::Attribute lhs = adaptor.getLhs();
+  mlir::Attribute rhs = adaptor.getRhs();
+
+  if (!mlir::isa_and_nonnull<cir::ConstVectorAttr>(cond) ||
+      !mlir::isa_and_nonnull<cir::ConstVectorAttr>(lhs) ||
+      !mlir::isa_and_nonnull<cir::ConstVectorAttr>(rhs))
+    return {};
+  auto condVec = mlir::cast<cir::ConstVectorAttr>(cond);
+  auto lhsVec = mlir::cast<cir::ConstVectorAttr>(lhs);
+  auto rhsVec = mlir::cast<cir::ConstVectorAttr>(rhs);
+
+  mlir::ArrayAttr condElts = condVec.getElts();
+
+  SmallVector<mlir::Attribute, 16> elements;
+  elements.reserve(condElts.size());
+
+  for (const auto &[idx, condAttr] :
+       llvm::enumerate(condElts.getAsRange<cir::IntAttr>())) {
+    if (condAttr.getSInt()) {
+      elements.push_back(lhsVec.getElts()[idx]);
+    } else {
+      elements.push_back(rhsVec.getElts()[idx]);
+    }
+  }
+
+  cir::VectorType vecTy = getLhs().getType();
+  return cir::ConstVectorAttr::get(
+      vecTy, mlir::ArrayAttr::get(getContext(), elements));
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexCreateOp::verify() {
+  if (getType().getElementType() != getReal().getType()) {
+    emitOpError()
+        << "operand type of cir.complex.create does not match its result type";
+    return failure();
+  }
+
+  return success();
+}
+
+OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute real = adaptor.getReal();
+  mlir::Attribute imag = adaptor.getImag();
+  if (!real || !imag)
+    return {};
+
+  // When both of real and imag are constants, we can fold the operation into an
+  // `#cir.const_complex` operation.
+  auto realAttr = mlir::cast<mlir::TypedAttr>(real);
+  auto imagAttr = mlir::cast<mlir::TypedAttr>(imag);
+  return cir::ConstComplexAttr::get(realAttr, imagAttr);
 }
 
 //===----------------------------------------------------------------------===//

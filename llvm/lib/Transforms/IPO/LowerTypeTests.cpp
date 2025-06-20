@@ -143,7 +143,7 @@ bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (BitOffset >= BitSize)
     return false;
 
-  return Bits.count(BitOffset);
+  return Bits.count(BitSize - 1 - BitOffset);
 }
 
 void BitSetInfo::print(raw_ostream &OS) const {
@@ -188,7 +188,11 @@ BitSetInfo BitSetBuilder::build() {
   BSI.BitSize = ((Max - Min) >> BSI.AlignLog2) + 1;
   for (uint64_t Offset : Offsets) {
     Offset >>= BSI.AlignLog2;
-    BSI.Bits.insert(Offset);
+    // We invert the order of bits when adding them to the bitset. This is
+    // because the offset that we test against is computed by subtracting the
+    // address that we are testing from the global's address, which means that
+    // the offset increases as the tested address decreases.
+    BSI.Bits.insert(BSI.BitSize - 1 - Offset);
   }
 
   return BSI;
@@ -465,7 +469,8 @@ class LowerTypeTestsModule {
   struct TypeIdLowering {
     TypeTestResolution::Kind TheKind = TypeTestResolution::Unsat;
 
-    /// All except Unsat: the start address within the combined global.
+    /// All except Unsat: the address of the last element within the combined
+    /// global.
     Constant *OffsetedGlobal;
 
     /// ByteArray, Inline, AllOnes: log2 of the required global alignment
@@ -555,6 +560,8 @@ class LowerTypeTestsModule {
   bool isFunctionAnnotation(Value *V) const {
     return FunctionAnnotations.contains(V);
   }
+
+  void maybeReplaceComdat(Function *F, StringRef OriginalName);
 
 public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
@@ -772,7 +779,11 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   if (TIL.TheKind == TypeTestResolution::Single)
     return B.CreateICmpEQ(PtrAsInt, OffsetedGlobalAsInt);
 
-  Value *PtrOffset = B.CreateSub(PtrAsInt, OffsetedGlobalAsInt);
+  // Here we compute `last element - address`. The reason why we do this instead
+  // of computing `address - first element` is that it leads to a slightly
+  // shorter instruction sequence on x86. Because it doesn't matter how we do
+  // the subtraction on other architectures, we do so unconditionally.
+  Value *PtrOffset = B.CreateSub(OffsetedGlobalAsInt, PtrAsInt);
 
   // We need to check that the offset both falls within our range and is
   // suitably aligned. We can check both properties at the same time by
@@ -1073,6 +1084,23 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
   }
 }
 
+void LowerTypeTestsModule::maybeReplaceComdat(Function *F,
+                                              StringRef OriginalName) {
+  // For COFF we should also rename the comdat if this function also
+  // happens to be the key function. Even if the comdat name changes, this
+  // should still be fine since comdat and symbol resolution happens
+  // before LTO, so all symbols which would prevail have been selected.
+  if (F->hasComdat() && ObjectFormat == Triple::COFF &&
+      F->getComdat()->getName() == OriginalName) {
+    Comdat *OldComdat = F->getComdat();
+    Comdat *NewComdat = M.getOrInsertComdat(F->getName());
+    for (GlobalObject &GO : M.global_objects()) {
+      if (GO.getComdat() == OldComdat)
+        GO.setComdat(NewComdat);
+    }
+  }
+}
+
 // ThinLTO backend: the function F has a jump table entry; update this module
 // accordingly. isJumpTableCanonical describes the type of the jump table entry.
 void LowerTypeTestsModule::importFunction(
@@ -1106,6 +1134,7 @@ void LowerTypeTestsModule::importFunction(
     FDecl->setVisibility(GlobalValue::HiddenVisibility);
   } else {
     F->setName(Name + ".cfi");
+    maybeReplaceComdat(F, Name);
     F->setLinkage(GlobalValue::ExternalLinkage);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
@@ -1154,14 +1183,17 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
 
     ByteArrayInfo *BAI = nullptr;
     TypeIdLowering TIL;
+
+    uint64_t GlobalOffset =
+        BSI.ByteOffset + ((BSI.BitSize - 1) << BSI.AlignLog2);
     TIL.OffsetedGlobal = ConstantExpr::getGetElementPtr(
-        Int8Ty, CombinedGlobalAddr, ConstantInt::get(IntPtrTy, BSI.ByteOffset)),
+        Int8Ty, CombinedGlobalAddr, ConstantInt::get(IntPtrTy, GlobalOffset)),
     TIL.AlignLog2 = ConstantInt::get(IntPtrTy, BSI.AlignLog2);
     TIL.SizeM1 = ConstantInt::get(IntPtrTy, BSI.BitSize - 1);
     if (BSI.isAllOnes()) {
       TIL.TheKind = (BSI.BitSize == 1) ? TypeTestResolution::Single
                                        : TypeTestResolution::AllOnes;
-    } else if (BSI.BitSize <= 64) {
+    } else if (BSI.BitSize <= IntPtrTy->getBitWidth()) {
       TIL.TheKind = TypeTestResolution::Inline;
       uint64_t InlineBits = 0;
       for (auto Bit : BSI.Bits)
@@ -1669,8 +1701,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        GlobalValue::PrivateLinkage,
                        M.getDataLayout().getProgramAddressSpace(),
                        ".cfi.jumptable", &M);
+  ArrayType *JumpTableEntryType = ArrayType::get(Int8Ty, EntrySize);
   ArrayType *JumpTableType =
-      ArrayType::get(ArrayType::get(Int8Ty, EntrySize), Functions.size());
+      ArrayType::get(JumpTableEntryType, Functions.size());
   auto JumpTable = ConstantExpr::getPointerCast(
       JumpTableFn, PointerType::getUnqual(M.getContext()));
 
@@ -1691,7 +1724,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     if (!IsJumpTableCanonical) {
       GlobalValue::LinkageTypes LT = IsExported ? GlobalValue::ExternalLinkage
                                                 : GlobalValue::InternalLinkage;
-      GlobalAlias *JtAlias = GlobalAlias::create(F->getValueType(), 0, LT,
+      GlobalAlias *JtAlias = GlobalAlias::create(JumpTableEntryType, 0, LT,
                                                  F->getName() + ".cfi_jt",
                                                  CombinedGlobalElemPtr, &M);
       if (IsExported)
@@ -1716,25 +1749,14 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     } else {
       assert(F->getType()->getAddressSpace() == 0);
 
-      GlobalAlias *FAlias = GlobalAlias::create(
-          F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
+      GlobalAlias *FAlias =
+          GlobalAlias::create(JumpTableEntryType, 0, F->getLinkage(), "",
+                              CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
       FAlias->takeName(F);
       if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
-        // For COFF we should also rename the comdat if this function also
-        // happens to be the key function. Even if the comdat name changes, this
-        // should still be fine since comdat and symbol resolution happens
-        // before LTO, so all symbols which would prevail have been selected.
-        if (F->hasComdat() && ObjectFormat == Triple::COFF &&
-            F->getComdat()->getName() == FAlias->getName()) {
-          Comdat *OldComdat = F->getComdat();
-          Comdat *NewComdat = M.getOrInsertComdat(F->getName());
-          for (GlobalObject &GO : M.global_objects()) {
-            if (GO.getComdat() == OldComdat)
-              GO.setComdat(NewComdat);
-          }
-        }
+        maybeReplaceComdat(F, FAlias->getName());
       }
       replaceCfiUses(F, FAlias, IsJumpTableCanonical);
       if (!F->hasLocalLinkage())
@@ -2533,9 +2555,9 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
         continue;
       for (Use &U : make_early_inc_range(CE->uses())) {
         auto *CE = dyn_cast<ConstantExpr>(U.getUser());
-        if (U.getOperandNo() == 1 && CE &&
+        if (U.getOperandNo() == 0 && CE &&
             CE->getOpcode() == Instruction::Sub &&
-            MaySimplifyInt(CE->getOperand(0))) {
+            MaySimplifyInt(CE->getOperand(1))) {
           // This is a computation of PtrOffset as generated by
           // LowerTypeTestsModule::lowerTypeTestCall above. If
           // isKnownTypeIdMember passes we just pretend it evaluated to 0. This

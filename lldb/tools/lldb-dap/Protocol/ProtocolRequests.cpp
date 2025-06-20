@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolRequests.h"
+#include "JSONUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/JSON.h"
 #include <utility>
 
@@ -368,6 +370,16 @@ bool fromJSON(const json::Value &Params, StepInArguments &SIA, json::Path P) {
          OM.mapOptional("granularity", SIA.granularity);
 }
 
+bool fromJSON(const llvm::json::Value &Params, StepInTargetsArguments &SITA,
+              llvm::json::Path P) {
+  json::ObjectMapper OM(Params, P);
+  return OM && OM.map("frameId", SITA.frameId);
+}
+
+llvm::json::Value toJSON(const StepInTargetsResponseBody &SITR) {
+  return llvm::json::Object{{"targets", SITR.targets}};
+}
+
 bool fromJSON(const json::Value &Params, StepOutArguments &SOA, json::Path P) {
   json::ObjectMapper OM(Params, P);
   return OM && OM.map("threadId", SOA.threadId) &&
@@ -438,6 +450,20 @@ json::Value toJSON(const SetDataBreakpointsResponseBody &SDBR) {
   return json::Object{{"breakpoints", SDBR.breakpoints}};
 }
 
+bool fromJSON(const json::Value &Params, SetExceptionBreakpointsArguments &Args,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("filters", Args.filters) &&
+         O.mapOptional("filterOptions", Args.filterOptions);
+}
+
+json::Value toJSON(const SetExceptionBreakpointsResponseBody &B) {
+  json::Object result;
+  if (!B.breakpoints.empty())
+    result.insert({"breakpoints", B.breakpoints});
+  return result;
+}
+
 json::Value toJSON(const ThreadsResponseBody &TR) {
   return json::Object{{"threads", TR.threads}};
 }
@@ -454,6 +480,41 @@ bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
 
 json::Value toJSON(const DisassembleResponseBody &DRB) {
   return json::Object{{"instructions", DRB.instructions}};
+}
+
+bool fromJSON(const json::Value &Params, ReadMemoryArguments &RMA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+
+  const json::Object *rma_obj = Params.getAsObject();
+  constexpr llvm::StringRef ref_key = "memoryReference";
+  const std::optional<llvm::StringRef> memory_ref = rma_obj->getString(ref_key);
+  if (!memory_ref) {
+    P.field(ref_key).report("missing value");
+    return false;
+  }
+
+  const std::optional<lldb::addr_t> addr_opt =
+      DecodeMemoryReference(*memory_ref);
+  if (!addr_opt) {
+    P.field(ref_key).report("Malformed memory reference");
+    return false;
+  }
+
+  RMA.memoryReference = *addr_opt;
+
+  return O && O.map("count", RMA.count) && O.mapOptional("offset", RMA.offset);
+}
+
+json::Value toJSON(const ReadMemoryResponseBody &RMR) {
+  json::Object result{{"address", RMR.address}};
+
+  if (RMR.unreadableBytes != 0)
+    result.insert({"unreadableBytes", RMR.unreadableBytes});
+  if (!RMR.data.empty())
+    result.insert({"data", llvm::encodeBase64(RMR.data)});
+
+  return result;
 }
 
 } // namespace lldb_dap::protocol

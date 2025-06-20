@@ -36,7 +36,7 @@ define i64 @main() {
   tail call void @_Z2fpv()
   ; CHECK: ret i64 0
   ; WRONGTYPE: ret i64 sub
-  ret i64 sub (i64 ptrtoint (ptr @_Z2fpv to i64), i64 ptrtoint (ptr @__typeid__ZTSFvvE_global_addr to i64))
+  ret i64 sub (i64 ptrtoint (ptr @__typeid__ZTSFvvE_global_addr to i64), i64 ptrtoint (ptr @_Z2fpv to i64))
 }
 
 declare void @llvm.ubsantrap(i8 immarg)

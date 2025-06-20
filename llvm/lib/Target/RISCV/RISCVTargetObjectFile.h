@@ -48,9 +48,6 @@ public:
 
   bool isInSmallSection(uint64_t Size) const;
 
-  const MCExpr *createTargetMCExpr(const MCExpr *Expr,
-                                   uint8_t Specifier) const override;
-
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
                                           const MCSymbol *Sym,
                                           const MCValue &MV, int64_t Offset,

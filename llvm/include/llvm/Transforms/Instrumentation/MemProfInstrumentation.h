@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROF_INSTRUMENTATION_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Function;
@@ -28,8 +29,8 @@ class Module;
 /// record data about the allocations.
 class MemProfilerPass : public PassInfoMixin<MemProfilerPass> {
 public:
-  explicit MemProfilerPass();
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI explicit MemProfilerPass();
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
@@ -37,8 +38,8 @@ public:
 /// to profile memory allocations and accesses.
 class ModuleMemProfilerPass : public PassInfoMixin<ModuleMemProfilerPass> {
 public:
-  explicit ModuleMemProfilerPass();
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI explicit ModuleMemProfilerPass();
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 

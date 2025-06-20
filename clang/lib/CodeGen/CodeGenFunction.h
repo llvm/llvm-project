@@ -3332,10 +3332,12 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
-  /// Returns debug info, with additional annotation if enabled by
-  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
+  /// Returns debug info, with additional annotation if
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
+  /// any of the ordinals.
   llvm::DILocation *
-  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
+  SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                             SanitizerHandler Handler);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
@@ -4848,6 +4850,12 @@ public:
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                    ReturnValueSlot ReturnValue);
+
+  // Returns a builtin function that the SPIR-V backend will expand into a spec
+  // constant.
+  llvm::Function *
+  getSpecConstantFunction(const clang::QualType &SpecConstantType);
+
   llvm::Value *EmitDirectXBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitSPIRVBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,

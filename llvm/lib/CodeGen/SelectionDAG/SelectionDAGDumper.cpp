@@ -585,6 +585,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "partial_reduce_umla";
   case ISD::PARTIAL_REDUCE_SMLA:
     return "partial_reduce_smla";
+  case ISD::PARTIAL_REDUCE_SUMLA:
+    return "partial_reduce_sumla";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \

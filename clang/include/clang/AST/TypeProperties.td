@@ -753,7 +753,7 @@ let Class = TemplateSpecializationType in {
   }
 
   def : Creator<[{
-    return ctx.getTemplateSpecializationType(templateName, args, std::nullopt, UnderlyingType);
+    return ctx.getTemplateSpecializationType(templateName, args, {}, UnderlyingType);
   }]>;
 }
 

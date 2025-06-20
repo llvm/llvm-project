@@ -1622,7 +1622,7 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   std::optional<int64_t> Diff =
       getPointersDiff(ElemTyA, PtrA, ElemTyB, PtrB, DL, SE,
                       /*StrictCheck=*/true, CheckType);
-  return Diff && *Diff == 1;
+  return Diff == 1;
 }
 
 void MemoryDepChecker::addAccess(StoreInst *SI) {
@@ -2764,8 +2764,8 @@ LoopAccessInfo::recordAnalysis(StringRef RemarkName, const Instruction *I) {
 
 bool LoopAccessInfo::isInvariant(Value *V) const {
   auto *SE = PSE->getSE();
-  // TODO: Is this really what we want? Even without FP SCEV, we may want some
-  // trivially loop-invariant FP values to be considered invariant.
+  if (TheLoop->isLoopInvariant(V))
+    return true;
   if (!SE->isSCEVable(V->getType()))
     return false;
   const SCEV *S = SE->getSCEV(V);

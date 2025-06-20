@@ -161,6 +161,17 @@ int main(int, char**) {
     assert(transparent_used);
   }
   {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    auto [it1, inserted] = m.try_emplace("charlie", 4);
+    assert(it1 == m.begin() + 2);
+    assert(inserted);
+
+    auto it2 = m.try_emplace(m.begin(), "beta2", 2);
+    assert(it2 == m.begin() + 2);
+  }
+  {
     auto try_emplace = [](auto& m, auto key_arg, auto value_arg) {
       using M   = std::decay_t<decltype(m)>;
       using Key = typename M::key_type;

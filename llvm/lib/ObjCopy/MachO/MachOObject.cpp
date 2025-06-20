@@ -8,6 +8,7 @@
 
 #include "MachOObject.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include <unordered_set>
 
 using namespace llvm;
@@ -96,10 +97,6 @@ void Object::updateLoadCommandIndexes() {
       break;
     case MachO::LC_DYLD_EXPORTS_TRIE:
       ExportsTrieCommandIndex = Index;
-      break;
-    case MachO::LC_ENCRYPTION_INFO:
-    case MachO::LC_ENCRYPTION_INFO_64:
-      EncryptionInfoCommandIndex = Index;
       break;
     }
   }
