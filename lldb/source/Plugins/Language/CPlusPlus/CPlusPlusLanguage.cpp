@@ -2007,9 +2007,9 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionQualifiers: {
     auto quals_or_err = GetDemangledFunctionQualifiers(sc);
     if (!quals_or_err) {
-      LLDB_LOG_ERROR(
-          GetLog(LLDBLog::Language), quals_or_err.takeError(),
-          "Failed to handle ${{function.qualifiers}} frame-format variable: {0}");
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), quals_or_err.takeError(),
+                     "Failed to handle ${{function.qualifiers}} frame-format "
+                     "variable: {0}");
       return false;
     }
 
