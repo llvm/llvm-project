@@ -9,6 +9,7 @@
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -598,8 +599,7 @@ public:
 
   RunLayoutInfoPropagation(Operation *op) : target(op) {
     SymbolTableCollection symbolTable;
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<LayoutInfoPropagation>(symbolTable);
     (void)solver.initializeAndRun(op);
   }
