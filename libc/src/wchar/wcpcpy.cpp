@@ -21,9 +21,7 @@ LLVM_LIBC_FUNCTION(wchar_t *, wcpcpy,
   size_t size = internal::string_length(s2);
   __builtin_memcpy(s1, s2, (size + 1) * sizeof(wchar_t));
   wchar_t *result = s1 + size;
-  if (result != nullptr)
-    return result;
-  return nullptr;
+  return result;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
