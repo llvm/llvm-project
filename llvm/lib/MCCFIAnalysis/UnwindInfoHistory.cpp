@@ -1,5 +1,5 @@
 // TODO check what includes to keep and what to remove
-#include "llvm/MCCFIAnalysis/CFIState.h"
+#include "llvm/MCCFIAnalysis/UnwindInfoHistory.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCDwarf.h"
@@ -11,28 +11,18 @@
 
 using namespace llvm;
 
-CFIState::CFIState(const CFIState &Other) : Context(Other.Context) {
-  // TODO maybe remove it
-  State = Other.State;
+std::optional<dwarf::UnwindTable::const_iterator>
+UnwindInfoHistory::getCurrentUnwindRow() const {
+  if (!Table.size())
+    return std::nullopt;
+
+  return --Table.end();
 }
 
-CFIState &CFIState::operator=(const CFIState &Other) {
-  // TODO maybe remove it
-  if (this != &Other) {
-    State = Other.State;
-    Context = Other.Context;
-  }
-
-  return *this;
-}
-
-std::optional<DWARFRegType>
-CFIState::getReferenceRegisterForCallerValueOfRegister(DWARFRegType Reg) const {
-  // TODO maybe move it the Location class
-  auto LastRow = getLastRow();
-  assert(LastRow && "The state is empty.");
-
-  auto UnwinLoc = LastRow->getRegisterLocations().getRegisterLocation(Reg);
+std::optional<UnwindInfoHistory::DWARFRegType>
+UnwindInfoHistory::getReferenceRegisterForUnwindInfoOfRegister(
+    const dwarf::UnwindTable::const_iterator &UnwindRow, DWARFRegType Reg) {
+  auto UnwinLoc = UnwindRow->getRegisterLocations().getRegisterLocation(Reg);
   assert(UnwinLoc &&
          "The register should be tracked inside the register states");
 
@@ -40,9 +30,8 @@ CFIState::getReferenceRegisterForCallerValueOfRegister(DWARFRegType Reg) const {
   case dwarf::UnwindLocation::Location::Undefined:
   case dwarf::UnwindLocation::Location::Constant:
   case dwarf::UnwindLocation::Location::Unspecified:
-    // TODO here should look into expr and find the registers, but for now it's
-    // TODO like this:
   case dwarf::UnwindLocation::Location::DWARFExpr:
+    // TODO here should look into expr and find the registers.
     return std::nullopt;
   case dwarf::UnwindLocation::Location::Same:
     return Reg;
@@ -51,33 +40,33 @@ CFIState::getReferenceRegisterForCallerValueOfRegister(DWARFRegType Reg) const {
   case dwarf::UnwindLocation::Location::CFAPlusOffset:
     // TODO check if it's ok to assume CFA is always depending on other
     // TODO register, if yes assert it here!
-    return LastRow->getCFAValue().getRegister();
+    return UnwindRow->getCFAValue().getRegister();
   }
 }
 
-void CFIState::apply(const MCCFIInstruction &CFIDirective) {
-  auto DwarfOperations = convertMC2DWARF(CFIDirective);
+void UnwindInfoHistory::update(const MCCFIInstruction &CFIDirective) {
+  auto DwarfOperations = convert(CFIDirective);
   if (!DwarfOperations) {
     Context->reportError(
         CFIDirective.getLoc(),
         "couldn't apply this directive to the unwinding information state");
   }
 
-  auto &&LastRow = getLastRow();
-  dwarf::UnwindRow Row = LastRow ? LastRow.value() : dwarf::UnwindRow();
-  if (Error Err = State.parseRows(DwarfOperations.value(), Row, nullptr)) {
-    // ! FIXME what should I do with this error?
+  auto LastRow = getCurrentUnwindRow();
+  dwarf::UnwindRow Row =
+      LastRow.has_value() ? *(LastRow.value()) : dwarf::UnwindRow();
+  if (Error Err = Table.parseRows(DwarfOperations.value(), Row, nullptr)) {
     Context->reportError(
         CFIDirective.getLoc(),
         formatv("could not parse this CFI directive due to: {0}",
                 toString(std::move(Err))));
     assert(false);
   }
-  State.insertRow(Row);
+  Table.insertRow(Row);
 }
 
 std::optional<dwarf::CFIProgram>
-CFIState::convertMC2DWARF(MCCFIInstruction CFIDirective) {
+UnwindInfoHistory::convert(MCCFIInstruction CFIDirective) {
   //! FIXME, this way of instantiating CFI program does not look right, either
   //! refactor CFIProgram to not depend on the Code/Data Alignment or add a new
   //! type that is independent from this and is also feedable to UnwindTable.
@@ -118,20 +107,22 @@ CFIState::convertMC2DWARF(MCCFIInstruction CFIDirective) {
                                    CFIDirective.getOffset());
     break;
   case MCCFIInstruction::OpRelOffset:
-    if (!getLastRow()) // TODO maybe replace it with assert
+    if (!getCurrentUnwindRow()) // TODO maybe replace it with assert
       return std::nullopt;
 
     DwarfOperations.addInstruction(
         dwarf::DW_CFA_offset, CFIDirective.getRegister(),
-        CFIDirective.getOffset() - getLastRow()->getCFAValue().getOffset());
+        CFIDirective.getOffset() -
+            getCurrentUnwindRow().value()->getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpAdjustCfaOffset:
-    if (!getLastRow()) // TODO maybe replace it with assert
+    if (!getCurrentUnwindRow()) // TODO maybe replace it with assert
       return std::nullopt;
 
-    DwarfOperations.addInstruction(dwarf::DW_CFA_def_cfa_offset,
-                                   CFIDirective.getOffset() +
-                                       getLastRow()->getCFAValue().getOffset());
+    DwarfOperations.addInstruction(
+        dwarf::DW_CFA_def_cfa_offset,
+        CFIDirective.getOffset() +
+            getCurrentUnwindRow().value()->getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpEscape:
     // TODO It's now feasible but for now, I ignore it
@@ -175,13 +166,4 @@ CFIState::convertMC2DWARF(MCCFIInstruction CFIDirective) {
   }
 
   return DwarfOperations;
-}
-
-std::optional<dwarf::UnwindRow> CFIState::getLastRow() const {
-  if (!State.size())
-    return std::nullopt;
-
-  //! FIXME too dirty
-  auto &&it = State.end();
-  return *--it;
 }

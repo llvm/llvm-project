@@ -1,7 +1,7 @@
 #ifndef LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_H
 #define LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_H
 
-#include "CFIState.h"
+#include "UnwindInfoHistory.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -23,7 +23,7 @@ class CFIAnalysis {
   MCContext *Context;
   MCInstrInfo const &MCII;
   MCRegisterInfo const *MCRI;
-  CFIState State;
+  UnwindInfoHistory State;
   bool IsEH;
 
 private:
@@ -49,19 +49,21 @@ public:
 
 private:
   void checkRegDiff(
-      const MCInst &Inst, DWARFRegType Reg, const CFIState &PrevState,
-      const CFIState &NextState,
+      const MCInst &Inst, UnwindInfoHistory::DWARFRegType Reg,
+      const dwarf::UnwindTable::const_iterator &PrevState,
+      const dwarf::UnwindTable::const_iterator &NextState,
       const dwarf::UnwindLocation
           &PrevRegState, // TODO maybe should get them from prev next state
       const dwarf::UnwindLocation
           &NextRegState, // TODO themselves instead of by arguments.
-      const std::set<DWARFRegType> &Reads,
-      const std::set<DWARFRegType> &Writes);
+      const std::set<UnwindInfoHistory::DWARFRegType> &Reads,
+      const std::set<UnwindInfoHistory::DWARFRegType> &Writes);
 
-  void checkCFADiff(const MCInst &Inst, const CFIState &PrevState,
-                    const CFIState &NextState,
-                    const std::set<DWARFRegType> &Reads,
-                    const std::set<DWARFRegType> &Writes);
+  void checkCFADiff(const MCInst &Inst,
+                    const dwarf::UnwindTable::const_iterator &PrevState,
+                    const dwarf::UnwindTable::const_iterator &NextState,
+                    const std::set<UnwindInfoHistory::DWARFRegType> &Reads,
+                    const std::set<UnwindInfoHistory::DWARFRegType> &Writes);
 };
 
 } // namespace llvm
