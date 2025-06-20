@@ -202,6 +202,7 @@ protected:
 
   bool HasNoSdstCMPX = false;
   bool HasVscnt = false;
+  bool HasWaitXcnt = false;
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
@@ -1367,6 +1368,10 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1250.
+  bool hasWaitXCnt() const { return HasWaitXcnt; }
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 

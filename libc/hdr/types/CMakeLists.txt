@@ -21,7 +21,7 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
-  mbstate_t 
+  mbstate_t
   HDRS
     mbstate_t.h
   DEPENDS

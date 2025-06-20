@@ -1244,8 +1244,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recv
     libc.src.sys.socket.recvfrom
     libc.src.sys.socket.recvmsg
-
-    # wchar entrypoints
+    
+    # wchar.h entrypoints
+    libc.src.wchar.mbrtowc
     libc.src.wchar.wcrtomb
   )
 endif()

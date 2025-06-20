@@ -15,7 +15,7 @@
 
 #else // Overlay mode
 
-#error "type not available in overlay mode"
+#error "Cannot overlay mbstate_t"
 
 #endif // LLVM_LIBC_FULL_BUILD
 
