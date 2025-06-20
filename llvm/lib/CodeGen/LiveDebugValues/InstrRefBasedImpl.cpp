@@ -694,7 +694,7 @@ public:
     DebugVariableID VarID = DVMap.getDVID(Var);
 
     // Ignore non-register locations, we don't transfer those.
-    if (MI.isUndefDebugValue() ||
+    if (MI.isUndefDebugValue() || MI.getDebugExpression()->isEntryValue() ||
         all_of(MI.debug_operands(),
                [](const MachineOperand &MO) { return !MO.isReg(); })) {
       auto It = ActiveVLocs.find(VarID);
@@ -1448,7 +1448,10 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
       for (const MachineOperand &MO : MI.debug_operands()) {
         // There should be no undef registers here, as we've screened for undef
         // debug values.
-        if (MO.isReg()) {
+        if (MI.getDebugExpression()->isEntryValue()) {
+          // If the DBG_VALUE is a DW_OP_entry_value, treat it as a constant.
+          DebugOps.push_back(DbgOpStore.insert(MO));
+        } else if (MO.isReg()) {
           DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
         } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
           DebugOps.push_back(DbgOpStore.insert(MO));
