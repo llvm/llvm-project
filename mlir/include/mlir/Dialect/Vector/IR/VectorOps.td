@@ -1736,7 +1736,9 @@ def Vector_TransferWriteOp :
   let hasVerifier = 1;
 }
 
-def Vector_LoadOp : Vector_Op<"load"> {
+def Vector_LoadOp : Vector_Op<"load", [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+  ]> {
   let summary = "reads an n-D slice of memory into an n-D vector";
   let description = [{
     The 'vector.load' operation reads an n-D slice of memory into an n-D
@@ -1822,7 +1824,9 @@ def Vector_LoadOp : Vector_Op<"load"> {
       "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
 }
 
-def Vector_StoreOp : Vector_Op<"store"> {
+def Vector_StoreOp : Vector_Op<"store", [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+  ]> {
   let summary = "writes an n-D vector to an n-D slice of memory";
   let description = [{
     The 'vector.store' operation writes an n-D vector to an n-D slice of memory.
