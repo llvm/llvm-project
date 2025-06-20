@@ -2238,7 +2238,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
-   FeatureDPALU_DPP,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureNSAEncoding,
