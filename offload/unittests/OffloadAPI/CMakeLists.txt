@@ -14,6 +14,7 @@ add_offload_unittest("event"
 
 add_offload_unittest("kernel"
     kernel/olGetKernel.cpp
+    kernel/olGetKernelMaxGroupSize.cpp
     kernel/olLaunchKernel.cpp)
 
 add_offload_unittest("memory"
