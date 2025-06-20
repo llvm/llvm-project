@@ -211,6 +211,7 @@ def constantfp_matchinfo : GIDefMatchData<"ConstantFP*">;
 def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
+def mi_vector_matchinfo : GIDefMatchData<"SmallVector<MachineInstr *>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -1327,6 +1328,14 @@ def combine_minmax_nan: GICombineRule<
          [{ return Helper.matchCombineFMinMaxNaN(*${root}, ${info}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${info}); }])>;
 
+// Combine multiple FDIVs with the same divisor into multiple FMULs by the
+// reciprocal.
+def fdiv_repeated_divison: GICombineRule<
+  (defs root:$root, mi_vector_matchinfo:$matchinfo),
+  (match (G_FDIV $dst, $src1, $src2):$root,
+         [{ return Helper.matchRepeatedFPDivisor(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyRepeatedFPDivisor(${matchinfo}); }])>;
+
 // Transform (add x, (sub y, x)) -> y
 // Transform (add (sub y, x), x) -> y
 def add_sub_reg_frags : GICombinePatFrag<
@@ -2051,7 +2060,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     constant_fold_cast_op, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    sub_add_reg, select_to_minmax,
+    sub_add_reg, select_to_minmax, fdiv_repeated_divison,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
