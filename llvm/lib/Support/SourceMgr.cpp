@@ -81,8 +81,8 @@ unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
 }
 
 template <typename T>
-static std::vector<T> &GetOrCreateOffsetCache(void *&OffsetCache,
-                                              MemoryBuffer *Buffer) {
+static ArrayRef<T> GetOrCreateOffsetCache(void *&OffsetCache,
+                                          MemoryBuffer *Buffer) {
   if (OffsetCache)
     return *static_cast<std::vector<T> *>(OffsetCache);
 
@@ -91,10 +91,24 @@ static std::vector<T> &GetOrCreateOffsetCache(void *&OffsetCache,
   size_t Sz = Buffer->getBufferSize();
   assert(Sz <= std::numeric_limits<T>::max());
   StringRef S = Buffer->getBuffer();
-  for (size_t N = 0; N < Sz; ++N) {
-    if (S[N] == '\n')
-      Offsets->push_back(static_cast<T>(N));
+
+  // The cache always includes 0 (for the start of the first line) and Sz (so
+  // that you can always index by N+1 to find the end of line N, even if the
+  // last line has no terminating newline).
+  Offsets->push_back(0);
+  for (size_t N = 0; N != Sz;) {
+    while (N != Sz && S[N] != '\n' && S[N] != '\r')
+      ++N;
+    if (N == Sz)
+      break;
+
+    // Skip over CR, LF, CRLF or LFCR.
+    ++N;
+    if (N != Sz && (S[N - 1] ^ S[N]) == ('\r' ^ '\n'))
+      ++N;
+    Offsets->push_back(static_cast<T>(N));
   }
+  Offsets->push_back(static_cast<T>(Sz));
 
   OffsetCache = Offsets;
   return *Offsets;
@@ -102,8 +116,7 @@ static std::vector<T> &GetOrCreateOffsetCache(void *&OffsetCache,
 
 template <typename T>
 unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
-  std::vector<T> &Offsets =
-      GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
+  ArrayRef<T> Offsets = GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
 
   const char *BufStart = Buffer->getBufferStart();
   assert(Ptr >= BufStart && Ptr <= Buffer->getBufferEnd());
@@ -112,9 +125,9 @@ unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
          static_cast<size_t>(PtrDiff) <= std::numeric_limits<T>::max());
   T PtrOffset = static_cast<T>(PtrDiff);
 
-  // llvm::lower_bound gives the number of EOL before PtrOffset. Add 1 to get
-  // the line number.
-  return llvm::lower_bound(Offsets, PtrOffset) - Offsets.begin() + 1;
+  // upper_bound gives the number of start-of-lines before or equal to
+  // PtrOffset.
+  return upper_bound(Offsets.drop_back(), PtrOffset) - Offsets.begin();
 }
 
 /// Look up a given \p Ptr in the buffer, determining which line it came
@@ -134,8 +147,7 @@ unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
 template <typename T>
 const char *SourceMgr::SrcBuffer::getPointerForLineNumberSpecialized(
     unsigned LineNo) const {
-  std::vector<T> &Offsets =
-      GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
+  ArrayRef<T> Offsets = GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
 
   // We start counting line and column numbers from 1.
   if (LineNo != 0)
@@ -143,13 +155,11 @@ const char *SourceMgr::SrcBuffer::getPointerForLineNumberSpecialized(
 
   const char *BufStart = Buffer->getBufferStart();
 
-  // The offset cache contains the location of the \n for the specified line,
-  // we want the start of the line.  As such, we look for the previous entry.
-  if (LineNo == 0)
-    return BufStart;
-  if (LineNo > Offsets.size())
+  // This allows looking up one greater than the maximum line number to get the
+  // offset to the end of the buffer.
+  if (LineNo >= Offsets.size())
     return nullptr;
-  return BufStart + Offsets[LineNo - 1] + 1;
+  return BufStart + Offsets[LineNo];
 }
 
 /// Return a pointer to the first character of the specified line number or
@@ -198,11 +208,8 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   const char *Ptr = Loc.getPointer();
 
   unsigned LineNo = SB.getLineNumber(Ptr);
-  const char *BufStart = SB.Buffer->getBufferStart();
-  size_t NewlineOffs = StringRef(BufStart, Ptr - BufStart).find_last_of("\n\r");
-  if (NewlineOffs == StringRef::npos)
-    NewlineOffs = ~(size_t)0;
-  return std::make_pair(LineNo, Ptr - BufStart - NewlineOffs);
+  const char *LineStart = SB.getPointerForLineNumber(LineNo);
+  return std::make_pair(LineNo, Ptr - LineStart + 1);
 }
 
 // FIXME: Note that the formatting of source locations is spread between
@@ -241,19 +248,12 @@ SMLoc SourceMgr::FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,
   // We start counting line and column numbers from 1.
   if (ColNo != 0)
     --ColNo;
+  Ptr += ColNo;
 
-  // If we have a column number, validate it.
-  if (ColNo) {
-    // Make sure the location is within the current line.
-    if (Ptr + ColNo > SB.Buffer->getBufferEnd())
-      return SMLoc();
-
-    // Make sure there is no newline in the way.
-    if (StringRef(Ptr, ColNo).find_first_of("\n\r") != StringRef::npos)
-      return SMLoc();
-
-    Ptr += ColNo;
-  }
+  // Make sure the location is still within the current line.
+  if (Ptr >= SB.getPointerForLineNumber(LineNo + 1) &&
+      Ptr != SB.Buffer->getBufferEnd())
+    return SMLoc();
 
   return SMLoc::getFromPointer(Ptr);
 }
@@ -285,21 +285,15 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
     unsigned CurBuf = FindBufferContainingLoc(Loc);
     assert(CurBuf && "Invalid or unspecified location!");
 
-    const MemoryBuffer *CurMB = getMemoryBuffer(CurBuf);
-    BufferID = CurMB->getBufferIdentifier();
+    const auto &SB = getBufferInfo(CurBuf);
+    BufferID = SB.Buffer->getBufferIdentifier();
 
-    // Scan backward to find the start of the line.
-    const char *LineStart = Loc.getPointer();
-    const char *BufStart = CurMB->getBufferStart();
-    while (LineStart != BufStart && LineStart[-1] != '\n' &&
-           LineStart[-1] != '\r')
-      --LineStart;
-
-    // Get the end of the line.
-    const char *LineEnd = Loc.getPointer();
-    const char *BufEnd = CurMB->getBufferEnd();
-    while (LineEnd != BufEnd && LineEnd[0] != '\n' && LineEnd[0] != '\r')
-      ++LineEnd;
+    // Find the start and end of the line.
+    unsigned LineNo = SB.getLineNumber(Loc.getPointer());
+    const char *LineStart = SB.getPointerForLineNumber(LineNo);
+    const char *LineEnd = SB.getPointerForLineNumber(LineNo + 1);
+    while (LineEnd > LineStart && (LineEnd[-1] == '\n' || LineEnd[-1] == '\r'))
+      --LineEnd;
     LineStr = StringRef(LineStart, LineEnd - LineStart);
 
     // Convert any ranges to column ranges that only intersect the line of the
