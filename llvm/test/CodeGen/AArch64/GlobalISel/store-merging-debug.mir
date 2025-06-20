@@ -48,7 +48,7 @@ tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 failsVerification: false
@@ -101,24 +101,24 @@ body:             |
     ; CHECK-LABEL: name: test_simple_4xs16
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0, debug-location !11
-    ; CHECK-NEXT: DBG_VALUE [[COPY]](p0), $noreg, !9, !DIExpression(), debug-location !11
-    ; CHECK-NEXT: DBG_VALUE %1:_(s16), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 2, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %4:_(s16), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 3, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %7:_(s16), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 4, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %10:_(s16), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE 0, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 6, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %2:_(s64), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 7, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %3:_(p0), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 8, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE 1, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 9, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %5:_(s64), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 10, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %6:_(p0), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 11, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE 2, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 12, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %8:_(s64), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 13, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %9:_(p0), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 14, column: 1, scope: !5)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0,  debug-location !11
+    ; CHECK-NEXT: DBG_VALUE [[COPY]](p0), $noreg, !9, !DIExpression(),  debug-location !11
+    ; CHECK-NEXT: DBG_VALUE %1:_(s16), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 2, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %4:_(s16), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 3, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %7:_(s16), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 4, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %10:_(s16), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 5, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE 0, $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 6, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %2:_(s64), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 7, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %3:_(p0), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 8, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE 1, $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 9, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %5:_(s64), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 10, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %6:_(p0), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 11, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE 2, $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 12, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %8:_(s64), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 13, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE %9:_(p0), $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 14, column: 1, scope: !5)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3940688328982532
-    ; CHECK-NEXT: G_STORE [[C]](s64), [[COPY]](p0), debug-location !DILocation(line: 9, scope: !5) :: (store (s64), align 2)
-    ; CHECK-NEXT: DBG_VALUE 3, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 15, column: 1, scope: !5)
+    ; CHECK-NEXT: G_STORE [[C]](s64), [[COPY]](p0),  debug-location !DILocation(line: 9, scope: !5) :: (store (s64), align 2)
+    ; CHECK-NEXT: DBG_VALUE 3, $noreg, !9, !DIExpression(),  debug-location !DILocation(line: 15, column: 1, scope: !5)
     ; CHECK-NEXT: RET_ReallyLR debug-location !DILocation(line: 16, column: 1, scope: !5)
     %0:_(p0) = COPY $x0, debug-location !11
     DBG_VALUE %0(p0), $noreg, !9, !DIExpression(), debug-location !11

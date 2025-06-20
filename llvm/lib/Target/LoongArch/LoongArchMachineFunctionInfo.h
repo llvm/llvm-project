@@ -36,6 +36,13 @@ private:
   /// insertIndirectBranch.
   int BranchRelaxationSpillFrameIndex = -1;
 
+  /// Registers that have been sign extended from i32.
+  SmallVector<Register, 8> SExt32Registers;
+
+  /// Pairs of `jr` instructions and corresponding JTI operands, used for the
+  /// `annotate-tablejump` option.
+  SmallVector<std::pair<MachineInstr *, int>, 4> JumpInfos;
+
 public:
   LoongArchMachineFunctionInfo(const Function &F,
                                const TargetSubtargetInfo *STI) {}
@@ -62,6 +69,19 @@ public:
   void setBranchRelaxationSpillFrameIndex(int Index) {
     BranchRelaxationSpillFrameIndex = Index;
   }
+
+  void addSExt32Register(Register Reg) { SExt32Registers.push_back(Reg); }
+
+  bool isSExt32Register(Register Reg) const {
+    return is_contained(SExt32Registers, Reg);
+  }
+
+  void setJumpInfo(MachineInstr *JrMI, int JTIIdx) {
+    JumpInfos.push_back(std::make_pair(JrMI, JTIIdx));
+  }
+  unsigned getJumpInfoSize() { return JumpInfos.size(); }
+  MachineInstr *getJumpInfoJrMI(unsigned Idx) { return JumpInfos[Idx].first; }
+  int getJumpInfoJTIIndex(unsigned Idx) { return JumpInfos[Idx].second; }
 };
 
 } // end namespace llvm

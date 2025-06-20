@@ -16,12 +16,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// This represents a section on a Mach-O system (used by Mac OS X).  On a Mac
 /// system, these are also described in /usr/include/mach-o/loader.h.
-class MCSectionMachO final : public MCSection {
+class LLVM_ABI MCSectionMachO final : public MCSection {
   char SegmentName[16];  // Not necessarily null terminated!
 
   /// This is the SECTION_TYPE and SECTION_ATTRIBUTES field of a section, drawn
@@ -31,6 +32,13 @@ class MCSectionMachO final : public MCSection {
   /// The 'reserved2' field of a section, used to represent the size of stubs,
   /// for example.
   unsigned Reserved2;
+
+  // The index of this section in MachObjectWriter::SectionOrder, which is
+  // different from MCSection::Ordinal.
+  unsigned LayoutOrder = 0;
+
+  // The defining non-temporary symbol for each fragment.
+  SmallVector<const MCSymbol *, 0> Atoms;
 
   MCSectionMachO(StringRef Segment, StringRef Section, unsigned TAA,
                  unsigned reserved2, SectionKind K, MCSymbol *Begin);
@@ -70,9 +78,15 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override;
+                            uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
+
+  void allocAtoms();
+  const MCSymbol *getAtom(size_t I) const;
+  void setAtom(size_t I, const MCSymbol *Sym);
+
+  unsigned getLayoutOrder() const { return LayoutOrder; }
+  void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
 
   static bool classof(const MCSection *S) {
     return S->getVariant() == SV_MachO;

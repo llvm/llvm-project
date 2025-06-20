@@ -18,9 +18,8 @@ class SettingsUseSourceCacheTestCase(TestBase):
         self.set_use_source_cache_and_test(False)
 
     @skipIf(hostoslist=no_match(["windows"]))
-    @skipIf(oslist=["windows"], archs=["aarch64"])  # Fails on windows 11
     def test_set_use_source_cache_true(self):
-        """Test that after 'set use-source-cache false', files are locked."""
+        """Test that after 'set use-source-cache true', files are locked."""
         self.set_use_source_cache_and_test(True)
 
     def set_use_source_cache_and_test(self, is_cache_enabled):
@@ -46,23 +45,27 @@ class SettingsUseSourceCacheTestCase(TestBase):
         # Show the source file contents to make sure LLDB loads src file.
         self.runCmd("source list")
 
-        # Try deleting the source file.
-        is_file_removed = self.removeFile(src)
+        # Try overwriting the source file.
+        is_file_overwritten = self.overwriteFile(src)
 
         if is_cache_enabled:
             self.assertFalse(
-                is_file_removed, "Source cache is enabled, but delete file succeeded"
+                is_file_overwritten,
+                "Source cache is enabled, but writing to file succeeded",
             )
 
         if not is_cache_enabled:
             self.assertTrue(
-                is_file_removed, "Source cache is disabled, but delete file failed"
+                is_file_overwritten,
+                "Source cache is disabled, but writing to file failed",
             )
 
-    def removeFile(self, src):
-        """Remove file and return true iff file was successfully removed."""
+    def overwriteFile(self, src):
+        """Write to file and return true iff file was successfully written."""
         try:
-            os.remove(src)
+            f = open(src, "w")
+            f.writelines(["// hello world\n"])
+            f.close()
             return True
         except Exception:
             return False

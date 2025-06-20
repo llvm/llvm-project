@@ -21,6 +21,7 @@ using namespace test;
 
 //===----------------------------------------------------------------------===//
 // Parsing
+//===----------------------------------------------------------------------===//
 
 static ParseResult parseCustomOptionalOperand(
     OpAsmParser &parser,
@@ -155,6 +156,7 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
 
 //===----------------------------------------------------------------------===//
 // Printing
+//===----------------------------------------------------------------------===//
 
 static void printCustomOptionalOperand(OpAsmPrinter &printer, Operation *,
                                        Value optOperand) {
@@ -280,7 +282,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
   p << " \"" << llvm::encodeBase64(getB64()) << "\"";
 }
 
-::mlir::LogicalResult FormatInferType2Op::inferReturnTypes(
+::llvm::LogicalResult FormatInferType2Op::inferReturnTypes(
     ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
     OpaqueProperties properties, ::mlir::RegionRange regions,
@@ -291,6 +293,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
 
 //===----------------------------------------------------------------------===//
 // Test WrapRegionOp - wrapping op exercising `parseGenericOperation()`.
+//===----------------------------------------------------------------------===//
 
 ParseResult WrappingRegionOp::parse(OpAsmParser &parser,
                                     OperationState &result) {
@@ -413,7 +416,7 @@ void PrettyPrintedRegionOp::print(OpAsmPrinter &p) {
   // of inner-op), then we can print the entire region in a succinct way.
   // Here we assume that the prototype of "test.special.op" can be trivially
   // derived while parsing it back.
-  if (innerOp.getName().getStringRef().equals("test.special.op")) {
+  if (innerOp.getName().getStringRef() == "test.special.op") {
     p << " start test.special.op end";
   } else {
     p << " (";
@@ -482,6 +485,25 @@ static ParseResult parseOptionalLoc(OpAsmParser &p, Attribute &loc) {
 
 static void printOptionalLoc(OpAsmPrinter &p, Operation *op, Attribute loc) {
   p.printOptionalLocationSpecifier(cast<LocationAttr>(loc));
+}
+
+//===----------------------------------------------------------------------===//
+// ParseCustomOperationNameAPI
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseCustomOperationNameEntry(OpAsmParser &p,
+                                                 Attribute &name) {
+  FailureOr<OperationName> opName = p.parseCustomOperationName();
+  if (failed(opName))
+    return ParseResult::failure();
+
+  name = p.getBuilder().getStringAttr(opName->getStringRef());
+  return ParseResult::success();
+}
+
+static void printCustomOperationNameEntry(OpAsmPrinter &p, Operation *op,
+                                          Attribute name) {
+  p << cast<StringAttr>(name).getValue();
 }
 
 #define GET_OP_CLASSES

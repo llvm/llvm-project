@@ -1,6 +1,7 @@
 {
   "DisplayName": "tvOS 15.0",
   "Version": "15.0",
+  "CanonicalName": "appletvos15.0",
   "MaximumDeploymentTarget": "15.0.99",
   "PropertyConditionFallbackNames": [],
   "VersionMap": {

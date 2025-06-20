@@ -135,6 +135,40 @@ static cl::opt<unsigned>
                                "(instructions per cycle)"),
                       cl::cat(ToolOptions), cl::init(0));
 
+static cl::opt<unsigned>
+    CallLatency("call-latency", cl::Hidden,
+                cl::desc("Number of cycles to assume for a call instruction"),
+                cl::cat(ToolOptions), cl::init(100U));
+
+enum class SkipType { NONE, LACK_SCHED, PARSE_FAILURE, ANY_FAILURE };
+
+static cl::opt<enum SkipType> SkipUnsupportedInstructions(
+    "skip-unsupported-instructions",
+    cl::desc("Force analysis to continue in the presence of unsupported "
+             "instructions"),
+    cl::values(
+        clEnumValN(SkipType::NONE, "none",
+                   "Exit with an error when an instruction is unsupported for "
+                   "any reason (default)"),
+        clEnumValN(
+            SkipType::LACK_SCHED, "lack-sched",
+            "Skip instructions on input which lack scheduling information"),
+        clEnumValN(
+            SkipType::PARSE_FAILURE, "parse-failure",
+            "Skip lines on the input which fail to parse for any reason"),
+        clEnumValN(SkipType::ANY_FAILURE, "any",
+                   "Skip instructions or lines on input which are unsupported "
+                   "for any reason")),
+    cl::init(SkipType::NONE), cl::cat(ViewOptions));
+
+bool shouldSkip(enum SkipType skipType) {
+  if (SkipUnsupportedInstructions == SkipType::NONE)
+    return false;
+  if (SkipUnsupportedInstructions == SkipType::ANY_FAILURE)
+    return true;
+  return skipType == SkipUnsupportedInstructions;
+}
+
 static cl::opt<bool>
     PrintRegisterFileStats("register-file-stats",
                            cl::desc("Print register file statistics"),
@@ -191,10 +225,29 @@ static cl::opt<unsigned> StoreQueueSize("squeue",
                                         cl::desc("Size of the store queue"),
                                         cl::cat(ToolOptions), cl::init(0));
 
-static cl::opt<bool>
-    PrintInstructionTables("instruction-tables",
-                           cl::desc("Print instruction tables"),
-                           cl::cat(ToolOptions), cl::init(false));
+enum class InstructionTablesType { NONE, NORMAL, FULL };
+
+static cl::opt<enum InstructionTablesType> InstructionTablesOption(
+    "instruction-tables", cl::desc("Print instruction tables"),
+    cl::values(clEnumValN(InstructionTablesType::NONE, "none",
+                          "Do not print instruction tables"),
+               clEnumValN(InstructionTablesType::NORMAL, "normal",
+                          "Print instruction tables"),
+               clEnumValN(InstructionTablesType::NORMAL, "", ""),
+               clEnumValN(InstructionTablesType::FULL, "full",
+                          "Print instruction tables with additional"
+                          " information: bypass latency, LLVM opcode,"
+                          " used resources")),
+    cl::cat(ToolOptions), cl::init(InstructionTablesType::NONE),
+    cl::ValueOptional);
+
+static bool shouldPrintInstructionTables(enum InstructionTablesType ITType) {
+  return InstructionTablesOption == ITType;
+}
+
+static bool shouldPrintInstructionTables() {
+  return !shouldPrintInstructionTables(InstructionTablesType::NONE);
+}
 
 static cl::opt<bool> PrintInstructionInfoView(
     "instruction-info",
@@ -235,11 +288,6 @@ static cl::opt<bool> DisableInstrumentManager(
     "disable-im",
     cl::desc("Disable instrumentation manager (use the default class which "
              "ignores instruments.)."),
-    cl::cat(ViewOptions), cl::init(false));
-
-static cl::opt<bool> SkipUnsupportedInstructions(
-    "skip-unsupported-instructions",
-    cl::desc("Make unsupported instruction errors into warnings."),
     cl::cat(ViewOptions), cl::init(false));
 
 namespace {
@@ -406,8 +454,6 @@ int main(int argc, char **argv) {
   // Tell SrcMgr about this buffer, which is what the parser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
 
-  std::unique_ptr<buffer_ostream> BOS;
-
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 
@@ -440,7 +486,8 @@ int main(int argc, char **argv) {
   mca::AsmAnalysisRegionGenerator CRG(*TheTarget, SrcMgr, ACtx, *MAI, *STI,
                                       *MCII);
   Expected<const mca::AnalysisRegions &> RegionsOrErr =
-      CRG.parseAnalysisRegions(std::move(IPtemp));
+      CRG.parseAnalysisRegions(std::move(IPtemp),
+                               shouldSkip(SkipType::PARSE_FAILURE));
   if (!RegionsOrErr) {
     if (auto Err =
             handleErrors(RegionsOrErr.takeError(), [](const StringError &E) {
@@ -482,7 +529,8 @@ int main(int argc, char **argv) {
   mca::AsmInstrumentRegionGenerator IRG(*TheTarget, SrcMgr, ICtx, *MAI, *STI,
                                         *MCII, *IM);
   Expected<const mca::InstrumentRegions &> InstrumentRegionsOrErr =
-      IRG.parseInstrumentRegions(std::move(IPtemp));
+      IRG.parseInstrumentRegions(std::move(IPtemp),
+                                 shouldSkip(SkipType::PARSE_FAILURE));
   if (!InstrumentRegionsOrErr) {
     if (auto Err = handleErrors(InstrumentRegionsOrErr.takeError(),
                                 [](const StringError &E) {
@@ -542,7 +590,7 @@ int main(int argc, char **argv) {
   }
 
   // Create an instruction builder.
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, CallLatency);
 
   // Create a context to control ownership of the pipeline hardware.
   mca::Context MCA(*MRI, *STI);
@@ -593,7 +641,7 @@ int main(int argc, char **argv) {
                 [&IP, &STI](const mca::InstructionError<MCInst> &IE) {
                   std::string InstructionStr;
                   raw_string_ostream SS(InstructionStr);
-                  if (SkipUnsupportedInstructions)
+                  if (shouldSkip(SkipType::LACK_SCHED))
                     WithColor::warning()
                         << IE.Message
                         << ", skipping with -skip-unsupported-instructions, "
@@ -601,7 +649,8 @@ int main(int argc, char **argv) {
                   else
                     WithColor::error()
                         << IE.Message
-                        << ", use -skip-unsupported-instructions to ignore.\n";
+                        << ", use -skip-unsupported-instructions=lack-sched to "
+                           "ignore these on the input.\n";
                   IP->printInst(&IE.Inst, 0, "", *STI, SS);
                   SS.flush();
                   WithColor::note()
@@ -610,7 +659,7 @@ int main(int argc, char **argv) {
           // Default case.
           WithColor::error() << toString(std::move(NewE));
         }
-        if (SkipUnsupportedInstructions) {
+        if (shouldSkip(SkipType::LACK_SCHED)) {
           DroppedInsts.insert(&MCI);
           continue;
         }
@@ -630,9 +679,9 @@ int main(int argc, char **argv) {
     NonEmptyRegions++;
 
     mca::CircularSourceMgr S(LoweredSequence,
-                             PrintInstructionTables ? 1 : Iterations);
+                             shouldPrintInstructionTables() ? 1 : Iterations);
 
-    if (PrintInstructionTables) {
+    if (shouldPrintInstructionTables()) {
       //  Create a pipeline, stages, and a printer.
       auto P = std::make_unique<mca::Pipeline>();
       P->appendStage(std::make_unique<mca::EntryStage>(S));
@@ -648,10 +697,14 @@ int main(int argc, char **argv) {
       if (PrintInstructionInfoView) {
         Printer.addView(std::make_unique<mca::InstructionInfoView>(
             *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-            ShowBarriers, *IM, InstToInstruments));
+            ShowBarriers,
+            shouldPrintInstructionTables(InstructionTablesType::FULL), *IM,
+            InstToInstruments));
       }
-      Printer.addView(
-          std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
+
+      if (PrintResourcePressureView)
+        Printer.addView(
+            std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
 
       if (!runPipeline(*P))
         return 1;
@@ -725,7 +778,7 @@ int main(int argc, char **argv) {
     if (PrintInstructionInfoView)
       Printer.addView(std::make_unique<mca::InstructionInfoView>(
           *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-          ShowBarriers, *IM, InstToInstruments));
+          ShowBarriers, /*ShouldPrintFullInfo=*/false, *IM, InstToInstruments));
 
     // Fetch custom Views that are to be placed after the InstructionInfoView.
     // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line

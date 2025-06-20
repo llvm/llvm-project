@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-process-unprofitable -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-process-unprofitable -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; llvm.org/PR25412
 ; %synthgep caused %gep to be synthesized in subregion_if which was reused for

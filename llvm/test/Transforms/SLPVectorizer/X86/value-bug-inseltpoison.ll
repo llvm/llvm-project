@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; as elements of the vectorized tree.
 ; PR19621
 
-define void @test() {
+define void @test(i1 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb279:
 ; CHECK-NEXT:    br label [[BB283:%.*]]
@@ -22,13 +22,13 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], undef
 ; CHECK-NEXT:    br label [[BB21_I:%.*]]
 ; CHECK:       bb21.i:
-; CHECK-NEXT:    br i1 undef, label [[BB22_I:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 %arg, label [[BB22_I:%.*]], label [[EXIT]]
 ; CHECK:       bb22.i:
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> undef, [[TMP4]]
 ; CHECK-NEXT:    br label [[BB32_I:%.*]]
 ; CHECK:       bb32.i:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ [[TMP5]], [[BB22_I]] ], [ zeroinitializer, [[BB32_I]] ]
-; CHECK-NEXT:    br i1 undef, label [[BB32_I]], label [[BB21_I]]
+; CHECK-NEXT:    br i1 %arg, label [[BB32_I]], label [[BB21_I]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], <double undef, double 0.000000e+00>
@@ -57,7 +57,7 @@ bb284:
   br label %bb21.i
 
 bb21.i:
-  br i1 undef, label %bb22.i, label %exit
+  br i1 %arg, label %bb22.i, label %exit
 
 bb22.i:
   %tmp24.i = fadd double undef, %tmp9.i
@@ -67,7 +67,7 @@ bb22.i:
 bb32.i:
   %xs.0.i = phi double [ %tmp24.i, %bb22.i ], [ 0.000000e+00, %bb32.i ]
   %ys.0.i = phi double [ %tmp26.i, %bb22.i ], [ 0.000000e+00, %bb32.i ]
-  br i1 undef, label %bb32.i, label %bb21.i
+  br i1 %arg, label %bb32.i, label %bb21.i
 
 exit:
   %tmp303 = fpext float %Av.sroa.0.0 to double

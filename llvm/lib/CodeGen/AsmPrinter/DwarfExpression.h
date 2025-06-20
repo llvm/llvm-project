@@ -31,67 +31,6 @@ class DIELoc;
 class TargetRegisterInfo;
 class MachineLocation;
 
-/// Holds a DIExpression and keeps track of how many operands have been consumed
-/// so far.
-class DIExpressionCursor {
-  DIExpression::expr_op_iterator Start, End;
-
-public:
-  DIExpressionCursor(const DIExpression *Expr) {
-    if (!Expr) {
-      assert(Start == End);
-      return;
-    }
-    Start = Expr->expr_op_begin();
-    End = Expr->expr_op_end();
-  }
-
-  DIExpressionCursor(ArrayRef<uint64_t> Expr)
-      : Start(Expr.begin()), End(Expr.end()) {}
-
-  DIExpressionCursor(const DIExpressionCursor &) = default;
-
-  /// Consume one operation.
-  std::optional<DIExpression::ExprOperand> take() {
-    if (Start == End)
-      return std::nullopt;
-    return *(Start++);
-  }
-
-  /// Consume N operations.
-  void consume(unsigned N) { std::advance(Start, N); }
-
-  /// Return the current operation.
-  std::optional<DIExpression::ExprOperand> peek() const {
-    if (Start == End)
-      return std::nullopt;
-    return *(Start);
-  }
-
-  /// Return the next operation.
-  std::optional<DIExpression::ExprOperand> peekNext() const {
-    if (Start == End)
-      return std::nullopt;
-
-    auto Next = Start.getNext();
-    if (Next == End)
-      return std::nullopt;
-
-    return *Next;
-  }
-
-  /// Determine whether there are any operations left in this expression.
-  operator bool() const { return Start != End; }
-
-  DIExpression::expr_op_iterator begin() const { return Start; }
-  DIExpression::expr_op_iterator end() const { return End; }
-
-  /// Retrieve the fragment information, if any.
-  std::optional<DIExpression::FragmentInfo> getFragmentInfo() const {
-    return DIExpression::getFragmentInfo(Start, End);
-  }
-};
-
 /// Base class containing the logic for constructing DWARF expressions
 /// independently of whether they are emitted into a DIE or into a .debug_loc
 /// entry.
@@ -106,17 +45,17 @@ class DwarfExpression {
 protected:
   /// Holds information about all subregisters comprising a register location.
   struct Register {
-    int DwarfRegNo;
+    int64_t DwarfRegNo;
     unsigned SubRegSize;
     const char *Comment;
 
     /// Create a full register, no extra DW_OP_piece operators necessary.
-    static Register createRegister(int RegNo, const char *Comment) {
+    static Register createRegister(int64_t RegNo, const char *Comment) {
       return {RegNo, 0, Comment};
     }
 
     /// Create a subregister that needs a DW_OP_piece operator with SizeInBits.
-    static Register createSubRegister(int RegNo, unsigned SizeInBits,
+    static Register createSubRegister(int64_t RegNo, unsigned SizeInBits,
                                       const char *Comment) {
       return {RegNo, SizeInBits, Comment};
     }
@@ -222,13 +161,13 @@ protected:
 
   /// Emit a DW_OP_reg operation. Note that this is only legal inside a DWARF
   /// register location description.
-  void addReg(int DwarfReg, const char *Comment = nullptr);
+  void addReg(int64_t DwarfReg, const char *Comment = nullptr);
 
   /// Emit a DW_OP_breg operation.
-  void addBReg(int DwarfReg, int Offset);
+  void addBReg(int64_t DwarfReg, int64_t Offset);
 
   /// Emit DW_OP_fbreg <Offset>.
-  void addFBReg(int Offset);
+  void addFBReg(int64_t Offset);
 
   /// Emit a partial DWARF register operation.
   ///

@@ -107,8 +107,8 @@ define i32 @sdiv_abs_nsw(i32 %x) {
 
 define <4 x i32> @sdiv_abs_nsw_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @sdiv_abs_nsw_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> splat (i32 1), <4 x i32> splat (i32 -1)
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %x, i1 true)

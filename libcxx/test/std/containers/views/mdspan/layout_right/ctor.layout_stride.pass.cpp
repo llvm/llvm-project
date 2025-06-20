@@ -23,10 +23,11 @@
 //
 // Effects: Direct-non-list-initializes extents_ with other.extents().
 
+#include <array>
+#include <cassert>
+#include <cstddef>
 #include <mdspan>
 #include <type_traits>
-#include <cassert>
-#include <limits>
 
 #include "test_macros.h"
 

@@ -67,31 +67,31 @@
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 //
 // Target defaults for -fmath-errno (reusing the above checks).
-// RUN: %clang -### -target i686-unknown-linux -c %s 2>&1 \
+// RUN: %clang -### --target=i686-unknown-linux -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
 // RUN: %clang -### -target i686-apple-darwin -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-freebsd -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-freebsd -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-netbsd -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-netbsd -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-openbsd -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-openbsd -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### --target=x86_64-unknown-haiku -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-dragonfly -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-dragonfly -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-fuchsia -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-fuchsia -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-linux-android -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-android -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-linux-musl -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-musl -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -nogpuinc -nogpulib -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target amdgcn-amd-amdpal -c %s 2>&1 \
+// RUN: %clang -### --target=amdgcn-amd-amdpal -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target amdgcn-mesa-mesa3d -c %s 2>&1   \
+// RUN: %clang -### --target=amdgcn-mesa-mesa3d -c %s 2>&1   \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 //
 // Check that -ffast-math disables -fmath-errno, and -fno-fast-math merely
@@ -103,9 +103,9 @@
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### -ffast-math -fmath-errno -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
-// RUN: %clang -### -target i686-unknown-linux -fno-fast-math -c %s 2>&1 \
+// RUN: %clang -### --target=i686-unknown-linux -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
-// RUN: %clang -### -target i686-unknown-linux -fno-math-errno -fno-fast-math -c %s 2>&1 \
+// RUN: %clang -### --target=i686-unknown-linux -fno-math-errno -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
 // RUN: %clang -### -target i686-apple-darwin -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
@@ -157,7 +157,7 @@
 
 // FIXME: This case leaves nnan and ninf. That seems wrong!
 // RUN: %clang -### -ffast-math -fno-unsafe-math-optimizations -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,NO-REASSOC,NO-NSZ,NO-ARCP,NO-AFN,NOROUNDING %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,NO-REASSOC,NO-NSZ,NO-ARCP,NO-AFN,NOROUNDING,NO-TRAPPING %s
 // RUN: %clang -### -ffast-math -fmath-errno -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,ERRNO,NOROUNDING %s
 // RUN: %clang -### -ffast-math -fno-associative-math -c %s 2>&1 \
@@ -209,7 +209,7 @@
 
 // RUN: %clang -### -funsafe-math-optimizations -fno-unsafe-math-optimizations \
 // RUN:     -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,NO-ARCP,NO-NSZ,NO-AFN %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,NO-ARCP,NO-NSZ,NO-AFN,NO-TRAPPING %s
 // RUN: %clang -### -ffast-math -fno-associative-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,ARCP,NSZ,AFN %s
 
@@ -224,9 +224,8 @@
 // RUN: %clang -### -ffast-math -ftrapping-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,ARCP,NSZ,AFN,TRAPPING %s
 
-// FIXME: -fno-unsafe-math-optimizations shouldn't imply trapping math
 // RUN: %clang -### -ffast-math -fno-unsafe-math-optimizations -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,NO-ARCP,NO-NSZ,NO-AFN,TRAPPING %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,NO-ARCP,NO-NSZ,NO-AFN,NO-TRAPPING %s
 
 // Reassociate is allowed because it does not require reciprocal-math.
 

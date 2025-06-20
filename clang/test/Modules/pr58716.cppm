@@ -7,7 +7,7 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -triple=x86_64-linux-gnu -std=c++20 -emit-module-interface %t/m.cppm -o %t/m.pcm
-// RUN: %clang_cc1 -triple=x86_64-linux-gnu -std=c++20 %t/m.pcm -S -emit-llvm -o - | FileCheck %t/m.cppm
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -std=c++20 %t/m.pcm -emit-llvm -o - | FileCheck %t/m.cppm
 
 //--- m.cppm
 module;

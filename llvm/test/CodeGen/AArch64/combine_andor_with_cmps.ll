@@ -31,9 +31,6 @@ define i1 @test2(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %or1
 }
 
-; It is illegal to apply the optimization in the following two test cases
-; because FMINNUM_IEEE and FMAXNUM_IEEE are not supported.
-
 define i1 @test3(float %arg1, float %arg2, float %arg3) {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
@@ -41,8 +38,8 @@ define i1 @test3(float %arg1, float %arg2, float %arg3) {
 ; CHECK-NEXT:    fadd s0, s0, s3
 ; CHECK-NEXT:    fmov s3, #2.00000000
 ; CHECK-NEXT:    fadd s1, s1, s3
-; CHECK-NEXT:    fcmp s1, s2
-; CHECK-NEXT:    fccmp s0, s2, #0, lt
+; CHECK-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NEXT:    fcmp s0, s2
 ; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
   %add1 = fadd nnan float %arg1, 1.0
@@ -60,8 +57,8 @@ define i1 @test4(float %arg1, float %arg2, float %arg3) {
 ; CHECK-NEXT:    fadd s0, s0, s3
 ; CHECK-NEXT:    fmov s3, #2.00000000
 ; CHECK-NEXT:    fadd s1, s1, s3
-; CHECK-NEXT:    fcmp s1, s2
-; CHECK-NEXT:    fccmp s0, s2, #4, gt
+; CHECK-NEXT:    fminnm s0, s0, s1
+; CHECK-NEXT:    fcmp s0, s2
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
   %add1 = fadd nnan float %arg1, 1.0

@@ -14,15 +14,18 @@
 // them falling through into each other and don't want the linker to
 // accidentally split them up, garbage collect, or reorder them.
 //
-// The entry points are grouped up into 2s for rv64 and 4s for rv32 since this
-// is the minimum grouping which will maintain the required 16-byte stack
-// alignment.
+// For the conventional ABIs, entry points are grouped up into 2s for rv64 and
+// 4s for rv32 since this is the minimum grouping which will maintain the
+// required 16-byte stack alignment.
+//
+// For the ilp32e/lp64e abis, entry points are grouped into 1s, since this is
+// the minimum grouping which will maintain the required 4-byte stack alignment.
 
   .text
 
 #if __riscv_xlen == 32
 
-#ifndef __riscv_32e
+#ifndef __riscv_abi_rve
 
   .globl  __riscv_restore_12
   .type   __riscv_restore_12,@function
@@ -92,24 +95,30 @@ __riscv_restore_0:
 
   .globl  __riscv_restore_2
   .type   __riscv_restore_2,@function
+__riscv_restore_2:
+  lw      s1, 0(sp)
+  addi    sp, sp, 4
+  // fallthrough into __riscv_restore_1/0
+
   .globl  __riscv_restore_1
   .type   __riscv_restore_1,@function
+__riscv_restore_1:
+  lw      s0, 0(sp)
+  addi    sp, sp, 4
+  // fallthrough into __riscv_restore_0
+
   .globl  __riscv_restore_0
   .type   __riscv_restore_0,@function
-__riscv_restore_2:
-__riscv_restore_1:
 __riscv_restore_0:
-  lw      s1,  0(sp)
-  lw      s0,  4(sp)
-  lw      ra,  8(sp)
-  addi    sp, sp, 12
+  lw      ra, 0(sp)
+  addi    sp, sp, 4
   ret
 
 #endif
 
 #elif __riscv_xlen == 64
 
-#ifndef __riscv_64e
+#ifndef __riscv_abi_rve
 
   .globl  __riscv_restore_12
   .type   __riscv_restore_12,@function
@@ -188,17 +197,23 @@ __riscv_restore_0:
 
   .globl  __riscv_restore_2
   .type   __riscv_restore_2,@function
+__riscv_restore_2:
+  ld      s1, 0(sp)
+  addi    sp, sp, 8
+  // fallthrough into __riscv_restore_1/0
+
   .globl  __riscv_restore_1
   .type   __riscv_restore_1,@function
+__riscv_restore_1:
+  ld      s0, 0(sp)
+  addi    sp, sp, 8
+  // fallthrough into __riscv_restore_0
+
   .globl  __riscv_restore_0
   .type   __riscv_restore_0,@function
-__riscv_restore_2:
-__riscv_restore_1:
 __riscv_restore_0:
-  ld      s1,  0(sp)
-  ld      s0,  8(sp)
-  ld      ra,  16(sp)
-  addi    sp, sp, 24
+  ld      ra, 0(sp)
+  addi    sp, sp, 8
   ret
 
 #endif

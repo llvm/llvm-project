@@ -32,13 +32,13 @@ s_mov_b32 s
 // Out of range register
 
 s_mov_b32 s102, 1
-// VI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// VI: :[[@LINE-1]]:{{[0-9]+}}: error: s102 register not available on this GPU
 
 s_mov_b32 s103, 1
-// VI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// VI: :[[@LINE-1]]:{{[0-9]+}}: error: s103 register not available on this GPU
 
 s_mov_b64 s[102:103], -1
-// VI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// VI: :[[@LINE-1]]:{{[0-9]+}}: error: s[102:103] register not available on this GPU
 
 s_setpc_b64 0
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

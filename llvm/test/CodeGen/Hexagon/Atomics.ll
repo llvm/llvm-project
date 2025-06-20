@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=hexagon
+; RUN: llc < %s -mtriple=hexagon
 
 @si = common global i32 0, align 4
 @sll = common global i64 0, align 8

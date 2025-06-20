@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly \
-; RUN: -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly \
+; RUN: -passes=polly-codegen -S < %s | FileCheck %s
 
 ; This test ensures that the expression N + 1 that is stored in the phi-node
-; alloca, is directly computed and not incorrectly transfered through memory.
+; alloca, is directly computed and not incorrectly transferred through memory.
 
 ; CHECK: store i64 [[REG:%.*]], ptr %res.phiops
 ; CHECK: [[REG]] = add i64 %N, 1

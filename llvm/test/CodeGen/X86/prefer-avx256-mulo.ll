@@ -17,7 +17,7 @@ define <16 x i1> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX256-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX256-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm2
 ; AVX256-NEXT:    vpcmpeqb %xmm1, %xmm2, %xmm1
-; AVX256-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
+; AVX256-NEXT:    vpternlogq {{.*#+}} xmm1 = ~xmm1
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; AVX256-NEXT:    vpmovsxbd %xmm2, %ymm2
 ; AVX256-NEXT:    vptestmd %ymm2, %ymm2, %k1
@@ -46,7 +46,7 @@ define <16 x i1> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm2, %k1
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512-NEXT:    vpmovdb %zmm0, (%rdi)
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -69,7 +69,7 @@ define <16 x i1> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX256-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
 ; AVX256-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX256-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
-; AVX256-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
+; AVX256-NEXT:    vpternlogq {{.*#+}} xmm1 = ~xmm1
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; AVX256-NEXT:    vpmovsxbd %xmm2, %ymm2
 ; AVX256-NEXT:    vptestmd %ymm2, %ymm2, %k1
@@ -98,7 +98,7 @@ define <16 x i1> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512-NEXT:    vpmovdb %zmm0, (%rdi)
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

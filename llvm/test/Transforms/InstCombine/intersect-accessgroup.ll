@@ -12,12 +12,9 @@
 ; 				}
 ; }
 ;
-; Check for correctly merging access group metadata for instcombine
-; (only common loops are parallel == intersection)
-; Note that combined load would be parallel to loop !16 since both
-; origin loads are parallel to it, but it references two access groups
-; (!8 and !9), neither of which contain both loads. As such, the
-; information that the combined load is parallel to !16 is lost.
+; Check that the original access group on %0 is preserved when replacing uses
+; of %1 with it, as %0 is not moved and if %0 would not be parallel in the
+; original loop it would be UB.
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -107,7 +104,9 @@ for.end32:
 ; CHECK: load double, {{.*}} !llvm.access.group ![[ACCESSGROUP_0:[0-9]+]]
 ; CHECK: br label %for.cond14, !llvm.loop ![[LOOP_4:[0-9]+]]
 
-; CHECK: ![[ACCESSGROUP_0]] = distinct !{}
+; CHECK: ![[ACCESSGROUP_0]] = !{![[G1:[0-9]+]], ![[G2:[0-9]+]]}
+; CHECK: ![[G1]] = distinct !{}
+; CHECK: ![[G2]] = distinct !{}
 
 ; CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[PARALLEL_ACCESSES_5:[0-9]+]]}
-; CHECK: ![[PARALLEL_ACCESSES_5]] = !{!"llvm.loop.parallel_accesses", ![[ACCESSGROUP_0]]}
+; CHECK: ![[PARALLEL_ACCESSES_5]] = !{!"llvm.loop.parallel_accesses", ![[G1]]}

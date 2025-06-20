@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define ptr @f() {
 ; CHECK-LABEL: define ptr @f() {
-; CHECK-NEXT:    ret ptr getelementptr ([3 x ptr], ptr @b, i64 0, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @b, i64 8)
 ;
   ret ptr getelementptr ([3 x ptr], ptr @b, i64 0, i64 1)
 }

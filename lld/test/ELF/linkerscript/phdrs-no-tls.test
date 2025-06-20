@@ -1,0 +1,32 @@
+## Test STT_TLS and relocations without PT_TLS. See also invalid/tls-symbol.s.
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: not ld.lld -T a.lds a.o
+# RUN: ld.lld -T a.lds a.o --noinhibit-exec 2>&1 | FileCheck %s --implicit-check-not=warning:
+
+# CHECK:      warning: a.o has an STT_TLS symbol but doesn't have a PT_TLS segment
+# CHECK-NEXT: warning: a.o has an STT_TLS symbol but doesn't have a PT_TLS segment
+
+#--- a.lds
+PHDRS {
+  text PT_LOAD FLAGS(5);
+  data PT_LOAD FLAGS(6);
+}
+
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .text : { *(.text .text.*) } :text
+  .data : { *(.data .data.*) } :data
+}
+
+#--- a.s
+.globl _start
+_start:
+  movl %fs:a@TPOFF, %eax
+  movl %fs:b@TPOFF, %eax
+
+.section .tbss,"awT"
+a:
+b:
+  .long 0

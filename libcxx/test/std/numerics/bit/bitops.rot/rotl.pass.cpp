@@ -15,6 +15,7 @@
 
 #include <bit>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -41,6 +42,8 @@ constexpr bool test()
     assert(std::rotl(T(max - 1), 5) == T(max - 32));
     assert(std::rotl(T(max - 1), 6) == T(max - 64));
     assert(std::rotl(T(max - 1), 7) == T(max - 128));
+    assert(std::rotl(T(max - 1), std::numeric_limits<int>::max()) ==
+           std::rotl(T(max - 1), std::numeric_limits<int>::max() % std::numeric_limits<T>::digits));
 
     assert(std::rotl(T(max - 1), -1) == T(max - highbit));
     assert(std::rotl(T(max - 1), -2) == T(max - (highbit >> 1)));
@@ -49,6 +52,8 @@ constexpr bool test()
     assert(std::rotl(T(max - 1), -5) == T(max - (highbit >> 4)));
     assert(std::rotl(T(max - 1), -6) == T(max - (highbit >> 5)));
     assert(std::rotl(T(max - 1), -7) == T(max - (highbit >> 6)));
+    assert(std::rotl(T(max - 1), std::numeric_limits<int>::min()) ==
+           std::rotl(T(max - 1), std::numeric_limits<int>::min() % std::numeric_limits<T>::digits));
 
     assert(std::rotl(T(1), 0) == T(1));
     assert(std::rotl(T(1), 1) == T(2));

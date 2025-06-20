@@ -28,10 +28,6 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
-  case FK_PCRel_1:
-  case FK_PCRel_2:
-  case FK_PCRel_4:
-  case FK_PCRel_8:
     return Value;
   case VE::fixup_ve_hi32:
   case VE::fixup_ve_pc_hi32:
@@ -60,14 +56,11 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case FK_Data_1:
-  case FK_PCRel_1:
     return 1;
   case FK_Data_2:
-  case FK_PCRel_2:
     return 2;
     return 4;
   case FK_Data_4:
-  case FK_PCRel_4:
   case VE::fixup_ve_reflong:
   case VE::fixup_ve_srel32:
   case VE::fixup_ve_hi32:
@@ -100,9 +93,7 @@ public:
   VEAsmBackend(const Target &T)
       : MCAsmBackend(llvm::endianness::little), TheTarget(T) {}
 
-  unsigned getNumFixupKinds() const override { return VE::NumTargetFixupKinds; }
-
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[VE::NumTargetFixupKinds] = {
         // name, offset, bits, flags
         {"fixup_ve_reflong", 0, 32, 0},
@@ -126,14 +117,13 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < VE::NumTargetFixupKinds &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override {
+  bool shouldForceRelocation(const MCFixup &Fixup,
+                             const MCValue &Target) override {
     switch ((VE::Fixups)Fixup.getKind()) {
     default:
       return false;
@@ -153,16 +143,6 @@ public:
     return false;
   }
 
-  /// fixupNeedsRelaxation - Target specific predicate for whether a given
-  /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    // Not implemented yet.  For example, if we have a branch with
-    // lager than SIMM32 immediate value, we want to relaxation such
-    // branch instructions.
-    return false;
-  }
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override {
     // Aurora VE doesn't support relaxInstruction yet.
@@ -189,10 +169,9 @@ public:
   ELFVEAsmBackend(const Target &T, Triple::OSType OSType)
       : VEAsmBackend(T), OSType(OSType) {}
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  void applyFixup(const MCFragment &, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+                  uint64_t Value, bool IsResolved) override {
     Value = adjustFixupValue(Fixup.getKind(), Value);
     if (!Value)
       return; // Doesn't change encoding.

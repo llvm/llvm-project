@@ -24,13 +24,16 @@ def LLVMAddComdats : Pass<"llvm-add-comdats", "::mlir::ModuleOp"> {
   }];
 }
 
-def LLVMLegalizeForExport : Pass<"llvm-legalize-for-export"> {
+def LLVMLegalizeForExportPass : Pass<"llvm-legalize-for-export"> {
   let summary = "Legalize LLVM dialect to be convertible to LLVM IR";
-  let constructor = "::mlir::LLVM::createLegalizeForExportPass()";
+  let description = [{
+    Creates a pass that legalizes the LLVM dialect operations so that they can
+    be translated to LLVM IR.
+  }];
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
-def LLVMRequestCWrappers
+def LLVMRequestCWrappersPass
     : Pass<"llvm-request-c-wrappers", "::mlir::func::FuncOp"> {
   let summary = "Request C wrapper emission for all functions";
   let description = [{
@@ -40,33 +43,13 @@ def LLVMRequestCWrappers
     conversion of builtin functions to LLVM to avoid the attribute being
     dropped by other passes.
   }];
-  let constructor = "::mlir::LLVM::createRequestCWrappersPass()";
 }
 
-def LLVMTypeConsistency
-    : Pass<"llvm-type-consistency", "::mlir::LLVM::LLVMFuncOp"> {
-  let summary = "Rewrites to improve type consistency";
-  let description = [{
-    Set of rewrites to improve the coherency of types within an LLVM dialect
-    program. This will adjust operations operating on pointers so they interpret
-    their associated pointee type as consistently as possible.
-  }];
-  let constructor = "::mlir::LLVM::createTypeConsistencyPass()";
-
-  let options = [
-    Option<"maxVectorSplitSize", "max-vector-split-size", "unsigned",
-           /*default=*/"512",
-           "Maximum size in bits of a vector value in a load or store operation"
-           " operating on multiple elements that should still be split">,
-  ];
-}
-
-def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
+def NVVMOptimizeForTargetPass : Pass<"llvm-optimize-for-nvvm-target"> {
   let summary = "Optimize NVVM IR";
-  let constructor = "::mlir::NVVM::createOptimizeForTargetPass()";
 }
 
-def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir::ModuleOp"> {
+def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir::ModuleOp"> {
   let summary = "Materialize LLVM debug info subprogram attribute on every LLVMFuncOp";
   let description = [{
     Having a debug info subprogram attribute on a function is required for
@@ -78,7 +61,16 @@ def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir:
     line-by-line or get a backtrace with line numbers.
   }];
 
-  let constructor = "mlir::LLVM::createDIScopeForLLVMFuncOpPass()";
+  let options = [
+    Option<"emissionKind", "emission-kind", "mlir::LLVM::DIEmissionKind",
+    /*default=*/"mlir::LLVM::DIEmissionKind::LineTablesOnly", "Emission kind to generate debug info.",
+    [{::llvm::cl::values(
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::None, "None", "None"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::Full, "Full", "Full"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "LineTablesOnly (default)"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::DebugDirectivesOnly, "DebugDirectivesOnly", "DebugDirectivesOnly")
+	   )}]>,
+  ];
 }
 
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES

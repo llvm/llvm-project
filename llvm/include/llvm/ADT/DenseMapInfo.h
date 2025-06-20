@@ -23,20 +23,22 @@
 
 namespace llvm {
 
+namespace densemap::detail {
+// A bit mixer with very low latency using one multiplications and one
+// xor-shift. The constant is from splitmix64.
+inline uint64_t mix(uint64_t x) {
+  x *= 0xbf58476d1ce4e5b9u;
+  x ^= x >> 31;
+  return x;
+}
+} // namespace densemap::detail
+
 namespace detail {
 
 /// Simplistic combination of 32-bit hash values into 32-bit hash values.
-static inline unsigned combineHashValue(unsigned a, unsigned b) {
-  uint64_t key = (uint64_t)a << 32 | (uint64_t)b;
-  key += ~(key << 32);
-  key ^= (key >> 22);
-  key += ~(key << 13);
-  key ^= (key >> 8);
-  key += (key << 3);
-  key ^= (key >> 15);
-  key += ~(key << 27);
-  key ^= (key >> 31);
-  return (unsigned)key;
+inline unsigned combineHashValue(unsigned a, unsigned b) {
+  uint64_t x = (uint64_t)a << 32 | (uint64_t)b;
+  return (unsigned)densemap::detail::mix(x);
 }
 
 } // end namespace detail
@@ -137,7 +139,10 @@ template<> struct DenseMapInfo<unsigned long> {
   static inline unsigned long getTombstoneKey() { return ~0UL - 1L; }
 
   static unsigned getHashValue(const unsigned long& Val) {
-    return (unsigned)(Val * 37UL);
+    if constexpr (sizeof(Val) == 4)
+      return DenseMapInfo<unsigned>::getHashValue(Val);
+    else
+      return densemap::detail::mix(Val);
   }
 
   static bool isEqual(const unsigned long& LHS, const unsigned long& RHS) {
@@ -151,7 +156,7 @@ template<> struct DenseMapInfo<unsigned long long> {
   static inline unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
 
   static unsigned getHashValue(const unsigned long long& Val) {
-    return (unsigned)(Val * 37ULL);
+    return densemap::detail::mix(Val);
   }
 
   static bool isEqual(const unsigned long long& LHS,
@@ -297,6 +302,24 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   }
 };
 
+// Provide DenseMapInfo for enum classes.
+template <typename Enum>
+struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
+  using UnderlyingType = std::underlying_type_t<Enum>;
+  using Info = DenseMapInfo<UnderlyingType>;
+
+  static Enum getEmptyKey() { return static_cast<Enum>(Info::getEmptyKey()); }
+
+  static Enum getTombstoneKey() {
+    return static_cast<Enum>(Info::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const Enum &Val) {
+    return Info::getHashValue(static_cast<UnderlyingType>(Val));
+  }
+
+  static bool isEqual(const Enum &LHS, const Enum &RHS) { return LHS == RHS; }
+};
 } // end namespace llvm
 
 #endif // LLVM_ADT_DENSEMAPINFO_H

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s
+; RUN: llc -mtriple=hexagon -O3 < %s
 ; REQUIRES: asserts
 
 ; Test that we don't assert because of requiring too many scavenger spill

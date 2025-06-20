@@ -213,29 +213,29 @@ define void @add32_reject() nounwind {
 ; RV32I-LABEL: add32_reject:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, %hi(ga)
-; RV32I-NEXT:    lw a1, %lo(ga)(a0)
-; RV32I-NEXT:    lui a2, %hi(gb)
-; RV32I-NEXT:    lw a3, %lo(gb)(a2)
+; RV32I-NEXT:    lui a1, %hi(gb)
+; RV32I-NEXT:    lw a2, %lo(ga)(a0)
+; RV32I-NEXT:    lw a3, %lo(gb)(a1)
 ; RV32I-NEXT:    lui a4, 1
 ; RV32I-NEXT:    addi a4, a4, -1096
-; RV32I-NEXT:    add a1, a1, a4
+; RV32I-NEXT:    add a2, a2, a4
 ; RV32I-NEXT:    add a3, a3, a4
-; RV32I-NEXT:    sw a1, %lo(ga)(a0)
-; RV32I-NEXT:    sw a3, %lo(gb)(a2)
+; RV32I-NEXT:    sw a2, %lo(ga)(a0)
+; RV32I-NEXT:    sw a3, %lo(gb)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add32_reject:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, %hi(ga)
-; RV64I-NEXT:    lw a1, %lo(ga)(a0)
-; RV64I-NEXT:    lui a2, %hi(gb)
-; RV64I-NEXT:    lw a3, %lo(gb)(a2)
+; RV64I-NEXT:    lui a1, %hi(gb)
+; RV64I-NEXT:    lw a2, %lo(ga)(a0)
+; RV64I-NEXT:    lw a3, %lo(gb)(a1)
 ; RV64I-NEXT:    lui a4, 1
 ; RV64I-NEXT:    addi a4, a4, -1096
-; RV64I-NEXT:    add a1, a1, a4
+; RV64I-NEXT:    add a2, a2, a4
 ; RV64I-NEXT:    add a3, a3, a4
-; RV64I-NEXT:    sw a1, %lo(ga)(a0)
-; RV64I-NEXT:    sw a3, %lo(gb)(a2)
+; RV64I-NEXT:    sw a2, %lo(ga)(a0)
+; RV64I-NEXT:    sw a3, %lo(gb)(a1)
 ; RV64I-NEXT:    ret
   %1 = load i32, ptr @ga, align 4
   %2 = load i32, ptr @gb, align 4

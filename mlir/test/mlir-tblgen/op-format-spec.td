@@ -19,6 +19,7 @@ class TestFormat_Op<string fmt, list<Trait> traits = []>
 
 //===----------------------------------------------------------------------===//
 // attr-dict
+//===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error
 def DirectiveAttrDictValidA : TestFormat_Op<[{
@@ -30,6 +31,7 @@ def DirectiveAttrDictValidB : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // custom
+//===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error
 def DirectiveCustomValidA : TestFormat_Op<[{
@@ -50,6 +52,7 @@ def DirectiveCustomValidE : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // functional-type
+//===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error
 def DirectiveFunctionalTypeValid : TestFormat_Op<[{
@@ -58,6 +61,7 @@ def DirectiveFunctionalTypeValid : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // operands
+//===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
 def DirectiveOperandsValid : TestFormat_Op<[{
@@ -66,6 +70,7 @@ def DirectiveOperandsValid : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // regions
+//===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
 def DirectiveRegionsValid : TestFormat_Op<[{
@@ -74,6 +79,7 @@ def DirectiveRegionsValid : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // results
+//===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
 def DirectiveResultsInvalidA : TestFormat_Op<[{
@@ -82,6 +88,7 @@ def DirectiveResultsInvalidA : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // successors
+//===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
 def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
@@ -90,6 +97,7 @@ def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // type
+//===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
 def DirectiveTypeValid : TestFormat_Op<[{

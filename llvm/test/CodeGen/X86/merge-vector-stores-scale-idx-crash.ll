@@ -21,10 +21,10 @@ define void @testfn(ptr nocapture %p) {
 
 ; CHECK-LABEL: testfn_scalar
 ; CHECK: retq
-define void @testfn_scalar(ptr nocapture %j) local_unnamed_addr #0 align 2 {
+define void @testfn_scalar(ptr nocapture %j, i1 %arg) local_unnamed_addr #0 align 2 {
 entry:
   %0 = bitcast i64 undef to <2 x float>
-  br i1 undef, label %if.end, label %if.then
+  br i1 %arg, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
   unreachable

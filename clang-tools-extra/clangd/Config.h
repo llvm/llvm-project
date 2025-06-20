@@ -59,6 +59,7 @@ struct Config {
     std::optional<std::string> FixedCDBPath;
   };
 
+  enum class BuiltinHeaderPolicy { Clangd, QueryDriver };
   /// Controls how the compile command for the current file is determined.
   struct {
     /// Edits to apply to the compile command, in sequence.
@@ -66,6 +67,10 @@ struct Config {
         Edits;
     /// Where to search for compilation databases for this file's flags.
     CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, std::nullopt};
+
+    /// Whether to use clangd's own builtin headers, or ones from the system
+    /// include extractor, if available.
+    BuiltinHeaderPolicy BuiltinHeaders = BuiltinHeaderPolicy::Clangd;
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };
@@ -110,10 +115,11 @@ struct Config {
     IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;
     IncludesPolicy MissingIncludes = IncludesPolicy::None;
 
-    /// IncludeCleaner will not diagnose usages of these headers matched by
-    /// these regexes.
     struct {
+      /// IncludeCleaner will not diagnose usages of these headers matched by
+      /// these regexes.
       std::vector<std::function<bool(llvm::StringRef)>> IgnoreHeader;
+      bool AnalyzeAngledIncludes = false;
     } Includes;
   } Diagnostics;
 
@@ -123,13 +129,45 @@ struct Config {
     // declarations, always spell out the whole name (with or without leading
     // ::). All nested namespaces are affected as well.
     std::vector<std::string> FullyQualifiedNamespaces;
+
+    // List of matcher functions for inserting certain headers with <> or "".
+    std::vector<std::function<bool(llvm::StringRef)>> QuotedHeaders;
+    std::vector<std::function<bool(llvm::StringRef)>> AngledHeaders;
   } Style;
+
+  /// controls the completion options for argument lists.
+  enum class ArgumentListsPolicy {
+    /// nothing, no argument list and also NO Delimiters "()" or "<>".
+    None,
+    /// open, only opening delimiter "(" or "<".
+    OpenDelimiter,
+    /// empty pair of delimiters "()" or "<>".
+    Delimiters,
+    /// full name of both type and variable.
+    FullPlaceholders,
+  };
+
+  enum class HeaderInsertionPolicy {
+    IWYU,       // Include what you use
+    NeverInsert // Never insert headers as part of code completion
+  };
+
+  enum class CodePatternsPolicy {
+    All, // Suggest all code patterns and snippets
+    None // Suggest none of the code patterns and snippets
+  };
 
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
     /// scopes.
     bool AllScopes = true;
+    /// controls the completion options for argument lists.
+    ArgumentListsPolicy ArgumentLists = ArgumentListsPolicy::FullPlaceholders;
+    /// Controls if headers should be inserted when completions are accepted
+    HeaderInsertionPolicy HeaderInsertion = HeaderInsertionPolicy::IWYU;
+    /// Enables code patterns & snippets suggestions
+    CodePatternsPolicy CodePatterns = CodePatternsPolicy::All;
   } Completion;
 
   /// Configures hover feature.
@@ -147,6 +185,7 @@ struct Config {
     bool DeducedTypes = true;
     bool Designators = true;
     bool BlockEnd = false;
+    bool DefaultArguments = false;
     // Limit the length of type names in inlay hints. (0 means no limit)
     uint32_t TypeNameLimit = 32;
   } InlayHints;

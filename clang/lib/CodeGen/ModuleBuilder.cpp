@@ -151,7 +151,7 @@ namespace {
     void Initialize(ASTContext &Context) override {
       Ctx = &Context;
 
-      M->setTargetTriple(Ctx->getTargetInfo().getTriple().getTriple());
+      M->setTargetTriple(Ctx->getTargetInfo().getTriple());
       M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
       const auto &SDKVersion = Ctx->getTargetInfo().getSDKVersion();
       if (!SDKVersion.empty())
@@ -310,7 +310,7 @@ namespace {
       Builder->EmitTentativeDefinition(D);
     }
 
-    void CompleteExternalDeclaration(VarDecl *D) override {
+    void CompleteExternalDeclaration(DeclaratorDecl *D) override {
       Builder->EmitExternalDeclaration(D);
     }
 

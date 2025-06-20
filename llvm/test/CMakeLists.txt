@@ -1,6 +1,7 @@
 llvm_canonicalize_cmake_booleans(
   BUILD_SHARED_LIBS
   HAVE_OCAMLOPT
+  ENABLE_BACKTRACES
   LLVM_ENABLE_DIA_SDK
   LLVM_ENABLE_FFI
   LLVM_ENABLE_THREADS
@@ -24,7 +25,11 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_REVERSE_ITERATION
   LLVM_INCLUDE_DXIL_TESTS
   LLVM_TOOL_LLVM_DRIVER_BUILD
+  LLVM_INCLUDE_SPIRV_SIMULATOR_TESTS
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
+  LLVM_APPEND_VC_REV
+  LLVM_HAS_LOGF128
+  LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
   )
 
 configure_lit_site_cfg(
@@ -57,7 +62,6 @@ configure_lit_site_cfg(
 set(LLVM_TEST_DEPENDS
           BugpointPasses
           FileCheck
-          LLVMHello
           LLVMWindowsDriver
           UnitTests
           bugpoint
@@ -73,8 +77,10 @@ set(LLVM_TEST_DEPENDS
           llvm-c-test
           llvm-cat
           llvm-cfi-verify
+          llvm-cgdata
           llvm-config
           llvm-cov
+          llvm-ctxprof-util
           llvm-cvtres
           llvm-cxxdump
           llvm-cxxfilt
@@ -104,8 +110,8 @@ set(LLVM_TEST_DEPENDS
           llvm-mc
           llvm-mca
           llvm-ml
+          llvm-ml64
           llvm-modextract
-          llvm-mt
           llvm-nm
           llvm-objcopy
           llvm-objdump
@@ -167,6 +173,10 @@ if(TARGET LTO)
   set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} LTO)
 endif()
 
+if (TARGET llvm-mt)
+  list(APPEND LLVM_TEST_DEPENDS llvm-mt)
+endif ()
+
 if(LLVM_BUILD_EXAMPLES)
   list(APPEND LLVM_TEST_DEPENDS
     Kaleidoscope-Ch3
@@ -206,6 +216,7 @@ if(TARGET ocaml_llvm)
           ocaml_llvm_analysis
           ocaml_llvm_bitreader
           ocaml_llvm_bitwriter
+          ocaml_llvm_debuginfo
           ocaml_llvm_executionengine
           ocaml_llvm_irreader
           ocaml_llvm_linker
@@ -226,10 +237,12 @@ endif()
 if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   list(APPEND LLVM_TEST_DEPENDS spirv-dis)
   list(APPEND LLVM_TEST_DEPENDS spirv-val)
+  list(APPEND LLVM_TEST_DEPENDS spirv-as)
+  list(APPEND LLVM_TEST_DEPENDS spirv-link)
 endif()
 
 add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})
-set_target_properties(llvm-test-depends PROPERTIES FOLDER "Tests")
+set_target_properties(llvm-test-depends PROPERTIES FOLDER "LLVM/Tests")
 
 if(LLVM_BUILD_TOOLS)
   set(exclude_from_check_all "")
@@ -242,7 +255,7 @@ add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS}
   )
-set_target_properties(check-llvm PROPERTIES FOLDER "Tests")
+set_target_properties(check-llvm PROPERTIES FOLDER "LLVM/Tests")
 
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
@@ -253,4 +266,4 @@ add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
 # Setup an alias for 'check-all'.
 add_custom_target(check)
 add_dependencies(check check-all)
-set_target_properties(check PROPERTIES FOLDER "Tests")
+set_target_properties(check PROPERTIES FOLDER "LLVM/Tests")

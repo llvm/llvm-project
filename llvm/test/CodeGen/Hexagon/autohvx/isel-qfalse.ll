@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
   
 ; Make sure we can select QFALSE.
 ; CHECK: vcmp.gt(v0.w,v0.w)

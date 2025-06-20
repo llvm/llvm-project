@@ -1,5 +1,5 @@
-# Test that 64 bit movq instructions with immediate operands
-# that fit in 32 bits are shortened.
+## Test that 64 bit movq instructions with immediate operands
+## that fit in 32 bits are shortened.
 
 RUN: %clang %cflags %p/Inputs/asm_main.c %p/Inputs/shorten_mov.s -o %t.exe
 RUN: llvm-bolt %t.exe -o %t

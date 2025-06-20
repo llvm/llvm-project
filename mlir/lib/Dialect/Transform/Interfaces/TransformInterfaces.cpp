@@ -12,12 +12,13 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/CastInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "transform-dialect"
 #define DEBUG_TYPE_FULL "transform-dialect-full"
@@ -206,6 +207,15 @@ transform::TransformState::mapBlockArgument(BlockArgument argument,
       .checkAndReport();
 }
 
+LogicalResult transform::TransformState::mapBlockArguments(
+    Block::BlockArgListType arguments,
+    ArrayRef<SmallVector<MappedValue>> mapping) {
+  for (auto &&[argument, values] : llvm::zip_equal(arguments, mapping))
+    if (failed(mapBlockArgument(argument, values)))
+      return failure();
+  return success();
+}
+
 LogicalResult
 transform::TransformState::setPayloadOps(Value value,
                                          ArrayRef<Operation *> targets) {
@@ -229,7 +239,7 @@ transform::TransformState::setPayloadOps(Value value,
 
   // Setting new payload for the value without cleaning it first is a misuse of
   // the API, assert here.
-  SmallVector<Operation *> storedTargets(targets.begin(), targets.end());
+  SmallVector<Operation *> storedTargets(targets);
   Mappings &mappings = getMapping(value);
   bool inserted =
       mappings.direct.insert({value, std::move(storedTargets)}).second;
@@ -322,7 +332,7 @@ void transform::TransformState::forgetMapping(Value opHandle,
   for (Operation *op : mappings.direct[opHandle])
     dropMappingEntry(mappings.reverse, op, opHandle);
   mappings.direct.erase(opHandle);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Payload IR is removed from the mapping. This invalidates the respective
   // iterators.
   mappings.incrementTimestamp(opHandle);
@@ -334,7 +344,7 @@ void transform::TransformState::forgetMapping(Value opHandle,
     for (Value resultHandle : resultHandles) {
       Mappings &localMappings = getMapping(resultHandle);
       dropMappingEntry(localMappings.values, resultHandle, opResult);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(resultHandle);
@@ -350,7 +360,7 @@ void transform::TransformState::forgetValueMapping(
   for (Value payloadValue : mappings.reverseValues[valueHandle])
     dropMappingEntry(mappings.reverseValues, payloadValue, valueHandle);
   mappings.values.erase(valueHandle);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Payload IR is removed from the mapping. This invalidates the respective
   // iterators.
   mappings.incrementTimestamp(valueHandle);
@@ -364,7 +374,7 @@ void transform::TransformState::forgetValueMapping(
       dropMappingEntry(localMappings.direct, opHandle, payloadOp);
       dropMappingEntry(localMappings.reverse, payloadOp, opHandle);
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       localMappings.incrementTimestamp(opHandle);
@@ -444,7 +454,7 @@ transform::TransformState::replacePayloadValue(Value value, Value replacement) {
     // between the handles and the IR objects
     if (!replacement) {
       dropMappingEntry(mappings.values, handle, value);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(handle);
@@ -478,11 +488,11 @@ void transform::TransformState::recordOpHandleInvalidationOne(
     return;
 
   FULL_LDBG("--recordOpHandleInvalidationOne\n");
-  DEBUG_WITH_TYPE(
-      DEBUG_TYPE_FULL,
-      llvm::interleaveComma(potentialAncestors, DBGS() << "--ancestors: ",
-                            [](Operation *op) { llvm::dbgs() << *op; });
-      llvm::dbgs() << "\n");
+  DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+    (DBGS() << "--ancestors: "
+            << llvm::interleaved(llvm::make_pointee_range(potentialAncestors))
+            << "\n");
+  });
 
   Operation *owner = consumingHandle.getOwner();
   unsigned operandNo = consumingHandle.getOperandNumber();
@@ -796,9 +806,8 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 void transform::TransformState::compactOpHandles() {
   for (Value handle : opHandlesToCompact) {
     Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (llvm::find(mappings.direct[handle], nullptr) !=
-        mappings.direct[handle].end())
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    if (llvm::is_contained(mappings.direct[handle], nullptr))
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(handle);
@@ -926,12 +935,10 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     assert(scopeIt != regionStack.rend() &&
            "could not find region scope for handle");
     RegionScope *scope = *scopeIt;
-    for (Operation *user : handle.getUsers()) {
-      if (user != scope->currentTransform &&
-          !happensBefore(user, scope->currentTransform))
-        return false;
-    }
-    return true;
+    return llvm::all_of(handle.getUsers(), [&](Operation *user) {
+      return user == scope->currentTransform ||
+             happensBefore(user, scope->currentTransform);
+    });
   };
   transform::ErrorCheckingTrackingListener trackingListener(*this, transform,
                                                             config);
@@ -1384,6 +1391,21 @@ void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
   ++errorCounter;
 }
 
+std::string
+transform::ErrorCheckingTrackingListener::getLatestMatchFailureMessage() {
+  if (!matchFailure) {
+    return "";
+  }
+  return matchFailure->str();
+}
+
+void transform::ErrorCheckingTrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  Diagnostic diag(loc, DiagnosticSeverity::Remark);
+  reasonCallback(diag);
+  matchFailure = std::move(diag);
+}
+
 //===----------------------------------------------------------------------===//
 // TransformRewriter
 //===----------------------------------------------------------------------===//
@@ -1469,19 +1491,19 @@ transform::detail::checkApplyToOne(Operation *transformOp,
     if (ptr.isNull())
       continue;
     if (llvm::isa<TransformHandleTypeInterface>(res.getType()) &&
-        !ptr.is<Operation *>()) {
+        !isa<Operation *>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce an Operation * for result #"
                         << res.getResultNumber();
     }
     if (llvm::isa<TransformParamTypeInterface>(res.getType()) &&
-        !ptr.is<Attribute>()) {
+        !isa<Attribute>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce an Attribute for result #"
                         << res.getResultNumber();
     }
     if (llvm::isa<TransformValueHandleTypeInterface>(res.getType()) &&
-        !ptr.is<Value>()) {
+        !isa<Value>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce a Value for result #"
                         << res.getResultNumber();
@@ -1493,7 +1515,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
   return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return value.get<T>(); }));
+      range, [](transform::MappedValue value) { return cast<T>(value); }));
 }
 
 void transform::detail::setApplyToOneResults(
@@ -1528,11 +1550,12 @@ void transform::detail::setApplyToOneResults(
 // Utilities for implementing transform ops with regions.
 //===----------------------------------------------------------------------===//
 
-void transform::detail::prepareValueMappings(
-    SmallVectorImpl<SmallVector<transform::MappedValue>> &mappings,
-    ValueRange values, const transform::TransformState &state) {
-  for (Value operand : values) {
-    SmallVector<MappedValue> &mapped = mappings.emplace_back();
+LogicalResult transform::detail::appendValueMappings(
+    MutableArrayRef<SmallVector<transform::MappedValue>> mappings,
+    ValueRange values, const transform::TransformState &state, bool flatten) {
+  assert(mappings.size() == values.size() && "mismatching number of mappings");
+  for (auto &&[operand, mapped] : llvm::zip_equal(values, mappings)) {
+    size_t mappedSize = mapped.size();
     if (llvm::isa<TransformHandleTypeInterface>(operand.getType())) {
       llvm::append_range(mapped, state.getPayloadOps(operand));
     } else if (llvm::isa<TransformValueHandleTypeInterface>(
@@ -1543,7 +1566,21 @@ void transform::detail::prepareValueMappings(
              "unsupported kind of transform dialect value");
       llvm::append_range(mapped, state.getParams(operand));
     }
+
+    if (mapped.size() - mappedSize != 1 && !flatten)
+      return failure();
   }
+  return success();
+}
+
+void transform::detail::prepareValueMappings(
+    SmallVectorImpl<SmallVector<transform::MappedValue>> &mappings,
+    ValueRange values, const transform::TransformState &state) {
+  mappings.resize(mappings.size() + values.size());
+  (void)appendValueMappings(
+      MutableArrayRef<SmallVector<transform::MappedValue>>(mappings).take_back(
+          values.size()),
+      values, state);
 }
 
 void transform::detail::forwardTerminatorOperands(
@@ -1579,7 +1616,8 @@ transform::detail::makeTransformStateForTesting(Region *region,
 /// Appends to `effects` the memory effect instances on `target` with the same
 /// resource and effect as the ones the operation `iface` having on `source`.
 static void
-remapEffects(MemoryEffectOpInterface iface, BlockArgument source, Value target,
+remapEffects(MemoryEffectOpInterface iface, BlockArgument source,
+             OpOperand *target,
              SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   SmallVector<MemoryEffects::EffectInstance> nestedEffects;
   iface.getEffectsOnValue(source, nestedEffects);
@@ -1590,7 +1628,7 @@ remapEffects(MemoryEffectOpInterface iface, BlockArgument source, Value target,
 /// Appends to `effects` the same effects as the operations of `block` have on
 /// block arguments but associated with `operands.`
 static void
-remapArgumentEffects(Block &block, ValueRange operands,
+remapArgumentEffects(Block &block, MutableArrayRef<OpOperand> operands,
                      SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   for (Operation &op : block) {
     auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
@@ -1598,7 +1636,7 @@ remapArgumentEffects(Block &block, ValueRange operands,
       continue;
 
     for (auto &&[source, target] : llvm::zip(block.getArguments(), operands)) {
-      remapEffects(iface, source, target, effects);
+      remapEffects(iface, source, &target, effects);
     }
 
     SmallVector<MemoryEffects::EffectInstance> nestedEffects;
@@ -1611,8 +1649,8 @@ remapArgumentEffects(Block &block, ValueRange operands,
 void transform::detail::getPotentialTopLevelEffects(
     Operation *operation, Value root, Block &body,
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(operation->getOperands(), effects);
-  transform::producesHandle(operation->getResults(), effects);
+  transform::onlyReadsHandle(operation->getOpOperands(), effects);
+  transform::producesHandle(operation->getOpResults(), effects);
 
   if (!root) {
     for (Operation &op : body) {
@@ -1620,7 +1658,6 @@ void transform::detail::getPotentialTopLevelEffects(
       if (!iface)
         continue;
 
-      SmallVector<MemoryEffects::EffectInstance, 2> nestedEffects;
       iface.getEffects(effects);
     }
     return;
@@ -1628,7 +1665,7 @@ void transform::detail::getPotentialTopLevelEffects(
 
   // Carry over all effects on arguments of the entry block as those on the
   // operands, this is the same value just remapped.
-  remapArgumentEffects(body, operation->getOperands(), effects);
+  remapArgumentEffects(body, operation->getOpOperands(), effects);
 }
 
 LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
@@ -1737,10 +1774,10 @@ void transform::detail::getParamProducerTransformOpTraitEffects(
     Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   producesHandle(op->getResults(), effects);
   bool hasPayloadOperands = false;
-  for (Value operand : op->getOperands()) {
+  for (OpOperand &operand : op->getOpOperands()) {
     onlyReadsHandle(operand, effects);
     if (llvm::isa<TransformHandleTypeInterface,
-                  TransformValueHandleTypeInterface>(operand.getType()))
+                  TransformValueHandleTypeInterface>(operand.get().getType()))
       hasPayloadOperands = true;
   }
   if (hasPayloadOperands)
@@ -1772,12 +1809,12 @@ transform::detail::verifyParamProducerTransformOpTrait(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 void transform::consumesHandle(
-    ValueRange handles,
+    MutableArrayRef<OpOperand> handles,
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Value handle : handles) {
-    effects.emplace_back(MemoryEffects::Read::get(), handle,
+  for (OpOperand &handle : handles) {
+    effects.emplace_back(MemoryEffects::Read::get(), &handle,
                          TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Free::get(), handle,
+    effects.emplace_back(MemoryEffects::Free::get(), &handle,
                          TransformMappingResource::get());
   }
 }
@@ -1802,9 +1839,20 @@ bool transform::isHandleConsumed(Value handle,
 }
 
 void transform::producesHandle(
-    ValueRange handles,
+    ResultRange handles,
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Value handle : handles) {
+  for (OpResult handle : handles) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), handle,
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), handle,
+                         TransformMappingResource::get());
+  }
+}
+
+void transform::producesHandle(
+    MutableArrayRef<BlockArgument> handles,
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (BlockArgument handle : handles) {
     effects.emplace_back(MemoryEffects::Allocate::get(), handle,
                          TransformMappingResource::get());
     effects.emplace_back(MemoryEffects::Write::get(), handle,
@@ -1813,10 +1861,10 @@ void transform::producesHandle(
 }
 
 void transform::onlyReadsHandle(
-    ValueRange handles,
+    MutableArrayRef<OpOperand> handles,
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Value handle : handles) {
-    effects.emplace_back(MemoryEffects::Read::get(), handle,
+  for (OpOperand &handle : handles) {
+    effects.emplace_back(MemoryEffects::Read::get(), &handle,
                          TransformMappingResource::get());
   }
 }
@@ -1964,7 +2012,9 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
 LogicalResult transform::applyTransforms(
     Operation *payloadRoot, TransformOpInterface transform,
     const RaggedArray<MappedValue> &extraMapping,
-    const TransformOptions &options, bool enforceToplevelTransformOp) {
+    const TransformOptions &options, bool enforceToplevelTransformOp,
+    function_ref<void(TransformState &)> stateInitializer,
+    function_ref<LogicalResult(TransformState &)> stateExporter) {
   if (enforceToplevelTransformOp) {
     if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
         transform->getNumOperands() != 0) {
@@ -1978,7 +2028,13 @@ LogicalResult transform::applyTransforms(
 
   TransformState state(transform->getParentRegion(), payloadRoot, extraMapping,
                        options);
-  return state.applyTransform(transform).checkAndReport();
+  if (stateInitializer)
+    stateInitializer(state);
+  if (state.applyTransform(transform).checkAndReport().failed())
+    return failure();
+  if (stateExporter)
+    return stateExporter(state);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

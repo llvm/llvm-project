@@ -85,7 +85,7 @@ static bool haveNoReadsAfterWriteExceptSameIndex(
       return WalkResult::advance();
 
     // Check that at last one store was retrieved
-    if (!write->second.size())
+    if (write->second.empty())
       return WalkResult::interrupt();
 
     auto storeIndices = write->second.front();
@@ -124,8 +124,9 @@ static bool haveNoReadsAfterWriteExceptSameIndex(
                   OperationEquivalence::Flags::IgnoreLocations)) {
             return WalkResult::interrupt();
           }
-        } else
+        } else {
           return WalkResult::interrupt();
+        }
       }
     }
     return WalkResult::advance();

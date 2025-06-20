@@ -1,0 +1,7 @@
+# Python on an empty file will always succeed as interesting
+# RUN: touch %t
+
+# Fail on attempt to write output to a directory
+# RUN: not llvm-reduce --delta-passes=instructions -o %p/Inputs --test %python --test-arg %t %p/Inputs/test-output-format.ll 2>&1 | FileCheck  -DMSG=%errc_EISDIR %s
+
+# CHECK: error: opening output file: [[MSG]]

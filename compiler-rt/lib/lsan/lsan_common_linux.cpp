@@ -28,7 +28,7 @@ namespace __lsan {
 
 static const char kLinkerName[] = "ld";
 
-static char linker_placeholder[sizeof(LoadedModule)] ALIGNED(64);
+alignas(64) static char linker_placeholder[sizeof(LoadedModule)];
 static LoadedModule *linker = nullptr;
 
 static bool IsLinker(const LoadedModule& module) {
@@ -92,11 +92,6 @@ static int ProcessGlobalRegionsCallback(struct dl_phdr_info *info, size_t size,
   }
   return 0;
 }
-
-#if SANITIZER_ANDROID && __ANDROID_API__ < 21
-extern "C" __attribute__((weak)) int dl_iterate_phdr(
-    int (*)(struct dl_phdr_info *, size_t, void *), void *);
-#endif
 
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {

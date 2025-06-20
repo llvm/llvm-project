@@ -1,8 +1,6 @@
 /// Check that libraries built with the per target runtime directory layout
 /// are selected correctly when using variations of Arm triples.
 
-// REQUIRES: arm-registered-target
-
 // RUN: %clang %s --target=arm-unknown-linux-gnueabihf -print-runtime-dir \
 // RUN:        -resource-dir=%S/Inputs/arm_float_abi_runtime_path 2>&1 | FileCheck -check-prefix=ARMHF %s
 /// "armv7l" should be normalised to just "arm".

@@ -669,8 +669,7 @@ public:
   BuildInfoRecord() = default;
   explicit BuildInfoRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   BuildInfoRecord(ArrayRef<TypeIndex> ArgIndices)
-      : TypeRecord(TypeRecordKind::BuildInfo),
-        ArgIndices(ArgIndices.begin(), ArgIndices.end()) {}
+      : TypeRecord(TypeRecordKind::BuildInfo), ArgIndices(ArgIndices) {}
 
   ArrayRef<TypeIndex> getArgs() const { return ArgIndices; }
 

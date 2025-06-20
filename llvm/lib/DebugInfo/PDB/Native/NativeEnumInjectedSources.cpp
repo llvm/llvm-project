@@ -9,7 +9,6 @@
 #include "llvm/DebugInfo/PDB/Native/NativeEnumInjectedSources.h"
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"

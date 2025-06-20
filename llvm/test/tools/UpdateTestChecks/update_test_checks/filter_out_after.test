@@ -1,0 +1,39 @@
+## Check that --filter-out-after works properly.
+# RUN: cp -f %S/Inputs/filter-out-after.ll %t.ll && %update_test_checks --version=5 --filter-out-after="^b2:" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after.ll.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_test_checks --version=5 --filter-out-after="^b2:" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after.ll.expected
+
+## Check that running the script again, without arguments, does not change the result:
+# RUN: %update_test_checks --version=5 %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after.ll.expected
+
+## Check that multiple --filter-out-after options work properly.
+# RUN: cp -f %S/Inputs/filter-out-after.ll %t.ll && %update_test_checks --version=5 --filter-out-after="= mul i32" --filter-out-after="^b2:" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after.ll.expected2
+
+## Check that running the script again does not change the result:
+# RUN: %update_test_checks --version=5 --filter-out-after="= mul i32" --filter-out-after="^b2:" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after.ll.expected2
+
+## Check that running the script again, without arguments, does not change the result:
+# RUN: %update_test_checks --version=5 %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after.ll.expected2
+
+## Check that --filter-out-after works per function only.
+# RUN: cp -f %S/Inputs/filter-out-after2.ll %t.ll && %update_test_checks --version=5 --filter-out-after="^b2:" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after2.ll.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_test_checks --version=5 --filter-out-after="^b2:" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after2.ll.expected
+
+## Check that running the script again, without arguments, does not change the result:
+# RUN: %update_test_checks --version=5 %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after2.ll.expected
+
+## Check that --filter-out-after does not filter input IR.
+# RUN: cp -f %S/Inputs/filter-out-after3.ll %t.ll && %update_test_checks --version=5 --filter-out-after="br label %3" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/filter-out-after3.ll.expected

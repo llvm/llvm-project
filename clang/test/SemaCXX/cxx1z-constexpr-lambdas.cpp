@@ -349,3 +349,27 @@ static_assert(OtherCaptures(), "");
 } // namespace PR36054
 
 #endif // ndef CPP14_AND_EARLIER
+
+
+#if __cpp_constexpr >= 201907L
+namespace GH114234 {
+template <auto Arg>
+auto g() { return Arg; }
+
+template <typename>
+auto f() {
+    []<typename>() {
+        g<[] { return 123; }()>();
+    }.template operator()<int>();
+}
+
+void test() { f<int>(); }
+}
+
+namespace GH97958 {
+static_assert(
+  []<int I=0>() -> decltype([]{ return true; })
+  { return {}; }()());
+}
+
+#endif

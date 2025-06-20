@@ -1,5 +1,4 @@
 ; RUN: opt -passes=debugify,loop-simplify,loop-extract -S < %s | FileCheck %s
-; RUN: opt -passes=debugify,loop-simplify,loop-extract -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; This tests 2 cases:
 ; 1. loop1 should be extracted into a function, without extracting %v1 alloca.
@@ -11,7 +10,7 @@
 ; CHECK-LABEL: define void @test()
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %v1 = alloca i32
-; CHECK-NEXT:   call void @llvm.dbg.value(metadata ptr %v1
+; CHECK-NEXT:   #dbg_value(ptr %v1
 ; CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 undef, ptr %v1, i64 4, i1 true)
 
 ; CHECK-LABEL: define internal void @test.loop2()
@@ -20,6 +19,7 @@
 
 ; CHECK-LABEL: define internal void @test.loop1(ptr %v1)
 ; CHECK-NEXT: newFuncRoot:
+; CHECK-NEXT: #dbg_value
 ; CHECK-NEXT:   br
 
 define void @test() {

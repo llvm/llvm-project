@@ -28,6 +28,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "AbortWithPayloadFrameRecognizer.h"
 #include "SystemRuntimeMacOSX.h"
 
 #include <memory>
@@ -61,8 +62,9 @@ SystemRuntime *SystemRuntimeMacOSX::CreateInstance(Process *process) {
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      case llvm::Triple::XROS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
+      case llvm::Triple::XROS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -90,7 +92,10 @@ SystemRuntimeMacOSX::SystemRuntimeMacOSX(Process *process)
       m_libpthread_offsets(), m_dispatch_tsd_indexes_addr(LLDB_INVALID_ADDRESS),
       m_libdispatch_tsd_indexes(),
       m_dispatch_voucher_offsets_addr(LLDB_INVALID_ADDRESS),
-      m_libdispatch_voucher_offsets() {}
+      m_libdispatch_voucher_offsets() {
+
+  RegisterAbortWithPayloadFrameRecognizer(process);
+}
 
 // Destructor
 SystemRuntimeMacOSX::~SystemRuntimeMacOSX() { Clear(true); }
@@ -628,10 +633,8 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(0, sc);
-    AddressRange addr_range;
-    sc.GetAddressRange(eSymbolContextSymbol, 0, false, addr_range);
-    queue_info_version_address =
-        addr_range.GetBaseAddress().GetLoadAddress(&target);
+    Address addr = sc.GetFunctionOrSymbolAddress();
+    queue_info_version_address = addr.GetLoadAddress(&target);
   }
   sc_list.Clear();
 
@@ -642,10 +645,8 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(0, sc);
-    AddressRange addr_range;
-    sc.GetAddressRange(eSymbolContextSymbol, 0, false, addr_range);
-    queue_info_data_offset_address =
-        addr_range.GetBaseAddress().GetLoadAddress(&target);
+    Address addr = sc.GetFunctionOrSymbolAddress();
+    queue_info_data_offset_address = addr.GetLoadAddress(&target);
   }
   sc_list.Clear();
 
@@ -656,10 +657,8 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(0, sc);
-    AddressRange addr_range;
-    sc.GetAddressRange(eSymbolContextSymbol, 0, false, addr_range);
-    item_info_version_address =
-        addr_range.GetBaseAddress().GetLoadAddress(&target);
+    Address addr = sc.GetFunctionOrSymbolAddress();
+    item_info_version_address = addr.GetLoadAddress(&target);
   }
   sc_list.Clear();
 
@@ -670,10 +669,8 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(0, sc);
-    AddressRange addr_range;
-    sc.GetAddressRange(eSymbolContextSymbol, 0, false, addr_range);
-    item_info_data_offset_address =
-        addr_range.GetBaseAddress().GetLoadAddress(&target);
+    Address addr = sc.GetFunctionOrSymbolAddress();
+    item_info_data_offset_address = addr.GetLoadAddress(&target);
   }
 
   if (queue_info_version_address != LLDB_INVALID_ADDRESS &&

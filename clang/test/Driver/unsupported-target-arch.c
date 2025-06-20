@@ -63,3 +63,21 @@
 // RUN: not %clang --target=powerpc-apple-darwin -o /dev/null %s 2> %t.err
 // RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-PPCMAC %s
 // CHECK-PPCMAC: error: unknown target triple 'unknown-apple-macosx{{.*}}'
+
+// RUN: not %clang --target=aarch64-unknown-uefi -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-AARCH64 %s
+// RUN: not %clang_cl --target=aarch64-unknown-uefi -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-AARCH64 %s
+// CHECK-AARCH64: error: unknown target triple 'aarch64-unknown-uefi'{{$}}
+
+// RUN: not %clang --target=arm-unknown-uefi -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-ARM %s
+// RUN: not %clang_cl --target=arm-unknown-uefi -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-ARM %s
+// CHECK-ARM: error: unknown target triple 'arm-unknown-uefi'{{$}}
+
+// RUN: not %clang --target=x86-unknown-uefi -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-x86 %s
+// RUN: not %clang_cl --target=x86-unknown-uefi -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-x86 %s
+// CHECK-x86: error: unknown target triple 'x86-unknown-uefi'{{$}}

@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc  < %s | FileCheck %s
+; RUN: llc -mtriple=sparc < %s | FileCheck %s
 
 ;; Ensure that spills and reloads work for various types on
 ;; sparcv8.

@@ -18,6 +18,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio> // for printf
+#include <cstring>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -145,7 +146,7 @@ namespace utils {
         struct ::stat tmp;
         return ::stat(path.c_str(), &tmp) == 0;
     }
-} // end namespace utils
+} // namespace utils
 
 struct scoped_test_env
 {
@@ -232,9 +233,9 @@ struct scoped_test_env
         if (size >
             static_cast<typename std::make_unsigned<utils::off64_t>::type>(
                 std::numeric_limits<utils::off64_t>::max())) {
-            fprintf(stderr, "create_file(%s, %ju) too large\n",
-                    filename.c_str(), size);
-            abort();
+            std::fprintf(stderr, "create_file(%s, %ju) too large\n",
+                         filename.c_str(), size);
+            std::abort();
         }
 
 #if defined(_WIN32) || defined(__MVS__)
@@ -244,20 +245,20 @@ struct scoped_test_env
 #endif
         FILE* file = utils::fopen64(filename.c_str(), "w" FOPEN_CLOEXEC_FLAG);
         if (file == nullptr) {
-            fprintf(stderr, "fopen %s failed: %s\n", filename.c_str(),
-                    strerror(errno));
-            abort();
+            std::fprintf(stderr, "fopen %s failed: %s\n", filename.c_str(),
+                         std::strerror(errno));
+            std::abort();
         }
 
         if (utils::ftruncate64(
                 fileno(file), static_cast<utils::off64_t>(size)) == -1) {
-            fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(),
-                    size, strerror(errno));
-            fclose(file);
-            abort();
+            std::fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(),
+                         size, std::strerror(errno));
+            std::fclose(file);
+            std::abort();
         }
 
-        fclose(file);
+        std::fclose(file);
         return filename;
     }
 
@@ -529,7 +530,7 @@ inline bool ErrorIs(const std::error_code& ec, std::errc First, ErrcT... Rest) {
 // available in single-threaded mode.
 template <class Dur> void SleepFor(Dur dur) {
     using namespace std::chrono;
-#if defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
+#if !_LIBCPP_HAS_MONOTONIC_CLOCK
     using Clock = system_clock;
 #else
     using Clock = steady_clock;
@@ -582,7 +583,11 @@ struct ExceptionChecker {
     assert(ErrorIsImp(Err.code(), {expected_err}));
     assert(Err.path1() == expected_path1);
     assert(Err.path2() == expected_path2);
+#ifndef _WIN32
+    // On Windows, the error strings are windows error code strings, and don't
+    // match textually with the strings generated for generic std::errc::*.
     LIBCPP_ONLY(check_libcxx_string(Err));
+#endif
   }
 
   void check_libcxx_string(fs::filesystem_error const& Err) {
@@ -616,10 +621,9 @@ struct ExceptionChecker {
     }();
     assert(format == Err.what());
     if (format != Err.what()) {
-      fprintf(stderr,
-              "filesystem_error::what() does not match expected output:\n");
-      fprintf(stderr, "  expected: \"%s\"\n", format.c_str());
-      fprintf(stderr, "  actual:   \"%s\"\n\n", Err.what());
+      std::fprintf(stderr, "filesystem_error::what() does not match expected output:\n");
+      std::fprintf(stderr, "  expected: \"%s\"\n", format.c_str());
+      std::fprintf(stderr, "  actual:   \"%s\"\n\n", Err.what());
     }
   }
 
@@ -639,23 +643,23 @@ inline fs::path GetWindowsInaccessibleDir() {
       continue;
     // Basic sanity checks on the directory_entry
     if (!ent.exists() || !ent.is_directory()) {
-      fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
-                      "but doesn't behave as expected, skipping tests "
-                      "regarding it\n", dir.string().c_str());
+      std::fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
+                           "but doesn't behave as expected, skipping tests "
+                           "regarding it\n", dir.string().c_str());
       return fs::path();
     }
     // Check that it indeed is inaccessible as expected
     (void)fs::exists(ent, ec);
     if (!ec) {
-      fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
-                      "but seems to be accessible, skipping tests "
-                      "regarding it\n", dir.string().c_str());
+      std::fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
+                           "but seems to be accessible, skipping tests "
+                           "regarding it\n", dir.string().c_str());
       return fs::path();
     }
     return ent;
   }
-  fprintf(stderr, "No inaccessible directory \"%s\" found, skipping tests "
-                  "regarding it\n", dir.string().c_str());
+  std::fprintf(stderr, "No inaccessible directory \"%s\" found, skipping tests "
+                       "regarding it\n", dir.string().c_str());
   return fs::path();
 }
 

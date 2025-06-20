@@ -29,7 +29,7 @@ std::string Var::str() const {
   std::string str;
   llvm::raw_string_ostream os(str);
   print(os);
-  return os.str();
+  return str;
 }
 
 void Var::print(AsmPrinter &printer) const { print(printer.getStream()); }

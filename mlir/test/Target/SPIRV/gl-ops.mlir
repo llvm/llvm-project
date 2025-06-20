@@ -32,6 +32,20 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %14 = spirv.GL.Ldexp %arg0 : f32, %arg2 : i32 -> f32
     // CHECK: {{%.*}} = spirv.GL.FMix {{%.*}} : f32, {{%.*}} : f32, {{%.*}} : f32 -> f32
     %15 = spirv.GL.FMix %arg0 : f32, %arg1 : f32, %arg0 : f32 -> f32
+    // CHECK: {{%.*}} = spirv.GL.Fract {{%.*}} : f32
+    %16 = spirv.GL.Fract %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Asinh {{%.*}} : f32
+    %17 = spirv.GL.Asinh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Acosh {{%.*}} : f32
+    %18 = spirv.GL.Acosh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Atanh {{%.*}} : f32
+    %19 = spirv.GL.Atanh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Log2 {{%.*}} : f32
+    %20 = spirv.GL.Log2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Tanh {{%.*}} : f32
+    %21 = spirv.GL.Tanh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Exp2 {{%.*}} : f32
+    %22 = spirv.GL.Exp2 %arg0 : f32
     spirv.Return
   }
 
@@ -76,9 +90,56 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 
+  spirv.func @findilsb(%arg0 : i32) "None" {
+    // CHECK: spirv.GL.FindILsb {{%.*}} : i32
+    %2 = spirv.GL.FindILsb %arg0 : i32
+    spirv.Return
+  }
+  spirv.func @findsmsb(%arg0 : i32) "None" {
+    // CHECK: spirv.GL.FindSMsb {{%.*}} : i32
+    %2 = spirv.GL.FindSMsb %arg0 : i32
+    spirv.Return
+  }
+
   spirv.func @findumsb(%arg0 : i32) "None" {
     // CHECK: spirv.GL.FindUMsb {{%.*}} : i32
     %2 = spirv.GL.FindUMsb %arg0 : i32
+    spirv.Return
+  }
+
+  spirv.func @vector(%arg0 : f32, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>, %arg3: vector<3xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.GL.Cross {{%.*}}, {{%.*}} : vector<3xf32>
+    %0 = spirv.GL.Cross %arg1, %arg2 : vector<3xf32>
+    // CHECK: {{%.*}} = spirv.GL.Normalize {{%.*}} : f32
+    %1 = spirv.GL.Normalize %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Normalize {{%.*}} : vector<3xf32>
+    %2 = spirv.GL.Normalize %arg1 : vector<3xf32>
+    // CHECK: {{%.*}} = spirv.GL.Reflect {{%.*}}, {{%.*}} : f32
+    %3 = spirv.GL.Reflect %arg0, %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Reflect {{%.*}}, {{%.*}} : vector<3xf32>
+    %4 = spirv.GL.Reflect %arg1, %arg2 : vector<3xf32>
+    // CHECK: {{%.*}} = spirv.GL.Distance {{%.*}}, {{%.*}} : f32, f32 -> f32
+    %5 = spirv.GL.Distance %arg0, %arg0 : f32, f32 -> f32
+    // CHECK: {{%.*}} = spirv.GL.Distance {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xf32> -> f32
+    %6 = spirv.GL.Distance %arg1, %arg2 : vector<3xf32>, vector<3xf32> -> f32
+    // CHECK: {{%.*}} = spirv.GL.FindILsb {{%.*}} : vector<3xi32>
+    %7 = spirv.GL.FindILsb %arg3 : vector<3xi32>
+    // CHECK: {{%.*}} = spirv.GL.FindSMsb {{%.*}} : vector<3xi32>
+    %8 = spirv.GL.FindSMsb %arg3 : vector<3xi32>
+    // CHECK: {{%.*}} = spirv.GL.FindUMsb {{%.*}} : vector<3xi32>
+    %9 = spirv.GL.FindUMsb %arg3 : vector<3xi32>
+    // CHECK: {{%.*}} = spirv.GL.Length {{%.*}} : f32 -> f32
+    %10 = spirv.GL.Length %arg0 : f32 -> f32
+    // CHECK: {{%.*}} = spirv.GL.Length {{%.*}} : vector<3xf32> -> f32
+    %11 = spirv.GL.Length %arg1 : vector<3xf32> -> f32
+    spirv.Return
+  }
+
+  spirv.func @pack_half_2x16(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.GL.UnpackHalf2x16 {{%.*}} : i32 -> vector<2xf32>
+    %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<2xf32>
+    // CHECK: {{%.*}} = spirv.GL.PackHalf2x16 {{%.*}} : vector<2xf32> -> i32
+    %1 = spirv.GL.PackHalf2x16 %0 : vector<2xf32> -> i32
     spirv.Return
   }
 }

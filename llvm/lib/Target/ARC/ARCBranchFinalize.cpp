@@ -61,7 +61,7 @@ char ARCBranchFinalize::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ARCBranchFinalize, "arc-branch-finalize",
                       "ARC finalize branches", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ARCBranchFinalize, "arc-branch-finalize",
                     "ARC finalize branches", false, false)
 

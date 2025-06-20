@@ -6,7 +6,7 @@ define void @redundant_add(i64 %n) {
 ; CHECK-LABEL: redundant_add:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %exit_check
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpq %rdi, %rax

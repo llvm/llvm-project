@@ -40,10 +40,11 @@ WARNING-NOT: warning
 
 Check that a PCH with wrong signature, but with right LF_PRECOMP records count, works.
 
+RUN: mkdir -p %t.dir
 RUN: sed '16,19s/Signature: *545589255/Signature: 123456789/' < %t.precomp.yaml > precomp-wrong-sig.yaml
-RUN: yaml2obj precomp-wrong-sig.yaml -o %T/precomp.obj
-RUN: env LLD_IN_TEST=1 lld-link %T/precomp.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug:noghash /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix WARNING --allow-empty
-RUN: env LLD_IN_TEST=1 lld-link %T/precomp.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug:ghash /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix WARNING --allow-empty
+RUN: yaml2obj precomp-wrong-sig.yaml -o %t.dir/precomp.obj
+RUN: env LLD_IN_TEST=1 lld-link %t.dir/precomp.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug:noghash /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix WARNING --allow-empty
+RUN: env LLD_IN_TEST=1 lld-link %t.dir/precomp.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug:ghash /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix WARNING --allow-empty
 
 Check that two PCH objs with duplicate signatures are an error.
 

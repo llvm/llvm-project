@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-allow-nonaffine-loops -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,print<polly-simplify>' -polly-import-jscop-postfix=transformed -polly-allow-nonaffine-loops -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Do not remove the store in region_entry. It can be executed multiple times
 ; due to being part of a non-affine loop.

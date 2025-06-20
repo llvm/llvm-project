@@ -4,7 +4,7 @@
 define amdgpu_kernel void @eq_t(float %x) {
 ; GCN-LABEL: eq_t:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, 1.0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, 4.0, s[0:1]
@@ -14,14 +14,14 @@ define amdgpu_kernel void @eq_t(float %x) {
   %s1 = select i1 %c1, i32 56789, i32 1
   %c2 = icmp eq i32 %s1, 56789
   %s2 = select i1 %c2, float 4.0, float 2.0
-  store float %s2, ptr undef, align 4
+  store float %s2, ptr poison, align 4
   ret void
 }
 
 define amdgpu_kernel void @ne_t(float %x) {
 ; GCN-LABEL: ne_t:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 1.0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, 4.0, s[0:1]
@@ -31,14 +31,14 @@ define amdgpu_kernel void @ne_t(float %x) {
   %s1 = select i1 %c1, i32 56789, i32 1
   %c2 = icmp ne i32 %s1, 56789
   %s2 = select i1 %c2, float 4.0, float 2.0
-  store float %s2, ptr undef, align 4
+  store float %s2, ptr poison, align 4
   ret void
 }
 
 define amdgpu_kernel void @eq_f(float %x) {
 ; GCN-LABEL: eq_f:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 1.0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, 4.0, s[0:1]
@@ -48,14 +48,14 @@ define amdgpu_kernel void @eq_f(float %x) {
   %s1 = select i1 %c1, i32 1, i32 56789
   %c2 = icmp eq i32 %s1, 56789
   %s2 = select i1 %c2, float 4.0, float 2.0
-  store float %s2, ptr undef, align 4
+  store float %s2, ptr poison, align 4
   ret void
 }
 
 define amdgpu_kernel void @ne_f(float %x) {
 ; GCN-LABEL: ne_f:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, 1.0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, 4.0, s[0:1]
@@ -65,7 +65,7 @@ define amdgpu_kernel void @ne_f(float %x) {
   %s1 = select i1 %c1, i32 1, i32 56789
   %c2 = icmp ne i32 %s1, 56789
   %s2 = select i1 %c2, float 4.0, float 2.0
-  store float %s2, ptr undef, align 4
+  store float %s2, ptr poison, align 4
   ret void
 }
 
@@ -79,6 +79,6 @@ define amdgpu_kernel void @different_constants(float %x) {
   %s1 = select i1 %c1, i32 56789, i32 1
   %c2 = icmp eq i32 %s1, 5678
   %s2 = select i1 %c2, float 4.0, float 2.0
-  store float %s2, ptr undef, align 4
+  store float %s2, ptr poison, align 4
   ret void
 }

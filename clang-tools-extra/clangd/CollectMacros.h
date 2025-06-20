@@ -31,6 +31,7 @@ struct MacroOccurrence {
   // True if the occurence is used in a conditional directive, e.g. #ifdef MACRO
   bool InConditionalDirective;
 
+  CharSourceRange toSourceRange(const SourceManager &SM) const;
   Range toRange(const SourceManager &SM) const;
 };
 
@@ -81,6 +82,14 @@ public:
                SourceRange Range) override;
 
   void SourceRangeSkipped(SourceRange R, SourceLocation EndifLoc) override;
+
+  // Called when the AST build is done to disable further recording
+  // of macros by this class. This is needed because some clang-tidy
+  // checks can trigger PP callbacks by calling directly into the
+  // preprocessor. Such calls are not interleaved with FileChanged()
+  // in the expected way, leading this class to erroneously process
+  // macros that are not in the main file.
+  void doneParse() { InMainFile = false; }
 
 private:
   void add(const Token &MacroNameTok, const MacroInfo *MI,

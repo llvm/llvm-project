@@ -9,10 +9,14 @@ let Definition = "interpreter" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will prompt you before quitting if there are any live processes being debugged. If false, LLDB will quit without asking in any case.">;
+  def SaveTranscript: Property<"save-transcript", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"If true, commands will be saved into a transcript buffer for user access.">;
   def SaveSessionOnQuit: Property<"save-session-on-quit", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, LLDB will save the session's transcripts before quitting.">;
+    Desc<"If true, LLDB will save the session's transcripts before quitting. Note: transcripts will only be saved if interpreter.save-transcript is true.">;
   def OpenTranscriptInEditor: Property<"open-transcript-in-editor", "Boolean">,
     Global,
     DefaultTrue,
@@ -27,7 +31,7 @@ let Definition = "interpreter" in {
   def SpaceReplPrompts: Property<"space-repl-prompts", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, blank lines will be printed between between REPL submissions.">;
+    Desc<"If true, blank lines will be printed between REPL submissions.">;
   def EchoCommands: Property<"echo-commands", "Boolean">,
     Global,
     DefaultTrue,

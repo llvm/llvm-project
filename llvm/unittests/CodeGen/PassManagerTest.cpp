@@ -162,16 +162,14 @@ public:
     // MachineModuleAnalysis needs a TargetMachine instance.
     llvm::InitializeAllTargets();
 
-    std::string TripleName = Triple::normalize(sys::getDefaultTargetTriple());
+    Triple TT(sys::getDefaultTargetTriple());
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     if (!TheTarget)
       return;
 
     TargetOptions Options;
-    TM.reset(TheTarget->createTargetMachine(TripleName, "", "", Options,
-                                            std::nullopt));
+    TM.reset(TheTarget->createTargetMachine(TT, "", "", Options, std::nullopt));
   }
 };
 
@@ -179,13 +177,12 @@ TEST_F(PassManagerTest, Basic) {
   if (!TM)
     GTEST_SKIP();
 
-  LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(LLVMTM);
+  MachineModuleInfo MMI(TM.get());
 
-  LoopAnalysisManager LAM;
   MachineFunctionAnalysisManager MFAM;
+  LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
@@ -205,13 +202,17 @@ TEST_F(PassManagerTest, Basic) {
   std::vector<int> Counts;
 
   ModulePassManager MPM;
+  FunctionPassManager FPM;
   MachineFunctionPassManager MFPM;
   MPM.addPass(TestMachineModulePass(Count, Counts));
-  MPM.addPass(createModuleToMachineFunctionPassAdaptor(
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(
       TestMachineFunctionPass(Count, Counts)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   MPM.addPass(TestMachineModulePass(Count, Counts));
   MFPM.addPass(TestMachineFunctionPass(Count, Counts));
-  MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+  FPM = FunctionPassManager();
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
   testing::internal::CaptureStderr();
   MPM.run(*M, MAM);
@@ -225,10 +226,9 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   if (!TM)
     GTEST_SKIP();
 
-  LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(LLVMTM);
+  MachineModuleInfo MMI(TM.get());
 
   LoopAnalysisManager LAM;
   MachineFunctionAnalysisManager MFAM;
@@ -248,8 +248,10 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   ModulePassManager MPM;
   FunctionPassManager FPM;
   MachineFunctionPassManager MFPM;
+  MPM.addPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
   MFPM.addPass(ReportWarningPass());
-  MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   testing::internal::CaptureStderr();
   MPM.run(*M, MAM);
   std::string Output = testing::internal::GetCapturedStderr();

@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPSPV.h"
-#include "CommonArgs.h"
 #include "HIPUtility.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Support/FileSystem.h"
@@ -193,7 +192,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
   StringRef hipPath = DriverArgs.getLastArgValue(options::OPT_hip_path_EQ);
   if (hipPath.empty()) {
-    getDriver().Diag(diag::err_drv_hipspv_no_hip_path) << 1 << "'-nogpuinc'";
+    getDriver().Diag(diag::err_drv_hipspv_no_hip_path);
     return;
   }
   SmallString<128> P(hipPath);
@@ -204,7 +203,8 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return {};
 
   ArgStringList LibraryPaths;

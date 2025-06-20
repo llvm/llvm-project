@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // struct __private_constructor_tag{};
 
 // The private constructor tag is intended to be a trivial type that can easily
@@ -16,4 +18,5 @@
 #include <__utility/private_constructor_tag.h>
 #include <type_traits>
 
-static_assert(std::is_trivial<std::__private_constructor_tag>::value, "");
+static_assert(std::is_trivially_copyable<std::__private_constructor_tag>::value, "");
+static_assert(std::is_trivially_default_constructible<std::__private_constructor_tag>::value, "");

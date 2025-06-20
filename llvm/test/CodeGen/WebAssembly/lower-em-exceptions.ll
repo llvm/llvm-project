@@ -44,7 +44,7 @@ lpad:                                             ; preds = %entry
 ; CHECK-NEXT: %[[CDR:.*]] = extractvalue { ptr, i32 } %[[IVI2]], 1
 
 catch.dispatch:                                   ; preds = %lpad
-  %3 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
+  %3 = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
   %matches = icmp eq i32 %2, %3
   br i1 %matches, label %catch1, label %catch
 ; CHECK: catch.dispatch:
@@ -139,7 +139,7 @@ lpad:                                             ; preds = %entry
   br label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %lpad
-  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
+  %4 = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
   %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch1, label %catch
 
@@ -162,7 +162,7 @@ declare void @foo(i32)
 declare ptr @bar(i8, i8)
 
 declare i32 @__gxx_personality_v0(...)
-declare i32 @llvm.eh.typeid.for(ptr)
+declare i32 @llvm.eh.typeid.for.p0(ptr)
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
 declare void @__cxa_call_unexpected(ptr)

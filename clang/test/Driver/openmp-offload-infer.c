@@ -1,7 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:          -nogpulib --offload-arch=sm_52 --offload-arch=gfx803 \
 // RUN:          --libomptarget-amdgpu-bc-path=%S/Inputs/hip_dev_lib/libomptarget-amdgpu-gfx803.bc \
@@ -43,7 +39,7 @@
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908 --offload-arch=skylake \
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-FAILED
 
-// CHECK-FAILED: error: failed to deduce triple for target architecture 'skylake'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead.
+// CHECK-FAILED: error: failed to deduce triple for target architecture 'skylake'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908 -fno-openmp \

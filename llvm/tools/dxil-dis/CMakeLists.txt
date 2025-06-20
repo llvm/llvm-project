@@ -25,7 +25,9 @@ include(ExternalProject)
 
 set(SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/DXC-src)
 set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/DXC-bins)
-set(GIT_SETTINGS GIT_REPOSITORY https://github.com/microsoft/DirectXShaderCompiler.git)
+set(GIT_SETTINGS
+    GIT_REPOSITORY https://github.com/microsoft/DirectXShaderCompiler.git
+    GIT_TAG main)
 
 if (DXC_SOURCE_DIR)
   set(SOURCE_DIR ${DXC_SOURCE_DIR})
@@ -36,7 +38,7 @@ ExternalProject_Add(DXC
                     ${GIT_SETTINGS}
                     SOURCE_DIR ${SOURCE_DIR}
                     BINARY_DIR ${BINARY_DIR}
-                    CMAKE_ARGS -C ${SOURCE_DIR}/cmake/caches/PredefinedParams.cmake -DLLVM_INCLUDE_TESTS=On
+                    CMAKE_ARGS -C ${SOURCE_DIR}/cmake/caches/PredefinedParams.cmake -DLLVM_INCLUDE_TESTS=Off -DCLANG_INCLUDE_TESTS=Off -DHLSL_INCLUDE_TESTS=Off
                     BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target llvm-dis
                     BUILD_BYPRODUCTS ${BINARY_DIR}/bin/llvm-dis
                     INSTALL_COMMAND ""

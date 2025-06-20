@@ -11,6 +11,7 @@ body: |
     ; NO-FP16: %cst:_(s16) = G_CONSTANT i16 0
     ; NO-FP16-NEXT: $h0 = COPY %cst(s16)
     ; NO-FP16-NEXT: RET_ReallyLR implicit $h0
+    ;
     ; FP16-LABEL: name: fp16
     ; FP16: %cst:_(s16) = G_FCONSTANT half 0xH0000
     ; FP16-NEXT: $h0 = COPY %cst(s16)
@@ -28,6 +29,7 @@ body: |
     ; NO-FP16: %cst:_(s16) = G_CONSTANT i16 16384
     ; NO-FP16-NEXT: $h0 = COPY %cst(s16)
     ; NO-FP16-NEXT: RET_ReallyLR implicit $h0
+    ;
     ; FP16-LABEL: name: fp16_non_zero
     ; FP16: %cst:_(s16) = G_FCONSTANT half 0xH4000
     ; FP16-NEXT: $h0 = COPY %cst(s16)
@@ -46,6 +48,7 @@ body:             |
     ; NO-FP16-NEXT: %ext:_(s32) = G_FPEXT %cst(s16)
     ; NO-FP16-NEXT: $w0 = COPY %ext(s32)
     ; NO-FP16-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; FP16-LABEL: name: nan
     ; FP16: %cst:_(s16) = G_FCONSTANT half 0xH7C01
     ; FP16-NEXT: %ext:_(s32) = G_FPEXT %cst(s16)

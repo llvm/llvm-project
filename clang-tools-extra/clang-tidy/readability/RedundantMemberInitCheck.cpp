@@ -12,7 +12,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;
@@ -41,25 +40,35 @@ void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   auto ConstructorMatcher =
-      cxxConstructExpr(argumentCountIs(0),
-                       hasDeclaration(cxxConstructorDecl(ofClass(cxxRecordDecl(
-                           unless(isTriviallyDefaultConstructible()))))))
+      cxxConstructExpr(
+          argumentCountIs(0),
+          hasDeclaration(cxxConstructorDecl(
+              ofClass(cxxRecordDecl(unless(isTriviallyDefaultConstructible()))
+                          .bind("class")))))
           .bind("construct");
+
+  auto HasUnionAsParent = hasParent(recordDecl(isUnion()));
+
+  auto HasTypeEqualToConstructorClass = hasType(qualType(
+      hasCanonicalType(qualType(hasDeclaration(equalsBoundNode("class"))))));
 
   Finder->addMatcher(
       cxxConstructorDecl(
           unless(isDelegatingConstructor()), ofClass(unless(isUnion())),
           forEachConstructorInitializer(
-              cxxCtorInitializer(withInitializer(ConstructorMatcher),
-                                 unless(forField(fieldDecl(
-                                     anyOf(hasType(isConstQualified()),
-                                           hasParent(recordDecl(isUnion())))))))
+              cxxCtorInitializer(
+                  withInitializer(ConstructorMatcher),
+                  anyOf(isBaseInitializer(),
+                        forField(fieldDecl(unless(hasType(isConstQualified())),
+                                           unless(HasUnionAsParent),
+                                           HasTypeEqualToConstructorClass))))
                   .bind("init")))
           .bind("constructor"),
       this);
 
   Finder->addMatcher(fieldDecl(hasInClassInitializer(ConstructorMatcher),
-                               unless(hasParent(recordDecl(isUnion()))))
+                               HasTypeEqualToConstructorClass,
+                               unless(HasUnionAsParent))
                          .bind("field"),
                      this);
 }

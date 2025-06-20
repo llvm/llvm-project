@@ -121,16 +121,14 @@ define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
 define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; CHECK-LABEL: mul_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; CHECK-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; CHECK-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; CHECK-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; CHECK-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-NEXT:    vpand %ymm2, %ymm1, %ymm3
+; CHECK-NEXT:    vpmaddubsw %ymm3, %ymm0, %ymm3
+; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm3
+; CHECK-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsllw $8, %ymm0, %ymm0
+; CHECK-NEXT:    vpor %ymm0, %ymm3, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = mul <32 x i8> %i, %j
   ret <32 x i8> %x
@@ -262,3 +260,31 @@ define <4 x i32> @mul_const11(<4 x i32> %x) {
   %m = mul <4 x i32> %x, <i32 2155905152, i32 2155905152, i32 2155905152, i32 2155905152>
   ret <4 x i32> %m
 }
+
+; check we will zero both vectors.
+define void @multi_freeze(<2 x double> %x, <2 x double> %y) nounwind {
+; X86-LABEL: multi_freeze:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovaps %xmm0, %xmm0
+; X86-NEXT:    vmovaps %xmm1, %xmm1
+; X86-NEXT:    calll foo@PLT
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: multi_freeze:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    vmovaps %xmm0, %xmm0
+; X64-NEXT:    vmovaps %xmm1, %xmm1
+; X64-NEXT:    callq foo@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = freeze <2 x double> poison
+  %2 = shufflevector <2 x double> %x, <2 x double> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = shufflevector <2 x double> %y, <2 x double> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  call void @foo(<4 x double> %2, <4 x double> %3)
+  ret void
+}
+
+declare void @foo(<4 x double>, <4 x double>)

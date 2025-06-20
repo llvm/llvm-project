@@ -341,6 +341,7 @@ define float @convphi_loopdelayed(ptr %s, ptr %d, i64 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    [[LS:%.*]] = load i32, ptr [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[LOOP:%.*]], label [[END:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -349,8 +350,8 @@ define float @convphi_loopdelayed(ptr %s, ptr %d, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END]], label [[LOOP]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[B:%.*]] = bitcast i32 [[LS]] to float
-; CHECK-NEXT:    ret float [[B]]
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ undef, [[ENTRY]] ], [ [[LS_BC]], [[LOOP]] ]
+; CHECK-NEXT:    ret float [[PHI_TC]]
 ;
 entry:
   %cmp15 = icmp sgt i64 %n, 0

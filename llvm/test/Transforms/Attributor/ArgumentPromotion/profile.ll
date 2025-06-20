@@ -42,7 +42,11 @@ declare void @use_i32(i32)
 
 !0 = !{!"branch_weights", i32 30}
 ;.
-; CHECK: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+; TUNIT: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!"branch_weights", i32 30}
+; CGSCC: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+;.
+; TUNIT: [[PROF0]] = !{!"branch_weights", i32 30}
+;.
+; CGSCC: [[PROF0]] = !{!"branch_weights", i32 30}
 ;.

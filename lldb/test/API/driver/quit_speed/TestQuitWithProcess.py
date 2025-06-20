@@ -12,6 +12,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 class DriverQuitSpeedTest(PExpectTest):
     source = "main.c"
 
+    @skipIfAsan
     def test_run_quit(self):
         """Test that the lldb driver's batch mode works correctly."""
         import pexpect
@@ -27,8 +28,8 @@ class DriverQuitSpeedTest(PExpectTest):
         # Launch the process without a TTY so we don't have to interrupt:
         child.sendline("process launch -n")
         print("launched process")
-        child.expect("Process ([\d]*) launched:")
+        child.expect(r"Process ([\d]*) launched:")
         print("Got launch message")
         child.sendline("quit")
         print("sent quit")
-        child.expect(pexpect.EOF, timeout=60)
+        child.expect(pexpect.EOF, timeout=15)

@@ -1,5 +1,4 @@
 # REQUIRES: python
-# UNSUPPORTED: lldb-repro
 #
 # RUN: mkdir -p %t.root
 # RUN: mkdir -p %t.home

@@ -14,9 +14,8 @@ body:             |
     ; CHECK-LABEL: name: LdOffset
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $w8 = MOVZWi 56952, 0
-    ; CHECK-NEXT: renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8
-    ; CHECK-NEXT: renamable $w0 = LDRBBroX killed renamable $x0, killed renamable $x8, 0, 0
+    ; CHECK-NEXT: $x8 = ADDXri $x0, 253, 12
+    ; CHECK-NEXT: renamable $w0 = LDRBBui killed renamable $x8, 3704
     ; CHECK-NEXT: RET undef $lr, implicit $w0
     renamable $w8 = MOVZWi 56952, 0
     renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8
@@ -46,3 +45,46 @@ body:             |
     renamable $w0 = LDRBBroX killed renamable $x0, renamable $x8, 0, 0
     RET undef $lr, implicit $w0
 ...
+
+# Negative test: No MOVZWi used for the const offset
+---
+name:            LdOffset_missing_MOVZ
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: LdOffset_missing_MOVZ
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8
+    ; CHECK-NEXT: renamable $w0 = LDRBBroX killed renamable $x0, killed renamable $x8, 0, 0
+    ; CHECK-NEXT: RET undef $lr, implicit $w0
+    renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8
+    renamable $w0 = LDRBBroX killed renamable $x0, killed renamable $x8, 0, 0
+    RET undef $lr, implicit $w0
+...
+
+# Negative test: MOVZWi and MOVKWi don't set the same register
+---
+name:            LdOffset_different_register_MOVZ_MOVK
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: LdOffset_different_register_MOVZ_MOVK
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $w7 = MOVZWi 56952, 0
+    ; CHECK-NEXT: renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8
+    ; CHECK-NEXT: renamable $w0 = LDRBBroX killed renamable $x0, killed renamable $x8, 0, 0
+    ; CHECK-NEXT: RET undef $lr, implicit $w0
+    renamable $w7 = MOVZWi 56952, 0
+    renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8
+    renamable $w0 = LDRBBroX killed renamable $x0, killed renamable $x8, 0, 0
+    RET undef $lr, implicit $w0

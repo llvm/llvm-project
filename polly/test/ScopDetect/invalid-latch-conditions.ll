@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly                              -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-allow-nonaffine-loops                                   -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=NALOOPS
-; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadNPMPolly                              -polly-process-unprofitable=false '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-loops                                   '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NALOOPS
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-loops -polly-process-unprofitable=false '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
 
 ; The latch conditions of the outer loop are not affine, thus the loop cannot
 ; handled by the domain generation and needs to be overapproximated.

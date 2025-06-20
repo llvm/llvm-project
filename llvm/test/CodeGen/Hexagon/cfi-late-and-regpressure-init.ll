@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-misched=true < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-misched=true < %s | FileCheck %s
 ; This test checks the delayed emission of CFI instructions
 ; This test also checks the proper initialization of RegisterPressureTracker.
 ; The RegisterPressureTracker must skip debug instructions upon entry of a BB

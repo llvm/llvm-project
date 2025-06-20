@@ -1,4 +1,4 @@
-; RUN: llc -march=msp430 < %s
+; RUN: llc -mtriple=msp430 < %s
 
 @nextaddr = global ptr null                       ; <i8**> [#uses=2]
 @C.0.2070 = private constant [5 x ptr] [ptr blockaddress(@foo, %L1), ptr blockaddress(@foo, %L2), ptr blockaddress(@foo, %L3), ptr blockaddress(@foo, %L4), ptr blockaddress(@foo, %L5)] ; <[5 x i8*]*> [#uses=1]

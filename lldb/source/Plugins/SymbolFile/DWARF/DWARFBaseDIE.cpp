@@ -35,10 +35,6 @@ dw_tag_t DWARFBaseDIE::Tag() const {
     return llvm::dwarf::DW_TAG_null;
 }
 
-const char *DWARFBaseDIE::GetTagAsCString() const {
-  return DW_TAG_value_to_name(Tag());
-}
-
 const char *DWARFBaseDIE::GetAttributeValueAsString(const dw_attr_t attr,
                                                 const char *fail_value) const {
   if (IsValid())
@@ -109,10 +105,6 @@ SymbolFileDWARF *DWARFBaseDIE::GetDWARF() const {
 
 bool DWARFBaseDIE::HasChildren() const {
   return m_die && m_die->HasChildren();
-}
-
-bool DWARFBaseDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
-  return IsValid() && GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
 }
 
 DWARFAttributes DWARFBaseDIE::GetAttributes(Recurse recurse) const {

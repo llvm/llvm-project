@@ -220,6 +220,14 @@ public:
   CacheShard &getShardForFilename(StringRef Filename) const;
   CacheShard &getShardForUID(llvm::sys::fs::UniqueID UID) const;
 
+  /// Visits all cached entries and re-stat an entry using FS if
+  /// it is negatively stat cached. If re-stat succeeds on a path,
+  /// the path is added to InvalidPaths, indicating that the cache
+  /// may have erroneously negatively cached it. The caller can then
+  /// use InvalidPaths to issue diagnostics.
+  std::vector<StringRef>
+  getInvalidNegativeStatCachedPaths(llvm::vfs::FileSystem &UnderlyingFS) const;
+
 private:
   std::unique_ptr<CacheShard[]> CacheShards;
   unsigned NumShards;
@@ -353,6 +361,12 @@ public:
 
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 
+  /// Make it so that no paths bypass this VFS.
+  void resetBypassedPathPrefix() { BypassedPathPrefix.reset(); }
+  /// Set the prefix for paths that should bypass this VFS and go straight to
+  /// the underlying VFS.
+  void setBypassedPathPrefix(StringRef Prefix) { BypassedPathPrefix = Prefix; }
+
   /// Returns entry for the given filename.
   ///
   /// Attempts to use the local and shared caches first, then falls back to
@@ -364,6 +378,16 @@ public:
   /// Returns true if the directive tokens are populated for this file entry,
   /// false if not (i.e. this entry is not a file or its scan fails).
   bool ensureDirectiveTokensArePopulated(EntryRef Entry);
+
+  /// \returns The scanned preprocessor directive tokens of the file that are
+  /// used to speed up preprocessing, if available.
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  getDirectiveTokens(const Twine &Path) {
+    if (llvm::ErrorOr<EntryRef> Entry = getOrCreateFileSystemEntry(Path.str()))
+      if (ensureDirectiveTokensArePopulated(*Entry))
+        return Entry->getDirectiveTokens();
+    return std::nullopt;
+  }
 
   /// Check whether \p Path exists. By default checks cached result of \c
   /// status(), and falls back on FS if unable to do so.
@@ -450,11 +474,18 @@ private:
     getUnderlyingFS().print(OS, Type, IndentLevel + 1);
   }
 
+  /// Whether this path should bypass this VFS and go straight to the underlying
+  /// VFS.
+  bool shouldBypass(StringRef Path) const;
+
   /// The global cache shared between worker threads.
   DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;
+
+  /// Prefix of paths that should go straight to the underlying VFS.
+  std::optional<std::string> BypassedPathPrefix;
 
   /// The working directory to use for making relative paths absolute before
   /// using them for cache lookups.

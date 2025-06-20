@@ -26,6 +26,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -278,6 +279,13 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
         FullFS += ",+evex512";
   }
 
+  // Disable 64-bit only features in non-64-bit mode.
+  SmallVector<StringRef, 9> FeaturesIn64BitOnly = {
+      "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
+  if (FullFS.find("-64bit-mode") != std::string::npos)
+    for (StringRef F : FeaturesIn64BitOnly)
+      FullFS += ",-" + F.str();
+
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPU, TuneCPU, FullFS);
 
@@ -289,11 +297,10 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     IsUnalignedMem16Slow = false;
 
   LLVM_DEBUG(dbgs() << "Subtarget features: SSELevel " << X86SSELevel
-                    << ", 3DNowLevel " << X863DNowLevel << ", 64bit "
-                    << HasX86_64 << "\n");
+                    << ", MMX " << HasMMX << ", 64bit " << HasX86_64 << "\n");
   if (Is64Bit && !HasX86_64)
-    report_fatal_error("64-bit code requested on a subtarget that doesn't "
-                       "support it!");
+    reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
+                          "support it!");
 
   // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, NaCl, and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
@@ -353,6 +360,9 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
   RegBankInfo.reset(RBI);
   InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
 }
+
+// Define the virtual destructor out-of-line for build efficiency.
+X86Subtarget::~X86Subtarget() = default;
 
 const CallLowering *X86Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();

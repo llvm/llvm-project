@@ -4,8 +4,12 @@
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
 // REQUIRES: stable-runtime
 
+// Issue #108194: Incomplete .debug_line at -O1 and above.
+// XFAIL: target={{.*sparc.*}}
+
+#include "defines.h"
 #include <stdlib.h>
-__attribute__((noinline))
+ATTRIBUTE_NOINLINE
 static void LargeFunction(int *x, int zero) {
   x[0]++;
   x[1]++;
@@ -26,7 +30,7 @@ static void LargeFunction(int *x, int zero) {
   // Darwin.
   // CHECK-Linux:  {{#0 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-3]]
   // CHECK-SunOS:  {{#0 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-4]]
-  // CHECK-Windows:{{#0 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-5]]
+  // CHECK-Windows:{{#[0-1] 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-5]]
   // CHECK-FreeBSD:{{#0 0x.* in LargeFunction.*large_func_test.cpp:}}[[@LINE-6]]
   // CHECK-Darwin: {{#0 0x.* in .*LargeFunction.*large_func_test.cpp}}:[[@LINE-7]]
 
@@ -45,7 +49,7 @@ static void LargeFunction(int *x, int zero) {
 int main(int argc, char **argv) {
   int *x = new int[100];
   LargeFunction(x, argc - 1);
-  // CHECK: {{    #1 0x.* in main .*large_func_test.cpp:}}[[@LINE-1]]
+  // CHECK: {{    #[1-2] 0x.* in main .*large_func_test.cpp:}}[[@LINE-1]]
   // CHECK: {{0x.* is located 12 bytes after 400-byte region}}
   // CHECK: {{allocated by thread T0 here:}}
   // CHECK-Linux:  {{    #0 0x.* in operator new}}

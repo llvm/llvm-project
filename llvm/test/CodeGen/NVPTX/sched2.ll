@@ -1,12 +1,12 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 define void @foo(ptr %a) {
 ; CHECK: .func foo
-; CHECK: ld.v2.u32
-; CHECK-NEXT: ld.v2.u32
-; CHECK-NEXT: ld.v2.u32
-; CHECK-NEXT: ld.v2.u32
+; CHECK: ld.v2.b32
+; CHECK-NEXT: ld.v2.b32
+; CHECK-NEXT: ld.v2.b32
+; CHECK-NEXT: ld.v2.b32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32

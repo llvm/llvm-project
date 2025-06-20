@@ -1,4 +1,4 @@
-//RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown -analyze -analyzer-checker=core -verify %s
+//RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown -analyzer-checker=core -verify %s
 // expected-no-diagnostics
 
 #include <stdint.h>

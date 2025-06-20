@@ -29,11 +29,23 @@ module m
   !ERROR: A function may not have ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)
   attributes(global) real function f1
   end
-  recursive attributes(global) subroutine s7 ! ok
+  !ERROR: A kernel subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  recursive attributes(global) subroutine s7
   end
-  pure attributes(global) subroutine s8 ! ok
+  !ERROR: A kernel subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  pure attributes(global) subroutine s8
   end
-  elemental attributes(global) subroutine s9 ! ok
+  !ERROR: A kernel subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  elemental attributes(global) subroutine s9
+  end
+  !ERROR: A kernel subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  recursive attributes(grid_global) subroutine s10
+  end
+  !ERROR: A kernel subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  pure attributes(grid_global) subroutine s11
+  end
+  !ERROR: A kernel subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  elemental attributes(grid_global) subroutine s12
   end
 end
 

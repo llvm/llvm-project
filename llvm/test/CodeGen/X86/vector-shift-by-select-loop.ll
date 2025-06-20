@@ -33,7 +33,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; SSE-NEXT:    pxor %xmm8, %xmm8
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm9 = xmm0[0],zero,xmm0[1],zero
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm10 = xmm1[0],zero,xmm1[1],zero
-; SSE-NEXT:    .p2align 4, 0x90
+; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB0_4: # %vector.body
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -115,11 +115,11 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; SSE-NEXT:    cmpq %rcx, %rdx
 ; SSE-NEXT:    jne .LBB0_4
 ; SSE-NEXT:  # %bb.5: # %middle.block
-; SSE-NEXT:    cmpq %r9, %rdx
+; SSE-NEXT:    cmpl %r9d, %edx
 ; SSE-NEXT:    jne .LBB0_6
 ; SSE-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; SSE-NEXT:    retq
-; SSE-NEXT:    .p2align 4, 0x90
+; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB0_8: # %for.body
 ; SSE-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -167,7 +167,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm6 = xmm8[0],zero,xmm8[1],zero
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm7 = xmm7[0],zero,xmm7[1],zero
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm8 = xmm8[0],zero,xmm8[1],zero
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB0_4: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm9 = mem[0],zero
@@ -239,12 +239,12 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX1-NEXT:    cmpq %rcx, %rdx
 ; AVX1-NEXT:    jne .LBB0_4
 ; AVX1-NEXT:  # %bb.5: # %middle.block
-; AVX1-NEXT:    cmpq %r9, %rdx
+; AVX1-NEXT:    cmpl %r9d, %edx
 ; AVX1-NEXT:    jne .LBB0_6
 ; AVX1-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB0_8: # %for.body
 ; AVX1-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; AVX1-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -283,7 +283,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB0_4: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -314,12 +314,12 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX2-NEXT:    cmpq %rcx, %rdx
 ; AVX2-NEXT:    jne .LBB0_4
 ; AVX2-NEXT:  # %bb.5: # %middle.block
-; AVX2-NEXT:    cmpq %r9, %rdx
+; AVX2-NEXT:    cmpl %r9d, %edx
 ; AVX2-NEXT:    jne .LBB0_6
 ; AVX2-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB0_8: # %for.body
 ; AVX2-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -362,7 +362,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; XOP-NEXT:    .p2align 4, 0x90
+; XOP-NEXT:    .p2align 4
 ; XOP-NEXT:  .LBB0_4: # %vector.body
 ; XOP-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XOP-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
@@ -413,12 +413,12 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; XOP-NEXT:    cmpq %rcx, %rdx
 ; XOP-NEXT:    jne .LBB0_4
 ; XOP-NEXT:  # %bb.5: # %middle.block
-; XOP-NEXT:    cmpq %r9, %rdx
+; XOP-NEXT:    cmpl %r9d, %edx
 ; XOP-NEXT:    jne .LBB0_6
 ; XOP-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; XOP-NEXT:    vzeroupper
 ; XOP-NEXT:    retq
-; XOP-NEXT:    .p2align 4, 0x90
+; XOP-NEXT:    .p2align 4
 ; XOP-NEXT:  .LBB0_8: # %for.body
 ; XOP-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; XOP-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -450,22 +450,22 @@ for.body.preheader40:
 
 vector.ph:
   %n.vec = and i64 %wide.trip.count, 4294967264
-  %broadcast.splatinsert20 = insertelement <8 x i32> undef, i32 %amt0, i32 0
-  %broadcast.splat21 = shufflevector <8 x i32> %broadcast.splatinsert20, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert22 = insertelement <8 x i32> undef, i32 %amt1, i32 0
-  %broadcast.splat23 = shufflevector <8 x i32> %broadcast.splatinsert22, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert24 = insertelement <8 x i32> undef, i32 %amt0, i32 0
-  %broadcast.splat25 = shufflevector <8 x i32> %broadcast.splatinsert24, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert26 = insertelement <8 x i32> undef, i32 %amt1, i32 0
-  %broadcast.splat27 = shufflevector <8 x i32> %broadcast.splatinsert26, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert28 = insertelement <8 x i32> undef, i32 %amt0, i32 0
-  %broadcast.splat29 = shufflevector <8 x i32> %broadcast.splatinsert28, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert30 = insertelement <8 x i32> undef, i32 %amt1, i32 0
-  %broadcast.splat31 = shufflevector <8 x i32> %broadcast.splatinsert30, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert32 = insertelement <8 x i32> undef, i32 %amt0, i32 0
-  %broadcast.splat33 = shufflevector <8 x i32> %broadcast.splatinsert32, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert34 = insertelement <8 x i32> undef, i32 %amt1, i32 0
-  %broadcast.splat35 = shufflevector <8 x i32> %broadcast.splatinsert34, <8 x i32> undef, <8 x i32> zeroinitializer
+  %broadcast.splatinsert20 = insertelement <8 x i32> poison, i32 %amt0, i32 0
+  %broadcast.splat21 = shufflevector <8 x i32> %broadcast.splatinsert20, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert22 = insertelement <8 x i32> poison, i32 %amt1, i32 0
+  %broadcast.splat23 = shufflevector <8 x i32> %broadcast.splatinsert22, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert24 = insertelement <8 x i32> poison, i32 %amt0, i32 0
+  %broadcast.splat25 = shufflevector <8 x i32> %broadcast.splatinsert24, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert26 = insertelement <8 x i32> poison, i32 %amt1, i32 0
+  %broadcast.splat27 = shufflevector <8 x i32> %broadcast.splatinsert26, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert28 = insertelement <8 x i32> poison, i32 %amt0, i32 0
+  %broadcast.splat29 = shufflevector <8 x i32> %broadcast.splatinsert28, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert30 = insertelement <8 x i32> poison, i32 %amt1, i32 0
+  %broadcast.splat31 = shufflevector <8 x i32> %broadcast.splatinsert30, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert32 = insertelement <8 x i32> poison, i32 %amt0, i32 0
+  %broadcast.splat33 = shufflevector <8 x i32> %broadcast.splatinsert32, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert34 = insertelement <8 x i32> poison, i32 %amt1, i32 0
+  %broadcast.splat35 = shufflevector <8 x i32> %broadcast.splatinsert34, <8 x i32> poison, <8 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:
@@ -547,7 +547,7 @@ define void @vector_variable_shift_left_loop_simpler(ptr nocapture %arr, ptr noc
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm3[0],zero,xmm3[1],zero
 ; SSE-NEXT:    pslld %xmm0, %xmm1
 ; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    .p2align 4, 0x90
+; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB1_2: # %vector.body
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -578,7 +578,7 @@ define void @vector_variable_shift_left_loop_simpler(ptr nocapture %arr, ptr noc
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX1-NEXT:    vpslld %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB1_2: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -606,7 +606,7 @@ define void @vector_variable_shift_left_loop_simpler(ptr nocapture %arr, ptr noc
 ; AVX2-NEXT:    vpbroadcastd %xmm2, %xmm2
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB1_2: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} xmm4 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -635,7 +635,7 @@ define void @vector_variable_shift_left_loop_simpler(ptr nocapture %arr, ptr noc
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; XOP-NEXT:    xorl %ecx, %ecx
 ; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOP-NEXT:    .p2align 4, 0x90
+; XOP-NEXT:    .p2align 4
 ; XOP-NEXT:  .LBB1_2: # %vector.body
 ; XOP-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XOP-NEXT:    vpmovzxbd {{.*#+}} xmm4 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -655,12 +655,12 @@ entry:
 
 vector.ph:
   %n.vec = and i64 %wide.trip.count, 4294967292
-  %splatinsert18 = insertelement <4 x i32> undef, i32 %amt0, i32 0
-  %splat1 = shufflevector <4 x i32> %splatinsert18, <4 x i32> undef, <4 x i32> zeroinitializer
-  %splatinsert20 = insertelement <4 x i32> undef, i32 %amt1, i32 0
-  %splat2 = shufflevector <4 x i32> %splatinsert20, <4 x i32> undef, <4 x i32> zeroinitializer
-  %splatinsert22 = insertelement <4 x i32> undef, i32 %x, i32 0
-  %splat3 = shufflevector <4 x i32> %splatinsert22, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splatinsert18 = insertelement <4 x i32> poison, i32 %amt0, i32 0
+  %splat1 = shufflevector <4 x i32> %splatinsert18, <4 x i32> poison, <4 x i32> zeroinitializer
+  %splatinsert20 = insertelement <4 x i32> poison, i32 %amt1, i32 0
+  %splat2 = shufflevector <4 x i32> %splatinsert20, <4 x i32> poison, <4 x i32> zeroinitializer
+  %splatinsert22 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %splat3 = shufflevector <4 x i32> %splatinsert22, <4 x i32> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:

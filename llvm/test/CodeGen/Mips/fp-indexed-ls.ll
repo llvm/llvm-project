@@ -1,10 +1,10 @@
-; RUN: llc -march=mipsel   -mcpu=mips32   -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R1
-; RUN: llc -march=mipsel   -mcpu=mips32r2 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R2
-; RUN: llc -march=mipsel   -mcpu=mips32r6 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R6
-; RUN: llc -march=mips64el -mcpu=mips4    -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
-; RUN: llc -march=mips64el -mcpu=mips64   -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
-; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
-; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS64R6
+; RUN: llc -mtriple=mipsel   -mcpu=mips32   -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R1
+; RUN: llc -mtriple=mipsel   -mcpu=mips32r2 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R2
+; RUN: llc -mtriple=mipsel   -mcpu=mips32r6 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R6
+; RUN: llc -mtriple=mips64el -mcpu=mips4    -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
+; RUN: llc -mtriple=mips64el -mcpu=mips64   -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
+; RUN: llc -mtriple=mips64el -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS64R6
 
 ; Check that [ls][dwu]xc1 are not emitted for nacl.
 ; RUN: llc -mtriple=mipsel-none-nacl-gnu -mcpu=mips32r2 < %s | FileCheck %s -check-prefix=CHECK-NACL

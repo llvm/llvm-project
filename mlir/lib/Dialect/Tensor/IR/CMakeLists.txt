@@ -17,9 +17,6 @@ add_mlir_dialect_library(MLIRTensorDialect
   DEPENDS
   MLIRTensorOpsIncGen
 
-  LINK_COMPONENTS
-  Core
-
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRArithDialect
@@ -29,8 +26,11 @@ add_mlir_dialect_library(MLIRTensorDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIR
+  MLIRInferIntRangeCommon
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRParallelCombiningOpInterface
+  MLIRRuntimeVerifiableOpInterface
   MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport

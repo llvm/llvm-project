@@ -11,7 +11,7 @@ define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 24)
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[CALL]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP0]], i32 0, i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR]], align 4

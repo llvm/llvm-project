@@ -33,12 +33,20 @@ bool lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
                                              MCOperand &MCOp,
                                              const AsmPrinter &AP);
 
+FunctionPass *createLoongArchDeadRegisterDefinitionsPass();
 FunctionPass *createLoongArchExpandAtomicPseudoPass();
-FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM);
+FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM,
+                                     CodeGenOptLevel OptLevel);
+FunctionPass *createLoongArchMergeBaseOffsetOptPass();
+FunctionPass *createLoongArchOptWInstrsPass();
 FunctionPass *createLoongArchPreRAExpandPseudoPass();
 FunctionPass *createLoongArchExpandPseudoPass();
-void initializeLoongArchDAGToDAGISelPass(PassRegistry &);
+void initializeLoongArchAsmPrinterPass(PassRegistry &);
+void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
+void initializeLoongArchDeadRegisterDefinitionsPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
+void initializeLoongArchMergeBaseOffsetOptPass(PassRegistry &);
+void initializeLoongArchOptWInstrsPass(PassRegistry &);
 void initializeLoongArchPreRAExpandPseudoPass(PassRegistry &);
 void initializeLoongArchExpandPseudoPass(PassRegistry &);
 } // end namespace llvm

@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v1 -show-mc-encoding < %s | FileCheck %s
 
 define i8 @mov(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: mov:

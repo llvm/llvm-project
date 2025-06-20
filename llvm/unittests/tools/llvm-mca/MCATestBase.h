@@ -74,7 +74,7 @@ protected:
   /// `llvm-mca` tool to verify result correctness.
   /// This function only displays on SummaryView by default.
   virtual Error runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
-                               ArrayRef<mca::View *> Views = std::nullopt,
+                               ArrayRef<mca::View *> Views = {},
                                const mca::PipelineOptions *PO = nullptr);
 };
 

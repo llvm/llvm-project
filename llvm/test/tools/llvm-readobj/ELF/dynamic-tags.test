@@ -8,8 +8,10 @@
 # RUN: llvm-readelf --dynamic-table %t1 \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU64
 # RUN: llvm-readelf -d %t1 | FileCheck %s --check-prefix=GNU64
+# RUN: llvm-readelf --dynamic-table --pretty-print --elf-output-style=JSON %t1 \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=JSON64
 
-#      LLVM64:DynamicSection [ (61 entries)
+#      LLVM64:DynamicSection [ (62 entries)
 # LLVM64-NEXT:  Tag                Type                 Name/Value
 # LLVM64-NEXT:  0x0000000000000001 NEEDED               Shared library: [D]
 # LLVM64-NEXT:  0x0000000000000002 PLTRELSZ             16 (bytes)
@@ -47,6 +49,7 @@
 # LLVM64-NEXT:  0x0000000000000023 RELRSZ               16 (bytes)
 # LLVM64-NEXT:  0x0000000000000024 RELR                 0x1000
 # LLVM64-NEXT:  0x0000000000000025 RELRENT              17185 (bytes)
+# LLVM64-NEXT:  0x0000000040000026 CREL                 0x40
 # LLVM64-NEXT:  0x000000006000000F ANDROID_REL          0x1000
 # LLVM64-NEXT:  0x0000000060000010 ANDROID_RELSZ        16 (bytes)
 # LLVM64-NEXT:  0x0000000060000011 ANDROID_RELA         0x1000
@@ -74,7 +77,7 @@
 # LLVM64-NEXT:  0x0000000000000000 NULL                 0x0
 # LLVM64-NEXT:]
 
-#      GNU64:Dynamic section at offset {{.*}} contains 61 entries:
+#      GNU64:Dynamic section at offset {{.*}} contains 62 entries:
 # GNU64-NEXT:  Tag                Type                   Name/Value
 # GNU64-NEXT:  0x0000000000000001 (NEEDED)               Shared library: [D]
 # GNU64-NEXT:  0x0000000000000002 (PLTRELSZ)             16 (bytes)
@@ -112,6 +115,7 @@
 # GNU64-NEXT:  0x0000000000000023 (RELRSZ)               16 (bytes)
 # GNU64-NEXT:  0x0000000000000024 (RELR)                 0x1000
 # GNU64-NEXT:  0x0000000000000025 (RELRENT)              17185 (bytes)
+# GNU64-NEXT:  0x0000000040000026 (CREL)                 0x40
 # GNU64-NEXT:  0x000000006000000f (ANDROID_REL)          0x1000
 # GNU64-NEXT:  0x0000000060000010 (ANDROID_RELSZ)        16 (bytes)
 # GNU64-NEXT:  0x0000000060000011 (ANDROID_RELA)         0x1000
@@ -137,6 +141,366 @@
 # GNU64-NEXT:  0x000000006abcdef0 (<unknown:>0x6abcdef0) 0x9988776655443322
 # GNU64-NEXT:  0x0000000076543210 (<unknown:>0x76543210) 0x5555666677778888
 # GNU64-NEXT:  0x0000000000000000 (NULL)                 0x0
+
+#      JSON64:"DynamicSection": [
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1,
+# JSON64-NEXT:      "Type": "NEEDED",
+# JSON64-NEXT:      "Value": 1,
+# JSON64-NEXT:      "Library": "D"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 2,
+# JSON64-NEXT:      "Type": "PLTRELSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 3,
+# JSON64-NEXT:      "Type": "PLTGOT",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 4,
+# JSON64-NEXT:      "Type": "HASH",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 5,
+# JSON64-NEXT:      "Type": "STRTAB",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 6,
+# JSON64-NEXT:      "Type": "SYMTAB",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 7,
+# JSON64-NEXT:      "Type": "RELA",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 8,
+# JSON64-NEXT:      "Type": "RELASZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 9,
+# JSON64-NEXT:      "Type": "RELAENT",
+# JSON64-NEXT:      "Value": 1929
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 10,
+# JSON64-NEXT:      "Type": "STRSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 11,
+# JSON64-NEXT:      "Type": "SYMENT",
+# JSON64-NEXT:      "Value": 2439
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 12,
+# JSON64-NEXT:      "Type": "INIT",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 13,
+# JSON64-NEXT:      "Type": "FINI",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 14,
+# JSON64-NEXT:      "Type": "SONAME",
+# JSON64-NEXT:      "Value": 3,
+# JSON64-NEXT:      "Name": "U"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 15,
+# JSON64-NEXT:      "Type": "RPATH",
+# JSON64-NEXT:      "Value": 5,
+# JSON64-NEXT:      "Path": [
+# JSON64-NEXT:          "f"
+# JSON64-NEXT:      ]
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 16,
+# JSON64-NEXT:      "Type": "SYMBOLIC",
+# JSON64-NEXT:      "Value": 1311768467294899695
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 17,
+# JSON64-NEXT:      "Type": "REL",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 18,
+# JSON64-NEXT:      "Type": "RELSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 19,
+# JSON64-NEXT:      "Type": "RELENT",
+# JSON64-NEXT:      "Value": 291
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 20,
+# JSON64-NEXT:      "Type": "PLTREL",
+# JSON64-NEXT:      "Value": 7
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 21,
+# JSON64-NEXT:      "Type": "DEBUG",
+# JSON64-NEXT:      "Value": 18364757930599072545
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 22,
+# JSON64-NEXT:      "Type": "TEXTREL",
+# JSON64-NEXT:      "Value": 1234605616436508552
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 23,
+# JSON64-NEXT:      "Type": "JMPREL",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 24,
+# JSON64-NEXT:      "Type": "BIND_NOW",
+# JSON64-NEXT:      "Value": 9833440827789222417
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 25,
+# JSON64-NEXT:      "Type": "INIT_ARRAY",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 26,
+# JSON64-NEXT:      "Type": "FINI_ARRAY",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 27,
+# JSON64-NEXT:      "Type": "INIT_ARRAYSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 28,
+# JSON64-NEXT:      "Type": "FINI_ARRAYSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 29,
+# JSON64-NEXT:      "Type": "RUNPATH",
+# JSON64-NEXT:      "Value": 7,
+# JSON64-NEXT:      "Path": [
+# JSON64-NEXT:          "w"
+# JSON64-NEXT:      ]
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 30,
+# JSON64-NEXT:      "Type": "FLAGS",
+# JSON64-NEXT:      "Value": 18446744073709551615,
+# JSON64-NEXT:      "Flags": [
+# JSON64-NEXT:          "ORIGIN",
+# JSON64-NEXT:          "SYMBOLIC",
+# JSON64-NEXT:          "TEXTREL",
+# JSON64-NEXT:          "BIND_NOW",
+# JSON64-NEXT:          "STATIC_TLS"
+# JSON64-NEXT:      ]
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 32,
+# JSON64-NEXT:      "Type": "PREINIT_ARRAY",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 33,
+# JSON64-NEXT:      "Type": "PREINIT_ARRAYSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 34,
+# JSON64-NEXT:      "Type": "SYMTAB_SHNDX",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 35,
+# JSON64-NEXT:      "Type": "RELRSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 36,
+# JSON64-NEXT:      "Type": "RELR",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 37,
+# JSON64-NEXT:      "Type": "RELRENT",
+# JSON64-NEXT:      "Value": 17185
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1073741862,
+# JSON64-NEXT:      "Type": "CREL",
+# JSON64-NEXT:      "Value": 64
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1610612751,
+# JSON64-NEXT:      "Type": "ANDROID_REL",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1610612752,
+# JSON64-NEXT:      "Type": "ANDROID_RELSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1610612753,
+# JSON64-NEXT:      "Type": "ANDROID_RELA",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1610612754,
+# JSON64-NEXT:      "Type": "ANDROID_RELASZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879040000,
+# JSON64-NEXT:      "Type": "ANDROID_RELR",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879040001,
+# JSON64-NEXT:      "Type": "ANDROID_RELRSZ",
+# JSON64-NEXT:      "Value": 16
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879040003,
+# JSON64-NEXT:      "Type": "ANDROID_RELRENT",
+# JSON64-NEXT:      "Value": 4660
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879047925,
+# JSON64-NEXT:      "Type": "GNU_HASH",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879047926,
+# JSON64-NEXT:      "Type": "TLSDESC_PLT",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879047927,
+# JSON64-NEXT:      "Type": "TLSDESC_GOT",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048185,
+# JSON64-NEXT:      "Type": "RELACOUNT",
+# JSON64-NEXT:      "Value": 0
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048186,
+# JSON64-NEXT:      "Type": "RELCOUNT",
+# JSON64-NEXT:      "Value": 0
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048187,
+# JSON64-NEXT:      "Type": "FLAGS_1"
+# JSON64-NEXT:      "Value": 18446744073709551615,
+# JSON64-NEXT:      "Flags": [
+# JSON64-NEXT:          "NOW",
+# JSON64-NEXT:          "GLOBAL",
+# JSON64-NEXT:          "GROUP",
+# JSON64-NEXT:          "NODELETE",
+# JSON64-NEXT:          "LOADFLTR",
+# JSON64-NEXT:          "INITFIRST",
+# JSON64-NEXT:          "NOOPEN",
+# JSON64-NEXT:          "ORIGIN",
+# JSON64-NEXT:          "DIRECT",
+# JSON64-NEXT:          "TRANS",
+# JSON64-NEXT:          "INTERPOSE",
+# JSON64-NEXT:          "NODEFLIB",
+# JSON64-NEXT:          "NODUMP",
+# JSON64-NEXT:          "CONFALT",
+# JSON64-NEXT:          "ENDFILTEE",
+# JSON64-NEXT:          "DISPRELDNE",
+# JSON64-NEXT:          "DISPRELPND",
+# JSON64-NEXT:          "NODIRECT",
+# JSON64-NEXT:          "IGNMULDEF",
+# JSON64-NEXT:          "NOKSYMS",
+# JSON64-NEXT:          "NOHDR",
+# JSON64-NEXT:          "EDITED",
+# JSON64-NEXT:          "NORELOC",
+# JSON64-NEXT:          "SYMINTPOSE",
+# JSON64-NEXT:          "GLOBAUDIT",
+# JSON64-NEXT:          "SINGLETON",
+# JSON64-NEXT:          "PIE"
+# JSON64-NEXT:      ]
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048176,
+# JSON64-NEXT:      "Type": "VERSYM",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048188,
+# JSON64-NEXT:      "Type": "VERDEF",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048189,
+# JSON64-NEXT:      "Type": "VERDEFNUM",
+# JSON64-NEXT:      "Value": 0
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048190,
+# JSON64-NEXT:      "Type": "VERNEED",
+# JSON64-NEXT:      "Value": 4096
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048191,
+# JSON64-NEXT:      "Type": "VERNEEDNUM",
+# JSON64-NEXT:      "Value": 0
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 2147483645,
+# JSON64-NEXT:      "Type": "AUXILIARY"
+# JSON64-NEXT:      "Value": 1,
+# JSON64-NEXT:      "Library": "D"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 2147483646,
+# JSON64-NEXT:      "Type": "USED",
+# JSON64-NEXT:      "Value": 3,
+# JSON64-NEXT:      "Object": "U"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 2147483647,
+# JSON64-NEXT:      "Type": "FILTER",
+# JSON64-NEXT:      "Value": 3,
+# JSON64-NEXT:      "Library": "U"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 305419896,
+# JSON64-NEXT:      "Type": "<unknown:>0x12345678",
+# JSON64-NEXT:      "Value": 9756277979052589857
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1790762736,
+# JSON64-NEXT:      "Type": "<unknown:>0x6abcdef0",
+# JSON64-NEXT:      "Value": 11063223766036525858
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1985229328,
+# JSON64-NEXT:      "Type": "<unknown:>0x76543210",
+# JSON64-NEXT:      "Value": 6148933456521300104
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 0,
+# JSON64-NEXT:      "Type": "NULL",
+# JSON64-NEXT:      "Value": 0
+# JSON64-NEXT:  }
+# JSON64-NEXT:]
 
 --- !ELF
 FileHeader:
@@ -226,6 +590,8 @@ Sections:
         Value: 0x1000
       - Tag:   DT_RELRENT
         Value: 0x4321
+      - Tag:   DT_CREL
+        Value: 0x40
       - Tag:   DT_ANDROID_REL
         Value: 0x1000
       - Tag:   DT_ANDROID_RELSZ
@@ -300,7 +666,7 @@ ProgramHeaders:
 # RUN:   | FileCheck %s --check-prefix=GNU32 --strict-whitespace --match-full-lines
 # RUN: llvm-readelf -d %t2 | FileCheck %s --check-prefix=GNU32 --strict-whitespace --match-full-lines
 
-#      LLVM32:DynamicSection [ (61 entries)
+#      LLVM32:DynamicSection [ (62 entries)
 # LLVM32-NEXT:  Tag        Type                 Name/Value
 # LLVM32-NEXT:  0x00000001 NEEDED               Shared library: [D]
 # LLVM32-NEXT:  0x00000002 PLTRELSZ             16 (bytes)
@@ -338,6 +704,7 @@ ProgramHeaders:
 # LLVM32-NEXT:  0x00000023 RELRSZ               16 (bytes)
 # LLVM32-NEXT:  0x00000024 RELR                 0x1000
 # LLVM32-NEXT:  0x00000025 RELRENT              17185 (bytes)
+# LLVM32-NEXT:  0x40000026 CREL                 0x40
 # LLVM32-NEXT:  0x6000000F ANDROID_REL          0x1000
 # LLVM32-NEXT:  0x60000010 ANDROID_RELSZ        16 (bytes)
 # LLVM32-NEXT:  0x60000011 ANDROID_RELA         0x1000
@@ -365,7 +732,7 @@ ProgramHeaders:
 # LLVM32-NEXT:  0x00000000 NULL                 0x0
 # LLVM32-NEXT:]
 
-#      GNU32:Dynamic section at offset 0x84 contains 61 entries:
+#      GNU32:Dynamic section at offset 0x84 contains 62 entries:
 # GNU32-NEXT:  Tag        Type                   Name/Value
 # GNU32-NEXT:  0x00000001 (NEEDED)               Shared library: [D]
 # GNU32-NEXT:  0x00000002 (PLTRELSZ)             16 (bytes)
@@ -403,6 +770,7 @@ ProgramHeaders:
 # GNU32-NEXT:  0x00000023 (RELRSZ)               16 (bytes)
 # GNU32-NEXT:  0x00000024 (RELR)                 0x1000
 # GNU32-NEXT:  0x00000025 (RELRENT)              17185 (bytes)
+# GNU32-NEXT:  0x40000026 (CREL)                 0x40
 # GNU32-NEXT:  0x6000000f (ANDROID_REL)          0x1000
 # GNU32-NEXT:  0x60000010 (ANDROID_RELSZ)        16 (bytes)
 # GNU32-NEXT:  0x60000011 (ANDROID_RELA)         0x1000
@@ -489,13 +857,14 @@ Sections:
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_JMPREL: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_SYMTAB_SHNDX: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_CREL: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_GNU_HASH: invalid e_phentsize: 1
 
 # PHENTSIZE-LLVM:      warning: '[[FILE]]': string table was not found
 # PHENTSIZE-LLVM-NEXT: LoadName: <?>
 
-# PHENTSIZE-LLVM:      DynamicSection [ (61 entries)
+# PHENTSIZE-LLVM:      DynamicSection [ (62 entries)
 # PHENTSIZE-LLVM-NEXT:   Tag                Type                 Name/Value
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000001 NEEDED               Shared library: [<?>]
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000002 PLTRELSZ             16 (bytes)
@@ -533,6 +902,7 @@ Sections:
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000023 RELRSZ               16 (bytes)
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000024 RELR                 0x1000
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000025 RELRENT              17185 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000040000026 CREL                 0x40
 # PHENTSIZE-LLVM-NEXT:   0x000000006000000F ANDROID_REL          0x1000
 # PHENTSIZE-LLVM-NEXT:   0x0000000060000010 ANDROID_RELSZ        16 (bytes)
 # PHENTSIZE-LLVM-NEXT:   0x0000000060000011 ANDROID_RELA         0x1000
@@ -560,7 +930,7 @@ Sections:
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000000 NULL                 0x0
 # PHENTSIZE-LLVM-NEXT: ]
 
-# PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 61 entries:
+# PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 62 entries:
 # PHENTSIZE-GNU-NEXT:   Tag                Type                   Name/Value
 # PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': string table was not found
 # PHENTSIZE-GNU-NEXT:   0x0000000000000001 (NEEDED)               Shared library: [<?>]
@@ -599,6 +969,7 @@ Sections:
 # PHENTSIZE-GNU-NEXT:   0x0000000000000023 (RELRSZ)               16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000000000024 (RELR)                 0x1000
 # PHENTSIZE-GNU-NEXT:   0x0000000000000025 (RELRENT)              17185 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000040000026 (CREL)                 0x40
 # PHENTSIZE-GNU-NEXT:   0x000000006000000f (ANDROID_REL)          0x1000
 # PHENTSIZE-GNU-NEXT:   0x0000000060000010 (ANDROID_RELSZ)        16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000060000011 (ANDROID_RELA)         0x1000

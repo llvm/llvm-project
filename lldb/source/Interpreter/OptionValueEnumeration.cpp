@@ -37,6 +37,16 @@ void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
+llvm::json::Value
+OptionValueEnumeration::ToJSON(const ExecutionContext *exe_ctx) const {
+  for (const auto &enums : m_enumerations) {
+    if (enums.value.value == m_current_value)
+      return enums.cstring.GetStringRef();
+  }
+
+  return std::to_string(static_cast<uint64_t>(m_current_value));
+}
+
 Status OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
                                                   VarSetOperationType op) {
   Status error;
@@ -66,7 +76,7 @@ Status OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
                             m_enumerations.GetCStringAtIndex(i).GetCString());
         }
       }
-      error.SetErrorString(error_strm.GetString());
+      error = Status(error_strm.GetString().str());
     }
     break;
   }
@@ -105,6 +115,6 @@ void OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
     }
     return;
   }
-    for (size_t i = 0; i < num_enumerators; ++i)
-      request.AddCompletion(m_enumerations.GetCStringAtIndex(i).GetStringRef());
+  for (size_t i = 0; i < num_enumerators; ++i)
+    request.AddCompletion(m_enumerations.GetCStringAtIndex(i).GetStringRef());
 }

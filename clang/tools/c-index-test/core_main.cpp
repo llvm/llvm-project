@@ -8,7 +8,6 @@
 
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -19,12 +18,14 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -219,8 +220,10 @@ static bool printSourceSymbols(const char *Executable,
   SmallVector<const char *, 4> ArgsWithProgName;
   ArgsWithProgName.push_back(Executable);
   ArgsWithProgName.append(Args.begin(), Args.end());
-  IntrusiveRefCntPtr<DiagnosticsEngine>
-    Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          *DiagOpts));
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
   CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
@@ -239,7 +242,7 @@ static bool printSourceSymbols(const char *Executable,
 
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCompilerInvocationAction(
-      std::move(CInvok), PCHContainerOps, Diags, IndexAction.get()));
+      std::move(CInvok), PCHContainerOps, DiagOpts, Diags, IndexAction.get()));
 
   if (!Unit)
     return true;
@@ -270,12 +273,14 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
     return true;
   }
 
-  auto HSOpts = std::make_shared<HeaderSearchOptions>();
+  HeaderSearchOptions HSOpts;
 
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          *DiagOpts);
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      std::string(modulePath), *pchRdr, ASTUnit::LoadASTOnly, Diags,
+      modulePath, *pchRdr, ASTUnit::LoadASTOnly, DiagOpts, Diags,
       FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
       /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
       /*AllowASTWithCompilerErrors=*/true,

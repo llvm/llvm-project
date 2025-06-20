@@ -25,7 +25,7 @@ target triple = "nvptx64"
 @baz_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
 
-define dso_local void @foo(ptr %dyn) "kernel" {
+define dso_local ptx_kernel void @foo(ptr %dyn) "kernel" {
 entry:
   %c = call i32 @__kmpc_target_init(ptr @foo_kernel_environment, ptr %dyn)
   %x = call align 4 ptr @__kmpc_alloc_shared(i64 4)
@@ -36,7 +36,7 @@ entry:
   ret void
 }
 
-define void @bar(ptr %dyn) "kernel" {
+define ptx_kernel void @bar(ptr %dyn) "kernel" {
   %c = call i32 @__kmpc_target_init(ptr @bar_kernel_environment, ptr %dyn)
   call void @unknown_no_openmp()
   %cmp = icmp eq i32 %c, -1
@@ -60,7 +60,7 @@ exit:
   ret void
 }
 
-define void @baz_spmd(ptr %dyn) "kernel" {
+define ptx_kernel void @baz_spmd(ptr %dyn) "kernel" {
   %c = call i32 @__kmpc_target_init(ptr @baz_kernel_environment, ptr %dyn)
   call void @unknown_no_openmp()
   %c0 = icmp eq i32 %c, -1
@@ -109,7 +109,6 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}
-!nvvm.annotations = !{!7, !8, !13}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "replace_globalization.c", directory: "/tmp/replace_globalization.c")
@@ -118,24 +117,21 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"openmp", i32 50}
 !6 = !{i32 7, !"openmp-device", i32 50}
-!7 = !{ptr @foo, !"kernel", i32 1}
-!8 = !{ptr @bar, !"kernel", i32 1}
-!13 = !{ptr @baz_spmd, !"kernel", i32 1}
 !9 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !10 = !DISubroutineType(types: !2)
 !11 = !DILocation(line: 5, column: 7, scope: !9)
 !12 = !DILocation(line: 5, column: 14, scope: !9)
 ;.
-; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
+; CHECK: @S = external local_unnamed_addr global ptr
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [113 x i8] c"
-; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[FOO_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK: @[[BAR_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK: @[[BAZ_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK: @[[OFFSET:[a-zA-Z0-9_$"\\.-]+]] = global i32 undef
-; CHECK: @[[STACK:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [1024 x i8] undef
-; CHECK: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [16 x i8] poison, align 4
-; CHECK: @[[Y_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
+; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; CHECK: @foo_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @bar_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @baz_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @offset = global i32 undef
+; CHECK: @stack = internal addrspace(3) global [1024 x i8] undef
+; CHECK: @x_shared = internal addrspace(3) global [16 x i8] poison, align 4
+; CHECK: @y_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -177,7 +173,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[C0]], label [[MASTER3:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master3:
-; CHECK-NEXT:    [[Z:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 24) #[[ATTR6]], !dbg [[DBG10:![0-9]+]]
+; CHECK-NEXT:    [[Z:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 24) #[[ATTR6]], !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    call void @use.internalized(ptr nofree [[Z]]) #[[ATTR7]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[Z]], i64 24) #[[ATTR8]]
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -201,7 +197,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK: Function Attrs: norecurse nosync nounwind allocsize(0) memory(read)
+; CHECK: Function Attrs: nosync nounwind allocsize(0) memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_alloc_shared
 ; CHECK-SAME: (i64 [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr @offset, align 4
@@ -216,7 +212,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(write) }
-; CHECK: attributes #[[ATTR2]] = { norecurse nosync nounwind allocsize(0) memory(read) }
+; CHECK: attributes #[[ATTR2]] = { nosync nounwind allocsize(0) memory(read) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR5]] = { "llvm.assume"="omp_no_openmp" }
@@ -224,19 +220,16 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR7]] = { nosync nounwind memory(write) }
 ; CHECK: attributes #[[ATTR8]] = { nounwind }
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "replace_globalization.c", directory: "/tmp/replace_globalization.c")
-; CHECK: [[META2:![0-9]+]] = !{}
+; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
+; CHECK: [[META1]] = !DIFile(filename: "replace_globalization.c", directory: {{.*}})
+; CHECK: [[META2]] = !{}
 ; CHECK: [[META3:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CHECK: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META7:![0-9]+]] = !{ptr @foo, !"kernel", i32 1}
-; CHECK: [[META8:![0-9]+]] = !{ptr @bar, !"kernel", i32 1}
-; CHECK: [[META9:![0-9]+]] = !{ptr @baz_spmd, !"kernel", i32 1}
-; CHECK: [[DBG10]] = !DILocation(line: 5, column: 14, scope: !11)
-; CHECK: [[META11:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-; CHECK: [[META12:![0-9]+]] = !DISubroutineType(types: !2)
+; CHECK: [[DBG7]] = !DILocation(line: 5, column: 14, scope: [[META8:![0-9]+]])
+; CHECK: [[META8]] = distinct !DISubprogram(name: "bar", scope: [[META1]], file: [[META1]], line: 1, type: [[META9:![0-9]+]], scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
+; CHECK: [[META9]] = !DISubroutineType(types: [[META2]])
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-LIMIT: {{.*}}

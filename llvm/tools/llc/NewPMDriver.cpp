@@ -16,11 +16,12 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/FreeMachineFunction.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/Passes/CodeGenPassBuilder.h" // TODO: Include pass headers properly.
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/CommandLine.h"
@@ -46,16 +46,12 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
-
 using namespace llvm;
 
-static cl::opt<std::string>
+static cl::opt<RegAllocType, false, RegAllocTypeParser>
     RegAlloc("regalloc-npm",
              cl::desc("Register allocator to use for new pass manager"),
-             cl::Hidden, cl::init("default"));
+             cl::Hidden, cl::init(RegAllocType::Unset));
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
@@ -93,38 +89,36 @@ int llvm::compileModuleWithNewPM(
     StringRef Arg0, std::unique_ptr<Module> M, std::unique_ptr<MIRParser> MIR,
     std::unique_ptr<TargetMachine> Target, std::unique_ptr<ToolOutputFile> Out,
     std::unique_ptr<ToolOutputFile> DwoOut, LLVMContext &Context,
-    const TargetLibraryInfoImpl &TLII, bool NoVerify, StringRef PassPipeline,
+    const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
     CodeGenFileType FileType) {
 
   if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
-    WithColor::warning(errs(), Arg0)
+    WithColor::error(errs(), Arg0)
         << "--passes cannot be used with "
         << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
     return 1;
   }
 
-  LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
-
   raw_pwrite_stream *OS = &Out->os();
 
   // Fetch options from TargetPassConfig
   CGPassBuilderOption Opt = getCGPassBuilderOption();
-  Opt.DisableVerify = NoVerify;
+  Opt.DisableVerify = VK != VerifierKind::InputOutput;
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(&LLVMTM);
+  MachineModuleInfo MMI(Target.get());
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Context, Opt.DebugPM);
-  SI.registerCallbacks(PIC);
-  registerCodeGenCallback(PIC, LLVMTM);
+  StandardInstrumentations SI(Context, Opt.DebugPM,
+                              VK == VerifierKind::EachPass);
+  registerCodeGenCallback(PIC, *Target);
 
+  MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  MachineFunctionAnalysisManager MFAM;
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -132,18 +126,20 @@ int llvm::compileModuleWithNewPM(
   PB.registerLoopAnalyses(LAM);
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+  SI.registerCallbacks(PIC, &MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   ModulePassManager MPM;
+  FunctionPassManager FPM;
 
   if (!PassPipeline.empty()) {
     // Construct a custom pass pipeline that starts after instruction
     // selection.
 
     if (!MIR) {
-      WithColor::warning(errs(), Arg0) << "-passes is for .mir file only.\n";
+      WithColor::error(errs(), Arg0) << "-passes is for .mir file only.\n";
       return 1;
     }
 
@@ -151,17 +147,18 @@ int llvm::compileModuleWithNewPM(
     ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
     MPM.addPass(PrintMIRPreparePass(*OS));
     MachineFunctionPassManager MFPM;
+    if (VK == VerifierKind::InputOutput)
+      MFPM.addPass(MachineVerifierPass());
     MFPM.addPass(PrintMIRPass(*OS));
-    MFPM.addPass(FreeMachineFunctionPass());
-    MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+    FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
-    if (MIR->parseMachineFunctions(*M, MMI))
-      return 1;
   } else {
-    ExitOnErr(LLVMTM.buildCodeGenPipeline(
+    ExitOnErr(Target->buildCodeGenPipeline(
         MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
   }
 
+  // If user only wants to print the pipeline, print it before parsing the MIR.
   if (PrintPipelinePasses) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
@@ -172,6 +169,9 @@ int llvm::compileModuleWithNewPM(
     outs() << PipelineStr << '\n';
     return 0;
   }
+
+  if (MIR && MIR->parseMachineFunctions(*M, MAM))
+    return 1;
 
   // Before executing passes, print the final values of the LLVM options.
   cl::PrintOptionValues();

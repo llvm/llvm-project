@@ -12,10 +12,9 @@ import lldbdap_testcase
 
 class TestDAP_setFunctionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_set_and_clear(self):
         """Tests setting and clearing function breakpoints.
-        This packet is a bit tricky on the debug adaptor side since there
+        This packet is a bit tricky on the debug adapter side since there
         is no "clearFunction Breakpoints" packet. Function breakpoints
         are set by sending a "setFunctionBreakpoints" packet with zero or
         more function names. If function breakpoints have been set before,
@@ -26,7 +25,7 @@ class TestDAP_setFunctionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         correctly. It doesn't test hitting breakpoints and the functionality
         of each breakpoint, like 'conditions' and 'hitCondition' settings.
         """
-        # Visual Studio Code Debug Adaptors have no way to specify the file
+        # Visual Studio Code Debug Adapters have no way to specify the file
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
         program = self.getBuildArtifact("a.out")
@@ -123,7 +122,6 @@ class TestDAP_setFunctionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfWindows
-    @skipIfRemote
     def test_functionality(self):
         """Tests hitting breakpoints and the functionality of a single
         breakpoint, like 'conditions' and 'hitCondition' settings."""

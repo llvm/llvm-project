@@ -15,7 +15,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include <optional>
-#include <utility>
 
 namespace clang::tidy::performance {
 namespace {
@@ -36,7 +35,7 @@ void recordFixes(const VarDecl &Var, ASTContext &Context,
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
-            Var, Context, DeclSpec::TQ::TQ_const))
+            Var, Context, Qualifiers::Const))
       Diagnostic << *Fix;
   }
 }
@@ -75,16 +74,16 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
   }
 }
 
-AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
+AST_MATCHER_FUNCTION_P(StatementMatcher,
+                       isRefReturningMethodCallWithConstOverloads,
                        std::vector<StringRef>, ExcludedContainerTypes) {
   // Match method call expressions where the `this` argument is only used as
-  // const, this will be checked in `check()` part. This returned const
-  // reference is highly likely to outlive the local const reference of the
-  // variable being declared. The assumption is that the const reference being
-  // returned either points to a global static variable or to a member of the
-  // called object.
+  // const, this will be checked in `check()` part. This returned reference is
+  // highly likely to outlive the local const reference of the variable being
+  // declared. The assumption is that the reference being returned either points
+  // to a global static variable or to a member of the called object.
   const auto MethodDecl =
-      cxxMethodDecl(returns(hasCanonicalType(matchers::isReferenceToConst())))
+      cxxMethodDecl(returns(hasCanonicalType(referenceType())))
           .bind(MethodDeclId);
   const auto ReceiverExpr =
       ignoringParenImpCasts(declRefExpr(to(varDecl().bind(ObjectArgId))));
@@ -104,14 +103,18 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
                                 hasArgument(0, hasType(ReceiverType)))));
 }
 
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
-  // Only allow initialization of a const reference from a free function if it
-  // has no arguments. Otherwise it could return an alias to one of its
-  // arguments and the arguments need to be checked for const use as well.
-  return callExpr(callee(functionDecl(returns(hasCanonicalType(
-                                          matchers::isReferenceToConst())))
-                             .bind(FunctionDeclId)),
-                  argumentCountIs(0), unless(callee(cxxMethodDecl())))
+  // Only allow initialization of a const reference from a free function or
+  // static member function if it has no arguments. Otherwise it could return
+  // an alias to one of its arguments and the arguments need to be checked
+  // for const use as well.
+  return callExpr(argumentCountIs(0),
+                  callee(functionDecl(returns(hasCanonicalType(
+                                          matchers::isReferenceToConst())),
+                                      unless(cxxMethodDecl(unless(isStatic()))))
+                             .bind(FunctionDeclId)))
       .bind(InitFunctionCallId);
 }
 
@@ -121,7 +124,7 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
       anyOf(isConstRefReturningFunctionCall(),
-            isConstRefReturningMethodCall(ExcludedContainerTypes),
+            isRefReturningMethodCallWithConstOverloads(ExcludedContainerTypes),
             ignoringImpCasts(OldVarDeclRef),
             ignoringImpCasts(unaryOperator(hasOperatorName("&"),
                                            hasUnaryOperand(OldVarDeclRef)))));
@@ -232,12 +235,14 @@ UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
           Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
-  auto LocalVarCopiedFrom = [this](const internal::Matcher<Expr> &CopyCtorArg) {
-    return compoundStmt(
-               forEachDescendant(
-                   declStmt(
-                       unless(has(decompositionDecl())),
-                       has(varDecl(hasLocalStorage(),
+  auto LocalVarCopiedFrom =
+      [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
+        return compoundStmt(
+                   forEachDescendant(
+                       declStmt(
+                           unless(has(decompositionDecl())),
+                           has(varDecl(
+                                   hasLocalStorage(),
                                    hasType(qualType(
                                        hasCanonicalType(allOf(
                                            matchers::isExpensiveToCopy(),
@@ -254,15 +259,16 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                                                isCopyConstructor())),
                                            hasArgument(0, CopyCtorArg))
                                            .bind("ctorCall"))))
-                               .bind("newVarDecl")))
-                       .bind("declStmt")))
-        .bind("blockStmt");
-  };
+                                   .bind("newVarDecl")))
+                           .bind("declStmt")))
+            .bind("blockStmt");
+      };
 
-  Finder->addMatcher(LocalVarCopiedFrom(anyOf(isConstRefReturningFunctionCall(),
-                                              isConstRefReturningMethodCall(
-                                                  ExcludedContainerTypes))),
-                     this);
+  Finder->addMatcher(
+      LocalVarCopiedFrom(anyOf(
+          isConstRefReturningFunctionCall(),
+          isRefReturningMethodCallWithConstOverloads(ExcludedContainerTypes))),
+      this);
 
   Finder->addMatcher(LocalVarCopiedFrom(declRefExpr(
                          to(varDecl(hasLocalStorage()).bind(OldVarDeclId)))),

@@ -48,4 +48,4 @@ set_source_files_properties("${version_inc}"
              HEADER_FILE_ONLY TRUE)
 
 add_custom_target(llvm_vcsrevision_h ALL DEPENDS "${generated_files}")
-set_target_properties(llvm_vcsrevision_h PROPERTIES FOLDER "Misc")
+set_target_properties(llvm_vcsrevision_h PROPERTIES FOLDER "LLVM/Resources")

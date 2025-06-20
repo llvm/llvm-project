@@ -117,7 +117,8 @@ class DarwinNSLogOutputTestCase(TestBase):
         self.runCmd("process continue")
         self.expect(expect_regexes)
 
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIfAsan # avoid dealing with pexpect timeout flakyness on bots
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @skipUnlessDarwin
     @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def test_nslog_output_is_displayed(self):
@@ -132,7 +133,8 @@ class DarwinNSLogOutputTestCase(TestBase):
         self.assertGreater(len(self.child.match.groups()), 0)
         self.assertEqual("This is a message from NSLog", self.child.match.group(1))
 
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIfAsan # avoid dealing with pexpect timeout flakyness on bots
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @skipUnlessDarwin
     @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def test_nslog_output_is_suppressed_with_env_var(self):
