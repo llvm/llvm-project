@@ -5359,43 +5359,20 @@ define amdgpu_kernel void @constant_zextload_v2i1_to_v2i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
-; GFX1250-FAKE16-LABEL: constant_zextload_v2i1_to_v2i64:
-; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    global_load_u8 v0, v1, s[2:3] nv
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v0
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_bitop2_b32 v0, 1, v0 bitop3:0x40
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 1, v2
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1250-FAKE16-NEXT:    s_endpgm
-;
-; GFX1250-REAL16-LABEL: constant_zextload_v2i1_to_v2i64:
-; GFX1250-REAL16:       ; %bb.0:
-; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-REAL16-NEXT:    global_load_u8 v0, v1, s[2:3] nv
-; GFX1250-REAL16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-REAL16-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s2
-; GFX1250-REAL16-NEXT:    s_and_b32 s2, s2, 1
-; GFX1250-REAL16-NEXT:    s_lshr_b32 s3, s3, 1
-; GFX1250-REAL16-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v2, s3
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v3, v1
-; GFX1250-REAL16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1250-REAL16-NEXT:    s_endpgm
+; GFX1250-LABEL: constant_zextload_v2i1_to_v2i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX1250-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_u8 v0, v3, s[2:3] nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v1, 0xffff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v2, 1, v1 :: v_dual_bitop2_b32 v0, 1, v0 bitop3:0x40
+; GFX1250-NEXT:    v_mov_b32_e32 v1, v3
+; GFX1250-NEXT:    global_store_b128 v3, v[0:3], s[0:1]
+; GFX1250-NEXT:    s_endpgm
   %load = load <2 x i1>, ptr addrspace(4) %in
   %ext = zext <2 x i1> %load to <2 x i64>
   store <2 x i64> %ext, ptr addrspace(1) %out
@@ -5599,52 +5576,24 @@ define amdgpu_kernel void @constant_zextload_v3i1_to_v3i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    global_store_b128 v5, v[0:3], s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
-; GFX1250-FAKE16-LABEL: constant_zextload_v3i1_to_v3i64:
-; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v5, 0
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    global_load_u8 v0, v5, s[2:3] nv
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v2, v0, 1, 1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX1250-FAKE16-NEXT:    v_dual_lshrrev_b32 v4, 2, v1 :: v_dual_bitop2_b32 v0, 1, v0 bitop3:0x40
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v3, v5
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX1250-FAKE16-NEXT:    s_clause 0x1
-; GFX1250-FAKE16-NEXT:    global_store_b64 v5, v[4:5], s[0:1] offset:16
-; GFX1250-FAKE16-NEXT:    global_store_b128 v5, v[0:3], s[0:1]
-; GFX1250-FAKE16-NEXT:    s_endpgm
-;
-; GFX1250-REAL16-LABEL: constant_zextload_v3i1_to_v3i64:
-; GFX1250-REAL16:       ; %bb.0:
-; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-REAL16-NEXT:    global_load_u8 v0, v1, s[2:3] nv
-; GFX1250-REAL16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-REAL16-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s2
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x10001
-; GFX1250-REAL16-NEXT:    s_lshr_b32 s3, s3, 2
-; GFX1250-REAL16-NEXT:    s_and_b32 s2, s2, 1
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX1250-REAL16-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s4
-; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v2, s3
-; GFX1250-REAL16-NEXT:    global_store_b64 v1, v[0:1], s[0:1] offset:16
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-REAL16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1250-REAL16-NEXT:    s_endpgm
+; GFX1250-LABEL: constant_zextload_v3i1_to_v3i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX1250-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_u8 v2, v3, s[2:3] nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_lshrrev_b32 v4, 2, v0
+; GFX1250-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_bitop2_b32 v0, 1, v2 bitop3:0x40
+; GFX1250-NEXT:    v_bfe_u32 v2, v2, 1, 1
+; GFX1250-NEXT:    v_and_b32_e32 v4, 0xffff, v4
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    global_store_b64 v3, v[4:5], s[0:1] offset:16
+; GFX1250-NEXT:    global_store_b128 v3, v[0:3], s[0:1]
+; GFX1250-NEXT:    s_endpgm
   %load = load <3 x i1>, ptr addrspace(4) %in
   %ext = zext <3 x i1> %load to <3 x i64>
   store <3 x i64> %ext, ptr addrspace(1) %out
@@ -5892,58 +5841,25 @@ define amdgpu_kernel void @constant_zextload_v4i1_to_v4i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
-; GFX1250-FAKE16-LABEL: constant_zextload_v4i1_to_v4i64:
-; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    global_load_u8 v0, v1, s[2:3] nv
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-FAKE16-NEXT:    s_bfe_u32 s3, s2, 0x10002
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 3, v0
-; GFX1250-FAKE16-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v0, s3
-; GFX1250-FAKE16-NEXT:    s_bfe_u32 s3, s2, 0x10001
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX1250-FAKE16-NEXT:    s_and_b32 s2, s2, 1
-; GFX1250-FAKE16-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX1250-FAKE16-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:16
-; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v2, s3
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1250-FAKE16-NEXT:    s_endpgm
-;
-; GFX1250-REAL16-LABEL: constant_zextload_v4i1_to_v4i64:
-; GFX1250-REAL16:       ; %bb.0:
-; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-REAL16-NEXT:    global_load_u8 v0, v1, s[2:3] nv
-; GFX1250-REAL16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-REAL16-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s2
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x10002
-; GFX1250-REAL16-NEXT:    s_lshr_b32 s3, s3, 3
-; GFX1250-REAL16-NEXT:    s_and_b32 s4, 0xffff, s4
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, v1
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s3, s2, 0x10001
-; GFX1250-REAL16-NEXT:    s_and_b32 s2, s2, 1
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX1250-REAL16-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX1250-REAL16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:16
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v2, s3
-; GFX1250-REAL16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1250-REAL16-NEXT:    s_endpgm
+; GFX1250-LABEL: constant_zextload_v4i1_to_v4i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX1250-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_u8 v6, v3, s[2:3] nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v2, 0xffff, v6
+; GFX1250-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_bitop2_b32 v4, 1, v6 bitop3:0x40
+; GFX1250-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v5, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1250-NEXT:    v_lshrrev_b32_e32 v2, 3, v2
+; GFX1250-NEXT:    v_bfe_u32 v0, v6, 2, 1
+; GFX1250-NEXT:    v_bfe_u32 v6, v6, 1, 1
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    global_store_b128 v3, v[0:3], s[0:1] offset:16
+; GFX1250-NEXT:    global_store_b128 v3, v[4:7], s[0:1]
+; GFX1250-NEXT:    s_endpgm
   %load = load <4 x i1>, ptr addrspace(4) %in
   %ext = zext <4 x i1> %load to <4 x i64>
   store <4 x i64> %ext, ptr addrspace(1) %out
@@ -6255,28 +6171,28 @@ define amdgpu_kernel void @constant_zextload_v8i1_to_v8i64(ptr addrspace(1) %out
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_u8 v12, v1, s[2:3] nv
+; GFX1250-NEXT:    global_load_u8 v12, v3, s[2:3] nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffff, v12
 ; GFX1250-NEXT:    v_bfe_u32 v6, v12, 5, 1
 ; GFX1250-NEXT:    v_bfe_u32 v4, v12, 4, 1
 ; GFX1250-NEXT:    v_bfe_u32 v10, v12, 3, 1
 ; GFX1250-NEXT:    v_bfe_u32 v8, v12, 2, 1
-; GFX1250-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_lshrrev_b32 v2, 7, v0
-; GFX1250-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1250-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_lshrrev_b32 v2, 7, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v7, v3
 ; GFX1250-NEXT:    v_bfe_u32 v0, v0, 6, 1
-; GFX1250-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v9, v1
-; GFX1250-NEXT:    v_dual_mov_b32 v11, v1 :: v_dual_mov_b32 v13, v1
-; GFX1250-NEXT:    v_mov_b32_e32 v15, v1
+; GFX1250-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v11, v3
+; GFX1250-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v15, v3
+; GFX1250-NEXT:    v_mov_b32_e32 v13, v3
 ; GFX1250-NEXT:    v_bfe_u32 v14, v12, 1, 1
 ; GFX1250-NEXT:    v_and_b32_e32 v12, 1, v12
 ; GFX1250-NEXT:    s_clause 0x3
-; GFX1250-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:48
-; GFX1250-NEXT:    global_store_b128 v1, v[4:7], s[0:1] offset:32
-; GFX1250-NEXT:    global_store_b128 v1, v[8:11], s[0:1] offset:16
-; GFX1250-NEXT:    global_store_b128 v1, v[12:15], s[0:1]
+; GFX1250-NEXT:    global_store_b128 v3, v[0:3], s[0:1] offset:48
+; GFX1250-NEXT:    global_store_b128 v3, v[4:7], s[0:1] offset:32
+; GFX1250-NEXT:    global_store_b128 v3, v[8:11], s[0:1] offset:16
+; GFX1250-NEXT:    global_store_b128 v3, v[12:15], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %load = load <8 x i1>, ptr addrspace(4) %in
   %ext = zext <8 x i1> %load to <8 x i64>
@@ -6492,35 +6408,35 @@ define amdgpu_kernel void @constant_sextload_v8i1_to_v8i64(ptr addrspace(1) %out
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v10, s3
-; GFX1250-NEXT:    s_lshr_b32 s2, s3, 6
-; GFX1250-NEXT:    s_lshr_b32 s4, s3, 7
-; GFX1250-NEXT:    s_lshr_b32 s6, s3, 4
-; GFX1250-NEXT:    s_lshr_b32 s8, s3, 5
-; GFX1250-NEXT:    s_lshr_b32 s10, s3, 2
-; GFX1250-NEXT:    s_lshr_b32 s12, s3, 3
-; GFX1250-NEXT:    s_lshr_b32 s14, s3, 1
-; GFX1250-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x10000
-; GFX1250-NEXT:    v_bfe_i32 v12, v10, 0, 1
-; GFX1250-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[6:7], s[6:7], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[12:13], s[12:13], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[10:11], s[10:11], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
+; GFX1250-NEXT:    v_mov_b32_e32 v4, s3
+; GFX1250-NEXT:    s_lshr_b32 s12, s3, 6
+; GFX1250-NEXT:    s_lshr_b32 s14, s3, 7
+; GFX1250-NEXT:    s_lshr_b32 s8, s3, 4
+; GFX1250-NEXT:    s_lshr_b32 s10, s3, 5
+; GFX1250-NEXT:    s_lshr_b32 s4, s3, 2
+; GFX1250-NEXT:    s_lshr_b32 s6, s3, 3
 ; GFX1250-NEXT:    s_bfe_i64 s[14:15], s[14:15], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v4, s6 :: v_dual_mov_b32 v5, s7
-; GFX1250-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
-; GFX1250-NEXT:    v_dual_mov_b32 v8, s10 :: v_dual_mov_b32 v9, s11
-; GFX1250-NEXT:    v_dual_mov_b32 v10, s12 :: v_dual_mov_b32 v11, s13
-; GFX1250-NEXT:    v_dual_mov_b32 v14, s14 :: v_dual_ashrrev_i32 v13, 31, v12
-; GFX1250-NEXT:    v_mov_b32_e32 v15, s15
+; GFX1250-NEXT:    s_bfe_i64 s[12:13], s[12:13], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s2, s3, 1
+; GFX1250-NEXT:    s_bfe_i64 s[10:11], s[10:11], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x10000
+; GFX1250-NEXT:    v_bfe_i32 v4, v4, 0, 1
+; GFX1250-NEXT:    s_bfe_i64 s[6:7], s[6:7], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x10000
+; GFX1250-NEXT:    v_mov_b64_e32 v[12:13], s[12:13]
+; GFX1250-NEXT:    v_mov_b64_e32 v[14:15], s[14:15]
+; GFX1250-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
+; GFX1250-NEXT:    v_mov_b64_e32 v[8:9], s[8:9]
+; GFX1250-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
+; GFX1250-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; GFX1250-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX1250-NEXT:    s_clause 0x3
-; GFX1250-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:48
-; GFX1250-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
-; GFX1250-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
-; GFX1250-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
+; GFX1250-NEXT:    global_store_b128 v16, v[12:15], s[0:1] offset:48
+; GFX1250-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:32
+; GFX1250-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:16
+; GFX1250-NEXT:    global_store_b128 v16, v[4:7], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %load = load <8 x i1>, ptr addrspace(4) %in
   %ext = sext <8 x i1> %load to <8 x i64>
@@ -6805,44 +6721,43 @@ define amdgpu_kernel void @constant_zextload_v16i1_to_v16i64(ptr addrspace(1) %o
 ; GFX1250-FAKE16:       ; %bb.0:
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    global_load_u16 v12, v1, s[2:3] nv
+; GFX1250-FAKE16-NEXT:    global_load_u16 v10, v3, s[2:3] nv
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v22, 0xffff, v12
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_bitop2_b32 v28, 1, v12 bitop3:0x40
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v5, v1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v0, v12, 10, 1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v2, v22, 11, 1
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v9, v1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v6, v12, 9, 1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v4, v22, 8, 1
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v11, v1 :: v_dual_mov_b32 v13, v1
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v31, v1 :: v_dual_lshrrev_b32 v10, 15, v22
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v8, v22, 14, 1
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v15, v1 :: v_dual_mov_b32 v17, v1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v14, v12, 13, 1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v18, v12, 7, 1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v26, v12, 3, 1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v30, v12, 1, 1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v24, v12, 2, 1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v20, v12, 4, 1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v16, v12, 6, 1
-; GFX1250-FAKE16-NEXT:    v_bfe_u32 v12, v12, 12, 1
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v19, v1 :: v_dual_mov_b32 v21, v1
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v23, v1 :: v_dual_mov_b32 v25, v1
-; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v27, v1 :: v_dual_mov_b32 v29, v1
+; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v22, 0xffff, v10
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v6, v10, 13, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v4, v10, 12, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v30, v10, 1, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v26, v10, 3, 1
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_lshrrev_b32 v2, 15, v22
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v7, v3
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v0, v22, 14, 1
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v11, v3
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v15, v3
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v29, v3 :: v_dual_bitop2_b32 v28, 1, v10 bitop3:0x40
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v18, v10, 7, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v14, v10, 9, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v8, v10, 10, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v16, v10, 6, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v20, v10, 4, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v24, v10, 2, 1
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v10, v22, 11, 1
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v13, v3 :: v_dual_mov_b32 v19, v3
+; GFX1250-FAKE16-NEXT:    v_bfe_u32 v12, v22, 8, 1
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v17, v3 :: v_dual_mov_b32 v23, v3
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v21, v3 :: v_dual_mov_b32 v27, v3
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v25, v3 :: v_dual_mov_b32 v31, v3
 ; GFX1250-FAKE16-NEXT:    v_bfe_u32 v22, v22, 5, 1
 ; GFX1250-FAKE16-NEXT:    s_clause 0x7
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:80
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[4:7], s[0:1] offset:64
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[8:11], s[0:1] offset:112
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[12:15], s[0:1] offset:96
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[16:19], s[0:1] offset:48
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[20:23], s[0:1] offset:32
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[24:27], s[0:1] offset:16
-; GFX1250-FAKE16-NEXT:    global_store_b128 v1, v[28:31], s[0:1]
+; GFX1250-FAKE16-NEXT:    global_store_b128 v3, v[0:3], s[0:1] offset:112
+; GFX1250-FAKE16-NEXT:    global_store_b128 v3, v[4:7], s[0:1] offset:96
+; GFX1250-FAKE16-NEXT:    global_store_b128 v3, v[8:11], s[0:1] offset:80
+; GFX1250-FAKE16-NEXT:    global_store_b128 v3, v[12:15], s[0:1] offset:64
+; GFX1250-FAKE16-NEXT:    global_store_b128 v3, v[16:19], s[0:1] offset:48
+; GFX1250-FAKE16-NEXT:    global_store_b128 v3, v[20:23], s[0:1] offset:32
+; GFX1250-FAKE16-NEXT:    global_store_b128 v3, v[24:27], s[0:1] offset:16
+; GFX1250-FAKE16-NEXT:    global_store_b128 v3, v[28:31], s[0:1]
 ; GFX1250-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1250-REAL16-LABEL: constant_zextload_v16i1_to_v16i64:
@@ -6854,49 +6769,48 @@ define amdgpu_kernel void @constant_zextload_v16i1_to_v16i64(ptr addrspace(1) %o
 ; GFX1250-REAL16-NEXT:    global_load_u16 v0, v3, s[2:3] nv
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-REAL16-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1250-REAL16-NEXT:    s_and_b32 s3, 0xffff, s2
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x1000a
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s5, s3, 0x1000b
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v5, v3
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v4, s5
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x10009
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s5, s3, 0x10008
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v1, v3
-; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:80
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
-; GFX1250-REAL16-NEXT:    s_lshr_b32 s4, s3, 15
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s5, s3, 0x1000e
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s3, s3, 0x10005
-; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:64
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x1000d
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s5, s2, 0x1000c
-; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:112
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x10007
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s5, s2, 0x10006
-; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:96
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x10004
-; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:48
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v4, s3
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s3, s2, 0x10003
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x10002
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-REAL16-NEXT:    s_bfe_u32 s2, s2, 0x10001
-; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:32
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v4, s3
-; GFX1250-REAL16-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:16
-; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[0:3], s[0:1]
+; GFX1250-REAL16-NEXT:    s_and_b32 s5, 0xffff, s2
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s3, s2, 0x10001
+; GFX1250-REAL16-NEXT:    s_lshr_b32 s15, s5, 15
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s16, s5, 0x1000e
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s8, s2, 0x1000d
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s9, s2, 0x1000c
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s10, s2, 0x1000a
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v28, s2 :: v_dual_mov_b32 v1, v3
+; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v7, v3
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s14, s5, 0x1000b
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v30, s3 :: v_dual_mov_b32 v2, s15
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v10, s14
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v11, v3
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v29, v3 :: v_dual_mov_b32 v6, s8
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s4, s2, 0x10003
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s6, s2, 0x10007
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s7, s2, 0x10009
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s11, s2, 0x10006
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s12, s2, 0x10004
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s13, s2, 0x10002
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s2, s5, 0x10005
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v4, s9 :: v_dual_mov_b32 v8, s10
+; GFX1250-REAL16-NEXT:    s_bfe_u32 s5, s5, 0x10008
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v15, v3
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v13, v3 :: v_dual_mov_b32 v19, v3
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v14, s7 :: v_dual_mov_b32 v18, s6
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v12, s5 :: v_dual_mov_b32 v22, s2
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v17, v3 :: v_dual_mov_b32 v23, v3
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v16, s11 :: v_dual_mov_b32 v20, s12
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v21, v3 :: v_dual_mov_b32 v27, v3
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v25, v3 :: v_dual_mov_b32 v31, v3
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v26, s4 :: v_dual_mov_b32 v24, s13
+; GFX1250-REAL16-NEXT:    v_and_b32_e32 v28, 1, v28
+; GFX1250-REAL16-NEXT:    s_clause 0x7
+; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[0:3], s[0:1] offset:112
+; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[4:7], s[0:1] offset:96
+; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[8:11], s[0:1] offset:80
+; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[12:15], s[0:1] offset:64
+; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[16:19], s[0:1] offset:48
+; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[20:23], s[0:1] offset:32
+; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[24:27], s[0:1] offset:16
+; GFX1250-REAL16-NEXT:    global_store_b128 v3, v[28:31], s[0:1]
 ; GFX1250-REAL16-NEXT:    s_endpgm
   %load = load <16 x i1>, ptr addrspace(4) %in
   %ext = zext <16 x i1> %load to <16 x i64>
@@ -7260,65 +7174,64 @@ define amdgpu_kernel void @constant_sextload_v16i1_to_v16i64(ptr addrspace(1) %o
 ; GFX1250-NEXT:    global_load_u16 v0, v32, s[2:3] nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s3, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v28, s3
-; GFX1250-NEXT:    s_lshr_b32 s2, s3, 14
-; GFX1250-NEXT:    s_lshr_b32 s4, s3, 15
-; GFX1250-NEXT:    s_lshr_b32 s10, s3, 10
-; GFX1250-NEXT:    s_lshr_b32 s12, s3, 11
-; GFX1250-NEXT:    s_lshr_b32 s6, s3, 12
-; GFX1250-NEXT:    s_lshr_b32 s8, s3, 13
-; GFX1250-NEXT:    s_lshr_b32 s14, s3, 8
-; GFX1250-NEXT:    s_lshr_b32 s16, s3, 9
-; GFX1250-NEXT:    s_lshr_b32 s18, s3, 6
-; GFX1250-NEXT:    s_lshr_b32 s20, s3, 7
-; GFX1250-NEXT:    s_lshr_b32 s22, s3, 4
-; GFX1250-NEXT:    s_lshr_b32 s24, s3, 5
-; GFX1250-NEXT:    s_lshr_b32 s26, s3, 2
-; GFX1250-NEXT:    s_lshr_b32 s28, s3, 3
-; GFX1250-NEXT:    s_lshr_b32 s30, s3, 1
-; GFX1250-NEXT:    s_bfe_i64 s[12:13], s[12:13], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[10:11], s[10:11], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[16:17], s[16:17], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[14:15], s[14:15], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[6:7], s[6:7], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[20:21], s[20:21], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[18:19], s[18:19], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
-; GFX1250-NEXT:    v_dual_mov_b32 v8, s10 :: v_dual_mov_b32 v9, s11
-; GFX1250-NEXT:    v_dual_mov_b32 v10, s12 :: v_dual_mov_b32 v11, s13
-; GFX1250-NEXT:    v_bfe_i32 v28, v28, 0, 1
-; GFX1250-NEXT:    s_bfe_i64 s[24:25], s[24:25], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[22:23], s[22:23], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v4, s6 :: v_dual_mov_b32 v5, s7
-; GFX1250-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
-; GFX1250-NEXT:    v_dual_mov_b32 v12, s14 :: v_dual_mov_b32 v13, s15
-; GFX1250-NEXT:    v_dual_mov_b32 v14, s16 :: v_dual_mov_b32 v15, s17
-; GFX1250-NEXT:    s_bfe_i64 s[28:29], s[28:29], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[26:27], s[26:27], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v16, s18 :: v_dual_mov_b32 v17, s19
-; GFX1250-NEXT:    v_dual_mov_b32 v18, s20 :: v_dual_mov_b32 v19, s21
+; GFX1250-NEXT:    s_lshr_b32 s20, s3, 10
+; GFX1250-NEXT:    s_lshr_b32 s22, s3, 11
+; GFX1250-NEXT:    s_lshr_b32 s28, s3, 14
+; GFX1250-NEXT:    s_lshr_b32 s30, s3, 15
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
+; GFX1250-NEXT:    s_lshr_b32 s16, s3, 8
+; GFX1250-NEXT:    s_lshr_b32 s18, s3, 9
+; GFX1250-NEXT:    s_lshr_b32 s24, s3, 12
+; GFX1250-NEXT:    s_lshr_b32 s26, s3, 13
+; GFX1250-NEXT:    s_lshr_b32 s12, s3, 6
+; GFX1250-NEXT:    s_lshr_b32 s14, s3, 7
 ; GFX1250-NEXT:    s_bfe_i64 s[30:31], s[30:31], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v20, s22 :: v_dual_mov_b32 v21, s23
-; GFX1250-NEXT:    v_dual_mov_b32 v22, s24 :: v_dual_mov_b32 v23, s25
-; GFX1250-NEXT:    v_dual_mov_b32 v24, s26 :: v_dual_mov_b32 v25, s27
-; GFX1250-NEXT:    v_dual_mov_b32 v26, s28 :: v_dual_mov_b32 v27, s29
-; GFX1250-NEXT:    v_dual_mov_b32 v30, s30 :: v_dual_mov_b32 v31, s31
+; GFX1250-NEXT:    s_bfe_i64 s[28:29], s[28:29], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[22:23], s[22:23], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[20:21], s[20:21], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s8, s3, 4
+; GFX1250-NEXT:    s_lshr_b32 s10, s3, 5
+; GFX1250-NEXT:    s_bfe_i64 s[26:27], s[26:27], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[24:25], s[24:25], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[18:19], s[18:19], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[16:17], s[16:17], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s4, s3, 2
+; GFX1250-NEXT:    s_lshr_b32 s6, s3, 3
+; GFX1250-NEXT:    s_bfe_i64 s[14:15], s[14:15], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[12:13], s[12:13], 0x10000
+; GFX1250-NEXT:    v_mov_b64_e32 v[20:21], s[20:21]
+; GFX1250-NEXT:    v_mov_b64_e32 v[28:29], s[28:29]
+; GFX1250-NEXT:    v_mov_b64_e32 v[30:31], s[30:31]
+; GFX1250-NEXT:    v_mov_b64_e32 v[22:23], s[22:23]
+; GFX1250-NEXT:    s_lshr_b32 s2, s3, 1
+; GFX1250-NEXT:    s_bfe_i64 s[10:11], s[10:11], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x10000
+; GFX1250-NEXT:    v_mov_b64_e32 v[16:17], s[16:17]
+; GFX1250-NEXT:    v_mov_b64_e32 v[24:25], s[24:25]
+; GFX1250-NEXT:    v_mov_b64_e32 v[26:27], s[26:27]
+; GFX1250-NEXT:    v_bfe_i32 v0, v0, 0, 1
+; GFX1250-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
+; GFX1250-NEXT:    s_bfe_i64 s[6:7], s[6:7], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x10000
+; GFX1250-NEXT:    v_mov_b64_e32 v[12:13], s[12:13]
+; GFX1250-NEXT:    v_mov_b64_e32 v[14:15], s[14:15]
+; GFX1250-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
+; GFX1250-NEXT:    v_mov_b64_e32 v[8:9], s[8:9]
+; GFX1250-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
+; GFX1250-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GFX1250-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
+; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b128 v32, v[0:3], s[0:1] offset:112
-; GFX1250-NEXT:    global_store_b128 v32, v[4:7], s[0:1] offset:96
-; GFX1250-NEXT:    v_ashrrev_i32_e32 v29, 31, v28
+; GFX1250-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:112
+; GFX1250-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:96
+; GFX1250-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX1250-NEXT:    s_clause 0x5
-; GFX1250-NEXT:    global_store_b128 v32, v[8:11], s[0:1] offset:80
-; GFX1250-NEXT:    global_store_b128 v32, v[12:15], s[0:1] offset:64
-; GFX1250-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:48
-; GFX1250-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:32
-; GFX1250-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:16
-; GFX1250-NEXT:    global_store_b128 v32, v[28:31], s[0:1]
+; GFX1250-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:80
+; GFX1250-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:64
+; GFX1250-NEXT:    global_store_b128 v32, v[12:15], s[0:1] offset:48
+; GFX1250-NEXT:    global_store_b128 v32, v[8:11], s[0:1] offset:32
+; GFX1250-NEXT:    global_store_b128 v32, v[4:7], s[0:1] offset:16
+; GFX1250-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %load = load <16 x i1>, ptr addrspace(4) %in
   %ext = sext <16 x i1> %load to <16 x i64>
@@ -7859,11 +7772,11 @@ define amdgpu_kernel void @constant_zextload_v32i1_to_v32i64(ptr addrspace(1) %o
 ; GFX1250-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:192
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v2, s3
-; GFX1250-NEXT:    s_bfe_u32 s3, s2, 0x10014
-; GFX1250-NEXT:    s_bfe_u32 s4, s2, 0x10015
+; GFX1250-NEXT:    s_bfe_u32 s3, s2, 0x10015
+; GFX1250-NEXT:    s_bfe_u32 s4, s2, 0x10014
 ; GFX1250-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:176
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v2, s4
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v2, s3
 ; GFX1250-NEXT:    s_bfe_u32 s3, s2, 0x10013
 ; GFX1250-NEXT:    s_bfe_u32 s4, s2, 0x10012
 ; GFX1250-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:160
@@ -8611,87 +8524,87 @@ define amdgpu_kernel void @constant_sextload_v32i1_to_v32i64(ptr addrspace(1) %o
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[2:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s34, s2, 30
-; GFX1250-NEXT:    s_lshr_b32 s36, s2, 31
-; GFX1250-NEXT:    s_lshr_b32 s38, s2, 28
-; GFX1250-NEXT:    s_lshr_b32 s40, s2, 29
-; GFX1250-NEXT:    s_lshr_b32 s42, s2, 26
-; GFX1250-NEXT:    s_lshr_b32 s44, s2, 27
-; GFX1250-NEXT:    s_bfe_i64 s[34:35], s[34:35], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[36:37], s[36:37], 0x10000
-; GFX1250-NEXT:    s_lshr_b32 s46, s2, 24
-; GFX1250-NEXT:    s_lshr_b32 s48, s2, 25
-; GFX1250-NEXT:    s_bfe_i64 s[40:41], s[40:41], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[38:39], s[38:39], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v24, 0 :: v_dual_mov_b32 v0, s34
-; GFX1250-NEXT:    s_bfe_i64 s[44:45], s[44:45], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[42:43], s[42:43], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v1, s35 :: v_dual_mov_b32 v2, s36
-; GFX1250-NEXT:    v_dual_mov_b32 v3, s37 :: v_dual_mov_b32 v4, s38
-; GFX1250-NEXT:    s_lshr_b32 s26, s2, 22
-; GFX1250-NEXT:    s_lshr_b32 s50, s2, 23
-; GFX1250-NEXT:    s_bfe_i64 s[48:49], s[48:49], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[46:47], s[46:47], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s39 :: v_dual_mov_b32 v6, s40
-; GFX1250-NEXT:    v_dual_mov_b32 v7, s41 :: v_dual_mov_b32 v8, s42
-; GFX1250-NEXT:    s_lshr_b32 s52, s2, 20
-; GFX1250-NEXT:    s_lshr_b32 s54, s2, 21
-; GFX1250-NEXT:    v_dual_mov_b32 v9, s43 :: v_dual_mov_b32 v10, s44
-; GFX1250-NEXT:    v_dual_mov_b32 v11, s45 :: v_dual_mov_b32 v12, s46
-; GFX1250-NEXT:    s_lshr_b32 s56, s2, 18
-; GFX1250-NEXT:    s_lshr_b32 s58, s2, 19
-; GFX1250-NEXT:    s_bfe_i64 s[50:51], s[50:51], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v13, s47 :: v_dual_mov_b32 v14, s48
-; GFX1250-NEXT:    s_bfe_i64 s[26:27], s[26:27], 0x10000
-; GFX1250-NEXT:    v_mov_b32_e32 v15, s49
-; GFX1250-NEXT:    s_lshr_b32 s60, s2, 16
-; GFX1250-NEXT:    s_lshr_b32 s62, s2, 17
-; GFX1250-NEXT:    s_bfe_i64 s[54:55], s[54:55], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[52:53], s[52:53], 0x10000
-; GFX1250-NEXT:    s_lshr_b32 s64, s2, 14
-; GFX1250-NEXT:    s_lshr_b32 s66, s2, 15
+; GFX1250-NEXT:    s_lshr_b32 s64, s2, 30
+; GFX1250-NEXT:    s_lshr_b32 s66, s2, 31
+; GFX1250-NEXT:    s_lshr_b32 s60, s2, 28
+; GFX1250-NEXT:    s_lshr_b32 s62, s2, 29
+; GFX1250-NEXT:    s_lshr_b32 s56, s2, 26
+; GFX1250-NEXT:    s_lshr_b32 s58, s2, 27
+; GFX1250-NEXT:    s_bfe_i64 s[66:67], s[66:67], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[64:65], s[64:65], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s52, s2, 24
+; GFX1250-NEXT:    s_lshr_b32 s54, s2, 25
+; GFX1250-NEXT:    s_bfe_i64 s[62:63], s[62:63], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[60:61], s[60:61], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v24, 0 :: v_dual_mov_b32 v0, s64
 ; GFX1250-NEXT:    s_bfe_i64 s[58:59], s[58:59], 0x10000
 ; GFX1250-NEXT:    s_bfe_i64 s[56:57], s[56:57], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v1, s65 :: v_dual_mov_b32 v2, s66
+; GFX1250-NEXT:    v_dual_mov_b32 v3, s67 :: v_dual_mov_b32 v4, s60
+; GFX1250-NEXT:    s_lshr_b32 s48, s2, 22
+; GFX1250-NEXT:    s_lshr_b32 s50, s2, 23
+; GFX1250-NEXT:    s_bfe_i64 s[54:55], s[54:55], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[52:53], s[52:53], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v5, s61 :: v_dual_mov_b32 v6, s62
+; GFX1250-NEXT:    v_dual_mov_b32 v7, s63 :: v_dual_mov_b32 v8, s56
+; GFX1250-NEXT:    s_lshr_b32 s44, s2, 20
+; GFX1250-NEXT:    s_lshr_b32 s46, s2, 21
+; GFX1250-NEXT:    v_dual_mov_b32 v9, s57 :: v_dual_mov_b32 v10, s58
+; GFX1250-NEXT:    v_dual_mov_b32 v11, s59 :: v_dual_mov_b32 v12, s52
+; GFX1250-NEXT:    s_lshr_b32 s40, s2, 18
+; GFX1250-NEXT:    s_lshr_b32 s42, s2, 19
+; GFX1250-NEXT:    s_bfe_i64 s[50:51], s[50:51], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[48:49], s[48:49], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v13, s53 :: v_dual_mov_b32 v14, s54
+; GFX1250-NEXT:    v_mov_b32_e32 v15, s55
+; GFX1250-NEXT:    s_lshr_b32 s24, s2, 16
+; GFX1250-NEXT:    s_lshr_b32 s38, s2, 17
+; GFX1250-NEXT:    s_bfe_i64 s[46:47], s[46:47], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[44:45], s[44:45], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s36, s2, 14
+; GFX1250-NEXT:    s_lshr_b32 s34, s2, 15
+; GFX1250-NEXT:    s_bfe_i64 s[42:43], s[42:43], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[40:41], s[40:41], 0x10000
 ; GFX1250-NEXT:    s_clause 0x3
 ; GFX1250-NEXT:    global_store_b128 v24, v[0:3], s[0:1] offset:240
 ; GFX1250-NEXT:    global_store_b128 v24, v[4:7], s[0:1] offset:224
 ; GFX1250-NEXT:    global_store_b128 v24, v[8:11], s[0:1] offset:208
 ; GFX1250-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:192
 ; GFX1250-NEXT:    s_wait_xcnt 0x3
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s26 :: v_dual_mov_b32 v1, s27
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s48 :: v_dual_mov_b32 v1, s49
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s50 :: v_dual_mov_b32 v3, s51
 ; GFX1250-NEXT:    s_wait_xcnt 0x2
-; GFX1250-NEXT:    v_mov_b32_e32 v4, s52
+; GFX1250-NEXT:    v_mov_b32_e32 v4, s44
+; GFX1250-NEXT:    s_lshr_b32 s26, s2, 10
+; GFX1250-NEXT:    s_lshr_b32 s22, s2, 11
 ; GFX1250-NEXT:    s_lshr_b32 s30, s2, 12
 ; GFX1250-NEXT:    s_lshr_b32 s28, s2, 13
-; GFX1250-NEXT:    s_lshr_b32 s24, s2, 10
-; GFX1250-NEXT:    s_lshr_b32 s22, s2, 11
-; GFX1250-NEXT:    s_bfe_i64 s[62:63], s[62:63], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[60:61], s[60:61], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s53 :: v_dual_mov_b32 v6, s54
+; GFX1250-NEXT:    s_bfe_i64 s[38:39], s[38:39], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[24:25], s[24:25], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v5, s45 :: v_dual_mov_b32 v6, s46
 ; GFX1250-NEXT:    s_wait_xcnt 0x1
-; GFX1250-NEXT:    v_dual_mov_b32 v7, s55 :: v_dual_mov_b32 v8, s56
+; GFX1250-NEXT:    v_dual_mov_b32 v7, s47 :: v_dual_mov_b32 v8, s40
 ; GFX1250-NEXT:    s_lshr_b32 s20, s2, 8
 ; GFX1250-NEXT:    s_lshr_b32 s18, s2, 9
-; GFX1250-NEXT:    s_bfe_i64 s[66:67], s[66:67], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[64:65], s[64:65], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v9, s57 :: v_dual_mov_b32 v10, s58
+; GFX1250-NEXT:    s_bfe_i64 s[34:35], s[34:35], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[36:37], s[36:37], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v9, s41 :: v_dual_mov_b32 v10, s42
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v11, s59 :: v_dual_mov_b32 v12, s60
+; GFX1250-NEXT:    v_dual_mov_b32 v11, s43 :: v_dual_mov_b32 v12, s24
 ; GFX1250-NEXT:    s_lshr_b32 s16, s2, 6
 ; GFX1250-NEXT:    s_lshr_b32 s14, s2, 7
-; GFX1250-NEXT:    s_bfe_i64 s[22:23], s[22:23], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[24:25], s[24:25], 0x10000
 ; GFX1250-NEXT:    s_bfe_i64 s[28:29], s[28:29], 0x10000
 ; GFX1250-NEXT:    s_bfe_i64 s[30:31], s[30:31], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v13, s61 :: v_dual_mov_b32 v14, s62
-; GFX1250-NEXT:    v_dual_mov_b32 v15, s63 :: v_dual_mov_b32 v16, s64
+; GFX1250-NEXT:    s_bfe_i64 s[22:23], s[22:23], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[26:27], s[26:27], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v13, s25 :: v_dual_mov_b32 v14, s38
+; GFX1250-NEXT:    v_dual_mov_b32 v15, s39 :: v_dual_mov_b32 v16, s36
 ; GFX1250-NEXT:    s_lshr_b32 s12, s2, 4
 ; GFX1250-NEXT:    s_lshr_b32 s10, s2, 5
 ; GFX1250-NEXT:    s_bfe_i64 s[18:19], s[18:19], 0x10000
 ; GFX1250-NEXT:    s_bfe_i64 s[20:21], s[20:21], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v17, s65 :: v_dual_mov_b32 v18, s66
-; GFX1250-NEXT:    v_dual_mov_b32 v19, s67 :: v_dual_mov_b32 v20, s30
+; GFX1250-NEXT:    v_dual_mov_b32 v17, s37 :: v_dual_mov_b32 v18, s34
+; GFX1250-NEXT:    v_dual_mov_b32 v19, s35 :: v_dual_mov_b32 v20, s30
 ; GFX1250-NEXT:    s_lshr_b32 s8, s2, 2
 ; GFX1250-NEXT:    s_lshr_b32 s6, s2, 3
 ; GFX1250-NEXT:    s_bfe_i64 s[14:15], s[14:15], 0x10000
@@ -8706,11 +8619,11 @@ define amdgpu_kernel void @constant_sextload_v32i1_to_v32i64(ptr addrspace(1) %o
 ; GFX1250-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:112
 ; GFX1250-NEXT:    global_store_b128 v24, v[20:23], s[0:1] offset:96
 ; GFX1250-NEXT:    s_wait_xcnt 0x5
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s26 :: v_dual_mov_b32 v1, s27
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s22 :: v_dual_mov_b32 v3, s23
 ; GFX1250-NEXT:    s_wait_xcnt 0x4
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s20
-; GFX1250-NEXT:    s_lshr_b32 s68, s2, 1
+; GFX1250-NEXT:    s_lshr_b32 s4, s2, 1
 ; GFX1250-NEXT:    s_bfe_i64 s[10:11], s[10:11], 0x10000
 ; GFX1250-NEXT:    s_bfe_i64 s[12:13], s[12:13], 0x10000
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, s21 :: v_dual_mov_b32 v6, s18
@@ -8721,16 +8634,16 @@ define amdgpu_kernel void @constant_sextload_v32i1_to_v32i64(ptr addrspace(1) %o
 ; GFX1250-NEXT:    v_dual_mov_b32 v9, s17 :: v_dual_mov_b32 v10, s14
 ; GFX1250-NEXT:    s_wait_xcnt 0x2
 ; GFX1250-NEXT:    v_dual_mov_b32 v11, s15 :: v_dual_mov_b32 v12, s12
-; GFX1250-NEXT:    s_bfe_i64 s[4:5], s[2:3], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[2:3], s[68:69], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x10000
 ; GFX1250-NEXT:    v_dual_mov_b32 v13, s13 :: v_dual_mov_b32 v14, s10
 ; GFX1250-NEXT:    s_wait_xcnt 0x1
 ; GFX1250-NEXT:    v_dual_mov_b32 v15, s11 :: v_dual_mov_b32 v16, s8
 ; GFX1250-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s6
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v19, s7 :: v_dual_mov_b32 v20, s4
-; GFX1250-NEXT:    v_dual_mov_b32 v21, s5 :: v_dual_mov_b32 v22, s2
-; GFX1250-NEXT:    v_mov_b32_e32 v23, s3
+; GFX1250-NEXT:    v_dual_mov_b32 v19, s7 :: v_dual_mov_b32 v20, s2
+; GFX1250-NEXT:    v_dual_mov_b32 v21, s3 :: v_dual_mov_b32 v22, s4
+; GFX1250-NEXT:    v_mov_b32_e32 v23, s5
 ; GFX1250-NEXT:    s_clause 0x5
 ; GFX1250-NEXT:    global_store_b128 v24, v[0:3], s[0:1] offset:80
 ; GFX1250-NEXT:    global_store_b128 v24, v[4:7], s[0:1] offset:64
@@ -9727,20 +9640,15 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_bfe_u32 s4, s3, 0x10014
+; GFX1250-NEXT:    s_bfe_u32 s4, s3, 0x1001e
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v2, s4
-; GFX1250-NEXT:    s_bfe_u32 s5, s3, 0x10015
-; GFX1250-NEXT:    s_lshr_b32 s4, s3, 31
+; GFX1250-NEXT:    s_lshr_b32 s5, s3, 31
+; GFX1250-NEXT:    s_bfe_u32 s4, s3, 0x1001d
 ; GFX1250-NEXT:    v_dual_mov_b32 v4, s5 :: v_dual_mov_b32 v5, v3
-; GFX1250-NEXT:    s_bfe_u32 s5, s3, 0x1001e
+; GFX1250-NEXT:    s_bfe_u32 s5, s3, 0x1001c
 ; GFX1250-NEXT:    s_bfe_u32 s6, s3, 0x10003
 ; GFX1250-NEXT:    s_bfe_u32 s7, s3, 0x10002
-; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:416
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
-; GFX1250-NEXT:    s_bfe_u32 s4, s3, 0x1001d
-; GFX1250-NEXT:    s_bfe_u32 s5, s3, 0x1001c
 ; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:496
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
@@ -9759,9 +9667,14 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:448
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
+; GFX1250-NEXT:    s_bfe_u32 s4, s3, 0x10015
+; GFX1250-NEXT:    s_bfe_u32 s5, s3, 0x10014
+; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:432
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
 ; GFX1250-NEXT:    s_bfe_u32 s4, s3, 0x10013
 ; GFX1250-NEXT:    s_bfe_u32 s5, s3, 0x10012
-; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:432
+; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:416
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v4, s4
 ; GFX1250-NEXT:    s_bfe_u32 s4, s3, 0x10011
@@ -9839,13 +9752,15 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX1250-NEXT:    s_bfe_u32 s4, s2, 0x10016
 ; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:192
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v4, s3
-; GFX1250-NEXT:    s_bfe_u32 s3, s2, 0x10014
-; GFX1250-NEXT:    s_bfe_u32 s4, s2, 0x10015
+; GFX1250-NEXT:    v_mov_b32_e32 v4, s3
+; GFX1250-NEXT:    s_bfe_u32 s3, s2, 0x10015
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1250-NEXT:    s_bfe_u32 s4, s2, 0x10014
 ; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:176
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s3 :: v_dual_mov_b32 v4, s4
+; GFX1250-NEXT:    v_mov_b32_e32 v4, s3
 ; GFX1250-NEXT:    s_bfe_u32 s3, s2, 0x10013
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX1250-NEXT:    s_bfe_u32 s4, s2, 0x10012
 ; GFX1250-NEXT:    global_store_b128 v3, v[2:5], s[0:1] offset:160
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
@@ -11278,280 +11193,300 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_mov_b32 s61, 0
+; GFX1250-NEXT:    ; implicit-def: $vgpr13 : SGPR spill to VGPR lane
+; GFX1250-NEXT:    s_mov_b32 s13, 0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_mov_b32 s55, s61
-; GFX1250-NEXT:    s_mov_b32 s43, s61
-; GFX1250-NEXT:    s_mov_b32 s51, s61
-; GFX1250-NEXT:    s_mov_b32 s29, s61
-; GFX1250-NEXT:    s_mov_b32 s39, s61
-; GFX1250-NEXT:    s_mov_b32 s17, s61
-; GFX1250-NEXT:    s_mov_b32 s25, s61
-; GFX1250-NEXT:    s_mov_b32 s49, s61
+; GFX1250-NEXT:    s_mov_b32 s31, s13
+; GFX1250-NEXT:    s_mov_b32 s23, s13
+; GFX1250-NEXT:    s_mov_b32 s47, s13
+; GFX1250-NEXT:    s_mov_b32 s43, s13
+; GFX1250-NEXT:    s_mov_b32 s57, s13
+; GFX1250-NEXT:    s_mov_b32 s53, s13
+; GFX1250-NEXT:    s_mov_b32 s65, s13
+; GFX1250-NEXT:    s_mov_b32 s17, s13
+; GFX1250-NEXT:    s_mov_b32 s49, s13
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0 nv
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_mov_b32 s3, s61
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s98, s5, 30
+; GFX1250-NEXT:    s_lshr_b32 s2, s5, 1
+; GFX1250-NEXT:    s_lshr_b32 s30, s5, 18
+; GFX1250-NEXT:    v_writelane_b32 v13, s2, 0
+; GFX1250-NEXT:    s_lshr_b32 s22, s5, 19
+; GFX1250-NEXT:    s_lshr_b32 s46, s5, 20
+; GFX1250-NEXT:    s_lshr_b32 s42, s5, 21
+; GFX1250-NEXT:    s_lshr_b32 s56, s5, 22
+; GFX1250-NEXT:    v_writelane_b32 v13, s3, 1
+; GFX1250-NEXT:    s_lshr_b32 s2, s5, 2
+; GFX1250-NEXT:    s_lshr_b32 s52, s5, 23
+; GFX1250-NEXT:    s_lshr_b32 s60, s5, 25
+; GFX1250-NEXT:    s_lshr_b32 s94, s5, 30
+; GFX1250-NEXT:    v_writelane_b32 v13, s2, 2
 ; GFX1250-NEXT:    s_lshr_b32 s90, s5, 31
-; GFX1250-NEXT:    s_lshr_b32 s96, s5, 28
-; GFX1250-NEXT:    s_lshr_b32 s76, s5, 29
-; GFX1250-NEXT:    s_lshr_b32 s72, s5, 27
-; GFX1250-NEXT:    s_lshr_b32 s60, s5, 24
-; GFX1250-NEXT:    s_lshr_b32 s86, s5, 26
-; GFX1250-NEXT:    s_bfe_i64 s[98:99], s[98:99], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s84, s5, 28
+; GFX1250-NEXT:    s_lshr_b32 s80, s5, 29
+; GFX1250-NEXT:    s_lshr_b32 s64, s5, 24
+; GFX1250-NEXT:    v_writelane_b32 v13, s3, 3
+; GFX1250-NEXT:    s_lshr_b32 s2, s5, 3
+; GFX1250-NEXT:    s_lshr_b32 s72, s5, 26
+; GFX1250-NEXT:    s_lshr_b32 s68, s5, 27
+; GFX1250-NEXT:    s_bfe_i64 s[94:95], s[94:95], 0x10000
+; GFX1250-NEXT:    v_writelane_b32 v13, s2, 4
 ; GFX1250-NEXT:    s_bfe_i64 s[90:91], s[90:91], 0x10000
-; GFX1250-NEXT:    s_lshr_b32 s64, s5, 25
-; GFX1250-NEXT:    s_bfe_i64 s[96:97], s[96:97], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[76:77], s[76:77], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[72:73], s[72:73], 0x10000
 ; GFX1250-NEXT:    s_bfe_i64 s[60:61], s[60:61], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v0, s98
-; GFX1250-NEXT:    s_lshr_b32 s54, s5, 22
-; GFX1250-NEXT:    s_lshr_b32 s42, s5, 23
-; GFX1250-NEXT:    v_dual_mov_b32 v1, s99 :: v_dual_mov_b32 v2, s90
-; GFX1250-NEXT:    v_dual_mov_b32 v3, s91 :: v_dual_mov_b32 v4, s96
-; GFX1250-NEXT:    s_bfe_i64 s[86:87], s[86:87], 0x10000
-; GFX1250-NEXT:    s_lshr_b32 s50, s5, 20
-; GFX1250-NEXT:    s_lshr_b32 s28, s5, 21
-; GFX1250-NEXT:    s_lshr_b32 s2, s5, 17
-; GFX1250-NEXT:    s_lshr_b32 s6, s5, 14
-; GFX1250-NEXT:    s_lshr_b32 s8, s5, 15
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s97 :: v_dual_mov_b32 v6, s76
-; GFX1250-NEXT:    v_dual_mov_b32 v7, s77 :: v_dual_mov_b32 v10, s86
-; GFX1250-NEXT:    v_dual_mov_b32 v13, s73 :: v_dual_mov_b32 v14, s60
-; GFX1250-NEXT:    v_mov_b32_e32 v15, s61
-; GFX1250-NEXT:    s_bfe_i64 s[60:61], s[64:65], 0x10000
-; GFX1250-NEXT:    s_lshr_b32 s38, s5, 18
-; GFX1250-NEXT:    s_lshr_b32 s16, s5, 19
-; GFX1250-NEXT:    s_lshr_b32 s10, s5, 12
-; GFX1250-NEXT:    s_lshr_b32 s12, s5, 13
-; GFX1250-NEXT:    v_dual_mov_b32 v11, s87 :: v_dual_mov_b32 v12, s72
-; GFX1250-NEXT:    s_bfe_i64 s[54:55], s[54:55], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[42:43], s[42:43], 0x10000
-; GFX1250-NEXT:    s_lshr_b32 s24, s5, 16
-; GFX1250-NEXT:    s_lshr_b32 s14, s5, 10
-; GFX1250-NEXT:    s_lshr_b32 s18, s5, 11
-; GFX1250-NEXT:    v_dual_mov_b32 v16, s60 :: v_dual_mov_b32 v17, s61
-; GFX1250-NEXT:    v_mov_b32_e32 v18, s54
-; GFX1250-NEXT:    s_bfe_i64 s[50:51], s[50:51], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[28:29], s[28:29], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[6:7], s[6:7], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
-; GFX1250-NEXT:    s_lshr_b32 s20, s5, 8
-; GFX1250-NEXT:    s_lshr_b32 s22, s5, 9
-; GFX1250-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s42
-; GFX1250-NEXT:    v_dual_mov_b32 v21, s43 :: v_dual_mov_b32 v22, s50
-; GFX1250-NEXT:    s_bfe_i64 s[38:39], s[38:39], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[16:17], s[16:17], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[12:13], s[12:13], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[10:11], s[10:11], 0x10000
-; GFX1250-NEXT:    s_lshr_b32 s26, s5, 6
-; GFX1250-NEXT:    s_lshr_b32 s30, s5, 7
-; GFX1250-NEXT:    v_dual_mov_b32 v23, s51 :: v_dual_mov_b32 v24, s28
-; GFX1250-NEXT:    v_dual_mov_b32 v25, s29 :: v_dual_mov_b32 v26, s38
-; GFX1250-NEXT:    s_bfe_i64 s[24:25], s[24:25], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[18:19], s[18:19], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[14:15], s[14:15], 0x10000
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:496
-; GFX1250-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:480
-; GFX1250-NEXT:    s_wait_xcnt 0x1
-; GFX1250-NEXT:    v_dual_mov_b32 v33, s3 :: v_dual_mov_b32 v0, s6
-; GFX1250-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_mov_b32 v2, s8
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v3, s9 :: v_dual_mov_b32 v4, s10
-; GFX1250-NEXT:    s_lshr_b32 s34, s5, 4
-; GFX1250-NEXT:    s_lshr_b32 s36, s5, 5
-; GFX1250-NEXT:    s_lshr_b32 s40, s5, 2
-; GFX1250-NEXT:    s_lshr_b32 s44, s5, 3
-; GFX1250-NEXT:    v_dual_mov_b32 v27, s39 :: v_dual_mov_b32 v28, s16
-; GFX1250-NEXT:    v_dual_mov_b32 v29, s17 :: v_dual_mov_b32 v30, s24
-; GFX1250-NEXT:    s_bfe_i64 s[22:23], s[22:23], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[20:21], s[20:21], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s11 :: v_dual_mov_b32 v6, s12
-; GFX1250-NEXT:    v_mov_b32_e32 v7, s13
-; GFX1250-NEXT:    s_lshr_b32 s46, s5, 1
-; GFX1250-NEXT:    s_mov_b32 s48, s5
-; GFX1250-NEXT:    v_dual_mov_b32 v31, s25 :: v_dual_mov_b32 v32, s2
-; GFX1250-NEXT:    s_bfe_i64 s[30:31], s[30:31], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[26:27], s[26:27], 0x10000
-; GFX1250-NEXT:    s_clause 0x5
-; GFX1250-NEXT:    global_store_b128 v8, v[10:13], s[0:1] offset:464
-; GFX1250-NEXT:    global_store_b128 v8, v[14:17], s[0:1] offset:448
-; GFX1250-NEXT:    global_store_b128 v8, v[18:21], s[0:1] offset:432
-; GFX1250-NEXT:    global_store_b128 v8, v[22:25], s[0:1] offset:416
-; GFX1250-NEXT:    global_store_b128 v8, v[26:29], s[0:1] offset:400
-; GFX1250-NEXT:    global_store_b128 v8, v[30:33], s[0:1] offset:384
-; GFX1250-NEXT:    s_wait_xcnt 0x5
-; GFX1250-NEXT:    v_dual_mov_b32 v10, s14 :: v_dual_mov_b32 v11, s15
-; GFX1250-NEXT:    v_dual_mov_b32 v12, s18 :: v_dual_mov_b32 v13, s19
-; GFX1250-NEXT:    s_wait_xcnt 0x4
-; GFX1250-NEXT:    v_mov_b32_e32 v14, s20
-; GFX1250-NEXT:    s_lshr_b32 s52, s4, 30
-; GFX1250-NEXT:    s_lshr_b32 s56, s4, 31
-; GFX1250-NEXT:    s_bfe_i64 s[44:45], s[44:45], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[40:41], s[40:41], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[36:37], s[36:37], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[34:35], s[34:35], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v15, s21 :: v_dual_mov_b32 v16, s22
-; GFX1250-NEXT:    s_wait_xcnt 0x3
-; GFX1250-NEXT:    v_dual_mov_b32 v17, s23 :: v_dual_mov_b32 v18, s26
-; GFX1250-NEXT:    s_lshr_b32 s58, s4, 28
-; GFX1250-NEXT:    s_lshr_b32 s62, s4, 29
-; GFX1250-NEXT:    s_bfe_i64 s[48:49], s[48:49], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[46:47], s[46:47], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v19, s27 :: v_dual_mov_b32 v20, s30
-; GFX1250-NEXT:    s_wait_xcnt 0x2
-; GFX1250-NEXT:    v_dual_mov_b32 v21, s31 :: v_dual_mov_b32 v22, s34
-; GFX1250-NEXT:    s_lshr_b32 s66, s4, 26
-; GFX1250-NEXT:    s_lshr_b32 s68, s4, 27
 ; GFX1250-NEXT:    s_bfe_i64 s[56:57], s[56:57], 0x10000
 ; GFX1250-NEXT:    s_bfe_i64 s[52:53], s[52:53], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v23, s35 :: v_dual_mov_b32 v24, s36
+; GFX1250-NEXT:    v_writelane_b32 v13, s3, 5
+; GFX1250-NEXT:    s_lshr_b32 s2, s5, 4
+; GFX1250-NEXT:    s_bfe_i64 s[46:47], s[46:47], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[42:43], s[42:43], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[30:31], s[30:31], 0x10000
+; GFX1250-NEXT:    v_writelane_b32 v13, s2, 6
+; GFX1250-NEXT:    s_bfe_i64 s[22:23], s[22:23], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[84:85], s[84:85], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[80:81], s[80:81], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v12, 0 :: v_dual_mov_b32 v0, s94
+; GFX1250-NEXT:    v_writelane_b32 v13, s3, 7
+; GFX1250-NEXT:    s_lshr_b32 s2, s5, 5
+; GFX1250-NEXT:    s_lshr_b32 s12, s5, 16
+; GFX1250-NEXT:    s_lshr_b32 s36, s5, 12
+; GFX1250-NEXT:    s_lshr_b32 s38, s5, 13
+; GFX1250-NEXT:    v_writelane_b32 v13, s2, 8
+; GFX1250-NEXT:    s_lshr_b32 s40, s5, 14
+; GFX1250-NEXT:    s_lshr_b32 s44, s5, 15
+; GFX1250-NEXT:    v_dual_mov_b32 v1, s95 :: v_dual_mov_b32 v2, s90
+; GFX1250-NEXT:    v_writelane_b32 v13, s3, 9
+; GFX1250-NEXT:    v_dual_mov_b32 v3, s91 :: v_dual_mov_b32 v4, s84
+; GFX1250-NEXT:    s_lshr_b32 s14, s4, 3
+; GFX1250-NEXT:    s_bfe_i64 s[72:73], s[72:73], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s10, s4, 4
+; GFX1250-NEXT:    s_lshr_b32 s8, s4, 5
+; GFX1250-NEXT:    s_bfe_i64 s[68:69], s[68:69], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[64:65], s[64:65], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s6, s4, 6
+; GFX1250-NEXT:    v_dual_mov_b32 v17, s61 :: v_dual_mov_b32 v18, s56
+; GFX1250-NEXT:    s_lshr_b32 s56, s4, 9
+; GFX1250-NEXT:    v_dual_mov_b32 v21, s53 :: v_dual_mov_b32 v22, s46
+; GFX1250-NEXT:    v_dual_mov_b32 v23, s47 :: v_dual_mov_b32 v24, s42
+; GFX1250-NEXT:    s_lshr_b32 s46, s4, 11
+; GFX1250-NEXT:    s_lshr_b32 s42, s4, 12
+; GFX1250-NEXT:    v_dual_mov_b32 v27, s31 :: v_dual_mov_b32 v28, s22
+; GFX1250-NEXT:    s_lshr_b32 s22, s4, 14
+; GFX1250-NEXT:    s_lshr_b32 s16, s5, 17
+; GFX1250-NEXT:    s_mov_b32 s48, s5
+; GFX1250-NEXT:    v_dual_mov_b32 v5, s85 :: v_dual_mov_b32 v6, s80
+; GFX1250-NEXT:    v_dual_mov_b32 v7, s81 :: v_dual_mov_b32 v8, s72
+; GFX1250-NEXT:    s_lshr_b32 s2, s4, 7
+; GFX1250-NEXT:    v_dual_mov_b32 v19, s57 :: v_dual_mov_b32 v20, s52
+; GFX1250-NEXT:    s_lshr_b32 s52, s4, 10
+; GFX1250-NEXT:    v_dual_mov_b32 v9, s73 :: v_dual_mov_b32 v10, s68
+; GFX1250-NEXT:    v_dual_mov_b32 v11, s69 :: v_dual_mov_b32 v14, s64
+; GFX1250-NEXT:    v_dual_mov_b32 v15, s65 :: v_dual_mov_b32 v16, s60
+; GFX1250-NEXT:    v_dual_mov_b32 v25, s43 :: v_dual_mov_b32 v26, s30
+; GFX1250-NEXT:    s_bfe_i64 s[12:13], s[12:13], 0x10000
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v29, s23 :: v_dual_mov_b32 v30, s12
+; GFX1250-NEXT:    s_bfe_i64 s[94:95], s[22:23], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[84:85], s[42:43], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[68:69], s[46:47], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[60:61], s[56:57], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[56:57], s[6:7], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[42:43], s[8:9], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[46:47], s[10:11], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[22:23], s[14:15], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[6:7], s[44:45], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[8:9], s[40:41], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[10:11], s[38:39], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[14:15], s[36:37], 0x10000
+; GFX1250-NEXT:    v_readlane_b32 s36, v13, 8
+; GFX1250-NEXT:    v_readlane_b32 s38, v13, 6
+; GFX1250-NEXT:    v_readlane_b32 s40, v13, 4
+; GFX1250-NEXT:    v_readlane_b32 s44, v13, 2
+; GFX1250-NEXT:    s_lshr_b32 s28, s5, 10
+; GFX1250-NEXT:    s_lshr_b32 s34, s5, 11
+; GFX1250-NEXT:    s_bfe_i64 s[72:73], s[52:53], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[52:53], s[2:3], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[2:3], s[48:49], 0x10000
+; GFX1250-NEXT:    v_readlane_b32 s37, v13, 9
+; GFX1250-NEXT:    v_readlane_b32 s39, v13, 7
+; GFX1250-NEXT:    v_readlane_b32 s41, v13, 5
+; GFX1250-NEXT:    v_readlane_b32 s45, v13, 3
+; GFX1250-NEXT:    v_readlane_b32 s48, v13, 0
+; GFX1250-NEXT:    s_bfe_i64 s[16:17], s[16:17], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s24, s5, 8
+; GFX1250-NEXT:    s_lshr_b32 s26, s5, 9
+; GFX1250-NEXT:    v_readlane_b32 s49, v13, 1
+; GFX1250-NEXT:    s_lshr_b32 s18, s5, 6
+; GFX1250-NEXT:    s_lshr_b32 s20, s5, 7
+; GFX1250-NEXT:    s_bfe_i64 s[34:35], s[34:35], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[28:29], s[28:29], 0x10000
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    global_store_b128 v12, v[0:3], s[0:1] offset:496
+; GFX1250-NEXT:    global_store_b128 v12, v[4:7], s[0:1] offset:480
+; GFX1250-NEXT:    s_wait_xcnt 0x1
+; GFX1250-NEXT:    v_dual_mov_b32 v33, s17 :: v_dual_mov_b32 v0, s8
+; GFX1250-NEXT:    v_dual_mov_b32 v1, s9 :: v_dual_mov_b32 v2, s6
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v3, s7 :: v_dual_mov_b32 v4, s14
+; GFX1250-NEXT:    s_bfe_i64 s[26:27], s[26:27], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[24:25], s[24:25], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v5, s15 :: v_dual_mov_b32 v6, s10
+; GFX1250-NEXT:    v_dual_mov_b32 v7, s11 :: v_dual_mov_b32 v31, s13
+; GFX1250-NEXT:    v_mov_b32_e32 v32, s16
+; GFX1250-NEXT:    s_bfe_i64 s[20:21], s[20:21], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[18:19], s[18:19], 0x10000
+; GFX1250-NEXT:    s_clause 0x5
+; GFX1250-NEXT:    global_store_b128 v12, v[8:11], s[0:1] offset:464
+; GFX1250-NEXT:    global_store_b128 v12, v[14:17], s[0:1] offset:448
+; GFX1250-NEXT:    global_store_b128 v12, v[18:21], s[0:1] offset:432
+; GFX1250-NEXT:    global_store_b128 v12, v[22:25], s[0:1] offset:416
+; GFX1250-NEXT:    global_store_b128 v12, v[26:29], s[0:1] offset:400
+; GFX1250-NEXT:    global_store_b128 v12, v[30:33], s[0:1] offset:384
+; GFX1250-NEXT:    s_wait_xcnt 0x5
+; GFX1250-NEXT:    v_dual_mov_b32 v8, s28 :: v_dual_mov_b32 v9, s29
+; GFX1250-NEXT:    v_dual_mov_b32 v10, s34 :: v_dual_mov_b32 v11, s35
+; GFX1250-NEXT:    s_wait_xcnt 0x4
+; GFX1250-NEXT:    v_mov_b32_e32 v14, s24
+; GFX1250-NEXT:    s_lshr_b32 s98, s4, 30
+; GFX1250-NEXT:    s_lshr_b32 s100, s4, 31
+; GFX1250-NEXT:    s_bfe_i64 s[36:37], s[36:37], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[38:39], s[38:39], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[40:41], s[40:41], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[44:45], s[44:45], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v15, s25 :: v_dual_mov_b32 v16, s26
+; GFX1250-NEXT:    s_wait_xcnt 0x3
+; GFX1250-NEXT:    v_dual_mov_b32 v17, s27 :: v_dual_mov_b32 v18, s18
+; GFX1250-NEXT:    s_lshr_b32 s92, s4, 28
+; GFX1250-NEXT:    s_lshr_b32 s96, s4, 29
+; GFX1250-NEXT:    s_bfe_i64 s[48:49], s[48:49], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v19, s19 :: v_dual_mov_b32 v20, s20
+; GFX1250-NEXT:    s_wait_xcnt 0x2
+; GFX1250-NEXT:    v_dual_mov_b32 v21, s21 :: v_dual_mov_b32 v22, s38
+; GFX1250-NEXT:    s_lshr_b32 s86, s4, 26
+; GFX1250-NEXT:    s_lshr_b32 s88, s4, 27
+; GFX1250-NEXT:    s_bfe_i64 s[100:101], s[100:101], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[98:99], s[98:99], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v23, s39 :: v_dual_mov_b32 v24, s36
 ; GFX1250-NEXT:    v_mov_b32_e32 v25, s37
 ; GFX1250-NEXT:    s_clause 0x5
-; GFX1250-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:368
-; GFX1250-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:352
-; GFX1250-NEXT:    global_store_b128 v8, v[10:13], s[0:1] offset:336
-; GFX1250-NEXT:    global_store_b128 v8, v[14:17], s[0:1] offset:320
-; GFX1250-NEXT:    global_store_b128 v8, v[18:21], s[0:1] offset:304
-; GFX1250-NEXT:    global_store_b128 v8, v[22:25], s[0:1] offset:288
+; GFX1250-NEXT:    global_store_b128 v12, v[0:3], s[0:1] offset:368
+; GFX1250-NEXT:    global_store_b128 v12, v[4:7], s[0:1] offset:352
+; GFX1250-NEXT:    global_store_b128 v12, v[8:11], s[0:1] offset:336
+; GFX1250-NEXT:    global_store_b128 v12, v[14:17], s[0:1] offset:320
+; GFX1250-NEXT:    global_store_b128 v12, v[18:21], s[0:1] offset:304
+; GFX1250-NEXT:    global_store_b128 v12, v[22:25], s[0:1] offset:288
 ; GFX1250-NEXT:    s_wait_xcnt 0x5
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v1, s41
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s44 :: v_dual_mov_b32 v3, s45
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s44 :: v_dual_mov_b32 v1, s45
+; GFX1250-NEXT:    v_dual_mov_b32 v2, s40 :: v_dual_mov_b32 v3, s41
 ; GFX1250-NEXT:    s_wait_xcnt 0x4
-; GFX1250-NEXT:    v_mov_b32_e32 v4, s48
-; GFX1250-NEXT:    s_lshr_b32 s70, s4, 24
-; GFX1250-NEXT:    s_lshr_b32 s74, s4, 25
-; GFX1250-NEXT:    s_lshr_b32 s78, s4, 22
-; GFX1250-NEXT:    s_lshr_b32 s80, s4, 23
+; GFX1250-NEXT:    v_mov_b32_e32 v4, s2
+; GFX1250-NEXT:    s_lshr_b32 s74, s4, 22
+; GFX1250-NEXT:    s_lshr_b32 s76, s4, 23
+; GFX1250-NEXT:    s_lshr_b32 s78, s4, 24
+; GFX1250-NEXT:    s_lshr_b32 s82, s4, 25
+; GFX1250-NEXT:    s_bfe_i64 s[96:97], s[96:97], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[92:93], s[92:93], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v5, s3 :: v_dual_mov_b32 v6, s48
+; GFX1250-NEXT:    s_wait_xcnt 0x3
+; GFX1250-NEXT:    v_dual_mov_b32 v7, s49 :: v_dual_mov_b32 v8, s98
+; GFX1250-NEXT:    s_lshr_b32 s66, s4, 20
+; GFX1250-NEXT:    s_lshr_b32 s70, s4, 21
+; GFX1250-NEXT:    s_bfe_i64 s[88:89], s[88:89], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[86:87], s[86:87], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v9, s99 :: v_dual_mov_b32 v10, s100
+; GFX1250-NEXT:    s_wait_xcnt 0x2
+; GFX1250-NEXT:    v_dual_mov_b32 v11, s101 :: v_dual_mov_b32 v14, s92
+; GFX1250-NEXT:    s_lshr_b32 s58, s4, 18
+; GFX1250-NEXT:    s_lshr_b32 s62, s4, 19
+; GFX1250-NEXT:    s_bfe_i64 s[82:83], s[82:83], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[78:79], s[78:79], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[76:77], s[76:77], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[74:75], s[74:75], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v15, s93 :: v_dual_mov_b32 v16, s96
+; GFX1250-NEXT:    s_wait_xcnt 0x1
+; GFX1250-NEXT:    v_dual_mov_b32 v17, s97 :: v_dual_mov_b32 v18, s86
+; GFX1250-NEXT:    s_lshr_b32 s50, s4, 16
+; GFX1250-NEXT:    s_lshr_b32 s54, s4, 17
+; GFX1250-NEXT:    s_bfe_i64 s[70:71], s[70:71], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[66:67], s[66:67], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v19, s87 :: v_dual_mov_b32 v20, s88
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v21, s89 :: v_dual_mov_b32 v22, s78
+; GFX1250-NEXT:    s_lshr_b32 s12, s4, 15
 ; GFX1250-NEXT:    s_bfe_i64 s[62:63], s[62:63], 0x10000
 ; GFX1250-NEXT:    s_bfe_i64 s[58:59], s[58:59], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s49 :: v_dual_mov_b32 v6, s46
-; GFX1250-NEXT:    s_wait_xcnt 0x3
-; GFX1250-NEXT:    v_dual_mov_b32 v7, s47 :: v_dual_mov_b32 v10, s52
-; GFX1250-NEXT:    s_lshr_b32 s82, s4, 20
-; GFX1250-NEXT:    s_lshr_b32 s84, s4, 21
-; GFX1250-NEXT:    s_bfe_i64 s[68:69], s[68:69], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[66:67], s[66:67], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v11, s53 :: v_dual_mov_b32 v12, s56
-; GFX1250-NEXT:    s_wait_xcnt 0x2
-; GFX1250-NEXT:    v_dual_mov_b32 v13, s57 :: v_dual_mov_b32 v14, s58
-; GFX1250-NEXT:    s_lshr_b32 s88, s4, 18
-; GFX1250-NEXT:    s_lshr_b32 s92, s4, 19
-; GFX1250-NEXT:    s_bfe_i64 s[80:81], s[80:81], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[78:79], s[78:79], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[74:75], s[74:75], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[70:71], s[70:71], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v15, s59 :: v_dual_mov_b32 v16, s62
-; GFX1250-NEXT:    s_wait_xcnt 0x1
-; GFX1250-NEXT:    v_dual_mov_b32 v17, s63 :: v_dual_mov_b32 v18, s66
-; GFX1250-NEXT:    s_lshr_b32 s94, s4, 16
-; GFX1250-NEXT:    s_lshr_b32 s100, s4, 17
-; GFX1250-NEXT:    s_bfe_i64 s[84:85], s[84:85], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[82:83], s[82:83], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v19, s67 :: v_dual_mov_b32 v20, s68
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v21, s69 :: v_dual_mov_b32 v22, s70
-; GFX1250-NEXT:    s_lshr_b32 s98, s4, 14
-; GFX1250-NEXT:    s_lshr_b32 s102, s4, 15
-; GFX1250-NEXT:    s_lshr_b32 s96, s4, 13
-; GFX1250-NEXT:    s_lshr_b32 s86, s4, 8
-; GFX1250-NEXT:    s_lshr_b32 s64, s4, 7
-; GFX1250-NEXT:    s_lshr_b32 s50, s4, 5
-; GFX1250-NEXT:    s_lshr_b32 s38, s4, 3
-; GFX1250-NEXT:    s_lshr_b32 s24, s4, 1
-; GFX1250-NEXT:    s_bfe_i64 s[92:93], s[92:93], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[88:89], s[88:89], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v23, s71 :: v_dual_mov_b32 v24, s74
-; GFX1250-NEXT:    v_mov_b32_e32 v25, s75
+; GFX1250-NEXT:    v_dual_mov_b32 v23, s79 :: v_dual_mov_b32 v24, s82
+; GFX1250-NEXT:    v_mov_b32_e32 v25, s83
 ; GFX1250-NEXT:    s_clause 0x5
-; GFX1250-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:272
-; GFX1250-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:256
-; GFX1250-NEXT:    global_store_b128 v8, v[10:13], s[0:1] offset:240
-; GFX1250-NEXT:    global_store_b128 v8, v[14:17], s[0:1] offset:224
-; GFX1250-NEXT:    global_store_b128 v8, v[18:21], s[0:1] offset:208
-; GFX1250-NEXT:    global_store_b128 v8, v[22:25], s[0:1] offset:192
+; GFX1250-NEXT:    global_store_b128 v12, v[0:3], s[0:1] offset:272
+; GFX1250-NEXT:    global_store_b128 v12, v[4:7], s[0:1] offset:256
+; GFX1250-NEXT:    global_store_b128 v12, v[8:11], s[0:1] offset:240
+; GFX1250-NEXT:    global_store_b128 v12, v[14:17], s[0:1] offset:224
+; GFX1250-NEXT:    global_store_b128 v12, v[18:21], s[0:1] offset:208
+; GFX1250-NEXT:    global_store_b128 v12, v[22:25], s[0:1] offset:192
 ; GFX1250-NEXT:    s_wait_xcnt 0x5
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s78 :: v_dual_mov_b32 v1, s79
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s80 :: v_dual_mov_b32 v3, s81
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s74 :: v_dual_mov_b32 v1, s75
+; GFX1250-NEXT:    v_dual_mov_b32 v2, s76 :: v_dual_mov_b32 v3, s77
 ; GFX1250-NEXT:    s_wait_xcnt 0x4
-; GFX1250-NEXT:    v_mov_b32_e32 v4, s82
-; GFX1250-NEXT:    s_lshr_b32 s90, s4, 12
-; GFX1250-NEXT:    s_lshr_b32 s76, s4, 10
-; GFX1250-NEXT:    s_lshr_b32 s72, s4, 11
-; GFX1250-NEXT:    s_bfe_i64 s[100:101], s[100:101], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[94:95], s[94:95], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s83 :: v_dual_mov_b32 v6, s84
-; GFX1250-NEXT:    s_wait_xcnt 0x3
-; GFX1250-NEXT:    v_dual_mov_b32 v7, s85 :: v_dual_mov_b32 v10, s88
-; GFX1250-NEXT:    s_lshr_b32 s60, s4, 9
-; GFX1250-NEXT:    s_lshr_b32 s54, s4, 6
-; GFX1250-NEXT:    s_lshr_b32 s42, s4, 4
-; GFX1250-NEXT:    s_lshr_b32 s28, s4, 2
-; GFX1250-NEXT:    s_bfe_i64 s[16:17], s[4:5], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[4:5], s[24:25], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[24:25], s[38:39], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[38:39], s[50:51], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[50:51], s[64:65], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[64:65], s[86:87], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[86:87], s[96:97], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[96:97], s[102:103], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[98:99], s[98:99], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v11, s89 :: v_dual_mov_b32 v12, s92
-; GFX1250-NEXT:    s_wait_xcnt 0x2
-; GFX1250-NEXT:    v_dual_mov_b32 v13, s93 :: v_dual_mov_b32 v14, s94
-; GFX1250-NEXT:    s_bfe_i64 s[72:73], s[72:73], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[76:77], s[76:77], 0x10000
-; GFX1250-NEXT:    s_bfe_i64 s[90:91], s[90:91], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v15, s95 :: v_dual_mov_b32 v16, s100
-; GFX1250-NEXT:    s_wait_xcnt 0x1
-; GFX1250-NEXT:    v_dual_mov_b32 v17, s101 :: v_dual_mov_b32 v18, s98
-; GFX1250-NEXT:    s_bfe_i64 s[60:61], s[60:61], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v19, s99 :: v_dual_mov_b32 v20, s96
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v21, s97 :: v_dual_mov_b32 v22, s90
+; GFX1250-NEXT:    v_mov_b32_e32 v4, s66
+; GFX1250-NEXT:    s_lshr_b32 s30, s4, 13
 ; GFX1250-NEXT:    s_bfe_i64 s[54:55], s[54:55], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v23, s91 :: v_dual_mov_b32 v24, s86
-; GFX1250-NEXT:    v_mov_b32_e32 v25, s87
+; GFX1250-NEXT:    s_bfe_i64 s[50:51], s[50:51], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v5, s67 :: v_dual_mov_b32 v6, s70
+; GFX1250-NEXT:    s_wait_xcnt 0x3
+; GFX1250-NEXT:    v_dual_mov_b32 v7, s71 :: v_dual_mov_b32 v8, s58
+; GFX1250-NEXT:    s_lshr_b32 s64, s4, 8
+; GFX1250-NEXT:    s_bfe_i64 s[90:91], s[12:13], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v9, s59 :: v_dual_mov_b32 v10, s62
+; GFX1250-NEXT:    s_wait_xcnt 0x2
+; GFX1250-NEXT:    v_dual_mov_b32 v11, s63 :: v_dual_mov_b32 v14, s50
+; GFX1250-NEXT:    s_bfe_i64 s[80:81], s[30:31], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s54
+; GFX1250-NEXT:    s_wait_xcnt 0x1
+; GFX1250-NEXT:    v_dual_mov_b32 v17, s55 :: v_dual_mov_b32 v18, s94
+; GFX1250-NEXT:    s_bfe_i64 s[64:65], s[64:65], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v19, s95 :: v_dual_mov_b32 v20, s90
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v21, s91 :: v_dual_mov_b32 v22, s84
+; GFX1250-NEXT:    s_lshr_b32 vcc_lo, s4, 2
+; GFX1250-NEXT:    v_dual_mov_b32 v23, s85 :: v_dual_mov_b32 v24, s80
+; GFX1250-NEXT:    v_mov_b32_e32 v25, s81
 ; GFX1250-NEXT:    s_clause 0x5
-; GFX1250-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:176
-; GFX1250-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:160
-; GFX1250-NEXT:    global_store_b128 v8, v[10:13], s[0:1] offset:144
-; GFX1250-NEXT:    global_store_b128 v8, v[14:17], s[0:1] offset:128
-; GFX1250-NEXT:    global_store_b128 v8, v[18:21], s[0:1] offset:112
-; GFX1250-NEXT:    global_store_b128 v8, v[22:25], s[0:1] offset:96
+; GFX1250-NEXT:    global_store_b128 v12, v[0:3], s[0:1] offset:176
+; GFX1250-NEXT:    global_store_b128 v12, v[4:7], s[0:1] offset:160
+; GFX1250-NEXT:    global_store_b128 v12, v[8:11], s[0:1] offset:144
+; GFX1250-NEXT:    global_store_b128 v12, v[14:17], s[0:1] offset:128
+; GFX1250-NEXT:    global_store_b128 v12, v[18:21], s[0:1] offset:112
+; GFX1250-NEXT:    global_store_b128 v12, v[22:25], s[0:1] offset:96
 ; GFX1250-NEXT:    s_wait_xcnt 0x5
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s76 :: v_dual_mov_b32 v1, s77
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s72 :: v_dual_mov_b32 v3, s73
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s72 :: v_dual_mov_b32 v1, s73
+; GFX1250-NEXT:    v_dual_mov_b32 v2, s68 :: v_dual_mov_b32 v3, s69
 ; GFX1250-NEXT:    s_wait_xcnt 0x4
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s64
-; GFX1250-NEXT:    s_bfe_i64 s[42:43], s[42:43], 0x10000
+; GFX1250-NEXT:    s_lshr_b32 s102, s4, 1
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, s65 :: v_dual_mov_b32 v6, s60
 ; GFX1250-NEXT:    s_wait_xcnt 0x3
-; GFX1250-NEXT:    v_dual_mov_b32 v7, s61 :: v_dual_mov_b32 v10, s54
-; GFX1250-NEXT:    s_bfe_i64 s[28:29], s[28:29], 0x10000
-; GFX1250-NEXT:    v_dual_mov_b32 v11, s55 :: v_dual_mov_b32 v12, s50
+; GFX1250-NEXT:    v_dual_mov_b32 v7, s61 :: v_dual_mov_b32 v8, s56
+; GFX1250-NEXT:    s_bfe_i64 s[30:31], vcc, 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v9, s57 :: v_dual_mov_b32 v10, s52
 ; GFX1250-NEXT:    s_wait_xcnt 0x2
-; GFX1250-NEXT:    v_dual_mov_b32 v13, s51 :: v_dual_mov_b32 v14, s42
-; GFX1250-NEXT:    v_dual_mov_b32 v15, s43 :: v_dual_mov_b32 v16, s38
+; GFX1250-NEXT:    v_dual_mov_b32 v11, s53 :: v_dual_mov_b32 v14, s46
+; GFX1250-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x10000
+; GFX1250-NEXT:    s_bfe_i64 s[12:13], s[102:103], 0x10000
+; GFX1250-NEXT:    v_dual_mov_b32 v15, s47 :: v_dual_mov_b32 v16, s42
 ; GFX1250-NEXT:    s_wait_xcnt 0x1
-; GFX1250-NEXT:    v_dual_mov_b32 v17, s39 :: v_dual_mov_b32 v18, s28
-; GFX1250-NEXT:    v_dual_mov_b32 v19, s29 :: v_dual_mov_b32 v20, s24
+; GFX1250-NEXT:    v_dual_mov_b32 v17, s43 :: v_dual_mov_b32 v18, s30
+; GFX1250-NEXT:    v_dual_mov_b32 v19, s31 :: v_dual_mov_b32 v20, s22
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v21, s25 :: v_dual_mov_b32 v22, s16
-; GFX1250-NEXT:    v_dual_mov_b32 v23, s17 :: v_dual_mov_b32 v24, s4
-; GFX1250-NEXT:    v_mov_b32_e32 v25, s5
+; GFX1250-NEXT:    v_dual_mov_b32 v21, s23 :: v_dual_mov_b32 v22, s4
+; GFX1250-NEXT:    v_dual_mov_b32 v23, s5 :: v_dual_mov_b32 v24, s12
+; GFX1250-NEXT:    v_mov_b32_e32 v25, s13
 ; GFX1250-NEXT:    s_clause 0x5
-; GFX1250-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:80
-; GFX1250-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:64
-; GFX1250-NEXT:    global_store_b128 v8, v[10:13], s[0:1] offset:48
-; GFX1250-NEXT:    global_store_b128 v8, v[14:17], s[0:1] offset:32
-; GFX1250-NEXT:    global_store_b128 v8, v[18:21], s[0:1] offset:16
-; GFX1250-NEXT:    global_store_b128 v8, v[22:25], s[0:1]
+; GFX1250-NEXT:    global_store_b128 v12, v[0:3], s[0:1] offset:80
+; GFX1250-NEXT:    global_store_b128 v12, v[4:7], s[0:1] offset:64
+; GFX1250-NEXT:    global_store_b128 v12, v[8:11], s[0:1] offset:48
+; GFX1250-NEXT:    global_store_b128 v12, v[14:17], s[0:1] offset:32
+; GFX1250-NEXT:    global_store_b128 v12, v[18:21], s[0:1] offset:16
+; GFX1250-NEXT:    global_store_b128 v12, v[22:25], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %load = load <64 x i1>, ptr addrspace(4) %in
   %ext = sext <64 x i1> %load to <64 x i64>
