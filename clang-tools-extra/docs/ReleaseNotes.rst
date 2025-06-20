@@ -291,6 +291,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to not run on
+  objective-c code.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
