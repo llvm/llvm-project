@@ -1139,6 +1139,32 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Visibility = Sampler->Visibility;
       Infos.push_back(Info);
     }
+    if (const auto *Clause =
+            std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(&Elem)) {
+      RangeInfo Info;
+      Info.LowerBound = Clause->Reg.Number;
+      assert(0 < Clause->NumDescriptors && "Verified as part of TODO(#129940)");
+      Info.UpperBound =
+        Clause->NumDescriptors == RangeInfo::Unbounded
+        ? RangeInfo::Unbounded
+        : Info.LowerBound + Clause->NumDescriptors - 1; // use inclusive ranges []
+
+      Info.Class = Clause->Type;
+      Info.Space = Clause->Space;
+      // Note: Clause does not hold the visibility this will need to
+      Infos.push_back(Info);
+    }
+    if (const auto *Table =
+            std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
+      // Table holds the Visibility of all owned Clauses in Table, so iterate
+      // owned Clauses and update their corresponding RangeInfo
+      assert(Table->NumClauses <= Infos.size() && "RootElement");
+      // The last Table->NumClauses elements of Infos are the owned Clauses
+      // generated RangeInfo
+      auto TableInfos = MutableArrayRef<RangeInfo>(Infos).take_back(Table->NumClauses);
+      for (RangeInfo &Info : TableInfos)
+        Info.Visibility = Table->Visibility;
+    }
   }
 
   // 2. Sort the RangeInfo's by their GroupT to form groupings
