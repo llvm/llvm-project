@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64PERFECTSHUFFLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace llvm {
 
@@ -6721,6 +6722,29 @@ inline bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
   }
 
   return true;
+}
+
+/// isDUPQMask - matches a splat of equivalent lanes within segments of a given
+///              number of elements.
+inline std::optional<unsigned> isDUPQMask(ArrayRef<int> M, unsigned Segments,
+                                          unsigned NumElts) {
+  unsigned Lane = (unsigned)M[0];
+
+  // Make sure there's no size changes.
+  if (NumElts * Segments != M.size())
+    return std::nullopt;
+
+  // Check the first index corresponds to one of the lanes in the first segment.
+  if (Lane >= NumElts)
+    return std::nullopt;
+
+  // Check that all lanes match the first, adjusted for segment.
+  if (all_of(enumerate(M), [&](auto P) {
+        return (unsigned)P.value() == Lane + (P.index() / NumElts) * NumElts;
+      }))
+    return Lane;
+
+  return std::nullopt;
 }
 
 } // namespace llvm

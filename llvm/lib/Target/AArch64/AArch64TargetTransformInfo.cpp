@@ -5586,6 +5586,22 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     Kind = TTI::SK_PermuteSingleSrc;
   }
 
+  // Segmented shuffle matching.
+  if ((ST->hasSVE2p1() || ST->hasSME2p1()) &&
+      Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(Tp) &&
+      Tp->getPrimitiveSizeInBits().isKnownMultipleOf(
+          AArch64::SVEBitsPerBlock)) {
+
+    FixedVectorType *VTy = cast<FixedVectorType>(Tp);
+    unsigned Segments =
+        VTy->getPrimitiveSizeInBits() / AArch64::SVEBitsPerBlock;
+    unsigned SegmentElts = VTy->getNumElements() / Segments;
+
+    // dupq zd.t, zn.t[idx]
+    if (isDUPQMask(Mask, Segments, SegmentElts))
+      return LT.first;
+  }
+
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
   // folded into a LD1R. That's what we check and return here. For performance
