@@ -858,7 +858,7 @@ void RegPressureTracker::recedeSkipDebugValues() {
 
 void RegPressureTracker::recede(SmallVectorImpl<VRegMaskOrUnit> *LiveUses) {
   recedeSkipDebugValues();
-  if (CurrPos->isDebugInstr() || CurrPos->isPseudoProbe()) {
+  if (CurrPos->isDebugOrPseudoInstr()) {
     // It's possible to only have debug_value and pseudo probe instructions and
     // hit the start of the block.
     assert(CurrPos == MBB->begin());
