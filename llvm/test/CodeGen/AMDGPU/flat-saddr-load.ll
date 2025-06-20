@@ -1861,19 +1861,12 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_undef_hi_immneg128(ptr in
 }
 
 define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zero_hi(ptr inreg %sbase, i32 %voffset) {
-; GFX1250-SDAG-LABEL: flat_load_saddr_i16_d16hi_zero_hi:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    flat_load_u16 v0, v0, s[2:3]
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    v_perm_b32 v0, v0, 0, 0x5040100
-; GFX1250-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: flat_load_saddr_i16_d16hi_zero_hi:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    flat_load_u16 v0, v0, s[2:3]
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: flat_load_saddr_i16_d16hi_zero_hi:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    flat_load_u16 v0, v0, s[2:3]
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %load = load i16, ptr %gep0
@@ -1883,19 +1876,12 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zero_hi(ptr inreg %sbase,
 }
 
 define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zero_hi_immneg128(ptr inreg %sbase, i32 %voffset) {
-; GFX1250-SDAG-LABEL: flat_load_saddr_i16_d16hi_zero_hi_immneg128:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    flat_load_u16 v0, v0, s[2:3] offset:-128
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    v_perm_b32 v0, v0, 0, 0x5040100
-; GFX1250-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: flat_load_saddr_i16_d16hi_zero_hi_immneg128:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    flat_load_u16 v0, v0, s[2:3] offset:-128
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: flat_load_saddr_i16_d16hi_zero_hi_immneg128:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    flat_load_u16 v0, v0, s[2:3] offset:-128
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr %gep0, i64 -128

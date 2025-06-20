@@ -440,6 +440,8 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   EVT EltVT = VT.getVectorElementType();
   SDLoc DL(N);
   SDValue RegClass = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
+  unsigned NumRegs = EltVT.getSizeInBits() / 32;
+  bool IsGCN = TM.getTargetTriple().isAMDGCN();
 
   if (NumVectorElts == 1) {
     CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, EltVT, N->getOperand(0),
@@ -447,7 +449,6 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     return;
   }
 
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().isAMDGCN();
   if (IsGCN && Subtarget->has64BitLiterals() && VT.getSizeInBits() == 64 &&
       CurDAG->isConstantValueOfAnyType(SDValue(N, 0))) {
     uint64_t C = 0;
@@ -478,6 +479,8 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
 
   assert(NumVectorElts <= 32 && "Vectors with more than 32 elements not "
                                   "supported yet");
+  assert((IsGCN || (!IsGCN && NumRegs == 1)) &&
+         "R600 does not support 64-bit reg_seq elements");
   // 32 = Max Num Vector Elements
   // 2 = 2 REG_SEQUENCE operands per element (value, subreg index)
   // 1 = Vector Register Class
@@ -492,8 +495,9 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
       IsRegSeq = false;
       break;
     }
-    unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(i)
-                         : R600RegisterInfo::getSubRegFromChannel(i);
+    unsigned Sub =
+        IsGCN ? SIRegisterInfo::getSubRegFromChannel(i * NumRegs, NumRegs)
+              : R600RegisterInfo::getSubRegFromChannel(i);
     RegSeqArgs[1 + (2 * i)] = N->getOperand(i);
     RegSeqArgs[1 + (2 * i) + 1] = CurDAG->getTargetConstant(Sub, DL, MVT::i32);
   }
@@ -503,8 +507,9 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     MachineSDNode *ImpDef = CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF,
                                                    DL, EltVT);
     for (unsigned i = NOps; i < NumVectorElts; ++i) {
-      unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(i)
-                           : R600RegisterInfo::getSubRegFromChannel(i);
+      unsigned Sub =
+          IsGCN ? SIRegisterInfo::getSubRegFromChannel(i * NumRegs, NumRegs)
+                : R600RegisterInfo::getSubRegFromChannel(i);
       RegSeqArgs[1 + (2 * i)] = SDValue(ImpDef, 0);
       RegSeqArgs[1 + (2 * i) + 1] =
           CurDAG->getTargetConstant(Sub, DL, MVT::i32);
@@ -672,9 +677,12 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
       break;
     }
 
-    assert(VT.getVectorElementType().bitsEq(MVT::i32));
+    EVT VET = VT.getVectorElementType();
+    assert(VET.bitsEq(MVT::i32) || VET.bitsEq(MVT::i64));
+    unsigned EltSize = VET.getSizeInBits();
     unsigned RegClassID =
-        SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * 32)->getID();
+        SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * EltSize)
+            ->getID();
     SelectBuildVector(N, RegClassID);
     return;
   }

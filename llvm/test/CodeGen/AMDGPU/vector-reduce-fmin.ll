@@ -229,9 +229,10 @@ define half @test_vector_reduce_fmin_v3half(<3 x half> %v) {
 ; GFX9-SDAG-LABEL: test_vector_reduce_fmin_v3half:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX9-SDAG-NEXT:    s_movk_i32 s0, 0x7e00
-; GFX9-SDAG-NEXT:    v_pack_b32_f16 v1, v1, s0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, 0x5040100
+; GFX9-SDAG-NEXT:    v_perm_b32 v1, s0, v1, v2
+; GFX9-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_pk_min_f16 v0, v0, v1
