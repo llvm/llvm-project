@@ -37,11 +37,19 @@ template <> struct enum_iteration_traits<RTLIB::Libcall> {
   static constexpr bool is_iterable = true;
 };
 
+template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
+  static constexpr bool is_iterable = true;
+};
+
 namespace RTLIB {
 
 // Return an iterator over all Libcall values.
 static inline auto libcalls() {
   return enum_seq(static_cast<RTLIB::Libcall>(0), RTLIB::UNKNOWN_LIBCALL);
+}
+
+static inline auto libcall_impls() {
+  return enum_seq(static_cast<RTLIB::LibcallImpl>(1), RTLIB::NumLibcallImpls);
 }
 
 /// A simple container for information about the supported runtime calls.
@@ -76,16 +84,21 @@ struct RuntimeLibcallsInfo {
     return LibcallImpls[Call];
   }
 
-  /// Set the CallingConv that should be used for the specified libcall.
-  // FIXME: This should be a function of RTLIB::LibcallImpl
-  void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
-    LibcallCallingConvs[Call] = CC;
+  /// Set the CallingConv that should be used for the specified libcall
+  /// implementation
+  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
+    LibcallImplCallingConvs[Call] = CC;
+  }
+
+  // FIXME: Remove this wrapper in favor of directly using
+  // getLibcallImplCallingConv
+  CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
+    return LibcallImplCallingConvs[LibcallImpls[Call]];
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
-  // FIXME: This should be a function of RTLIB::LibcallImpl
-  CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return LibcallCallingConvs[Call];
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+    return LibcallImplCallingConvs[Call];
   }
 
   ArrayRef<RTLIB::LibcallImpl> getLibcallImpls() const {
@@ -130,8 +143,9 @@ private:
   static_assert(static_cast<int>(CallingConv::C) == 0,
                 "default calling conv should be encoded as 0");
 
-  /// Stores the CallingConv that should be used for each libcall.
-  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL] = {};
+  /// Stores the CallingConv that should be used for each libcall
+  /// implementation.;
+  CallingConv::ID LibcallImplCallingConvs[RTLIB::NumLibcallImpls] = {};
 
   /// The condition type that should be used to test the result of each of the
   /// soft floating-point comparison libcall against integer zero.
