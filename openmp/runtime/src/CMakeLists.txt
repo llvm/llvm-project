@@ -463,7 +463,7 @@ else()
     install(TARGETS omp ${export_to_llvmexports} EXPORT openmpTargets ${LIBOMP_INSTALL_KIND}
             DESTINATION "${OPENMP_INSTALL_LIBDIR}")
     install(EXPORT openmpTargets FILE openmpTargets.cmake NAMESPACE OpenMP::
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/openmp)
+            DESTINATION ${OPENMP_INSTALL_LIBDIR}/cmake/openmp)
   endif()
   # Create cmake configuration files
   include(CMakePackageConfigHelpers)
@@ -473,7 +473,7 @@ else()
    openmp-config.cmake
    INSTALL_DESTINATION ${OPENMP_INSTALL_LIBDIR}/cmake/openmp )
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openmp-config.cmake
-          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/openmp )
+          DESTINATION ${OPENMP_INSTALL_LIBDIR}/cmake/openmp )
 
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility
