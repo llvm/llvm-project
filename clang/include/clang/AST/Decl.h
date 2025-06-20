@@ -5180,7 +5180,7 @@ class HLSLRootSignatureDecl final
                                     llvm::hlsl::rootsig::RootElement> {
   friend TrailingObjects;
 
-  llvm::dxbc::RootSignatureVersion RootSigVer;
+  llvm::dxbc::RootSignatureVersion Version;
 
   unsigned NumElems;
 
@@ -5191,19 +5191,19 @@ class HLSLRootSignatureDecl final
   }
 
   HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
-                        llvm::dxbc::RootSignatureVersion RootSigVer,
+                        llvm::dxbc::RootSignatureVersion Verison,
                         unsigned NumElems);
 
 public:
   static HLSLRootSignatureDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
-         llvm::dxbc::RootSignatureVersion RootSigVer,
+         llvm::dxbc::RootSignatureVersion Version,
          ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements);
 
   static HLSLRootSignatureDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);
 
-  llvm::dxbc::RootSignatureVersion getVersion() const { return RootSigVer; }
+  llvm::dxbc::RootSignatureVersion getVersion() const { return Version; }
 
   ArrayRef<llvm::hlsl::rootsig::RootElement> getRootElements() const {
     return {getElems(), NumElems};
