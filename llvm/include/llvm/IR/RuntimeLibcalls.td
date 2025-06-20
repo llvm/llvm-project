@@ -357,6 +357,17 @@ multiclass LibmLongDoubleLibCall<string libcall_basename = !toupper(NAME),
                            !strconcat(rtbasename, "l")>;
 }
 
+// ARM EABI calls
+def AEABI_MEMCPY4 : RuntimeLibcall; // Align 4
+def AEABI_MEMCPY8 : RuntimeLibcall; // Align 8
+def AEABI_MEMMOVE4 : RuntimeLibcall;
+def AEABI_MEMMOVE8 : RuntimeLibcall;
+def AEABI_MEMSET4 : RuntimeLibcall;
+def AEABI_MEMSET8 : RuntimeLibcall;
+def AEABI_MEMCLR : RuntimeLibcall;
+def AEABI_MEMCLR4 : RuntimeLibcall;
+def AEABI_MEMCLR8 : RuntimeLibcall;
+
 //--------------------------------------------------------------------
 // Define implementation default libcalls
 //--------------------------------------------------------------------
@@ -1134,8 +1145,20 @@ def __aeabi_uidivmod : RuntimeLibcallImpl<UDIVREM_I32>; //  CallingConv::ARM_AAP
 // Memory operations
 // RTABI chapter 4.3.4
 def __aeabi_memcpy : RuntimeLibcallImpl<MEMCPY>; // CallingConv::ARM_AAPCS
+def __aeabi_memcpy4 : RuntimeLibcallImpl<AEABI_MEMCPY4>;
+def __aeabi_memcpy8 : RuntimeLibcallImpl<AEABI_MEMCPY8>;
+
 def __aeabi_memmove : RuntimeLibcallImpl<MEMMOVE>; // CallingConv::ARM_AAPCS
+def __aeabi_memmove4 : RuntimeLibcallImpl<AEABI_MEMMOVE4>;
+def __aeabi_memmove8 : RuntimeLibcallImpl<AEABI_MEMMOVE8>;
+
 def __aeabi_memset : RuntimeLibcallImpl<MEMSET>; // CallingConv::ARM_AAPCS
+def __aeabi_memset4 : RuntimeLibcallImpl<AEABI_MEMSET4>;
+def __aeabi_memset8 : RuntimeLibcallImpl<AEABI_MEMSET8>;
+
+def __aeabi_memclr : RuntimeLibcallImpl<AEABI_MEMCLR>;
+def __aeabi_memclr4 : RuntimeLibcallImpl<AEABI_MEMCLR4>;
+def __aeabi_memclr8 : RuntimeLibcallImpl<AEABI_MEMCLR8>;
 
 // isTargetWindows()
 def __stoi64 : RuntimeLibcallImpl<FPTOSINT_F32_I64>; // CallingConv::ARM_AAPCS_VFP
