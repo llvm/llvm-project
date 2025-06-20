@@ -4971,6 +4971,7 @@ bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
       else if (IntrinsicID == Intrinsic::ppc_lharx)
         AlreadyCleared = 16;
       if (AlreadyCleared != 0 && AlreadyCleared == MB) {
+        assert(ME == 31 && "ME must be 31.");
         ReplaceUses(SDValue(N, 0), N->getOperand(0));
         return true;
       }
