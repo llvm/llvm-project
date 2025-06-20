@@ -499,26 +499,25 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   setOperationAction(ISD::TRUNCATE, MVT::v16i16, Custom);
 }
 
-ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
+const ARMBaseTargetMachine &ARMTargetLowering::getTM() const {
+  return static_cast<const ARMBaseTargetMachine &>(getTargetMachine());
+}
+
+ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                                      const ARMSubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM_), Subtarget(&STI) {
+
+  const auto &TM = static_cast<const ARMBaseTargetMachine &>(TM_);
+
   RegInfo = Subtarget->getRegisterInfo();
   Itins = Subtarget->getInstrItineraryData();
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
-  if (!Subtarget->isTargetDarwin() && !Subtarget->isTargetIOS() &&
-      !Subtarget->isTargetWatchOS() && !Subtarget->isTargetDriverKit()) {
-    bool IsHFTarget = TM.Options.FloatABIType == FloatABI::Hard;
+  const Triple &TT = TM.getTargetTriple();
 
-    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
-      setLibcallCallingConv(LC, IsHFTarget ? CallingConv::ARM_AAPCS_VFP
-                                           : CallingConv::ARM_AAPCS);
-    }
-  }
-
-  if (Subtarget->isTargetMachO()) {
+  if (TT.isOSBinFormatMachO()) {
     // Uses VFP for Thumb libfuncs if available.
     if (Subtarget->isThumb() && Subtarget->hasVFP2Base() &&
         Subtarget->hasARMOps() && !Subtarget->useSoftFloat()) {
@@ -591,9 +590,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   }
 
   // RTLIB
-  if (Subtarget->isAAPCS_ABI() &&
-      (Subtarget->isTargetAEABI() || Subtarget->isTargetGNUAEABI() ||
-       Subtarget->isTargetMuslAEABI() || Subtarget->isTargetAndroid())) {
+  if (TM.isAAPCS_ABI() && (TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
+                           TT.isTargetMuslAEABI() || TT.isAndroid())) {
     // clang-format off
     static const struct {
       const RTLIB::Libcall Op;
@@ -715,8 +713,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   // The half <-> float conversion functions are always soft-float on
   // non-watchos platforms, but are needed for some targets which use a
   // hard-float calling convention by default.
-  if (!Subtarget->isTargetWatchABI()) {
-    if (Subtarget->isAAPCS_ABI()) {
+  if (!TT.isWatchABI()) {
+    if (TM.isAAPCS_ABI()) {
       setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
       setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
       setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
@@ -729,7 +727,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
   // In EABI, these functions have an __aeabi_ prefix, but in GNUEABI they have
   // a __gnu_ prefix (which is the default).
-  if (Subtarget->isTargetAEABI()) {
+  if (TT.isTargetAEABI()) {
     static const struct {
       const RTLIB::Libcall Op;
       const char * const Name;
@@ -744,7 +742,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setLibcallName(LC.Op, LC.Name);
       setLibcallCallingConv(LC.Op, LC.CC);
     }
-  } else if (!Subtarget->isTargetMachO()) {
+  } else if (!TT.isOSBinFormatMachO()) {
     setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
     setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
   }
@@ -1230,7 +1228,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UDIV,  MVT::i32, LibCall);
   }
 
-  if (Subtarget->isTargetWindows() && !Subtarget->hasDivideInThumbMode()) {
+  if (TT.isOSWindows() && !Subtarget->hasDivideInThumbMode()) {
     setOperationAction(ISD::SDIV, MVT::i32, Custom);
     setOperationAction(ISD::UDIV, MVT::i32, Custom);
 
@@ -1242,9 +1240,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UREM,  MVT::i32, Expand);
 
   // Register based DivRem for AEABI (RTABI 4.2)
-  if (Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
-      Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI() ||
-      Subtarget->isTargetWindows()) {
+  if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
+      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
     HasStandaloneRem = false;
@@ -1274,7 +1271,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STACKSAVE,          MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE,       MVT::Other, Expand);
 
-  if (Subtarget->isTargetWindows())
+  if (TT.isOSWindows())
     setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
   else
     setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Expand);
@@ -1329,8 +1326,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   }
 
   // Compute supported atomic widths.
-  if (Subtarget->isTargetLinux() ||
-      (!Subtarget->isMClass() && Subtarget->hasV6Ops())) {
+  if (TT.isOSLinux() || (!Subtarget->isMClass() && Subtarget->hasV6Ops())) {
     // For targets where __sync_* routines are reliably available, we use them
     // if necessary.
     //
@@ -1541,7 +1537,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
   // On MSVC, both 32-bit and 64-bit, ldexpf(f32) is not defined.  MinGW has
   // it, but it's just a wrapper around ldexp.
-  if (Subtarget->isTargetWindows()) {
+  if (TT.isOSWindows()) {
     for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
@@ -2070,7 +2066,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     return isVarArg ? CallingConv::ARM_AAPCS : CallingConv::ARM_AAPCS_VFP;
   case CallingConv::C:
   case CallingConv::Tail:
-    if (!Subtarget->isAAPCS_ABI())
+    if (!getTM().isAAPCS_ABI())
       return CallingConv::ARM_APCS;
     else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
              getTargetMachine().Options.FloatABIType == FloatABI::Hard &&
@@ -2080,12 +2076,12 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
       return CallingConv::ARM_AAPCS;
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
-    if (!Subtarget->isAAPCS_ABI()) {
+    if (!getTM().isAAPCS_ABI()) {
       if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
-    } else if (Subtarget->hasVFP2Base() &&
-               !Subtarget->isThumb1Only() && !isVarArg)
+    } else if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() &&
+               !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
       return CallingConv::ARM_AAPCS;
@@ -3273,7 +3269,7 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     SDValue Arg = OutVals[realRVLocIdx];
     bool ReturnF16 = false;
 
-    if (Subtarget->hasFullFP16() && Subtarget->isTargetHardFloat()) {
+    if (Subtarget->hasFullFP16() && getTM().isTargetHardFloat()) {
       // Half-precision return values can be returned like this:
       //
       // t11 f16 = fadd ...
@@ -9937,7 +9933,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   auto &DL = DAG.getDataLayout();
 
   ArgListTy Args;
-  bool ShouldUseSRet = Subtarget->isAPCS_ABI();
+  bool ShouldUseSRet = getTM().isAPCS_ABI();
   SDValue SRet;
   if (ShouldUseSRet) {
     // Create stack object for sret.

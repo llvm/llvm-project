@@ -321,6 +321,17 @@ public:
   static void AutoCompleteProcessName(llvm::StringRef partial_name,
                                       CompletionRequest &request);
 
+  // Protocol
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             ProtocolServerCreateInstance create_callback);
+
+  static bool UnregisterPlugin(ProtocolServerCreateInstance create_callback);
+
+  static llvm::StringRef GetProtocolServerPluginNameAtIndex(uint32_t idx);
+
+  static ProtocolServerCreateInstance
+  GetProtocolCreateCallbackForPluginName(llvm::StringRef name);
+
   // Register Type Provider
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              RegisterTypeBuilderCreateInstance create_callback);

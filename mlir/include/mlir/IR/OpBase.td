@@ -566,7 +566,7 @@ class ShapedTypeMatchesElementCountAndTypes<string shapedArg,
     PredOpTrait<"shaped type '" # shapedArg # "' matches '" # elementsArg # "' "
                 "element count and types",
         And<[CPred<ElementCount<shapedArg>.result # " == "
-                     "$" # elementsArg # ".getTypes().size()">,
+                     "static_cast<int64_t>($" # elementsArg # ".getTypes().size())">,
              CPred<"::llvm::all_of($" # elementsArg # ".getTypes(), "
                      "[&](::mlir::Type t) { return t == "
                        # ElementType<shapedArg>.result # "; })">]>> {

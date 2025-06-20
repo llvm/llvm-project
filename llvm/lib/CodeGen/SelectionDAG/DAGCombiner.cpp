@@ -7214,9 +7214,8 @@ static SDValue foldMaskedMerge(SDNode *Node, SelectionDAG &DAG,
                                const TargetLowering &TLI, const SDLoc &DL) {
   // Note that masked-merge variants using XOR or ADD expressions are
   // normalized to OR by InstCombine so we only check for OR or AND.
-  assert(Node->getOpcode() == ISD::OR ||
-         Node->getOpcode() == ISD::AND &&
-             "Must be called with ISD::OR or ISD::AND node");
+  assert((Node->getOpcode() == ISD::OR || Node->getOpcode() == ISD::AND) &&
+         "Must be called with ISD::OR or ISD::AND node");
 
   // If the target supports and-not, don't fold this.
   if (TLI.hasAndNot(SDValue(Node, 0)))
@@ -15740,8 +15739,12 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       N0.getOpcode() == ISD::SIGN_EXTEND ||
       N0.getOpcode() == ISD::ANY_EXTEND) {
     // if the source is smaller than the dest, we still need an extend.
-    if (N0.getOperand(0).getValueType().bitsLT(VT))
-      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0));
+    if (N0.getOperand(0).getValueType().bitsLT(VT)) {
+      SDNodeFlags Flags;
+      if (N0.getOpcode() == ISD::ZERO_EXTEND)
+        Flags.setNonNeg(N0->getFlags().hasNonNeg());
+      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0), Flags);
+    }
     // if the source is larger than the dest, than we just need the truncate.
     if (N0.getOperand(0).getValueType().bitsGT(VT))
       return DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));

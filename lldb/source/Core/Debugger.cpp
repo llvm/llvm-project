@@ -16,6 +16,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/Core/ProtocolServer.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -2374,4 +2375,27 @@ llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
   assert(g_thread_pool &&
          "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;
+}
+
+void Debugger::AddProtocolServer(lldb::ProtocolServerSP protocol_server_sp) {
+  assert(protocol_server_sp &&
+         GetProtocolServer(protocol_server_sp->GetPluginName()) == nullptr);
+  m_protocol_servers.push_back(protocol_server_sp);
+}
+
+void Debugger::RemoveProtocolServer(lldb::ProtocolServerSP protocol_server_sp) {
+  auto it = llvm::find(m_protocol_servers, protocol_server_sp);
+  if (it != m_protocol_servers.end())
+    m_protocol_servers.erase(it);
+}
+
+lldb::ProtocolServerSP
+Debugger::GetProtocolServer(llvm::StringRef protocol) const {
+  for (ProtocolServerSP protocol_server_sp : m_protocol_servers) {
+    if (!protocol_server_sp)
+      continue;
+    if (protocol_server_sp->GetPluginName() == protocol)
+      return protocol_server_sp;
+  }
+  return nullptr;
 }
