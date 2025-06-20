@@ -291,6 +291,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check by adding the option
+  `IgnoreMacros` to allow ignoring code inside macros.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
