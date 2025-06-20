@@ -141,7 +141,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("mipspe");
     break;
   default:
-    D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
+    D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str(false);
   }
 
   Arg *SubsysArg =
@@ -414,8 +414,8 @@ static llvm::Triple getLiteralTriple(const Driver &D, const llvm::Triple &T) {
 
 void toolchains::MinGW::findGccLibDir(const llvm::Triple &LiteralTriple) {
   llvm::SmallVector<llvm::SmallString<32>, 5> SubdirNames;
-  SubdirNames.emplace_back(LiteralTriple.str());
-  SubdirNames.emplace_back(getTriple().str());
+  SubdirNames.emplace_back(LiteralTriple.str(false));
+  SubdirNames.emplace_back(getTriple().str(false));
   SubdirNames.emplace_back(getTriple().getArchName());
   SubdirNames.back() += "-w64-mingw32";
   SubdirNames.emplace_back(getTriple().getArchName());
@@ -442,9 +442,9 @@ void toolchains::MinGW::findGccLibDir(const llvm::Triple &LiteralTriple) {
 static llvm::ErrorOr<std::string> findGcc(const llvm::Triple &LiteralTriple,
                                           const llvm::Triple &T) {
   llvm::SmallVector<llvm::SmallString<32>, 5> Gccs;
-  Gccs.emplace_back(LiteralTriple.str());
+  Gccs.emplace_back(LiteralTriple.str(false));
   Gccs.back() += "-gcc";
-  Gccs.emplace_back(T.str());
+  Gccs.emplace_back(T.str(false));
   Gccs.back() += "-gcc";
   Gccs.emplace_back(T.getArchName());
   Gccs.back() += "-w64-mingw32-gcc";
@@ -462,8 +462,8 @@ static llvm::ErrorOr<std::string>
 findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
                          const llvm::Triple &T, std::string &SubdirName) {
   llvm::SmallVector<llvm::SmallString<32>, 4> Subdirs;
-  Subdirs.emplace_back(LiteralTriple.str());
-  Subdirs.emplace_back(T.str());
+  Subdirs.emplace_back(LiteralTriple.str(false));
+  Subdirs.emplace_back(T.str(false));
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32";
   Subdirs.emplace_back(T.getArchName());

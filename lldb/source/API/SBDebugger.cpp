@@ -642,7 +642,7 @@ bool SBDebugger::GetDefaultArchitecture(char *arch_name, size_t arch_name_len) {
     ArchSpec default_arch = Target::GetDefaultArchitecture();
 
     if (default_arch.IsValid()) {
-      const std::string &triple_str = default_arch.GetTriple().str();
+      const std::string &triple_str = default_arch.GetTriple().str(false);
       if (!triple_str.empty())
         ::snprintf(arch_name, arch_name_len, "%s", triple_str.c_str());
       else

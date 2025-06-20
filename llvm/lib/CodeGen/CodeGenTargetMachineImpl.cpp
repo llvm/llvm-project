@@ -44,7 +44,7 @@ static cl::opt<bool> EnableNoTrapAfterNoreturn(
              "after noreturn calls, even if --trap-unreachable is set."));
 
 void CodeGenTargetMachineImpl::initAsmInfo() {
-  MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
+  MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str(false)));
   assert(MRI && "Unable to create reg info");
   MII.reset(TheTarget.createMCInstrInfo());
   assert(MII && "Unable to create instruction info");
@@ -53,11 +53,11 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
   // code generation. This is similar to the hack in the AsmPrinter for
   // module level assembly etc.
   STI.reset(TheTarget.createMCSubtargetInfo(
-      getTargetTriple().str(), getTargetCPU(), getTargetFeatureString()));
+      getTargetTriple().str(false), getTargetCPU(), getTargetFeatureString()));
   assert(STI && "Unable to create subtarget info");
 
   MCAsmInfo *TmpAsmInfo = TheTarget.createMCAsmInfo(
-      *MRI, getTargetTriple().str(), Options.MCOptions);
+      *MRI, getTargetTriple().str(false), Options.MCOptions);
   // TargetSelect.h moved to a different directory between LLVM 2.9 and 3.0,
   // and if the old one gets included then MCAsmInfo will be NULL and
   // we'll crash later.
@@ -197,7 +197,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
       return make_error<StringError>("createMCAsmBackend failed",
                                      inconvertibleErrorCode());
 
-    Triple T(getTargetTriple().str());
+    Triple T(getTargetTriple().str(false));
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
         T, Context, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)

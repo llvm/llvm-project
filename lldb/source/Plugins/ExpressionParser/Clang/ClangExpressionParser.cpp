@@ -509,7 +509,7 @@ static void SetupTargetOpts(CompilerInstance &compiler,
 
   const auto target_machine = target_arch.GetMachine();
   if (target_arch.IsValid()) {
-    std::string triple = target_arch.GetTriple().str();
+    std::string triple = target_arch.GetTriple().str(false);
     compiler.getTargetOpts().Triple = triple;
     LLDB_LOGF(log, "Using %s as the target triple",
               compiler.getTargetOpts().Triple.c_str());

@@ -209,7 +209,7 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
     D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << "-fuse-ld" << TC.getTriple().str();
+        << "-fuse-ld" << TC.getTriple().str(false);
   }
 
   std::string LdName = TC.qualifyPSCmdName(TC.getLinkerBaseName());
@@ -432,7 +432,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
     D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << "-fuse-ld" << TC.getTriple().str();
+        << "-fuse-ld" << TC.getTriple().str(false);
   }
 
   std::string LdName = TC.qualifyPSCmdName(TC.getLinkerBaseName());
@@ -570,7 +570,7 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {
     Arg *A = DriverArgs.getLastArg(options::OPT_fuse_init_array);
     getDriver().Diag(clang::diag::err_drv_unsupported_opt_for_target)
-        << A->getAsString(DriverArgs) << getTriple().str();
+        << A->getAsString(DriverArgs) << getTriple().str(false);
   }
 
   CC1Args.push_back("-fno-use-init-array");

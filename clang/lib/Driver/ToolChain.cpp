@@ -342,7 +342,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 
   std::vector<std::string> Result;
   const llvm::Triple Triple(ComputeEffectiveClangTriple(Args));
-  Result.push_back("--target=" + Triple.str());
+  Result.push_back("--target=" + Triple.str(false));
 
   switch (Triple.getArch()) {
   case llvm::Triple::aarch64:
@@ -871,7 +871,7 @@ std::optional<std::string>
 ToolChain::getFallbackAndroidTargetPath(StringRef BaseDir) const {
   llvm::Triple TripleWithoutLevel(getTriple());
   TripleWithoutLevel.setEnvironmentName("android"); // remove any version number
-  const std::string &TripleWithoutLevelStr = TripleWithoutLevel.str();
+  const std::string &TripleWithoutLevelStr = TripleWithoutLevel.str(false);
   unsigned TripleVersion = getTriple().getEnvironmentVersion().getMajor();
   unsigned BestVersion = 0;
 
@@ -923,7 +923,7 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   auto getPathForTriple =
       [&](const llvm::Triple &Triple) -> std::optional<std::string> {
     SmallString<128> P(BaseDir);
-    llvm::sys::path::append(P, Triple.str());
+    llvm::sys::path::append(P, Triple.str(false));
     if (getVFS().exists(P))
       return std::string(P);
     return {};
@@ -992,7 +992,7 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   if (Triple.isOSDarwin())
     return {};
 
-  llvm::sys::path::append(P, Triple.str());
+  llvm::sys::path::append(P, Triple.str(false));
   return std::string(P);
 }
 
@@ -1019,7 +1019,7 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
     Paths.push_back(std::string(Path));
   };
 
-  AddPath({getTriple().str()});
+  AddPath({getTriple().str(false)});
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
   return Paths;
 }

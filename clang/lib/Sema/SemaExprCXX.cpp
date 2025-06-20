@@ -853,7 +853,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
 
   // In OpenMP target regions, we replace 'throw' with a trap on GPU targets.
   if (IsOpenMPGPUTarget)
-    targetDiag(OpLoc, diag::warn_throw_not_valid_on_target) << T.str();
+    targetDiag(OpLoc, diag::warn_throw_not_valid_on_target) << T.str(false);
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)

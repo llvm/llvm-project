@@ -2373,7 +2373,7 @@ public:
 
           JOS.value("-c");
 
-          JOS.value(Saver.save("--target=" + Triple.str()));
+          JOS.value(Saver.save("--target=" + Triple.str(false)));
 
           for (const auto &A : CodegenOptions)
             JOS.value(A);

@@ -122,7 +122,7 @@ bool CompilerInstance::createTarget() {
       TO->CPU = *getFrontendOpts().AuxTargetCPU;
     if (getFrontendOpts().AuxTargetFeatures)
       TO->FeaturesAsWritten = *getFrontendOpts().AuxTargetFeatures;
-    TO->HostTriple = getTarget().getTriple().str();
+    TO->HostTriple = getTarget().getTriple().str(false);
     setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), *TO));
   }
 

@@ -101,7 +101,7 @@ public:
     return TargetTriple.getArch() == Triple::spirv32 ||
            TargetTriple.getArch() == Triple::spirv64;
   }
-  const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
+  const std::string &getTargetTripleAsStr() const { return TargetTriple.str(false); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;
   bool isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const;

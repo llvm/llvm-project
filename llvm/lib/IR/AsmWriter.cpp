@@ -3103,7 +3103,7 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!DL.empty())
     Out << "target datalayout = \"" << DL << "\"\n";
   if (!M->getTargetTriple().empty())
-    Out << "target triple = \"" << M->getTargetTriple().str() << "\"\n";
+    Out << "target triple = \"" << M->getTargetTriple().str(false) << "\"\n";
 
   if (!M->getModuleInlineAsm().empty()) {
     Out << '\n';

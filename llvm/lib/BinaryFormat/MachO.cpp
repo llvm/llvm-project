@@ -71,7 +71,7 @@ static MachO::CPUSubTypePowerPC getPowerPCSubType(const Triple &T) {
 static Error unsupported(const char *Str, const Triple &T) {
   return createStringError(std::errc::invalid_argument,
                            "Unsupported triple for mach-o cpu %s: %s", Str,
-                           T.str().c_str());
+                           T.str(false).c_str());
 }
 
 Expected<uint32_t> MachO::getCPUType(const Triple &T) {

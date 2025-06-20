@@ -597,7 +597,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
           LangOptions::ExceptionHandlingKind::None &&
       T.isWindowsMSVCEnvironment())
     Diags.Report(diag::err_fe_invalid_exception_model)
-        << static_cast<unsigned>(LangOpts.getExceptionHandling()) << T.str();
+        << static_cast<unsigned>(LangOpts.getExceptionHandling()) << T.str(false);
 
   if (LangOpts.AppleKext && !LangOpts.CPlusPlus)
     Diags.Report(diag::warn_c_kext);
@@ -2169,7 +2169,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     // future.
     if (T.isOSAIX())
       Diags.Report(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << T.str();
+          << A->getSpelling() << T.str(false);
 
     const Option &O = A->getOption();
     if (O.matches(OPT_fpcc_struct_return) ||
@@ -2185,7 +2185,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_mxcoff_roptr)) {
     if (!T.isOSAIX())
       Diags.Report(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << T.str();
+          << A->getSpelling() << T.str(false);
 
     // Since the storage mapping class is specified per csect,
     // without using data sections, it is less effective to use read-only
@@ -2204,7 +2204,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_mabi_EQ_quadword_atomics)) {
     if (!T.isOSAIX() || T.isPPC32())
       Diags.Report(diag::err_drv_unsupported_opt_for_target)
-        << A->getSpelling() << T.str();
+        << A->getSpelling() << T.str(false);
   }
 
   bool NeedLocTracking = false;
@@ -3848,7 +3848,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     llvm::raw_string_ostream OS(Targets);
     llvm::interleave(
         Opts.OMPTargetTriples, OS,
-        [&OS](const llvm::Triple &T) { OS << T.str(); }, ",");
+        [&OS](const llvm::Triple &T) { OS << T.str(false); }, ",");
     GenerateArg(Consumer, OPT_fopenmp_targets_EQ, Targets);
   }
 
@@ -4278,7 +4278,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       // Add unsupported host targets here:
       case llvm::Triple::nvptx:
       case llvm::Triple::nvptx64:
-        Diags.Report(diag::err_drv_omp_host_target_not_supported) << T.str();
+        Diags.Report(diag::err_drv_omp_host_target_not_supported) << T.str(false);
         break;
       }
     }
@@ -4348,7 +4348,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Diags.Report(diag::err_drv_invalid_omp_target) << A->getValue(i);
       else if (getArchPtrSize(T) != getArchPtrSize(TT))
         Diags.Report(diag::err_drv_incompatible_omp_arch)
-            << A->getValue(i) << T.str();
+            << A->getValue(i) << T.str(false);
       else
         Opts.OMPTargetTriples.push_back(TT);
     }
@@ -4521,7 +4521,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     } else {
       auto Kind = TargetCXXABI::getKind(CXXABI);
       if (!TargetCXXABI::isSupportedCXXABI(T, Kind))
-        Diags.Report(diag::err_unsupported_cxx_abi) << CXXABI << T.str();
+        Diags.Report(diag::err_unsupported_cxx_abi) << CXXABI << T.str(false);
       else
         Opts.CXXABI = Kind;
     }
@@ -4584,19 +4584,19 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
       if (T.getOSName().empty()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
-            << ExpectedOS << OS << T.str();
+            << ExpectedOS << OS << T.str(false);
       } else if (T.getEnvironmentName().empty()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
-            << ShaderStage << Environment << T.str();
+            << ShaderStage << Environment << T.str(false);
       } else if (!T.isShaderStageEnvironment()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
-            << ShaderStage << T.getEnvironmentName() << T.str();
+            << ShaderStage << T.getEnvironmentName() << T.str(false);
       }
 
       if (T.isDXIL()) {
         if (!T.isShaderModelOS() || T.getOSVersion() == VersionTuple(0)) {
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
-              << ShaderModel << T.getOSName() << T.str();
+              << ShaderModel << T.getOSName() << T.str(false);
         }
         // Validate that if fnative-half-type is given, that
         // the language standard is at least hlsl2018, and that
@@ -4613,7 +4613,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       } else if (T.isSPIRVLogical()) {
         if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
-              << VulkanEnv << T.getOSName() << T.str();
+              << VulkanEnv << T.getOSName() << T.str(false);
         }
         if (Args.getLastArg(OPT_fnative_half_type)) {
           const LangStandard &Std =
@@ -4626,7 +4626,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         llvm_unreachable("expected DXIL or SPIR-V target");
       }
     } else
-      Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
+      Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str(false);
 
     if (Opts.LangStd < LangStandard::lang_hlsl202x) {
       const LangStandard &Requested =

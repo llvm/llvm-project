@@ -112,7 +112,7 @@ std::string OHOS::getMultiarchTriple(const llvm::Triple &T) const {
   case llvm::Triple::loongarch64:
     return "loongarch64-linux-ohos";
   }
-  return T.str();
+  return T.str(false);
 }
 
 std::string OHOS::getMultiarchTriple(const Driver &D,
@@ -296,7 +296,7 @@ ToolChain::path_list OHOS::getRuntimePaths() const {
 
   // Second try the normalized triple.
   P.assign(D.ResourceDir);
-  llvm::sys::path::append(P, "lib", Triple.str(), SelectedMultilib.gccSuffix());
+  llvm::sys::path::append(P, "lib", Triple.str(false), SelectedMultilib.gccSuffix());
   Paths.push_back(P.c_str());
 
   // Third try the effective triple.

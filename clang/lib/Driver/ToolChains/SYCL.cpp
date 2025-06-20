@@ -67,7 +67,7 @@ SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
   for (OptSpecifier Opt : getUnsupportedOpts()) {
     if (const Arg *A = Args.getLastArg(Opt)) {
       D.Diag(clang::diag::warn_drv_unsupported_option_for_target)
-          << A->getAsString(Args) << getTriple().str();
+          << A->getAsString(Args) << getTriple().str(false);
     }
   }
 }

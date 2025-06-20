@@ -135,7 +135,7 @@ bool OffloadTargetInfo::isOffloadKindCompatible(
 }
 
 bool OffloadTargetInfo::isTripleValid() const {
-  return !Triple.str().empty() && Triple.getArch() != Triple::UnknownArch;
+  return !Triple.str(false).empty() && Triple.getArch() != Triple::UnknownArch;
 }
 
 bool OffloadTargetInfo::operator==(const OffloadTargetInfo &Target) const {

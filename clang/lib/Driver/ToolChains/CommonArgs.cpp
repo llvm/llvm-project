@@ -1089,7 +1089,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
     if (!IsOSAIX)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << OptStr << Triple.str();
+          << OptStr << Triple.str(false);
 
     if (HasRoptr) {
       // The data sections option is on by default on AIX. We only need to error
@@ -1636,7 +1636,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   if (SanArgs.hasMemTag()) {
     if (!TC.getTriple().isAndroid()) {
       TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-          << "-fsanitize=memtag*" << TC.getTriple().str();
+          << "-fsanitize=memtag*" << TC.getTriple().str(false);
     }
     CmdArgs.push_back(
         Args.MakeArgString("--android-memtag-mode=" + SanArgs.getMemtagMode()));
@@ -1889,7 +1889,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
       LastPICArg == Args.getLastArg(options::OPT_fPIC, options::OPT_fpic,
                                     options::OPT_fPIE, options::OPT_fpie)) {
     ToolChain.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-        << LastPICArg->getSpelling() << Triple.str();
+        << LastPICArg->getSpelling() << Triple.str(false);
     if (Triple.getArch() == llvm::Triple::x86_64)
       return std::make_tuple(llvm::Reloc::PIC_, 2U, false);
     return std::make_tuple(llvm::Reloc::Static, 0U, false);
@@ -1941,7 +1941,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
     // uses it, and it isn't even valid on any OS but Darwin.
     if (!Triple.isOSDarwin())
       ToolChain.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << Triple.str();
+          << A->getSpelling() << Triple.str(false);
 
     // FIXME: Warn when this flag trumps some other PIC or PIE flag.
 
@@ -1971,14 +1971,14 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   if (LastROPIArg && LastROPIArg->getOption().matches(options::OPT_fropi)) {
     if (!EmbeddedPISupported)
       ToolChain.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-          << LastROPIArg->getSpelling() << Triple.str();
+          << LastROPIArg->getSpelling() << Triple.str(false);
     ROPI = true;
   }
   Arg *LastRWPIArg = Args.getLastArg(options::OPT_frwpi, options::OPT_fno_rwpi);
   if (LastRWPIArg && LastRWPIArg->getOption().matches(options::OPT_frwpi)) {
     if (!EmbeddedPISupported)
       ToolChain.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-          << LastRWPIArg->getSpelling() << Triple.str();
+          << LastRWPIArg->getSpelling() << Triple.str(false);
     RWPI = true;
   }
 
@@ -2131,7 +2131,7 @@ unsigned tools::getDwarfVersion(const ToolChain &TC,
       DwarfVersion = N;
       if (DwarfVersion == 5 && TC.getTriple().isOSAIX())
         TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-            << GDwarfN->getSpelling() << TC.getTriple().str();
+            << GDwarfN->getSpelling() << TC.getTriple().str(false);
     }
   if (DwarfVersion == 0) {
     DwarfVersion = TC.GetDefaultDwarfVersion();

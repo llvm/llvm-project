@@ -659,7 +659,7 @@ ClangModulesDeclVendor::Create(Target &target) {
       "-fsyntax-only",
       "-femit-all-decls",
       "-target",
-      arch.GetTriple().str(),
+      arch.GetTriple().str(false),
       "-fmodules-validate-system-headers",
       "-Werror=non-modular-include-in-framework-module",
       "-Xclang=-fincremental-extensions",

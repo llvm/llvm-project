@@ -4317,7 +4317,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
   // In OpenMP target regions, we assume that catch is never reached on GPU
   // targets.
   if (IsOpenMPGPUTarget)
-    targetDiag(TryLoc, diag::warn_try_not_valid_on_target) << T.str();
+    targetDiag(TryLoc, diag::warn_try_not_valid_on_target) << T.str(false);
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)

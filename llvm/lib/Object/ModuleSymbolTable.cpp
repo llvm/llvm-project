@@ -81,17 +81,17 @@ initializeRecordStreamer(const Module &M,
   const Target *T = TargetRegistry::lookupTarget(TT, Err);
   assert(T && T->hasMCAsmParser());
 
-  std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT.str()));
+  std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT.str(false)));
   if (!MRI)
     return;
 
   MCTargetOptions MCOptions;
-  std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT.str(), MCOptions));
+  std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT.str(false), MCOptions));
   if (!MAI)
     return;
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      T->createMCSubtargetInfo(TT.str(), "", ""));
+      T->createMCSubtargetInfo(TT.str(false), "", ""));
   if (!STI)
     return;
 

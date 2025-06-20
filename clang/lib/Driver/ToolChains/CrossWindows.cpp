@@ -94,7 +94,7 @@ void tools::CrossWindows::Linker::ConstructJob(
   CmdArgs.push_back("-m");
   switch (TC.getArch()) {
   default:
-    D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
+    D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str(false);
     break;
   case llvm::Triple::arm:
   case llvm::Triple::thumb:

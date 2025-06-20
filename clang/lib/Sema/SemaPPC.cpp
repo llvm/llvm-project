@@ -229,7 +229,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
          BuiltinID == PPC::BI__builtin_ppc_minfe))
       return Diag(TheCall->getBeginLoc(), diag::err_target_unsupported_type)
              << "builtin" << true << 128 << QualType(Context.LongDoubleTy)
-             << false << Context.getTargetInfo().getTriple().str();
+             << false << Context.getTargetInfo().getTriple().str(false);
     // Argument type should be exact.
     QualType ArgType = QualType(Context.LongDoubleTy);
     if (BuiltinID == PPC::BI__builtin_ppc_maxfl ||

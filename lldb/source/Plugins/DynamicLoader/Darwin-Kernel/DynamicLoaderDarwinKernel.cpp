@@ -498,7 +498,7 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
             log,
             "DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: "
             "kernel binary image found at 0x%" PRIx64 " with arch '%s' %s",
-            addr, kernel_arch.GetTriple().str().c_str(), uuid_str.c_str());
+            addr, kernel_arch.GetTriple().str(false).c_str(), uuid_str.c_str());
       }
       return memory_module_sp->GetUUID();
     }

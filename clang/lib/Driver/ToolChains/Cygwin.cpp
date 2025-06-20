@@ -93,7 +93,7 @@ void Cygwin::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   // On systems using multiarch, add /usr/include/$triple before
   // /usr/include.
-  std::string MultiarchIncludeDir = getTriple().str();
+  std::string MultiarchIncludeDir = getTriple().str(false);
   if (!MultiarchIncludeDir.empty() &&
       D.getVFS().exists(SysRoot + "/usr/include/" + MultiarchIncludeDir))
     addExternCSystemInclude(DriverArgs, CC1Args,
