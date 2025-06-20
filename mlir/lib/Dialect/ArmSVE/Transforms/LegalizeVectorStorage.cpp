@@ -299,9 +299,9 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
 };
 
 /// Transforms a `transfer_read` operation so it reads vector of a type that
-/// can be mapped to an LLVM type. This is done by collapsing trailing
-/// dimensions so we obtain a vector type with a single scalable dimension in
-/// the rightmost position.
+/// can be mapped to an LLVM type ("LLVM-legal" type). This is done by
+/// collapsing trailing dimensions so we obtain a vector type with a single
+/// scalable dimension in the rightmost position.
 ///
 /// Example:
 /// ```
@@ -339,15 +339,30 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
       return rewriter.notifyMatchFailure(readOp,
                                          "masked transfers not-supported");
 
+    // General permutation maps are not supported. The issue is with transpose,
+    // broadcast, and other forms of non-identify mapping in the minor
+    // dimensions which is impossible to represent after collapsing (at least
+    // because the resulting "collapsed" maps would have smaller number of
+    // dimension indices).
+    // TODO: We have not had yet the need for it, but some forms of permutation
+    // maps with identity in the minor dimensions voukld be supported, for
+    // example `(i, j, k, p) -> (j, i, k, p)` where we need to collapse only `k`
+    // and `p`.
     if (!readOp.getPermutationMap().isMinorIdentity())
       return rewriter.notifyMatchFailure(readOp, "non-identity permutation");
 
     // We handle transfers of vectors with rank >= 2 and a single scalable
-    // dimension.
+    // dimension. This transformation aims to transform an LLVM-illegal type
+    // into an LLVM-legal type and one dimensional vectors are already
+    // LLVM-legal, even if scalable. A value of a vector type with more than one
+    // scalable dimension is impossible to represent using a vector type with no
+    // scalable dimensions or a single one. For example a `vector<[4]x[4]xi8>`
+    // would have `4 * 4 * vscale * vscale` elements and this quantity is
+    // impossible to represent as `N` or `N * vscale` (where `N` is a constant).
     VectorType origVT = readOp.getVectorType();
     ArrayRef<bool> origScalableDims = origVT.getScalableDims();
     const int64_t origVRank = origVT.getRank();
-    if (origVRank < 2 || llvm::count(origScalableDims, true) != 1)
+    if (origVRank < 2 || origVT.getNumScalableDims() != 1)
       return rewriter.notifyMatchFailure(readOp, "wrong dimensions");
 
     // Number of trailing dimensions to collapse, including the scalable
@@ -366,10 +381,11 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
       return rewriter.notifyMatchFailure(
           readOp, "non-contiguous memref dimensions to collapse");
 
-    // The collapsed dimensions (excluding the scalable one) of the vector and
-    // the memref must match and the corresponding indices must be in-bounds (it
-    // follows these indices would be zero). This guarantees that the operation
-    // transfers a contiguous block.
+    // The dimensions to collapse (excluding the scalable one) of the vector and
+    // the memref must match. A dynamic memref dimension is considered
+    // non-matching. The transfers from the dimensions to collapse must be
+    // in-bounds (it follows the corresponding indices would be zero). This
+    // guarantees that the operation transfers a contiguous block.
     if (!llvm::equal(memTy.getShape().take_back(numCollapseDims - 1),
                      origVT.getShape().take_back(numCollapseDims - 1)))
       return rewriter.notifyMatchFailure(
@@ -379,8 +395,8 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
     if (!llvm::all_of(
             ArrayRef<bool>(origInBounds).take_back(numCollapseDims - 1),
             [](bool v) { return v; }))
-      return rewriter.notifyMatchFailure(readOp,
-                                         "out-if-bounds index to collapse");
+      return rewriter.notifyMatchFailure(
+          readOp, "out-of-bounds transfer from a dimension to collapse");
 
     // Collapse the trailing dimensions of the memref.
     SmallVector<ReassociationIndices> reassoc;
