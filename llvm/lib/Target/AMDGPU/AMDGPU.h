@@ -439,10 +439,6 @@ struct AMDGPUPrintfRuntimeBindingPass
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-ModulePass* createAMDGPUUnifyMetadataPass();
-void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
-extern char &AMDGPUUnifyMetadataID;
-
 struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
