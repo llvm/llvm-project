@@ -15,11 +15,11 @@ define void @test(ptr %ptr) {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[LIM_0:%.*]] = phi i32 [ 65, [[ENTRY:%.*]] ], [ 1, [[DEAD:%.*]] ]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 8
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LIM_0]], i32 2)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[LIM_0]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SCEVGEP]], i8 0, i64 [[TMP2]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP2]], -8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SCEVGEP]], i8 0, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
