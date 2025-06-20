@@ -80,6 +80,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenPHISC:
@@ -101,6 +102,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
@@ -184,6 +186,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
   case VPInterleaveSC:
     return mayWriteToMemory();
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenStoreEVLSC:
@@ -2192,12 +2195,12 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
+static Type *getGEPIndexTy(bool IsScalable, bool IsReverse, bool IsUnitStride,
                            unsigned CurrentPart, IRBuilderBase &Builder) {
   // Use i32 for the gep index type when the value is constant,
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  return IsScalable && (IsReverse || CurrentPart > 0)
+  return !IsUnitStride || (IsScalable && (IsReverse || CurrentPart > 0))
              ? DL.getIndexType(Builder.getPtrTy(0))
              : Builder.getInt32Ty();
 }
@@ -2206,7 +2209,7 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ true,
-                                CurrentPart, Builder);
+                                /*IsUnitStride*/ true, CurrentPart, Builder);
 
   // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
@@ -2217,7 +2220,7 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
       ConstantInt::get(IndexTy, -(int64_t)CurrentPart), RunTimeVF);
   // LastLane = 1 - RunTimeVF
   Value *LastLane = Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
-  Value *Ptr = State.get(getOperand(0), VPLane(0));
+  Value *Ptr = State.get(getPtr(), VPLane(0));
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
   ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
@@ -2240,13 +2243,22 @@ void VPVectorEndPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
-  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
-                                CurrentPart, Builder);
+  Value *Stride = State.get(getStride(), /*IsScalar*/ true);
+
+  auto *StrideC = dyn_cast<ConstantInt>(Stride);
+  bool IsStrideOne = StrideC && StrideC->isOne();
+  bool IsUnitStride = IsStrideOne || (StrideC && StrideC->isMinusOne());
+  Type *IndexTy =
+      getGEPIndexTy(State.VF.isScalable(),
+                    /*IsReverse*/ false, IsUnitStride, CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
+  Stride = Builder.CreateSExtOrTrunc(Stride, IndexTy);
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
+  Value *Index = IsStrideOne ? Increment : Builder.CreateMul(Increment, Stride);
+
   Value *ResultPtr =
-      Builder.CreateGEP(IndexedTy, Ptr, Increment, "", getGEPNoWrapFlags());
+      Builder.CreateGEP(IndexedTy, Ptr, Index, "", getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
@@ -2839,9 +2851,11 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)
-                        ? Instruction::Load
-                        : Instruction::Store;
+  unsigned Opcode =
+      isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe, VPWidenStridedLoadRecipe>(
+          this)
+          ? Instruction::Load
+          : Instruction::Store;
 
   if (!Consecutive) {
     // TODO: Using the original IR may not be accurate.
@@ -2850,6 +2864,11 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
+
+    if (isa<VPWidenStridedLoadRecipe>(this))
+      return Ctx.TTI.getStridedMemoryOpCost(
+          Opcode, Ty, Ptr, IsMasked, Alignment, Ctx.CostKind, &Ingredient);
+
     return Ctx.TTI.getAddressComputationCost(Ty) +
            Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
                                           Ctx.CostKind, &Ingredient);
@@ -2997,6 +3016,50 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
   printOperands(O, SlotTracker);
+}
+#endif
+
+void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+
+  auto &Builder = State.Builder;
+  Value *Addr = State.get(getAddr(), /*IsScalar*/ true);
+  Value *Stride = State.get(getStride(), /*IsScalar*/ true);
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask())
+    Mask = State.get(VPMask);
+  else
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *RunTimeVF = Builder.CreateZExtOrTrunc(State.get(getVF(), VPLane(0)),
+                                               Builder.getInt32Ty());
+
+  auto *PtrTy = Addr->getType();
+  auto *StrideTy = Stride->getType();
+  const DataLayout &DL = Ingredient.getDataLayout();
+  Value *StrideInBytes = Builder.CreateMul(
+      Stride, ConstantInt::get(StrideTy, DL.getTypeAllocSize(ScalarDataTy)));
+  CallInst *NewLI = Builder.CreateIntrinsic(
+      Intrinsic::experimental_vp_strided_load, {DataTy, PtrTy, StrideTy},
+      {Addr, StrideInBytes, Mask, RunTimeVF}, nullptr, "wide.strided.load");
+  NewLI->addParamAttr(
+      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
+  applyMetadata(*NewLI);
+  State.set(this, NewLI);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenStridedLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = load ";
+  getAddr()->printAsOperand(O, SlotTracker);
+  O << ", stride = ";
+  getStride()->printAsOperand(O, SlotTracker);
+  O << ", runtimeVF = ";
+  getVF()->printAsOperand(O, SlotTracker);
 }
 #endif
 
