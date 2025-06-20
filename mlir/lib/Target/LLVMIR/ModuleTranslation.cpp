@@ -776,7 +776,10 @@ ModuleTranslation::ModuleTranslation(Operation *module,
          "mlirModule should honor LLVM's module semantics.");
 }
 
-ModuleTranslation::~ModuleTranslation() {}
+ModuleTranslation::~ModuleTranslation() {
+  if (ompBuilder && !ompBuilder->isFinalized())
+    ompBuilder->finalize();
+}
 
 void ModuleTranslation::forgetMapping(Region &region) {
   SmallVector<Region *> toProcess;
