@@ -123,8 +123,7 @@ struct InfoTreeNode {
   static constexpr uint64_t IndentSize = 4;
 
   std::string Key;
-  struct None {};
-  using VariantType = std::variant<uint64_t, std::string, bool, None>;
+  using VariantType = std::variant<uint64_t, std::string, bool, std::monostate>;
   VariantType Value;
   std::string Units;
   // Need to specify a default value number of elements here as `InfoTreeNode`'s
@@ -134,7 +133,7 @@ struct InfoTreeNode {
   // * The same key can appear multiple times
   std::unique_ptr<llvm::SmallVector<InfoTreeNode, 8>> Children;
 
-  InfoTreeNode() : InfoTreeNode("", None{}, "") {}
+  InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
   InfoTreeNode(std::string Key, VariantType Value, std::string Units)
       : Key(Key), Value(Value), Units(Units) {}
 
@@ -142,7 +141,7 @@ struct InfoTreeNode {
   /// a key string in \p Key. The value in \p Value is optional and can be any
   /// type that is representable as a string. The units in \p Units is optional
   /// and must be a string.
-  template <typename T = None>
+  template <typename T = std::monostate>
   InfoTreeNode *add(std::string Key, T Value = T(),
                     const std::string &Units = std::string()) {
     assert(!Key.empty() && "Invalid info key");
@@ -151,7 +150,7 @@ struct InfoTreeNode {
       Children = std::make_unique<llvm::SmallVector<InfoTreeNode, 8>>();
 
     VariantType ValueVariant;
-    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, None>)
+    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, std::monostate>)
       ValueVariant = Value;
     else if constexpr (std::is_arithmetic_v<T>)
       ValueVariant = static_cast<uint64_t>(Value);
@@ -197,7 +196,7 @@ private:
               llvm::outs() << (V ? "Yes" : "No");
             else if constexpr (std::is_same_v<T, uint64_t>)
               llvm::outs() << V;
-            else if constexpr (std::is_same_v<T, None>) {
+            else if constexpr (std::is_same_v<T, std::monostate>) {
               // Do nothing
             } else
               static_assert(false, "doPrint visit not exhaustive");
