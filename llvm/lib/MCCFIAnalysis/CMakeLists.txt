@@ -1,5 +1,5 @@
 add_llvm_component_library(LLVMMCCFIAnalysis
-  CFIState.cpp
+  UnwindInfoHistory.cpp
   CFIAnalysisMCStreamer.cpp
   CFIAnalysis.cpp
 
