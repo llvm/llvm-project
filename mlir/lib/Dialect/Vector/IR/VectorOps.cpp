@@ -2417,6 +2417,14 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
   return foldToElementsFromElements(*this, results);
 }
 
+void vector::ToElementsOp::build(OpBuilder &builder, OperationState &result, Value elements) {
+  auto vectorType = cast<VectorType>(elements.getType());
+  Type elementType = vectorType.getElementType();
+  int64_t nbElements = vectorType.getNumElements();
+  SmallVector<Type> scalarTypes(nbElements, elementType);
+  build(builder, result, scalarTypes, elements);
+}
+
 //===----------------------------------------------------------------------===//
 // FromElementsOp
 //===----------------------------------------------------------------------===//
