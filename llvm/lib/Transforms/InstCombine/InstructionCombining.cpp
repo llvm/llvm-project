@@ -1349,6 +1349,37 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     return nullptr;
   };
 
+  // Special case for reconstructing across a select:
+  // (Cond ? V1 : (X & Mask)) op
+  // zext (Cond ? V2 : trunc X)
+  // -> (Cond ? (V1 op zext V2) : ((X & Mask) op zext trunc X))
+  auto foldReconstruction = [&](Value *V1, Value *Masked,
+                                Value *ZExtSel) -> Value * {
+    Value *X;
+    if (!match(Masked, m_OneUse(m_And(m_Value(X), m_Constant()))))
+      return nullptr;
+
+    Value *V2, *Trunc;
+    if (!match(ZExtSel, m_ZExt(m_OneUse(m_Select(m_Specific(Cond), m_Value(V2),
+                                                 m_Value(Trunc))))))
+      return nullptr;
+
+    if (!match(Trunc, m_Trunc(m_Specific(X))))
+      return nullptr;
+
+    Value *ZExtTrue = Builder.CreateZExt(V2, V1->getType());
+    Value *True;
+    if (!(True = simplifyBinOp(Opcode, V1, ZExtTrue, FMF, Q)))
+      True = Builder.CreateOr(V1, ZExtTrue);
+
+    Value *ZExtFalse = Builder.CreateZExt(Trunc, V1->getType());
+    Value *False;
+    if (!(False = simplifyBinOp(Opcode, Masked, ZExtFalse, FMF, Q)))
+      False = Builder.CreateOr(Masked, ZExtFalse);
+
+    return Builder.CreateSelect(Cond, True, False, I.getName());
+  };
+
   if (LHSIsSelect && RHSIsSelect && A == D) {
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
@@ -1368,12 +1399,16 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
+    if (Value *NewSel = foldReconstruction(B, C, RHS))
+      return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
     True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
+      return NewSel;
+    if (Value *NewSel = foldReconstruction(E, F, LHS))
       return NewSel;
   }
 

@@ -6,11 +6,7 @@ define i40 @select_reconstruction_i40(i40 %arg0) {
 ; CHECK-SAME: i40 [[ARG0:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i40 [[ARG0]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = and i40 [[ARG0]], -256
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i8 0, i8 [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i40 0, i40 [[TMP7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP4]] to i40
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i40 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i40 0, i40 [[ARG0]]
 ; CHECK-NEXT:    ret i40 [[TMP3]]
 ;
   %1 = trunc i40 %arg0 to i8
@@ -28,11 +24,7 @@ define i40 @select_reconstruction_any_cmp_val(i40 %arg0, i8 %arg1) {
 ; CHECK-SAME: i40 [[ARG0:%.*]], i8 [[ARG1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i40 [[ARG0]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[ARG1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = and i40 [[ARG0]], -256
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i8 0, i8 [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i40 0, i40 [[TMP7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP4]] to i40
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i40 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i40 0, i40 [[ARG0]]
 ; CHECK-NEXT:    ret i40 [[TMP3]]
 ;
   %1 = trunc i40 %arg0 to i8
@@ -51,11 +43,8 @@ define i40 @select_reconstruction_257_mask(i40 %arg0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i40 [[ARG0]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i40 [[ARG0]], -257
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i8 0, i8 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i40 0, i40 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i40
-; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i40 [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    ret i40 [[TMP7]]
+; CHECK-NEXT:    ret i40 [[TMP4]]
 ;
   %1 = trunc i40 %arg0 to i8
   %2 = icmp eq i8 %1, 2
@@ -72,11 +61,7 @@ define i40 @select_reconstruction_i16_mask(i40 %arg0) {
 ; CHECK-SAME: i40 [[ARG0:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i40 [[ARG0]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = and i40 [[ARG0]], -65356
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i16 0, i16 [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i40 0, i40 [[TMP7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP4]] to i40
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i40 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i40 0, i40 [[ARG0]]
 ; CHECK-NEXT:    ret i40 [[TMP3]]
 ;
   %1 = trunc i40 %arg0 to i16
@@ -94,11 +79,7 @@ define <2 x i32> @select_reconstruction_vec_any_cmp_val(<2 x i32> %arg0, <2 x i8
 ; CHECK-SAME: <2 x i32> [[ARG0:%.*]], <2 x i8> [[ARG1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[ARG0]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i8> [[ARG1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[ARG0]], splat (i32 -256)
-; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x i8> zeroinitializer, <2 x i8> [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> zeroinitializer, <2 x i32> [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i8> [[TMP4]] to <2 x i32>
-; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint <2 x i32> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> zeroinitializer, <2 x i32> [[ARG0]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP7]]
 ;
   %1 = trunc <2 x i32> %arg0 to <2 x i8>
