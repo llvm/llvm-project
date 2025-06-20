@@ -57,3 +57,26 @@ define i32 @all_true_2_i64(<2 x i64> %v) {
   %conv3 = zext i1 %3 to i32
   ret i32 %conv3
 }
+
+
+define i32 @all_true_4_i64(<4 x i64> %v) {
+; CHECK-LABEL: all_true_4_i64:
+; CHECK:         .functype all_true_4_i64 (v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push9=, 0, 0
+; CHECK-NEXT:    local.tee $push8=, $2=, $pop9
+; CHECK-NEXT:    i64x2.eq $push1=, $0, $pop8
+; CHECK-NEXT:    i64x2.eq $push0=, $1, $2
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK-NEXT:    v128.any_true $push3=, $pop2
+; CHECK-NEXT:    i32.const $push4=, -1
+; CHECK-NEXT:    i32.xor $push5=, $pop3, $pop4
+; CHECK-NEXT:    i32.const $push6=, 1
+; CHECK-NEXT:    i32.and $push7=, $pop5, $pop6
+; CHECK-NEXT:    return $pop7
+  %1 = icmp eq <4 x i64> %v, zeroinitializer
+  %2 = bitcast <4 x i1> %1 to i4
+  %3 = icmp eq i4 %2, 0
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
