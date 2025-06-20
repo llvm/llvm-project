@@ -15,7 +15,8 @@
 
 #include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "sandbox-vectorizer"
+#define PASS_NAME "sandbox-vectorizer"
+#define DEBUG_TYPE PASS_NAME
 #define DEBUG_PREFIX "SBVec: "
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_DEBUG_H
