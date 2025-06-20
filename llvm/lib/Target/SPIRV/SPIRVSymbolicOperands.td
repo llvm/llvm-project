@@ -526,6 +526,7 @@ defm Subgroup2DBlockTransformINTEL : CapabilityOperand<6229, 0, 0, [SPV_INTEL_2d
 defm Subgroup2DBlockTransposeINTEL : CapabilityOperand<6230, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
 defm Int4TypeINTEL : CapabilityOperand<5112, 0, 0, [SPV_INTEL_int4], []>;
 defm Int4CooperativeMatrixINTEL : CapabilityOperand<5114, 0, 0, [SPV_INTEL_int4], [Int4TypeINTEL, CooperativeMatrixKHR]>;
+defm FPGAArgumentInterfacesINTEL : CapabilityOperand<6174, 0, 0, [SPV_INTEL_fpga_argument_interfaces], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1277,6 +1278,15 @@ defm FunctionFloatingPointModeINTEL : DecorationOperand<6080, 0, 0, [], [Functio
 defm AliasScopeINTEL : DecorationOperand<5914, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm NoAliasINTEL : DecorationOperand<5915, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm FPMaxErrorDecorationINTEL : DecorationOperand<6170, 0, 0, [], [FPMaxErrorINTEL]>;
+defm ConduitKernelArgumentINTEL : DecorationOperand<6175, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
+defm RegisterMapKernelArgumentINTEL: DecorationOperand<6176, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
+defm MMHostInterfaceAddressWidthINTEL: DecorationOperand<6177, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
+defm MMHostInterfaceDataWidthINTEL: DecorationOperand<6178, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
+defm MMHostInterfaceLatencyINTEL: DecorationOperand<6179, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
+defm MMHostInterfaceReadWriteModeINTEL: DecorationOperand<6180, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
+defm MMHostInterfaceMaxBurstINTEL: DecorationOperand<6181, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
+defm MMHostInterfaceWaitRequestINTEL: DecorationOperand<6182, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
+defm StableKernelArgumentINTEL: DecorationOperand<6183, 0, 0, [], [FPGAArgumentInterfacesINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time
