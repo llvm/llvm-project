@@ -5878,7 +5878,7 @@ HLSLRootSignatureDecl *
 HLSLRootSignatureDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   HLSLRootSignatureDecl *Result = new (C, ID) HLSLRootSignatureDecl(
       nullptr, SourceLocation(), nullptr,
-      /*RootSigVer*/ llvm::dxbc::RootSignatureVersion::rootsig_1_0,
+      /*RootSigVer*/ llvm::dxbc::RootSignatureVersion::V1_1,
       /*NumElems=*/0);
   return Result;
 }

@@ -747,8 +747,8 @@ struct DescriptorRange : public v1::DescriptorRange {
 
 // D3D_ROOT_SIGNATURE_VERSION
 enum class RootSignatureVersion {
-  rootsig_1_0 = 0x1,
-  rootsig_1_1 = 0x2,
+  V1_0 = 0x1,
+  V1_1 = 0x2,
 };
 
 } // namespace dxbc
