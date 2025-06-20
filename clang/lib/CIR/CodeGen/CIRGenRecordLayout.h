@@ -197,6 +197,8 @@ public:
     assert(it != bitFields.end() && "Unable to find bitfield info");
     return it->second;
   }
+  void print(raw_ostream &os) const;
+  LLVM_DUMP_METHOD void dump() const;
 };
 
 } // namespace clang::CIRGen
