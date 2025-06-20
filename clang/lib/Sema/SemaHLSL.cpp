@@ -1069,7 +1069,6 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
       SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,
       DeclIdent, Elements);
 
-  // Perform validation of constructs here
   if (handleRootSignatureDecl(SignatureDecl, Loc))
     return;
 
@@ -1165,7 +1164,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
         << OInfo->LowerBound << OInfo->UpperBound << Info->Space << CommonVis;
   };
 
-  // 3: Iterate throught collected RangeInfos
+  // 3: Iterate through collected RangeInfos
   for (const RangeInfo &Info : Infos) {
     GroupT InfoGroup = {Info.Class, Info.Space};
     // Reset our ResourceRanges when we enter a new group
@@ -1186,9 +1185,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
     // Otherwise, the range that is inserted needs to check that it does not
     // overlap with ShaderVisibility::All.
     //
-    // Maps will be an ArrayRef to all non-all visibility RangeMaps in the
-    // former case and it will be an ArrayRef to just the all visiblity
-    // RangeMap in the latter case.
+    // OverlapRanges will be an ArrayRef to all non-all visibility
+    // ResourceRanges in the former case and it will be an ArrayRef to just the
+    // all visiblity ResourceRange in the latter case.
     MutableArrayRef<ResourceRange> OverlapRanges =
         Info.Vis == llvm::hlsl::rootsig::ShaderVisibility::All
             ? MutableArrayRef<ResourceRange>{Ranges}.drop_front()
