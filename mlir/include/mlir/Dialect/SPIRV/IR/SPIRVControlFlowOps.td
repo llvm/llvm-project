@@ -21,6 +21,15 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
+// TODO: This is not only specific to control flow ops, so it could be moved
+// somewhere else.
+class SPIRV_HasParentOfType<string op> : PredOpTrait<
+  "op expects to be nested in " # op,
+  CPred<"getOperation()->getParentOfType<::mlir::spirv::" # op # ">() != nullptr">
+>;
+
+// -----
+
 def SPIRV_BranchOp : SPIRV_Op<"Branch", [
     DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope, Pure,
     Terminator]> {
@@ -533,6 +542,32 @@ def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
 
   let hasVerifier = 0;
   let hasRegionVerifier = 1;
+}
+
+// -----
+
+def SPIRV_BreakOp : SPIRV_Op<"mlir.break", [
+    Pure, Terminator, SPIRV_HasParentOfType<"LoopOp">, ReturnLike]> {
+  let summary = "Early exit from a structured loop.";
+
+  let description = [{
+    Since the SPIR-V dialect relies on structured control flow, early exit using
+    branches is not possible. Since branch cannot reference blocks outside a region
+    a `spirv.mlir.selection` cannot arbitrarily branch to the merge block of the
+    enclosing loop.
+
+    To provide support for early exits dialect implements a `spirv.mlir.break`
+    operation. The semantic of the operation is like that in GLSL / C / C++.
+    The break operation should be treated as a branch to the merge block of the
+    enclosing loop.
+  }];
+
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let hasOpcode = 0;
+  let autogenSerialization = 0;
+  let hasVerifier = 0;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_CONTROLFLOW_OPS
