@@ -5794,27 +5794,9 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
-    auto lc_notes = FindLC_NOTEByName("process metadata");
-    for (auto lc_note : lc_notes) {
-      offset_t payload_offset = std::get<0>(lc_note);
-      offset_t strsize = std::get<1>(lc_note);
-      std::string buf(strsize, '\0');
-      if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
-        LLDB_LOGF(log,
-                  "Unable to read %" PRIu64
-                  " bytes of 'process metadata' LC_NOTE JSON contents",
-                  strsize);
-        return false;
-      }
-      while (buf.back() == '\0')
-        buf.resize(buf.size() - 1);
-      StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+    StructuredData::ObjectSP object_sp = GetCorefileProcessMetadata();
+    if (object_sp) {
       StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
-      if (!dict) {
-        LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
-                       "get a dictionary.");
-        return false;
-      }
       StructuredData::Array *threads;
       if (!dict->GetValueForKeyAsArray("threads", threads) || !threads) {
         LLDB_LOGF(log,
@@ -5855,6 +5837,45 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
     }
   }
   return false;
+}
+
+StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
+  ModuleSP module_sp(GetModule());
+  if (!module_sp)
+    return {};
+
+  Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  auto lc_notes = FindLC_NOTEByName("process metadata");
+  if (lc_notes.size() == 0)
+    return {};
+
+  if (lc_notes.size() > 1)
+    LLDB_LOGF(
+        log,
+        "Multiple 'process metadata' LC_NOTEs found, only using the first.");
+
+  offset_t payload_offset = std::get<0>(lc_notes[0]);
+  offset_t strsize = std::get<1>(lc_notes[0]);
+  std::string buf(strsize, '\0');
+  if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
+    LLDB_LOGF(log,
+              "Unable to read %" PRIu64
+              " bytes of 'process metadata' LC_NOTE JSON contents",
+              strsize);
+    return {};
+  }
+  while (buf.back() == '\0')
+    buf.resize(buf.size() - 1);
+  StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+  StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
+  if (!dict) {
+    LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                   "get a dictionary.");
+    return {};
+  }
+
+  return object_sp;
 }
 
 lldb::RegisterContextSP
