@@ -1327,6 +1327,15 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     Value *X;
     const APInt *C1;
 
+    // (X mod(C1 *C2)/C2) -> (X/C2) mod(C1)
+    if ((IsSigned && match(Op0, m_SRem(m_Value(X), m_NSWMul(m_APInt(C1), m_APInt(C2))))) ||
+        (!IsSigned && match(Op0, m_URem(m_Value(X), m_NUWMul(m_APInt(C1), m_APInt(C2)))))) {
+      Value *XDivC2 = Builder.CreateUDiv(X, ConstantInt::get(X->getType(), *C2));
+      Value *Result = Builder.CreateURem(XDivC2, ConstantInt::get(X->getType(), *C1));
+      
+      return replaceInstUsesWith(I, Result);
+    }
+    
     // (X / C1) / C2  -> X / (C1*C2)
     if ((IsSigned && match(Op0, m_SDiv(m_Value(X), m_APInt(C1)))) ||
         (!IsSigned && match(Op0, m_UDiv(m_Value(X), m_APInt(C1))))) {
