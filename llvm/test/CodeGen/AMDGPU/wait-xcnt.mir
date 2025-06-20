@@ -582,7 +582,6 @@ body: |
     ; GCN-NEXT: $vgpr6 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: $vgpr7 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
     ; GCN-NEXT: $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
-    ; GCN-NEXT: S_WAIT_XCNT 3
     ; GCN-NEXT: $vgpr5 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
     ; GCN-NEXT: $vgpr8 = V_MOV_B32_e32 1, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr4, 0, 0, implicit $exec, implicit $flat_scr

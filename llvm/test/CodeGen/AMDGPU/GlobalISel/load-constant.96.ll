@@ -78,7 +78,7 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX1250-NOUNALIGNED:       ; %bb.0:
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NOUNALIGNED-NEXT:    s_clause 0xa
+; GFX1250-NOUNALIGNED-NEXT:    s_clause 0xb
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v2, v[0:1], off
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v3, v[0:1], off offset:1
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v4, v[0:1], off offset:2
@@ -90,7 +90,6 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v10, v[0:1], off offset:8
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v11, v[0:1], off offset:9
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v12, v[0:1], off offset:11
-; GFX1250-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v0, v[0:1], off offset:10
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0xa
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
