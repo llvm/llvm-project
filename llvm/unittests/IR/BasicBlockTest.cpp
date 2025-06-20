@@ -583,5 +583,15 @@ TEST(BasicBlockTest, DiscardValueNames2) {
   }
 }
 
+TEST(BasicBlockTest, IrrLoopHeaderNull) {
+  LLVMContext Ctx;
+  Module M("Mod", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(M.getContext()),
+                                Type::getInt32Ty(Ctx), /* isVarArg */ false);
+  auto *F = Function::Create(FTy, Function::ExternalLinkage, "foo", &M);
+  auto *BB = BasicBlock::Create(Ctx, "", F);
+  EXPECT_EQ(BB->getIrrLoopHeaderWeight(), std::nullopt);
+}
+
 } // End anonymous namespace.
 } // End llvm namespace.
