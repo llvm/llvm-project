@@ -525,6 +525,17 @@ struct Allocator {
     return true;
   }
 
+  bool UpdateDeallocationStack(uptr addr, BufferedStackTrace *stack) {
+    AsanChunk *m = GetAsanChunkByAddr(addr);
+    if (!m) return false;
+    if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED)
+      return false;
+    if (m->Beg() != addr) return false;
+    AsanThread *t = GetCurrentThread();
+    m->SetFreeContext(t ? t->tid() : kMainTid, StackDepotPut(*stack));
+    return true;
+  }
+
   // -------------------- Allocation/Deallocation routines ---------------
   void *Allocate(uptr size, uptr alignment, BufferedStackTrace *stack,
                  AllocType alloc_type, bool can_fill) {
@@ -941,8 +952,8 @@ uptr AsanChunkView::AllocTid() const {
 }
 
 uptr AsanChunkView::FreeTid() const {
-  if (!IsQuarantined())
-    return kInvalidTid;
+  //if (!IsQuarantined())
+  //  return kInvalidTid;
   u32 tid = 0;
   u32 stack = 0;
   chunk_->GetFreeContext(tid, stack);
@@ -961,8 +972,8 @@ u32 AsanChunkView::GetAllocStackId() const {
 }
 
 u32 AsanChunkView::GetFreeStackId() const {
-  if (!IsQuarantined())
-    return 0;
+  //if (!IsQuarantined())
+  //  return 0;
   u32 tid = 0;
   u32 stack = 0;
   chunk_->GetFreeContext(tid, stack);
@@ -1117,6 +1128,10 @@ void asan_mz_force_lock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
 
 void asan_mz_force_unlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   instance.ForceUnlock();
+}
+
+int asan_update_deallocation_context(void* addr, BufferedStackTrace *stack) {
+  return instance.UpdateDeallocationStack((uptr)addr, stack);
 }
 
 }  // namespace __asan
