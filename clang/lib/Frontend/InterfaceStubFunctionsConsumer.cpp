@@ -292,7 +292,7 @@ public:
                              raw_ostream &OS) -> void {
       OS << "--- !" << Format << "\n";
       OS << "IfsVersion: 3.0\n";
-      OS << "Target: " << T.str(false) << "\n";
+      OS << "Target: " << T.str() << "\n";
       OS << "Symbols:\n";
       for (const auto &E : Symbols) {
         const MangledSymbol &Symbol = E.second;

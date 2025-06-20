@@ -783,7 +783,7 @@ TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   // Construct the target
   std::unique_ptr<TargetInfo> Target = AllocateTarget(Triple, *Opts);
   if (!Target) {
-    Diags.Report(diag::err_target_unknown_triple) << Triple.str(false);
+    Diags.Report(diag::err_target_unknown_triple) << Triple.str();
     return nullptr;
   }
   Target->TargetOpts = Opts;

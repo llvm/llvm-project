@@ -35,7 +35,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       break;
     default:
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << XRayInstrument->getSpelling() << Triple.str(false);
+          << XRayInstrument->getSpelling() << Triple.str();
       break;
     }
   } else if (Triple.isOSBinFormatELF()) {
@@ -56,11 +56,11 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       break;
     default:
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << XRayInstrument->getSpelling() << Triple.str(false);
+          << XRayInstrument->getSpelling() << Triple.str();
     }
   } else {
     D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << XRayInstrument->getSpelling() << Triple.str(false);
+        << XRayInstrument->getSpelling() << Triple.str();
   }
 
   if (Args.hasFlag(options::OPT_fxray_shared, options::OPT_fno_xray_shared,
@@ -74,7 +74,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       break;
     default:
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << "-fxray-shared" << Triple.str(false);
+          << "-fxray-shared" << Triple.str();
     }
 
     unsigned PICLvl = std::get<1>(tools::ParsePICArgs(TC, Args));

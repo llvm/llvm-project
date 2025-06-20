@@ -414,7 +414,7 @@ void Solaris::addLibStdCxxIncludePaths(
   // the lib directory of the GCC installation.
   // On Solaris this usually looks like /usr/gcc/X.Y/include/c++/X.Y.Z
   StringRef LibDir = GCCInstallation.getParentLibPath();
-  StringRef TripleStr = GCCInstallation.getTriple().str(false);
+  StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
   const GCCVersion &Version = GCCInstallation.getVersion();
 

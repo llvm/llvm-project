@@ -101,12 +101,12 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     } else if (TargetTriple.isMusl()) {
       Libc = "musl";
     } else {
-      return TargetTriple.str(false);
+      return TargetTriple.str();
     }
 
     switch (TargetEnvironment) {
     default:
-      return TargetTriple.str(false);
+      return TargetTriple.str();
     case llvm::Triple::GNUSF:
     case llvm::Triple::MuslSF:
       FPFlavor = "sf";
@@ -174,7 +174,7 @@ std::string Linux::getMultiarchTriple(const Driver &D,
   case llvm::Triple::systemz:
     return "s390x-linux-gnu";
   }
-  return TargetTriple.str(false);
+  return TargetTriple.str();
 }
 
 static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
@@ -406,7 +406,7 @@ std::string Linux::computeSysRoot() const {
     //   $GCCToolchainPath/lib/gcc/csky-linux-gnuabiv2/6.3.0
     // Path = $GCCToolchainPath/csky-linux-gnuabiv2/libc
     std::string Path = (GCCInstallation.getInstallPath() + "/../../../../" +
-                        GCCInstallation.getTriple().str(false) + "/libc")
+                        GCCInstallation.getTriple().str() + "/libc")
                            .str();
     if (getVFS().exists(Path))
       return Path;
@@ -421,7 +421,7 @@ std::string Linux::computeSysRoot() const {
   // variants.
 
   const StringRef InstallDir = GCCInstallation.getInstallPath();
-  const StringRef TripleStr = GCCInstallation.getTriple().str(false);
+  const StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
 
   std::string Path =
@@ -620,7 +620,7 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
   if (Distro == Distro::Exherbo &&
       (Triple.getVendor() == llvm::Triple::UnknownVendor ||
        Triple.getVendor() == llvm::Triple::PC))
-    return "/usr/" + Triple.str(false) + "/lib/" + Loader;
+    return "/usr/" + Triple.str() + "/lib/" + Loader;
   return "/" + LibDir + "/" + Loader;
 }
 
@@ -694,7 +694,7 @@ void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
     return;
 
   // Detect Debian g++-multiarch-incdir.diff.
-  StringRef TripleStr = GCCInstallation.getTriple().str(false);
+  StringRef TripleStr = GCCInstallation.getTriple().str();
   StringRef DebianMultiarch =
       GCCInstallation.getTriple().getArch() == llvm::Triple::x86
           ? "i386-linux-gnu"
@@ -756,7 +756,7 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
     CC1Args.push_back("-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(
         GCCInstallation.getParentLibPath() + "/../" +
-        GCCInstallation.getTriple().str(false) + "/include"));
+        GCCInstallation.getTriple().str() + "/include"));
   }
 }
 

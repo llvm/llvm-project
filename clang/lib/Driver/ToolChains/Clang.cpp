@@ -579,7 +579,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   if (TC.getTriple().isOSAIX()) {
     if (Arg *ProfileSampleUseArg = getLastProfileSampleUseArg(Args))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << ProfileSampleUseArg->getSpelling() << TC.getTriple().str(false);
+          << ProfileSampleUseArg->getSpelling() << TC.getTriple().str();
   }
 
   if (ProfileGenerateArg) {
@@ -2137,7 +2137,7 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
   if (VecExtabi) {
     if (!T.isOSAIX())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << "-mabi=vec-extabi" << T.str(false);
+          << "-mabi=vec-extabi" << T.str();
     CmdArgs.push_back("-mabi=vec-extabi");
   }
 
@@ -5746,7 +5746,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << (NoPICDataIsTextRelative ? "-mno-pic-data-is-text-relative"
                                       : "-mpic-data-is-text-relative")
-          << RawTriple.str(false);
+          << RawTriple.str();
   }
 
   bool IsROPI = RelocationModel == llvm::Reloc::ROPI ||
@@ -5868,7 +5868,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ_quadword_atomics)) {
     if (!Triple.isOSAIX() || Triple.isPPC32())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << A->getSpelling() << RawTriple.str(false);
+        << A->getSpelling() << RawTriple.str();
     CmdArgs.push_back("-mabi=quadword-atomics");
   }
 
@@ -5877,7 +5877,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // support for 128-bit long double is available for AIX.
     if (Triple.isOSAIX())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << RawTriple.str(false);
+          << A->getSpelling() << RawTriple.str();
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_Wframe_larger_than_EQ)) {
@@ -5906,7 +5906,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                options::OPT_msvr4_struct_return)) {
     if (!TC.getTriple().isPPC32()) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << RawTriple.str(false);
+          << A->getSpelling() << RawTriple.str();
     } else if (A->getOption().matches(options::OPT_maix_struct_return)) {
       CmdArgs.push_back("-maix-struct-return");
     } else {
@@ -5919,7 +5919,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                options::OPT_freg_struct_return)) {
     if (TC.getArch() != llvm::Triple::x86) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << RawTriple.str(false);
+          << A->getSpelling() << RawTriple.str();
     } else if (A->getOption().matches(options::OPT_fpcc_struct_return)) {
       CmdArgs.push_back("-fpcc-struct-return");
     } else {

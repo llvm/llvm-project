@@ -144,7 +144,7 @@ getNVIDIAOffloadTargetTriple(const Driver &D, const ArgList &Args,
     D.Diag(diag::err_drv_cuda_offload_only_emit_bc);
     return std::nullopt;
   }
-  D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str(false);
+  D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
   return std::nullopt;
 }
 
@@ -165,7 +165,7 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
     return TT;
   if (TT->getArch() == llvm::Triple::spirv64)
     return TT;
-  D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str(false);
+  D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
   return std::nullopt;
 }
 
@@ -714,13 +714,13 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
   // Currently the only architecture supported by *-uefi triples are x86_64.
   if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64)
-    D.Diag(diag::err_target_unknown_triple) << Target.str(false);
+    D.Diag(diag::err_target_unknown_triple) << Target.str();
 
   // The `-maix[32|64]` flags are only valid for AIX targets.
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_maix32, options::OPT_maix64);
       A && !Target.isOSAIX())
     D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << A->getAsString(Args) << Target.str(false);
+        << A->getAsString(Args) << Target.str();
 
   // Handle pseudo-target flags '-m64', '-mx32', '-m32' and '-m16'.
   Arg *A = Args.getLastArg(options::OPT_m64, options::OPT_mx32,
@@ -748,7 +748,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
                A->getOption().matches(options::OPT_maix32)) {
       if (D.IsFlangMode() && !Target.isOSAIX()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << Target.str(false);
+            << A->getAsString(Args) << Target.str();
       } else {
         AT = Target.get32BitArchVariant().getArch();
         if (Target.getEnvironment() == llvm::Triple::GNUX32)
@@ -779,7 +779,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   if (Args.hasFlag(options::OPT_miamcu, options::OPT_mno_iamcu, false)) {
     if (Target.get32BitArchVariant().getArch() != llvm::Triple::x86)
       D.Diag(diag::err_drv_unsupported_opt_for_target) << "-miamcu"
-                                                       << Target.str(false);
+                                                       << Target.str();
 
     if (A && !A->getOption().matches(options::OPT_m32))
       D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -1361,7 +1361,7 @@ static bool findTripleConfigFile(llvm::cl::ExpansionContext &ExpCtx,
                                  SmallString<128> &ConfigFilePath,
                                  llvm::Triple Triple, std::string Suffix) {
   // First, try the full unmodified triple.
-  if (ExpCtx.findConfigFile(Triple.str(false) + Suffix, ConfigFilePath))
+  if (ExpCtx.findConfigFile(Triple.str() + Suffix, ConfigFilePath))
     return true;
 
   // Don't continue if we didn't find a parsable version in the triple.
@@ -1375,14 +1375,14 @@ static bool findTripleConfigFile(llvm::cl::ExpansionContext &ExpCtx,
   // e.g. arm64-apple-darwin23.6.0 -> arm64-apple-darwin23
   if (OSVersion.getMajor() != 0) {
     Triple.setOSName(BaseOSName + llvm::utostr(OSVersion.getMajor()));
-    if (ExpCtx.findConfigFile(Triple.str(false) + Suffix, ConfigFilePath))
+    if (ExpCtx.findConfigFile(Triple.str() + Suffix, ConfigFilePath))
       return true;
   }
 
   // Finally, try without any version suffix at all.
   // e.g. arm64-apple-darwin23.6.0 -> arm64-apple-darwin
   Triple.setOSName(BaseOSName);
-  return ExpCtx.findConfigFile(Triple.str(false) + Suffix, ConfigFilePath);
+  return ExpCtx.findConfigFile(Triple.str() + Suffix, ConfigFilePath);
 }
 
 bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
@@ -1402,7 +1402,7 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   // and the name prefix is not a valid triple, force it for backwards
   // compatibility.
   if (!ClangNameParts.TargetPrefix.empty() &&
-      computeTargetTriple(*this, "/invalid/", *CLOptions).str(false) ==
+      computeTargetTriple(*this, "/invalid/", *CLOptions).str() ==
           "/invalid/") {
     llvm::Triple PrefixTriple{ClangNameParts.TargetPrefix};
     if (PrefixTriple.getArch() == llvm::Triple::UnknownArch ||
@@ -1413,9 +1413,9 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   // Otherwise, use the real triple as used by the driver.
   llvm::Triple RealTriple =
       computeTargetTriple(*this, TargetTriple, *CLOptions);
-  if (Triple.str(false).empty()) {
+  if (Triple.str().empty()) {
     Triple = RealTriple;
-    assert(!Triple.str(false).empty());
+    assert(!Triple.str().empty());
   }
 
   // On z/OS, start by loading the customization file before loading
@@ -1582,7 +1582,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     T.setObjectFormat(llvm::Triple::COFF);
     if (Args.hasArg(options::OPT__SLASH_arm64EC))
       T.setArch(llvm::Triple::aarch64, llvm::Triple::AArch64SubArch_arm64ec);
-    TargetTriple = T.str(false);
+    TargetTriple = T.str();
   } else if (IsDXCMode()) {
     // Build TargetTriple from target_profile option for clang-dxc.
     if (const Arg *A = Args.getLastArg(options::OPT_target_profile)) {
@@ -1617,7 +1617,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
           A->claim();
         }
 
-        TargetTriple = T.str(false);
+        TargetTriple = T.str();
       }
     } else {
       Diag(diag::err_drv_dxc_missing_target_profile);
@@ -1770,7 +1770,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
        TC.getTriple().getSubArch() != llvm::Triple::AArch64SubArch_arm64ec) &&
       UArgs->hasArg(options::OPT__SLASH_arm64EC)) {
     getDiags().Report(clang::diag::warn_target_override_arm64ec)
-        << TC.getTriple().str(false);
+        << TC.getTriple().str();
   }
 
   // A common user mistake is specifying a target of aarch64-none-eabi or
@@ -6715,8 +6715,8 @@ const ToolChain &Driver::getOffloadToolChain(
     const llvm::opt::ArgList &Args, const Action::OffloadKind Kind,
     const llvm::Triple &Target, const llvm::Triple &AuxTarget) const {
   std::unique_ptr<ToolChain> &TC =
-      ToolChains[Target.str(false) + "/" + AuxTarget.str(false)];
-  std::unique_ptr<ToolChain> &HostTC = ToolChains[AuxTarget.str(false)];
+      ToolChains[Target.str() + "/" + AuxTarget.str()];
+  std::unique_ptr<ToolChain> &HostTC = ToolChains[AuxTarget.str()];
 
   assert(HostTC && "Host toolchain for offloading doesn't exit?");
   if (!TC) {
@@ -6781,7 +6781,7 @@ const ToolChain &Driver::getOffloadToolChain(
 const ToolChain &Driver::getToolChain(const ArgList &Args,
                                       const llvm::Triple &Target) const {
 
-  auto &TC = ToolChains[Target.str(false)];
+  auto &TC = ToolChains[Target.str()];
   if (!TC) {
     switch (Target.getOS()) {
     case llvm::Triple::AIX:

@@ -653,7 +653,7 @@ public:
   virtual std::string getMultiarchTriple(const Driver &D,
                                          const llvm::Triple &TargetTriple,
                                          StringRef SysRoot) const {
-    return TargetTriple.str(false);
+    return TargetTriple.str();
   }
 
   /// ComputeLLVMTriple - Return the LLVM target triple to use, after taking

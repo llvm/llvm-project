@@ -152,7 +152,7 @@ const Target *TargetRegistry::lookupTarget(const Triple &TT,
 
   if (I == targets().end()) {
     Error =
-        "No available targets are compatible with triple \"" + TT.str(false) + "\"";
+        "No available targets are compatible with triple \"" + TT.str() + "\"";
     return nullptr;
   }
 

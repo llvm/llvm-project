@@ -2102,9 +2102,9 @@ std::string Triple::merge(const Triple &Other) const {
   // If vendor is apple, pick the triple with the larger version number.
   if (getVendor() == Triple::Apple)
     if (Other.isOSVersionLT(*this))
-      return str(false);
+      return str();
 
-  return Other.str(false);
+  return Other.str();
 }
 
 bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,

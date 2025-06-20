@@ -62,7 +62,7 @@ RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
     // Multilib cross-compiler GCC installations put ld in a triple-prefixed
     // directory off of the parent of the GCC installation.
     PPaths.push_back(Twine(GCCInstallation.getParentLibPath() + "/../" +
-                           GCCInstallation.getTriple().str(false) + "/bin")
+                           GCCInstallation.getTriple().str() + "/bin")
                          .str());
     PPaths.push_back((GCCInstallation.getParentLibPath() + "/../bin").str());
   } else {
@@ -119,7 +119,7 @@ void RISCVToolChain::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
   const GCCVersion &Version = GCCInstallation.getVersion();
-  StringRef TripleStr = GCCInstallation.getTriple().str(false);
+  StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
   addLibStdCXXIncludePaths(computeSysRoot() + "/include/c++/" + Version.Text,
                            TripleStr, Multilib.includeSuffix(), DriverArgs,
@@ -133,7 +133,7 @@ std::string RISCVToolChain::computeSysRoot() const {
   SmallString<128> SysRootDir;
   if (GCCInstallation.isValid()) {
     StringRef LibDir = GCCInstallation.getParentLibPath();
-    StringRef TripleStr = GCCInstallation.getTriple().str(false);
+    StringRef TripleStr = GCCInstallation.getTriple().str();
     llvm::sys::path::append(SysRootDir, LibDir, "..", TripleStr);
   } else {
     // Use the triple as provided to the driver. Unlike the parsed triple

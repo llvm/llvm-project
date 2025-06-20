@@ -270,7 +270,7 @@ void Flang::AddPPCTargetArgs(const ArgList &Args,
   if (VecExtabi) {
     if (!T.isOSAIX()) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << "-mabi=vec-extabi" << T.str(false);
+          << "-mabi=vec-extabi" << T.str();
     }
     CmdArgs.push_back("-mabi=vec-extabi");
   }

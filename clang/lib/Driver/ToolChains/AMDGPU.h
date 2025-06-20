@@ -163,7 +163,7 @@ public:
           parseSanitizerValue(A->getValue(), /*Allow Groups*/ false);
       if (K != SanitizerKind::Address)
         Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
-            << A->getAsString(Args) << getTriple().str(false);
+            << A->getAsString(Args) << getTriple().str();
     }
   }
 };

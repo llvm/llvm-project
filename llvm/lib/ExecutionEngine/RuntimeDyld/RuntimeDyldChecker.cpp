@@ -757,7 +757,7 @@ private:
   Expected<TargetInfo> getTargetInfo(const Triple &TT, const StringRef &CPU,
                                      const SubtargetFeatures &TF) const {
 
-    auto TripleName = TT.str(false);
+    auto TripleName = TT.str();
     std::string ErrorStr;
     const Target *TheTarget =
         TargetRegistry::lookupTarget(TripleName, ErrorStr);

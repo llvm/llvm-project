@@ -500,7 +500,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                   << Desc << A->getAsString(Args);
             else
               D.Diag(diag::err_drv_unsupported_opt_for_target)
-                  << Desc << Triple.str(false);
+                  << Desc << Triple.str();
           }
           DiagnosedKinds |= KindsToDiagnose;
         }
@@ -530,7 +530,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         if (DiagnoseErrors) {
           std::string Desc = describeSanitizeArg(Arg, KindsToDiagnose);
           D.Diag(diag::err_drv_unsupported_opt_for_target)
-              << Desc << TC.getTriple().str(false);
+              << Desc << TC.getTriple().str();
         }
         DiagnosedKinds |= KindsToDiagnose;
       }
@@ -700,7 +700,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       S.Mask = KindsToDiagnose;
       if (DiagnoseErrors)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << ("-fno-sanitize-trap=" + toString(S)) << TC.getTriple().str(false);
+            << ("-fno-sanitize-trap=" + toString(S)) << TC.getTriple().str();
       Kinds &= ~KindsToDiagnose;
     }
   }
@@ -1013,7 +1013,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     Arg *A =
         Args.getLastArg(options::OPT_shared_libsan, options::OPT_static_libsan);
     D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
-        << A->getSpelling() << TC.getTriple().str(false);
+        << A->getSpelling() << TC.getTriple().str();
   }
 
   ImplicitCfiRuntime = TC.getTriple().isAndroid();
@@ -1434,7 +1434,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (KcfiArity) {
     if (!TC.getTriple().isOSLinux() || !TC.getTriple().isArch64Bit()) {
       TC.getDriver().Diag(clang::diag::err_drv_kcfi_arity_unsupported_target)
-          << TC.getTriple().str(false);
+          << TC.getTriple().str();
     }
     CmdArgs.push_back("-fsanitize-kcfi-arity");
   }

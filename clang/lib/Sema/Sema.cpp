@@ -2164,8 +2164,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         else
           PD << "expression";
         targetDiag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << false /*return*/
-          << Context.getTargetInfo().getTriple().str(false);
+            << false /*show bit size*/ << 0 /*bitsize*/ << false /*return*/
+            << Ty << Context.getTargetInfo().getTriple().str();
       }
       return;
     }
@@ -2199,7 +2199,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       if (targetDiag(Loc, PD, FD)
           << true /*show bit size*/
           << static_cast<unsigned>(Context.getTypeSize(Ty)) << Ty
-          << false /*return*/ << Context.getTargetInfo().getTriple().str(false)) {
+          << false /*return*/ << Context.getTargetInfo().getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2225,7 +2225,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
 
       if (Diag(Loc, PD, FD)
           << false /*show bit size*/ << 0 << Ty << false /*return*/
-          << TI.getTriple().str(false)) {
+          << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2244,7 +2244,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
 
       if (Diag(Loc, PD, FD)
           << false /*show bit size*/ << 0 << Ty << true /*return*/
-          << TI.getTriple().str(false)) {
+          << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }

@@ -49,7 +49,7 @@ std::string Hurd::getMultiarchTriple(const Driver &D,
 
   // For most architectures, just use whatever we have rather than trying to be
   // clever.
-  return TargetTriple.str(false);
+  return TargetTriple.str();
 }
 
 static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
@@ -207,7 +207,7 @@ void Hurd::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   if (!GCCInstallation.isValid())
     return;
 
-  StringRef TripleStr = GCCInstallation.getTriple().str(false);
+  StringRef TripleStr = GCCInstallation.getTriple().str();
   StringRef DebianMultiarch =
       GCCInstallation.getTriple().getArch() == llvm::Triple::x86 ? "i386-gnu"
                                                                  : TripleStr;

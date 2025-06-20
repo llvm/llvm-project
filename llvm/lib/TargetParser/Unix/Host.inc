@@ -65,7 +65,7 @@ static std::string updateTripleOSVersion(std::string TargetTripleString) {
         NewOSName += name.release;
         NewOSName += ".0.0";
         TT.setOSName(NewOSName);
-        return TT.str(false);
+        return TT.str();
       }
     }
   }

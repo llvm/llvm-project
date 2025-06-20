@@ -1492,9 +1492,9 @@ Error IRLinker::run() {
       !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
-                SrcM->getTargetTriple().str(false) + "' whereas '" +
+                SrcM->getTargetTriple().str() + "' whereas '" +
                 DstM.getModuleIdentifier() + "' is '" +
-                DstM.getTargetTriple().str(false) + "'\n");
+                DstM.getTargetTriple().str() + "'\n");
 
   DstM.setTargetTriple(Triple(SrcTriple.merge(DstTriple)));
 
