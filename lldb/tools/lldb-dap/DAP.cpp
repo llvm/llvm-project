@@ -497,6 +497,27 @@ DAP::SendFormattedOutput(OutputType o, const char *format, ...) {
       o, llvm::StringRef(buffer, std::min<int>(actual_length, sizeof(buffer))));
 }
 
+int32_t DAP::CreateSourceReference(lldb::addr_t address) {
+  std::lock_guard<std::mutex> guard(m_source_references_mutex);
+  auto iter = llvm::find(m_source_references, address);
+  if (iter != m_source_references.end())
+    return std::distance(m_source_references.begin(), iter) + 1;
+
+  m_source_references.emplace_back(address);
+  return static_cast<int32_t>(m_source_references.size());
+}
+
+std::optional<lldb::addr_t> DAP::GetSourceReferenceAddress(int32_t reference) {
+  std::lock_guard<std::mutex> guard(m_source_references_mutex);
+  if (reference <= LLDB_DAP_INVALID_SRC_REF)
+    return std::nullopt;
+
+  if (static_cast<size_t>(reference) > m_source_references.size())
+    return std::nullopt;
+
+  return m_source_references[reference - 1];
+}
+
 ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
   const auto num = thread.GetStopReasonDataCount();
   // Check to see if have hit an exception breakpoint and change the
@@ -600,6 +621,55 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
   }
 
   llvm_unreachable("enum cases exhausted.");
+}
+
+std::optional<protocol::Source> DAP::ResolveSource(lldb::SBAddress address) {
+  if (DisplayAssemblySource(debugger, address))
+    return ResolveAssemblySource(address);
+
+  lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, address);
+  if (!line_entry.IsValid())
+    return std::nullopt;
+
+  return CreateSource(line_entry.GetFileSpec());
+}
+
+std::optional<protocol::Source>
+DAP::ResolveAssemblySource(lldb::SBAddress address) {
+  lldb::SBSymbol symbol = address.GetSymbol();
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  std::string name;
+  if (symbol.IsValid()) {
+    load_addr = symbol.GetStartAddress().GetLoadAddress(target);
+    name = symbol.GetName();
+  } else {
+    load_addr = address.GetLoadAddress(target);
+    name = GetLoadAddressString(load_addr);
+  }
+
+  if (load_addr == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+
+  protocol::Source source;
+  source.sourceReference = CreateSourceReference(load_addr);
+  lldb::SBModule module = address.GetModule();
+  if (module.IsValid()) {
+    lldb::SBFileSpec file_spec = module.GetFileSpec();
+    if (file_spec.IsValid()) {
+      std::string path = GetSBFileSpecPath(file_spec);
+      if (!path.empty())
+        source.path = path + '`' + name;
+    }
+  }
+
+  source.name = std::move(name);
+
+  // Mark the source as deemphasized since users will only be able to view
+  // assembly for these frames.
+  source.presentationHint =
+      protocol::Source::eSourcePresentationHintDeemphasize;
+
+  return source;
 }
 
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,
