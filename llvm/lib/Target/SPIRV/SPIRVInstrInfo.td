@@ -953,3 +953,27 @@ def OpSubgroup2DBlockPrefetchINTEL: Op<6234, (outs), (ins ID:$element_size, ID:$
 def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
                   ID:$block_count, ID:$src_ptr, ID:$dst_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord),
                   "OpSubgroup2DBlockStoreINTEL $element_size $block_width $block_height $block_count $src_ptr $dst_base_ptr $memory_width $memory_height $memory_pitch $coord">;
+
+//SPV_INTEL_arbitrary_precision_fixed_point
+def OpFixedSqrtINTEL: Op<5923, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSqrtINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedRecipINTEL: Op<5924, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedRecipINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedRsqrtINTEL: Op<5925, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedRsqrtINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinINTEL: Op<5926, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedCosINTEL: Op<5927, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedCosINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinCosINTEL: Op<5928, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinCosINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinPiINTEL: Op<5929, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinPiINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedCosPiINTEL: Op<5930, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedCosPiINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinCosPiINTEL: Op<5931, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinCosPiINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedLogINTEL: Op<5932, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedLogINTEL $result_type $input $sign $l $rl $q $o">;
+def OpFixedExpINTEL: Op<5933, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedExpINTEL $result_type $input $sign $l $rl $q $o">;
