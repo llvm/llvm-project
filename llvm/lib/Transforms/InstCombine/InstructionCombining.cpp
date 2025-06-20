@@ -3491,7 +3491,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
           continue;
-        } else if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
+        }
+        if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
           if (KnowInitZero && isRefSet(*Removable)) {
             IRBuilderBase::InsertPointGuard Guard(Builder);
             Builder.SetInsertPoint(MTI);
