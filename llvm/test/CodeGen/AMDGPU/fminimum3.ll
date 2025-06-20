@@ -4010,8 +4010,8 @@ define <2 x double> @v_no_fminimum3_f64__multi_use(double %a, double %b, double 
 ; GFX9-NEXT:    v_min_f64 v[2:3], v[0:1], v[4:5]
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v3, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.minimum.f64(double %a, double %b)
   %max1 = call double @llvm.minimum.f64(double %max0, double %c)
