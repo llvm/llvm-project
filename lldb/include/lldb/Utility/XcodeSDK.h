@@ -24,7 +24,6 @@ namespace lldb_private {
 /// An abstraction for Xcode-style SDKs that works like \ref ArchSpec.
 class XcodeSDK {
   std::string m_name;
-  FileSpec m_sysroot;
 
 public:
   /// Different types of Xcode SDKs.
@@ -64,10 +63,6 @@ public:
   /// directory component of a path one would pass to clang's -isysroot
   /// parameter. For example, "MacOSX.10.14.sdk".
   XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
-  XcodeSDK(std::string name, FileSpec sysroot)
-      : m_name(std::move(name)), m_sysroot(std::move(sysroot)) {
-    assert(!m_sysroot || m_name == m_sysroot.GetFilename().GetStringRef());
-  }
   static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
 
   /// The merge function follows a strict order to maintain monotonicity:
@@ -85,7 +80,6 @@ public:
   llvm::VersionTuple GetVersion() const;
   Type GetType() const;
   llvm::StringRef GetString() const;
-  const FileSpec &GetSysroot() const;
   /// Whether this Xcode SDK supports Swift.
   bool SupportsSwift() const;
 
@@ -112,6 +106,31 @@ public:
   static XcodeSDK::Type GetSDKTypeForTriple(const llvm::Triple &triple);
 
   static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
+};
+
+/// An abstraction which groups an XcodeSDK with its parsed path.
+class XcodeSDKPath {
+  XcodeSDK m_sdk;
+  FileSpec m_sysroot;
+
+public:
+  /// Default constructor, constructs an empty sdk with an empty path.
+  XcodeSDKPath() = default;
+  XcodeSDKPath(XcodeSDK sdk, FileSpec sysroot)
+      : m_sdk(std::move(sdk)), m_sysroot(std::move(sysroot)) {}
+  XcodeSDKPath(std::string name, FileSpec sysroot)
+      : m_sdk(XcodeSDK(std::move(name))), m_sysroot(std::move(sysroot)) {}
+
+  bool operator==(const XcodeSDKPath &other) const;
+  bool operator!=(const XcodeSDKPath &other) const;
+
+  XcodeSDK TakeSDK() const;
+  const FileSpec &GetSysroot() const { return m_sysroot; }
+  llvm::StringRef GetString() const { return m_sdk.GetString(); }
+  XcodeSDK::Type GetType() const { return m_sdk.GetType(); }
+
+  void Merge(const XcodeSDKPath &other);
+  bool IsAppleInternalSDK() const { return m_sdk.IsAppleInternalSDK(); }
 };
 
 } // namespace lldb_private

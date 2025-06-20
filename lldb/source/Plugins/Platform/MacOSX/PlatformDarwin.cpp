@@ -1356,7 +1356,7 @@ llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
 #endif // __APPLE__
 }
 
-llvm::Expected<std::pair<XcodeSDK, bool>>
+llvm::Expected<std::pair<XcodeSDKPath, bool>>
 PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
   SymbolFile *sym_file = module.GetSymbolFile();
   if (!sym_file)
@@ -1367,7 +1367,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
 
   bool found_public_sdk = false;
   bool found_internal_sdk = false;
-  XcodeSDK merged_sdk;
+  XcodeSDKPath merged_sdk_path;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
     if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
       auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
@@ -1375,13 +1375,13 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
       found_public_sdk |= !is_internal_sdk;
       found_internal_sdk |= is_internal_sdk;
 
-      merged_sdk.Merge(cu_sdk);
+      merged_sdk_path.Merge(cu_sdk);
     }
   }
 
   const bool found_mismatch = found_internal_sdk && found_public_sdk;
 
-  return std::pair{std::move(merged_sdk), found_mismatch};
+  return std::pair{std::move(merged_sdk_path), found_mismatch};
 }
 
 llvm::Expected<std::string>
@@ -1393,23 +1393,24 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
         llvm::formatv("Failed to parse SDK path from debug-info: {0}",
                       llvm::toString(sdk_or_err.takeError())));
 
-  auto [sdk, _] = std::move(*sdk_or_err);
+  auto [sdk_path, _] = std::move(*sdk_or_err);
 
-  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
-    return sdk.GetSysroot().GetPath();
+  if (FileSystem::Instance().Exists(sdk_path.GetSysroot()))
+    return sdk_path.GetSysroot().GetPath();
 
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  auto path_or_err =
+      HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_path.TakeSDK()});
   if (!path_or_err)
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
-                      sdk.GetString(),
+                      sdk_path.GetString(),
                       llvm::toString(path_or_err.takeError())));
 
   return path_or_err->str();
 }
 
-llvm::Expected<XcodeSDK>
+llvm::Expected<XcodeSDKPath>
 PlatformDarwin::GetSDKPathFromDebugInfo(CompileUnit &unit) {
   ModuleSP module_sp = unit.CalculateSymbolContextModule();
   if (!module_sp)
@@ -1434,7 +1435,7 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
 
   auto sdk = std::move(*sdk_or_err);
 
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk.TakeSDK()});
   if (!path_or_err)
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
