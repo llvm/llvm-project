@@ -7,3 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/StateStack.h"
+
+namespace mlir {
+
+void StateStackFrame::anchor() {}
+
+} // namespace mlir

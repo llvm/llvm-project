@@ -32,7 +32,7 @@ protected:
 
 private:
   const TypeID typeID;
-  virtual void anchor() {};
+  virtual void anchor();
 };
 
 /// Concrete CRTP base class for StateStack frames. This is used for keeping a
