@@ -461,7 +461,9 @@ public:
   /// @name Direct Component Access
   /// @{
 
-  const std::string &str() const { return Data; }
+  // const std::string &str() const { return Data; }
+
+  const std::string &str(bool includeObjectFormat) const { return Data; }
 
   const std::string &getTriple() const { return Data; }
 
