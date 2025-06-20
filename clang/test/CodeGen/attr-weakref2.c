@@ -33,7 +33,7 @@ int test4_h(void) {
 }
 int test4_f;
 
-// CHECK: @test5_f = external global i32
+// CHECK: @test5_f = extern_weak global i32
 extern int test5_f;
 static int test5_g __attribute__((weakref("test5_f")));
 int test5_h(void) {
