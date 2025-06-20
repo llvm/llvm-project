@@ -34,6 +34,8 @@ namespace affine {
 class AffineApplyOp;
 class AffineDelinearizeIndexOp;
 class AffineLinearizeIndexOp;
+class AffineMaxOp;
+class AffineMinOp;
 
 /// Lowers `affine.delinearize_index` into a sequence of division and remainder
 /// operations.
@@ -127,6 +129,23 @@ OpFoldResult materializeComputedBound(
     OpBuilder &b, Location loc, AffineMap boundMap,
     ArrayRef<std::pair<Value, std::optional<int64_t>>> mapOperands);
 
+/// Tries to simplify all affine min or max operations under `topOp`. The
+/// transform works by finding disjoint sets of affine result expressions
+/// bounded by a common affine expression on the min/max operation. It populates
+/// `modifiedOps` with all the operations modified by the transform/
+///
+/// In concrete terms, given an operation like:
+/// `affine.min affine_map<(d0)[s0, s1] -> (d0, s1, s0, 128)>(%i)[%s0, %s1]`
+/// If `d0 < 128` and `128 < s1 < s0`, the transform will update the op to:
+/// `affine.min affine_map<(d0)[s0, s1] -> (d0, 128)>(%i)[%s0, %s1]`.
+void simplifyAffineMinMaxOps(RewriterBase &rewriter, Operation *topOp,
+                             SmallVectorImpl<Operation *> &modifiedOps);
+/// Applies `simplifyAffineMinMaxOps` to a single operation and returns whether
+/// the operation was modified.
+bool simplifyAffineMinOp(RewriterBase &rewriter, AffineMinOp op);
+/// Applies `simplifyAffineMinMaxOps` to a single operation and returns whether
+/// the operation was modified.
+bool simplifyAffineMaxOp(RewriterBase &rewriter, AffineMaxOp op);
 } // namespace affine
 } // namespace mlir
 

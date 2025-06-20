@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -145,6 +146,24 @@ void SimplifyBoundedAffineOpsOp::getEffects(
   consumesHandle(getTargetMutable(), effects);
   for (OpOperand &operand : getBoundedValuesMutable())
     onlyReadsHandle(operand, effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// SimplifyMinMaxAffineOpsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure SimplifyMinMaxAffineOpsOp::applyToOne(
+    TransformRewriter &rewriter, Operation *target,
+    ApplyToEachResultList &results, TransformState &state) {
+  SmallVector<Operation *> modifiedOps;
+  simplifyAffineMinMaxOps(rewriter, target, modifiedOps);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void SimplifyMinMaxAffineOpsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
