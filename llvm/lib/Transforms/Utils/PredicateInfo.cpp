@@ -89,9 +89,7 @@ struct ValueDFS {
   // Only one of Def or Use will be set.
   Value *Def = nullptr;
   Use *U = nullptr;
-  // Neither PInfo nor EdgeOnly participate in the ordering
   PredicateBase *PInfo = nullptr;
-  bool EdgeOnly = false;
 };
 
 // Perform a strict weak ordering on instructions and arguments.
@@ -253,10 +251,6 @@ class PredicateInfoBuilder {
   // whether it returned a valid result.
   DenseMap<Value *, unsigned int> ValueInfoNums;
 
-  // The set of edges along which we can only handle phi uses, due to critical
-  // edges.
-  DenseSet<std::pair<BasicBlock *, BasicBlock *>> EdgeUsesOnly;
-
   ValueInfo &getOrCreateValueInfo(Value *);
   const ValueInfo &getValueInfo(Value *) const;
 
@@ -289,14 +283,14 @@ public:
 
 bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
                                           const ValueDFS &VDUse) const {
-  if (Stack.empty())
-    return false;
+  assert(!Stack.empty() && "Should not be called with empty stack");
   // If it's a phi only use, make sure it's for this phi node edge, and that the
   // use is in a phi node.  If it's anything else, and the top of the stack is
-  // EdgeOnly, we need to pop the stack.  We deliberately sort phi uses next to
-  // the defs they must go with so that we can know it's time to pop the stack
-  // when we hit the end of the phi uses for a given def.
-  if (Stack.back().EdgeOnly) {
+  // a LN_Last def, we need to pop the stack.  We deliberately sort phi uses
+  // next to the defs they must go with so that we can know it's time to pop
+  // the stack when we hit the end of the phi uses for a given def.
+  const ValueDFS &Top = Stack.back();
+  if (Top.LocalNum == LN_Last && Top.PInfo) {
     if (!VDUse.U)
       return false;
     auto *PHI = dyn_cast<PHINode>(VDUse.U->getUser());
@@ -304,15 +298,14 @@ bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
       return false;
     // Check edge
     BasicBlock *EdgePred = PHI->getIncomingBlock(*VDUse.U);
-    if (EdgePred != getBranchBlock(Stack.back().PInfo))
+    if (EdgePred != getBranchBlock(Top.PInfo))
       return false;
 
     // Use dominates, which knows how to handle edge dominance.
-    return DT.dominates(getBlockEdge(Stack.back().PInfo), *VDUse.U);
+    return DT.dominates(getBlockEdge(Top.PInfo), *VDUse.U);
   }
 
-  return (VDUse.DFSIn >= Stack.back().DFSIn &&
-          VDUse.DFSOut <= Stack.back().DFSOut);
+  return VDUse.DFSIn >= Top.DFSIn && VDUse.DFSOut <= Top.DFSOut;
 }
 
 void PredicateInfoBuilder::popStackUntilDFSScope(ValueDFSStack &Stack,
@@ -459,8 +452,6 @@ void PredicateInfoBuilder::processBranch(
           PredicateBase *PB =
               new PredicateBranch(V, BranchBB, Succ, Cond, TakenEdge);
           addInfoFor(OpsToRename, V, PB);
-          if (!Succ->getSinglePredecessor())
-            EdgeUsesOnly.insert({BranchBB, Succ});
         }
       }
     }
@@ -487,8 +478,6 @@ void PredicateInfoBuilder::processSwitch(
       PredicateSwitch *PS = new PredicateSwitch(
           Op, SI->getParent(), TargetBlock, C.getCaseValue(), SI);
       addInfoFor(OpsToRename, Op, PS);
-      if (!TargetBlock->getSinglePredecessor())
-        EdgeUsesOnly.insert({BranchBB, TargetBlock});
     }
   }
 }
@@ -637,14 +626,13 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
         // block, and handle it specially. We know that it goes last, and only
         // dominate phi uses.
         auto BlockEdge = getBlockEdge(PossibleCopy);
-        if (EdgeUsesOnly.count(BlockEdge)) {
+        if (!BlockEdge.second->getSinglePredecessor()) {
           VD.LocalNum = LN_Last;
           auto *DomNode = DT.getNode(BlockEdge.first);
           if (DomNode) {
             VD.DFSIn = DomNode->getDFSNumIn();
             VD.DFSOut = DomNode->getDFSNumOut();
             VD.PInfo = PossibleCopy;
-            VD.EdgeOnly = true;
             OrderedUses.push_back(VD);
           }
         } else {
@@ -688,21 +676,17 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
       LLVM_DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
                         << VD.DFSOut << ")\n");
 
-      bool ShouldPush = (VD.Def || PossibleCopy);
-      bool OutOfScope = !stackIsInScope(RenameStack, VD);
-      if (OutOfScope || ShouldPush) {
-        // Sync to our current scope.
-        popStackUntilDFSScope(RenameStack, VD);
-        if (ShouldPush) {
-          RenameStack.push_back(VD);
-        }
+      // Sync to our current scope.
+      popStackUntilDFSScope(RenameStack, VD);
+
+      if (VD.Def || PossibleCopy) {
+        RenameStack.push_back(VD);
+        continue;
       }
+
       // If we get to this point, and the stack is empty we must have a use
       // with no renaming needed, just skip it.
       if (RenameStack.empty())
-        continue;
-      // Skip values, only want to rename the uses
-      if (VD.Def || PossibleCopy)
         continue;
       if (!DebugCounter::shouldExecute(RenameCounter)) {
         LLVM_DEBUG(dbgs() << "Skipping execution due to debug counter\n");
