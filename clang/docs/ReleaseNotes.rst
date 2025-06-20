@@ -46,6 +46,16 @@ Potentially Breaking Changes
   ``endbr64`` instruction at the labels named as possible branch
   destinations, so it is not safe to use a register-controlled branch
   instruction to branch to one. (In line with gcc.)
+- Scalar deleting destructors emitted by clang have been aligned with Microsoft
+  ABI on Windows. Prior to this patch, clang handled ``::delete`` via calling
+  global operator delete direct after the destructor call and not calling class
+  operator delete in scalar deleting destructor body by passing "0" as implicit
+  flag argument value. After this change if library A was compiled with
+  clang 20, library B compiled with clang 21. class B is implemented in
+  library A, so its destructor doesn't call operator ``::delete``, then an
+  object of class B is deleted via ``::delete`` in library B, so the callsite
+  doesn't call ``::delete`` because of this patch.
+  So there will be no ``::delete`` call at all.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------

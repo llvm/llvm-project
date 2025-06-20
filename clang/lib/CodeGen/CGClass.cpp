@@ -1587,28 +1587,82 @@ namespace {
     }
   };
 
+  // This function implements generation of scalar deleting destructor body for
+  // the case when the destructor also accepts an implicit flag. Right now only
+  // Microsoft ABI requires deleting destructors to accept implicit flags.
+  // The flag indicates whether an operator delete should be called and whether
+  // it should be a class-specific operator delete or a global one.
   void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
                                      llvm::Value *ShouldDeleteCondition,
                                      bool ReturnAfterDelete) {
+    const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
+    const CXXRecordDecl *ClassDecl = Dtor->getParent();
+    const FunctionDecl *OD = Dtor->getOperatorDelete();
+    assert(OD->isDestroyingOperatorDelete() == ReturnAfterDelete &&
+           "unexpected value for ReturnAfterDelete");
+    auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
+    // Clang 20 calls global operator delete after dtor call. Clang 21 and newer
+    // call global operator delete inside of dtor body, as MSVC does.
+    bool Clang21AndNewer = CGF.getContext().getLangOpts().getClangABICompat() >
+                           LangOptions::ClangABI::Ver20;
+    if (Clang21AndNewer && OD->isDestroyingOperatorDelete()) {
+      llvm::BasicBlock *CallDtor = CGF.createBasicBlock("dtor.call_dtor");
+      llvm::BasicBlock *DontCallDtor = CGF.createBasicBlock("dtor.entry_cont");
+      // Third bit set signals that global operator delete is called. That means
+      // despite class having destroying operator delete which is responsible
+      // for calling dtor, we need to call dtor because global operator delete
+      // won't do that.
+      llvm::Value *Check3rdBit = CGF.Builder.CreateAnd(
+          ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 4));
+      llvm::Value *ShouldCallDtor = CGF.Builder.CreateIsNull(Check3rdBit);
+      CGF.Builder.CreateCondBr(ShouldCallDtor, DontCallDtor, CallDtor);
+      CGF.EmitBlock(CallDtor);
+      QualType ThisTy = Dtor->getFunctionObjectParameterType();
+      CGF.EmitCXXDestructorCall(Dtor, Dtor_Complete, /*ForVirtualBase=*/false,
+                                /*Delegating=*/false, CGF.LoadCXXThisAddress(),
+                                ThisTy);
+      CGF.Builder.CreateBr(DontCallDtor);
+      CGF.EmitBlock(DontCallDtor);
+    }
     llvm::BasicBlock *callDeleteBB = CGF.createBasicBlock("dtor.call_delete");
     llvm::BasicBlock *continueBB = CGF.createBasicBlock("dtor.continue");
-    llvm::Value *ShouldCallDelete
-      = CGF.Builder.CreateIsNull(ShouldDeleteCondition);
+    // First bit set signals that operator delete must be called.
+    llvm::Value *Check1stBit = CGF.Builder.CreateAnd(
+        ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 1));
+    llvm::Value *ShouldCallDelete = CGF.Builder.CreateIsNull(Check1stBit);
     CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
 
     CGF.EmitBlock(callDeleteBB);
-    const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
-    const CXXRecordDecl *ClassDecl = Dtor->getParent();
-    CGF.EmitDeleteCall(Dtor->getOperatorDelete(),
-                       LoadThisForDtorDelete(CGF, Dtor),
-                       CGF.getContext().getTagDeclType(ClassDecl));
-    assert(Dtor->getOperatorDelete()->isDestroyingOperatorDelete() ==
-               ReturnAfterDelete &&
-           "unexpected value for ReturnAfterDelete");
-    if (ReturnAfterDelete)
-      CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
-    else
-      CGF.Builder.CreateBr(continueBB);
+    auto EmitDeleteAndGoToEnd = [&](const FunctionDecl *DeleteOp) {
+      CGF.EmitDeleteCall(DeleteOp, LoadThisForDtorDelete(CGF, Dtor),
+                         CGF.getContext().getTagDeclType(ClassDecl));
+      if (ReturnAfterDelete)
+        CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+      else
+        CGF.Builder.CreateBr(continueBB);
+    };
+    // If Sema only found a global operator delete previously, the dtor can
+    // always call it. Otherwise we need to check the third bit and call the
+    // appropriate operator delete, i.e. global or class-specific.
+    if (const FunctionDecl *GlobOD = Dtor->getOperatorGlobalDelete();
+        isa<CXXMethodDecl>(OD) && GlobOD && Clang21AndNewer) {
+      // Third bit set signals that global operator delete is called, i.e.
+      // ::delete appears on the callsite.
+      llvm::Value *CheckTheBitForGlobDeleteCall = CGF.Builder.CreateAnd(
+          ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 4));
+      llvm::Value *ShouldCallGlobDelete =
+          CGF.Builder.CreateIsNull(CheckTheBitForGlobDeleteCall);
+      llvm::BasicBlock *GlobDelete =
+          CGF.createBasicBlock("dtor.call_glob_delete");
+      llvm::BasicBlock *ClassDelete =
+          CGF.createBasicBlock("dtor.call_class_delete");
+      CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
+      CGF.EmitBlock(GlobDelete);
+
+      EmitDeleteAndGoToEnd(GlobOD);
+      CGF.EmitBlock(ClassDelete);
+    }
+    EmitDeleteAndGoToEnd(OD);
 
     CGF.EmitBlock(continueBB);
   }
