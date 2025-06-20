@@ -1499,7 +1499,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       // because flags will be dropped when executing them unconditionally.
       // TODO: Results could be improved by considering poison-propagation
       // properties of visited ops.
-      auto CanSpeculateOp = [this](Value *Ptr) {
+      auto CanSpeculatePointerOp = [this](Value *Ptr) {
         SmallVector<Value *> Worklist = {Ptr};
         SmallPtrSet<Value *, 4> Visited;
         while (!Worklist.empty()) {
@@ -1535,7 +1535,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       // that it will consider loops that need guarding by SCEV checks. The
       // vectoriser will generate these checks if we decide to vectorise.
       if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
-          CanSpeculateOp(LI->getPointerOperand()) &&
+          CanSpeculatePointerOp(LI->getPointerOperand()) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
                                             &Predicates))
         SafePointers.insert(LI->getPointerOperand());
