@@ -293,6 +293,35 @@ def UsmmlaOp : ArmSVE_Op<"usmmla", [Pure,
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
 }
 
+
+def BfmmlaOp : ArmSVE_Op<"bfmmla", [Pure,
+                                    AllTypesMatch<["src1", "src2"]>,
+                                    AllTypesMatch<["acc", "dst"]>]> {
+  let summary = "BFloat16 matrix multiply-accumulate";
+  let description = [{
+    BFMMLA: BFloat16 matrix multiply-accumulate into 2×2 matrices";
+
+    This operation multiplies the 2x4 BFloat16 matrix held in each 128-bit
+    segment of the first source vector by the 4x2 BFloat16 matrix in the
+    corresponding segment of the second source vector, then accumulates
+    this intermediate result with the 2x2 Float32 matrix in the corresponding
+    segment of the accumulator vector, yielding the final 2x2 Float32
+    segment of the result.
+
+    Source:
+    https://developer.arm.com/documentation/100987/0000
+  }];
+  // Supports (vector<[8]xbf16>, vector<[8]xbf16>) -> (vector<[4]xf32>)
+  let arguments = (ins
+          ScalableVectorOfLengthAndType<[4], [F32]>:$acc,
+          ScalableVectorOfLengthAndType<[8], [BF16]>:$src1,
+          ScalableVectorOfLengthAndType<[8], [BF16]>:$src2
+  );
+  let results = (outs ScalableVectorOfLengthAndType<[4], [F32]>:$dst);
+  let assemblyFormat =
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
+}
+
 class SvboolTypeConstraint<string lhsArg, string rhsArg> : TypesMatchWith<
       "expected corresponding svbool type widened to [16]xi1",
       lhsArg, rhsArg,
@@ -589,6 +618,12 @@ def SmmlaIntrOp :
 def UsmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"usmmla">,
   Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+
+def BfmmlaIntrOp :
+  ArmSVE_IntrOp<"bfmmla", [Pure, TypeIs<"res", ScalableVectorOfLengthAndType<[4], [F32]>>]>,
+  Arguments<(ins Arg<ScalableVectorOfLengthAndType<[4], [F32]>, "acc">:$acc,
+                 Arg<ScalableVectorOfLengthAndType<[8], [BF16]>, "lhs">:$lhs,
+                 Arg<ScalableVectorOfLengthAndType<[8], [BF16]>, "rhs">:$rhs)>;
 
 def SdotIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"sdot">,
