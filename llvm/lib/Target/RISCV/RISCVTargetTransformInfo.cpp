@@ -282,7 +282,7 @@ RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
-bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
+bool RISCVTTIImpl::hasActiveVectorLength() const {
   return ST->hasVInstructions();
 }
 
@@ -297,8 +297,8 @@ RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) const {
 InstructionCost RISCVTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
-    TTI::PartialReductionExtendKind OpBExtend,
-    std::optional<unsigned> BinOp) const {
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind) const {
 
   // zve32x is broken for partial_reduce_umla, but let's make sure we
   // don't generate them.
@@ -311,9 +311,8 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
   Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   // Note: Asuming all vqdot* variants are equal cost
-  // TODO: Thread CostKind through this API
-  return LT.first * getRISCVInstructionCost(RISCV::VQDOT_VV, LT.second,
-                                            TTI::TCK_RecipThroughput);
+  return LT.first *
+         getRISCVInstructionCost(RISCV::VQDOT_VV, LT.second, CostKind);
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
@@ -602,15 +601,6 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-// Consolidate!
-static MVT getLMUL1VT(MVT VT) {
-  assert(VT.getVectorElementType().getSizeInBits() <= RISCV::RVVBitsPerBlock &&
-         "Unexpected vector MVT");
-  return MVT::getScalableVectorVT(
-      VT.getVectorElementType(),
-      RISCV::RVVBitsPerBlock / VT.getVectorElementType().getSizeInBits());
-}
-
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
@@ -870,7 +860,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     MVT ContainerVT = LT.second;
     if (LT.second.isFixedLengthVector())
       ContainerVT = TLI->getContainerForFixedLengthVector(LT.second);
-    MVT M1VT = getLMUL1VT(ContainerVT);
+    MVT M1VT = RISCVTargetLowering::getM1VT(ContainerVT);
     if (ContainerVT.bitsLE(M1VT)) {
       // Example sequence:
       //   csrr a0, vlenb
@@ -2994,20 +2984,13 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   }
 
   if (IsZeroCmp && ST->hasVInstructions()) {
-    unsigned RealMinVLen = ST->getRealMinVLen();
-    // Support Fractional LMULs if the lengths are larger than XLen.
-    // TODO: Support non-power-of-2 types.
-    for (unsigned FLMUL = 8; FLMUL >= 2; FLMUL /= 2) {
-      unsigned Len = RealMinVLen / FLMUL;
-      if (Len > ST->getXLen())
-        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
-    }
-    for (unsigned LMUL = 1; LMUL <= ST->getMaxLMULForFixedLengthVectors();
-         LMUL *= 2) {
-      unsigned Len = RealMinVLen * LMUL;
-      if (Len > ST->getXLen())
-        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
-    }
+    unsigned VLenB = ST->getRealMinVLen() / 8;
+    // The minimum size should be `XLen / 8 + 1`, and the maxinum size should be
+    // `VLenB * MaxLMUL` so that it fits in a single register group.
+    unsigned MinSize = ST->getXLen() / 8 + 1;
+    unsigned MaxSize = VLenB * ST->getMaxLMULForFixedLengthVectors();
+    for (unsigned Size = MinSize; Size <= MaxSize; Size++)
+      Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
   return Options;
 }

@@ -73,6 +73,25 @@ struct DemangledNameInfo {
   bool hasBasename() const {
     return BasenameRange.second > BasenameRange.first;
   }
+
+  /// Returns \c true if this object holds a valid scope range.
+  bool hasScope() const { return ScopeRange.second > ScopeRange.first; }
+
+  /// Returns \c true if this object holds a valid arguments range.
+  bool hasArguments() const {
+    return ArgumentsRange.second > ArgumentsRange.first;
+  }
+
+  /// Returns \c true if this object holds a valid qualifiers range.
+  bool hasQualifiers() const {
+    return QualifiersRange.second > QualifiersRange.first;
+  }
+
+  /// Returns \c true if this object holds a valid prefix range.
+  bool hasPrefix() const { return PrefixRange.second > PrefixRange.first; }
+
+  /// Returns \c true if this object holds a valid suffix range.
+  bool hasSuffix() const { return SuffixRange.second > SuffixRange.first; }
 };
 
 /// An OutputBuffer which keeps a record of where certain parts of a
