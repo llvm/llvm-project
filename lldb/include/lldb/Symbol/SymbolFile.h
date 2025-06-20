@@ -27,6 +27,7 @@
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Errc.h"
 
 #include <mutex>
@@ -471,6 +472,16 @@ public:
                                     bool errors_only) {
     return false;
   };
+
+  /// Return a map of separate debug info files that are loaded.
+  ///
+  /// Unlike GetSeparateDebugInfo(), this function will only return the list of
+  /// files, if there are errors they are simply ignored. This function will
+  /// always return a valid list, even if it is empty.
+  ///
+  /// \return
+  ///     A unique list of all the filespecs, or an empty list.
+  virtual lldb_private::FileSpecList GetSeparateDebugInfoFiles() { return {}; }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,

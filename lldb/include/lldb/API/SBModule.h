@@ -287,6 +287,14 @@ public:
   ///     A const reference to the file specification object.
   lldb::SBFileSpec GetSymbolFileSpec() const;
 
+  /// Get a list of filespecs associated with all the separate symbol files
+  /// associated with this module.
+  ///
+  /// \return
+  ///     A list of filespecs associated with all the separate symbol files
+  ///     associated with this module.
+  lldb::SBFileSpecList GetSeparateDebugInfoFiles();
+
   lldb::SBAddress GetObjectFileHeaderAddress() const;
   lldb::SBAddress GetObjectFileEntryPointAddress() const;
 
