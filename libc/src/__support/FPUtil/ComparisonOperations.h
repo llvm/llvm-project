@@ -1,4 +1,4 @@
-//===-- Comparision operations on floating point numbers --------*- C++ -*-===//
+//===-- Comparison operations on floating point numbers --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISIONOPERATIONS_H
-#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISIONOPERATIONS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISONOPERATIONS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISONOPERATIONS_H
 
 #include "FEnvImpl.h"                      // raise_except_if_required
 #include "FPBits.h"                        // FPBits<T>
@@ -18,12 +18,12 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 // IEEE Standard 754-2019. Section 5.11
-// Rules for comparision within the same floating point type
+// Rules for comparison within the same floating point type
 // 1. +0 = −0
 // 2. (i)   +inf  = +inf
 //    (ii)  -inf  = -inf
 //    (iii) -inf != +inf
-// 3. Any comparision with NaN return false except (NaN != NaN => true)
+// 3. Any comparison with NaN return false except (NaN != NaN => true)
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> equals(T x,
                                                                        T y) {
@@ -42,7 +42,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> equals(T x,
   if (x_bits.is_zero() && y_bits.is_zero())
     return true;
 
-  // should also work for comparisions of different signs
+  // should also work for comparisons of different signs
   return x_bits.uintval() == y_bits.uintval();
 }
 
@@ -56,7 +56,7 @@ not_equals(T x, T y) {
 // Rules:
 // 1. -inf < x (x != -inf)
 // 2. x < +inf (x != +inf)
-// 3. Any comparision with NaN return false
+// 3. Any comparison with NaN return false
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
                                                                           T y) {
@@ -67,7 +67,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
   if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
     fputil::raise_except_if_required(FE_INVALID);
 
-  // Any comparision with NaN returns false
+  // Any comparison with NaN returns false
   if (x_bits.is_nan() || y_bits.is_nan())
     return false;
 
@@ -81,7 +81,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
     return false;
 
   // since we store the float in the format: s | e | m
-  // the comparisions should work if we directly compare the uintval's
+  // the comparisons should work if we directly compare the uintval's
 
   // TODO: verify if we should use FPBits.get_exponent and FPBits.get_mantissa
   // instead of directly comparing uintval's
@@ -119,4 +119,4 @@ greater_than_or_equals(T x, T y) {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISIONOPERATIONS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISONOPERATIONS_H

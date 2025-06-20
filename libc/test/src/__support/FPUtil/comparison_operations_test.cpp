@@ -1,4 +1,4 @@
-//===-- Unittests for Comparision Operations for FPBits class -------------===//
+//===-- Unittests for Comparison Operations for FPBits class -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/ComparisionOperations.h"
+#include "src/__support/FPUtil/ComparisonOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/properties/types.h"
 #include "src/__support/sign.h"
