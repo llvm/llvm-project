@@ -2169,9 +2169,7 @@ defm V_MAX_F16         : VOP2_Real_gfx10<0x039>;
 defm V_MIN_F16         : VOP2_Real_gfx10<0x03a>;
 defm V_LDEXP_F16       : VOP2_Real_gfx10<0x03b>;
 
-let IsSingle = 1 in {
-  defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
-}
+defm V_PK_FMAC_F16     :  VOP2_Real_gfx10<0x03c>;
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
@@ -2560,6 +2558,8 @@ defm V_SUBBREV_CO_U32     : VOP2be_Real_e32e64_gfx9 <0x1e, "V_SUBBREV_U32", "v_s
 defm V_ADD_U32            : VOP2_Real_e32e64_gfx9 <0x34>;
 defm V_SUB_U32            : VOP2_Real_e32e64_gfx9 <0x35>;
 defm V_SUBREV_U32         : VOP2_Real_e32e64_gfx9 <0x36>;
+
+defm V_PK_FMAC_F16     : VOP2_Real_e32e64_gfx9<0x03c>;
 } // End AssemblerPredicate = isGFX9Only
 
 defm V_BFM_B32            : VOP2_Real_e64only_vi <0x293>;
