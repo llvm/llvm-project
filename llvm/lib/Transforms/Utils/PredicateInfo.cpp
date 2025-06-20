@@ -89,9 +89,7 @@ struct ValueDFS {
   // Only one of Def or Use will be set.
   Value *Def = nullptr;
   Use *U = nullptr;
-  // Neither PInfo nor EdgeOnly participate in the ordering
   PredicateBase *PInfo = nullptr;
-  bool EdgeOnly = false;
 };
 
 // Perform a strict weak ordering on instructions and arguments.
@@ -289,10 +287,11 @@ bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
     return false;
   // If it's a phi only use, make sure it's for this phi node edge, and that the
   // use is in a phi node.  If it's anything else, and the top of the stack is
-  // EdgeOnly, we need to pop the stack.  We deliberately sort phi uses next to
-  // the defs they must go with so that we can know it's time to pop the stack
-  // when we hit the end of the phi uses for a given def.
-  if (Stack.back().EdgeOnly) {
+  // a LN_Last def, we need to pop the stack.  We deliberately sort phi uses
+  // next to the defs they must go with so that we can know it's time to pop
+  // the stack when we hit the end of the phi uses for a given def.
+  const ValueDFS &Top = Stack.back();
+  if (Top.LocalNum == LN_Last && Top.PInfo) {
     if (!VDUse.U)
       return false;
     auto *PHI = dyn_cast<PHINode>(VDUse.U->getUser());
@@ -300,15 +299,14 @@ bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
       return false;
     // Check edge
     BasicBlock *EdgePred = PHI->getIncomingBlock(*VDUse.U);
-    if (EdgePred != getBranchBlock(Stack.back().PInfo))
+    if (EdgePred != getBranchBlock(Top.PInfo))
       return false;
 
     // Use dominates, which knows how to handle edge dominance.
-    return DT.dominates(getBlockEdge(Stack.back().PInfo), *VDUse.U);
+    return DT.dominates(getBlockEdge(Top.PInfo), *VDUse.U);
   }
 
-  return (VDUse.DFSIn >= Stack.back().DFSIn &&
-          VDUse.DFSOut <= Stack.back().DFSOut);
+  return VDUse.DFSIn >= Top.DFSIn && VDUse.DFSOut <= Top.DFSOut;
 }
 
 void PredicateInfoBuilder::popStackUntilDFSScope(ValueDFSStack &Stack,
@@ -636,7 +634,6 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
             VD.DFSIn = DomNode->getDFSNumIn();
             VD.DFSOut = DomNode->getDFSNumOut();
             VD.PInfo = PossibleCopy;
-            VD.EdgeOnly = true;
             OrderedUses.push_back(VD);
           }
         } else {
