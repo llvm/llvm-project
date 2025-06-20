@@ -15,12 +15,13 @@
 //   constexpr void append_range(R&& rg); // C++23
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "../../insert_range_sequence_containers.h"
 #include "test_allocator.h"
 
-void test() {
+int main(int, char**) {
   test_append_range_exception_safety_throwing_copy<std::vector>();
   test_append_range_exception_safety_throwing_allocator<std::vector, int>();
 
@@ -30,16 +31,12 @@ void test() {
     try {
       v.append_range(a);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == 8);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
     }
   }
-}
-
-int main(int, char**) {
-  test();
 
   return 0;
 }

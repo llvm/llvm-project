@@ -14,17 +14,18 @@
 // void push_back(const value_type& x);
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "test_allocator.h"
 
 int main(int, char**) {
-  using Vec = std::vector<bool, limited_allocator<bool, 10> >;
-  Vec v(Vec().max_size(), true);
+  std::vector<bool, limited_allocator<bool, 10> > v;
+  v.resize(v.max_size(), true);
   try {
     v.push_back(true);
     assert(false);
-  } catch (...) {
+  } catch (const std::length_error&) {
     assert(v.size() == v.max_size());
     for (std::size_t i = 0; i != v.size(); ++i)
       assert(v[i] == true);

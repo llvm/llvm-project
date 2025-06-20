@@ -20,14 +20,11 @@
 
 #include "test_allocator.h"
 
-void test() {
+int main(int, char**) {
   {
-    std::vector<bool, limited_allocator<bool, 10> > v;
-    v.resize(5);
+    std::vector<bool, limited_allocator<bool, 10> > v(5, false);
     try {
-      // It is reasonable to assume that no vector<bool> implementation would use
-      // 64 kB or larger chunk size for the underlying bits storage.
-      v.resize(10 * 65536); // 10 * max_chunk_size
+      v.resize(v.max_size() + 1);
       assert(false);
     } catch (const std::length_error&) {
       assert(v.size() == 5);
@@ -60,9 +57,6 @@ void test() {
       assert(std::equal(v.begin(), v.end(), std::begin(a)));
     }
   }
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }

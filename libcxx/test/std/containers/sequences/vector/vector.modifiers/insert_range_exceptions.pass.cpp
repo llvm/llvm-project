@@ -15,12 +15,13 @@
 //   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "../../insert_range_sequence_containers.h"
 #include "test_allocator.h"
 
-void test() {
+int main(int, char**) {
   test_insert_range_exception_safety_throwing_copy<std::vector>();
   test_insert_range_exception_safety_throwing_allocator<std::vector, int>();
 
@@ -30,7 +31,7 @@ void test() {
     try {
       v.insert_range(v.begin(), a);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == 8);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
@@ -42,7 +43,7 @@ void test() {
     try {
       v.insert_range(v.end(), a);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == 8);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
@@ -54,16 +55,12 @@ void test() {
     try {
       v.insert_range(v.begin() + v.size() / 2, a);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == 10);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
     }
   }
-}
-
-int main(int, char**) {
-  test();
 
   return 0;
 }

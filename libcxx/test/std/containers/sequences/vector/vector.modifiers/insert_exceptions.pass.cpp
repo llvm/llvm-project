@@ -17,18 +17,19 @@
 //   iterator insert(const_iterator position, Iter first, Iter last);
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 
 #include "test_allocator.h"
 #include "test_macros.h"
 
-void test() {
+int main(int, char**) {
   {
     std::vector<int, limited_allocator<int, 10> > v(10, 42);
     try {
       v.insert(v.begin(), 0);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
@@ -39,7 +40,7 @@ void test() {
     try {
       v.insert(v.end(), 0);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
@@ -50,7 +51,7 @@ void test() {
     try {
       v.insert(v.begin() + v.size() / 2, 0);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == v.max_size());
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
@@ -61,7 +62,7 @@ void test() {
     try {
       v.insert(v.begin(), 3, 0);
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == 8);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
@@ -73,7 +74,7 @@ void test() {
     try {
       v.insert(v.begin() + v.size() / 2, std::begin(a), std::end(a));
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == 8);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
@@ -85,17 +86,13 @@ void test() {
     try {
       v.insert(v.begin(), {1, 2, 3});
       assert(false);
-    } catch (...) {
+    } catch (const std::length_error&) {
       assert(v.size() == 8);
       for (std::size_t i = 0; i != v.size(); ++i)
         assert(v[i] == 42);
     }
   }
 #endif
-}
-
-int main(int, char**) {
-  test();
 
   return 0;
 }
