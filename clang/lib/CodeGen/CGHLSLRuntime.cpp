@@ -66,7 +66,7 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   DXILValMD->addOperand(Val);
 }
 
-void addRootSignature(llvm::dxil::RootSignatureVersion RootSigVer,
+void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
                       ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
                       llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();

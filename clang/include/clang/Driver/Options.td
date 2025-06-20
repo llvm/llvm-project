@@ -9294,7 +9294,7 @@ def hlsl_rootsig_ver :
   Visibility<[ClangOption, CC1Option, DXCOption]>,
   HelpText<"Root Signature Version">,
   Values<"rootsig_1_0,rootsig_1_1">,
-  NormalizedValuesScope<"llvm::dxil::RootSignatureVersion">,
+  NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
   NormalizedValues<["rootsig_1_0", "rootsig_1_1"]>,
   MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "rootsig_1_1">;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,

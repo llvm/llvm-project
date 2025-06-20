@@ -99,12 +99,6 @@ enum class SamplerFeedbackType : uint32_t {
 const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 
-// D3D_ROOT_SIGNATURE_VERSION
-enum class RootSignatureVersion {
-  rootsig_1_0 = 0x1,
-  rootsig_1_1 = 0x2,
-};
-
 } // namespace dxil
 } // namespace llvm
 

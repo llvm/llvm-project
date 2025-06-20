@@ -3043,10 +3043,10 @@ void TextNodeDumper::VisitHLSLRootSignatureDecl(
   dumpName(D);
   OS << " version: ";
   switch (D->getVersion()) {
-  case llvm::dxil::RootSignatureVersion::rootsig_1_0:
+  case llvm::dxbc::RootSignatureVersion::rootsig_1_0:
     OS << "1.0";
     break;
-  case llvm::dxil::RootSignatureVersion::rootsig_1_1:
+  case llvm::dxbc::RootSignatureVersion::rootsig_1_1:
     OS << "1.1";
     break;
   }

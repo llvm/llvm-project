@@ -24,7 +24,7 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DXILABI.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
@@ -625,8 +625,8 @@ public:
   std::string OpenACCMacroOverride;
 
   /// The HLSL root signature version for dxil.
-  llvm::dxil::RootSignatureVersion HLSLRootSigVer =
-      llvm::dxil::RootSignatureVersion::rootsig_1_1;
+  llvm::dxbc::RootSignatureVersion HLSLRootSigVer =
+      llvm::dxbc::RootSignatureVersion::rootsig_1_1;
 
   // Indicates if the wasm-opt binary must be ignored in the case of a
   // WebAssembly target.

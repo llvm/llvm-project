@@ -5855,13 +5855,13 @@ bool HLSLBufferDecl::buffer_decls_empty() {
 
 HLSLRootSignatureDecl::HLSLRootSignatureDecl(
     DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
-    llvm::dxil::RootSignatureVersion RootSigVer, unsigned NumElems)
+    llvm::dxbc::RootSignatureVersion RootSigVer, unsigned NumElems)
     : NamedDecl(Decl::Kind::HLSLRootSignature, DC, Loc, DeclarationName(ID)),
       RootSigVer(RootSigVer), NumElems(NumElems) {}
 
 HLSLRootSignatureDecl *HLSLRootSignatureDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
-    llvm::dxil::RootSignatureVersion RootSigVer,
+    llvm::dxbc::RootSignatureVersion RootSigVer,
     ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements) {
   HLSLRootSignatureDecl *RSDecl =
       new (C, DC,
@@ -5878,7 +5878,7 @@ HLSLRootSignatureDecl *
 HLSLRootSignatureDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   HLSLRootSignatureDecl *Result = new (C, ID) HLSLRootSignatureDecl(
       nullptr, SourceLocation(), nullptr,
-      /*RootSigVer*/ llvm::dxil::RootSignatureVersion::rootsig_1_0,
+      /*RootSigVer*/ llvm::dxbc::RootSignatureVersion::rootsig_1_0,
       /*NumElems=*/0);
   return Result;
 }
