@@ -46,7 +46,8 @@ public:
 
   virtual BreakpointLocations GetBreakpointLocations(Status &status);
 
-  virtual llvm::Expected<unsigned> GetBreakpointSize(lldb::addr_t bp_addr) {
+  virtual llvm::Expected<unsigned>
+  GetBreakpointSize([[maybe_unused]] lldb::addr_t bp_addr) {
     return 4;
   }
 

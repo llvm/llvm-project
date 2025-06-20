@@ -1843,7 +1843,8 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
   // RISC-V ISA there can be at most 16 instructions in the sequence.
 
   lldb::addr_t entry_pc = pc; // LR instruction address
-  pc += 4;                    // add LR_W, LR_D instruction size
+  auto lr_inst = riscv_emulator->ReadInstructionAt(entry_pc);
+  pc += lr_inst->is_rvc ? 2 : 4;
 
   size_t atomic_length = 0;
   std::optional<DecodeResult> inst;
@@ -1873,7 +1874,7 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding store conditional insturuction",
               __FUNCTION__);
-    return {entry_pc + 4};
+    return {entry_pc + lr_inst->is_rvc ? 2u : 4u};
   }
 
   lldb::addr_t exit_pc = pc;

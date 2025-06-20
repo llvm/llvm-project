@@ -1,5 +1,6 @@
 """
 Test software step-inst, also known as instruction level single step, in risc-v atomic sequence.
+For more information about atomic sequences, see the RISC-V Unprivileged ISA specification.
 """
 
 import lldb

@@ -1,4 +1,7 @@
 void __attribute__((naked)) branch_cas(int *a, int *b) {
+  // Stop at the first instruction. The atomic sequence contains active forward
+  // branch (bne a5, a1, 2f). After step instruction lldb should stop at the
+  // branch's target address (ret instruction).
   asm volatile("1:\n\t"
                "lr.w a2, (a0)\n\t"
                "and a5, a2, a4\n\t"
