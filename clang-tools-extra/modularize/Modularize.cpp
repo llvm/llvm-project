@@ -339,8 +339,8 @@ static std::string findInputFile(const CommandLineArguments &CLArgs) {
   llvm::opt::Visibility VisibilityMask(options::CC1Option);
   unsigned MissingArgIndex, MissingArgCount;
   SmallVector<const char *, 256> Argv;
-  for (auto I = CLArgs.begin(), E = CLArgs.end(); I != E; ++I)
-    Argv.push_back(I->c_str());
+  for (const std::string &CLArg : CLArgs)
+    Argv.push_back(CLArg.c_str());
   InputArgList Args = getDriverOptTable().ParseArgs(
       Argv, MissingArgIndex, MissingArgCount, VisibilityMask);
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);

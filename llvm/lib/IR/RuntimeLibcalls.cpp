@@ -18,20 +18,64 @@ static cl::opt<bool>
 
 static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
                                    const Triple &TT) {
+#define LCALLNAMES(A, B, N)                                                    \
+  Info.setLibcallName(A##N##_RELAX, #B #N "_relax");                           \
+  Info.setLibcallName(A##N##_ACQ, #B #N "_acq");                               \
+  Info.setLibcallName(A##N##_REL, #B #N "_rel");                               \
+  Info.setLibcallName(A##N##_ACQ_REL, #B #N "_acq_rel");
+#define LCALLNAME4(A, B)                                                       \
+  LCALLNAMES(A, B, 1)                                                          \
+  LCALLNAMES(A, B, 2) LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8)
+#define LCALLNAME5(A, B)                                                       \
+  LCALLNAMES(A, B, 1)                                                          \
+  LCALLNAMES(A, B, 2)                                                          \
+  LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8) LCALLNAMES(A, B, 16)
+  LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, __aarch64_cas)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, __aarch64_swp)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, __aarch64_ldadd)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, __aarch64_ldset)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, __aarch64_ldclr)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, __aarch64_ldeor)
+
   if (TT.isWindowsArm64EC()) {
     // FIXME: are there calls we need to exclude from this?
 #define HANDLE_LIBCALL(code, name)                                             \
-  {                                                                            \
+  if (sizeof(name) != 1) {                                                     \
     const char *libcallName = Info.getLibcallName(RTLIB::code);                \
-    if (libcallName && libcallName[0] != '#')                                  \
-      Info.setLibcallName(RTLIB::code, "#" #name);                             \
+    if (libcallName && libcallName[0] != '#') {                                \
+      assert(strcmp(libcallName, name) == 0 && "Unexpected name");             \
+      Info.setLibcallName(RTLIB::code, "#" name);                              \
+    }                                                                          \
   }
+#define LIBCALL_NO_NAME ""
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
+#undef LIBCALL_NO_NAME
+
+    LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, #__aarch64_cas)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, #__aarch64_swp)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, #__aarch64_ldadd)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, #__aarch64_ldset)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, #__aarch64_ldclr)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, #__aarch64_ldeor)
   }
+
+#undef LCALLNAMES
+#undef LCALLNAME4
+#undef LCALLNAME5
 }
 
-static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
+static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
+                               FloatABI::ABIType FloatABIType,
+                               EABI EABIVersion) {
+  if (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) {
+    CallingConv::ID DefaultCC = FloatABIType == FloatABI::Hard
+                                    ? CallingConv::ARM_AAPCS_VFP
+                                    : CallingConv::ARM_AAPCS;
+    for (RTLIB::Libcall LC : RTLIB::libcalls())
+      Info.setLibcallCallingConv(LC, DefaultCC);
+  }
+
   // Register based DivRem for AEABI (RTABI 4.2)
   if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
       TT.isTargetMuslAEABI() || TT.isOSWindows()) {
@@ -216,71 +260,123 @@ static void setMSP430Libcalls(RuntimeLibcallsInfo &Info, const Triple &TT) {
   // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
 }
 
+void RuntimeLibcallsInfo::initSoftFloatCmpLibcallPredicates() {
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F32] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F64] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F128] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_PPCF128] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F32] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F64] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_PPCF128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F32] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F64] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F128] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_PPCF128] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F32] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F64] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F128] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_PPCF128] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F32] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F64] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F128] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_PPCF128] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F32] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F64] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F128] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_PPCF128] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F32] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F64] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_PPCF128] = CmpInst::ICMP_NE;
+}
+
+static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
+                                    bool FiniteOnlyFuncs = false) {
+  Info.setLibcallName(RTLIB::REM_F128, "fmodf128");
+  Info.setLibcallName(RTLIB::FMA_F128, "fmaf128");
+  Info.setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
+  Info.setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
+  Info.setLibcallName(RTLIB::LOG_F128, "logf128");
+  Info.setLibcallName(RTLIB::LOG2_F128, "log2f128");
+  Info.setLibcallName(RTLIB::LOG10_F128, "log10f128");
+  Info.setLibcallName(RTLIB::EXP_F128, "expf128");
+  Info.setLibcallName(RTLIB::EXP2_F128, "exp2f128");
+  Info.setLibcallName(RTLIB::EXP10_F128, "exp10f128");
+  Info.setLibcallName(RTLIB::SIN_F128, "sinf128");
+  Info.setLibcallName(RTLIB::COS_F128, "cosf128");
+  Info.setLibcallName(RTLIB::TAN_F128, "tanf128");
+  Info.setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
+  Info.setLibcallName(RTLIB::ASIN_F128, "asinf128");
+  Info.setLibcallName(RTLIB::ACOS_F128, "acosf128");
+  Info.setLibcallName(RTLIB::ATAN_F128, "atanf128");
+  Info.setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
+  Info.setLibcallName(RTLIB::SINH_F128, "sinhf128");
+  Info.setLibcallName(RTLIB::COSH_F128, "coshf128");
+  Info.setLibcallName(RTLIB::TANH_F128, "tanhf128");
+  Info.setLibcallName(RTLIB::POW_F128, "powf128");
+  Info.setLibcallName(RTLIB::CEIL_F128, "ceilf128");
+  Info.setLibcallName(RTLIB::TRUNC_F128, "truncf128");
+  Info.setLibcallName(RTLIB::RINT_F128, "rintf128");
+  Info.setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
+  Info.setLibcallName(RTLIB::ROUND_F128, "roundf128");
+  Info.setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
+  Info.setLibcallName(RTLIB::FLOOR_F128, "floorf128");
+  Info.setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
+  Info.setLibcallName(RTLIB::FMIN_F128, "fminf128");
+  Info.setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
+  Info.setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
+  Info.setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
+  Info.setLibcallName(RTLIB::FMINIMUM_NUM_F128, "fminimum_numf128");
+  Info.setLibcallName(RTLIB::FMAXIMUM_NUM_F128, "fmaximum_numf128");
+  Info.setLibcallName(RTLIB::LROUND_F128, "lroundf128");
+  Info.setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
+  Info.setLibcallName(RTLIB::LRINT_F128, "lrintf128");
+  Info.setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
+  Info.setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
+  Info.setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+  Info.setLibcallName(RTLIB::MODF_F128, "modff128");
+
+  if (FiniteOnlyFuncs) {
+    Info.setLibcallName(RTLIB::LOG_FINITE_F128, "__logf128_finite");
+    Info.setLibcallName(RTLIB::LOG2_FINITE_F128, "__log2f128_finite");
+    Info.setLibcallName(RTLIB::LOG10_FINITE_F128, "__log10f128_finite");
+    Info.setLibcallName(RTLIB::EXP_FINITE_F128, "__expf128_finite");
+    Info.setLibcallName(RTLIB::EXP2_FINITE_F128, "__exp2f128_finite");
+    Info.setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
+  } else {
+    Info.setLibcallName(RTLIB::LOG_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::LOG2_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::LOG10_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::EXP_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::EXP2_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::POW_FINITE_F128, nullptr);
+  }
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
-void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
-  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames),
-            nullptr);
+void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
+                                       ExceptionHandling ExceptionModel,
+                                       FloatABI::ABIType FloatABI,
+                                       EABI EABIVersion) {
+  initSoftFloatCmpLibcallPredicates();
+
+  initSoftFloatCmpLibcallPredicates();
 
 #define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
+#define LIBCALL_NO_NAME nullptr
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
-
-  // Initialize calling conventions to their default.
-  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
-    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
+#undef LIBCALL_NO_NAME
 
   // Use the f128 variants of math functions on x86
-  if (TT.isX86() && TT.isGNUEnvironment()) {
-    setLibcallName(RTLIB::REM_F128, "fmodf128");
-    setLibcallName(RTLIB::FMA_F128, "fmaf128");
-    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-    setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
-    setLibcallName(RTLIB::LOG_F128, "logf128");
-    setLibcallName(RTLIB::LOG_FINITE_F128, "__logf128_finite");
-    setLibcallName(RTLIB::LOG2_F128, "log2f128");
-    setLibcallName(RTLIB::LOG2_FINITE_F128, "__log2f128_finite");
-    setLibcallName(RTLIB::LOG10_F128, "log10f128");
-    setLibcallName(RTLIB::LOG10_FINITE_F128, "__log10f128_finite");
-    setLibcallName(RTLIB::EXP_F128, "expf128");
-    setLibcallName(RTLIB::EXP_FINITE_F128, "__expf128_finite");
-    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-    setLibcallName(RTLIB::EXP2_FINITE_F128, "__exp2f128_finite");
-    setLibcallName(RTLIB::EXP10_F128, "exp10f128");
-    setLibcallName(RTLIB::SIN_F128, "sinf128");
-    setLibcallName(RTLIB::COS_F128, "cosf128");
-    setLibcallName(RTLIB::TAN_F128, "tanf128");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-    setLibcallName(RTLIB::ASIN_F128, "asinf128");
-    setLibcallName(RTLIB::ACOS_F128, "acosf128");
-    setLibcallName(RTLIB::ATAN_F128, "atanf128");
-    setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
-    setLibcallName(RTLIB::SINH_F128, "sinhf128");
-    setLibcallName(RTLIB::COSH_F128, "coshf128");
-    setLibcallName(RTLIB::TANH_F128, "tanhf128");
-    setLibcallName(RTLIB::POW_F128, "powf128");
-    setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
-    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-    setLibcallName(RTLIB::RINT_F128, "rintf128");
-    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-    setLibcallName(RTLIB::ROUND_F128, "roundf128");
-    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
-    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-    setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
-    setLibcallName(RTLIB::FMIN_F128, "fminf128");
-    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-    setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
-    setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
-    setLibcallName(RTLIB::FMINIMUM_NUM_F128, "fminimum_numf128");
-    setLibcallName(RTLIB::FMAXIMUM_NUM_F128, "fmaximum_numf128");
-    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-    setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
-    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
-    setLibcallName(RTLIB::MODF_F128, "modff128");
+  if (TT.isX86() && TT.isGNUEnvironment())
+    setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
+
+  if (TT.isX86() || TT.isVE()) {
+    if (ExceptionModel == ExceptionHandling::SjLj)
+      setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
   }
 
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
@@ -315,31 +411,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::OGT_F128, "__gtkf2");
     setLibcallName(RTLIB::UO_F128, "__unordkf2");
 
-    setLibcallName(RTLIB::LOG_F128, "logf128");
-    setLibcallName(RTLIB::LOG2_F128, "log2f128");
-    setLibcallName(RTLIB::LOG10_F128, "log10f128");
-    setLibcallName(RTLIB::EXP_F128, "expf128");
-    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-    setLibcallName(RTLIB::SIN_F128, "sinf128");
-    setLibcallName(RTLIB::COS_F128, "cosf128");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-    setLibcallName(RTLIB::POW_F128, "powf128");
-    setLibcallName(RTLIB::FMIN_F128, "fminf128");
-    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-    setLibcallName(RTLIB::REM_F128, "fmodf128");
-    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-    setLibcallName(RTLIB::ROUND_F128, "roundf128");
-    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-    setLibcallName(RTLIB::RINT_F128, "rintf128");
-    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-    setLibcallName(RTLIB::FMA_F128, "fmaf128");
-    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+    // TODO: Do the finite only functions exist?
+    setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/false);
 
     if (TT.isOSAIX()) {
       bool isPPC64 = TT.isPPC64();
@@ -373,7 +446,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       break;
     }
 
-    if (darwinHasSinCos(TT)) {
+    if (darwinHasSinCosStret(TT)) {
       setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
       setLibcallName(RTLIB::SINCOS_STRET_F64, "__sincos_stret");
       if (TT.isWatchABI()) {
@@ -417,8 +490,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::EXP10_F64, "__exp10");
   }
 
-  if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
-      (TT.isAndroid() && !TT.isAndroidVersionLT(9))) {
+  if (hasSinCos(TT)) {
     setLibcallName(RTLIB::SINCOS_F32, "sincosf");
     setLibcallName(RTLIB::SINCOS_F64, "sincos");
     setLibcallName(RTLIB::SINCOS_F80, "sincosl");
@@ -462,7 +534,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   }
 
   // Setup Windows compiler runtime calls.
-  if (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()) {
+  if (TT.getArch() == Triple::x86 &&
+      (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment())) {
     static const struct {
       const RTLIB::Libcall Op;
       const char *const Name;
@@ -481,10 +554,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     }
   }
 
-  if (TT.getArch() == Triple::ArchType::aarch64)
+  if (TT.isAArch64())
     setAArch64LibcallNames(*this, TT);
   else if (TT.isARM() || TT.isThumb())
-    setARMLibcallNames(*this, TT);
+    setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
   else if (TT.getArch() == Triple::ArchType::avr) {
     // Division rtlib functions (not supported), use divmod functions instead
     setLibcallName(RTLIB::SDIV_I8, nullptr);
@@ -531,6 +604,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       setLibcallName(RTLIB::MULO_I64, nullptr);
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
+  } else {
+    // Define the emscripten name for return address helper.
+    // TODO: when implementing other Wasm backends, make this generic or only do
+    // this on emscripten depending on what they end up doing.
+    setLibcallName(RTLIB::RETURN_ADDRESS, "emscripten_return_address");
   }
 
   if (TT.isSystemZ() && TT.isOSzOS()) {

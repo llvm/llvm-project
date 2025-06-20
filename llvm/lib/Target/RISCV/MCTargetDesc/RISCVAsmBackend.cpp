@@ -8,7 +8,6 @@
 
 #include "RISCVAsmBackend.h"
 #include "RISCVFixupKinds.h"
-#include "RISCVMCExpr.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -86,7 +85,10 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
       {"fixup_riscv_qc_abs20_u", 12, 20, 0},
-      {"fixup_riscv_qc_e_jump_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_qc_e_call_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+
+      // Andes fixups
+      {"fixup_riscv_nds_branch_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -553,7 +555,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (Bit19 << 31) | (Bit14_0 << 16) | (Bit18_15 << 12);
     return Value;
   }
-  case RISCV::fixup_riscv_qc_e_jump_plt: {
+  case RISCV::fixup_riscv_qc_e_call_plt: {
     if (!isInt<32>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     if (Value & 0x1)
@@ -566,6 +568,21 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     uint64_t Bit11 = (Value >> 11) & 0x1;
     Value = (Bit31_16 << 32ull) | (Bit12 << 31) | (Bit10_5 << 25) |
             (Bit15_13 << 17) | (Bit4_1 << 8) | (Bit11 << 7);
+    return Value;
+  }
+  case RISCV::fixup_riscv_nds_branch_10: {
+    if (!isInt<11>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    if (Value & 0x1)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 2-byte aligned");
+    // Need to extract imm[10], imm[9:5], imm[4:1] from the 11-bit Value.
+    unsigned Sbit = (Value >> 10) & 0x1;
+    unsigned Hi5 = (Value >> 5) & 0x1f;
+    unsigned Lo4 = (Value >> 1) & 0xf;
+    // Inst{31} = Sbit;
+    // Inst{29-25} = Hi5;
+    // Inst{11-8} = Lo4;
+    Value = (Sbit << 31) | (Hi5 << 25) | (Lo4 << 8);
     return Value;
   }
   }
@@ -591,6 +608,57 @@ bool RISCVAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
   return !Res.getSubSym();
 }
 
+// Get the corresponding PC-relative HI fixup that a S_PCREL_LO points to, and
+// optionally the fragment containing it.
+//
+// \returns nullptr if this isn't a S_PCREL_LO pointing to a known PC-relative
+// HI fixup.
+static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
+                                      const MCFragment **DFOut) {
+  MCValue AUIPCLoc;
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
+    return nullptr;
+
+  const MCSymbol *AUIPCSymbol = AUIPCLoc.getAddSym();
+  if (!AUIPCSymbol)
+    return nullptr;
+  const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
+
+  if (!DF)
+    return nullptr;
+
+  uint64_t Offset = AUIPCSymbol->getOffset();
+  if (DF->getContents().size() == Offset) {
+    DF = dyn_cast_or_null<MCDataFragment>(DF->getNext());
+    if (!DF)
+      return nullptr;
+    Offset = 0;
+  }
+
+  for (const MCFixup &F : DF->getFixups()) {
+    if (F.getOffset() != Offset)
+      continue;
+    auto Kind = F.getTargetKind();
+    if (!mc::isRelocation(F.getKind())) {
+      if (Kind == RISCV::fixup_riscv_pcrel_hi20) {
+        *DFOut = DF;
+        return &F;
+      }
+      break;
+    }
+    switch (Kind) {
+    case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TLS_GOT_HI20:
+    case ELF::R_RISCV_TLS_GD_HI20:
+    case ELF::R_RISCV_TLSDESC_HI20:
+      *DFOut = DF;
+      return &F;
+    }
+  }
+
+  return nullptr;
+}
+
 bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
                                           const MCValue &Target,
                                           uint64_t &Value) {
@@ -602,7 +670,8 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
     llvm_unreachable("Unexpected fixup kind!");
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_s: {
-    AUIPCFixup = cast<RISCVMCExpr>(Fixup.getValue())->getPCRelHiFixup(&AUIPCDF);
+    AUIPCFixup =
+        getPCRelHiFixup(cast<MCSpecifierExpr>(*Fixup.getValue()), &AUIPCDF);
     if (!AUIPCFixup) {
       getContext().reportError(Fixup.getLoc(),
                                "could not find corresponding %pcrel_hi");
@@ -648,8 +717,11 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
   case RISCV::fixup_riscv_qc_e_branch:
   case RISCV::fixup_riscv_qc_abs20_u:
   case RISCV::fixup_riscv_qc_e_32:
-  case RISCV::fixup_riscv_qc_e_jump_plt:
+  case RISCV::fixup_riscv_qc_e_call_plt:
     VendorIdentifier = "QUALCOMM";
+    break;
+  case RISCV::fixup_riscv_nds_branch_10:
+    VendorIdentifier = "ANDES";
     break;
   }
 

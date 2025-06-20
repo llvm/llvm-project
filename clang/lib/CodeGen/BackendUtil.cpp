@@ -124,17 +124,10 @@ namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
 }
 
-// Default filename used for profile generation.
-static std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
-}
-
 // Path and name of file used for profile generation
 static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
   std::string FileName = CodeGenOpts.InstrProfileOutput.empty()
-                             ? getDefaultProfileGenName()
+                             ? llvm::driver::getDefaultProfileGenName()
                              : CodeGenOpts.InstrProfileOutput;
   if (CodeGenOpts.ContinuousProfileSync)
     FileName = "%c" + FileName;
