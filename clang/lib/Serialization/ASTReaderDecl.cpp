@@ -1632,8 +1632,7 @@ RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->NonParmVarDeclBits.PreviousDeclInSameBlockScope =
         VarDeclBits.getNextBit();
 
-    bool HasInitWithSideEffect = VarDeclBits.getNextBit();
-    if (HasInitWithSideEffect)
+    if (VarDeclBits.getNextBit())
       Reader.InitSideEffectVars.insert(VD);
 
     VD->NonParmVarDeclBits.EscapingByref = VarDeclBits.getNextBit();

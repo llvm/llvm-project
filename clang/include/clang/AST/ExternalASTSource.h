@@ -434,6 +434,17 @@ public:
     return GetPtr();
   }
 
+  /// Retrieve the pointer to the AST node that this lazy pointer points to,
+  /// if it can be done without triggering deserialization.
+  ///
+  /// \returns a pointer to the AST node, or null if not yet deserialized.
+  T *getWithoutDeserializing() const {
+    if (isOffset()) {
+      return nullptr;
+    }
+    return GetPtr();
+  }
+
   /// Retrieve the address of the AST node pointer. Deserializes the pointee if
   /// necessary.
   T **getAddressOfPointer(ExternalASTSource *Source) const {

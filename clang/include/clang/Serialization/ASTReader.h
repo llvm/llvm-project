@@ -1444,6 +1444,8 @@ private:
 
   /// VarDecls with initializers containing side effects must be emitted,
   /// but DeclMustBeEmitted is not allowed to deserialize the intializer.
+  /// FIXME: Lower memory usage by removing VarDecls once the initializer
+  /// is deserialized.
   llvm::SmallPtrSet<Decl *, 16> InitSideEffectVars;
 
 public:
