@@ -242,7 +242,7 @@ def : WriteRes<WriteST, [CyUnitLS]> {
 // Rt latency is latency WriteIS + WriteLD.
 // EXAMPLE: LDR Xn, Xm [, lsl 3]
 def CyWriteLDIdx : SchedWriteVariant<[
-  SchedVar<ScaledIdxPred, [WriteIS, WriteLD]>, // Load from scaled register.
+  SchedVar<ScaledIdxPred, [WriteLD]>,          // Load from scaled register.
   SchedVar<NoSchedPred,   [WriteLD]>]>;        // Load from register offset.
 def : SchedAlias<WriteLDIdx, CyWriteLDIdx>;    // Map AArch64->Cyclone type.
 
@@ -635,7 +635,7 @@ def : WriteRes<WriteVST, [CyUnitLS]> {
 // same latency, this is acceptable.
 
 // Vd is read 5 cycles after issuing the vector load.
-def : ReadAdvance<ReadVLD, 5>;
+def : ReadAdvance<ReadVLD, 4>;
 
 def : InstRW<[WriteVLD],
              (instregex "LD1Onev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
@@ -670,13 +670,10 @@ def : InstRW<[WriteVLD, WriteVLD, WriteVLD, WriteVLD],
 def : InstRW<[WriteVLD, WriteAdr, WriteVLD, WriteVLD, WriteVLD],
              (instregex "LD1Fourv(16b|8h|4s|2d)_POST")>;
 
-def : InstRW<[WriteVLDShuffle, ReadVLD],
-             (instregex "LD1i(8|16|32)$")>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr],
-             (instregex "LD1i(8|16|32)_POST")>;
-
-def : InstRW<[WriteVLDShuffle, ReadVLD],          (instrs LD1i64)>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr],(instrs LD1i64_POST)>;
+def : InstRW<[ReadVLD],
+             (instregex "LD1i(8|16|32|64)$")>;
+def : InstRW<[ReadVLD],
+             (instregex "LD1i(8|16|32|64)_POST")>;
 
 def : InstRW<[WriteVLDShuffle],
              (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
