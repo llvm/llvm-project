@@ -643,6 +643,9 @@ Improvements to Clang's diagnostics
   #GH36703, #GH32903, #GH23312, #GH69874.
 
 
+- Clang now diagnoses missing format attributes for non-template functions
+  and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
