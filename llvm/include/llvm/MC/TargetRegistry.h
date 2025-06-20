@@ -65,7 +65,7 @@ class InstrumentManager;
 struct SourceMgr;
 } // namespace mca
 
-MCStreamer *createNullStreamer(MCContext &Ctx);
+LLVM_ABI MCStreamer *createNullStreamer(MCContext &Ctx);
 // Takes ownership of \p TAB and \p CE.
 
 /// Create a machine code streamer which will print out assembly for the native
@@ -84,55 +84,56 @@ MCStreamer *createNullStreamer(MCContext &Ctx);
 ///
 /// \param ShowInst - Whether to show the MCInst representation inline with
 /// the assembly.
-MCStreamer *createAsmStreamer(MCContext &Ctx,
-                              std::unique_ptr<formatted_raw_ostream> OS,
-                              std::unique_ptr<MCInstPrinter> InstPrint,
-                              std::unique_ptr<MCCodeEmitter> CE,
-                              std::unique_ptr<MCAsmBackend> TAB);
+LLVM_ABI MCStreamer *
+createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+                  std::unique_ptr<MCInstPrinter> InstPrint,
+                  std::unique_ptr<MCCodeEmitter> CE,
+                  std::unique_ptr<MCAsmBackend> TAB);
 
-MCStreamer *createELFStreamer(MCContext &Ctx,
-                              std::unique_ptr<MCAsmBackend> &&TAB,
-                              std::unique_ptr<MCObjectWriter> &&OW,
-                              std::unique_ptr<MCCodeEmitter> &&CE);
-MCStreamer *createGOFFStreamer(MCContext &Ctx,
-                               std::unique_ptr<MCAsmBackend> &&TAB,
-                               std::unique_ptr<MCObjectWriter> &&OW,
-                               std::unique_ptr<MCCodeEmitter> &&CE);
-MCStreamer *createMachOStreamer(MCContext &Ctx,
-                                std::unique_ptr<MCAsmBackend> &&TAB,
-                                std::unique_ptr<MCObjectWriter> &&OW,
-                                std::unique_ptr<MCCodeEmitter> &&CE,
-                                bool DWARFMustBeAtTheEnd,
-                                bool LabelSections = false);
-MCStreamer *createWasmStreamer(MCContext &Ctx,
-                               std::unique_ptr<MCAsmBackend> &&TAB,
-                               std::unique_ptr<MCObjectWriter> &&OW,
-                               std::unique_ptr<MCCodeEmitter> &&CE);
-MCStreamer *createSPIRVStreamer(MCContext &Ctx,
-                                std::unique_ptr<MCAsmBackend> &&TAB,
-                                std::unique_ptr<MCObjectWriter> &&OW,
-                                std::unique_ptr<MCCodeEmitter> &&CE);
-MCStreamer *createDXContainerStreamer(MCContext &Ctx,
-                                      std::unique_ptr<MCAsmBackend> &&TAB,
-                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                      std::unique_ptr<MCCodeEmitter> &&CE);
+LLVM_ABI MCStreamer *createELFStreamer(MCContext &Ctx,
+                                       std::unique_ptr<MCAsmBackend> &&TAB,
+                                       std::unique_ptr<MCObjectWriter> &&OW,
+                                       std::unique_ptr<MCCodeEmitter> &&CE);
+LLVM_ABI MCStreamer *createGOFFStreamer(MCContext &Ctx,
+                                        std::unique_ptr<MCAsmBackend> &&TAB,
+                                        std::unique_ptr<MCObjectWriter> &&OW,
+                                        std::unique_ptr<MCCodeEmitter> &&CE);
+LLVM_ABI MCStreamer *createMachOStreamer(MCContext &Ctx,
+                                         std::unique_ptr<MCAsmBackend> &&TAB,
+                                         std::unique_ptr<MCObjectWriter> &&OW,
+                                         std::unique_ptr<MCCodeEmitter> &&CE,
+                                         bool DWARFMustBeAtTheEnd,
+                                         bool LabelSections = false);
+LLVM_ABI MCStreamer *createWasmStreamer(MCContext &Ctx,
+                                        std::unique_ptr<MCAsmBackend> &&TAB,
+                                        std::unique_ptr<MCObjectWriter> &&OW,
+                                        std::unique_ptr<MCCodeEmitter> &&CE);
+LLVM_ABI MCStreamer *createSPIRVStreamer(MCContext &Ctx,
+                                         std::unique_ptr<MCAsmBackend> &&TAB,
+                                         std::unique_ptr<MCObjectWriter> &&OW,
+                                         std::unique_ptr<MCCodeEmitter> &&CE);
+LLVM_ABI MCStreamer *
+createDXContainerStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+                          std::unique_ptr<MCObjectWriter> &&OW,
+                          std::unique_ptr<MCCodeEmitter> &&CE);
 
-MCRelocationInfo *createMCRelocationInfo(const Triple &TT, MCContext &Ctx);
+LLVM_ABI MCRelocationInfo *createMCRelocationInfo(const Triple &TT,
+                                                  MCContext &Ctx);
 
-MCSymbolizer *createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
-                                 LLVMSymbolLookupCallback SymbolLookUp,
-                                 void *DisInfo, MCContext *Ctx,
-                                 std::unique_ptr<MCRelocationInfo> &&RelInfo);
+LLVM_ABI MCSymbolizer *
+createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
+                   LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
+                   MCContext *Ctx, std::unique_ptr<MCRelocationInfo> &&RelInfo);
 
-mca::CustomBehaviour *createCustomBehaviour(const MCSubtargetInfo &STI,
-                                            const mca::SourceMgr &SrcMgr,
-                                            const MCInstrInfo &MCII);
+LLVM_ABI mca::CustomBehaviour *
+createCustomBehaviour(const MCSubtargetInfo &STI, const mca::SourceMgr &SrcMgr,
+                      const MCInstrInfo &MCII);
 
-mca::InstrPostProcess *createInstrPostProcess(const MCSubtargetInfo &STI,
-                                              const MCInstrInfo &MCII);
+LLVM_ABI mca::InstrPostProcess *
+createInstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII);
 
-mca::InstrumentManager *createInstrumentManager(const MCSubtargetInfo &STI,
-                                                const MCInstrInfo &MCII);
+LLVM_ABI mca::InstrumentManager *
+createInstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII);
 
 /// Target - Wrapper for Target specific information.
 ///
@@ -545,17 +546,16 @@ public:
   /// \param TAB The target assembler backend object. Takes ownership.
   /// \param OW The stream object.
   /// \param Emitter The target independent assembler object.Takes ownership.
-  MCStreamer *createMCObjectStreamer(const Triple &T, MCContext &Ctx,
-                                     std::unique_ptr<MCAsmBackend> TAB,
-                                     std::unique_ptr<MCObjectWriter> OW,
-                                     std::unique_ptr<MCCodeEmitter> Emitter,
-                                     const MCSubtargetInfo &STI) const;
+  LLVM_ABI MCStreamer *createMCObjectStreamer(
+      const Triple &T, MCContext &Ctx, std::unique_ptr<MCAsmBackend> TAB,
+      std::unique_ptr<MCObjectWriter> OW,
+      std::unique_ptr<MCCodeEmitter> Emitter, const MCSubtargetInfo &STI) const;
 
-  MCStreamer *createAsmStreamer(MCContext &Ctx,
-                                std::unique_ptr<formatted_raw_ostream> OS,
-                                std::unique_ptr<MCInstPrinter> IP,
-                                std::unique_ptr<MCCodeEmitter> CE,
-                                std::unique_ptr<MCAsmBackend> TAB) const;
+  LLVM_ABI MCStreamer *
+  createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+                    std::unique_ptr<MCInstPrinter> IP,
+                    std::unique_ptr<MCCodeEmitter> CE,
+                    std::unique_ptr<MCAsmBackend> TAB) const;
 
   MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                             formatted_raw_ostream &OS,
@@ -693,12 +693,12 @@ struct TargetRegistry {
 
   /// printRegisteredTargetsForVersion - Print the registered targets
   /// appropriately for inclusion in a tool's version output.
-  static void printRegisteredTargetsForVersion(raw_ostream &OS);
+  LLVM_ABI static void printRegisteredTargetsForVersion(raw_ostream &OS);
 
   /// @name Registry Access
   /// @{
 
-  static iterator_range<iterator> targets();
+  LLVM_ABI static iterator_range<iterator> targets();
 
   /// lookupTarget - Lookup a target based on a target triple.
   ///
@@ -715,8 +715,8 @@ struct TargetRegistry {
   /// \param Triple - The triple to use for finding a target.
   /// \param Error - On failure, an error string describing why no target was
   /// found.
-  static const Target *lookupTarget(const Triple &TheTriple,
-                                    std::string &Error);
+  LLVM_ABI static const Target *lookupTarget(const Triple &TheTriple,
+                                             std::string &Error);
 
   /// lookupTarget - Lookup a target based on an architecture name
   /// and a target triple.  If the architecture name is non-empty,
@@ -729,8 +729,8 @@ struct TargetRegistry {
   /// by architecture is done.
   /// \param Error - On failure, an error string describing why no target was
   /// found.
-  static const Target *lookupTarget(StringRef ArchName, Triple &TheTriple,
-                                    std::string &Error);
+  LLVM_ABI static const Target *
+  lookupTarget(StringRef ArchName, Triple &TheTriple, std::string &Error);
 
   /// @}
   /// @name Target Registration
@@ -754,10 +754,11 @@ struct TargetRegistry {
   /// @param ArchMatchFn - The arch match checking function for this target.
   /// @param HasJIT - Whether the target supports JIT code
   /// generation.
-  static void RegisterTarget(Target &T, const char *Name, const char *ShortDesc,
-                             const char *BackendName,
-                             Target::ArchMatchFnTy ArchMatchFn,
-                             bool HasJIT = false);
+  LLVM_ABI static void RegisterTarget(Target &T, const char *Name,
+                                      const char *ShortDesc,
+                                      const char *BackendName,
+                                      Target::ArchMatchFnTy ArchMatchFn,
+                                      bool HasJIT = false);
 
   /// RegisterMCAsmInfo - Register a MCAsmInfo implementation for the
   /// given target.

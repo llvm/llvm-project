@@ -14,7 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseV2Model : SchedMachineModel {
-  let IssueWidth            =  16; // Micro-ops dispatched at a time.
+  let IssueWidth            =   6; // This value comes from the decode bandwidth
+                                   // and empirical measurements showed that a
+                                   // lower value is better.
   let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.

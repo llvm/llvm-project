@@ -12,7 +12,6 @@
 
 #include "flang/Lower/Bridge.h"
 
-#include "OpenMP/DataSharingProcessor.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
@@ -2040,44 +2039,38 @@ private:
     bool useDelayedPriv =
         enableDelayedPrivatizationStaging && doConcurrentLoopOp;
     llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
+    llvm::SmallSet<const Fortran::semantics::Symbol *, 16> mightHaveReadHostSym;
 
-    for (const Fortran::semantics::Symbol *sym : info.localSymList) {
+    for (const Fortran::semantics::Symbol *symToPrivatize : info.localSymList) {
       if (useDelayedPriv) {
         Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
-            *this, this->getFirOpBuilder(), localSymbols,
-            [this](fir::LocalitySpecifierOp result, mlir::Type argType) {
-              TODO(this->toLocation(),
-                   "Localizers that need init regions are not supported yet.");
-            },
-            allPrivatizedSymbols, sym, &privateClauseOps);
+            *this, this->getFirOpBuilder(), localSymbols, allPrivatizedSymbols,
+            mightHaveReadHostSym, symToPrivatize, &privateClauseOps);
         continue;
       }
 
-      createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
+      createHostAssociateVarClone(*symToPrivatize, /*skipDefaultInit=*/false);
     }
 
-    for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
+    for (const Fortran::semantics::Symbol *symToPrivatize :
+         info.localInitSymList) {
       if (useDelayedPriv) {
         Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
-            *this, this->getFirOpBuilder(), localSymbols,
-            [this](fir::LocalitySpecifierOp result, mlir::Type argType) {
-              TODO(this->toLocation(),
-                   "Localizers that need init regions are not supported yet.");
-            },
-            allPrivatizedSymbols, sym, &privateClauseOps);
+            *this, this->getFirOpBuilder(), localSymbols, allPrivatizedSymbols,
+            mightHaveReadHostSym, symToPrivatize, &privateClauseOps);
         continue;
       }
 
-      createHostAssociateVarClone(*sym, /*skipDefaultInit=*/true);
+      createHostAssociateVarClone(*symToPrivatize, /*skipDefaultInit=*/true);
       const auto *hostDetails =
-          sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+          symToPrivatize->detailsIf<Fortran::semantics::HostAssocDetails>();
       assert(hostDetails && "missing locality spec host symbol");
       const Fortran::semantics::Symbol *hostSym = &hostDetails->symbol();
       Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
       Fortran::evaluate::Assignment assign{
-          ea.Designate(Fortran::evaluate::DataRef{*sym}).value(),
+          ea.Designate(Fortran::evaluate::DataRef{*symToPrivatize}).value(),
           ea.Designate(Fortran::evaluate::DataRef{*hostSym}).value()};
-      if (Fortran::semantics::IsPointer(*sym))
+      if (Fortran::semantics::IsPointer(*symToPrivatize))
         assign.u = Fortran::evaluate::Assignment::BoundsSpec{};
       genAssignment(assign);
     }

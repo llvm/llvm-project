@@ -9,8 +9,8 @@
 #include "src/stdio/ftell.h"
 #include "src/__support/File/file.h"
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
