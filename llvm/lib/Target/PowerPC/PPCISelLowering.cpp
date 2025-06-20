@@ -1428,39 +1428,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTargetDAGCombine({ISD::TRUNCATE, ISD::SETCC, ISD::SELECT_CC});
   }
 
-  setLibcallName(RTLIB::LOG_F128, "logf128");
-  setLibcallName(RTLIB::LOG2_F128, "log2f128");
-  setLibcallName(RTLIB::LOG10_F128, "log10f128");
-  setLibcallName(RTLIB::EXP_F128, "expf128");
-  setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-  setLibcallName(RTLIB::SIN_F128, "sinf128");
-  setLibcallName(RTLIB::COS_F128, "cosf128");
-  setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-  setLibcallName(RTLIB::POW_F128, "powf128");
-  setLibcallName(RTLIB::FMIN_F128, "fminf128");
-  setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-  setLibcallName(RTLIB::REM_F128, "fmodf128");
-  setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-  setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-  setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-  setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-  setLibcallName(RTLIB::ROUND_F128, "roundf128");
-  setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-  setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-  setLibcallName(RTLIB::RINT_F128, "rintf128");
-  setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-  setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-  setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-  setLibcallName(RTLIB::FMA_F128, "fmaf128");
-  setLibcallName(RTLIB::FREXP_F128, "frexpf128");
-
-  if (Subtarget.isAIXABI()) {
-    setLibcallName(RTLIB::MEMCPY, isPPC64 ? "___memmove64" : "___memmove");
-    setLibcallName(RTLIB::MEMMOVE, isPPC64 ? "___memmove64" : "___memmove");
-    setLibcallName(RTLIB::MEMSET, isPPC64 ? "___memset64" : "___memset");
-    setLibcallName(RTLIB::BZERO, isPPC64 ? "___bzero64" : "___bzero");
-  }
-
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
   if (Subtarget.useCRBits()) {
@@ -1475,6 +1442,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
 
   setMinFunctionAlignment(Align(4));
+  setMinCmpXchgSizeInBits(Subtarget.hasPartwordAtomics() ? 8 : 32);
 
   auto CPUDirective = Subtarget.getCPUDirective();
   switch (CPUDirective) {
@@ -7799,7 +7767,9 @@ SDValue PPCTargetLowering::LowerCall_AIX(
           DAG.getConstant(VA.getLocMemOffset(), dl, StackPtr.getValueType());
       PtrOff = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
       MemOpChains.push_back(
-          DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
+          DAG.getStore(Chain, dl, Arg, PtrOff,
+                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset()),
+                       Subtarget.getFrameLowering()->getStackAlign()));
 
       continue;
     }
@@ -12721,6 +12691,76 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 
 static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
   return Builder.CreateIntrinsic(Id, {});
+}
+
+Value *PPCTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
+                                         Value *Addr,
+                                         AtomicOrdering Ord) const {
+  unsigned SZ = ValueTy->getPrimitiveSizeInBits();
+
+  assert((SZ == 8 || SZ == 16 || SZ == 32 || SZ == 64) &&
+         "Only 8/16/32/64-bit atomic loads supported");
+  Intrinsic::ID IntID;
+  switch (SZ) {
+  default:
+    llvm_unreachable("Unexpected PrimitiveSize");
+  case 8:
+    IntID = Intrinsic::ppc_lbarx;
+    assert(Subtarget.hasPartwordAtomics() && "No support partword atomics.");
+    break;
+  case 16:
+    IntID = Intrinsic::ppc_lharx;
+    assert(Subtarget.hasPartwordAtomics() && "No support partword atomics.");
+    break;
+  case 32:
+    IntID = Intrinsic::ppc_lwarx;
+    break;
+  case 64:
+    IntID = Intrinsic::ppc_ldarx;
+    break;
+  }
+  Value *Call =
+      Builder.CreateIntrinsic(IntID, Addr, /*FMFSource=*/nullptr, "larx");
+
+  return Builder.CreateTruncOrBitCast(Call, ValueTy);
+}
+
+// Perform a store-conditional operation to Addr. Return the status of the
+// store. This should be 0 if the store succeeded, non-zero otherwise.
+Value *PPCTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
+                                               Value *Val, Value *Addr,
+                                               AtomicOrdering Ord) const {
+  Type *Ty = Val->getType();
+  unsigned SZ = Ty->getPrimitiveSizeInBits();
+
+  assert((SZ == 8 || SZ == 16 || SZ == 32 || SZ == 64) &&
+         "Only 8/16/32/64-bit atomic loads supported");
+  Intrinsic::ID IntID;
+  switch (SZ) {
+  default:
+    llvm_unreachable("Unexpected PrimitiveSize");
+  case 8:
+    IntID = Intrinsic::ppc_stbcx;
+    assert(Subtarget.hasPartwordAtomics() && "No support partword atomics.");
+    break;
+  case 16:
+    IntID = Intrinsic::ppc_sthcx;
+    assert(Subtarget.hasPartwordAtomics() && "No support partword atomics.");
+    break;
+  case 32:
+    IntID = Intrinsic::ppc_stwcx;
+    break;
+  case 64:
+    IntID = Intrinsic::ppc_stdcx;
+    break;
+  }
+
+  if (SZ == 8 || SZ == 16)
+    Val = Builder.CreateZExt(Val, Builder.getInt32Ty());
+
+  Value *Call = Builder.CreateIntrinsic(IntID, {Addr, Val},
+                                        /*FMFSource=*/nullptr, "stcx");
+  return Builder.CreateXor(Call, Builder.getInt32(1));
 }
 
 // The mappings for emitLeading/TrailingFence is taken from
@@ -19684,7 +19724,7 @@ PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
   unsigned Size = AI->getNewValOperand()->getType()->getPrimitiveSizeInBits();
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;
-  return TargetLowering::shouldExpandAtomicCmpXchgInIR(AI);
+  return AtomicExpansionKind::LLSC;
 }
 
 static Intrinsic::ID

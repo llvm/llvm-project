@@ -207,7 +207,7 @@ public:
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
 
-  bool hasPairedLoad(EVT LoadedType, Align &RequiredAligment) const override;
+  bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 

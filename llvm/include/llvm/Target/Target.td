@@ -314,7 +314,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // to use in a given machine function. The code will be inserted in a
   // function like this:
   //
-  //   static inline unsigned f(const MachineFunction &MF) { ... }
+  //   static inline unsigned f(const MachineFunction &MF, bool Rev) { ... }
   //
   // The function should return 0 to select the default order defined by
   // MemberList, 1 to select the first AltOrders entry and so on.

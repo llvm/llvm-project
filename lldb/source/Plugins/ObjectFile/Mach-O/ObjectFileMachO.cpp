@@ -1595,6 +1595,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_objc_classlist("__objc_classlist");
   static ConstString g_sect_name_cfstring("__cfstring");
 
+  static ConstString g_sect_name_dwarf_debug_str_offs("__debug_str_offs");
+  static ConstString g_sect_name_dwarf_debug_str_offs_dwo("__debug_str_offs.dwo");
   static ConstString g_sect_name_dwarf_apple_names("__apple_names");
   static ConstString g_sect_name_dwarf_apple_types("__apple_types");
   static ConstString g_sect_name_dwarf_apple_namespaces("__apple_namespac");
@@ -1608,6 +1610,11 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
   static ConstString g_sect_name_lldb_formatters("__lldbformatters");
   static ConstString g_sect_name_swift_ast("__swift_ast");
+
+  if (section_name == g_sect_name_dwarf_debug_str_offs)
+    return eSectionTypeDWARFDebugStrOffsets;
+  if (section_name == g_sect_name_dwarf_debug_str_offs_dwo)
+    return eSectionTypeDWARFDebugStrOffsetsDwo;
 
   llvm::StringRef stripped_name = section_name.GetStringRef();
   if (stripped_name.consume_front("__debug_"))
