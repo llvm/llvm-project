@@ -105,6 +105,10 @@ Improvements to clang-tidy
   specific tests. This may break tests for users with custom out-of-tree checks
   who use :program:`check_clang_tidy.py` as-is.
 
+- :program:`clang-tidy` now supports query based custom checks by `CustomChecks`
+  configuration option.
+  :doc:`Query Based Custom Check Document <clang-tidy/QueryBasedCustomChecks>`
+  
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
