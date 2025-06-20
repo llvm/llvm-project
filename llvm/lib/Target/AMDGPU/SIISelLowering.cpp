@@ -15189,6 +15189,12 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
   EVT ScalarVT = VT.getScalarType();
   EVT IntVT = VT.changeElementType(MVT::i32);
 
+  if (!N->isDivergent() && getSubtarget()->hasSALUFloatInsts() &&
+      (ScalarVT == MVT::f32 || ScalarVT == MVT::f16)) {
+    // Prefer to use s_mul_f16/f32 instead of v_ldexp_f16/f32.
+    return SDValue();
+  }
+
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 

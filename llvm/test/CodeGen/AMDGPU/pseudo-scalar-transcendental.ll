@@ -2,19 +2,34 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
+; TODO: GlobalISel should avoid generating v_ldexp_f32.
 define amdgpu_cs float @v_s_exp_f32(float inreg %src) {
-; GFX12-LABEL: v_s_exp_f32:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_cmp_lt_f32 s0, 0xc2fc0000
-; GFX12-NEXT:    s_cselect_b32 s1, 0x42800000, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
-; GFX12-NEXT:    s_add_f32 s0, s0, s1
-; GFX12-NEXT:    s_cselect_b32 s1, 0xffffffc0, 0
-; GFX12-NEXT:    v_s_exp_f32 s0, s0
-; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-NEXT:    v_ldexp_f32 v0, s0, s1
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: v_s_exp_f32:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s0, 0xc2fc0000
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 0x42800000, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
+; GFX12-SDAG-NEXT:    s_add_f32 s0, s0, s1
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 0x1f800000, 1.0
+; GFX12-SDAG-NEXT:    v_s_exp_f32 s0, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
+; GFX12-SDAG-NEXT:    s_mul_f32 s0, s0, s1
+; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: v_s_exp_f32:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_cmp_lt_f32 s0, 0xc2fc0000
+; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 0x42800000, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
+; GFX12-GISEL-NEXT:    s_add_f32 s0, s0, s1
+; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 0xffffffc0, 0
+; GFX12-GISEL-NEXT:    v_s_exp_f32 s0, s0
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_ldexp_f32 v0, s0, s1
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %result = call float @llvm.exp2.f32(float %src)
   ret float %result
 }
@@ -59,14 +74,15 @@ define amdgpu_cs float @v_s_log_f32(float inreg %src) {
 ; GFX12-SDAG-LABEL: v_s_log_f32:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s0, 0x800000
-; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 32, 0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_ldexp_f32 v0, s0, s1
-; GFX12-SDAG-NEXT:    s_cselect_b32 s0, 0x42000000, 0
-; GFX12-SDAG-NEXT:    v_log_f32_e32 v0, v0
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 0x4f800000, 1.0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
+; GFX12-SDAG-NEXT:    s_mul_f32 s0, s0, s1
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 0x42000000, 0
+; GFX12-SDAG-NEXT:    v_s_log_f32 s0, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
+; GFX12-SDAG-NEXT:    s_sub_f32 s0, s0, s1
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_subrev_f32_e32 v0, s0, v0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: v_s_log_f32:
@@ -147,7 +163,7 @@ define amdgpu_cs half @v_s_rcp_f16(half inreg %src) {
   ret half %result
 }
 
-; TODO-GFX12: GlobalISel should generate v_s_rsq.
+; TODO: GlobalISel should generate v_s_rsq.
 define amdgpu_cs float @v_s_rsq_f32(float inreg %src) {
 ; GFX12-SDAG-LABEL: v_s_rsq_f32:
 ; GFX12-SDAG:       ; %bb.0:
@@ -184,7 +200,7 @@ define amdgpu_cs half @v_s_rsq_f16(half inreg %src) {
   ret half %result
 }
 
-; TODO-GFX12: Should not use any VALU instructions.
+; TODO: Should avoid generating v_cmp_class_f32.
 define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 ; GFX12-SDAG-LABEL: v_s_sqrt_f32:
 ; GFX12-SDAG:       ; %bb.0:
@@ -298,16 +314,18 @@ define amdgpu_cs half @v_amdgcn_sqrt_f16(half inreg %src)  {
 define amdgpu_cs float @srcmods_abs_f32(float inreg %src) {
 ; GFX12-SDAG-LABEL: srcmods_abs_f32:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_and_b32 s1, s0, 0x7fffffff
+; GFX12-SDAG-NEXT:    s_bitset0_b32 s0, 31
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s1, 0x800000
-; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 32, 0
-; GFX12-SDAG-NEXT:    v_ldexp_f32 v0, |s0|, s1
-; GFX12-SDAG-NEXT:    s_cselect_b32 s0, 0x42000000, 0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_log_f32_e32 v0, v0
+; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s0, 0x800000
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 0x4f800000, 1.0
+; GFX12-SDAG-NEXT:    s_mul_f32 s0, s0, s1
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 0x42000000, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-SDAG-NEXT:    v_s_log_f32 s0, s0
+; GFX12-SDAG-NEXT:    s_sub_f32 s0, s0, s1
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    v_subrev_f32_e32 v0, s0, v0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: srcmods_abs_f32:
@@ -333,15 +351,17 @@ define amdgpu_cs float @srcmods_abs_f32(float inreg %src) {
 define amdgpu_cs float @srcmods_neg_f32(float inreg %src) {
 ; GFX12-SDAG-LABEL: srcmods_neg_f32:
 ; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_xor_b32 s1, s0, 0x80000000
 ; GFX12-SDAG-NEXT:    s_cmp_gt_f32 s0, 0x80800000
-; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 32, 0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_ldexp_f32 v0, -s0, s1
-; GFX12-SDAG-NEXT:    s_cselect_b32 s0, 0x42000000, 0
-; GFX12-SDAG-NEXT:    v_log_f32_e32 v0, v0
+; GFX12-SDAG-NEXT:    s_cselect_b32 s0, 0x4f800000, 1.0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
+; GFX12-SDAG-NEXT:    s_mul_f32 s0, s1, s0
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, 0x42000000, 0
+; GFX12-SDAG-NEXT:    v_s_log_f32 s0, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
+; GFX12-SDAG-NEXT:    s_sub_f32 s0, s0, s1
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_subrev_f32_e32 v0, s0, v0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: srcmods_neg_f32:
