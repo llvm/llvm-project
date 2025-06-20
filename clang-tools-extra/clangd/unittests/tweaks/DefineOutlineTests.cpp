@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestFS.h"
+#include "TestIndex.h"
 #include "TweakTesting.h"
+#include "index/MemIndex.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -447,9 +449,27 @@ inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
 TEST_F(DefineOutlineTest, InCppFile) {
   FileName = "Test.cpp";
 
+  const auto MakePos = [](uint32_t Line, uint32_t Col) {
+    SymbolLocation::Position Pos;
+    Pos.setLine(Line);
+    Pos.setColumn(Col);
+    return Pos;
+  };
+  struct SymbolSpec {
+    StringRef NamespaceName;
+    StringRef ClassName;
+    StringRef FuncName;
+    SymbolLocation::Position DeclStart;
+    SymbolLocation::Position DeclEnd;
+    SymbolLocation::Position DefStart;
+    SymbolLocation::Position DefEnd;
+  };
+  using SymbolSpecs = std::vector<SymbolSpec>;
+
   struct {
     llvm::StringRef Test;
     llvm::StringRef ExpectedSource;
+    SymbolSpecs Definitions;
   } Cases[] = {
       {
           R"cpp(
@@ -470,10 +490,164 @@ TEST_F(DefineOutlineTest, InCppFile) {
             }
             }
         )cpp"},
+
+      // Criterion 1: Distance
+      {
+          R"cpp(
+            struct Foo {
+                void ignored1();     // Too far away
+                void ignored2();     // No definition
+                void ignored3() {}   // Defined inline
+                void fo^o() {}
+                void neighbor();
+            };
+            void Foo::ignored1() {}
+            void Foo::neighbor() {}
+        )cpp",
+          R"cpp(
+            struct Foo {
+                void ignored1();     // Too far away
+                void ignored2();     // No definition
+                void ignored3() {}   // Defined inline
+                void foo() ;
+                void neighbor();
+            };
+            void Foo::ignored1() {}
+            void Foo::foo() {}
+void Foo::neighbor() {}
+        )cpp",
+          SymbolSpecs{{"", "Foo", "ignored3", MakePos(4, 21), MakePos(4, 29),
+                       MakePos(4, 21), MakePos(4, 29)},
+                      {"", "Foo", "ignored1", MakePos(2, 21), MakePos(2, 29),
+                       MakePos(8, 22), MakePos(8, 30)},
+                      {"", "Foo", "neighbor", MakePos(6, 21), MakePos(6, 29),
+                       MakePos(9, 22), MakePos(9, 30)}}},
+
+      // Criterion 2: Prefer preceding
+      {
+          R"cpp(
+            struct Foo {
+                void neighbor();
+                void fo^o() {}
+                void ignored();
+            };
+            void Foo::neighbor() {}
+            void Foo::ignored() {}
+        )cpp",
+          R"cpp(
+            struct Foo {
+                void neighbor();
+                void foo() ;
+                void ignored();
+            };
+            void Foo::neighbor() {}void Foo::foo() {}
+
+            void Foo::ignored() {}
+        )cpp",
+          SymbolSpecs{{"", "Foo", "ignored", MakePos(4, 21), MakePos(4, 28),
+                       MakePos(7, 22), MakePos(7, 29)},
+                      {"", "Foo", "neighbor", MakePos(2, 22), MakePos(2, 29),
+                       MakePos(6, 22), MakePos(6, 30)}}},
+
+      // Like above, but with a namespace
+      {
+          R"cpp(
+            namespace NS {
+            struct Foo {
+                void neighbor();
+                void fo^o() {}
+                void ignored();
+            };
+            void Foo::neighbor() {}
+            void Foo::ignored() {}
+            }
+        )cpp",
+          R"cpp(
+            namespace NS {
+            struct Foo {
+                void neighbor();
+                void foo() ;
+                void ignored();
+            };
+            void Foo::neighbor() {}void Foo::foo() {}
+
+            void Foo::ignored() {}
+            }
+        )cpp",
+          SymbolSpecs{{"NS", "Foo", "ignored", MakePos(5, 21), MakePos(5, 29),
+                       MakePos(8, 22), MakePos(8, 30)},
+                      {"NS", "Foo", "neighbor", MakePos(3, 21), MakePos(3, 29),
+                       MakePos(7, 22), MakePos(7, 30)}}},
+
+      // Like above, but there is no namespace at the definition site
+      {
+          R"cpp(
+            namespace NS {
+            struct Foo {
+                void neighbor();
+                void fo^o() {}
+                void ignored();
+            };
+            }
+            void NS::Foo::neighbor() {}
+            void NS::Foo::ignored() {}
+        )cpp",
+          R"cpp(
+            namespace NS {
+            struct Foo {
+                void neighbor();
+                void foo() ;
+                void ignored();
+            };
+            }
+            void NS::Foo::neighbor() {}void NS::Foo::foo() {}
+
+            void NS::Foo::ignored() {}
+        )cpp",
+          SymbolSpecs{{"NS", "Foo", "ignored", MakePos(5, 21), MakePos(5, 29),
+                       MakePos(9, 26), MakePos(9, 33)},
+                      {"NS", "Foo", "neighbor", MakePos(3, 21), MakePos(3, 29),
+                       MakePos(8, 26), MakePos(8, 34)}}},
+  };
+
+  Path FilePath =
+#ifdef _WIN32
+      "C:/clangd-test/"
+#else
+      "/clangd-test/"
+#endif
+      + FileName.str();
+  std::string URI = URI::createFile(FilePath).toString();
+  std::string FullNamespace;
+
+  const auto BuildIndex = [&](const SymbolSpecs &Specs) {
+    SymbolSlab::Builder Slab;
+    for (const auto &S : Specs) {
+      std::string USRFormat;
+      if (!S.NamespaceName.empty())
+        USRFormat += "@N@" + S.NamespaceName.str();
+      if (!S.ClassName.empty())
+        USRFormat += "@S@" + S.ClassName.str();
+      USRFormat += "@F@\\0#";
+      Symbol Sym = sym(S.FuncName, index::SymbolKind::Function, USRFormat);
+      Sym.CanonicalDeclaration.FileURI = URI.data();
+      Sym.CanonicalDeclaration.Start = S.DeclStart;
+      Sym.CanonicalDeclaration.End = S.DeclEnd;
+      Sym.Definition.FileURI = Sym.CanonicalDeclaration.FileURI;
+      Sym.Definition.Start = S.DefStart;
+      Sym.Definition.End = S.DefEnd;
+      if (!S.NamespaceName.empty()) {
+        FullNamespace = S.NamespaceName.str() + "::";
+        Sym.Scope = FullNamespace;
+      }
+      Slab.insert(Sym);
+    }
+    return MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
   };
 
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);
+    Index = BuildIndex(Case.Definitions);
     EXPECT_EQ(apply(Case.Test, nullptr), Case.ExpectedSource);
   }
 }
