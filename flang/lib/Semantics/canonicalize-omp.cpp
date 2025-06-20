@@ -8,7 +8,6 @@
 
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
-#include <stack>
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
 // structural checks and semantic analysis.
@@ -134,8 +133,8 @@ private:
       if (GetConstructIf<parser::CompilerDirective>(*nextIt))
         continue;
       // Keep track of the loops to handle the end loop directives
-      std::stack<parser::OpenMPLoopConstruct *> loops;
-      loops.push(&x);
+      llvm::SmallVector<parser::OpenMPLoopConstruct *> loops;
+      loops.push_back(&x);
       if (auto *innerConstruct{
               GetConstructIf<parser::OpenMPConstruct>(*nextIt)}) {
         if (auto *innerOmpLoop{
@@ -146,12 +145,12 @@ private:
           if (innerDir.v == llvm::omp::Directive::OMPD_tile) {
             std::get<std::optional<
                 common::Indirection<parser::OpenMPLoopConstruct>>>(
-                loops.top()->t) = std::move(*innerOmpLoop);
+                loops.back()->t) = std::move(*innerOmpLoop);
             // Retrieveing the address so that DoConstruct or inner loop can be
             // set later.
-            loops.push(&(std::get<std::optional<
+            loops.push_back(&(std::get<std::optional<
                     common::Indirection<parser::OpenMPLoopConstruct>>>(
-                loops.top()->t)
+                loops.back()->t)
                     .value()
                     .value()));
             nextIt = block.erase(nextIt);
@@ -161,7 +160,7 @@ private:
 
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
-          std::get<std::optional<parser::DoConstruct>>(loops.top()->t) =
+          std::get<std::optional<parser::DoConstruct>>(loops.back()->t) =
               std::move(*doCons);
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
@@ -169,9 +168,9 @@ private:
             if (auto *endDir{
                     GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
               std::get<std::optional<parser::OmpEndLoopDirective>>(
-                  loops.top()->t) = std::move(*endDir);
+                  loops.back()->t) = std::move(*endDir);
               nextIt = block.erase(nextIt);
-              loops.pop();
+              loops.pop_back();
             } else {
               // If there is a mismatch bail out.
               break;
