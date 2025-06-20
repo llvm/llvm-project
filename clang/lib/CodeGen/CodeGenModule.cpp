@@ -1515,7 +1515,7 @@ auto *ExternGV = new llvm::GlobalVariable(
 );
 ExternGV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 (void)ExternGV;
-    llvm::errs() << "✅ Emitting __cli global variable!\n";
+    llvm::errs() << "Emitting __cli global variable!\n";
 
   */
   
@@ -1557,7 +1557,7 @@ if (auto *Old = getModule().getNamedGlobal(VarName)) {
     Old->eraseFromParent();
 }
 
-// ✅ Step 5: Emit the real global variable
+// Step 5: Emit the real global variable
 auto *FinalGV = new llvm::GlobalVariable(
     getModule(),
     PtrToStr->getType(),                       // i8*
@@ -1568,7 +1568,7 @@ auto *FinalGV = new llvm::GlobalVariable(
 );
 //FinalGV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
 
-llvm::errs() << "✅ Emitting " << VarName << " global variable!\n";
+llvm::errs() << "Emitting " << VarName << " global variable!\n";
 
 // === END ===
 
