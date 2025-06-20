@@ -1117,6 +1117,17 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Visibility = Descriptor->Visibility;
       Infos.push_back(Info);
     }
+    if (const auto *Constants =
+            std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
+      RangeInfo Info;
+      Info.LowerBound = Constants->Reg.Number;
+      Info.UpperBound = Info.LowerBound; // use inclusive ranges []
+
+      Info.Class = llvm::dxil::ResourceClass::CBuffer;
+      Info.Space = Constants->Space;
+      Info.Visibility = Constants->Visibility;
+      Infos.push_back(Info);
+    }
   }
 
   // 2. Sort the RangeInfo's by their GroupT to form groupings
