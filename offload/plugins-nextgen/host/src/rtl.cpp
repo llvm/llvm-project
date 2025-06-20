@@ -43,7 +43,7 @@
 #endif
 
 // The number of devices in this plugin.
-#define NUM_DEVICES 4
+#define NUM_DEVICES 1
 
 namespace llvm {
 namespace omp {
