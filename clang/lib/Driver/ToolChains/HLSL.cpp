@@ -295,6 +295,13 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_rootsig_ver) {
+      DAL->AddSeparateArg(nullptr,
+                          Opts.getOption(options::OPT_hlsl_rootsig_ver),
+                          A->getValue());
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT__SLASH_O) {
       StringRef OStr = A->getValue();
       if (OStr == "d") {
