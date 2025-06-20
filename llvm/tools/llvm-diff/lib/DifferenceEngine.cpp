@@ -340,8 +340,32 @@ class FunctionDifferenceEngine {
                     BasicBlock::const_iterator RI);
 
   bool diffCallSites(const CallBase &L, const CallBase &R, bool Complain) {
-    // FIXME: call attributes
     AssumptionContext AC = {L.getParent(), R.getParent()};
+    const AttributeList &LAttrs = L.getAttributes();
+    const AttributeList &RAttrs = R.getAttributes();
+    if (LAttrs.getFnAttrs() != RAttrs.getFnAttrs()) {
+      if (Complain)
+        Engine.log("function attributes differ");
+      return true;
+    }
+    if (LAttrs.getNumAttrSets() != RAttrs.getNumAttrSets()) {
+      if (Complain)
+        Engine.log("parameter attribute counts differ");
+      return true;
+    }
+    for (unsigned I = 0; I != LAttrs.getNumAttrSets(); I++) {
+      if (LAttrs.getParamAttrs(I) != RAttrs.getParamAttrs(I)) {
+        if (Complain)
+          Engine.logf("parameter attributes %l and %r differ")
+              << L.getArgOperand(I) << R.getArgOperand(I);
+        return true;
+      }
+    }
+    if (LAttrs.getRetAttrs() != RAttrs.getRetAttrs()) {
+      if (Complain)
+        Engine.log("return attributes differ");
+      return true;
+    }
     if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand(),
                               &AC)) {
       if (Complain) Engine.log("called functions differ");
@@ -366,7 +390,6 @@ class FunctionDifferenceEngine {
   // assumption to be checked later in BlockDiffCandidates.
   bool diff(const Instruction *L, const Instruction *R, bool Complain,
             bool TryUnify, bool AllowAssumptions) {
-    // FIXME: metadata (if Complain is set)
     AssumptionContext ACValue = {L->getParent(), R->getParent()};
     // nullptr AssumptionContext disables assumption generation.
     const AssumptionContext *AC = AllowAssumptions ? &ACValue : nullptr;
@@ -375,6 +398,34 @@ class FunctionDifferenceEngine {
     if (L->getOpcode() != R->getOpcode()) {
       if (Complain) Engine.log("different instruction types");
       return true;
+    }
+
+    if (L->hasMetadata() || R->hasMetadata()) {
+      SmallVector<std::pair<unsigned, MDNode *>, 4> LMD, RMD;
+      L->getAllMetadata(LMD);
+      R->getAllMetadata(RMD);
+      if (LMD.size() != RMD.size()) {
+        if (Complain)
+          Engine.log("different metadata entry counts");
+        return true;
+      }
+      for (unsigned I = 0; I != LMD.size(); ++I) {
+        if (LMD[I].second->getNumOperands() !=
+            RMD[I].second->getNumOperands()) {
+          if (Complain)
+            Engine.log("different metadata operand counts");
+          return true;
+        }
+        for (unsigned J = 0; J != LMD[I].second->getNumOperands(); J++) {
+          Metadata *a = LMD[I].second->getOperand(J);
+          Metadata *b = RMD[I].second->getOperand(J);
+          if (a->getMetadataID() != b->getMetadataID()) {
+            if (Complain)
+              Engine.log("different metadata entry counts");
+            return true;
+          }
+        }
+      }
     }
 
     if (isa<CmpInst>(L)) {
