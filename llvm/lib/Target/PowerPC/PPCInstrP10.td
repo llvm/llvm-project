@@ -2171,26 +2171,15 @@ class DagCondVNot<dag d, bit negate> {
 
 class XXEvalUnaryPattern<ValueType vt> {
   // vnot Operand B
-  dag vnotB = !cond(
-    !eq(vt, v4i32) : (vnot v4i32:$vB),
-    !eq(vt, v2i64) : (v2i64 (bitconvert (vnot (v4i32 (bitconvert v2i64:$vB)))))
-  );
+  dag vnotB = (vnot vt:$vB);
   // vnot Operand C
-  dag vnotC = !cond(
-    !eq(vt, v4i32) : (vnot v4i32:$vC),
-    !eq(vt, v2i64) : (v2i64 (bitconvert (vnot (v4i32 (bitconvert v2i64:$vC)))))
-  );
+  dag vnotC = (vnot vt:$vC);
 }
 
 class XXEvalBinaryPattern<ValueType vt, SDPatternOperator op, bit notResult = 0> {
   // Defines a wrapper class for binary patterns with optional NOT on result.
   // Generate op pattern with optional NOT wrapping for result depending on "notResult".
-      dag opPat = !cond(
-                !eq(vt, v4i32) : DagCondVNot<(op v4i32:$vB, v4i32:$vC), notResult>.res,
-                !eq(vt, v2i64) : (v2i64 (bitconvert DagCondVNot<(op
-                                      (v4i32 (bitconvert v2i64:$vB)),
-                                      (v4i32 (bitconvert v2i64:$vC))), notResult>.res))
-                );
+  dag opPat = DagCondVNot<(op vt:$vB, vt:$vC), notResult>.res;
 }
 
 multiclass XXEvalVSelectWithXAnd<ValueType vt, bits<8> baseImm> {
@@ -2395,16 +2384,12 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
 
     // Utilize xxeval instruction for ternary vector expressions.
     defm : XXEvalVSelectWithXAnd<v4i32, 22>;
-    defm : XXEvalVSelectWithXAnd<v2i64, 22>;
 
     defm : XXEvalVSelectWithXB<v4i32, 49>;
-    defm : XXEvalVSelectWithXB<v2i64, 49>;
 
     defm : XXEvalVSelectWithXC<v4i32, 81>;
-    defm : XXEvalVSelectWithXC<v2i64, 81>;
-
+    
     defm : XXEvalVSelectWithXXor<v4i32, 97>;
-    defm : XXEvalVSelectWithXXor<v2i64, 97>;
 
     // Anonymous patterns to select prefixed VSX loads and stores.
     // Load / Store f128
