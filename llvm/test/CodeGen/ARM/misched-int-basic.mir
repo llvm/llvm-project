@@ -4,6 +4,8 @@
 # RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_A9
 # RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -verify-misched \
 # RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_R52
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52plus -run-pass  machine-scheduler  -enable-misched -verify-misched \
+# RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_R52
 # REQUIRES: asserts
 --- |
   ; ModuleID = 'foo.ll'

@@ -1,0 +1,33 @@
+## This reproduces a bug with misidentification of a parent fragment.
+
+RUN: split-file %p/Inputs/ambiguous_fragment.s %t
+
+RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %t/file1 -o %t1.o
+RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %t/file2 -o %t2.o
+RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %t/file3 -o %t3.o
+RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %t/file4 -o %t4.o
+RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %t/file5 -o %t5.o
+
+RUN: ld.lld %t1.o %t2.o %t3.o %t4.o %t5.o -o %t.exe \
+RUN:   --script %p/Inputs/ambiguous_fragment.script
+
+RUN: llvm-objcopy %t.exe %t.exe2 \
+RUN:   --add-symbol=_Zfunc.cold.0=.text.cold:0x4,local,function \
+RUN:   --add-symbol=_Zfunc=.text:0xc,function
+
+RUN: llvm-objdump --syms %t.exe2 | FileCheck %s --check-prefix=CHECK-SYMS
+
+RUN: link_fdata %s %t.exe2 %t.preagg PREAGG
+RUN: perf2bolt -v=1 %t.exe2 -p %t.preagg --pa -o %t.fdata -w %t.yaml | FileCheck %s
+
+# PREAGG: B X:0 #__func# 1 0
+
+CHECK-SYMS: 0000000000020004 {{.*}} __func.cold.0
+CHECK-SYMS: 0000000000020004 {{.*}} _Zfunc.cold.0
+
+CHECK-NOT:  BOLT-ERROR: parent function not found for __func.cold.0
+CHECK:      BOLT-INFO: marking __func.cold.0/3(*4) as a fragment of __func/4(*3)
+CHECK-NEXT: BOLT-INFO: marking __func.cold.0/1(*2) as a fragment of __func/1(*2)
+CHECK-NEXT: BOLT-INFO: marking __func.cold.0/2(*2) as a fragment of __func/2(*2)
+CHECK-NEXT: BOLT-INFO: marking __func.cold.0/3(*4) as a fragment of __func/3(*2)
+CHECK-NEXT: BOLT-INFO: marking __func.cold.0/4(*2) as a fragment of __func/4(*3)

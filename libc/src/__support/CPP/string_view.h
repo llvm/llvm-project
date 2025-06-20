@@ -9,11 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H
 
+#include "limits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // This is very simple alternate of the std::string_view class. There is no
@@ -30,8 +32,8 @@ private:
 
   LIBC_INLINE static int compareMemory(const char *Lhs, const char *Rhs,
                                        size_t Length) {
-    for (size_t I = 0; I < Length; ++I)
-      if (int Diff = (int)Lhs[I] - (int)Rhs[I])
+    for (size_t i = 0; i < Length; ++i)
+      if (int Diff = (int)Lhs[i] - (int)Rhs[i])
         return Diff;
     return 0;
   }
@@ -39,7 +41,7 @@ private:
   LIBC_INLINE static constexpr size_t length(const char *Str) {
     for (const char *End = Str;; ++End)
       if (*End == '\0')
-        return End - Str;
+        return static_cast<size_t>(End - Str);
   }
 
   LIBC_INLINE bool equals(string_view Other) const {
@@ -60,7 +62,8 @@ public:
 
   // special value equal to the maximum value representable by the type
   // size_type.
-  LIBC_INLINE_VAR static constexpr size_t npos = -1;
+  LIBC_INLINE_VAR static constexpr size_t npos =
+      cpp::numeric_limits<size_t>::max();
 
   LIBC_INLINE constexpr string_view() : Data(nullptr), Len(0) {}
 
@@ -214,6 +217,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H

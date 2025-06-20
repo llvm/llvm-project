@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/FrameAnalysis.h"
+#include "bolt/Core/CallGraphWalker.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/CallGraphWalker.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Timer.h"
 #include <fstream>
@@ -320,7 +320,6 @@ bool FrameAnalysis::updateArgsTouchedFor(const BinaryFunction &BF, MCInst &Inst,
   if (!BC.MIB->isCall(Inst))
     return false;
 
-  std::set<int64_t> Res;
   const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
   // If indirect call, we conservatively assume it accesses all stack positions
   if (TargetSymbol == nullptr) {
@@ -561,11 +560,6 @@ FrameAnalysis::FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG)
     NamedRegionTimer T1("clearspt", "clear spt", "FA", "FA breakdown",
                         opts::TimeFA);
     clearSPTMap();
-
-    // Clean up memory allocated for annotation values
-    if (!opts::NoThreads)
-      for (MCPlusBuilder::AllocatorIdTy Id : SPTAllocatorsId)
-        BC.MIB->freeValuesAllocator(Id);
   }
 }
 

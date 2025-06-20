@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReservedIdentifierCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Token.h"
 #include <algorithm>
 #include <cctype>
@@ -178,8 +176,11 @@ std::optional<RenamerClangTidyCheck::FailureInfo>
 ReservedIdentifierCheck::getDeclFailureInfo(const NamedDecl *Decl,
                                             const SourceManager &) const {
   assert(Decl && Decl->getIdentifier() && !Decl->getName().empty() &&
-         !Decl->isImplicit() &&
          "Decl must be an explicit identifier with a name.");
+  // Implicit identifiers cannot fail.
+  if (Decl->isImplicit())
+    return std::nullopt;
+
   return getFailureInfoImpl(
       Decl->getName(), isa<TranslationUnitDecl>(Decl->getDeclContext()),
       /*IsMacro = */ false, getLangOpts(), Invert, AllowedIdentifiers);

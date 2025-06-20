@@ -11,6 +11,7 @@
 
 #include "ARMTargetMachine.h"
 #include "ARM.h"
+#include "ARMLatencyMutations.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMMacroFusion.h"
 #include "ARMSubtarget.h"
@@ -18,7 +19,6 @@
 #include "ARMTargetTransformInfo.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/ExecutionDomainFix.h"
@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
@@ -34,7 +33,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -43,6 +41,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
@@ -84,7 +83,7 @@ namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
   RegisterTargetMachine<ARMLETargetMachine> A(getTheThumbLETarget());
@@ -93,6 +92,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
+  initializeARMAsmPrinterPass(Registry);
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
   initializeARMParallelDSPPass(Registry);
@@ -110,7 +110,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMSLSHardeningPass(Registry);
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
-  initializeARMDAGToDAGISelPass(Registry);
+  initializeARMDAGToDAGISelLegacyPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -222,9 +222,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool isLittle)
-    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, isLittle),
+                               TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TargetABI(computeTargetABI(TT, CPU, Options)),
       TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
 
@@ -241,7 +242,9 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       Options.EABIVersion == EABI::Unknown) {
     // musl is compatible with glibc with regard to EABI version
     if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
+         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
          TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
          TargetTriple.getEnvironment() == Triple::MuslEABI ||
          TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
          TargetTriple.getEnvironment() == Triple::OpenHOS) &&
@@ -267,6 +270,22 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 }
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
+
+bool ARMBaseTargetMachine::isAPCS_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_APCS;
+}
+
+bool ARMBaseTargetMachine::isAAPCS_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS ||
+         TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
+
+bool ARMBaseTargetMachine::isAAPCS16_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
 
 MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
@@ -321,7 +340,29 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(ARMTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<ARMTTIImpl>(this, F));
+}
+
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createSchedLive(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  if (auto Mutation = createARMLatencyMutations(ST, C->AA))
+    DAG->addMutation(std::move(Mutation));
+  return DAG;
 }
 
 ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
@@ -350,26 +391,6 @@ public:
 
   ARMBaseTargetMachine &getARMTargetMachine() const {
     return getTM<ARMBaseTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    return DAG;
   }
 
   void addIRPasses() override;
@@ -617,7 +638,7 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardCatchretPass());
+    addPass(createEHContGuardTargetsPass());
   }
 }
 
@@ -640,3 +661,5 @@ bool ARMBaseTargetMachine::parseMachineFunctionInfo(
   MF.getInfo<ARMFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
   return false;
 }
+
+void ARMBaseTargetMachine::reset() { SubtargetMap.clear(); }

@@ -1,13 +1,13 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | %ptxas-verify %}
 
 declare i32 @llvm.nvvm.fns(i32, i32, i32)
 
 ; CHECK-LABEL: .func{{.*}}fns
 define i32 @fns(i32 %mask, i32 %base, i32 %offset) {
-  ; CHECK: ld.param.u32 	[[MASK:%r[0-9]+]], [fns_param_0];
-  ; CHECK: ld.param.u32 	[[BASE:%r[0-9]+]], [fns_param_1];
-  ; CHECK: ld.param.u32 	[[OFFSET:%r[0-9]+]], [fns_param_2];
+  ; CHECK: ld.param.b32 	[[MASK:%r[0-9]+]], [fns_param_0];
+  ; CHECK: ld.param.b32 	[[BASE:%r[0-9]+]], [fns_param_1];
+  ; CHECK: ld.param.b32 	[[OFFSET:%r[0-9]+]], [fns_param_2];
 
   ; CHECK:  fns.b32 	{{%r[0-9]+}}, [[MASK]], [[BASE]], [[OFFSET]];
   %r0 = call i32 @llvm.nvvm.fns(i32 %mask, i32 %base, i32 %offset);

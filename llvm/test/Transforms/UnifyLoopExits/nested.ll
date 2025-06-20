@@ -31,7 +31,7 @@ define void @nested(i1 %PredB3, i1 %PredB4, i1 %PredA4, i1 %PredA3, i32 %X, i32 
 ; CHECK-NEXT:    [[EXIT_PHI:%.*]] = phi i32 [ [[Z:%.*]], [[C:%.*]] ], [ [[EXIT_PHI_MOVED:%.*]], [[LOOP_EXIT_GUARD]] ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[EXIT_PHI_MOVED]] = phi i32 [ undef, [[A4]] ], [ [[A4_PHI]], [[A5]] ]
+; CHECK-NEXT:    [[EXIT_PHI_MOVED]] = phi i32 [ poison, [[A4]] ], [ [[A4_PHI]], [[A5]] ]
 ; CHECK-NEXT:    [[GUARD_C:%.*]] = phi i1 [ true, [[A4]] ], [ false, [[A5]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_C]], label [[C]], label [[EXIT]]
 ; CHECK:       loop.exit.guard1:

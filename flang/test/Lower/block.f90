@@ -7,13 +7,13 @@ program bb ! block stack management and exits
     integer :: i, j
     ! CHECK:   fir.store %c0{{.*}} to %[[V_1]] : !fir.ref<i32>
     i = 0
-    ! CHECK:   %[[V_3:[0-9]+]] = fir.call @llvm.stacksave.p0()
+    ! CHECK:   %[[V_3:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
     ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
     ! CHECK:   br ^bb1
     ! CHECK: ^bb1:  // 2 preds: ^bb0, ^bb16
     ! CHECK:   cond_br %{{.*}}, ^bb2, ^bb17
     ! CHECK: ^bb2:  // pred: ^bb1
-    ! CHECK:   %[[V_11:[0-9]+]] = fir.call @llvm.stacksave.p0()
+    ! CHECK:   %[[V_11:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
     ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
     ! CHECK:   cond_br %{{.*}}, ^bb3, ^bb4
     ! CHECK: ^bb3:  // pred: ^bb2
@@ -27,29 +27,29 @@ program bb ! block stack management and exits
     ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
     ! CHECK:   cond_br %{{.*}}, ^bb7, ^bb8
     ! CHECK: ^bb7:  // pred: ^bb6
-    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_11]])
+    ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
     ! CHECK:   br ^bb15
     ! CHECK: ^bb8:  // pred: ^bb6
     ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
     ! CHECK:   cond_br %{{.*}}, ^bb9, ^bb10
     ! CHECK: ^bb9:  // pred: ^bb8
-    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_11]])
+    ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
     ! CHECK:   br ^bb16
     ! CHECK: ^bb10:  // 2 preds: ^bb3, ^bb8
     ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
     ! CHECK:   cond_br %{{.*}}, ^bb11, ^bb12
     ! CHECK: ^bb11:  // pred: ^bb10
-    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_11]])
+    ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
     ! CHECK:   br ^bb18
     ! CHECK: ^bb12:  // pred: ^bb10
     ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
     ! CHECK:   cond_br %{{.*}}, ^bb13, ^bb14
     ! CHECK: ^bb13:  // pred: ^bb12
-    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_11]])
-    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_3]])
+    ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
+    ! CHECK:   llvm.intr.stackrestore %[[V_3]] : !llvm.ptr
     ! CHECK:   br ^bb19
     ! CHECK: ^bb14: // 2 preds: ^bb5, ^bb12
-    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_11]])
+    ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
     ! CHECK:   br ^bb15
     ! CHECK: ^bb15:  // 2 preds: ^bb7, ^bb14
     ! CHECK:   br ^bb16
@@ -59,7 +59,7 @@ program bb ! block stack management and exits
     ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
     ! CHECK:   cf.br ^bb18
     ! CHECK: ^bb18:  // 2 preds: ^bb11, ^bb17
-    ! CHECK:   fir.call @llvm.stackrestore.p0(%[[V_3]])
+    ! CHECK:   llvm.intr.stackrestore %[[V_3]] : !llvm.ptr
     ! CHECK:   br ^bb19
     ! CHECK: ^bb19:  // 2 preds: ^bb13, ^bb18
     block
@@ -79,10 +79,10 @@ program bb ! block stack management and exits
 12  end block
 100 print*, i ! expect 21
 
-    ! CHECK: %[[V_51:[0-9]+]] = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
+    ! CHECK: %[[V_51:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
     ! CHECK: fir.store %c5{{.*}} to %[[V_0]] : !fir.ref<i32>
-    ! CHECK: fir.call @ss(%[[V_0]]) fastmath<contract> : (!fir.ref<i32>) -> ()
-    ! CHECK: fir.call @llvm.stackrestore.p0(%[[V_51]]) fastmath<contract> : (!fir.ref<i8>) -> ()
+    ! CHECK: fir.call @ss(%[[V_0]]) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> ()
+    ! CHECK: llvm.intr.stackrestore %[[V_51]] : !llvm.ptr
     block
       interface
         subroutine ss(n) bind(c)

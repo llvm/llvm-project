@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-bit=false < %s
+; RUN: llc -mtriple=hexagon -hexagon-bit=false < %s
 ; REQUIRES: asserts
 
 ; Fix for an undefined virtual register assert that was caused by an

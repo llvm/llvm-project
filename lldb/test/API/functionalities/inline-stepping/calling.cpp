@@ -13,6 +13,12 @@ int called_by_inline_ref (int &value);
 inline void inline_trivial_1 () __attribute__((always_inline));
 inline void inline_trivial_2 () __attribute__((always_inline));
 
+// These three should share the same initial pc so we can test
+// virtual inline stepping.
+inline void caller_trivial_inline_1() __attribute__((always_inline));
+inline void caller_trivial_inline_2() __attribute__((always_inline));
+inline void caller_trivial_inline_3() __attribute__((always_inline));
+
 void caller_trivial_1 ();
 void caller_trivial_2 ();
 
@@ -79,6 +85,23 @@ caller_trivial_2 ()
     inline_value += 1;  // At increment in caller_trivial_2.
 }
 
+// When you call caller_trivial_inline_1, the inlined call-site
+// should share a PC with all three of the following inlined
+// functions, so we can exercise "virtual inline stepping".
+void caller_trivial_inline_1() {
+  caller_trivial_inline_2(); // In caller_trivial_inline_1.
+  inline_value += 1;
+}
+
+void caller_trivial_inline_2() {
+  caller_trivial_inline_3(); // In caller_trivial_inline_2.
+  inline_value += 1;         // After caller_trivial_inline_3
+}
+
+void caller_trivial_inline_3() {
+  inline_value += 1; // In caller_trivial_inline_3.
+}
+
 void
 called_by_inline_trivial ()
 {
@@ -131,6 +154,8 @@ main (int argc, char **argv)
     
     max_value(123, 456);                                // Call max_value template
     max_value(std::string("abc"), std::string("0022")); // Call max_value specialized
+
+    caller_trivial_inline_1(); // At caller_trivial_inline_1.
 
     return 0;            // About to return from main.
 }

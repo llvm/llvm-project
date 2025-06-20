@@ -14,7 +14,7 @@ config.extra_paths = "@POLLY_TEST_EXTRA_PATHS@".split(";")
 ## Check the current platform with regex
 import re
 EAT_ERR_ON_X86 = ' '
-if (re.match(r'^x86_64*', '@LLVM_TARGET_TRIPLE@') == None) :
+if (re.match(r'^x86_64*', '@LLVM_TARGET_TRIPLE@') is None) :
   EAT_ERR_ON_X86 = '|| echo \"error is eaten\"'
 
 for arch in config.targets_to_build.split():
@@ -47,7 +47,6 @@ if config.llvm_polly_link_into_tools == '' or \
 else:
     config.substitutions.append(('%loadPolly', commonOpts ))
     config.substitutions.append(('%loadNPMPolly', commonOpts ))
-
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

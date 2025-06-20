@@ -20,6 +20,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
@@ -54,6 +55,15 @@ cl::opt<bool>
 // setjmp/longjmp handling using wasm EH instrutions
 cl::opt<bool> WebAssembly::WasmEnableSjLj(
     "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
+// If true, use the legacy Wasm EH proposal:
+// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
+// And if false, use the standardized Wasm EH proposal:
+// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
+// Currently set to true by default because not all major web browsers turn on
+// the new standard proposal by default, but will later change to false.
+cl::opt<bool> WebAssembly::WasmUseLegacyEH(
+    "wasm-use-legacy-eh", cl::desc("WebAssembly exception handling (legacy)"),
+    cl::init(true));
 
 static MCAsmInfo *createMCAsmInfo(const MCRegisterInfo & /*MRI*/,
                                   const Triple &TT,
@@ -104,10 +114,9 @@ createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new WebAssemblyTargetWasmStreamer(S);
 }
 
-static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
-                                                 formatted_raw_ostream &OS,
-                                                 MCInstPrinter * /*InstPrint*/,
-                                                 bool /*isVerboseAsm*/) {
+static MCTargetStreamer *
+createAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                        MCInstPrinter * /*InstPrint*/) {
   return new WebAssemblyTargetAsmStreamer(S, OS);
 }
 
@@ -116,7 +125,8 @@ static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeWebAssemblyTargetMC() {
   for (Target *T :
        {&getTheWebAssemblyTarget32(), &getTheWebAssemblyTarget64()}) {
     // Register the MC asm info.

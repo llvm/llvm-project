@@ -5,11 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14
-
-// ALLOW_RETRIES: 2
 
 // <shared_mutex>
 
@@ -17,44 +15,50 @@
 
 // bool try_lock();
 
+#include <shared_mutex>
+#include <atomic>
 #include <cassert>
 #include <chrono>
-#include <cstdlib>
-#include <shared_mutex>
 #include <thread>
 
 #include "make_test_thread.h"
-#include "test_macros.h"
 
-std::shared_mutex m;
-
-typedef std::chrono::system_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
-
-void f()
-{
-    time_point t0 = Clock::now();
-    assert(!m.try_lock());
-    assert(!m.try_lock());
-    assert(!m.try_lock());
-    while(!m.try_lock())
-        ;
-    time_point t1 = Clock::now();
+int main(int, char**) {
+  // Try to exclusive-lock a mutex that is not locked yet. This should succeed.
+  {
+    std::shared_mutex m;
+    bool succeeded = m.try_lock();
+    assert(succeeded);
     m.unlock();
-    ns d = t1 - t0 - ms(250);
-    assert(d < ms(200));  // within 200ms
-}
+  }
 
-int main(int, char**)
-{
+  // Try to exclusive-lock a mutex that is already locked exclusively. This should fail.
+  {
+    std::shared_mutex m;
     m.lock();
-    std::thread t = support::make_test_thread(f);
-    std::this_thread::sleep_for(ms(250));
-    m.unlock();
+
+    std::thread t = support::make_test_thread([&] {
+      bool succeeded = m.try_lock();
+      assert(!succeeded);
+    });
     t.join();
+
+    m.unlock();
+  }
+
+  // Try to exclusive-lock a mutex that is already share-locked. This should fail.
+  {
+    std::shared_mutex m;
+    m.lock_shared();
+
+    std::thread t = support::make_test_thread([&] {
+      bool succeeded = m.try_lock();
+      assert(!succeeded);
+    });
+    t.join();
+
+    m.unlock_shared();
+  }
 
   return 0;
 }

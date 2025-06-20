@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
 using namespace llvm;

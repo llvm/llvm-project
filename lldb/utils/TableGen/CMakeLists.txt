@@ -10,10 +10,8 @@ if (NOT DEFINED LLDB_TABLEGEN_EXE)
     add_tablegen(lldb-tblgen LLDB
       LLDBOptionDefEmitter.cpp
       LLDBPropertyDefEmitter.cpp
-      LLDBSBAPIDWARFEnum.cpp
       LLDBTableGen.cpp
       LLDBTableGenUtils.cpp
       )
-    set_target_properties(lldb-tblgen PROPERTIES FOLDER "LLDB tablegenning")
   endif()
 endif()

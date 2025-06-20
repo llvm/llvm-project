@@ -9,17 +9,16 @@
 // Implements generic name mangling support for blocks and Objective-C.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/AST/Attr.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/Mangle.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
@@ -29,6 +28,23 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
+
+void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
+                                 bool isInstanceMethod, StringRef ClassName,
+                                 std::optional<StringRef> CategoryName,
+                                 StringRef MethodName) {
+  // \01+[ContainerName(CategoryName) SelectorName]
+  if (includePrefixByte)
+    OS << "\01";
+  OS << (isInstanceMethod ? '-' : '+');
+  OS << '[';
+  OS << ClassName;
+  if (CategoryName)
+    OS << "(" << *CategoryName << ")";
+  OS << " ";
+  OS << MethodName;
+  OS << ']';
+}
 
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
 // much to be desired. Come up with a better mangling scheme.
@@ -75,7 +91,7 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
       if (FD->isMain() && FD->getNumParams() == 2)
         return CCM_WasmMainArgcArgv;
 
-  if (!Triple.isOSWindows() || !Triple.isX86())
+  if (!TI.shouldUseMicrosoftCCforMangling())
     return CCM_Other;
 
   if (Context.getLangOpts().CPlusPlus && !isExternC(ND) &&
@@ -241,7 +257,8 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   Out << ((DefaultPtrWidth / 8) * ArgWords);
 }
 
-void MangleContext::mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &Out) {
+void MangleContext::mangleMSGuidDecl(const MSGuidDecl *GD,
+                                     raw_ostream &Out) const {
   // For now, follow the MSVC naming convention for GUID objects on all
   // targets.
   MSGuidDecl::Parts P = GD->getParts();
@@ -301,9 +318,8 @@ void MangleContext::mangleBlock(const DeclContext *DC, const BlockDecl *BD,
   } else {
     assert((isa<NamedDecl>(DC) || isa<BlockDecl>(DC)) &&
            "expected a NamedDecl or BlockDecl");
-    if (isa<BlockDecl>(DC))
-      for (; DC && isa<BlockDecl>(DC); DC = DC->getParent())
-        (void) getBlockId(cast<BlockDecl>(DC), true);
+    for (; isa_and_nonnull<BlockDecl>(DC); DC = DC->getParent())
+      (void)getBlockId(cast<BlockDecl>(DC), true);
     assert((isa<TranslationUnitDecl>(DC) || isa<NamedDecl>(DC)) &&
            "expected a TranslationUnitDecl or a NamedDecl");
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(DC))
@@ -329,7 +345,7 @@ void MangleContext::mangleBlock(const DeclContext *DC, const BlockDecl *BD,
 void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
                                          raw_ostream &OS,
                                          bool includePrefixByte,
-                                         bool includeCategoryNamespace) {
+                                         bool includeCategoryNamespace) const {
   if (getASTContext().getLangOpts().ObjCRuntime.isGNUFamily()) {
     // This is the mangling we've always used on the GNU runtimes, but it
     // has obvious collisions in the face of underscores within class
@@ -363,28 +379,30 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   }
 
   // \01+[ContainerName(CategoryName) SelectorName]
-  if (includePrefixByte) {
-    OS << '\01';
-  }
-  OS << (MD->isInstanceMethod() ? '-' : '+') << '[';
+  auto CategoryName = std::optional<StringRef>();
+  StringRef ClassName = "";
   if (const auto *CID = MD->getCategory()) {
-    OS << CID->getClassInterface()->getName();
-    if (includeCategoryNamespace) {
-      OS << '(' << *CID << ')';
+    if (const auto *CI = CID->getClassInterface()) {
+      ClassName = CI->getName();
+      if (includeCategoryNamespace) {
+        CategoryName = CID->getName();
+      }
     }
   } else if (const auto *CD =
                  dyn_cast<ObjCContainerDecl>(MD->getDeclContext())) {
-    OS << CD->getName();
+    ClassName = CD->getName();
   } else {
     llvm_unreachable("Unexpected ObjC method decl context");
   }
-  OS << ' ';
-  MD->getSelector().print(OS);
-  OS << ']';
+  std::string MethodName;
+  llvm::raw_string_ostream MethodNameOS(MethodName);
+  MD->getSelector().print(MethodNameOS);
+  clang::mangleObjCMethodName(OS, includePrefixByte, MD->isInstanceMethod(),
+                              ClassName, CategoryName, MethodName);
 }
 
 void MangleContext::mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
-                                                     raw_ostream &Out) {
+                                                     raw_ostream &Out) const {
   SmallString<64> Name;
   llvm::raw_svector_ostream OS(Name);
 
@@ -514,10 +532,20 @@ public:
       }
     } else if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(ND)) {
       Manglings.emplace_back(getName(ND));
-      if (MD->isVirtual())
-        if (const auto *TIV = Ctx.getVTableContext()->getThunkInfo(MD))
-          for (const auto &T : *TIV)
-            Manglings.emplace_back(getMangledThunk(MD, T));
+      if (MD->isVirtual()) {
+        if (const auto *TIV = Ctx.getVTableContext()->getThunkInfo(MD)) {
+          for (const auto &T : *TIV) {
+            std::string ThunkName;
+            std::string ContextualizedName =
+                getMangledThunk(MD, T, /* ElideOverrideInfo */ false);
+            if (Ctx.useAbbreviatedThunkName(MD, ContextualizedName))
+              ThunkName = getMangledThunk(MD, T, /* ElideOverrideInfo */ true);
+            else
+              ThunkName = ContextualizedName;
+            Manglings.emplace_back(ThunkName);
+          }
+        }
+      }
     }
 
     return Manglings;
@@ -531,9 +559,9 @@ private:
         GD = GlobalDecl(CtorD, Ctor_Complete);
       else if (const auto *DtorD = dyn_cast<CXXDestructorDecl>(D))
         GD = GlobalDecl(DtorD, Dtor_Complete);
-      else if (D->hasAttr<CUDAGlobalAttr>())
-        GD = GlobalDecl(cast<FunctionDecl>(D));
-      else
+      else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+        GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(D);
+      } else
         GD = GlobalDecl(D);
       MC->mangleName(GD, OS);
       return false;
@@ -565,23 +593,24 @@ private:
     std::string BackendBuf;
     llvm::raw_string_ostream BOS(BackendBuf);
 
-    llvm::Mangler::getNameWithPrefix(BOS, FOS.str(), DL);
+    llvm::Mangler::getNameWithPrefix(BOS, FrontendBuf, DL);
 
-    return BOS.str();
+    return BackendBuf;
   }
 
-  std::string getMangledThunk(const CXXMethodDecl *MD, const ThunkInfo &T) {
+  std::string getMangledThunk(const CXXMethodDecl *MD, const ThunkInfo &T,
+                              bool ElideOverrideInfo) {
     std::string FrontendBuf;
     llvm::raw_string_ostream FOS(FrontendBuf);
 
-    MC->mangleThunk(MD, T, FOS);
+    MC->mangleThunk(MD, T, ElideOverrideInfo, FOS);
 
     std::string BackendBuf;
     llvm::raw_string_ostream BOS(BackendBuf);
 
-    llvm::Mangler::getNameWithPrefix(BOS, FOS.str(), DL);
+    llvm::Mangler::getNameWithPrefix(BOS, FrontendBuf, DL);
 
-    return BOS.str();
+    return BackendBuf;
   }
 };
 

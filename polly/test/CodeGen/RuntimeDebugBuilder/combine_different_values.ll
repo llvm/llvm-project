@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
 ; RUN: -polly-codegen-add-debug-printing \
 ; RUN: -polly-ignore-aliasing < %s | FileCheck %s
 
@@ -53,12 +53,12 @@
 
 ; CHECK: %0 = shl nuw nsw i64 %polly.indvar, 3
 ; CHECK: %scevgep = getelementptr i8, ptr %B, i64 %0
-; CHECK: %tmp3_p_scalar_ = load double, ptr %scevgep, align 8, !alias.scope !0, !noalias !3
+; CHECK: %tmp3_p_scalar_ = load double, ptr %scevgep, align 8, !alias.scope !2, !noalias !5
 ; CHECK: %1 = ptrtoint ptr %scevgep to i64
 ; CHECK: %2 = call i32 (...) @printf(ptr @3, ptr addrspace(4) @0, i64 %1, ptr addrspace(4) @1, double %tmp3_p_scalar_, ptr addrspace(4) @2)
 ; CHECK: %3 = call i32 @fflush(ptr null)
 ; CHECK: %scevgep1 = getelementptr i8, ptr %C, i64 %polly.indvar
-; CHECK: %tmp5_p_scalar_ = load i8, ptr %scevgep1, align 1, !alias.scope !8, !noalias !9
+; CHECK: %tmp5_p_scalar_ = load i8, ptr %scevgep1, align 1, !alias.scope !10, !noalias !11
 ; CHECK: %4 = ptrtoint ptr %scevgep1 to i64
 ; CHECK: %5 = sext i8 %tmp5_p_scalar_ to i64
 ; CHECK: %6 = call i32 (...) @printf(ptr @7, ptr addrspace(4) @4, i64 %4, ptr addrspace(4) @5, i64 %5, ptr addrspace(4) @6)
@@ -67,7 +67,7 @@
 ; CHECK: %p_tmp7 = fadd double %tmp3_p_scalar_, %p_tmp6
 ; CHECK: %8 = shl nuw nsw i64 %polly.indvar, 2
 ; CHECK: %scevgep2 = getelementptr i8, ptr %D, i64 %8
-; CHECK: %tmp9_p_scalar_ = load i32, ptr %scevgep2, align 4, !alias.scope !10, !noalias !11
+; CHECK: %tmp9_p_scalar_ = load i32, ptr %scevgep2, align 4, !alias.scope !12, !noalias !13
 ; CHECK: %9 = ptrtoint ptr %scevgep2 to i64
 ; CHECK: %10 = sext i32 %tmp9_p_scalar_ to i64
 ; CHECK: %11 = call i32 (...) @printf(ptr @11, ptr addrspace(4) @8, i64 %9, ptr addrspace(4) @9, i64 %10, ptr addrspace(4) @10)
@@ -76,7 +76,7 @@
 ; CHECK: %p_tmp11 = fadd double %p_tmp7, %p_tmp10
 ; CHECK: %13 = shl nuw nsw i64 %polly.indvar, 3
 ; CHECK: %scevgep3 = getelementptr i8, ptr %E, i64 %13
-; CHECK: %tmp13_p_scalar_ = load i64, ptr %scevgep3, align 8, !alias.scope !12, !noalias !13
+; CHECK: %tmp13_p_scalar_ = load i64, ptr %scevgep3, align 8, !alias.scope !14, !noalias !15
 ; CHECK: %14 = ptrtoint ptr %scevgep3 to i64
 ; CHECK: %15 = call i32 (...) @printf(ptr @15, ptr addrspace(4) @12, i64 %14, ptr addrspace(4) @13, i64 %tmp13_p_scalar_, ptr addrspace(4) @14)
 ; CHECK: %16 = call i32 @fflush(ptr null)
@@ -84,7 +84,7 @@
 ; CHECK: %p_tmp15 = fadd double %p_tmp11, %p_tmp14
 ; CHECK: %17 = shl nuw nsw i64 %polly.indvar, 2
 ; CHECK: %scevgep4 = getelementptr i8, ptr %A, i64 %17
-; CHECK: %tmp17_p_scalar_ = load float, ptr %scevgep4, align 4, !alias.scope !14, !noalias !15
+; CHECK: %tmp17_p_scalar_ = load float, ptr %scevgep4, align 4, !alias.scope !16, !noalias !17
 ; CHECK: %18 = ptrtoint ptr %scevgep4 to i64
 ; CHECK: %19 = fpext float %tmp17_p_scalar_ to double
 ; CHECK: %20 = call i32 (...) @printf(ptr @19, ptr addrspace(4) @16, i64 %18, ptr addrspace(4) @17, double %19, ptr addrspace(4) @18)

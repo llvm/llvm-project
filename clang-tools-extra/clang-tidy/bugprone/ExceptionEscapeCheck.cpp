@@ -8,9 +8,7 @@
 
 #include "ExceptionEscapeCheck.h"
 
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace clang::ast_matchers;
@@ -20,7 +18,7 @@ namespace {
 
 AST_MATCHER_P(FunctionDecl, isEnabled, llvm::StringSet<>,
               FunctionsThatShouldNotThrow) {
-  return FunctionsThatShouldNotThrow.count(Node.getNameAsString()) > 0;
+  return FunctionsThatShouldNotThrow.contains(Node.getNameAsString());
 }
 
 AST_MATCHER(FunctionDecl, isExplicitThrow) {
@@ -43,13 +41,11 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       IgnoredExceptionsVec;
   StringRef(RawFunctionsThatShouldNotThrow)
       .split(FunctionsThatShouldNotThrowVec, ",", -1, false);
-  FunctionsThatShouldNotThrow.insert(FunctionsThatShouldNotThrowVec.begin(),
-                                     FunctionsThatShouldNotThrowVec.end());
+  FunctionsThatShouldNotThrow.insert_range(FunctionsThatShouldNotThrowVec);
 
   llvm::StringSet<> IgnoredExceptions;
   StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
-  IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
-                           IgnoredExceptionsVec.end());
+  IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
 }

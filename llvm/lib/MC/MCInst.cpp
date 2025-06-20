@@ -35,10 +35,13 @@ void MCOperand::print(raw_ostream &OS, const MCRegisterInfo *RegInfo) const {
   else if (isDFPImm())
     OS << "DFPImm:" << bit_cast<double>(getDFPImm());
   else if (isExpr()) {
-    OS << "Expr:(" << *getExpr() << ")";
+    OS << "Expr:" << *getExpr();
   } else if (isInst()) {
     OS << "Inst:(";
-    getInst()->print(OS, RegInfo);
+    if (const auto *Inst = getInst())
+      Inst->print(OS, RegInfo);
+    else
+      OS << "NULL";
     OS << ")";
   } else
     OS << "UNDEFINED";

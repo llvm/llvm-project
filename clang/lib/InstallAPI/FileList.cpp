@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/InstallAPI/FileList.h"
-#include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/InstallAPI/FileList.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -51,6 +49,7 @@ private:
 
 public:
   std::unique_ptr<MemoryBuffer> InputBuffer;
+  clang::FileManager *FM;
   unsigned Version;
   HeaderSeq HeaderList;
 
@@ -124,6 +123,12 @@ Error Implementation::parseHeaders(Array &Headers) {
           HeaderFile{PathStr, *Type, /*IncludeName=*/"", Language});
       continue;
     }
+
+    if (FM)
+      if (!FM->getOptionalFileRef(PathStr))
+        return createFileError(
+            PathStr, make_error_code(std::errc::no_such_file_or_directory));
+
     auto IncludeName = createIncludeHeaderName(PathStr);
     HeaderList.emplace_back(PathStr, *Type,
                             IncludeName.has_value() ? IncludeName.value() : "",
@@ -170,9 +175,10 @@ Error Implementation::parse(StringRef Input) {
 
 llvm::Error
 FileListReader::loadHeaders(std::unique_ptr<MemoryBuffer> InputBuffer,
-                            HeaderSeq &Destination) {
+                            HeaderSeq &Destination, clang::FileManager *FM) {
   Implementation Impl;
   Impl.InputBuffer = std::move(InputBuffer);
+  Impl.FM = FM;
 
   if (llvm::Error Err = Impl.parse(Impl.InputBuffer->getBuffer()))
     return Err;

@@ -58,7 +58,7 @@ static gpu::GPUModuleOp genGPUModule(OpBuilder &builder, ModuleOp topModule) {
   for (auto op : topModule.getBodyRegion().getOps<gpu::GPUModuleOp>())
     return op; // existing
   markAsGPUContainer(topModule);
-  builder.setInsertionPointToStart(&topModule.getBodyRegion().front());
+  builder.setInsertionPointToStart(topModule.getBody());
   return builder.create<gpu::GPUModuleOp>(topModule->getLoc(),
                                           "sparse_kernels");
 }
@@ -75,7 +75,7 @@ static gpu::GPUFuncOp genGPUFunc(OpBuilder &builder, gpu::GPUModuleOp gpuModule,
     ("kernel" + Twine(kernelNumber++)).toStringRef(kernelName);
   } while (gpuModule.lookupSymbol(kernelName));
   // Then we insert a new kernel with given arguments into the module.
-  builder.setInsertionPointToStart(&gpuModule.getBodyRegion().front());
+  builder.setInsertionPointToStart(gpuModule.getBody());
   SmallVector<Type> argsTp;
   for (auto arg : args)
     argsTp.push_back(arg.getType());
@@ -212,7 +212,7 @@ static Value genTensorToMemref(PatternRewriter &rewriter, Location loc,
   auto tensorType = llvm::cast<ShapedType>(tensor.getType());
   auto memrefType =
       MemRefType::get(tensorType.getShape(), tensorType.getElementType());
-  return rewriter.create<bufferization::ToMemrefOp>(loc, memrefType, tensor);
+  return rewriter.create<bufferization::ToBufferOp>(loc, memrefType, tensor);
 }
 
 /// Prepares the outlined arguments, passing scalars and buffers in. Here we
@@ -651,7 +651,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, memY);
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, y.getType(), memY);
   return success();
 }
 
@@ -752,7 +752,7 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, bufC);
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, c.getType(), bufC);
   return success();
 }
 
@@ -925,9 +925,12 @@ static LogicalResult rewriteSpGEMM(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  Value vt = rewriter.create<bufferization::ToTensorOp>(loc, valH);
-  Value rt = rewriter.create<bufferization::ToTensorOp>(loc, rowH);
-  Value ct = rewriter.create<bufferization::ToTensorOp>(loc, colH);
+  Value vt = rewriter.create<bufferization::ToTensorOp>(
+      loc, memref::getTensorTypeFromMemRefType(valH.getType()), valH);
+  Value rt = rewriter.create<bufferization::ToTensorOp>(
+      loc, memref::getTensorTypeFromMemRefType(rowH.getType()), rowH);
+  Value ct = rewriter.create<bufferization::ToTensorOp>(
+      loc, memref::getTensorTypeFromMemRefType(colH.getType()), colH);
   rewriter.replaceOpWithNewOp<AssembleOp>(op, c.getType(), ValueRange{rt, ct},
                                           vt);
   return success();
@@ -1031,7 +1034,6 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
               .getAsyncToken();
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnC)
               .getAsyncToken();
-  SmallVector<Value> newDynamicSizes;
   token = genDeallocMemRef(rewriter, loc, buffer1, token);
   token = genDeallocMemRef(rewriter, loc, buffer2, token);
   token = genDeallocMemRef(rewriter, loc, buffer3, token);
@@ -1044,7 +1046,7 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, bufC);
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, C.getType(), bufC);
   return success();
 }
 
@@ -1269,7 +1271,7 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
     AffineExpr i, j, k;
     bindDims(getContext(), i, j, k);
 
-    // TODO: more robust patterns, tranposed versions, more kernels,
+    // TODO: more robust patterns, transposed versions, more kernels,
     //       identify alpha and beta and pass them to the CUDA calls.
 
     // Recognize a SpMV kernel.

@@ -35,18 +35,18 @@ protected:
   MacroExpansionContextTest()
       : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
-        DiagID(new DiagnosticIDs()), DiagOpts(new DiagnosticOptions()),
-        Diags(DiagID, DiagOpts.get(), new IgnoringDiagConsumer()),
+        DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions()) {
     TargetOpts->Triple = "x86_64-pc-linux-unknown";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
     LangOpts.CPlusPlus20 = 1; // For __VA_OPT__
   }
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
@@ -58,13 +58,12 @@ protected:
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
+    HeaderSearchOptions HSOpts;
     TrivialModuleLoader ModLoader;
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
-    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, HeaderInfo, ModLoader,
-                    /*IILookup =*/nullptr,
-                    /*OwnsHeaderSearch =*/false);
+    PreprocessorOptions PPOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
 
     PP.Initialize(*Target);
     auto Ctx = std::make_unique<MacroExpansionContext>(LangOpts);

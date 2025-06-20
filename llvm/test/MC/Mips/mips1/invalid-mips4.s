@@ -69,8 +69,8 @@
         movz      $a1,$s6,$9        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movz.d    $f12,$f29,$9      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movz.s    $f25,$f7,$v1      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        lld       $zero,-14736($ra) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-        lwu       $s3,-24086($v1)   # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
+        lld       $zero,-14736($ra) # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
+        lwu       $s3,-24086($v1)   # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
         round.l.d $f12,$f1          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         round.l.s $f25,$f5          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         round.w.d $f6,$f4           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled

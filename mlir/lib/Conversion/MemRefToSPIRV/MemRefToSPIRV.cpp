@@ -21,7 +21,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Visitors.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <optional>
@@ -166,8 +165,8 @@ static Value castIntNToBool(Location loc, Value srcInt, OpBuilder &builder) {
   if (srcInt.getType().isInteger(1))
     return srcInt;
 
-  auto one = spirv::ConstantOp::getOne(srcInt.getType(), loc, builder);
-  return builder.createOrFold<spirv::IEqualOp>(loc, srcInt, one);
+  auto one = spirv::ConstantOp::getZero(srcInt.getType(), loc, builder);
+  return builder.createOrFold<spirv::INotEqualOp>(loc, srcInt, one);
 }
 
 //===----------------------------------------------------------------------===//
@@ -308,6 +307,17 @@ public:
   }
 };
 
+/// Converts memref.extract_aligned_pointer_as_index to spirv.ConvertPtrToU.
+class ExtractAlignedPointerAsIndexOpPattern final
+    : public OpConversionPattern<memref::ExtractAlignedPointerAsIndexOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractAlignedPointerAsIndexOp extractOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -898,7 +908,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
   OpFoldResult offset =
       getMixedValues(adaptor.getStaticOffsets(), adaptor.getOffsets(), rewriter)
           .front();
-  if (isConstantIntValue(offset, 0)) {
+  if (isZeroInteger(offset)) {
     rewriter.replaceOp(op, src);
     return success();
   }
@@ -912,7 +922,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
     if (auto val = dyn_cast<Value>(offset))
       return val;
 
-    int64_t attrVal = cast<IntegerAttr>(offset.get<Attribute>()).getInt();
+    int64_t attrVal = cast<IntegerAttr>(cast<Attribute>(offset)).getInt();
     Attribute attr = rewriter.getIntegerAttr(intType, attrVal);
     return rewriter.createOrFold<spirv::ConstantOp>(loc, intType, attr);
   }();
@@ -923,16 +933,31 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// ExtractAlignedPointerAsIndexOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ExtractAlignedPointerAsIndexOpPattern::matchAndRewrite(
+    memref::ExtractAlignedPointerAsIndexOp extractOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+  Type indexType = typeConverter.getIndexType();
+  rewriter.replaceOpWithNewOp<spirv::ConvertPtrToUOp>(extractOp, indexType,
+                                                      adaptor.getSource());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Pattern population
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
-void populateMemRefToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateMemRefToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
-  patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
-               DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern,
-               LoadOpPattern, MemorySpaceCastOpPattern, StoreOpPattern,
-               ReinterpretCastPattern, CastPattern>(typeConverter,
-                                                    patterns.getContext());
+  patterns
+      .add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
+           DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern, LoadOpPattern,
+           MemorySpaceCastOpPattern, StoreOpPattern, ReinterpretCastPattern,
+           CastPattern, ExtractAlignedPointerAsIndexOpPattern>(
+          typeConverter, patterns.getContext());
 }
 } // namespace mlir

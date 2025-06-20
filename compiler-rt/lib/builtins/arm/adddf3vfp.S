@@ -19,10 +19,10 @@ DEFINE_COMPILERRT_FUNCTION(__adddf3vfp)
 #if defined(COMPILER_RT_ARMHF_TARGET)
 	vadd.f64 d0, d0, d1
 #else
-	vmov	d6, r0, r1		// move first param from r0/r1 pair into d6
-	vmov	d7, r2, r3		// move second param from r2/r3 pair into d7
+	VMOV_TO_DOUBLE(d6, r0, r1)		// move first param from r0/r1 pair into d6
+	VMOV_TO_DOUBLE(d7, r2, r3)		// move second param from r2/r3 pair into d7
 	vadd.f64 d6, d6, d7
-	vmov	r0, r1, d6		// move result back to r0/r1 pair
+	VMOV_FROM_DOUBLE(r0, r1, d6)		// move result back to r0/r1 pair
 #endif
 	bx	lr
 END_COMPILERRT_FUNCTION(__adddf3vfp)

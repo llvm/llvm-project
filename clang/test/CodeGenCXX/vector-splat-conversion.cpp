@@ -22,28 +22,28 @@ typedef __attribute__((__ext_vector_type__(4))) __int128 bigint4;
 
 // CHECK-LABEL: define{{.*}} void @_Z14BoolConversionv
 void BoolConversion() {
-  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: store <4 x i32> splat (i32 -1)
   int4 intsT = (int4)true;
   // CHECK: store <4 x i32> zeroinitializer
   int4 intsF = (int4)false;
-  // CHECK: store <4 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>
+  // CHECK: store <4 x float> splat (float -1.000000e+00)
   float4 floatsT = (float4)true;
   // CHECK: store <4 x float> zeroinitializer
   float4 floatsF = (float4)false;
-  // CHECK: store <4 x i128> <i128 -1, i128 -1, i128 -1, i128 -1>
+  // CHECK: store <4 x i128> splat (i128 -1)
   bigint4 bigintsT = (bigint4)true;
   // CHECK: store <4 x i128> zeroinitializer
   bigint4 bigintsF = (bigint4)false;
 
-  // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: store <4 x i32> splat (i32 -1)
   constexpr int4 cIntsT = (int4)true;
   // CHECK: store <4 x i32> zeroinitializer
   constexpr int4 cIntsF = (int4)false;
-  // CHECK: store <4 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>
+  // CHECK: store <4 x float> splat (float -1.000000e+00)
   constexpr float4 cFloatsT = (float4)true;
   // CHECK: store <4 x float> zeroinitializer
   constexpr float4 cFloatsF = (float4)false;
-  // CHECK: store <4 x i128> <i128 -1, i128 -1, i128 -1, i128 -1>
+  // CHECK: store <4 x i128> splat (i128 -1)
   constexpr bigint4 cBigintsT = (bigint4)true;
   // CHECK: store <4 x i128> zeroinitializer
   constexpr bigint4 cBigintsF = (bigint4)false;

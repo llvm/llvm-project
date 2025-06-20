@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-debug-func=dbg_printf -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-debug-func=dbg_printf '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
 ;
 ; Check that the call to dbg_printf is accepted as a debug-function.
 ;

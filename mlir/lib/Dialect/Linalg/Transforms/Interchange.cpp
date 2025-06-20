@@ -79,8 +79,7 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   ArrayRef<Attribute> itTypes = genericOp.getIteratorTypes().getValue();
   SmallVector<Attribute> itTypesVector;
   llvm::append_range(itTypesVector, itTypes);
-  SmallVector<int64_t> permutation(interchangeVector.begin(),
-                                   interchangeVector.end());
+  SmallVector<int64_t> permutation(interchangeVector);
   applyPermutationToVector(itTypesVector, permutation);
   genericOp.setIteratorTypesAttr(rewriter.getArrayAttr(itTypesVector));
 

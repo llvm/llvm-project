@@ -8,25 +8,6 @@ import shlex
 # Load common config for all compiler-rt unit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/unittests/lit.common.unit.configured")
 
-def push_ld_library_path(config, new_path):
-  new_ld_library_path = os.path.pathsep.join(
-    (new_path, config.environment.get('LD_LIBRARY_PATH', '')))
-  config.environment['LD_LIBRARY_PATH'] = new_ld_library_path
-
-  if platform.system() == 'FreeBSD':
-    new_ld_32_library_path = os.path.pathsep.join(
-      (new_path, config.environment.get('LD_32_LIBRARY_PATH', '')))
-    config.environment['LD_32_LIBRARY_PATH'] = new_ld_32_library_path
-
-  if platform.system() == 'SunOS':
-    new_ld_library_path_32 = os.path.pathsep.join(
-      (new_path, config.environment.get('LD_LIBRARY_PATH_32', '')))
-    config.environment['LD_LIBRARY_PATH_32'] = new_ld_library_path_32
-
-    new_ld_library_path_64 = os.path.pathsep.join(
-      (new_path, config.environment.get('LD_LIBRARY_PATH_64', '')))
-    config.environment['LD_LIBRARY_PATH_64'] = new_ld_library_path_64
-
 # Setup config name.
 config.name = 'AddressSanitizer-Unit'
 
@@ -47,20 +28,6 @@ config.test_exec_root = os.path.join("@COMPILER_RT_BINARY_DIR@",
                                      "lib", "asan", "tests", test_dir)
 
 config.test_source_root = config.test_exec_root
-
-# When LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on, the initial value of
-# config.compiler_rt_libdir (COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR) has the
-# host triple as the trailing path component. The value is incorrect for i386
-# tests on x86_64 hosts and vice versa. Adjust config.compiler_rt_libdir
-# accordingly.
-if config.enable_per_target_runtime_dir and config.target_arch != config.host_arch:
-    if config.target_arch == 'i386':
-        config.compiler_rt_libdir = re.sub(r'/x86_64(?=-[^/]+$)', '/i386', config.compiler_rt_libdir)
-    elif config.target_arch == 'x86_64':
-        config.compiler_rt_libdir = re.sub(r'/i386(?=-[^/]+$)', '/x86_64', config.compiler_rt_libdir)
-
-# Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
-push_ld_library_path(config, config.compiler_rt_libdir)
 
 if not config.parallelism_group:
   config.parallelism_group = 'shadow-memory'

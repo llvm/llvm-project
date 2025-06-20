@@ -173,7 +173,7 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
 
       // Ignore the specified operand, usually because this position was
       // visited in an upward traversal via an iterative choice.
-      if (ignoreOperand && *ignoreOperand == operandIt.index())
+      if (ignoreOperand == operandIt.index())
         continue;
 
       Position *pos =
@@ -818,7 +818,7 @@ std::unique_ptr<MatcherNode> &getOrCreateChild(SwitchNode *node,
   auto it = predicate->patternToAnswer.find(pattern);
   assert(it != predicate->patternToAnswer.end() &&
          "expected pattern to exist in predicate");
-  return node->getChildren().insert({it->second, nullptr}).first->second;
+  return node->getChildren()[it->second];
 }
 
 /// Build the matcher CFG by "pushing" patterns through by sorted predicate

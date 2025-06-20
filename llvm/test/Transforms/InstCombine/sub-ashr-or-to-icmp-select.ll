@@ -130,7 +130,7 @@ define i32 @neg_or_ashr_i32_commute(i32 %x0) {
 define <4 x i32> @sub_ashr_or_i32_vec(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @sub_ashr_or_i32_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> splat (i32 -1), <4 x i32> [[X]]
 ; CHECK-NEXT:    ret <4 x i32> [[OR]]
 ;
   %sub = sub nsw <4 x i32> %y, %x
@@ -142,7 +142,7 @@ define <4 x i32> @sub_ashr_or_i32_vec(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @sub_ashr_or_i32_vec_nuw_nsw(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @sub_ashr_or_i32_vec_nuw_nsw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> splat (i32 -1), <4 x i32> [[X]]
 ; CHECK-NEXT:    ret <4 x i32> [[OR]]
 ;
   %sub = sub nuw nsw <4 x i32> %y, %x
@@ -166,7 +166,7 @@ define <4 x i32> @neg_or_ashr_i32_vec(<4 x i32> %x) {
 define <4 x i32> @sub_ashr_or_i32_vec_commute(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @sub_ashr_or_i32_vec_commute(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> splat (i32 -1), <4 x i32> [[X]]
 ; CHECK-NEXT:    ret <4 x i32> [[OR]]
 ;
   %sub = sub nsw <4 x i32> %y, %x
@@ -177,7 +177,7 @@ define <4 x i32> @sub_ashr_or_i32_vec_commute(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @neg_or_ashr_i32_vec_commute(<4 x i32> %x0) {
 ; CHECK-LABEL: @neg_or_ashr_i32_vec_commute(
-; CHECK-NEXT:    [[X:%.*]] = sdiv <4 x i32> <i32 42, i32 42, i32 42, i32 42>, [[X0:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = sdiv <4 x i32> splat (i32 42), [[X0:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[SHR:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SHR]]
@@ -242,7 +242,7 @@ define i32 @sub_ashr_or_i32_extra_use_ashr(i32 %x, i32 %y, ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    store i32 [[SHR]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[SHR]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %sub = sub nsw i32 %y, %x
@@ -268,7 +268,7 @@ define i32 @sub_ashr_or_i32_no_nsw_nuw(i32 %x, i32 %y) {
 define i32 @neg_or_extra_use_ashr_i32(i32 %x, ptr %p) {
 ; CHECK-LABEL: @neg_or_extra_use_ashr_i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[OR]], 31
 ; CHECK-NEXT:    store i32 [[OR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[SHR]]
@@ -283,7 +283,7 @@ define i32 @neg_or_extra_use_ashr_i32(i32 %x, ptr %p) {
 define <4 x i32> @sub_ashr_or_i32_vec_undef1(<4 x i32> %x) {
 ; CHECK-LABEL: @sub_ashr_or_i32_vec_undef1(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> <i32 255, i32 255, i32 undef, i32 255>, [[X:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i32> [[SUB]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i32> [[SUB]], splat (i32 31)
 ; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[SHR]], [[X]]
 ; CHECK-NEXT:    ret <4 x i32> [[OR]]
 ;
@@ -295,7 +295,7 @@ define <4 x i32> @sub_ashr_or_i32_vec_undef1(<4 x i32> %x) {
 
 define <4 x i32> @sub_ashr_or_i32_vec_undef2(<4 x i32> %x) {
 ; CHECK-LABEL: @sub_ashr_or_i32_vec_undef2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> <i32 255, i32 255, i32 255, i32 255>, [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> splat (i32 255), [[X:%.*]]
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i32> [[SUB]], <i32 undef, i32 31, i32 31, i32 31>
 ; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[SHR]], [[X]]
 ; CHECK-NEXT:    ret <4 x i32> [[OR]]

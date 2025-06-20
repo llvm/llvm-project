@@ -7,18 +7,18 @@ declare i8 @bar()
 
 ; Test that we preserve LCSSA form when removing edges from unreachable blocks.
 ; CHECK-LABEL: @foo
-define void @foo() {
+define void @foo(i1 %arg) {
 entry:
   br label %for.cond
 
 for.cond:
   %x = phi i8 [ undef, %entry ], [ %y, %for.latch ]
-  br i1 undef, label %for.latch, label %exit
+  br i1 %arg, label %for.latch, label %exit
 
 ; CHECK:      unreachable.bb:
 ; CHECK-NEXT:   unreachable
 unreachable.bb:
-  br i1 undef, label %exit, label %for.latch
+  br i1 %arg, label %exit, label %for.latch
 
 for.latch:
   %y = call i8 @bar()

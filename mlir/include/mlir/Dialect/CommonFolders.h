@@ -196,8 +196,7 @@ template <class AttrElementT,
               function_ref<std::optional<ElementValueT>(ElementValueT)>>
 Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
                                       CalculationT &&calculate) {
-  assert(operands.size() == 1 && "unary op takes one operands");
-  if (!operands[0])
+  if (!llvm::getSingleElement(operands))
     return {};
 
   static_assert(
@@ -268,8 +267,7 @@ template <
     class CalculationT = function_ref<TargetElementValueT(ElementValueT, bool)>>
 Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
                           CalculationT &&calculate) {
-  assert(operands.size() == 1 && "Cast op takes one operand");
-  if (!operands[0])
+  if (!llvm::getSingleElement(operands))
     return {};
 
   static_assert(
@@ -298,7 +296,10 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
         calculate(op.getSplatValue<ElementValueT>(), castStatus);
     if (!castStatus)
       return {};
-    return DenseElementsAttr::get(cast<ShapedType>(resType), elementResult);
+    auto shapedResType = cast<ShapedType>(resType);
+    if (!shapedResType.hasStaticShape())
+      return {};
+    return DenseElementsAttr::get(shapedResType, elementResult);
   }
   if (auto op = dyn_cast<ElementsAttr>(operands[0])) {
     // Operand is ElementsAttr-derived; perform an element-wise fold by

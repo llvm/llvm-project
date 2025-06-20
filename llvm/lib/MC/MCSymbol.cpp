@@ -22,12 +22,12 @@
 using namespace llvm;
 
 // Only the address of this fragment is ever actually used.
-static MCDummyFragment SentinelFragment(nullptr);
+static MCDataFragment SentinelFragment;
 
 // Sentinel value for the absolute pseudo fragment.
 MCFragment *MCSymbol::AbsolutePseudoFragment = &SentinelFragment;
 
-void *MCSymbol::operator new(size_t s, const StringMapEntry<bool> *Name,
+void *MCSymbol::operator new(size_t s, const MCSymbolTableEntry *Name,
                              MCContext &Ctx) {
   // We may need more space for a Name to account for alignment.  So allocate
   // space for the storage type and not the name pointer.
@@ -45,7 +45,6 @@ void *MCSymbol::operator new(size_t s, const StringMapEntry<bool> *Name,
 }
 
 void MCSymbol::setVariableValue(const MCExpr *Value) {
-  assert(!IsUsed && "Cannot set a variable that has already been used.");
   assert(Value && "Invalid variable value!");
   assert((SymbolContents == SymContentsUnset ||
           SymbolContents == SymContentsVariable) &&
@@ -74,6 +73,8 @@ void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
       OS << "\\n";
     else if (C == '"')
       OS << "\\\"";
+    else if (C == '\\')
+      OS << "\\\\";
     else
       OS << C;
   }

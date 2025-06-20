@@ -8,16 +8,18 @@ define i16 @test() {
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PPREV_058_I:%.*]] = getelementptr [[S:%.*]], ptr null, i64 -1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> <ptr null, ptr poison>, ptr [[PPREV_058_I]], i32 1
 ; CHECK-NEXT:    br label [[WHILE_BODY_I:%.*]]
 ; CHECK:       while.body.i:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ 0, [[WHILE_BODY_I]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x ptr> [ [[TMP3:%.*]], [[WHILE_BODY_I]] ], [ [[TMP0]], [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP3]] = getelementptr [[S]], <2 x ptr> [[TMP2]], <2 x i64> <i64 -1, i64 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> [[TMP3]], i32 2, <2 x i1> <i1 true, i1 true>, <2 x i16> poison)
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i16> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP4]], i32 1
-; CHECK-NEXT:    [[CMP_I178:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i16 [ 0, [[WHILE_BODY_I]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PPREV_062_I:%.*]] = phi ptr [ [[PPREV_0_I:%.*]], [[WHILE_BODY_I]] ], [ [[PPREV_058_I]], [[ENTRY]] ]
+; CHECK-NEXT:    [[PEDGE_061_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ null, [[ENTRY]] ]
+; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr [[S]], ptr [[PEDGE_061_I]], i64 -1
+; CHECK-NEXT:    [[PPREV_0_I]] = getelementptr [[S]], ptr [[PPREV_062_I]], i64 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i16> @llvm.masked.load.v3i16.p0(ptr [[PPREV_0_I]], i32 2, <3 x i1> <i1 true, i1 false, i1 true>, <3 x i16> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i16> [[TMP1]], <3 x i16> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP2]], i32 1
+; CHECK-NEXT:    [[CMP_I178:%.*]] = icmp ult i16 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    br label [[WHILE_BODY_I]]
 ;
 entry:

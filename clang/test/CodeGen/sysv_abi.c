@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX
+// RUN: %clang_cc1 -triple x86_64-uefi -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX
 // RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck %s --check-prefixes=CHECK,NOAVX
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm < %s | FileCheck %s --check-prefixes=CHECK,NOAVX
+// RUN: %clang_cc1 -triple x86_64-uefi -emit-llvm < %s | FileCheck %s --check-prefixes=CHECK,NOAVX
 
 #define SYSV_CC __attribute__((sysv_abi))
 

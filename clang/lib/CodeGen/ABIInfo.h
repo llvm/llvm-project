@@ -20,6 +20,7 @@ class Value;
 class LLVMContext;
 class DataLayout;
 class Type;
+class FixedVectorType;
 } // namespace llvm
 
 namespace clang {
@@ -34,6 +35,8 @@ class CGCXXABI;
 class CGFunctionInfo;
 class CodeGenFunction;
 class CodeGenTypes;
+class RValue;
+class AggValueSlot;
 
 // FIXME: All of this stuff should be part of the target interface
 // somehow. It is currently here because it is not clear how to factor
@@ -75,18 +78,18 @@ public:
   // the ABI information any lower than CodeGen. Of course, for
   // VAArg handling it has to be at this level; there is no way to
   // abstract this out.
-  virtual CodeGen::Address EmitVAArg(CodeGen::CodeGenFunction &CGF,
-                                     CodeGen::Address VAListAddr,
-                                     QualType Ty) const = 0;
+  virtual RValue EmitVAArg(CodeGen::CodeGenFunction &CGF,
+                           CodeGen::Address VAListAddr, QualType Ty,
+                           AggValueSlot Slot) const = 0;
 
   bool isAndroid() const;
   bool isOHOSFamily() const;
 
   /// Emit the target dependent code to load a value of
   /// \arg Ty from the \c __builtin_ms_va_list pointed to by \arg VAListAddr.
-  virtual CodeGen::Address EmitMSVAArg(CodeGen::CodeGenFunction &CGF,
-                                       CodeGen::Address VAListAddr,
-                                       QualType Ty) const;
+  virtual RValue EmitMSVAArg(CodeGen::CodeGenFunction &CGF,
+                             CodeGen::Address VAListAddr, QualType Ty,
+                             AggValueSlot Slot) const;
 
   virtual bool isHomogeneousAggregateBaseType(QualType Ty) const;
 
@@ -107,7 +110,8 @@ public:
   /// A convenience method to return an indirect ABIArgInfo with an
   /// expected alignment equal to the ABI alignment of the given type.
   CodeGen::ABIArgInfo
-  getNaturalAlignIndirect(QualType Ty, bool ByVal = true, bool Realign = false,
+  getNaturalAlignIndirect(QualType Ty, unsigned AddrSpace, bool ByVal = true,
+                          bool Realign = false,
                           llvm::Type *Padding = nullptr) const;
 
   CodeGen::ABIArgInfo getNaturalAlignIndirectInReg(QualType Ty,
@@ -121,6 +125,13 @@ public:
                                        raw_ostream &Out) const;
   virtual void appendAttributeMangling(StringRef AttrStr,
                                        raw_ostream &Out) const;
+
+  /// Returns the optimal vector memory type based on the given vector type. For
+  /// example, on certain targets, a vector with 3 elements might be promoted to
+  /// one with 4 elements to improve performance.
+  virtual llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *T,
+                             const LangOptions &Opt) const;
 };
 
 /// Target specific hooks for defining how a type should be passed or returned

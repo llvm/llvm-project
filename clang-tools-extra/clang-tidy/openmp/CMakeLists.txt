@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyOpenMPModule
+add_clang_library(clangTidyOpenMPModule STATIC
   ExceptionEscapeCheck.cpp
   OpenMPTidyModule.cpp
   UseDefaultNoneCheck.cpp

@@ -16,7 +16,7 @@ class SectionChunk;
 class COFFLinkerContext;
 
 llvm::DenseMap<const SectionChunk *, int>
-computeCallGraphProfileOrder(const COFFLinkerContext &ctx);
+computeCallGraphProfileOrder(COFFLinkerContext &ctx);
 } // namespace lld::coff
 
 #endif

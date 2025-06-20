@@ -65,40 +65,48 @@ liveins:         []
 body:             |
   ; CHECK-LABEL: name: e
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.4(0x30000000)
-  ; CHECK:   [[t2MOVi32imm:%[0-9]+]]:rgpr = t2MOVi32imm @d
-  ; CHECK:   [[t2LDRi12_:%[0-9]+]]:gprnopc = t2LDRi12 [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
-  ; CHECK:   t2CMPri [[t2LDRi12_]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.4, 4 /* CC::mi */, $cpsr
-  ; CHECK:   t2B %bb.1, 14 /* CC::al */, $noreg
-  ; CHECK: bb.1.for.cond1.preheader.preheader:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[t2LDRi12_]], 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[tMOVr:%[0-9]+]]:gprlr = tMOVr killed [[t2ADDri]], 14 /* CC::al */, $noreg
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY [[tMOVr]]
-  ; CHECK:   [[t2MOVi32imm1:%[0-9]+]]:rgpr = t2MOVi32imm @c
-  ; CHECK:   [[t2MOVi:%[0-9]+]]:rgpr = t2MOVi 24, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK: bb.2.for.cond1.preheader:
-  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:gprlr = PHI [[COPY]], %bb.1, %3, %bb.2
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
-  ; CHECK:   $r0 = COPY [[t2MOVi32imm1]]
-  ; CHECK:   $r1 = COPY [[t2MOVi]]
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, &__aeabi_memclr4, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $sp
-  ; CHECK:   ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
-  ; CHECK:   [[t2SUBri:%[0-9]+]]:gprlr = t2SUBri [[PHI]], 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr = COPY [[t2SUBri]]
-  ; CHECK:   t2CMPri [[t2SUBri]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.2, 1 /* CC::ne */, $cpsr
-  ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
-  ; CHECK: bb.3.for.cond.for.end9_crit_edge:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   [[t2MOVi1:%[0-9]+]]:rgpr = t2MOVi -1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2STRi12 killed [[t2MOVi1]], [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (store (s32) into @d)
-  ; CHECK: bb.4.for.end9:
-  ; CHECK:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
-  ; CHECK:   $r0 = COPY [[DEF]]
-  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.4(0x30000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[t2MOVi32imm:%[0-9]+]]:rgpr = t2MOVi32imm @d
+  ; CHECK-NEXT:   [[t2LDRi12_:%[0-9]+]]:gprnopc = t2LDRi12 [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
+  ; CHECK-NEXT:   t2CMPri [[t2LDRi12_]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2Bcc %bb.4, 4 /* CC::mi */, $cpsr
+  ; CHECK-NEXT:   t2B %bb.1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.for.cond1.preheader.preheader:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[t2LDRi12_]], 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[tMOVr:%[0-9]+]]:gprlr = tMOVr killed [[t2ADDri]], 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY [[tMOVr]]
+  ; CHECK-NEXT:   [[t2MOVi32imm1:%[0-9]+]]:rgpr = t2MOVi32imm @c
+  ; CHECK-NEXT:   [[t2MOVi:%[0-9]+]]:rgpr = t2MOVi 24, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.for.cond1.preheader:
+  ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gprlr = PHI [[COPY]], %bb.1, %3, %bb.2
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   $r0 = COPY [[t2MOVi32imm1]]
+  ; CHECK-NEXT:   $r1 = COPY [[t2MOVi]]
+  ; CHECK-NEXT:   tBL 14 /* CC::al */, $noreg, &__aeabi_memclr4, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $sp
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   [[t2SUBri:%[0-9]+]]:gprlr = t2SUBri [[PHI]], 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY [[t2SUBri]]
+  ; CHECK-NEXT:   t2CMPri [[t2SUBri]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2Bcc %bb.2, 1 /* CC::ne */, $cpsr
+  ; CHECK-NEXT:   t2B %bb.3, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.for.cond.for.end9_crit_edge:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[t2MOVi1:%[0-9]+]]:rgpr = t2MOVi -1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   t2STRi12 killed [[t2MOVi1]], [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (store (s32) into @d)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.for.end9:
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   $r0 = COPY [[DEF]]
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit $r0
   bb.0.entry:
     successors: %bb.1(0x50000000), %bb.4(0x30000000)
 

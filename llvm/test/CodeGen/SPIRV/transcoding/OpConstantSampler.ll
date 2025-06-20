@@ -12,8 +12,8 @@
 
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
-; CHECK-SPIRV: %[[#SamplerID0:]] = OpConstantSampler %[[#]] Repeat 1 Nearest
-; CHECK-SPIRV: %[[#SamplerID1:]] = OpConstantSampler %[[#]] None 0 Nearest
+; CHECK-SPIRV-DAG: %[[#SamplerID0:]] = OpConstantSampler %[[#]] Repeat 1 Nearest
+; CHECK-SPIRV-DAG: %[[#SamplerID1:]] = OpConstantSampler %[[#]] None 0 Nearest
 ; CHECK-SPIRV: %[[#]] = OpSampledImage %[[#]] %[[#]] %[[#SamplerID0]]
 ; CHECK-SPIRV: %[[#]] = OpSampledImage %[[#]] %[[#]] %[[#SamplerID1]]
 

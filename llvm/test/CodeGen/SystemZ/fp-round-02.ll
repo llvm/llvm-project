@@ -134,6 +134,18 @@ define void @f12(ptr %ptr) {
   ret void
 }
 
+; Test trunc for f16.
+declare half @llvm.trunc.f16(half %f)
+define half @f13_half(half %f) {
+; CHECK-LABEL: f13_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: fiebra %f0, 5, %f0, 4
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.trunc.f16(half %f)
+  ret half %res
+}
+
 ; Test trunc for f32.
 declare float @llvm.trunc.f32(float %f)
 define float @f13(float %f) {
@@ -166,6 +178,18 @@ define void @f15(ptr %ptr) {
   ret void
 }
 
+; Test round for f16.
+declare half @llvm.round.f16(half %f)
+define half @f16_half(half %f) {
+; CHECK-LABEL: f16_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: fiebra %f0, 1, %f0, 4
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.round.f16(half %f)
+  ret half %res
+}
+
 ; Test round for f32.
 declare float @llvm.round.f32(float %f)
 define float @f16(float %f) {
@@ -194,6 +218,50 @@ define void @f18(ptr %ptr) {
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
   %res = call fp128 @llvm.round.f128(fp128 %src)
+  store fp128 %res, ptr %ptr
+  ret void
+}
+
+; Test roundeven for f16.
+declare half @llvm.roundeven.f16(half %f)
+define half @f19_half(half %f) {
+; CHECK-LABEL: f19_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: fiebra %f0, 4, %f0, 4
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.roundeven.f16(half %f)
+  ret half %res
+}
+
+; Test roundeven for f32.
+declare float @llvm.roundeven.f32(float %f)
+define float @f19(float %f) {
+; CHECK-LABEL: f19:
+; CHECK: fiebra %f0, 4, %f0, 4
+; CHECK: br %r14
+  %res = call float @llvm.roundeven.f32(float %f)
+  ret float %res
+}
+
+; Test roundeven for f64.
+declare double @llvm.roundeven.f64(double %f)
+define double @f20(double %f) {
+; CHECK-LABEL: f20:
+; CHECK: fidbra %f0, 4, %f0, 4
+; CHECK: br %r14
+  %res = call double @llvm.roundeven.f64(double %f)
+  ret double %res
+}
+
+; Test roundeven for f128.
+declare fp128 @llvm.roundeven.f128(fp128 %f)
+define void @f21(ptr %ptr) {
+; CHECK-LABEL: f21:
+; CHECK: fixbra %f0, 4, %f0, 4
+; CHECK: br %r14
+  %src = load fp128, ptr %ptr
+  %res = call fp128 @llvm.roundeven.f128(fp128 %src)
   store fp128 %res, ptr %ptr
   ret void
 }

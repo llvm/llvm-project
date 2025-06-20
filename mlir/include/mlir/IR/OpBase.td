@@ -206,7 +206,9 @@ def AnyRegion : Region<CPred<"true">, "any region">;
 // A region with the given number of blocks.
 class SizedRegion<int numBlocks> : Region<
   CPred<"::llvm::hasNItems($_self, " # numBlocks # ")">,
-  "region with " # numBlocks # " blocks">;
+  "region with " # numBlocks # " blocks"> {
+  int blocks = numBlocks;
+}
 
 // A region with at least the given number of blocks.
 class MinSizedRegion<int numBlocks> : Region<
@@ -399,7 +401,7 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // an additional `LogicalResult verify()` declaration will be generated on the
   // operation class. The operation should implement this method and verify the
   // additional necessary invariants. This verifier shouldn't access any nested
-  // operations because those operations may ill-formed. Use the
+  // operations because those operations may be ill-formed. Use the
   // `hasRegionVerifier` below instead.
   bit hasVerifier = 0;
 
@@ -554,6 +556,25 @@ class AllShapesMatch<list<string> names> :
 class AllTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType()", "type">;
 
+// A type constraint that verifies that a shaped type matches the size and
+// element type of a container with element types. More specifically, it denotes
+// shapedArg.getType().getNumElements() == elementsArg.size() &&
+// shapedArg.getType().getElementType() == elementsArg[i].getType(), for i in
+// [0, elementsArg.size()).
+class ShapedTypeMatchesElementCountAndTypes<string shapedArg,
+                                            string elementsArg> :
+    PredOpTrait<"shaped type '" # shapedArg # "' matches '" # elementsArg # "' "
+                "element count and types",
+        And<[CPred<ElementCount<shapedArg>.result # " == "
+                     "static_cast<int64_t>($" # elementsArg # ".getTypes().size())">,
+             CPred<"::llvm::all_of($" # elementsArg # ".getTypes(), "
+                     "[&](::mlir::Type t) { return t == "
+                       # ElementType<shapedArg>.result # "; })">]>> {
+
+  string shaped = shapedArg;
+  string elements = elementsArg;
+}
+
 // A type constraint that denotes `transform(lhs.getType()) == rhs.getType()`.
 // An optional comparator function may be provided that changes the above form
 // into: `comparator(transform(lhs.getType()), rhs.getType())`.
@@ -669,17 +690,5 @@ class TCopVTEtAreSameAt<list<int> indices> : CPred<
       "::mlir::ArrayRef<unsigned>({" # !interleave(indices, ", ") # "}), "
       "[this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); "
       "}))">;
-
-class AnyScalarTypeMatch<list<string> names> :
-    AnyMatchOperatorTrait<names, "$_self.getType().isSignlessInteger(1)",
-                          "scalar type">;
-
-class ScalarConditionOrMatchingShape<list<string> names> :
-    PredOpTrait<
-        !head(names) # " is scalar or has matching shape",
-        Or<[AnyScalarTypeMatch<[!head(names)]>.predicate,
-            AllShapesMatch<names>.predicate]>> {
-  list<string> values = names;
-}
 
 #endif // OP_BASE

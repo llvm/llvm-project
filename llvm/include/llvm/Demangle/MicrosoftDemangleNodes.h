@@ -104,6 +104,8 @@ enum class PrimitiveKind {
   Double,
   Ldouble,
   Nullptr,
+  Auto,
+  DecltypeAuto,
 };
 
 enum class CharKind {
@@ -251,7 +253,8 @@ enum class NodeKind {
   LocalStaticGuardVariable,
   FunctionSymbol,
   VariableSymbol,
-  SpecialTableSymbol
+  SpecialTableSymbol,
+  PointerAuthQualifier,
 };
 
 struct Node {
@@ -293,6 +296,7 @@ struct SymbolNode;
 struct FunctionSymbolNode;
 struct VariableSymbolNode;
 struct SpecialTableSymbolNode;
+struct PointerAuthQualifierNode;
 
 struct TypeNode : public Node {
   explicit TypeNode(NodeKind K) : Node(K) {}
@@ -332,7 +336,7 @@ struct FunctionSignatureNode : public TypeNode {
   // The function's calling convention.
   CallingConv CallConvention = CallingConv::None;
 
-  // Function flags (gloabl, public, etc)
+  // Function flags (global, public, etc)
   FuncClass FunctionClass = FC_Global;
 
   FunctionRefQualifier RefQualifier = FunctionRefQualifier::None;
@@ -464,6 +468,8 @@ struct PointerTypeNode : public TypeNode {
 
   // If this is a member pointer, this is the class that the member is in.
   QualifiedNameNode *ClassParent = nullptr;
+
+  PointerAuthQualifierNode *PointerAuthQualifier = nullptr;
 
   // Represents a type X in "a pointer to X", "a reference to X", or
   // "rvalue-reference to X"
@@ -621,6 +627,22 @@ struct FunctionSymbolNode : public SymbolNode {
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
 
   FunctionSignatureNode *Signature = nullptr;
+};
+
+struct PointerAuthQualifierNode : public Node {
+  PointerAuthQualifierNode() : Node(NodeKind::PointerAuthQualifier) {}
+
+  // __ptrauth takes three arguments:
+  //  - key
+  //  - isAddressDiscriminated
+  //  - extra discriminator
+  static constexpr unsigned NumArgs = 3;
+  typedef std::array<uint64_t, NumArgs> ArgArray;
+
+  void output(OutputBuffer &OB, OutputFlags Flags) const override;
+
+  // List of arguments.
+  NodeArrayNode *Components = nullptr;
 };
 
 } // namespace ms_demangle

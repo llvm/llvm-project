@@ -19,7 +19,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTARMSMETOSCF
+#define GEN_PASS_DEF_CONVERTARMSMETOSCFPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -33,20 +33,15 @@ SmallVector<Value, 2> getMemrefIndices(ValueRange indices, unsigned rank,
                                        Value tileSliceIndex,
                                        Value tileSliceNumElts, Location loc,
                                        PatternRewriter &rewriter) {
-  assert((rank == 1 || rank == 2) && "memref has unexpected rank!");
+  assert(rank == 2 && "memref has unexpected rank!");
   SmallVector<Value, 2> outIndices;
 
   auto tileSliceOffset = tileSliceIndex;
-  if (rank == 1)
-    tileSliceOffset =
-        rewriter.create<arith::MulIOp>(loc, tileSliceOffset, tileSliceNumElts);
 
   auto baseIndexPlusTileSliceOffset =
       rewriter.create<arith::AddIOp>(loc, indices[0], tileSliceOffset);
   outIndices.push_back(baseIndexPlusTileSliceOffset);
-
-  if (rank == 2)
-    outIndices.push_back(indices[1]);
+  outIndices.push_back(indices[1]);
 
   return outIndices;
 }
@@ -59,6 +54,10 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
                        /*currentTile=*/Value)>
         makeLoopBody) {
   PatternRewriter::InsertionGuard guard(rewriter);
+
+  // TODO: This case should be captured and rejected by a verifier.
+  if (memrefIndices.size() != 2)
+    return rewriter.notifyMatchFailure(loc, "invalid number of indices");
 
   auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
       loc, arm_sme::getSMETileSliceMinNumElts(tileType.getElementType()));
@@ -77,11 +76,6 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
   Value upperBound;
   if (mask) {
     auto createMaskOp = mask.getDefiningOp<vector::CreateMaskOp>();
-    if (!createMaskOp)
-      return rewriter.notifyMatchFailure(
-          loc, "unsupported mask op, only 'vector.create_mask' is "
-               "currently supported");
-
     auto maskDim0 = createMaskOp.getOperands()[0];
     auto maskDim1 = createMaskOp.getOperands()[1];
 
@@ -184,6 +178,10 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 
     Value initTile;
     if (mask) {
+      if (!mask.getDefiningOp<vector::CreateMaskOp>())
+        return rewriter.notifyMatchFailure(
+            loc, "unsupported mask op, only 'vector.create_mask' is "
+                 "currently supported");
       auto padOp = tileLoadOp.getPadding();
       assert(padOp && "expected padding when masking!");
 
@@ -196,12 +194,9 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
       // Initialize tile with zero to satisfy padding. Inactive cols will be
       // zeroed anyway since the loads use zeroing predication. For inactive
       // rows however, no load will occur so these need to be zeroed.
-      initTile = tileLoadOp.createOpAndForwardTileId<arm_sme::ZeroOp>(
-          rewriter, loc, tileType);
+      initTile = rewriter.create<arm_sme::ZeroOp>(loc, tileType);
     } else {
-      // Allocate a new SME tile.
-      initTile = tileLoadOp.createOpAndForwardTileId<arm_sme::GetTileOp>(
-          rewriter, loc, tileType);
+      initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
     }
 
     // Create a loop to load the active tile slices from memory.
@@ -212,10 +207,9 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
             Value currentTile) -> Value {
           // Create 'arm_sme.load_tile_slice' to load tile slice from memory
           // into tile.
-          return tileLoadOp.createOpAndForwardTileId<arm_sme::LoadTileSliceOp>(
-              rewriter, loc, tileType, tileLoadOp.getBase(), predicate,
-              currentTile, memrefIndices, tileSliceIndex,
-              tileLoadOp.getLayout());
+          return rewriter.create<arm_sme::LoadTileSliceOp>(
+              loc, tileType, tileLoadOp.getBase(), predicate, currentTile,
+              memrefIndices, tileSliceIndex, tileLoadOp.getLayout());
         });
 
     if (failed(forOp))
@@ -249,8 +243,8 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///      : memref<?x?xi32>, vector<[4]xi1>,
 ///        vector<[4]xi32> into vector<[4]xi32>
 ///    // Insert slice into tile
-///    %tile_update = arm_sme.move_vector_to_tile_slice
-///      %slice, %iter_tile, %tile_slice_idx :
+///    %tile_update = arm_sme.insert_tile_slice
+///      %slice, %iter_tile[%tile_slice_idx] :
 ///      vector<[4]xi32> into vector<[4]x[4]xi32>
 ///    scf.yield %tile_update : vector<[4]x[4]xi32>
 ///  }
@@ -292,9 +286,7 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
     auto numColsI32 = rewriter.create<arith::IndexCastUIOp>(
         loc, rewriter.getI32Type(), numCols);
 
-    // Allocate a new SME tile.
-    auto initTile = tileLoadOp.createOpAndForwardTileId<arm_sme::GetTileOp>(
-        rewriter, loc, tileType);
+    auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
     // Create a loop that loads each ZA tile slice from memory.
     auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
@@ -338,12 +330,11 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
         loc, tileSliceType, tileLoadOp.getBase(), memrefIndices, maskOp1D,
         /*passthru=*/pad1DOp);
 
-    // Create 'arm_sme.move_vector_to_tile_slice' to move slice into tile.
-    auto moveSlice =
-        tileLoadOp.createOpAndForwardTileId<arm_sme::MoveVectorToTileSliceOp>(
-            rewriter, loc, tileType, loadSlice->getResult(0), currentTile,
-            tileSliceIndex, tileLoadOp.getLayout());
-    rewriter.create<scf::YieldOp>(loc, moveSlice.getResult());
+    // Create 'arm_sme.insert_tile_slice' to insert slice into tile.
+    auto insertSlice = rewriter.create<arm_sme::InsertTileSliceOp>(
+        loc, tileType, loadSlice->getResult(0), currentTile, tileSliceIndex,
+        tileLoadOp.getLayout());
+    rewriter.create<scf::YieldOp>(loc, insertSlice.getResult());
 
     rewriter.setInsertionPointAfter(forOp);
 
@@ -380,14 +371,22 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
 
   LogicalResult matchAndRewrite(arm_sme::TileStoreOp tileStoreOp,
                                 PatternRewriter &rewriter) const override {
+    if (Value mask = tileStoreOp.getMask()) {
+      if (!mask.getDefiningOp<vector::CreateMaskOp>())
+        return rewriter.notifyMatchFailure(
+            tileStoreOp.getLoc(),
+            "unsupported mask op, only 'vector.create_mask' is "
+            "currently supported");
+    }
+
     // Create a loop that stores each active ZA tile slice from memory.
     return createLoadStoreForOverTileSlices(
         rewriter, tileStoreOp.getLoc(), tileStoreOp.getVectorType(),
         tileStoreOp.getIndices(), tileStoreOp.getMemRefType().getRank(),
         tileStoreOp.getMask(),
         [&](Value tileSliceIndex, ValueRange memrefIndices, Value predicate) {
-          tileStoreOp.replaceWithAndForwardTileId<arm_sme::StoreTileSliceOp>(
-              rewriter, tileStoreOp.getValueToStore(), tileSliceIndex,
+          rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
+              tileStoreOp, tileStoreOp.getValueToStore(), tileSliceIndex,
               predicate, tileStoreOp.getBase(), memrefIndices,
               tileStoreOp.getLayout());
         });
@@ -404,7 +403,7 @@ void mlir::populateArmSMEToSCFConversionPatterns(RewritePatternSet &patterns) {
 namespace {
 
 struct ConvertArmSMEToSCFPass
-    : public impl::ConvertArmSMEToSCFBase<ConvertArmSMEToSCFPass> {
+    : public impl::ConvertArmSMEToSCFPassBase<ConvertArmSMEToSCFPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
@@ -419,7 +418,3 @@ struct ConvertArmSMEToSCFPass
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertArmSMEToSCFPass() {
-  return std::make_unique<ConvertArmSMEToSCFPass>();
-}

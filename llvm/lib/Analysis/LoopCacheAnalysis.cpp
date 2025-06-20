@@ -224,7 +224,7 @@ IndexedReference::hasTemporalReuse(const IndexedReference &Other,
   }
 
   std::unique_ptr<Dependence> D =
-      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst, true);
+      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst);
 
   if (D == nullptr) {
     LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: no dependence\n");
@@ -299,7 +299,12 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
     TripCount = SE.getNoopOrZeroExtend(TripCount, WiderType);
     const SCEV *Numerator = SE.getMulExpr(Stride, TripCount);
-    RefCost = SE.getUDivExpr(Numerator, CacheLineSize);
+    // Round the fractional cost up to the nearest integer number.
+    // The impact is the most significant when cost is calculated
+    // to be a number less than one, because it makes more sense
+    // to say one cache line is used rather than zero cache line
+    // is used.
+    RefCost = SE.getUDivCeilSCEV(Numerator, CacheLineSize);
 
     LLVM_DEBUG(dbgs().indent(4)
                << "Access is consecutive: RefCost=(TripCount*Stride)/CLS="
@@ -323,6 +328,8 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
       const SCEV *TripCount =
           computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
       Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
+      // For the multiplication result to fit, request a type twice as wide.
+      WiderType = WiderType->getExtendedType();
       RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
                               SE.getNoopOrZeroExtend(TripCount, WiderType));
     }
@@ -333,14 +340,18 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
   assert(RefCost && "Expecting a valid RefCost");
 
   // Attempt to fold RefCost into a constant.
+  // CacheCostTy is a signed integer, but the tripcount value can be large
+  // and may not fit, so saturate/limit the value to the maximum signed
+  // integer value.
   if (auto ConstantCost = dyn_cast<SCEVConstant>(RefCost))
-    return ConstantCost->getValue()->getZExtValue();
+    return ConstantCost->getValue()->getLimitedValue(
+        std::numeric_limits<int64_t>::max());
 
   LLVM_DEBUG(dbgs().indent(4)
              << "RefCost is not a constant! Setting to RefCost=InvalidCost "
                 "(invalid value).\n");
 
-  return CacheCost::InvalidCost;
+  return CacheCostTy::getInvalid();
 }
 
 bool IndexedReference::tryDelinearizeFixedSize(
@@ -691,7 +702,7 @@ CacheCostTy
 CacheCost::computeLoopCacheCost(const Loop &L,
                                 const ReferenceGroupsTy &RefGroups) const {
   if (!L.isLoopSimplifyForm())
-    return InvalidCost;
+    return CacheCostTy::getInvalid();
 
   LLVM_DEBUG(dbgs() << "Considering loop '" << L.getName()
                     << "' as innermost loop.\n");

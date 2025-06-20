@@ -83,14 +83,14 @@ void ASTResultSynthesizer::TransformTopLevelDecl(Decl *D) {
   } else if (!m_top_level) {
     if (ObjCMethodDecl *method_decl = dyn_cast<ObjCMethodDecl>(D)) {
       if (m_ast_context &&
-          !method_decl->getSelector().getAsString().compare("$__lldb_expr:")) {
+          method_decl->getSelector().getAsString() == "$__lldb_expr:") {
         RecordPersistentTypes(method_decl);
         SynthesizeObjCMethodResult(method_decl);
       }
     } else if (FunctionDecl *function_decl = dyn_cast<FunctionDecl>(D)) {
       // When completing user input the body of the function may be a nullptr.
       if (m_ast_context && function_decl->hasBody() &&
-          !function_decl->getNameInfo().getAsString().compare("$__lldb_expr")) {
+          function_decl->getNameInfo().getAsString() == "$__lldb_expr") {
         RecordPersistentTypes(function_decl);
         SynthesizeFunctionResult(function_decl);
       }
@@ -129,8 +129,6 @@ bool ASTResultSynthesizer::SynthesizeFunctionResult(FunctionDecl *FunDecl) {
 
     function_decl->print(os);
 
-    os.flush();
-
     LLDB_LOGF(log, "Untransformed function AST:\n%s", s.c_str());
   }
 
@@ -144,8 +142,6 @@ bool ASTResultSynthesizer::SynthesizeFunctionResult(FunctionDecl *FunDecl) {
     raw_string_ostream os(s);
 
     function_decl->print(os);
-
-    os.flush();
 
     LLDB_LOGF(log, "Transformed function AST:\n%s", s.c_str());
   }
@@ -169,8 +165,6 @@ bool ASTResultSynthesizer::SynthesizeObjCMethodResult(
 
     MethodDecl->print(os);
 
-    os.flush();
-
     LLDB_LOGF(log, "Untransformed method AST:\n%s", s.c_str());
   }
 
@@ -188,8 +182,6 @@ bool ASTResultSynthesizer::SynthesizeObjCMethodResult(
     raw_string_ostream os(s);
 
     MethodDecl->print(os);
-
-    os.flush();
 
     LLDB_LOGF(log, "Transformed method AST:\n%s", s.c_str());
   }
@@ -476,7 +468,6 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
         std::string s;
         llvm::raw_string_ostream ss(s);
         decl->dump(ss);
-        ss.flush();
 
         LLDB_LOGF(log, "Couldn't commit persistent  decl: %s\n", s.c_str());
       }

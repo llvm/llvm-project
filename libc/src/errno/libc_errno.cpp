@@ -6,45 +6,56 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "libc_errno.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-// LIBC_THREAD_LOCAL on GPU currently does nothing.  So essentially this is just
-// a global errno for gpu to use for now.
-extern "C" {
-LIBC_THREAD_LOCAL int __llvmlibc_gpu_errno;
+namespace LIBC_NAMESPACE_DECL {
+
+#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
+
+#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_UNDEFINED
+
+void Errno::operator=(int) {}
+Errno::operator int() { return 0; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
+
+namespace {
+LIBC_THREAD_LOCAL int thread_errno;
 }
 
-void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_gpu_errno = a; }
-LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_gpu_errno; }
+extern "C" int *__llvm_libc_errno() noexcept { return &thread_errno; }
 
-#elif !defined(LIBC_COPT_PUBLIC_PACKAGING)
-// This mode is for unit testing.  We just use our internal errno.
-LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
+void Errno::operator=(int a) { thread_errno = a; }
+Errno::operator int() { return thread_errno; }
 
-void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_internal_errno = a; }
-LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_internal_errno; }
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SHARED
 
-#elif defined(LIBC_FULL_BUILD)
-// This mode is for public libc archive, hermetic, and integration tests.
-// In full build mode, we provide the errno storage ourselves.
-extern "C" {
-LIBC_THREAD_LOCAL int __llvmlibc_errno;
+namespace {
+int shared_errno;
 }
 
-void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_errno = a; }
-LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_errno; }
+extern "C" int *__llvm_libc_errno() noexcept { return &shared_errno; }
 
-#else
-// In overlay mode, we simply use the system errno.
-#include <errno.h>
+void Errno::operator=(int a) { shared_errno = a; }
+Errno::operator int() { return shared_errno; }
 
-void LIBC_NAMESPACE::Errno::operator=(int a) { errno = a; }
-LIBC_NAMESPACE::Errno::operator int() { return errno; }
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
 
-#endif // LIBC_FULL_BUILD
+void Errno::operator=(int a) { *__llvm_libc_errno() = a; }
+Errno::operator int() { return *__llvm_libc_errno(); }
 
-namespace LIBC_NAMESPACE {
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SYSTEM
+
+void Errno::operator=(int a) { errno = a; }
+Errno::operator int() { return errno; }
+
+#endif
+
 // Define the global `libc_errno` instance.
 Errno libc_errno;
-} // namespace LIBC_NAMESPACE
+
+#endif // LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
+
+} // namespace LIBC_NAMESPACE_DECL

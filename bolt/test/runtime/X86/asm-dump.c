@@ -1,5 +1,5 @@
 /**
- * Test for asm-dump functionality.
+ ** Test for asm-dump functionality.
  *
  * REQUIRES: x86_64-linux,bolt-runtime
  *

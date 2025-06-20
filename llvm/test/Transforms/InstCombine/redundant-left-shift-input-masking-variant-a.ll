@@ -100,10 +100,10 @@ declare void @use3xi32(<3 x i32>)
 
 define <3 x i32> @t3_vec_splat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t3_vec_splat(
-; CHECK-NEXT:    [[T1:%.*]] = shl nuw <3 x i32> <i32 1, i32 1, i32 1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = add nsw <3 x i32> [[T1]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw <3 x i32> splat (i32 1), [[NBITS:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add nsw <3 x i32> [[T1]], splat (i32 -1)
 ; CHECK-NEXT:    [[T3:%.*]] = and <3 x i32> [[T2]], [[X:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = sub <3 x i32> <i32 32, i32 32, i32 32>, [[NBITS]]
+; CHECK-NEXT:    [[T4:%.*]] = sub <3 x i32> splat (i32 32), [[NBITS]]
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[NBITS]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T2]])
@@ -129,8 +129,8 @@ define <3 x i32> @t3_vec_splat(<3 x i32> %x, <3 x i32> %nbits) {
 define <3 x i32> @t4_vec_nonsplat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t4_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = add <3 x i32> [[NBITS:%.*]], <i32 -1, i32 0, i32 1>
-; CHECK-NEXT:    [[T1:%.*]] = shl nuw <3 x i32> <i32 1, i32 1, i32 1>, [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add nsw <3 x i32> [[T1]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw <3 x i32> splat (i32 1), [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = add nsw <3 x i32> [[T1]], splat (i32 -1)
 ; CHECK-NEXT:    [[T3:%.*]] = and <3 x i32> [[T2]], [[X:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = sub <3 x i32> <i32 33, i32 32, i32 32>, [[NBITS]]
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])

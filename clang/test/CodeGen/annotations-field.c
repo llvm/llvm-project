@@ -14,7 +14,7 @@ static struct foo gf;
 int main(int argc, char **argv) {
     struct foo f;
     f.v = argc;
-// CHECK: getelementptr inbounds %struct.foo, ptr %{{.*}}, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.foo, ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: call ptr @llvm.ptr.annotation.p0.[[$MANGLE_AS]]({{.*}}str{{.*}}str{{.*}}i32 9, ptr[[$CONST_AS]] null)
 // CHECK-NEXT: call ptr @llvm.ptr.annotation.p0.[[$MANGLE_AS]]({{.*}}str{{.*}}str{{.*}}i32 9, ptr[[$CONST_AS]] null)
     gf.v = argc;

@@ -38,8 +38,6 @@ store_ptr_in_gvar:                                ; preds = %entry
 
 check_pointers_are_equal:                         ; preds = %store_ptr_in_gvar, %entry
   %phi = phi ptr [ %ptr, %store_ptr_in_gvar ], [ @other_g_var, %entry ]
-; FIXME: While inlining, the following is miscompiled to i1 false,
-; as %ptr in the phi-node is not taken into account.
   %.not1 = icmp eq ptr %phi, %ptr
   br i1 %.not1, label %return, label %abort
 
@@ -55,7 +53,7 @@ define i32 @main() {
 ; CHECK-LABEL: define i32 @main() {
 ; CHECK-NEXT:    [[G_VAR:%.*]] = alloca [[STRUCT_A:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr [[G_VAR]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[G_VAR]], ptr align 1 @g_var, i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[G_VAR]], ptr align 8 @g_var, i64 20, i1 false)
 ; CHECK-NEXT:    [[VAL_I:%.*]] = load i32, ptr [[G_VAR]], align 8
 ; CHECK-NEXT:    [[DOTNOT_I:%.*]] = icmp eq i32 [[VAL_I]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT_I]], label [[CHECK_POINTERS_ARE_EQUAL_I:%.*]], label [[STORE_PTR_IN_GVAR_I:%.*]]
@@ -64,9 +62,13 @@ define i32 @main() {
 ; CHECK-NEXT:    br label [[CHECK_POINTERS_ARE_EQUAL_I]]
 ; CHECK:       check_pointers_are_equal.i:
 ; CHECK-NEXT:    [[PHI_I:%.*]] = phi ptr [ [[G_VAR]], [[STORE_PTR_IN_GVAR_I]] ], [ @other_g_var, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[DOTNOT1_I:%.*]] = icmp eq ptr [[PHI_I]], [[G_VAR]]
+; CHECK-NEXT:    br i1 [[DOTNOT1_I]], label [[CALLEE_EXIT:%.*]], label [[ABORT_I:%.*]]
+; CHECK:       abort.i:
 ; CHECK-NEXT:    call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       callee.exit:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr [[G_VAR]])
 ; CHECK-NEXT:    ret i32 0
 ;
   call void @callee(ptr noundef byval(%struct.a) align 8 @g_var)

@@ -1,13 +1,21 @@
 // RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
+#include "../defines.h"
+
 struct C {
   int x;
   ~C() {}
 };
-
-int __attribute__((noinline, optnone)) hide(int x) { return x; }
-
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma optimize("", off)
+#else
+__attribute__((optnone))
+#endif
+int ATTRIBUTE_NOINLINE hide(int x) { return x; }
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma optimize("", on)
+#endif
 int main() {
   C *buffer = new C[42];
   buffer[hide(-(1 + (int)sizeof(void*) / 4))].x = 42;

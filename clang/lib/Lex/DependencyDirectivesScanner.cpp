@@ -73,8 +73,8 @@ struct Scanner {
     // Set the lexer to use 'tok::at' for '@', instead of 'tok::unknown'.
     LangOpts.ObjC = true;
     LangOpts.LineComment = true;
-    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"" and
-    // R"()" literals.
+    LangOpts.RawStringLiterals = true;
+    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"".
     return LangOpts;
   }
 
@@ -88,8 +88,8 @@ private:
   [[nodiscard]] dependency_directives_scan::Token &
   lexToken(const char *&First, const char *const End);
 
-  dependency_directives_scan::Token &lexIncludeFilename(const char *&First,
-                                                        const char *const End);
+  [[nodiscard]] dependency_directives_scan::Token &
+  lexIncludeFilename(const char *&First, const char *const End);
 
   void skipLine(const char *&First, const char *const End);
   void skipDirective(StringRef Name, const char *&First, const char *const End);
@@ -323,10 +323,6 @@ static unsigned skipNewline(const char *&First, const char *End) {
   return Len;
 }
 
-static bool wasLineContinuation(const char *First, unsigned EOLLen) {
-  return *(First - (int)EOLLen - 1) == '\\';
-}
-
 static void skipToNewlineRaw(const char *&First, const char *const End) {
   for (;;) {
     if (First == End)
@@ -336,13 +332,16 @@ static void skipToNewlineRaw(const char *&First, const char *const End) {
     if (Len)
       return;
 
+    char LastNonWhitespace = ' ';
     do {
+      if (!isHorizontalWhitespace(*First))
+        LastNonWhitespace = *First;
       if (++First == End)
         return;
       Len = isEOL(First, End);
     } while (!Len);
 
-    if (First[-1] != '\\')
+    if (LastNonWhitespace != '\\')
       return;
 
     First += Len;
@@ -394,6 +393,7 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
 }
 
 void Scanner::skipLine(const char *&First, const char *const End) {
+  char LastNonWhitespace = ' ';
   for (;;) {
     assert(First <= End);
     if (First == End)
@@ -419,6 +419,8 @@ void Scanner::skipLine(const char *&First, const char *const End) {
       // Iterate over comments correctly.
       if (*First != '/' || End - First < 2) {
         LastTokenPtr = First;
+        if (!isWhitespace(*First))
+          LastNonWhitespace = *First;
         ++First;
         continue;
       }
@@ -431,6 +433,8 @@ void Scanner::skipLine(const char *&First, const char *const End) {
 
       if (First[1] != '*') {
         LastTokenPtr = First;
+        if (!isWhitespace(*First))
+          LastNonWhitespace = *First;
         ++First;
         continue;
       }
@@ -442,8 +446,9 @@ void Scanner::skipLine(const char *&First, const char *const End) {
       return;
 
     // Skip over the newline.
-    unsigned Len = skipNewline(First, End);
-    if (!wasLineContinuation(First, Len)) // Continue past line-continuations.
+    skipNewline(First, End);
+
+    if (LastNonWhitespace != '\\')
       break;
   }
 }
@@ -468,9 +473,16 @@ static void skipWhitespace(const char *&First, const char *const End) {
     if (End - First < 2)
       return;
 
-    if (First[0] == '\\' && isVerticalWhitespace(First[1])) {
-      skipNewline(++First, End);
-      continue;
+    if (*First == '\\') {
+      const char *Ptr = First + 1;
+      while (Ptr < End && isHorizontalWhitespace(*Ptr))
+        ++Ptr;
+      if (Ptr != End && isVerticalWhitespace(*Ptr)) {
+        skipNewline(Ptr, End);
+        First = Ptr;
+        continue;
+      }
+      return;
     }
 
     // Check for a non-comment character.
@@ -496,7 +508,15 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
                                      const char *const End) {
   const char *DirectiveLoc = Input.data() + CurDirToks.front().Offset;
   for (;;) {
+    // Keep a copy of the First char incase it needs to be reset.
+    const char *Previous = First;
     const dependency_directives_scan::Token &Tok = lexToken(First, End);
+    if ((Tok.is(tok::hash) || Tok.is(tok::at)) &&
+        (Tok.Flags & clang::Token::StartOfLine)) {
+      CurDirToks.pop_back();
+      First = Previous;
+      return false;
+    }
     if (Tok.is(tok::eof))
       return reportError(
           DirectiveLoc,
@@ -544,7 +564,7 @@ Scanner::lexIncludeFilename(const char *&First, const char *const End) {
 void Scanner::lexPPDirectiveBody(const char *&First, const char *const End) {
   while (true) {
     const dependency_directives_scan::Token &Tok = lexToken(First, End);
-    if (Tok.is(tok::eod))
+    if (Tok.is(tok::eod) || Tok.is(tok::eof))
       break;
   }
 }
@@ -660,7 +680,18 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   // an import.
 
   switch (*First) {
-  case ':':
+  case ':': {
+    // `module :` is never the start of a valid module declaration.
+    if (Id == "module") {
+      skipLine(First, End);
+      return false;
+    }
+    // `import:(type)name` is a valid ObjC method decl, so check one more token.
+    (void)lexToken(First, End);
+    if (!tryLexIdentifierOrSkipLine(First, End))
+      return false;
+    break;
+  }
   case '<':
   case '"':
     break;
@@ -835,6 +866,7 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   if (*First == '@')
     return lexAt(First, End);
 
+  // Handle module directives for C++20 modules.
   if (*First == 'i' || *First == 'e' || *First == 'm')
     return lexModule(First, End);
 
@@ -901,7 +933,10 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   case pp___include_macros:
   case pp_include_next:
   case pp_import:
-    lexIncludeFilename(First, End);
+    // Ignore missing filenames in include or import directives.
+    if (lexIncludeFilename(First, End).is(tok::eod)) {
+      return false;
+    }
     break;
   default:
     break;

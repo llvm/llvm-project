@@ -1,0 +1,18 @@
+## Check that merge-fdata tool correctly processes fdata files with header
+## string produced by no-lbr mode (no_lbr)
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: merge-fdata %t/a.fdata %t/b.fdata -o %t/merged.fdata
+# RUN: FileCheck %s --input-file %t/merged.fdata
+
+# CHECK: no_lbr
+# CHECK: main 2
+
+#--- a.fdata
+no_lbr
+main 1
+#--- b.fdata
+no_lbr
+main 1

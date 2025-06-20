@@ -15,7 +15,7 @@
 define amdgpu_kernel void @test_8_min_char(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture readonly %in0, ptr addrspace(1) nocapture readonly %in1) #0 {
 entry:
   %0 = load i8, ptr addrspace(1) %in0, align 1
-  %1 = insertelement <8 x i8> undef, i8 %0, i32 0
+  %1 = insertelement <8 x i8> poison, i8 %0, i32 0
   %arrayidx2.i.i = getelementptr inbounds i8, ptr addrspace(1) %in0, i64 1
   %2 = load i8, ptr addrspace(1) %arrayidx2.i.i, align 1
   %3 = insertelement <8 x i8> %1, i8 %2, i32 1
@@ -27,7 +27,7 @@ entry:
   %7 = insertelement <8 x i8> %5, i8 %6, i32 3
   %arrayidx.i.i = getelementptr inbounds i8, ptr addrspace(1) %in0, i64 4
   %8 = load i8, ptr addrspace(1) %arrayidx.i.i, align 1
-  %9 = insertelement <8 x i8> undef, i8 %8, i32 0
+  %9 = insertelement <8 x i8> poison, i8 %8, i32 0
   %arrayidx2.i9.i = getelementptr inbounds i8, ptr addrspace(1) %in0, i64 5
   %10 = load i8, ptr addrspace(1) %arrayidx2.i9.i, align 1
   %11 = insertelement <8 x i8> %9, i8 %10, i32 1
@@ -39,7 +39,7 @@ entry:
   %15 = insertelement <8 x i8> %13, i8 %14, i32 3
   %vecinit5.i = shufflevector <8 x i8> %7, <8 x i8> %15, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   %16 = load i8, ptr addrspace(1) %in1, align 1
-  %17 = insertelement <8 x i8> undef, i8 %16, i32 0
+  %17 = insertelement <8 x i8> poison, i8 %16, i32 0
   %arrayidx2.i.i4 = getelementptr inbounds i8, ptr addrspace(1) %in1, i64 1
   %18 = load i8, ptr addrspace(1) %arrayidx2.i.i4, align 1
   %19 = insertelement <8 x i8> %17, i8 %18, i32 1
@@ -51,7 +51,7 @@ entry:
   %23 = insertelement <8 x i8> %21, i8 %22, i32 3
   %arrayidx.i.i7 = getelementptr inbounds i8, ptr addrspace(1) %in1, i64 4
   %24 = load i8, ptr addrspace(1) %arrayidx.i.i7, align 1
-  %25 = insertelement <8 x i8> undef, i8 %24, i32 0
+  %25 = insertelement <8 x i8> poison, i8 %24, i32 0
   %arrayidx2.i9.i8 = getelementptr inbounds i8, ptr addrspace(1) %in1, i64 5
   %26 = load i8, ptr addrspace(1) %arrayidx2.i9.i8, align 1
   %27 = insertelement <8 x i8> %25, i8 %26, i32 1

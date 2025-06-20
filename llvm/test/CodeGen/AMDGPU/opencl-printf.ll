@@ -36,7 +36,7 @@
 @printed.str.float.neg0 = private addrspace(4) constant float -0.0, align 4
 @printed.str.float.0 = private addrspace(4) constant float 0.0, align 4
 @printed.str.ptr.null = private addrspace(4) constant ptr null, align 4
-@printed.str.ptr.undef = private addrspace(4) constant ptr undef, align 4
+@printed.str.ptr.undef = private addrspace(4) constant ptr poison, align 4
 @format.str.f = private unnamed_addr addrspace(4) constant [33 x i8] c"%f %f %f %f %f %f %f %f %f %f %f\00", align 1
 @format.str.p = private unnamed_addr addrspace(4) constant [15 x i8] c"%p %p %p %p %p\00", align 1
 @format.str.d = private unnamed_addr addrspace(4) constant [30 x i8] c"%d %d %d %d %d %d %d %d %d %d\00", align 1
@@ -555,7 +555,7 @@ entry:
 define amdgpu_kernel void @test_indexed_format_str(i32 %n) {
 ; R600-LABEL: @test_indexed_format_str(
 ; R600-NEXT:  entry:
-; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) getelementptr inbounds ([11 x i8], ptr addrspace(4) @indexed.format.str, i64 0, i32 7), i32 [[N:%.*]])
+; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) getelementptr ([11 x i8], ptr addrspace(4) @indexed.format.str, i64 0, i32 7), i32 [[N:%.*]])
 ; R600-NEXT:    ret void
 ;
 ; GCN-LABEL: @test_indexed_format_str(
@@ -583,7 +583,7 @@ entry:
 define amdgpu_kernel void @test_indexed_format_str_oob(i32 %n) {
 ; R600-LABEL: @test_indexed_format_str_oob(
 ; R600-NEXT:  entry:
-; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) getelementptr inbounds ([11 x i8], ptr addrspace(4) @indexed.format.str, i64 1, i64 0), i32 [[N:%.*]])
+; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) getelementptr ([11 x i8], ptr addrspace(4) @indexed.format.str, i64 0, i64 11), i32 [[N:%.*]])
 ; R600-NEXT:    ret void
 ;
 ; GCN-LABEL: @test_indexed_format_str_oob(
@@ -760,7 +760,7 @@ entry:
 define amdgpu_kernel void @test_undef_argument(i32 %n) {
 ; R600-LABEL: @test_undef_argument(
 ; R600-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
-; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) undef, ptr addrspace(5) [[STR]], i32 [[N:%.*]])
+; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) poison, ptr addrspace(5) [[STR]], i32 [[N:%.*]])
 ; R600-NEXT:    ret void
 ;
 ; GCN-LABEL: @test_undef_argument(
@@ -768,7 +768,7 @@ define amdgpu_kernel void @test_undef_argument(i32 %n) {
 ; GCN-NEXT:    ret void
 ;
   %str = alloca [9 x i8], align 1, addrspace(5)
-  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) undef, ptr addrspace(5) %str, i32 %n)
+  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) poison, ptr addrspace(5) %str, i32 %n)
   ret void
 }
 
@@ -1624,7 +1624,7 @@ entry:
 define amdgpu_kernel void @test_print_string_undef(i32 %n) {
 ; R600-LABEL: @test_print_string_undef(
 ; R600-NEXT:  entry:
-; R600-NEXT:    [[PRINTF:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) undef, i32 [[N:%.*]])
+; R600-NEXT:    [[PRINTF:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) poison, i32 [[N:%.*]])
 ; R600-NEXT:    ret void
 ;
 ; GCN-LABEL: @test_print_string_undef(
@@ -1647,7 +1647,7 @@ define amdgpu_kernel void @test_print_string_undef(i32 %n) {
 ; GCN-NEXT:    ret void
 ;
 entry:
-  %printf = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) undef, i32 %n)
+  %printf = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) poison, i32 %n)
   ret void
 }
 
@@ -1864,7 +1864,7 @@ entry:
 define amdgpu_kernel void @test_print_string_indexed(i32 %n) {
 ; R600-LABEL: @test_print_string_indexed(
 ; R600-NEXT:  entry:
-; R600-NEXT:    [[PRINTF:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) getelementptr inbounds ([32 x i8], ptr addrspace(4) @printed.str.size32, i64 0, i64 15), i32 [[N:%.*]])
+; R600-NEXT:    [[PRINTF:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) getelementptr ([32 x i8], ptr addrspace(4) @printed.str.size32, i64 0, i64 15), i32 [[N:%.*]])
 ; R600-NEXT:    ret void
 ;
 ; GCN-LABEL: @test_print_string_indexed(
@@ -1900,7 +1900,7 @@ entry:
 define amdgpu_kernel void @test_print_string_indexed_oob(i32 %n) {
 ; R600-LABEL: @test_print_string_indexed_oob(
 ; R600-NEXT:  entry:
-; R600-NEXT:    [[PRINTF:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) getelementptr inbounds ([32 x i8], ptr addrspace(4) @printed.str.size32, i64 1, i64 0), i32 [[N:%.*]])
+; R600-NEXT:    [[PRINTF:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) getelementptr ([32 x i8], ptr addrspace(4) @printed.str.size32, i64 0, i64 32), i32 [[N:%.*]])
 ; R600-NEXT:    ret void
 ;
 ; GCN-LABEL: @test_print_string_indexed_oob(

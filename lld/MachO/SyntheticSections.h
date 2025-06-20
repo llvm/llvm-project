@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/MathExtras.h"
@@ -446,6 +447,7 @@ private:
   // match its behavior here since some tools depend on it.
   // Consequently, the empty string will be at index 1, not zero.
   std::vector<StringRef> strings{" "};
+  llvm::DenseMap<llvm::CachedHashStringRef, uint32_t> stringMap;
   size_t size = 2;
 };
 
@@ -484,6 +486,7 @@ private:
   void emitEndSourceStab();
   void emitObjectFileStab(ObjFile *);
   void emitEndFunStab(Defined *);
+  Defined *getFuncBodySym(Defined *);
   void emitStabs();
 
 protected:

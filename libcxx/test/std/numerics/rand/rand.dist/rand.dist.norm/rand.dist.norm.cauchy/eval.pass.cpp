@@ -45,7 +45,7 @@ int main(int, char**)
             u.push_back(d(g));
         std::sort(u.begin(), u.end());
         for (int i = 0; i < N; ++i)
-            assert(std::abs(f(u[i], a, b) - double(i)/N) < .001);
+          assert(std::abs(f(u[i], a, b) - double(i) / N) < .0013);
     }
     {
         typedef std::cauchy_distribution<> D;
@@ -60,7 +60,7 @@ int main(int, char**)
             u.push_back(d(g));
         std::sort(u.begin(), u.end());
         for (int i = 0; i < N; ++i)
-            assert(std::abs(f(u[i], a, b) - double(i)/N) < .001);
+          assert(std::abs(f(u[i], a, b) - double(i) / N) < .0013);
     }
     {
         typedef std::cauchy_distribution<> D;
@@ -75,7 +75,7 @@ int main(int, char**)
             u.push_back(d(g));
         std::sort(u.begin(), u.end());
         for (int i = 0; i < N; ++i)
-            assert(std::abs(f(u[i], a, b) - double(i)/N) < .001);
+          assert(std::abs(f(u[i], a, b) - double(i) / N) < .0013);
     }
 
   return 0;

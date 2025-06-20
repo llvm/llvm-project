@@ -3,7 +3,7 @@
 ;immediate in the range of -65535 to -1 (inclusive).
 ;Our example uses the positive value 3.
 ;
-; RUN: not llc -march=mipsel < %s  2> %t
+; RUN: not llc -mtriple=mipsel < %s  2> %t
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 define i32 @main() nounwind {

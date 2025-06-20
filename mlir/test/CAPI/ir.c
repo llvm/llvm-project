@@ -340,9 +340,9 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // function.
   MlirRegion region = mlirOperationGetRegion(operation, 0);
   MlirBlock block = mlirRegionGetFirstBlock(region);
-  operation = mlirBlockGetFirstOperation(block);
-  region = mlirOperationGetRegion(operation, 0);
-  MlirOperation parentOperation = operation;
+  MlirOperation function = mlirBlockGetFirstOperation(block);
+  region = mlirOperationGetRegion(function, 0);
+  MlirOperation parentOperation = function;
   block = mlirRegionGetFirstBlock(region);
   operation = mlirBlockGetFirstOperation(block);
   assert(mlirModuleIsNull(mlirModuleFromOperation(operation)));
@@ -488,6 +488,18 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // clang-format off
   // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() <{value = 0 : index}> {elts = dense_resource<__elided__> : tensor<4xi32>} : () -> index loc(unknown)
+  // clang-format on
+
+  mlirOpPrintingFlagsDestroy(flags);
+  flags = mlirOpPrintingFlagsCreate();
+  mlirOpPrintingFlagsSkipRegions(flags);
+  fprintf(stderr, "Op print with skip regions flag: ");
+  mlirOperationPrintWithFlags(function, flags, printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // clang-format off
+  // CHECK: Op print with skip regions flag: func.func @add(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>)
+  // CHECK-NOT: constant
+  // CHECK-NOT: return
   // clang-format on
 
   fprintf(stderr, "With state: |");
@@ -2377,6 +2389,9 @@ void testDiagnostics(void) {
   MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
       ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
   mlirEmitError(fileLineColLoc, "test diagnostics");
+  MlirLocation fileLineColRange = mlirLocationFileLineColRangeGet(
+      ctx, mlirStringRefCreateFromCString("other-file.c"), 1, 2, 3, 4);
+  mlirEmitError(fileLineColRange, "test diagnostics");
   MlirLocation callSiteLoc = mlirLocationCallSiteGet(
       mlirLocationFileLineColGet(
           ctx, mlirStringRefCreateFromCString("other-file.c"), 2, 3),
@@ -2403,6 +2418,10 @@ void testDiagnostics(void) {
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
   // CHECK:   loc("file.c":1:2)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc("other-file.c":1:2 to 3:4)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics

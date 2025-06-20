@@ -10,7 +10,7 @@
 #include "simple_packed_serialization_utils.h"
 #include "gtest/gtest.h"
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 TEST(ExecutorSymbolDefTest, Serialization) {
   blobSerializationRoundTrip<SPSExecutorSymbolDef>(ExecutorSymbolDef{});

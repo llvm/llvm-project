@@ -92,7 +92,7 @@ define <2 x ptr> @gep_constexpr_vec1(ptr %a) {
 }
 
 ; CHECK: define <2 x ptr> @gep_constexpr_vec2(<2 x ptr> %a)
-; CHECK:     ret <2 x ptr> getelementptr (i16, <2 x ptr> zeroinitializer, <2 x i32> <i32 3, i32 3>)
+; CHECK:     ret <2 x ptr> getelementptr (i16, <2 x ptr> zeroinitializer, <2 x i32> splat (i32 3))
 define <2 x ptr> @gep_constexpr_vec2(<2 x ptr> %a) {
   ret <2 x ptr> getelementptr (i16, <2 x ptr> zeroinitializer, i32 3)
 }

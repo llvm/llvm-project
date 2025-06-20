@@ -29,7 +29,7 @@ using testing::Not;
 // %i in the Symbolizer Markup Format spec
 #define I_REGEX "(0x[0-9a-fA-F]+|0[0-7]+|[0-9]+)"
 
-#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && HAVE_LINK_H &&             \
+#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES &&                            \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
      defined(__FreeBSD_kernel__) || defined(__NetBSD__))
 TEST(SignalsTest, PrintsSymbolizerMarkup) {

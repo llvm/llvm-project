@@ -108,72 +108,91 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: search
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.6(0x30000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r2 = t2LDRSHi12 renamable $r1, 2, 14 /* CC::al */, $noreg :: (load (s16) from %ir.idx)
-  ; CHECK:   t2CMPri renamable $r2, -1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   tBcc %bb.6, 13 /* CC::le */, killed $cpsr
-  ; CHECK: bb.1.while.cond.preheader:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r0, $r2
-  ; CHECK:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 0, 4, implicit-def $itstate
-  ; CHECK:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
-  ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
-  ; CHECK:   tB %bb.2, 14 /* CC::al */, $noreg
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   liveins: $r0, $r2
-  ; CHECK:   renamable $r1 = tUXTH killed renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK: bb.3.land.rhs:
-  ; CHECK:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r2 = tLDRi renamable $r0, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.info2)
-  ; CHECK:   renamable $r2 = tLDRHi killed renamable $r2, 1, 14 /* CC::al */, $noreg :: (load (s16) from %ir.idx3)
-  ; CHECK:   tCMPr killed renamable $r2, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   tBcc %bb.5, 0 /* CC::eq */, killed $cpsr
-  ; CHECK: bb.4.while.body:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.next4)
-  ; CHECK:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 0, 4, implicit-def $itstate
-  ; CHECK:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
-  ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
-  ; CHECK:   tB %bb.3, 14 /* CC::al */, $noreg
-  ; CHECK: bb.5.return:
-  ; CHECK:   liveins: $r0
-  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit killed $r0
-  ; CHECK: bb.6.while.cond9.preheader:
-  ; CHECK:   successors: %bb.7(0x80000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 0, 4, implicit-def $itstate
-  ; CHECK:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
-  ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
-  ; CHECK:   tB %bb.7, 14 /* CC::al */, $noreg
-  ; CHECK: bb.7.land.rhs11.lr.ph:
-  ; CHECK:   successors: %bb.8(0x80000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r1 = t2LDRSHi12 killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (load (s16) from %ir.data16143)
-  ; CHECK: bb.8.land.rhs11:
-  ; CHECK:   successors: %bb.9(0x80000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r2 = tLDRi renamable $r0, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.info12)
-  ; CHECK:   renamable $r2 = tLDRBi killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (load (s8) from %ir.data166, align 2)
-  ; CHECK:   tCMPr killed renamable $r2, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 0, 8, implicit-def $itstate
-  ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
-  ; CHECK:   tB %bb.9, 14 /* CC::al */, $noreg
-  ; CHECK: bb.9.while.body19:
-  ; CHECK:   successors: %bb.8(0x80000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.next205)
-  ; CHECK:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 0, 4, implicit-def $itstate
-  ; CHECK:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
-  ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
-  ; CHECK:   tB %bb.8, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.6(0x30000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r2 = t2LDRSHi12 renamable $r1, 2, 14 /* CC::al */, $noreg :: (load (s16) from %ir.idx)
+  ; CHECK-NEXT:   t2CMPri renamable $r2, -1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   tBcc %bb.6, 13 /* CC::le */, killed $cpsr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.while.cond.preheader:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2IT 0, 4, implicit-def $itstate
+  ; CHECK-NEXT:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
+  ; CHECK-NEXT:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
+  ; CHECK-NEXT:   tB %bb.2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r1 = tUXTH killed renamable $r2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.land.rhs:
+  ; CHECK-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r2 = tLDRi renamable $r0, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.info2)
+  ; CHECK-NEXT:   renamable $r2 = tLDRHi killed renamable $r2, 1, 14 /* CC::al */, $noreg :: (load (s16) from %ir.idx3)
+  ; CHECK-NEXT:   tCMPr killed renamable $r2, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   tBcc %bb.5, 0 /* CC::eq */, killed $cpsr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.while.body:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.next4)
+  ; CHECK-NEXT:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2IT 0, 4, implicit-def $itstate
+  ; CHECK-NEXT:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
+  ; CHECK-NEXT:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
+  ; CHECK-NEXT:   tB %bb.3, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5.return:
+  ; CHECK-NEXT:   liveins: $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit killed $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.6.while.cond9.preheader:
+  ; CHECK-NEXT:   successors: %bb.7(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2IT 0, 4, implicit-def $itstate
+  ; CHECK-NEXT:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
+  ; CHECK-NEXT:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
+  ; CHECK-NEXT:   tB %bb.7, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.7.land.rhs11.lr.ph:
+  ; CHECK-NEXT:   successors: %bb.8(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r1 = t2LDRSHi12 killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (load (s16) from %ir.data16143)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.8.land.rhs11:
+  ; CHECK-NEXT:   successors: %bb.9(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r2 = tLDRi renamable $r0, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.info12)
+  ; CHECK-NEXT:   renamable $r2 = tLDRBi killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (load (s8) from %ir.data166, align 2)
+  ; CHECK-NEXT:   tCMPr killed renamable $r2, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2IT 0, 8, implicit-def $itstate
+  ; CHECK-NEXT:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
+  ; CHECK-NEXT:   tB %bb.9, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.9.while.body19:
+  ; CHECK-NEXT:   successors: %bb.8(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.next205)
+  ; CHECK-NEXT:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2IT 0, 4, implicit-def $itstate
+  ; CHECK-NEXT:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
+  ; CHECK-NEXT:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
+  ; CHECK-NEXT:   tB %bb.8, 14 /* CC::al */, $noreg
   bb.0.entry:
     successors: %bb.2(0x50000000), %bb.1(0x30000000)
     liveins: $r0, $r1

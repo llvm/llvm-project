@@ -29,7 +29,7 @@
 /// many compilers, including Clang and GCC.
 ///
 /// It is documented here:
-///   http://www.codesourcery.com/public/cxx-abi/
+///   http://itanium-cxx-abi.github.io/cxx-abi/
 ITANIUM_CXXABI(GenericItanium, "itanium")
 
 /// The generic ARM ABI is a modified version of the Itanium ABI
@@ -46,8 +46,7 @@ ITANIUM_CXXABI(GenericItanium, "itanium")
 ///   - and more!
 ///
 /// It is documented here:
-///    http://infocenter.arm.com
-///                    /help/topic/com.arm.doc.ihi0041c/IHI0041C_cppabi.pdf
+///    https://github.com/ARM-software/abi-aa/blob/main/cppabi32/cppabi32.rst
 ITANIUM_CXXABI(GenericARM, "arm")
 
 /// The iOS ABI is a partial implementation of the ARM ABI.
@@ -63,10 +62,6 @@ ITANIUM_CXXABI(iOS, "ios")
 
 /// The iOS 64-bit and macOS 64-bit ARM ABI follows ARM's published 64-bit
 /// ABI more closely, but we don't guarantee to follow it perfectly.
-///
-/// It is documented here:
-///    http://infocenter.arm.com
-///                  /help/topic/com.arm.doc.ihi0059a/IHI0059A_cppabi64.pdf
 ITANIUM_CXXABI(AppleARM64, "applearm64")
 
 /// WatchOS is a modernisation of the iOS ABI, which roughly means it's
@@ -80,6 +75,9 @@ ITANIUM_CXXABI(WatchOS, "watchos")
 /// The relevant changes from the generic ABI in this case are:
 ///   - representation of member function pointers adjusted as in ARM.
 ///   - guard variables  are smaller.
+///
+/// It is documented here:
+///    https://github.com/ARM-software/abi-aa/blob/main/cppabi64/cppabi64.rst
 ITANIUM_CXXABI(GenericAArch64, "aarch64")
 
 /// The generic Mips ABI is a modified version of the Itanium ABI.

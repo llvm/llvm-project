@@ -13,8 +13,8 @@ func.func @matmul_split(%A : tensor<16x256xf32>, %B: tensor<256x32xf32>, %C: ten
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 //  CHECK-LABEL: @matmul_split
 //  CHECK-DAG: %[[ID:.*]] = arith.constant 0.000000e+00 : f32
-//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] : tensor<16x256xf32> into tensor<16x4x64xf32>
-//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] : tensor<256x32xf32> into tensor<4x64x32xf32>
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] output_shape [16, 4, 64] : tensor<16x256xf32> into tensor<16x4x64xf32>
+//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] output_shape [4, 64, 32] : tensor<256x32xf32> into tensor<4x64x32xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<16x32x4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<16x32x4xf32>) -> tensor<16x32x4xf32>
 //      CHECK: %[[G:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]]
@@ -65,7 +65,7 @@ func.func @generic_split_1d(%arg0: tensor<32xf32>, %arg1: tensor<f32>, %out: ten
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0) -> ()>
 //CHECK-LABEL: @generic_split_1d
 //  CHECK-DAG: %[[ID:.*]] = arith.constant 1.000000e+00 : f32
-//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1]] : tensor<32xf32> into tensor<4x8xf32>
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1]] output_shape [4, 8] : tensor<32xf32> into tensor<4x8xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<4xf32>) -> tensor<4xf32>
 //      CHECK: %[[G:.*]] = linalg.generic
@@ -119,8 +119,8 @@ func.func @generic_split_3d(%input: tensor<32x2xf32>, %input_2: tensor<5x32xf32>
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL:  func @generic_split_3d
 //  CHECK-DAG: %[[ID:.*]] = arith.constant 0xFF800000 : f32
-//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] : tensor<32x2xf32> into tensor<4x8x2xf32>
-//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] : tensor<5x32xf32> into tensor<5x4x8xf32>
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] output_shape [4, 8, 2] : tensor<32x2xf32> into tensor<4x8x2xf32>
+//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] output_shape [5, 4, 8] : tensor<5x32xf32> into tensor<5x4x8xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<5x2x4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<5x2x4xf32>) -> tensor<5x2x4xf32>
 //      CHECK: %[[G:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]], iterator_types = ["parallel", "reduction", "parallel", "parallel"]}
@@ -177,8 +177,8 @@ func.func @generic_split_3d_ninf(%input: tensor<32x2xf32>, %input_2: tensor<5x32
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL:  func @generic_split_3d_ninf
 //  CHECK-DAG: %[[ID:.*]] = arith.constant -3.40282347E+38 : f32
-//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] : tensor<32x2xf32> into tensor<4x8x2xf32>
-//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] : tensor<5x32xf32> into tensor<5x4x8xf32>
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] output_shape [4, 8, 2] : tensor<32x2xf32> into tensor<4x8x2xf32>
+//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] output_shape [5, 4, 8] : tensor<5x32xf32> into tensor<5x4x8xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<5x2x4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<5x2x4xf32>) -> tensor<5x2x4xf32>
 //      CHECK: %[[G:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]], iterator_types = ["parallel", "reduction", "parallel", "parallel"]}
@@ -218,8 +218,8 @@ func.func @matmul_split(%A : tensor<16x256xf32>, %B: tensor<256x32xf32>, %C: ten
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 //  CHECK-LABEL: @matmul_split
 //  CHECK-DAG: %[[ID:.*]] = arith.constant 0.000000e+00 : f32
-//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] : tensor<16x256xf32> into tensor<16x64x4xf32>
-//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] : tensor<256x32xf32> into tensor<64x4x32xf32>
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] output_shape [16, 64, 4] : tensor<16x256xf32> into tensor<16x64x4xf32>
+//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] output_shape [64, 4, 32] : tensor<256x32xf32> into tensor<64x4x32xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<16x32x4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<16x32x4xf32>) -> tensor<16x32x4xf32>
 //      CHECK: %[[G:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]]
@@ -270,7 +270,7 @@ func.func @generic_split_1d(%arg0: tensor<32xf32>, %arg1: tensor<f32>, %out: ten
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0) -> ()>
 //CHECK-LABEL: @generic_split_1d
 //  CHECK-DAG: %[[ID:.*]] = arith.constant 1.000000e+00 : f32
-//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1]] : tensor<32xf32> into tensor<8x4xf32>
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1]] output_shape [8, 4] : tensor<32xf32> into tensor<8x4xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<4xf32>) -> tensor<4xf32>
 //      CHECK: %[[G:.*]] = linalg.generic
@@ -324,8 +324,8 @@ func.func @generic_split_3d(%input: tensor<32x2xf32>, %input_2: tensor<5x32xf32>
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL:  func @generic_split_3d
 //  CHECK-DAG: %[[ID:.*]] = arith.constant 0x7F800000 : f32
-//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] : tensor<32x2xf32> into tensor<8x4x2xf32>
-//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] : tensor<5x32xf32> into tensor<5x8x4xf32>
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] output_shape [8, 4, 2] : tensor<32x2xf32> into tensor<8x4x2xf32>
+//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] output_shape [5, 8, 4] : tensor<5x32xf32> into tensor<5x8x4xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<5x2x4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<5x2x4xf32>) -> tensor<5x2x4xf32>
 //      CHECK: %[[G:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]], iterator_types = ["parallel", "reduction", "parallel", "parallel"]}
@@ -382,8 +382,8 @@ func.func @generic_split_3d(%input: tensor<32x2xf32>, %input_2: tensor<5x32xf32>
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL:  func @generic_split_3d
 //  CHECK-DAG: %[[ID:.*]] = arith.constant 3.40282347E+38 : f32
-//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] : tensor<32x2xf32> into tensor<8x4x2xf32>
-//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] : tensor<5x32xf32> into tensor<5x8x4xf32>
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] output_shape [8, 4, 2] : tensor<32x2xf32> into tensor<8x4x2xf32>
+//  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] output_shape [5, 8, 4] : tensor<5x32xf32> into tensor<5x8x4xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<5x2x4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<5x2x4xf32>) -> tensor<5x2x4xf32>
 //      CHECK: %[[G:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]], iterator_types = ["parallel", "reduction", "parallel", "parallel"]}
@@ -403,6 +403,98 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1:4 = transform.structured.split_reduction %0 { split_factor = 4, insert_split_dimension = 2, inner_parallel}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// -----
+// Checks we use nan as the neutral element for maxnumf op.
+func.func @generic_split_maxnumf(%in: tensor<32xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
+                                        affine_map<(d0) -> ()>],
+        iterator_types = ["reduction"]}
+  ins(%in : tensor<32xf32>)
+  outs(%out : tensor<f32>) {
+  ^bb0(%arg1: f32, %arg2: f32):
+    %y = arith.maxnumf %arg1, %arg2 : f32
+    linalg.yield %y : f32
+  } -> tensor<f32>
+  return %r : tensor<f32>
+}
+
+//  CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+//  CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
+//  CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (d0)>
+//  CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0) -> ()>
+// CHECK-LABEL:  func @generic_split_maxnumf
+//  The float value 0xFFC00000 that is filled into the init tensor represents negative NaN.
+//  CHECK-DAG: %[[ID:.*]] = arith.constant 0xFFC00000 : f32
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1]] output_shape [8, 4] : tensor<32xf32> into tensor<8x4xf32>
+//  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<4xf32>
+//      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<4xf32>) -> tensor<4xf32>
+//      CHECK: %[[G:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]}
+// CHECK-SAME:   ins(%[[I1]] : tensor<8x4xf32>) outs(%[[F]] : tensor<4xf32>) {
+//      CHECK:   arith.maxnumf
+//      CHECK:   linalg.yield
+//      CHECK: } -> tensor<4xf32>
+//      CHECK: %[[R:.*]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP3]]], iterator_types = ["reduction"]}
+// CHECK-SAME:   ins(%[[G]] : tensor<4xf32>) outs(%{{.*}} : tensor<f32>) {
+//      CHECK:   arith.maxnumf {{.*}}
+//      CHECK:   linalg.yield
+//      CHECK:  } -> tensor<f32>
+//      CHECK: return %[[R]] : tensor<f32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.split_reduction %0 { split_factor = 4, insert_split_dimension = 0, inner_parallel}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// -----
+// Checks we use nan as the neutral element for minnumf op.
+func.func @generic_split_minnumf(%in: tensor<32xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
+                                        affine_map<(d0) -> ()>],
+        iterator_types = ["reduction"]}
+  ins(%in : tensor<32xf32>)
+  outs(%out : tensor<f32>) {
+  ^bb0(%arg1: f32, %arg2: f32):
+    %y = arith.minnumf %arg1, %arg2 : f32
+    linalg.yield %y : f32
+  } -> tensor<f32>
+  return %r : tensor<f32>
+}
+
+//  CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+//  CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
+//  CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (d0)>
+//  CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0) -> ()>
+// CHECK-LABEL:  func @generic_split_minnumf
+//  The float value 0x7FC00000 that is filled into the init tensor represents positive NaN.
+//  CHECK-DAG: %[[ID:.*]] = arith.constant 0x7FC00000 : f32
+//  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1]] output_shape [8, 4] : tensor<32xf32> into tensor<8x4xf32>
+//  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<4xf32>
+//      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<4xf32>) -> tensor<4xf32>
+//      CHECK: %[[G:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]}
+// CHECK-SAME:   ins(%[[I1]] : tensor<8x4xf32>) outs(%[[F]] : tensor<4xf32>) {
+//      CHECK:   arith.minnumf
+//      CHECK:   linalg.yield
+//      CHECK: } -> tensor<4xf32>
+//      CHECK: %[[R:.*]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP3]]], iterator_types = ["reduction"]}
+// CHECK-SAME:   ins(%[[G]] : tensor<4xf32>) outs(%{{.*}} : tensor<f32>) {
+//      CHECK:   arith.minnumf {{.*}}
+//      CHECK:   linalg.yield
+//      CHECK:  } -> tensor<f32>
+//      CHECK: return %[[R]] : tensor<f32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.split_reduction %0 { split_factor = 4, insert_split_dimension = 0, inner_parallel}
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }

@@ -11,6 +11,8 @@
 
 // REQUIRES: libcpp-hardening-mode=none
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__assert>
 #include <cassert>
 

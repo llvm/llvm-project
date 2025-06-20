@@ -47,7 +47,7 @@ std::string EquivalenceObject::AsFortran() const {
   if (substringStart) {
     ss << '(' << *substringStart << ":)";
   }
-  return ss.str();
+  return buf;
 }
 
 Scope &Scope::MakeScope(Kind kind, Symbol *symbol) {
@@ -56,7 +56,7 @@ Scope &Scope::MakeScope(Kind kind, Symbol *symbol) {
 
 template <typename T>
 static std::vector<common::Reference<T>> GetSortedSymbols(
-    std::map<SourceName, MutableSymbolRef> symbols) {
+    const std::map<SourceName, MutableSymbolRef> &symbols) {
   std::vector<common::Reference<T>> result;
   result.reserve(symbols.size());
   for (auto &pair : symbols) {
@@ -215,6 +215,7 @@ const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
     } else {
       switch (dyType->category()) {
       case TypeCategory::Integer:
+      case TypeCategory::Unsigned:
       case TypeCategory::Real:
       case TypeCategory::Complex:
         return &MakeNumericType(dyType->category(), KindExpr{dyType->kind()});

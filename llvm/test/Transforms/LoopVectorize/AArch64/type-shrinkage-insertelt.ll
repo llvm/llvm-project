@@ -20,7 +20,7 @@ define void @test0(ptr noalias %M3, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP5]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i16> [[WIDE_LOAD]], <i16 10, i16 10, i16 10, i16 10>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i16> [[WIDE_LOAD]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]

@@ -14,10 +14,9 @@ define i32 @test_icmp_constant_op_zext(ptr %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 1, [[DOTCAST]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i16 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <4 x i8> <i8 109, i8 109, i8 109, i8 109>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    store <4 x i8> splat (i8 109), ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -69,17 +68,16 @@ define i32 @test_icmp_and_op_zext(ptr %dst, i64 %a) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[AND]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[BROADCAST_SPLAT]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i8>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 1, [[DOTCAST]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[BROADCAST_SPLAT]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i8>
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i16 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -133,18 +131,17 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[SRC_1]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[SRC_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i16> zeroinitializer, [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[SRC_2]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[SRC_2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[WIDE_LOAD1]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP3]], <4 x i16> zeroinitializer, <4 x i16> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <4 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

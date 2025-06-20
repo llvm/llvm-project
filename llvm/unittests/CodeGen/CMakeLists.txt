@@ -20,18 +20,20 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(CodeGenTests
-  AArch64SelectionDAGTest.cpp
   AllocationOrderTest.cpp
   AMDGPUMetadataTest.cpp
   AsmPrinterDwarfTest.cpp
   CCStateTest.cpp
   DIEHashTest.cpp
   DIETest.cpp
+  DroppedVariableStatsMIRTest.cpp
   DwarfStringPoolEntryRefTest.cpp
+  GCMetadata.cpp
   InstrRefLDVTest.cpp
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
   MachineBasicBlockTest.cpp
+  MachineDomTreeUpdaterTest.cpp
   MachineInstrBundleIteratorTest.cpp
   MachineInstrTest.cpp
   MachineOperandTest.cpp
@@ -45,6 +47,7 @@ add_llvm_unittest(CodeGenTests
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp
   MLRegAllocDevelopmentFeatures.cpp
+  X86MCInstLowerTest.cpp
   )
 
 add_subdirectory(GlobalISel)

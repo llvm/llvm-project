@@ -64,85 +64,85 @@ int main(int argc, char **argv) {
 
 // CHECK:       call void @__kmpc_taskgroup(ptr {{[^,]+}}, i32 [[GTID]])
 // CHECK-DAG:   store ptr [[A]], ptr [[A_REF:[^,]+]],
-// CHECK-DAG:   [[A_REF]] = getelementptr inbounds [[T1]], ptr [[GEPA:%[^,]+]], i32 0, i32 0
+// CHECK-DAG:   [[A_REF]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[A]], ptr [[A_REF:[^,]+]],
-// CHECK-DAG:   [[A_REF]] = getelementptr inbounds [[T1]], ptr [[GEPA]], i32 0, i32 1
-// CHECK-DAG:   [[GEPA]] = getelementptr inbounds [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
-// CHECK-DAG:   [[TMP6:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPA]], i32 0, i32 2
+// CHECK-DAG:   [[A_REF]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 1
+// CHECK-DAG:   [[GEPA]] = getelementptr inbounds nuw [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
+// CHECK-DAG:   [[TMP6:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 2
 // CHECK-DAG:   store i64 4, ptr [[TMP6]],
-// CHECK-DAG:   [[TMP7:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPA]], i32 0, i32 3
+// CHECK-DAG:   [[TMP7:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 3
 // CHECK-DAG:   store ptr @[[AINIT:.+]], ptr [[TMP7]],
-// CHECK-DAG:   [[TMP8:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPA]], i32 0, i32 4
+// CHECK-DAG:   [[TMP8:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 4
 // CHECK-DAG:   store ptr null, ptr [[TMP8]],
-// CHECK-DAG:   [[TMP9:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPA]], i32 0, i32 5
+// CHECK-DAG:   [[TMP9:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 5
 // CHECK-DAG:   store ptr @[[ACOMB:.+]], ptr [[TMP9]],
-// CHECK-DAG:   [[TMP10:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPA]], i32 0, i32 6
+// CHECK-DAG:   [[TMP10:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 6
 // CHECK-DAG:   call void @llvm.memset.p0.i64(ptr align 8 [[TMP10]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   store ptr [[B]], ptr [[TMP12:%[^,]+]],
-// CHECK-DAG:   [[TMP12]] = getelementptr inbounds [[T1]], ptr [[GEPB:%[^,]+]], i32 0, i32 0
+// CHECK-DAG:   [[TMP12]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[B]], ptr [[TMP12:%[^,]+]],
-// CHECK-DAG:   [[TMP12]] = getelementptr inbounds [[T1]], ptr [[GEPB]], i32 0, i32 1
-// CHECK-DAG:   [[GEPB]] = getelementptr inbounds [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
-// CHECK-DAG:   [[TMP14:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPB]], i32 0, i32 2
+// CHECK-DAG:   [[TMP12]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 1
+// CHECK-DAG:   [[GEPB]] = getelementptr inbounds nuw [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
+// CHECK-DAG:   [[TMP14:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 2
 // CHECK-DAG:   store i64 4, ptr [[TMP14]],
-// CHECK-DAG:   [[TMP15:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPB]], i32 0, i32 3
+// CHECK-DAG:   [[TMP15:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 3
 // CHECK-DAG:   store ptr @[[BINIT:.+]], ptr [[TMP15]],
-// CHECK-DAG:   [[TMP16:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPB]], i32 0, i32 4
+// CHECK-DAG:   [[TMP16:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 4
 // CHECK-DAG:   store ptr null, ptr [[TMP16]],
-// CHECK-DAG:   [[TMP17:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPB]], i32 0, i32 5
+// CHECK-DAG:   [[TMP17:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 5
 // CHECK-DAG:   store ptr @[[BCOMB:.+]], ptr [[TMP17]],
-// CHECK-DAG:   [[TMP18:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPB]], i32 0, i32 6
+// CHECK-DAG:   [[TMP18:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 6
 // CHECK-DAG:   call void @llvm.memset.p0.i64(ptr align 8 [[TMP18]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   store ptr [[ARGC_ADDR]], ptr [[TMP20:%[^,]+]],
-// CHECK-DAG:   [[TMP20]] = getelementptr inbounds [[T1]], ptr [[GEPARGC:%[^,]+]], i32 0, i32 0
+// CHECK-DAG:   [[TMP20]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[ARGC_ADDR]], ptr [[TMP20:%[^,]+]],
-// CHECK-DAG:   [[TMP20]] = getelementptr inbounds [[T1]], ptr [[GEPARGC]], i32 0, i32 1
-// CHECK-DAG:   [[GEPARGC]] = getelementptr inbounds [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
-// CHECK-DAG:   [[TMP22:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPARGC]], i32 0, i32 2
+// CHECK-DAG:   [[TMP20]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 1
+// CHECK-DAG:   [[GEPARGC]] = getelementptr inbounds nuw [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
+// CHECK-DAG:   [[TMP22:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 2
 // CHECK-DAG:   store i64 4, ptr [[TMP22]],
-// CHECK-DAG:   [[TMP23:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPARGC]], i32 0, i32 3
+// CHECK-DAG:   [[TMP23:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 3
 // CHECK-DAG:   store ptr @[[ARGCINIT:.+]], ptr [[TMP23]],
-// CHECK-DAG:   [[TMP24:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPARGC]], i32 0, i32 4
+// CHECK-DAG:   [[TMP24:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 4
 // CHECK-DAG:   store ptr null, ptr [[TMP24]],
-// CHECK-DAG:   [[TMP25:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPARGC]], i32 0, i32 5
+// CHECK-DAG:   [[TMP25:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 5
 // CHECK-DAG:   store ptr @[[ARGCCOMB:.+]], ptr [[TMP25]],
-// CHECK-DAG:   [[TMP26:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPARGC]], i32 0, i32 6
+// CHECK-DAG:   [[TMP26:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 6
 // CHECK-DAG:   call void @llvm.memset.p0.i64(ptr align 8 [[TMP26]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   [[TMP29:%.+]] = call ptr @__kmpc_taskred_init(i32 [[GTID]], i32 3, ptr [[RD_IN1]])
-// DEBUG-DAG:   call void @llvm.dbg.declare(metadata ptr [[TD1]],
+// DEBUG-DAG:   #dbg_declare(ptr [[TD1]],
 // CHECK-DAG:   store ptr [[TMP29]], ptr [[TD1]],
 // CHECK-DAG:   call void @__kmpc_taskgroup(ptr {{[^,]+}}, i32 [[GTID]])
 // CHECK-DAG:   store ptr [[C]], ptr [[TMP30:%[^,]+]],
-// CHECK-DAG:   [[TMP30]] = getelementptr inbounds [[T2]], ptr [[GEPC:%[^,]+]], i32 0, i32 0
+// CHECK-DAG:   [[TMP30]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[C]], ptr [[TMP30:%[^,]+]],
-// CHECK-DAG:   [[TMP30]] = getelementptr inbounds [[T2]], ptr [[GEPC]], i32 0, i32 1
-// CHECK-DAG:   [[GEPC]] = getelementptr inbounds [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
-// CHECK-DAG:   [[TMP32:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPC]], i32 0, i32 2
+// CHECK-DAG:   [[TMP30]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 1
+// CHECK-DAG:   [[GEPC]] = getelementptr inbounds nuw [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
+// CHECK-DAG:   [[TMP32:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 2
 // CHECK-DAG:   store i64 20, ptr [[TMP32]],
-// CHECK-DAG:   [[TMP33:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPC]], i32 0, i32 3
+// CHECK-DAG:   [[TMP33:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 3
 // CHECK-DAG:   store ptr @[[CINIT:.+]], ptr [[TMP33]],
-// CHECK-DAG:   [[TMP34:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPC]], i32 0, i32 4
+// CHECK-DAG:   [[TMP34:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 4
 // CHECK-DAG:   store ptr @[[CFINI:.+]], ptr [[TMP34]],
-// CHECK-DAG:   [[TMP35:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPC]], i32 0, i32 5
+// CHECK-DAG:   [[TMP35:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 5
 // CHECK-DAG:   store ptr @[[CCOMB:.+]], ptr [[TMP35]],
-// CHECK-DAG:   [[TMP36:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPC]], i32 0, i32 6
+// CHECK-DAG:   [[TMP36:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 6
 // CHECK-DAG:   call void @llvm.memset.p0.i64(ptr align 8 [[TMP36]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   store ptr [[VLA]], ptr [[TMP38:%[^,]+]],
-// CHECK-DAG:   [[TMP38]] = getelementptr inbounds [[T2]], ptr [[GEPVLA:%[^,]+]], i32 0, i32 0
+// CHECK-DAG:   [[TMP38]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[VLA]], ptr [[TMP38:%[^,]+]],
-// CHECK-DAG:   [[TMP38]] = getelementptr inbounds [[T2]], ptr [[GEPVLA]], i32 0, i32 1
-// CHECK-DAG:   [[GEPVLA]] = getelementptr inbounds [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
+// CHECK-DAG:   [[TMP38]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 1
+// CHECK-DAG:   [[GEPVLA]] = getelementptr inbounds nuw [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
 // CHECK-DAG:   [[TMP40:%.+]] = mul nuw i64 [[VLA_SIZE]], 2
 // CHECK-DAG:   [[TMP41:%.+]] = udiv exact i64 [[TMP40]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
-// CHECK-DAG:   [[TMP42:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPVLA]], i32 0, i32 2
+// CHECK-DAG:   [[TMP42:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 2
 // CHECK-DAG:   store i64 [[TMP40]], ptr [[TMP42]],
-// CHECK-DAG:   [[TMP43:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPVLA]], i32 0, i32 3
+// CHECK-DAG:   [[TMP43:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 3
 // CHECK-DAG:   store ptr @[[VLAINIT:.+]], ptr [[TMP43]],
-// CHECK-DAG:   [[TMP44:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPVLA]], i32 0, i32 4
+// CHECK-DAG:   [[TMP44:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 4
 // CHECK-DAG:   store ptr null, ptr [[TMP44]],
-// CHECK-DAG:   [[TMP45:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPVLA]], i32 0, i32 5
+// CHECK-DAG:   [[TMP45:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 5
 // CHECK-DAG:   store ptr @[[VLACOMB:.+]], ptr [[TMP45]],
-// CHECK-DAG:   [[TMP46:%.+]] = getelementptr inbounds [[T2]], ptr [[GEPVLA]], i32 0, i32 6
+// CHECK-DAG:   [[TMP46:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 6
 // CHECK-DAG:   store i32 1, ptr [[TMP46]],
 // CHECK:       [[TMP48:%.+]] = call ptr @__kmpc_taskred_init(i32 [[GTID]], i32 2, ptr [[RD_IN2]])
 // CHECK:       store ptr [[TMP48]], ptr [[TD2]],

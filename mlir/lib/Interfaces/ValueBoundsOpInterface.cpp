@@ -151,8 +151,10 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
                                         [](Value v) { return Variable(v); })) {}
 
 ValueBoundsConstraintSet::ValueBoundsConstraintSet(
-    MLIRContext *ctx, StopConditionFn stopCondition)
-    : builder(ctx), stopCondition(stopCondition) {
+    MLIRContext *ctx, StopConditionFn stopCondition,
+    bool addConservativeSemiAffineBounds)
+    : builder(ctx), stopCondition(stopCondition),
+      addConservativeSemiAffineBounds(addConservativeSemiAffineBounds) {
   assert(stopCondition && "expected non-null stop condition");
 }
 
@@ -174,11 +176,19 @@ static void assertValidValueDim(Value value, std::optional<int64_t> dim) {
 
 void ValueBoundsConstraintSet::addBound(BoundType type, int64_t pos,
                                         AffineExpr expr) {
+  // Note: If `addConservativeSemiAffineBounds` is true then the bound
+  // computation function needs to handle the case that the constraints set
+  // could become empty. This is because the conservative bounds add assumptions
+  // (e.g. for `mod` it assumes `rhs > 0`). If these constraints are later found
+  // not to hold, then the bound is invalid.
   LogicalResult status = cstr.addBound(
       type, pos,
-      AffineMap::get(cstr.getNumDimVars(), cstr.getNumSymbolVars(), expr));
+      AffineMap::get(cstr.getNumDimVars(), cstr.getNumSymbolVars(), expr),
+      addConservativeSemiAffineBounds
+          ? FlatLinearConstraints::AddConservativeSemiAffineBounds::Yes
+          : FlatLinearConstraints::AddConservativeSemiAffineBounds::No);
   if (failed(status)) {
-    // Non-pure (e.g., semi-affine) expressions are not yet supported by
+    // Not all semi-affine expressions are not yet supported by
     // FlatLinearConstraints. However, we can just ignore such failures here.
     // Even without this bound, there may be enough information in the
     // constraint system to compute the requested bound. In case this bound is
@@ -595,9 +605,8 @@ LogicalResult ValueBoundsConstraintSet::computeIndependentBound(
     worklist.push_back(v);
     while (!worklist.empty()) {
       Value next = worklist.pop_back_val();
-      if (visited.contains(next))
+      if (!visited.insert(next).second)
         continue;
-      visited.insert(next);
       if (llvm::is_contained(independencies, next))
         return false;
       // TODO: DominanceInfo could be used to stop the traversal early.
@@ -768,11 +777,11 @@ FailureOr<bool>
 ValueBoundsConstraintSet::areOverlappingSlices(MLIRContext *ctx,
                                                HyperrectangularSlice slice1,
                                                HyperrectangularSlice slice2) {
-  assert(slice1.getMixedOffsets().size() == slice1.getMixedOffsets().size() &&
+  assert(slice1.getMixedOffsets().size() == slice2.getMixedOffsets().size() &&
          "expected slices of same rank");
-  assert(slice1.getMixedSizes().size() == slice1.getMixedSizes().size() &&
+  assert(slice1.getMixedSizes().size() == slice2.getMixedSizes().size() &&
          "expected slices of same rank");
-  assert(slice1.getMixedStrides().size() == slice1.getMixedStrides().size() &&
+  assert(slice1.getMixedStrides().size() == slice2.getMixedStrides().size() &&
          "expected slices of same rank");
 
   Builder b(ctx);
@@ -833,11 +842,11 @@ FailureOr<bool>
 ValueBoundsConstraintSet::areEquivalentSlices(MLIRContext *ctx,
                                               HyperrectangularSlice slice1,
                                               HyperrectangularSlice slice2) {
-  assert(slice1.getMixedOffsets().size() == slice1.getMixedOffsets().size() &&
+  assert(slice1.getMixedOffsets().size() == slice2.getMixedOffsets().size() &&
          "expected slices of same rank");
-  assert(slice1.getMixedSizes().size() == slice1.getMixedSizes().size() &&
+  assert(slice1.getMixedSizes().size() == slice2.getMixedSizes().size() &&
          "expected slices of same rank");
-  assert(slice1.getMixedStrides().size() == slice1.getMixedStrides().size() &&
+  assert(slice1.getMixedStrides().size() == slice2.getMixedStrides().size() &&
          "expected slices of same rank");
 
   // The two slices are equivalent if all of their offsets, sizes and strides

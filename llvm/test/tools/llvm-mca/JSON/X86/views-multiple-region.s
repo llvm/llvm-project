@@ -20,6 +20,9 @@ add %edx, %edx
 # CHECK:      {
 # CHECK-NEXT:   "CodeRegions": [
 # CHECK-NEXT:     {
+# CHECK-NEXT:       "BottleneckAnalysis": {
+# CHECK-NEXT:         "PressureIncreaseCycles": 0
+# CHECK-NEXT:       },
 # CHECK-NEXT:       "DispatchStatistics": {
 # CHECK-NEXT:         "GROUP": 0,
 # CHECK-NEXT:         "LQ": 0,
@@ -164,6 +167,29 @@ add %edx, %edx
 # CHECK-NEXT:       }
 # CHECK-NEXT:     },
 # CHECK-NEXT:     {
+# CHECK-NEXT:       "BottleneckAnalysis": {
+# CHECK-NEXT:         "DataDependencyCycles": 69,
+# CHECK-NEXT:         "DependencyEdge": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "FromID": 0,
+# CHECK-NEXT:             "ResourceOrRegID": 24,
+# CHECK-NEXT:             "ToID": 2,
+# CHECK-NEXT:             "Type": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "FromID": 2,
+# CHECK-NEXT:             "ResourceOrRegID": 24,
+# CHECK-NEXT:             "ToID": 4,
+# CHECK-NEXT:             "Type": 1
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ],
+# CHECK-NEXT:         "MemoryDependencyCycles": 0,
+# CHECK-NEXT:         "PressureIncreaseCycles": 69,
+# CHECK-NEXT:         "RegisterDependencyCycles": 69,
+# CHECK-NEXT:         "ResourcePressure": [],
+# CHECK-NEXT:         "ResourcePressureCycles": 0,
+# CHECK-NEXT:         "TotalCycles": 103
+# CHECK-NEXT:       },
 # CHECK-NEXT:       "DispatchStatistics": {
 # CHECK-NEXT:         "GROUP": 0,
 # CHECK-NEXT:         "LQ": 0,

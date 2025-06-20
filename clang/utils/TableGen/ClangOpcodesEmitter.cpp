@@ -1,4 +1,4 @@
-//=== ClangOpcodesEmitter.cpp - constexpr interpreter opcodes ---*- C++ -*-===//
+//===-- ClangOpcodesEmitter.cpp - constexpr interpreter opcodes -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,11 +20,11 @@ using namespace llvm;
 
 namespace {
 class ClangOpcodesEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   unsigned NumTypes;
 
 public:
-  ClangOpcodesEmitter(RecordKeeper &R)
+  ClangOpcodesEmitter(const RecordKeeper &R)
       : Records(R), NumTypes(Records.getAllDerivedDefinitions("Type").size()) {}
 
   void run(raw_ostream &OS);
@@ -57,7 +57,7 @@ private:
 
 void Enumerate(const Record *R, StringRef N,
                std::function<void(ArrayRef<const Record *>, Twine)> &&F) {
-  llvm::SmallVector<const Record *, 2> TypePath;
+  SmallVector<const Record *, 2> TypePath;
   const auto *Types = R->getValueAsListInit("Types");
 
   std::function<void(size_t, const Twine &)> Rec;
@@ -146,8 +146,6 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N,
                 OS << ", PC";
               else
                 OS << ", OpPC";
-              if (CanReturn)
-                OS << ", Result";
               for (size_t I = 0, N = Args.size(); I < N; ++I)
                 OS << ", V" << I;
               OS << "))\n";
@@ -173,16 +171,12 @@ void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N,
   OS << "#ifdef GET_DISASM\n";
   Enumerate(R, N, [R, &OS](ArrayRef<const Record *>, const Twine &ID) {
     OS << "case OP_" << ID << ":\n";
-    OS << "  PrintName(\"" << ID << "\");\n";
-    OS << "  OS << \"\\t\"";
+    OS << "  Text.Op = PrintName(\"" << ID << "\");\n";
+    for (const auto *Arg : R->getValueAsListOfDefs("Args"))
+      OS << "  Text.Args.push_back(printArg<" << Arg->getValueAsString("Name")
+         << ">(P, PC));\n";
 
-    for (const auto *Arg : R->getValueAsListOfDefs("Args")) {
-      OS << " << ReadArg<" << Arg->getValueAsString("Name") << ">(P, PC)";
-      OS << " << \" \"";
-    }
-
-    OS << " << \"\\n\";\n";
-    OS << "  continue;\n";
+    OS << "  break;\n";
   });
   OS << "#endif\n";
 }
@@ -230,8 +224,7 @@ void ClangOpcodesEmitter::EmitProto(raw_ostream &OS, StringRef N,
   auto Args = R->getValueAsListOfDefs("Args");
   Enumerate(R, N, [&OS, &Args](ArrayRef<const Record *> TS, const Twine &ID) {
     OS << "bool emit" << ID << "(";
-    for (size_t I = 0, N = Args.size(); I < N; ++I) {
-      const auto *Arg = Args[I];
+    for (const Record *Arg : Args) {
       bool AsRef = Arg->getValueAsBit("AsRef");
       auto Name = Arg->getValueAsString("Name");
 
@@ -304,7 +297,7 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
   OS << "const SourceInfo &I) {\n";
 
   std::function<void(size_t, const Twine &)> Rec;
-  llvm::SmallVector<const Record *, 2> TS;
+  SmallVector<const Record *, 2> TS;
   Rec = [this, &Rec, &OS, Types, &Args, R, &TS, N,
          EmitFuncName](size_t I, const Twine &ID) {
     if (I >= Types->size()) {
@@ -404,6 +397,6 @@ void ClangOpcodesEmitter::PrintTypes(raw_ostream &OS,
   OS << ">";
 }
 
-void clang::EmitClangOpcodes(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangOpcodes(const RecordKeeper &Records, raw_ostream &OS) {
   ClangOpcodesEmitter(Records).run(OS);
 }

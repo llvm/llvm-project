@@ -57,7 +57,7 @@
 //
 // base = gep a, 0, x, y
 // load base
-// laod base + 1  * sizeof(float)
+// load base + 1  * sizeof(float)
 // load base + 32 * sizeof(float)
 // load base + 33 * sizeof(float)
 //
@@ -235,8 +235,10 @@ public:
   /// \p GEP The given GEP
   /// \p UserChainTail Outputs the tail of UserChain so that we can
   ///                  garbage-collect unused instructions in UserChain.
+  /// \p PreservesNUW  Outputs whether the extraction allows preserving the
+  ///                  GEP's nuw flag, if it has one.
   static Value *Extract(Value *Idx, GetElementPtrInst *GEP,
-                        User *&UserChainTail);
+                        User *&UserChainTail, bool &PreservesNUW);
 
   /// Looks for a constant offset from the given GEP index without extracting
   /// it. It returns the numeric value of the extracted constant offset (0 if
@@ -245,7 +247,7 @@ public:
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
-      : IP(InsertionPt), DL(InsertionPt->getModule()->getDataLayout()) {}
+      : IP(InsertionPt), DL(InsertionPt->getDataLayout()) {}
 
   /// Searches the expression that computes V for a non-zero constant C s.t.
   /// V can be reassociated into the form V' + C. If the searching is
@@ -778,8 +780,32 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   return NewBO;
 }
 
+/// A helper function to check if reassociating through an entry in the user
+/// chain would invalidate the GEP's nuw flag.
+static bool allowsPreservingNUW(const User *U) {
+  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
+    // Binary operations need to be effectively add nuw.
+    auto Opcode = BO->getOpcode();
+    if (Opcode == BinaryOperator::Or) {
+      // Ors are only considered here if they are disjoint. The addition that
+      // they represent in this case is NUW.
+      assert(cast<PossiblyDisjointInst>(BO)->isDisjoint());
+      return true;
+    }
+    return Opcode == BinaryOperator::Add && BO->hasNoUnsignedWrap();
+  }
+  // UserChain can only contain ConstantInt, CastInst, or BinaryOperator.
+  // Among the possible CastInsts, only trunc without nuw is a problem: If it
+  // is distributed through an add nuw, wrapping may occur:
+  // "add nuw trunc(a), trunc(b)" is more poisonous than "trunc(add nuw a, b)"
+  if (const TruncInst *TI = dyn_cast<TruncInst>(U))
+    return TI->hasNoUnsignedWrap();
+  return isa<CastInst>(U) || isa<ConstantInt>(U);
+}
+
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
-                                        User *&UserChainTail) {
+                                        User *&UserChainTail,
+                                        bool &PreservesNUW) {
   ConstantOffsetExtractor Extractor(GEP->getIterator());
   // Find a non-zero constant offset first.
   APInt ConstantOffset =
@@ -787,8 +813,12 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                      GEP->isInBounds());
   if (ConstantOffset == 0) {
     UserChainTail = nullptr;
+    PreservesNUW = true;
     return nullptr;
   }
+
+  PreservesNUW = all_of(Extractor.UserChain, allowsPreservingNUW);
+
   // Separates the constant offset from the GEP index.
   Value *IdxWithoutConstOffset = Extractor.rebuildWithoutConstOffset();
   UserChainTail = Extractor.UserChain.back();
@@ -972,22 +1002,8 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
 
 bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                             TargetTransformInfo &TTI) {
-  Type *GEPType = GEP->getResultElementType();
-  // TODO: support reordering for non-trivial GEP chains
-  if (GEPType->isAggregateType() || GEP->getNumIndices() != 1)
-    return false;
-
   auto PtrGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
   if (!PtrGEP)
-    return false;
-  Type *PtrGEPType = PtrGEP->getResultElementType();
-  // TODO: support reordering for non-trivial GEP chains
-  if (PtrGEPType->isAggregateType() || PtrGEP->getNumIndices() != 1)
-    return false;
-
-  // TODO: support reordering for non-trivial GEP chains
-  if (PtrGEPType != GEPType ||
-      PtrGEP->getSourceElementType() != GEP->getSourceElementType())
     return false;
 
   bool NestedNeedsExtraction;
@@ -1002,29 +1018,26 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                  /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
     return false;
 
-  IRBuilder<> Builder(GEP);
-  Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
   bool GEPInBounds = GEP->isInBounds();
   bool PtrGEPInBounds = PtrGEP->isInBounds();
   bool IsChainInBounds = GEPInBounds && PtrGEPInBounds;
   if (IsChainInBounds) {
-    auto GEPIdx = GEP->indices().begin();
-    auto KnownGEPIdx = computeKnownBits(GEPIdx->get(), *DL);
-    IsChainInBounds &= KnownGEPIdx.isNonNegative();
-    if (IsChainInBounds) {
-      auto PtrGEPIdx = GEP->indices().begin();
-      auto KnownPtrGEPIdx = computeKnownBits(PtrGEPIdx->get(), *DL);
-      IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
-    }
+    auto IsKnownNonNegative = [this](Value *V) {
+      return isKnownNonNegative(V, *DL);
+    };
+    IsChainInBounds &= all_of(GEP->indices(), IsKnownNonNegative);
+    if (IsChainInBounds)
+      IsChainInBounds &= all_of(PtrGEP->indices(), IsKnownNonNegative);
   }
 
-  // For trivial GEP chains, we can swap the indicies.
-  auto NewSrc = Builder.CreateGEP(PtrGEPType, PtrGEP->getPointerOperand(),
-                                  SmallVector<Value *, 4>(GEP->indices()));
-  cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
-  auto NewGEP = Builder.CreateGEP(GEPType, NewSrc,
-                                  SmallVector<Value *, 4>(PtrGEP->indices()));
-  cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
+  IRBuilder<> Builder(GEP);
+  // For trivial GEP chains, we can swap the indices.
+  Value *NewSrc = Builder.CreateGEP(
+      GEP->getSourceElementType(), PtrGEP->getPointerOperand(),
+      SmallVector<Value *, 4>(GEP->indices()), "", IsChainInBounds);
+  Value *NewGEP = Builder.CreateGEP(PtrGEP->getSourceElementType(), NewSrc,
+                                    SmallVector<Value *, 4>(PtrGEP->indices()),
+                                    "", IsChainInBounds);
   GEP->replaceAllUsesWith(NewGEP);
   RecursivelyDeleteTriviallyDeadInstructions(GEP);
   return true;
@@ -1069,6 +1082,10 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     }
   }
 
+  // Track information for preserving GEP flags.
+  bool AllOffsetsNonNegative = AccumulativeByteOffset >= 0;
+  bool AllNUWPreserved = true;
+
   // Remove the constant offset in each sequential index. The resultant GEP
   // computes the variadic base.
   // Notice that we don't remove struct field indices here. If LowerGEP is
@@ -1087,8 +1104,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       // uses the variadic part as the new index.
       Value *OldIdx = GEP->getOperand(I);
       User *UserChainTail;
-      Value *NewIdx =
-          ConstantOffsetExtractor::Extract(OldIdx, GEP, UserChainTail);
+      bool PreservesNUW;
+      Value *NewIdx = ConstantOffsetExtractor::Extract(
+          OldIdx, GEP, UserChainTail, PreservesNUW);
       if (NewIdx != nullptr) {
         // Switches to the index with the constant offset removed.
         GEP->setOperand(I, NewIdx);
@@ -1096,6 +1114,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
         // and the old index if they are not used.
         RecursivelyDeleteTriviallyDeadInstructions(UserChainTail);
         RecursivelyDeleteTriviallyDeadInstructions(OldIdx);
+        AllOffsetsNonNegative =
+            AllOffsetsNonNegative && isKnownNonNegative(NewIdx, *DL);
+        AllNUWPreserved &= PreservesNUW;
       }
     }
   }
@@ -1109,18 +1130,42 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // is transformed to:
   //
   //   addr2 = gep float, float* p, i64 a ; inbounds removed
-  //   addr  = gep inbounds float, float* addr2, i64 5
+  //   addr  = gep float, float* addr2, i64 5 ; inbounds removed
   //
   // If a is -4, although the old index b is in bounds, the new index a is
   // off-bound. http://llvm.org/docs/LangRef.html#id181 says "if the
   // inbounds keyword is not present, the offsets are added to the base
   // address with silently-wrapping two's complement arithmetic".
   // Therefore, the final code will be a semantically equivalent.
-  //
-  // TODO(jingyue): do some range analysis to keep as many inbounds as
-  // possible. GEPs with inbounds are more friendly to alias analysis.
-  bool GEPWasInBounds = GEP->isInBounds();
-  GEP->setIsInBounds(false);
+  GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
+
+  // If the initial GEP was inbounds/nusw and all variable indices and the
+  // accumulated offsets are non-negative, they can be added in any order and
+  // the intermediate results are in bounds and don't overflow in a nusw sense.
+  // So, we can preserve the inbounds/nusw flag for both GEPs.
+  bool CanPreserveInBoundsNUSW = AllOffsetsNonNegative;
+
+  // If the initial GEP was NUW and all operations that we reassociate were NUW
+  // additions, the resulting GEPs are also NUW.
+  if (GEP->hasNoUnsignedWrap() && AllNUWPreserved) {
+    NewGEPFlags |= GEPNoWrapFlags::noUnsignedWrap();
+    // If the initial GEP additionally had NUSW (or inbounds, which implies
+    // NUSW), we know that the indices in the initial GEP must all have their
+    // signbit not set. For indices that are the result of NUW adds, the
+    // add-operands therefore also don't have their signbit set. Therefore, all
+    // indices of the resulting GEPs are non-negative -> we can preserve
+    // the inbounds/nusw flag.
+    CanPreserveInBoundsNUSW |= GEP->hasNoUnsignedSignedWrap();
+  }
+
+  if (CanPreserveInBoundsNUSW) {
+    if (GEP->isInBounds())
+      NewGEPFlags |= GEPNoWrapFlags::inBounds();
+    else if (GEP->hasNoUnsignedSignedWrap())
+      NewGEPFlags |= GEPNoWrapFlags::noUnsignedSignedWrap();
+  }
+
+  GEP->setNoWrapFlags(NewGEPFlags);
 
   // Lowers a GEP to either GEPs with a single index or arithmetic operations.
   if (LowerGEP) {
@@ -1163,13 +1208,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   //   %new.gep = gep i8, %gep2, %offset
   //   ... %new.gep ...
   Instruction *NewGEP = GEP->clone();
-  NewGEP->insertBefore(GEP);
+  NewGEP->insertBefore(GEP->getIterator());
 
   Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   IRBuilder<> Builder(GEP);
   NewGEP = cast<Instruction>(Builder.CreatePtrAdd(
       NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true),
-      GEP->getName(), GEPWasInBounds));
+      GEP->getName(), NewGEPFlags));
   NewGEP->copyMetadata(*GEP);
 
   GEP->replaceAllUsesWith(NewGEP);
@@ -1195,7 +1240,7 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
   if (DisableSeparateConstOffsetFromGEP)
     return false;
 
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   bool Changed = false;
   for (BasicBlock &B : F) {
     if (!DT->isReachableFromEntry(&B))
@@ -1254,6 +1299,7 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
             new SExtInst(Dom, I->getType(), "", I->getIterator());
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
+        NewSExt->setDebugLoc(I->getDebugLoc());
         RecursivelyDeleteTriviallyDeadInstructions(I);
         return true;
       }
@@ -1266,6 +1312,7 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
             new SExtInst(Dom, I->getType(), "", I->getIterator());
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
+        NewSExt->setDebugLoc(I->getDebugLoc());
         RecursivelyDeleteTriviallyDeadInstructions(I);
         return true;
       }
@@ -1367,6 +1414,11 @@ bool SeparateConstOffsetFromGEP::isLegalToSwapOperand(
 }
 
 bool SeparateConstOffsetFromGEP::hasMoreThanOneUseInLoop(Value *V, Loop *L) {
+  // TODO: Could look at uses of globals, but we need to make sure we are
+  // looking at the correct function.
+  if (isa<Constant>(V))
+    return false;
+
   int UsesInLoop = 0;
   for (User *U : V->users()) {
     if (Instruction *User = dyn_cast<Instruction>(U))
@@ -1385,7 +1437,7 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
   Second->setOperand(1, Offset1);
 
   // We changed p+o+c to p+c+o, p+c may not be inbound anymore.
-  const DataLayout &DAL = First->getModule()->getDataLayout();
+  const DataLayout &DAL = First->getDataLayout();
   APInt Offset(DAL.getIndexSizeInBits(
                    cast<PointerType>(First->getType())->getAddressSpace()),
                0);
@@ -1394,8 +1446,9 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
   uint64_t ObjectSize;
   if (!getObjectSize(NewBase, ObjectSize, DAL, TLI) ||
      Offset.ugt(ObjectSize)) {
-    First->setIsInBounds(false);
-    Second->setIsInBounds(false);
+    // TODO(gep_nowrap): Make flag preservation more precise.
+    First->setNoWrapFlags(GEPNoWrapFlags::none());
+    Second->setNoWrapFlags(GEPNoWrapFlags::none());
   } else
     First->setIsInBounds(true);
 }

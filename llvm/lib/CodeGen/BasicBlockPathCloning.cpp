@@ -119,6 +119,23 @@ bool IsValidCloning(const MachineFunction &MF,
           return false;
         }
       }
+      if (PathBB->isMachineBlockAddressTaken()) {
+        // Avoid cloning blocks which have their address taken since we can't
+        // rewire branches to those blocks as easily.
+        WithColor::warning()
+            << "block #" << BBID
+            << " has its machine block address taken in function "
+            << MF.getName() << "\n";
+        return false;
+      }
+      if (PathBB->isInlineAsmBrIndirectTarget()) {
+        // Similarly for branches to the block within an asm goto.
+        WithColor::warning()
+            << "block #" << BBID
+            << " is a branch target of an 'asm goto' in function "
+            << MF.getName() << "\n";
+        return false;
+      }
     }
 
     if (I != ClonePath.size() - 1 && !PathBB->empty() &&

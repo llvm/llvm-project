@@ -69,10 +69,7 @@
 // RUN: %clang_cl -m32 -arch:avx2 --target=i386-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=avx2 %s
 // avx2: invalid /arch: argument
 
-// RUN: %clang_cl -m32 -arch:AVX512F --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify=KNL1 -DTEST_32_ARCH_AVX512F -- %s
-// KNL1-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
-// KNL1-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
-// KNL1-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
+// RUN: %clang_cl -m32 -arch:AVX512F --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_32_ARCH_AVX512F -- %s
 #if defined(TEST_32_ARCH_AVX512F)
 #if _M_IX86_FP != 2 || !__AVX__ || !__AVX2__ || !__AVX512F__  || __AVX512BW__
 #error fail
@@ -112,10 +109,7 @@
 // RUN: %clang_cl -m64 -arch:avx2 --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=avx264 %s
 // avx264: invalid /arch: argument
 
-// RUN: %clang_cl -m64 -arch:AVX512F --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify=KNL2 -DTEST_64_ARCH_AVX512F -- %s
-// KNL2-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
-// KNL2-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
-// KNL2-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
+// RUN: %clang_cl -m64 -arch:AVX512F --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_64_ARCH_AVX512F -- %s
 #if defined(TEST_64_ARCH_AVX512F)
 #if _M_IX86_FP || !__AVX__ || !__AVX2__ || !__AVX512F__  || __AVX512BW__
 #error fail
@@ -141,3 +135,16 @@
 
 void f(void) {
 }
+
+
+// RUN: not %clang_cl -### --target=i386-pc-windows -mapx-features=ndd -- 2>&1 %s | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang_cl -### --target=i386-pc-windows -mapxf -- 2>&1 %s | FileCheck --check-prefix=NON-APX %s
+// RUN: %clang_cl -### --target=i386-pc-windows -mno-apxf -- 2>&1 %s > /dev/null
+// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386-pc-windows{{.*}}'
+// NON-APX-NOT:  error: {{.*}} -mapx-features=
+
+// RUN: %clang_cl --target=x86_64-pc-windows -mapxf -### -- 2>&1 %s | FileCheck -check-prefix=APXF %s
+// RUN: %clang_cl --target=x86_64-pc-windows -mapxf -mno-apxf -### -- 2>&1 %s | FileCheck -check-prefix=NO-APXF %s
+// RUN: %clang_cl --target=x86_64-pc-windows -mapx-features=egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu -### -- 2>&1 %s | FileCheck -check-prefix=APXF %s
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu"

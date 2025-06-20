@@ -20,6 +20,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
@@ -121,14 +122,38 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   sampleprof_error Result;
   Result = addSamples(Other.getSamples(), Weight);
   for (const auto &I : Other.getCallTargets()) {
-    MergeResult(Result, addCalledTarget(I.first, I.second, Weight));
+    mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
   return Result;
+}
+
+std::error_code SampleRecord::serialize(
+    raw_ostream &OS, const MapVector<FunctionId, uint32_t> &NameTable) const {
+  encodeULEB128(getSamples(), OS);
+  encodeULEB128(getCallTargets().size(), OS);
+  for (const auto &J : getSortedCallTargets()) {
+    FunctionId Callee = J.first;
+    uint64_t CalleeSamples = J.second;
+    if (auto NameIndexIter = NameTable.find(Callee);
+        NameIndexIter != NameTable.end()) {
+      encodeULEB128(NameIndexIter->second, OS);
+    } else {
+      // If the callee is not in the name table, we cannot serialize it.
+      return sampleprof_error::truncated_name_table;
+    }
+    encodeULEB128(CalleeSamples, OS);
+  }
+  return sampleprof_error::success;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
+
+void LineLocation::serialize(raw_ostream &OS) {
+  encodeULEB128(LineOffset, OS);
+  encodeULEB128(Discriminator, OS);
+}
 
 /// Print the sample record to the stream \p OS indented by \p Indent.
 void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
@@ -236,7 +261,9 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
 }
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
-    const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper) const {
+    const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
+    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+        *FuncNameToProfNameMap) const {
   assert(DIL);
   SmallVector<std::pair<LineLocation, StringRef>, 10> S;
 
@@ -256,7 +283,8 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
     return this;
   const FunctionSamples *FS = this;
   for (int i = S.size() - 1; i >= 0 && FS != nullptr; i--) {
-    FS = FS->findFunctionSamplesAt(S[i].first, S[i].second, Remapper);
+    FS = FS->findFunctionSamplesAt(S[i].first, S[i].second, Remapper,
+                                   FuncNameToProfNameMap);
   }
   return FS;
 }
@@ -264,8 +292,7 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
 void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
   NameSet.insert(getFunction());
   for (const auto &BS : BodySamples)
-    for (const auto &TS : BS.second.getCallTargets())
-      NameSet.insert(TS.first);
+    NameSet.insert_range(llvm::make_first_range(BS.second.getCallTargets()));
 
   for (const auto &CS : CallsiteSamples) {
     for (const auto &NameFS : CS.second) {
@@ -277,19 +304,32 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
 
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     const LineLocation &Loc, StringRef CalleeName,
-    SampleProfileReaderItaniumRemapper *Remapper) const {
+    SampleProfileReaderItaniumRemapper *Remapper,
+    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+        *FuncNameToProfNameMap) const {
   CalleeName = getCanonicalFnName(CalleeName);
 
-  auto iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
-  if (iter == CallsiteSamples.end())
+  auto I = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
+  if (I == CallsiteSamples.end())
     return nullptr;
-  auto FS = iter->second.find(getRepInFormat(CalleeName));
-  if (FS != iter->second.end())
+  auto FS = I->second.find(getRepInFormat(CalleeName));
+  if (FS != I->second.end())
     return &FS->second;
+
+  if (FuncNameToProfNameMap && !FuncNameToProfNameMap->empty()) {
+    auto R = FuncNameToProfNameMap->find(FunctionId(CalleeName));
+    if (R != FuncNameToProfNameMap->end()) {
+      CalleeName = R->second.stringRef();
+      auto FS = I->second.find(getRepInFormat(CalleeName));
+      if (FS != I->second.end())
+        return &FS->second;
+    }
+  }
+
   if (Remapper) {
     if (auto NameInProfile = Remapper->lookUpNameInProfile(CalleeName)) {
-      auto FS = iter->second.find(getRepInFormat(*NameInProfile));
-      if (FS != iter->second.end())
+      auto FS = I->second.find(getRepInFormat(*NameInProfile));
+      if (FS != I->second.end())
         return &FS->second;
     }
   }
@@ -300,7 +340,7 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     return nullptr;
   uint64_t MaxTotalSamples = 0;
   const FunctionSamples *R = nullptr;
-  for (const auto &NameFS : iter->second)
+  for (const auto &NameFS : I->second)
     if (NameFS.second.getTotalSamples() >= MaxTotalSamples) {
       MaxTotalSamples = NameFS.second.getTotalSamples();
       R = &NameFS.second;
@@ -364,7 +404,7 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
       if (ColdContextFrameLength < MergedContext.size())
         MergedContext = MergedContext.take_back(ColdContextFrameLength);
       // Need to set MergedProfile's context here otherwise it will be lost.
-      FunctionSamples &MergedProfile = MergedProfileMap.Create(MergedContext);
+      FunctionSamples &MergedProfile = MergedProfileMap.create(MergedContext);
       MergedProfile.merge(*I.second);
     }
     ProfileMap.erase(I.first);

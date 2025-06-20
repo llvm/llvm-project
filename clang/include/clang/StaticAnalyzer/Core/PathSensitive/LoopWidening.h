@@ -27,7 +27,8 @@ namespace ento {
 /// by the loop body in any iteration.
 ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
-                                    unsigned BlockCount, const Stmt *LoopStmt);
+                                    unsigned BlockCount,
+                                    ConstCFGElementRef Elem);
 
 } // end namespace ento
 } // end namespace clang

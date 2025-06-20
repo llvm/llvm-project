@@ -21,14 +21,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -39,9 +37,7 @@ using namespace llvm;
 namespace {
   struct PPCTLSDynamicCall : public MachineFunctionPass {
     static char ID;
-    PPCTLSDynamicCall() : MachineFunctionPass(ID) {
-      initializePPCTLSDynamicCallPass(*PassRegistry::getPassRegistry());
-    }
+    PPCTLSDynamicCall() : MachineFunctionPass(ID) {}
 
     const PPCInstrInfo *TII;
 
@@ -325,8 +321,8 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LiveIntervals>();
-      AU.addRequired<SlotIndexes>();
+      AU.addRequired<LiveIntervalsWrapperPass>();
+      AU.addRequired<SlotIndexesWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -334,8 +330,8 @@ public:
 
 INITIALIZE_PASS_BEGIN(PPCTLSDynamicCall, DEBUG_TYPE,
                       "PowerPC TLS Dynamic Call Fixup", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(PPCTLSDynamicCall, DEBUG_TYPE,
                     "PowerPC TLS Dynamic Call Fixup", false, false)
 

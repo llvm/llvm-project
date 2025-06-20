@@ -111,7 +111,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Delete nested retain+release pairs around loops.
-define void @test3(ptr %a) nounwind {
+define void @test3(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUTER:%.*]] = tail call ptr @llvm.objc.retain(ptr [[A:%.*]]) #[[ATTR0]]
@@ -119,7 +119,7 @@ define void @test3(ptr %a) nounwind {
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]], !clang.imprecise_release !0
 ; CHECK-NEXT:    ret void
@@ -132,7 +132,7 @@ entry:
 loop:
   call void @callee()
   store i8 0, ptr %a
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind
@@ -140,7 +140,7 @@ exit:
   ret void
 }
 
-define void @test4(ptr %a) nounwind {
+define void @test4(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUTER:%.*]] = tail call ptr @llvm.objc.retain(ptr [[A:%.*]]) #[[ATTR0]]
@@ -151,7 +151,7 @@ define void @test4(ptr %a) nounwind {
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]], !clang.imprecise_release !0
 ; CHECK-NEXT:    ret void
@@ -168,7 +168,7 @@ more:
   call void @callee()
   call void @callee()
   store i8 0, ptr %a
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind
@@ -176,18 +176,18 @@ exit:
   ret void
 }
 
-define void @test5(ptr %a) nounwind {
+define void @test5(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUTER:%.*]] = tail call ptr @llvm.objc.retain(ptr [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[TRUE:%.*]], label [[MORE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TRUE:%.*]], label [[MORE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    br label [[MORE]]
 ; CHECK:       more:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use_pointer(ptr [[A]])
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]], !clang.imprecise_release !0
@@ -200,13 +200,13 @@ entry:
   br label %loop
 
 loop:
-  br i1 undef, label %true, label %more
+  br i1 %arg, label %true, label %more
 
 true:
   br label %more
 
 more:
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   call void @use_pointer(ptr %a)
@@ -215,18 +215,18 @@ exit:
   ret void
 }
 
-define void @test6(ptr %a) nounwind {
+define void @test6(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUTER:%.*]] = tail call ptr @llvm.objc.retain(ptr [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[TRUE:%.*]], label [[MORE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TRUE:%.*]], label [[MORE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    br label [[MORE]]
 ; CHECK:       more:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use_pointer(ptr [[A]])
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]], !clang.imprecise_release !0
@@ -238,14 +238,14 @@ entry:
   br label %loop
 
 loop:
-  br i1 undef, label %true, label %more
+  br i1 %arg, label %true, label %more
 
 true:
   call void @callee()
   br label %more
 
 more:
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   call void @use_pointer(ptr %a)
@@ -254,19 +254,19 @@ exit:
   ret void
 }
 
-define void @test7(ptr %a) nounwind {
+define void @test7(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUTER:%.*]] = tail call ptr @llvm.objc.retain(ptr [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[TRUE:%.*]], label [[MORE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TRUE:%.*]], label [[MORE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use_pointer(ptr [[A]])
 ; CHECK-NEXT:    br label [[MORE]]
 ; CHECK:       more:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]], !clang.imprecise_release !0
 ; CHECK-NEXT:    ret void
@@ -278,14 +278,14 @@ entry:
   br label %loop
 
 loop:
-  br i1 undef, label %true, label %more
+  br i1 %arg, label %true, label %more
 
 true:
   call void @use_pointer(ptr %a)
   br label %more
 
 more:
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind
@@ -293,19 +293,19 @@ exit:
   ret void
 }
 
-define void @test8(ptr %a) nounwind {
+define void @test8(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUTER:%.*]] = tail call ptr @llvm.objc.retain(ptr [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[TRUE:%.*]], label [[MORE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TRUE:%.*]], label [[MORE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    call void @use_pointer(ptr [[A]])
 ; CHECK-NEXT:    br label [[MORE]]
 ; CHECK:       more:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]], !clang.imprecise_release !0
 ; CHECK-NEXT:    ret void
@@ -316,7 +316,7 @@ entry:
   br label %loop
 
 loop:
-  br i1 undef, label %true, label %more
+  br i1 %arg, label %true, label %more
 
 true:
   call void @callee()
@@ -324,7 +324,7 @@ true:
   br label %more
 
 more:
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind
@@ -332,17 +332,17 @@ exit:
   ret void
 }
 
-define void @test9(ptr %a) nounwind {
+define void @test9(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[TRUE:%.*]], label [[MORE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TRUE:%.*]], label [[MORE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use_pointer(ptr [[A:%.*]])
 ; CHECK-NEXT:    br label [[MORE]]
 ; CHECK:       more:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -352,14 +352,14 @@ entry:
   br label %loop
 
 loop:
-  br i1 undef, label %true, label %more
+  br i1 %arg, label %true, label %more
 
 true:
   call void @use_pointer(ptr %a)
   br label %more
 
 more:
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind
@@ -367,17 +367,17 @@ exit:
   ret void
 }
 
-define void @test10(ptr %a) nounwind {
+define void @test10(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[TRUE:%.*]], label [[MORE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TRUE:%.*]], label [[MORE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    br label [[MORE]]
 ; CHECK:       more:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -387,14 +387,14 @@ entry:
   br label %loop
 
 loop:
-  br i1 undef, label %true, label %more
+  br i1 %arg, label %true, label %more
 
 true:
   call void @callee()
   br label %more
 
 more:
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind
@@ -402,16 +402,16 @@ exit:
   ret void
 }
 
-define void @test11(ptr %a) nounwind {
+define void @test11(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[TRUE:%.*]], label [[MORE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TRUE:%.*]], label [[MORE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    br label [[MORE]]
 ; CHECK:       more:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -421,13 +421,13 @@ entry:
   br label %loop
 
 loop:
-  br i1 undef, label %true, label %more
+  br i1 %arg, label %true, label %more
 
 true:
   br label %more
 
 more:
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind
@@ -437,18 +437,18 @@ exit:
 
 ; Don't delete anything if they're not balanced.
 
-define void @test12(ptr %a) nounwind {
+define void @test12(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUTER:%.*]] = tail call ptr @llvm.objc.retain(ptr [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[INNER:%.*]] = tail call ptr @llvm.objc.retain(ptr [[A]]) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[TRUE:%.*]], label [[MORE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TRUE:%.*]], label [[MORE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    ret void
 ; CHECK:       more:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]], !clang.imprecise_release !0
@@ -460,13 +460,13 @@ entry:
   br label %loop
 
 loop:
-  br i1 undef, label %true, label %more
+  br i1 %arg, label %true, label %more
 
 true:
   ret void
 
 more:
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind
@@ -479,7 +479,7 @@ exit:
 ; by an alloca.
 ; rdar://12969722
 
-define void @test13(ptr %a) nounwind {
+define void @test13(ptr %a, i1 %arg) nounwind {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BLOCK:%.*]] = alloca ptr, align 8
@@ -491,7 +491,7 @@ define void @test13(ptr %a) nounwind {
 ; CHECK-NEXT:    call void @block_callee(ptr [[BLOCK]])
 ; CHECK-NEXT:    [[RELOADED_A:%.*]] = load ptr, ptr [[BLOCK]], align 8
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[RELOADED_A]]) #[[ATTR0]], !clang.imprecise_release !0
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[A]]) #[[ATTR0]], !clang.imprecise_release !0
 ; CHECK-NEXT:    ret void
@@ -507,7 +507,7 @@ loop:
   call void @block_callee(ptr %block)
   %reloaded_a = load ptr, ptr %block, align 8
   call void @llvm.objc.release(ptr %reloaded_a) nounwind, !clang.imprecise_release !0
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 exit:
   call void @llvm.objc.release(ptr %a) nounwind, !clang.imprecise_release !0

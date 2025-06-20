@@ -7,19 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "rpc_client.h"
-#include "rpc.h"
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
-/// The libc client instance used to communicate with the server.
-Client client;
-
-/// Externally visible symbol to signify the usage of an RPC client to
-/// whomever needs to run the server as well as provide a way to initialize
-/// the client with a copy..
-extern "C" [[gnu::visibility("protected")]] const void *__llvm_libc_rpc_client =
-    &client;
+/// The libc client instance used to communicate with the server. Externally
+/// visible symbol to signify the usage of an RPC client to whomever needs to
+/// run the server as well as provide a way to initialize the client.
+[[gnu::visibility("protected")]] Client client;
 
 } // namespace rpc
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

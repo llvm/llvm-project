@@ -209,6 +209,7 @@ public:
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 
+  static bool SupportsLanguageStatic(lldb::LanguageType language);
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
@@ -221,12 +222,24 @@ public:
 
   virtual uint32_t GetPointerByteSize() = 0;
 
+  virtual unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual unsigned
+  GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual bool
+  GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) = 0;
+
   // Accessors
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type,
                                   bool BaseOnly) = 0;
 
   virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) = 0;
+
+  /// Defaults to GetTypeName(type).  Override if your language desires
+  /// specialized behavior.
+  virtual ConstString GetMangledTypeName(lldb::opaque_compiler_type_t type);
 
   virtual uint32_t
   GetTypeInfo(lldb::opaque_compiler_type_t type,
@@ -285,6 +298,9 @@ public:
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
 
+  virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                          uint32_t payload);
+
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.
   virtual CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
@@ -296,7 +312,7 @@ public:
 
   virtual const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) = 0;
 
-  virtual std::optional<uint64_t>
+  virtual llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
 
@@ -348,7 +364,13 @@ public:
     return CompilerDecl();
   }
 
-  virtual CompilerType GetChildCompilerTypeAtIndex(
+  virtual llvm::Expected<CompilerType>
+  GetDereferencedType(lldb::opaque_compiler_type_t type,
+                      ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) = 0;
+
+  virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
       bool ignore_array_bounds, std::string &child_name,
@@ -359,16 +381,11 @@ public:
 
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
-  virtual uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                           llvm::StringRef name,
-                                           bool omit_empty_base_classes) = 0;
+  virtual llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
+                          llvm::StringRef name,
+                          bool omit_empty_base_classes) = 0;
 
-  // Lookup a child member given a name. This function will match member names
-  // only and will descend into "clang_type" children in search for the first
-  // member in this class, or any base class that matches "name".
-  // TODO: Return all matches for a given name by returning a
-  // vector<vector<uint32_t>>
-  // so we catch all names that match a given child name, not just the first.
   virtual size_t GetIndexOfChildMemberWithName(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) = 0;
@@ -426,7 +443,11 @@ public:
   /// given stream.
   ///
   /// This should not modify the state of the TypeSystem if possible.
-  virtual void Dump(llvm::raw_ostream &output) = 0;
+  ///
+  /// \param[out] output Stream to dup the AST into.
+  /// \param[in] filter If empty, dump whole AST. If non-empty, will only
+  /// dump decls whose names contain \c filter.
+  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter) = 0;
 
   /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;

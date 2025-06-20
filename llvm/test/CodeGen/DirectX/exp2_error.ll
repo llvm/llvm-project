@@ -1,7 +1,8 @@
-; RUN: not opt -S -dxil-op-lower %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation exp2 does not support double overload type
-; CHECK: LLVM ERROR: Invalid Overload
+; CHECK: in function exp2_double
+; CHECK-SAME: Cannot create Exp2 operation: Invalid overload type
 
 define noundef double @exp2_double(double noundef %a) #0 {
 entry:

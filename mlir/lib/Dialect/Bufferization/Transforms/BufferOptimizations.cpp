@@ -24,9 +24,9 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_BUFFERHOISTING
-#define GEN_PASS_DEF_BUFFERLOOPHOISTING
-#define GEN_PASS_DEF_PROMOTEBUFFERSTOSTACK
+#define GEN_PASS_DEF_BUFFERHOISTINGPASS
+#define GEN_PASS_DEF_BUFFERLOOPHOISTINGPASS
+#define GEN_PASS_DEF_PROMOTEBUFFERSTOSTACKPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -57,6 +57,12 @@ static bool isLoop(Operation *op) {
     return false;
 
   return regionInterface.hasLoop();
+}
+
+/// Return whether the given operation is a loop with sequential execution
+/// semantics.
+static bool isSequentialLoop(Operation *op) {
+  return !op->hasTrait<OpTrait::HasParallelRegion>() && isLoop(op);
 }
 
 /// Returns true if the given operation implements the AllocationOpInterface
@@ -338,12 +344,13 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
     return dependencyBlock ? dependencyBlock : nullptr;
   }
 
-  /// Returns true if the given operation represents a loop and one of the
-  /// aliases caused the `aliasDominatorBlock` to be "above" the block of the
-  /// given loop operation. If this is the case, it indicates that the
-  /// allocation is passed via a back edge.
+  /// Returns true if the given operation represents a loop with sequential
+  /// execution semantics and one of the aliases caused the
+  /// `aliasDominatorBlock` to be "above" the block of the given loop operation.
+  /// If this is the case, it indicates that the allocation is passed via a back
+  /// edge.
   bool isLegalPlacement(Operation *op) {
-    return isLoop(op) &&
+    return isSequentialLoop(op) &&
            !dominators->dominates(aliasDominatorBlock, op->getBlock());
   }
 
@@ -390,12 +397,12 @@ public:
       OpBuilder builder(startOperation);
       Operation *allocOp = alloc.getDefiningOp();
       if (auto allocInterface = dyn_cast<AllocationOpInterface>(allocOp)) {
-        Operation *alloca =
-            allocInterface.buildPromotedAlloc(builder, alloc).value();
+        std::optional<Operation *> alloca =
+            allocInterface.buildPromotedAlloc(builder, alloc);
         if (!alloca)
           continue;
         // Replace the original alloc by a newly created alloca.
-        allocOp->replaceAllUsesWith(alloca);
+        allocOp->replaceAllUsesWith(alloca.value());
         allocOp->erase();
       }
     }
@@ -409,7 +416,7 @@ public:
 /// The buffer hoisting pass that hoists allocation nodes into dominating
 /// blocks.
 struct BufferHoistingPass
-    : public bufferization::impl::BufferHoistingBase<BufferHoistingPass> {
+    : public bufferization::impl::BufferHoistingPassBase<BufferHoistingPass> {
 
   void runOnOperation() override {
     // Hoist all allocations into dominator blocks.
@@ -421,7 +428,7 @@ struct BufferHoistingPass
 
 /// The buffer loop hoisting pass that hoists allocation nodes out of loops.
 struct BufferLoopHoistingPass
-    : public bufferization::impl::BufferLoopHoistingBase<
+    : public bufferization::impl::BufferLoopHoistingPassBase<
           BufferLoopHoistingPass> {
 
   void runOnOperation() override {
@@ -433,15 +440,11 @@ struct BufferLoopHoistingPass
 /// The promote buffer to stack pass that tries to convert alloc nodes into
 /// alloca nodes.
 class PromoteBuffersToStackPass
-    : public bufferization::impl::PromoteBuffersToStackBase<
+    : public bufferization::impl::PromoteBuffersToStackPassBase<
           PromoteBuffersToStackPass> {
-public:
-  PromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
-                            unsigned maxRankOfAllocatedMemRef) {
-    this->maxAllocSizeInBytes = maxAllocSizeInBytes;
-    this->maxRankOfAllocatedMemRef = maxRankOfAllocatedMemRef;
-  }
+  using Base::Base;
 
+public:
   explicit PromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc)
       : isSmallAlloc(std::move(isSmallAlloc)) {}
 
@@ -470,20 +473,6 @@ private:
 void mlir::bufferization::hoistBuffersFromLoops(Operation *op) {
   BufferAllocationHoisting<BufferAllocationLoopHoistingState> optimizer(op);
   optimizer.hoist();
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createBufferHoistingPass() {
-  return std::make_unique<BufferHoistingPass>();
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createBufferLoopHoistingPass() {
-  return std::make_unique<BufferLoopHoistingPass>();
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createPromoteBuffersToStackPass(
-    unsigned maxAllocSizeInBytes, unsigned maxRankOfAllocatedMemRef) {
-  return std::make_unique<PromoteBuffersToStackPass>(maxAllocSizeInBytes,
-                                                     maxRankOfAllocatedMemRef);
 }
 
 std::unique_ptr<Pass> mlir::bufferization::createPromoteBuffersToStackPass(

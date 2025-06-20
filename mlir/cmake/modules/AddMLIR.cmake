@@ -42,20 +42,26 @@ function(_pdll_tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
-  # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
-  if(CMAKE_GENERATOR MATCHES "Ninja")
-    # Make output path relative to build.ninja, assuming located on
-    # ${CMAKE_BINARY_DIR}.
+  # Use depfile instead of globbing arbitrary *.td(s) for Ninja. We force
+  # CMake versions older than v3.30 on Windows to use the fallback behavior
+  # due to a depfile parsing bug on Windows paths in versions prior to 3.30.
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25943
+  # CMake versions older than v3.23 on other platforms use the fallback
+  # behavior as v3.22 and earlier fail to parse some depfiles that get
+  # generated, and this behavior was fixed in CMake commit
+  # e04a352cca523eba2ac0d60063a3799f5bb1c69e.
+  cmake_policy(GET CMP0116 cmp0116_state)
+  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW
+     AND NOT (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS 3.30)
+     AND NOT (CMAKE_VERSION VERSION_LESS 3.23))
     # CMake emits build targets as relative paths but Ninja doesn't identify
-    # absolute path (in *.d) as relative path (in build.ninja)
-    # Note that tblgen is executed on ${CMAKE_BINARY_DIR} as working directory.
-    file(RELATIVE_PATH ofn_rel
-      ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${ofn})
+    # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
+    # CMake handles this discrepancy for us. Otherwise, we use the fallback
+    # logic.
     set(additional_cmdline
-      -o ${ofn_rel}
-      -d ${ofn_rel}.d
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      DEPFILE ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.d
+      -o ${ofn}
+      -d ${ofn}.d
+      DEPFILE ${ofn}.d
       )
     set(local_tds)
     set(global_tds)
@@ -210,6 +216,7 @@ function(add_mlir_doc doc_filename output_file output_directory command)
                   ${GEN_DOC_FILE}
           DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.md)
   add_custom_target(${output_file}DocGen DEPENDS ${GEN_DOC_FILE})
+  set_target_properties(${output_file}DocGen PROPERTIES FOLDER "MLIR/Tablegenning/Docs")
   add_dependencies(mlir-doc ${output_file}DocGen)
 endfunction()
 
@@ -290,7 +297,7 @@ function(add_mlir_example_library name)
   list(APPEND ARG_DEPENDS mlir-generic-headers)
 
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
-  set_target_properties(${name} PROPERTIES FOLDER "Examples")
+  set_target_properties(${name} PROPERTIES FOLDER "MLIR/Examples")
   if (LLVM_BUILD_EXAMPLES AND NOT ${ARG_DISABLE_INSTALL})
     add_mlir_library_install(${name})
   else()
@@ -304,26 +311,25 @@ endfunction()
 # EXCLUDE_FROM_LIBMLIR
 #   Don't include this library in libMLIR.so.  This option should be used
 #   for test libraries, executable-specific libraries, or rarely used libraries
-#   with large dependencies.
+#   with large dependencies.  When using it, please link libraries included
+#   in libMLIR via mlir_target_link_libraries(), to ensure that the library
+#   does not pull in static dependencies when MLIR_LINK_MLIR_DYLIB=ON is used.
+# OBJECT
+#   The library's object library is referenced using "obj.${name}". For this to
+#   work reliably, this flag ensures that the OBJECT library exists.
 # ENABLE_AGGREGATION
-#   Forces generation of an OBJECT library, exports additional metadata,
+#   Exports additional metadata,
 #   and installs additional object files needed to include this as part of an
 #   aggregate shared library.
 #   TODO: Make this the default for all MLIR libraries once all libraries
 #   are compatible with building an object library.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION;OBJECT"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
   _set_mlir_additional_headers_as_srcs(${ARG_ADDITIONAL_HEADERS})
-
-  # Is an object library needed.
-  set(NEEDS_OBJECT_LIB OFF)
-  if(ARG_ENABLE_AGGREGATION)
-    set(NEEDS_OBJECT_LIB ON)
-  endif()
 
   # Determine type of library.
   if(ARG_SHARED)
@@ -336,18 +342,39 @@ function(add_mlir_library name)
     else()
       set(LIBTYPE STATIC)
     endif()
-    # Test libraries and such shouldn't be include in libMLIR.so
-    if(NOT ARG_EXCLUDE_FROM_LIBMLIR)
-      set(NEEDS_OBJECT_LIB ON)
-      set_property(GLOBAL APPEND PROPERTY MLIR_STATIC_LIBS ${name})
-      set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
-      set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
-    endif()
   endif()
 
-  if(NEEDS_OBJECT_LIB AND NOT XCODE)
-    # The Xcode generator doesn't handle object libraries correctly.
-    # We special case xcode when building aggregates.
+  # Is an object library needed...?
+  # Note that the XCode generator doesn't handle object libraries correctly and
+  # usability is degraded in the Visual Studio solution generators.
+  # llvm_add_library may also itself decide to create an object library.
+  set(NEEDS_OBJECT_LIB OFF)
+  if(ARG_OBJECT)
+    # Yes, because the target "obj.${name}" is referenced.
+    set(NEEDS_OBJECT_LIB ON)
+  endif ()
+  if(LLVM_BUILD_LLVM_DYLIB AND NOT ARG_EXCLUDE_FROM_LIBMLIR AND NOT XCODE)
+    # Yes, because in addition to the shared library, the object files are
+    # needed for linking into libMLIR.so (see mlir/tools/mlir-shlib/CMakeLists.txt).
+    # For XCode, -force_load is used instead.
+    # Windows is not supported (LLVM_BUILD_LLVM_DYLIB=ON will cause an error).
+    set(NEEDS_OBJECT_LIB ON)
+    set_property(GLOBAL APPEND PROPERTY MLIR_STATIC_LIBS ${name})
+    set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
+    set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
+  endif ()
+  if(ARG_ENABLE_AGGREGATION AND NOT XCODE)
+    # Yes, because this library is added to an aggergate library such as
+    # libMLIR-C.so which is links together all the object files.
+    # For XCode, -force_load is used instead.
+    set(NEEDS_OBJECT_LIB ON)
+  endif()
+  if (NOT ARG_SHARED AND NOT ARG_EXCLUDE_FROM_LIBMLIR AND NOT XCODE AND NOT MSVC_IDE)
+    # Yes, but only for legacy reasons. Also avoid object libraries for
+    # Visual Studio solutions.
+    set(NEEDS_OBJECT_LIB ON)
+  endif()
+  if(NEEDS_OBJECT_LIB)
     list(APPEND LIBTYPE OBJECT)
   endif()
 
@@ -367,7 +394,7 @@ function(add_mlir_library name)
     # Add empty "phony" target
     add_custom_target(${name})
   endif()
-  set_target_properties(${name} PROPERTIES FOLDER "MLIR libraries")
+  set_target_properties(${name} PROPERTIES FOLDER "MLIR/Libraries")
 
   # Setup aggregate.
   if(ARG_ENABLE_AGGREGATION)
@@ -379,9 +406,12 @@ function(add_mlir_library name)
       # XCode has limited support for object libraries. Instead, add dep flags
       # that force the entire library to be embedded.
       list(APPEND AGGREGATE_DEPS "-force_load" "${name}")
-    else()
+    elseif(TARGET obj.${name})
+      # FIXME: *.obj can also be added via target_link_libraries since CMake 3.12.
       list(APPEND AGGREGATE_OBJECTS "$<TARGET_OBJECTS:obj.${name}>")
       list(APPEND AGGREGATE_OBJECT_LIB "obj.${name}")
+    else()
+      message(SEND_ERROR "Aggregate library not supported on this platform")
     endif()
 
     # For each declared dependency, transform it into a generator expression
@@ -401,7 +431,7 @@ function(add_mlir_library name)
 
     # In order for out-of-tree projects to build aggregates of this library,
     # we need to install the OBJECT library.
-    if(MLIR_INSTALL_AGGREGATE_OBJECTS AND NOT ARG_DISABLE_INSTALL)
+    if(TARGET "obj.${name}" AND MLIR_INSTALL_AGGREGATE_OBJECTS AND NOT ARG_DISABLE_INSTALL)
       add_mlir_library_install(obj.${name})
     endif()
   endif()
@@ -562,7 +592,7 @@ function(add_mlir_aggregate name)
   # TODO: Should be transitive.
   set_target_properties(${name} PROPERTIES
     MLIR_AGGREGATE_EXCLUDE_LIBS "${_embed_libs}")
-  if(MSVC)
+  if(WIN32)
     set_property(TARGET ${name} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
 
@@ -614,6 +644,7 @@ endfunction()
 function(add_mlir_public_c_api_library name)
   add_mlir_library(${name}
     ${ARGN}
+    OBJECT
     EXCLUDE_FROM_LIBMLIR
     ENABLE_AGGREGATION
     ADDITIONAL_HEADER_DIRS
@@ -694,3 +725,23 @@ function(mlir_check_all_link_libraries name)
     endforeach()
   endif()
 endfunction(mlir_check_all_link_libraries)
+
+# Link target against a list of MLIR libraries. If MLIR_LINK_MLIR_DYLIB is
+# enabled, this will link against the MLIR dylib instead of the static
+# libraries.
+#
+# This function should be used instead of target_link_libraries() when linking
+# MLIR libraries that are part of the MLIR dylib. For libraries that are not
+# part of the dylib (like test libraries), target_link_libraries() should be
+# used.
+function(mlir_target_link_libraries target type)
+  if (TARGET obj.${target})
+    target_link_libraries(obj.${target} ${ARGN})
+  endif()
+
+  if (MLIR_LINK_MLIR_DYLIB)
+    target_link_libraries(${target} ${type} MLIR)
+  else()
+    target_link_libraries(${target} ${type} ${ARGN})
+  endif()
+endfunction()

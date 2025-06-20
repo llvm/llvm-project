@@ -97,14 +97,6 @@ public:
   template <typename U> T value_or(U &&alt) && {
     return has_value() ? std::move(operator*()) : std::forward<U>(alt);
   }
-
-  // Allow conversion to std::optional<T>.
-  explicit operator std::optional<T> &() const & {
-    return *this ? **this : std::optional<T>();
-  }
-  explicit operator std::optional<T> &&() const && {
-    return *this ? std::move(**this) : std::optional<T>();
-  }
 };
 
 template <typename T>

@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -std=c++2a -frelaxed-template-template-args -verify %s
+// RUN:  %clang_cc1 -std=c++2a -verify %s
 
 template<typename T> concept C = T::f(); // #C
 template<typename T> concept D = C<T> && T::g();

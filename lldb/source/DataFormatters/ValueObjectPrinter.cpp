@@ -8,12 +8,14 @@
 
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/MathExtras.h"
+#include <cstdint>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -67,15 +69,13 @@ void ValueObjectPrinter::Init(
   SetupMostSpecializedValue();
 }
 
-bool ValueObjectPrinter::PrintValueObject() {
+llvm::Error ValueObjectPrinter::PrintValueObject() {
   // If the incoming ValueObject is in an error state, the best we're going to 
   // get out of it is its type.  But if we don't even have that, just print
   // the error and exit early.
   if (m_orig_valobj.GetError().Fail() &&
-      !m_orig_valobj.GetCompilerType().IsValid()) {
-    m_stream->Printf("Error: '%s'", m_orig_valobj.GetError().AsCString());
-    return true;
-  }
+      !m_orig_valobj.GetCompilerType().IsValid())
+    return m_orig_valobj.GetError().ToError();
 
   if (ShouldPrintValueObject()) {
     PrintLocationIfNeeded();
@@ -91,11 +91,10 @@ bool ValueObjectPrinter::PrintValueObject() {
       PrintValueAndSummaryIfNeeded(value_printed, summary_printed);
 
   if (m_val_summary_ok)
-    PrintChildrenIfNeeded(value_printed, summary_printed);
-  else
-    m_stream->EOL();
+    return PrintChildrenIfNeeded(value_printed, summary_printed);
+  m_stream->EOL();
 
-  return true;
+  return llvm::Error::success();
 }
 
 ValueObject &ValueObjectPrinter::GetMostSpecializedValue() {
@@ -145,13 +144,21 @@ void ValueObjectPrinter::SetupMostSpecializedValue() {
          "SetupMostSpecialized value must compute a valid ValueObject");
 }
 
-const char *ValueObjectPrinter::GetDescriptionForDisplay() {
+llvm::Expected<std::string> ValueObjectPrinter::GetDescriptionForDisplay() {
   ValueObject &valobj = GetMostSpecializedValue();
-  const char *str = valobj.GetObjectDescription();
+  llvm::Expected<std::string> maybe_str = valobj.GetObjectDescription();
+  if (maybe_str)
+    return maybe_str;
+
+  const char *str = nullptr;
   if (!str)
     str = valobj.GetSummaryAsCString();
   if (!str)
     str = valobj.GetValueAsCString();
+
+  if (!str)
+    return maybe_str;
+  llvm::consumeError(maybe_str.takeError());
   return str;
 }
 
@@ -461,45 +468,42 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
   return !error_printed;
 }
 
-bool ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
-                                                        bool summary_printed) {
+llvm::Error
+ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
+                                                   bool summary_printed) {
   if (ShouldPrintValueObject()) {
     // let's avoid the overly verbose no description error for a nil thing
     if (m_options.m_use_objc && !IsNil() && !IsUninitialized() &&
         (!m_options.m_pointer_as_array)) {
       if (!m_options.m_hide_value || ShouldShowName())
-        m_stream->Printf(" ");
-      const char *object_desc = nullptr;
-      if (value_printed || summary_printed)
-        object_desc = GetMostSpecializedValue().GetObjectDescription();
-      else
-        object_desc = GetDescriptionForDisplay();
-      if (object_desc && *object_desc) {
+        *m_stream << ' ';
+      llvm::Expected<std::string> object_desc =
+          (value_printed || summary_printed)
+              ? GetMostSpecializedValue().GetObjectDescription()
+              : GetDescriptionForDisplay();
+      if (!object_desc) {
+        // If no value or summary was printed, surface the error.
+        if (!value_printed && !summary_printed)
+          return object_desc.takeError();
+        // Otherwise gently nudge the user that they should have used
+        // `p` instead of `po`. Unfortunately we cannot be more direct
+        // about this, because we don't actually know what the user did.
+        *m_stream << "warning: no object description available\n";
+        llvm::consumeError(object_desc.takeError());
+      } else {
+        *m_stream << *object_desc;
         // If the description already ends with a \n don't add another one.
-        size_t object_end = strlen(object_desc) - 1;
-        if (object_desc[object_end] == '\n')
-          m_stream->Printf("%s", object_desc);
-        else
-          m_stream->Printf("%s\n", object_desc);
-        return true;
-      } else if (!value_printed && !summary_printed)
-        return true;
-      else
-        return false;
+        if (object_desc->empty() || object_desc->back() != '\n')
+          *m_stream << '\n';
+      }
+      return llvm::Error::success();
     }
   }
-  return true;
+  return llvm::Error::success();
 }
 
 bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
-  switch (m_mode) {
-  case Mode::Always:
-  case Mode::Default:
-    return m_count > 0;
-  case Mode::Never:
-    return false;
-  }
-  return false;
+  return m_count > 0;
 }
 
 bool ValueObjectPrinter::ShouldPrintChildren(
@@ -538,17 +542,18 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (is_ptr || is_ref) {
     // We have a pointer or reference whose value is an address. Make sure
     // that address is not NULL
-    AddressType ptr_address_type;
-    if (valobj.GetPointerValue(&ptr_address_type) == 0)
+    if (valobj.GetPointerValue().address == 0)
       return false;
 
     const bool is_root_level = m_curr_depth == 0;
+    const bool is_expanded_ptr =
+        is_ptr && m_type_flags.Test(m_options.m_expand_ptr_type_flags);
 
-    if (is_ref && is_root_level && print_children) {
-      // If this is the root object (depth is zero) that we are showing and
-      // it is a reference, and no pointer depth has been supplied print out
-      // what it references. Don't do this at deeper depths otherwise we can
-      // end up with infinite recursion...
+    if ((is_ref || is_expanded_ptr) && is_root_level && print_children) {
+      // If this is the root object (depth is zero) that we are showing and it
+      // is either a reference or a preferred type of pointer, then print it.
+      // Don't do this at deeper depths otherwise we can end up with infinite
+      // recursion...
       return true;
     }
 
@@ -617,7 +622,13 @@ void ValueObjectPrinter::PrintChild(
     ValueObjectPrinter child_printer(*(child_sp.get()), m_stream, child_options,
                                      ptr_depth, m_curr_depth + 1,
                                      m_printed_instance_pointers);
-    child_printer.PrintValueObject();
+    llvm::Error error = child_printer.PrintValueObject();
+    if (error) {
+      if (m_stream)
+        *m_stream << "error: " << toString(std::move(error));
+      else
+        llvm::consumeError(std::move(error));
+    }
   }
 }
 
@@ -628,22 +639,21 @@ ValueObjectPrinter::GetMaxNumChildrenToPrint(bool &print_dotdotdot) {
   if (m_options.m_pointer_as_array)
     return m_options.m_pointer_as_array.m_element_count;
 
-  auto num_children_or_err = synth_valobj.GetNumChildren();
+  const uint32_t max_num_children =
+      m_options.m_ignore_cap ? UINT32_MAX
+                             : GetMostSpecializedValue()
+                                   .GetTargetSP()
+                                   ->GetMaximumNumberOfChildrenToDisplay();
+  // Ask for one more child than the maximum to see if we should print "...".
+  auto num_children_or_err = synth_valobj.GetNumChildren(
+      llvm::SaturatingAdd(max_num_children, uint32_t(1)));
   if (!num_children_or_err)
     return num_children_or_err;
-  uint32_t num_children = *num_children_or_err;
-  print_dotdotdot = false;
-  if (num_children) {
-    const size_t max_num_children = GetMostSpecializedValue()
-                                        .GetTargetSP()
-                                        ->GetMaximumNumberOfChildrenToDisplay();
-
-    if (num_children > max_num_children && !m_options.m_ignore_cap) {
-      print_dotdotdot = true;
-      return max_num_children;
-    }
+  if (*num_children_or_err > max_num_children) {
+    print_dotdotdot = true;
+    return max_num_children;
   }
-  return num_children;
+  return num_children_or_err;
 }
 
 void ValueObjectPrinter::PrintChildrenPostamble(bool print_dotdotdot) {
@@ -807,9 +817,12 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
   return true;
 }
 
-void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
-                                               bool summary_printed) {
-  PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
+llvm::Error ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
+                                                      bool summary_printed) {
+  auto error = PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
+  if (error)
+    return error;
+
   ValueObject &valobj = GetMostSpecializedValue();
 
   DumpValueObjectOptions::PointerDepth curr_ptr_depth = m_ptr_depth;
@@ -825,7 +838,7 @@ void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
     if (m_printed_instance_pointers->count(instance_ptr_value)) {
       // We already printed this instance-is-pointer thing, so don't expand it.
       m_stream->PutCString(" {...}\n");
-      return;
+      return llvm::Error::success();
     } else {
       // Remember this guy for future reference.
       m_printed_instance_pointers->emplace(instance_ptr_value);
@@ -853,6 +866,7 @@ void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
           .SetReachedMaximumDepth();
   } else
     m_stream->EOL();
+  return llvm::Error::success();
 }
 
 bool ValueObjectPrinter::HasReachedMaximumDepth() {
