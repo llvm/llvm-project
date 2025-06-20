@@ -300,10 +300,9 @@ public:
     //   the DAG of the operation, `operandIndexOrNumValues` specifies the
     //   operand index, and `variadicSubIndex` must be set to `std::nullopt`.
     //
-    // * Properties not associated with an operation (ex. as arguments to
+    // * Properties not associated with an operation (e.g. as arguments to
     //   native code) have their corresponding PropConstraint stored in the
-    //   `dag` field. (They'll and set `operandIndexOrNumValues` to -1 to
-    //   indicate they aren't part of an operation.)
+    //   `dag` field. This constraint is only used when
     //
     // * If a symbol is defined in a `variadic` DAG, `dag` specifies the DAG
     //   of the parent operation, `operandIndexOrNumValues` specifies the
@@ -423,9 +422,9 @@ public:
                         DagAndConstant(nullptr, index, std::nullopt));
     }
     static SymbolInfo getProp(const PropConstraint *constraint) {
+      // -1 for anthe `operandIndexOrNumValues` is a sentinel value.
       return SymbolInfo(nullptr, Kind::Prop,
                         DagAndConstant(constraint, -1, std::nullopt));
-      ;
     }
     static SymbolInfo
     getOperand(DagNode node, const Operator *op, int operandIndex,

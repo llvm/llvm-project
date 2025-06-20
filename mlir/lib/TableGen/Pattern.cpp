@@ -830,8 +830,8 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
       if (!treeArgName.empty() && treeArgName != "_") {
         DagLeaf leaf = tree.getArgAsLeaf(i);
 
-        // In (NativeCodeCall<"Foo($_self, $0, $1, $2)"> I8Attr:$a, I8:$b, $c,
-        // I8Prop:$d),
+        // In (NativeCodeCall<"Foo($_self, $0, $1, $2, $3)"> I8Attr:$a, I8:$b,
+        //     $c, I8Prop:$d),
         if (leaf.isUnspecified()) {
           // This is case of $c, a Value without any constraints.
           verifyBind(infoMap.bindValue(treeArgName), treeArgName);

@@ -405,6 +405,9 @@ class ConfinedProperty<Property p, Pred pred, string newSummary = "">
 /// equal to the given value (and matches any other constraints on the property).
 /// The constant value is given as a string and should be of the _interface_ type
 /// of the attribute.
+///
+/// This requires that the given property's inference type be comparable to the
+/// given value with `==`, and does require specify a concrete property type.
 class ConstantProp<Property prop, string val>
     : ConfinedProp<prop,
         CPred<"$_self == " # val>,
