@@ -15,7 +15,7 @@
 
 #else // Overlay mode
 
-#include "hdr/wchar_overlay.h"
+#error "Cannot overlay mbstate_t
 
 #endif // LLVM_LIBC_FULL_BUILD
 
