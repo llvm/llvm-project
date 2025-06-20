@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -286,4 +287,137 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
   return TotalSizeBytes;
 }
 
+/*
+  The format of the binary access profile:
+  // header
+  BinaryAccessHeader header;
+  // segment info
+  SegmentEntry entry1;
+  SegmentEntry entry2;
+  ...
+  // memblock addresses
+  u64 MemBlockAddress1;
+  u64 MemBlockAddress2;
+  ...
+  // end
+
+BinaryAccessHeader is defined in MemProfBinaryAccessData.inc
+PACKED(struct BinaryAccessHeader {
+  uint64_t Magic;
+  uint64_t Version;
+  uint64_t TotalSize;
+  uint64_t SegmentOffset;
+  uint64_t NumSegments;
+  uint64_t MemAddressOffset;
+  uint64_t NumMemBlockAddresses;
+});
+SegmentEntry is defined in MemProfData.inc
+  struct SegmentEntry {
+  uint64_t Start; // segment start address
+  uint64_t End;   // segment end address
+  uint64_t Offset;  // binary offset at runtime
+  uint64_t BuildIdSize;
+  uint8_t BuildId[MEMPROF_BUILDID_MAX_SIZE] = {0};
+#define MEMPROF_BUILDID_MAX_SIZE 32ULL
+*/
+
+using BinaryAccessHeader = ::llvm::memprof::BinaryAccessHeader;
+
+u64 SerializeBinaryAccesses(ArrayRef<LoadedModule> Modules,
+                            char *&BufferStart) {
+  // Serialize the contents to a raw profile.
+  Vector<SegmentEntry> Entries;
+  Vector<u64> MemBlockAddresses;
+  for (const auto &Module : Modules) {
+    // TODO: is there a better way to filter the binaries we care?
+    if (strstr(Module.full_name(), ".app"))
+      for (const auto &Segment : Module.ranges()) {
+        // collect segment info
+        SegmentEntry Entry(Segment.beg, Segment.end, Module.base_address());
+        Entry.BuildIdSize = Module.uuid_size();
+        memcpy(Entry.BuildId, Module.uuid(), Module.uuid_size());
+        Entries.PushBack(Entry);
+        // collect memblock addresses whose access > 0 for each segment
+        for (uptr t = Entry.Start & SHADOW_MASK; t < Entry.End;
+             t += MEM_GRANULARITY)
+          if (GetShadowCount(t, MEM_GRANULARITY - 4) > 0)
+            MemBlockAddresses.PushBack(t);
+      }
+  }
+  // Allocate the memory for the entire buffer incl binaries segment info
+  // and memblock addresses
+  u64 NumSegmentsToRecord = Entries.Size();
+  u64 NumMemBlockAddressesToRecord = MemBlockAddresses.Size();
+  u64 NumSegmentsToRecordBytes =
+      RoundUpTo(sizeof(SegmentEntry) * NumSegmentsToRecord, 8);
+  u64 NumMemBlockAddressesToRecordBytes =
+      RoundUpTo(NumMemBlockAddressesToRecord * sizeof(u64), 8);
+  u64 NumHeaderBytes = RoundUpTo(sizeof(BinaryAccessHeader), 8);
+  u64 TotalBytes = NumHeaderBytes + NumSegmentsToRecordBytes +
+                   NumMemBlockAddressesToRecordBytes;
+  BufferStart = (char *)InternalAlloc(TotalBytes);
+  char *Buffer = BufferStart;
+
+  BinaryAccessHeader header{MEMPROF_BINARY_ACCESS_RAW_MAGIC_64,
+                            MEMPROF_BINARY_ACCESS_RAW_VERSION,
+                            TotalBytes,
+                            NumHeaderBytes,
+                            NumSegmentsToRecord,
+                            NumHeaderBytes + NumSegmentsToRecordBytes,
+                            NumMemBlockAddressesToRecord};
+  memcpy(Buffer, &header, sizeof(BinaryAccessHeader));
+  Buffer += NumHeaderBytes;
+  for (unsigned k = 0; k < NumSegmentsToRecord; k++) {
+    memcpy(Buffer, &Entries[k], sizeof(SegmentEntry));
+    Buffer += sizeof(SegmentEntry);
+  }
+  for (unsigned k = 0; k < NumMemBlockAddressesToRecord; k++) {
+    *(uptr *)Buffer = MemBlockAddresses[k];
+    Buffer += sizeof(uptr);
+  }
+  u64 BytesSerialized = Buffer - BufferStart;
+
+  fprintf(
+      stderr,
+      "[MemProf] NumSegmentsToRecord: %d, NumSegmentsToRecordBytes: %d, "
+      "NumMemBlockAddressesToRecord: %d, NumMemBlockAddressesToRecordBytes: "
+      "%d, BytesSerialized: %d, Buffer: %p\n",
+      NumSegmentsToRecord, NumSegmentsToRecordBytes,
+      NumMemBlockAddressesToRecord, NumMemBlockAddressesToRecordBytes,
+      BytesSerialized, Buffer);
+
+  return BytesSerialized;
+}
+
+void DumpBinaryAccesses() {
+  __sanitizer::ListOfModules List;
+  List.init();
+  ArrayRef<LoadedModule> Modules(List.begin(), List.end());
+  for (const auto &Module : Modules) {
+    // TODO: is there a better way to filter the binaries we care?
+    if (strstr(Module.full_name(), ".app")) {
+      for (const auto &Segment : Module.ranges()) {
+        SegmentEntry Entry(Segment.beg, Segment.end, Module.base_address());
+        Printf("\n[MemProf] BuildId: ");
+        for (size_t I = 0; I < Module.uuid_size(); I++)
+          Printf("%02x", Module.uuid()[I]);
+        Printf("\n");
+        Printf("[MemProf] ExecutableName: %s\n", Module.full_name());
+        Printf("[MemProf] Start: 0x%zx\n", Entry.Start);
+
+        InternalScopedString shadows;
+        for (auto t = Entry.Start & SHADOW_MASK; t < Entry.End;
+             t += MEM_GRANULARITY) {
+          // should not be 64, as it will include the next shadow memory
+          u64 c = GetShadowCount(t, MEM_GRANULARITY - 4);
+          if (c > 0)
+            shadows.AppendF("[MemProf] Shadow: 0x%zx %d\n", t, c);
+        }
+        Printf("%s", shadows.data());
+        Printf("[MemProf] End: 0x%zx\n", Entry.End);
+        Printf("[MemProf] Offset: 0x%zx\n", Entry.Offset);
+      }
+    }
+  }
+}
 } // namespace __memprof
