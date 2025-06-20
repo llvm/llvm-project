@@ -34,8 +34,14 @@ define i64 @pr97452_scalable_vf1_for(ptr %src, ptr noalias %dst) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i32 3
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 [[TMP11]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 1 x i64> [[TMP7]], i32 [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP15:%.*]] = sub i32 [[TMP14]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 1 x i64> [[WIDE_LOAD]], i32 [[TMP15]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 23, [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
@@ -49,13 +55,9 @@ define i64 @pr97452_scalable_vf1_for(ptr %src, ptr noalias %dst) #0 {
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[FOR]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 22
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-<<<<<<< HEAD
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ]
-=======
 ; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
->>>>>>> origin/main
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:

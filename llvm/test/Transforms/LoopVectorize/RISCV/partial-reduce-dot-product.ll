@@ -388,44 +388,6 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; V:       scalar.ph:
 ;
-<<<<<<< HEAD
-; FIXED-LABEL: define i32 @vqdotsu(
-; FIXED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; FIXED-NEXT:  entry:
-; FIXED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; FIXED:       vector.ph:
-; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
-; FIXED:       vector.body:
-; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; FIXED-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
-; FIXED-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; FIXED-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
-; FIXED-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
-; FIXED-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[WIDE_LOAD]] to <8 x i32>
-; FIXED-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[WIDE_LOAD2]] to <8 x i32>
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; FIXED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
-; FIXED-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP5]], i32 8
-; FIXED-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x i8>, ptr [[TMP6]], align 1
-; FIXED-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i8>, ptr [[TMP7]], align 1
-; FIXED-NEXT:    [[TMP8:%.*]] = sext <8 x i8> [[WIDE_LOAD3]] to <8 x i32>
-; FIXED-NEXT:    [[TMP9:%.*]] = sext <8 x i8> [[WIDE_LOAD4]] to <8 x i32>
-; FIXED-NEXT:    [[TMP10:%.*]] = mul <8 x i32> [[TMP8]], [[TMP3]]
-; FIXED-NEXT:    [[TMP11:%.*]] = mul <8 x i32> [[TMP9]], [[TMP4]]
-; FIXED-NEXT:    [[TMP12]] = add <8 x i32> [[TMP10]], [[VEC_PHI]]
-; FIXED-NEXT:    [[TMP13]] = add <8 x i32> [[TMP11]], [[VEC_PHI1]]
-; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; FIXED:       middle.block:
-; FIXED-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP13]], [[TMP12]]
-; FIXED-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
-; FIXED-NEXT:    br label [[FOR_EXIT:%.*]]
-; FIXED:       scalar.ph:
-=======
 ; ZVQDOTQ-LABEL: define i32 @vqdotsu(
 ; ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; ZVQDOTQ-NEXT:  entry:
@@ -497,7 +459,7 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; FIXED-V:       middle.block:
 ; FIXED-V-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP13]], [[TMP12]]
 ; FIXED-V-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
-; FIXED-V-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-V-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED-V:       scalar.ph:
 ;
 ; FIXED-ZVQDOTQ-LABEL: define i32 @vqdotsu(
@@ -534,9 +496,8 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; FIXED-ZVQDOTQ:       middle.block:
 ; FIXED-ZVQDOTQ-NEXT:    [[BIN_RDX:%.*]] = add <2 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; FIXED-ZVQDOTQ-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[BIN_RDX]])
-; FIXED-ZVQDOTQ-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-ZVQDOTQ-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED-ZVQDOTQ:       scalar.ph:
->>>>>>> origin/main
 ;
 entry:
   br label %for.body
@@ -598,44 +559,6 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; V:       scalar.ph:
 ;
-<<<<<<< HEAD
-; FIXED-LABEL: define i32 @vqdotsu2(
-; FIXED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; FIXED-NEXT:  entry:
-; FIXED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; FIXED:       vector.ph:
-; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
-; FIXED:       vector.body:
-; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; FIXED-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
-; FIXED-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; FIXED-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
-; FIXED-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
-; FIXED-NEXT:    [[TMP3:%.*]] = sext <8 x i8> [[WIDE_LOAD]] to <8 x i32>
-; FIXED-NEXT:    [[TMP4:%.*]] = sext <8 x i8> [[WIDE_LOAD2]] to <8 x i32>
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; FIXED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
-; FIXED-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP5]], i32 8
-; FIXED-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x i8>, ptr [[TMP6]], align 1
-; FIXED-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i8>, ptr [[TMP7]], align 1
-; FIXED-NEXT:    [[TMP8:%.*]] = zext <8 x i8> [[WIDE_LOAD3]] to <8 x i32>
-; FIXED-NEXT:    [[TMP9:%.*]] = zext <8 x i8> [[WIDE_LOAD4]] to <8 x i32>
-; FIXED-NEXT:    [[TMP10:%.*]] = mul <8 x i32> [[TMP8]], [[TMP3]]
-; FIXED-NEXT:    [[TMP11:%.*]] = mul <8 x i32> [[TMP9]], [[TMP4]]
-; FIXED-NEXT:    [[TMP12]] = add <8 x i32> [[TMP10]], [[VEC_PHI]]
-; FIXED-NEXT:    [[TMP13]] = add <8 x i32> [[TMP11]], [[VEC_PHI1]]
-; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-; FIXED:       middle.block:
-; FIXED-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP13]], [[TMP12]]
-; FIXED-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
-; FIXED-NEXT:    br label [[FOR_EXIT:%.*]]
-; FIXED:       scalar.ph:
-=======
 ; ZVQDOTQ-LABEL: define i32 @vqdotsu2(
 ; ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; ZVQDOTQ-NEXT:  entry:
@@ -707,7 +630,7 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; FIXED-V:       middle.block:
 ; FIXED-V-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP13]], [[TMP12]]
 ; FIXED-V-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
-; FIXED-V-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-V-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED-V:       scalar.ph:
 ;
 ; FIXED-ZVQDOTQ-LABEL: define i32 @vqdotsu2(
@@ -744,9 +667,8 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; FIXED-ZVQDOTQ:       middle.block:
 ; FIXED-ZVQDOTQ-NEXT:    [[BIN_RDX:%.*]] = add <2 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; FIXED-ZVQDOTQ-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[BIN_RDX]])
-; FIXED-ZVQDOTQ-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-ZVQDOTQ-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED-ZVQDOTQ:       scalar.ph:
->>>>>>> origin/main
 ;
 entry:
   br label %for.body

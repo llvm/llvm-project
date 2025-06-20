@@ -1873,12 +1873,9 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
            "There must be a single edge between VPBB and its successor");
     // Values coming from VPBB into phi recipes of RemoveSucc are removed from
     // these recipes.
-    for (VPRecipeBase &R : RemovedSucc->phis()) {
-      auto *Phi = cast<VPPhiAccessors>(&R);
-      assert((!isa<VPIRPhi>(&R) || RemovedSucc->getNumPredecessors() == 1) &&
-             "VPIRPhis must have a single predecessor");
-      Phi->removeIncomingValueFor(VPBB);
-    }
+    for (VPRecipeBase &R : RemovedSucc->phis())
+      cast<VPPhiAccessors>(&R)->removeIncomingValueFor(VPBB);
+
     // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
     // automatically on VPlan destruction if it becomes unreachable.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);

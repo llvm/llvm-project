@@ -522,7 +522,7 @@ define void @test_drop_poison_generating_dead_recipe(ptr %dst) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP0]])
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[DST:%.*]], align 8
-; CHECK-NEXT:    br i1 false, label %exit, label %scalar.ph
+; CHECK-NEXT:    br label %scalar.ph
 ; CHECK:       scalar.ph:
 ;
 entry:

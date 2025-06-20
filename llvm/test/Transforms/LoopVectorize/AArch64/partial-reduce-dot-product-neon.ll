@@ -614,7 +614,7 @@ define i32 @not_dotp_not_phi(ptr %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-INTERLEAVE1:       middle.block:
-; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i32> [[TMP8]], i32 15
+; CHECK-INTERLEAVE1-NEXT:    [[TMP12:%.*]] = extractelement <16 x i32> [[TMP7]], i32 15
 ; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
@@ -645,7 +645,7 @@ define i32 @not_dotp_not_phi(ptr %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
-; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i32> [[TMP8]], i32 15
+; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = extractelement <16 x i32> [[TMP7]], i32 15
 ; CHECK-INTERLEAVED-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
@@ -676,7 +676,7 @@ define i32 @not_dotp_not_phi(ptr %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
-; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i32> [[TMP8]], i32 15
+; CHECK-MAXBW-NEXT:    [[TMP12:%.*]] = extractelement <16 x i32> [[TMP7]], i32 15
 ; CHECK-MAXBW-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
