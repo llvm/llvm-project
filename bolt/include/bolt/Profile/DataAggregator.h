@@ -101,16 +101,17 @@ private:
     uint64_t Addr;
   };
 
-  /// Container for the unit of branch data.
-  /// Backwards compatible with legacy use for branches and fall-throughs:
-  /// - if \p Branch is FT_ONLY or FT_EXTERNAL_ORIGIN, the trace only
-  ///   contains fall-through data,
-  /// - if \p To is BR_ONLY, the trace only contains branch data.
+  /// Container for the unit of branch data, matching pre-aggregated trace type.
+  /// Backwards compatible with branch and fall-through types:
+  /// - if \p To is < 0, the trace only contains branch data (BR_ONLY),
+  /// - if \p Branch is < 0, the trace only contains fall-through data
+  ///   (FT_ONLY, FT_EXTERNAL_ORIGIN, or FT_EXTERNAL_RETURN).
   struct Trace {
     static constexpr const uint64_t EXTERNAL = 0ULL;
     static constexpr const uint64_t BR_ONLY = -1ULL;
     static constexpr const uint64_t FT_ONLY = -1ULL;
     static constexpr const uint64_t FT_EXTERNAL_ORIGIN = -2ULL;
+    static constexpr const uint64_t FT_EXTERNAL_RETURN = -3ULL;
 
     uint64_t Branch;
     uint64_t From;
@@ -390,9 +391,9 @@ private:
   /// File format syntax:
   /// E <event>
   /// S <start> <count>
-  /// T <start> <end> <ft_end> <count>
+  /// [TR] <start> <end> <ft_end> <count>
   /// B <start> <end> <count> <mispred_count>
-  /// [Ff] <start> <end> <count>
+  /// [Ffr] <start> <end> <count>
   ///
   /// where <start>, <end>, <ft_end> have the format [<id>:]<offset>
   ///
@@ -403,8 +404,11 @@ private:
   /// f - an aggregated fall-through with external origin - used to disambiguate
   ///       between a return hitting a basic block head and a regular internal
   ///       jump to the block
+  /// r - an aggregated fall-through originating at an external return, no
+  ///       checks are performed for a fallthrough start
   /// T - an aggregated trace: branch from <start> to <end> with a fall-through
   ///       to <ft_end>
+  /// R - an aggregated trace originating at a return
   ///
   /// <id> - build id of the object containing the address. We can skip it for
   /// the main binary and use "X" for an unknown object. This will save some
@@ -532,7 +536,12 @@ inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::Trace &T) {
   switch (T.Branch) {
   case DataAggregator::Trace::FT_ONLY:
+    break;
   case DataAggregator::Trace::FT_EXTERNAL_ORIGIN:
+    OS << "X:0 -> ";
+    break;
+  case DataAggregator::Trace::FT_EXTERNAL_RETURN:
+    OS << "X:R -> ";
     break;
   default:
     OS << Twine::utohexstr(T.Branch) << " -> ";
