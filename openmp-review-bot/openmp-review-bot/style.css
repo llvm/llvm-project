@@ -1,0 +1,16 @@
+#review-btn {
+    background-color: #4CAF50;
+    color: white;
+    font-size: 16px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+#summary-btn {
+    background-color: #2196F3;
+    color: white;
+    font-size: 16px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
