@@ -517,8 +517,6 @@ public:
                               SDValue Chain, SDValue InGlue, unsigned Condition,
                               SDValue PStateSM = SDValue()) const;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
-
   // Normally SVE is only used for byte size vectors that do not fit within a
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
   // used for 64bit and 128bit vectors as well.

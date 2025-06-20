@@ -9,9 +9,8 @@
 
 ; CHECKUF1: vector.ph:
 ; CHECKUF1-DAG:  %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
-; CHECKUF1-DAG:  %[[VSCALEX4:.*]] = shl nuw i64 %[[VSCALE]], 2
-; CHECKUF1-DAG:  %n.mod.vf = urem i64 %wide.trip.count, %[[VSCALEX4]]
-; CHECKUF1:      %n.vec = sub nsw i64 %wide.trip.count, %n.mod.vf
+; CHECKUF1-DAG:  %.neg = mul i64 %[[VSCALE]], 2147483644 
+; CHECKUF1-DAG:  %n.vec = and i64 %.neg, %wide.trip.count
 ; CHECKUF1: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
 ; CHECKUF1: %[[VSCALEX4:.*]] = shl nuw i64 %[[VSCALE]], 2
 
@@ -38,9 +37,8 @@
 
 ; CHECKUF2: vector.ph:
 ; CHECKUF2-DAG:  %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
-; CHECKUF2-DAG:  %[[VSCALEX8:.*]] = shl nuw i64 %[[VSCALE]], 3
-; CHECKUF2-DAG:  %n.mod.vf = urem i64 %wide.trip.count, %[[VSCALEX8]]
-; CHECKUF2:      %n.vec = sub nsw i64 %wide.trip.count, %n.mod.vf
+; CHECKUF2-DAG:  %.neg = mul i64 %[[VSCALE]], 2147483640
+; CHECKUF2:      %n.vec = and i64 %.neg, %wide.trip.count
 ; CHECKUF2: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
 ; CHECKUF2: %[[VSCALEX8:.*]] = shl nuw i64 %[[VSCALE]], 3
 
