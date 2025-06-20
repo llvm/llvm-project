@@ -1621,6 +1621,13 @@ def DeviceKernel : DeclOrTypeAttr {
 }];
 }
 
+def SYCLExternal : InheritableAttr {
+  let Spellings = [Clang<"sycl_external">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let LangOpts = [SYCLDevice];
+  let Documentation = [SYCLExternalDocs];
+}
+
 def SYCLKernelEntryPoint : InheritableAttr {
   let Spellings = [Clang<"sycl_kernel_entry_point">];
   let Args = [

@@ -202,6 +202,17 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<DeviceKernelAttr>(*this, D, AL);
 }
 
+void SemaSYCL::handleExternalAttr(Decl *D, const ParsedAttr &AL) {
+  auto *ND = cast<NamedDecl>(D);
+  if (!ND->isExternallyVisible()) {
+    Diag(AL.getLoc(), diag::err_sycl_attribute_invalid_linkage)
+        << AL << !isa<FunctionDecl>(ND);
+    return;
+  }
+
+  handleSimpleAttribute<SYCLExternalAttr>(*this, D, AL);
+}
+
 void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
   ParsedType PT = AL.getTypeArg();
   TypeSourceInfo *TSI = nullptr;
