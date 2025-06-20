@@ -167,9 +167,6 @@ DWARFASTParserClang::GetObjectParameter(const DWARFDIE &subprogram,
          subprogram.Tag() == DW_TAG_inlined_subroutine ||
          subprogram.Tag() == DW_TAG_subroutine_type);
 
-  if (!decl_ctx_die.IsStructUnionOrClass())
-    return {};
-
   if (DWARFDIE object_parameter =
           subprogram.GetAttributeValueAsReferenceDIE(DW_AT_object_pointer))
     return object_parameter;
@@ -177,6 +174,10 @@ DWARFASTParserClang::GetObjectParameter(const DWARFDIE &subprogram,
   // If no DW_AT_object_pointer was specified, assume the implicit object
   // parameter is the first parameter to the function, is called "this" and is
   // artificial (which is what most compilers would generate).
+
+  if (!decl_ctx_die.IsStructUnionOrClass())
+    return {};
+
   auto children = subprogram.children();
   auto it = llvm::find_if(children, [](const DWARFDIE &child) {
     return child.Tag() == DW_TAG_formal_parameter;
