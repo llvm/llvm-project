@@ -18,6 +18,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
@@ -72,9 +73,9 @@ public:
   QualType getType() const override;
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolRegionValueKind;
-  }
+  static constexpr Kind ClassKind = SymbolRegionValueKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// A symbol representing the result of an expression in the case when we do
@@ -128,9 +129,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolConjuredKind;
-  }
+  static constexpr Kind ClassKind = SymbolConjuredKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// A symbol representing the value of a MemRegion whose parent region has
@@ -172,9 +173,11 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolDerivedKind;
+  static constexpr Kind ClassKind = SymbolDerivedKind;
+  static constexpr bool classof(const SymExpr *SE) {
+    return classof(SE->getKind());
   }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// SymbolExtent - Represents the extent (size in bytes) of a bounded region.
@@ -209,9 +212,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolExtentKind;
-  }
+  static constexpr Kind ClassKind = SymbolExtentKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == SymbolExtentKind; }
 };
 
 /// SymbolMetadata - Represents path-dependent metadata about a specific region.
@@ -278,13 +281,14 @@ class SymbolMetadata : public SymbolData {
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolMetadataKind;
-  }
+  static constexpr Kind ClassKind = SymbolMetadataKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// Represents a cast expression.
 class SymbolCast : public SymExpr {
+  friend class SymbolManager;
   const SymExpr *Operand;
 
   /// Type of the operand.
@@ -295,20 +299,19 @@ class SymbolCast : public SymExpr {
 
   friend class SymExprAllocator;
   SymbolCast(SymbolID Sym, const SymExpr *In, QualType From, QualType To)
-      : SymExpr(SymbolCastKind, Sym), Operand(In), FromTy(From), ToTy(To) {
+      : SymExpr(SymbolCastKind, Sym, computeComplexity(In, From, To)),
+        Operand(In), FromTy(From), ToTy(To) {
     assert(In);
     assert(isValidTypeForSymbol(From));
     // FIXME: GenericTaintChecker creates symbols of void type.
     // Otherwise, 'To' should also be a valid type.
   }
 
-public:
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity = 1 + Operand->computeComplexity();
-    return Complexity;
+  static unsigned computeComplexity(const SymExpr *In, QualType, QualType) {
+    return In->complexity() + 1;
   }
 
+public:
   QualType getType() const override { return ToTy; }
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL
@@ -329,13 +332,14 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolCastKind;
-  }
+  static constexpr Kind ClassKind = SymbolCastKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// Represents a symbolic expression involving a unary operator.
 class UnarySymExpr : public SymExpr {
+  friend class SymbolManager;
   const SymExpr *Operand;
   UnaryOperator::Opcode Op;
   QualType T;
@@ -343,7 +347,8 @@ class UnarySymExpr : public SymExpr {
   friend class SymExprAllocator;
   UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
                QualType T)
-      : SymExpr(UnarySymExprKind, Sym), Operand(In), Op(Op), T(T) {
+      : SymExpr(UnarySymExprKind, Sym, computeComplexity(In, Op, T)),
+        Operand(In), Op(Op), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -354,13 +359,12 @@ class UnarySymExpr : public SymExpr {
     assert(!Loc::isLocType(T) && "unary symbol should be nonloc");
   }
 
-public:
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity = 1 + Operand->computeComplexity();
-    return Complexity;
+  static unsigned computeComplexity(const SymExpr *In, UnaryOperator::Opcode,
+                                    QualType) {
+    return In->complexity() + 1;
   }
 
+public:
   const SymExpr *getOperand() const { return Operand; }
   UnaryOperator::Opcode getOpcode() const { return Op; }
   QualType getType() const override { return T; }
@@ -380,9 +384,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == UnarySymExprKind;
-  }
+  static constexpr Kind ClassKind = UnarySymExprKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// Represents a symbolic expression involving a binary operator
@@ -391,8 +395,9 @@ class BinarySymExpr : public SymExpr {
   QualType T;
 
 protected:
-  BinarySymExpr(SymbolID Sym, Kind k, BinaryOperator::Opcode op, QualType t)
-      : SymExpr(k, Sym), Op(op), T(t) {
+  BinarySymExpr(SymbolID Sym, Kind k, BinaryOperator::Opcode op, QualType t,
+                unsigned Complexity)
+      : SymExpr(k, Sym, Complexity), Op(op), T(t) {
     assert(classof(this));
     // Binary expressions are results of arithmetic. Pointer arithmetic is not
     // handled by binary expressions, but it is instead handled by applying
@@ -408,14 +413,14 @@ public:
   BinaryOperator::Opcode getOpcode() const { return Op; }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    Kind k = SE->getKind();
-    return k >= BEGIN_BINARYSYMEXPRS && k <= END_BINARYSYMEXPRS;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) {
+    return K >= BEGIN_BINARYSYMEXPRS && K <= END_BINARYSYMEXPRS;
   }
 
 protected:
   static unsigned computeOperandComplexity(const SymExpr *Value) {
-    return Value->computeComplexity();
+    return Value->complexity();
   }
   static unsigned computeOperandComplexity(const llvm::APSInt &Value) {
     return 1;
@@ -430,17 +435,26 @@ protected:
 };
 
 /// Template implementation for all binary symbolic expressions
-template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassKind>
+template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassK>
 class BinarySymExprImpl : public BinarySymExpr {
+  friend class SymbolManager;
   LHSTYPE LHS;
   RHSTYPE RHS;
 
   friend class SymExprAllocator;
   BinarySymExprImpl(SymbolID Sym, LHSTYPE lhs, BinaryOperator::Opcode op,
                     RHSTYPE rhs, QualType t)
-      : BinarySymExpr(Sym, ClassKind, op, t), LHS(lhs), RHS(rhs) {
+      : BinarySymExpr(Sym, ClassKind, op, t,
+                      computeComplexity(lhs, op, rhs, t)),
+        LHS(lhs), RHS(rhs) {
     assert(getPointer(lhs));
     assert(getPointer(rhs));
+  }
+
+  static unsigned computeComplexity(LHSTYPE lhs, BinaryOperator::Opcode,
+                                    RHSTYPE rhs, QualType) {
+    // FIXME: Should we add 1 to complexity?
+    return computeOperandComplexity(lhs) + computeOperandComplexity(rhs);
   }
 
 public:
@@ -452,13 +466,6 @@ public:
 
   LHSTYPE getLHS() const { return LHS; }
   RHSTYPE getRHS() const { return RHS; }
-
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity =
-          computeOperandComplexity(RHS) + computeOperandComplexity(LHS);
-    return Complexity;
-  }
 
   static void Profile(llvm::FoldingSetNodeID &ID, LHSTYPE lhs,
                       BinaryOperator::Opcode op, RHSTYPE rhs, QualType t) {
@@ -474,7 +481,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) { return SE->getKind() == ClassKind; }
+  static constexpr Kind ClassKind = ClassK;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// Represents a symbolic expression like 'x' + 3.
@@ -488,6 +497,33 @@ using IntSymExpr = BinarySymExprImpl<APSIntPtr, const SymExpr *,
 /// Represents a symbolic expression like 'x' + 'y'.
 using SymSymExpr = BinarySymExprImpl<const SymExpr *, const SymExpr *,
                                      SymExpr::Kind::SymSymExprKind>;
+
+struct MaybeSymExpr {
+  MaybeSymExpr() = default;
+  explicit MaybeSymExpr(SymbolRef Sym) : Sym(Sym) {}
+  bool isValid() const { return Sym; }
+  bool isInvalid() const { return !isValid(); }
+  SymbolRef operator->() const { return Sym; }
+
+  SymbolRef getOrNull() const { return Sym; }
+  template <typename SymT> const SymT *getOrNull() const {
+    return llvm::dyn_cast_if_present<SymT>(Sym);
+  }
+
+  DefinedOrUnknownSVal getOrUnknown() const {
+    if (isInvalid())
+      return UnknownVal();
+    return nonloc::SymbolVal(Sym);
+  }
+
+  nonloc::SymbolVal getOrAssert() const {
+    assert(Sym);
+    return nonloc::SymbolVal(Sym);
+  }
+
+private:
+  SymbolRef Sym = nullptr;
+};
 
 class SymExprAllocator {
   SymbolID NextSymbolID = 0;
@@ -518,27 +554,27 @@ class SymbolManager {
   SymExprAllocator Alloc;
   BasicValueFactory &BV;
   ASTContext &Ctx;
+  const unsigned MaxCompComplexity;
 
 public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
-                llvm::BumpPtrAllocator &bpalloc)
-      : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx) {}
+                llvm::BumpPtrAllocator &bpalloc, const AnalyzerOptions &Opts)
+      : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx),
+        MaxCompComplexity(Opts.MaxSymbolComplexity) {
+    assert(MaxCompComplexity > 0 && "Zero max complexity doesn't make sense");
+  }
 
   static bool canSymbolicate(QualType T);
 
   /// Create or retrieve a SymExpr of type \p SymExprT for the given arguments.
   /// Use the arguments to check for an existing SymExpr and return it,
   /// otherwise, create a new one and keep a pointer to it to avoid duplicates.
-  template <typename SymExprT, typename... Args>
-  const SymExprT *acquire(Args &&...args);
+  template <typename SymExprT, typename... Args> auto acquire(Args &&...args);
 
   const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
                                       const LocationContext *LCtx, QualType T,
                                       unsigned VisitCount,
-                                      const void *SymbolTag = nullptr) {
-
-    return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
-  }
+                                      const void *SymbolTag = nullptr);
 
   QualType getType(const SymExpr *SE) const {
     return SE->getType();
@@ -672,7 +708,16 @@ public:
 };
 
 template <typename T, typename... Args>
-const T *SymbolManager::acquire(Args &&...args) {
+auto SymbolManager::acquire(Args &&...args) {
+  constexpr bool IsSymbolData = SymbolData::classof(T::ClassKind);
+  if constexpr (IsSymbolData) {
+    assert(T::computeComplexity(args...) == 1);
+  } else {
+    if (T::computeComplexity(args...) > MaxCompComplexity) {
+      return MaybeSymExpr();
+    }
+  }
+
   llvm::FoldingSetNodeID profile;
   T::Profile(profile, args...);
   void *InsertPos;
@@ -681,7 +726,12 @@ const T *SymbolManager::acquire(Args &&...args) {
     SD = Alloc.make<T>(std::forward<Args>(args)...);
     DataSet.InsertNode(SD, InsertPos);
   }
-  return cast<T>(SD);
+
+  if constexpr (IsSymbolData) {
+    return cast<T>(SD);
+  } else {
+    return MaybeSymExpr(SD);
+  }
 }
 
 } // namespace ento

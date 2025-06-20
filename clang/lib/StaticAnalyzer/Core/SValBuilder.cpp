@@ -51,11 +51,11 @@ void SValBuilder::anchor() {}
 
 SValBuilder::SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
                          ProgramStateManager &stateMgr)
-    : Context(context), BasicVals(context, alloc),
-      SymMgr(context, BasicVals, alloc), MemMgr(context, alloc),
-      StateMgr(stateMgr),
+    : Context(context),
       AnOpts(
           stateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions()),
+      BasicVals(context, alloc), SymMgr(context, BasicVals, alloc, AnOpts),
+      MemMgr(context, alloc), StateMgr(stateMgr),
       ArrayIndexTy(context.LongLongTy),
       ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
 
@@ -74,44 +74,50 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
   return UnknownVal();
 }
 
-nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
-                                          BinaryOperator::Opcode op,
-                                          APSIntPtr rhs, QualType type) {
+DefinedOrUnknownSVal SValBuilder::makeNonLoc(const SymExpr *lhs,
+                                             BinaryOperator::Opcode op,
+                                             APSIntPtr rhs, QualType type) {
+  // The Environment ensures we always get a persistent APSInt in
+  // BasicValueFactory, so we don't need to get the APSInt from
+  // BasicValueFactory again.
   assert(lhs);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.acquire<SymIntExpr>(lhs, op, rhs, type));
+  return SymMgr.acquire<SymIntExpr>(lhs, op, rhs, type).getOrUnknown();
 }
 
-nonloc::SymbolVal SValBuilder::makeNonLoc(APSIntPtr lhs,
-                                          BinaryOperator::Opcode op,
-                                          const SymExpr *rhs, QualType type) {
+DefinedOrUnknownSVal SValBuilder::makeNonLoc(APSIntPtr lhs,
+                                             BinaryOperator::Opcode op,
+                                             const SymExpr *rhs,
+                                             QualType type) {
   assert(rhs);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.acquire<IntSymExpr>(lhs, op, rhs, type));
+  return SymMgr.acquire<IntSymExpr>(lhs, op, rhs, type).getOrUnknown();
 }
 
-nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
-                                          BinaryOperator::Opcode op,
-                                          const SymExpr *rhs, QualType type) {
+DefinedOrUnknownSVal SValBuilder::makeNonLoc(const SymExpr *lhs,
+                                             BinaryOperator::Opcode op,
+                                             const SymExpr *rhs,
+                                             QualType type) {
   assert(lhs && rhs);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.acquire<SymSymExpr>(lhs, op, rhs, type));
+  return SymMgr.acquire<SymSymExpr>(lhs, op, rhs, type).getOrUnknown();
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *operand, UnaryOperator::Opcode op,
-                               QualType type) {
+DefinedOrUnknownSVal SValBuilder::makeNonLoc(const SymExpr *operand,
+                                             UnaryOperator::Opcode op,
+                                             QualType type) {
   assert(operand);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.acquire<UnarySymExpr>(operand, op, type));
+  return SymMgr.acquire<UnarySymExpr>(operand, op, type).getOrUnknown();
 }
 
-nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
-                                          QualType fromTy, QualType toTy) {
+DefinedOrUnknownSVal SValBuilder::makeNonLoc(const SymExpr *operand,
+                                             QualType fromTy, QualType toTy) {
   assert(operand);
   assert(!Loc::isLocType(toTy));
   if (fromTy == toTy)
     return nonloc::SymbolVal(operand);
-  return nonloc::SymbolVal(SymMgr.acquire<SymbolCast>(operand, fromTy, toTy));
+  return SymMgr.acquire<SymbolCast>(operand, fromTy, toTy).getOrUnknown();
 }
 
 SVal SValBuilder::convertToArrayIndex(SVal val) {
@@ -432,24 +438,19 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
                                    QualType ResultTy) {
   SymbolRef symLHS = LHS.getAsSymbol();
   SymbolRef symRHS = RHS.getAsSymbol();
+  auto lInt = LHS.getAs<nonloc::ConcreteInt>();
+  auto rInt = RHS.getAs<nonloc::ConcreteInt>();
 
   // TODO: When the Max Complexity is reached, we should conjure a symbol
   // instead of generating an Unknown value and propagate the taint info to it.
-  const unsigned MaxComp = AnOpts.MaxSymbolComplexity;
-
-  if (symLHS && symRHS &&
-      (symLHS->computeComplexity() + symRHS->computeComplexity()) <  MaxComp)
+  if (symLHS && symRHS)
     return makeNonLoc(symLHS, Op, symRHS, ResultTy);
 
-  if (symLHS && symLHS->computeComplexity() < MaxComp)
-    if (std::optional<nonloc::ConcreteInt> rInt =
-            RHS.getAs<nonloc::ConcreteInt>())
-      return makeNonLoc(symLHS, Op, rInt->getValue(), ResultTy);
+  if (symLHS && rInt)
+    return makeNonLoc(symLHS, Op, rInt->getValue(), ResultTy);
 
-  if (symRHS && symRHS->computeComplexity() < MaxComp)
-    if (std::optional<nonloc::ConcreteInt> lInt =
-            LHS.getAs<nonloc::ConcreteInt>())
-      return makeNonLoc(lInt->getValue(), Op, symRHS, ResultTy);
+  if (lInt && symRHS)
+    return makeNonLoc(lInt->getValue(), Op, symRHS, ResultTy);
 
   return UnknownVal();
 }
@@ -614,10 +615,12 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   // Check the range of the symbol being casted against the maximum value of the
   // target type.
   QualType CmpTy = getConditionType();
-  NonLoc CompVal = evalBinOpNN(state, BO_LE, *AsNonLoc, ToTypeMaxVal, CmpTy)
-                       .castAs<NonLoc>();
+  auto CompVal =
+      evalBinOpNN(state, BO_LE, *AsNonLoc, ToTypeMaxVal, CmpTy).getAs<NonLoc>();
+  if (!CompVal)
+    return UnknownVal();
   ProgramStateRef IsNotTruncated, IsTruncated;
-  std::tie(IsNotTruncated, IsTruncated) = state->assume(CompVal);
+  std::tie(IsNotTruncated, IsTruncated) = state->assume(*CompVal);
   if (!IsNotTruncated && IsTruncated) {
     // Symbol is truncated so we evaluate it as a cast.
     return makeNonLoc(AsSymbol, originalTy, castTy);
@@ -1048,6 +1051,10 @@ public:
     //  (llong)(ulong)(uint x) -> (llong)(uint x) (sizeof(ulong) ==
     //  sizeof(uint))
 
+    auto getAsSymValOrV = [V](DefinedOrUnknownSVal Val) {
+      return Val.getAs<nonloc::SymbolVal>().value_or(V);
+    };
+
     SymbolRef SE = V.getSymbol();
     QualType T = Context.getCanonicalType(SE->getType());
 
@@ -1055,14 +1062,14 @@ public:
       return V;
 
     if (!isa<SymbolCast>(SE))
-      return VB.makeNonLoc(SE, T, CastTy);
+      return getAsSymValOrV(VB.makeNonLoc(SE, T, CastTy));
 
     SymbolRef RootSym = cast<SymbolCast>(SE)->getOperand();
     QualType RT = RootSym->getType().getCanonicalType();
 
     // FIXME support simplification from non-integers.
     if (!RT->isIntegralOrEnumerationType())
-      return VB.makeNonLoc(SE, T, CastTy);
+      return getAsSymValOrV(VB.makeNonLoc(SE, T, CastTy));
 
     BasicValueFactory &BVF = VB.getBasicValueFactory();
     APSIntType CTy = BVF.getAPSIntType(CastTy);
@@ -1075,7 +1082,7 @@ public:
       const bool isSameType = (RT == CastTy);
       if (isSameType)
         return nonloc::SymbolVal(RootSym);
-      return VB.makeNonLoc(RootSym, RT, CastTy);
+      return getAsSymValOrV(VB.makeNonLoc(RootSym, RT, CastTy));
     }
 
     APSIntType RTy = BVF.getAPSIntType(RT);
@@ -1084,9 +1091,9 @@ public:
     const bool UR = RTy.isUnsigned();
 
     if (((WT > WR) && (UR || !UT)) || ((WT == WR) && (UT == UR)))
-      return VB.makeNonLoc(RootSym, RT, CastTy);
+      return getAsSymValOrV(VB.makeNonLoc(RootSym, RT, CastTy));
 
-    return VB.makeNonLoc(SE, T, CastTy);
+    return getAsSymValOrV(VB.makeNonLoc(SE, T, CastTy));
   }
 };
 } // end anonymous namespace

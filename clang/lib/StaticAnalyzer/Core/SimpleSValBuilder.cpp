@@ -290,10 +290,10 @@ static std::pair<SymbolRef, APSIntPtr> decomposeSymbol(SymbolRef Sym,
 // Simplify "(LSym + LInt) Op (RSym + RInt)" assuming all values are of the
 // same signed integral type and no overflows occur (which should be checked
 // by the caller).
-static NonLoc doRearrangeUnchecked(ProgramStateRef State,
-                                   BinaryOperator::Opcode Op,
-                                   SymbolRef LSym, llvm::APSInt LInt,
-                                   SymbolRef RSym, llvm::APSInt RInt) {
+static std::optional<NonLoc>
+doRearrangeUnchecked(ProgramStateRef State, BinaryOperator::Opcode Op,
+                     SymbolRef LSym, llvm::APSInt LInt, SymbolRef RSym,
+                     llvm::APSInt RInt) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   BasicValueFactory &BV = SVB.getBasicValueFactory();
   SymbolManager &SymMgr = SVB.getSymbolManager();
@@ -320,7 +320,7 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
                      nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
         .castAs<NonLoc>();
 
-  SymbolRef ResultSym = nullptr;
+  MaybeSymExpr ResultSym;
   BinaryOperator::Opcode ResultOp;
   llvm::APSInt ResultInt;
   if (BinaryOperator::isComparisonOp(Op)) {
@@ -346,12 +346,20 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
       ResultOp = BO_Sub;
     } else if (ResultInt == 0) {
       // Shortcut: Simplify "$x + 0" to "$x".
-      return nonloc::SymbolVal(ResultSym);
+      if (ResultSym.isInvalid())
+        return std::nullopt;
+      return ResultSym.getOrAssert();
     }
   }
+
+  if (ResultSym.isInvalid())
+    return std::nullopt;
+
   APSIntPtr PersistentResultInt = BV.getValue(ResultInt);
-  return nonloc::SymbolVal(SymMgr.acquire<SymIntExpr>(
-      ResultSym, ResultOp, PersistentResultInt, ResultTy));
+  return SymMgr
+      .acquire<SymIntExpr>(ResultSym.getOrNull(), ResultOp, PersistentResultInt,
+                           ResultTy)
+      .getOrAssert();
 }
 
 // Rearrange if symbol type matches the result type and if the operator is a
@@ -421,9 +429,8 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
 }
 
 SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
-                                  BinaryOperator::Opcode op,
-                                  NonLoc lhs, NonLoc rhs,
-                                  QualType resultTy)  {
+                                    BinaryOperator::Opcode op, NonLoc lhs,
+                                    NonLoc rhs, QualType resultTy) {
   NonLoc InputLHS = lhs;
   NonLoc InputRHS = rhs;
 

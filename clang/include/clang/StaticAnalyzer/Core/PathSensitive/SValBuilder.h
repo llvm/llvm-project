@@ -57,6 +57,8 @@ class SValBuilder {
 protected:
   ASTContext &Context;
 
+  const AnalyzerOptions &AnOpts;
+
   /// Manager of APSInt values.
   BasicValueFactory BasicVals;
 
@@ -67,8 +69,6 @@ protected:
   MemRegionManager MemMgr;
 
   ProgramStateManager &StateMgr;
-
-  const AnalyzerOptions &AnOpts;
 
   /// The scalar type to use for array indices.
   const QualType ArrayIndexTy;
@@ -317,21 +317,21 @@ public:
     return nonloc::LocAsInteger(BasicVals.getPersistentSValWithData(loc, bits));
   }
 
-  nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                               APSIntPtr rhs, QualType type);
+  DefinedOrUnknownSVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
+                                  APSIntPtr rhs, QualType type);
 
-  nonloc::SymbolVal makeNonLoc(APSIntPtr rhs, BinaryOperator::Opcode op,
-                               const SymExpr *lhs, QualType type);
+  DefinedOrUnknownSVal makeNonLoc(APSIntPtr rhs, BinaryOperator::Opcode op,
+                                  const SymExpr *lhs, QualType type);
 
-  nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                               const SymExpr *rhs, QualType type);
+  DefinedOrUnknownSVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
+                                  const SymExpr *rhs, QualType type);
 
-  NonLoc makeNonLoc(const SymExpr *operand, UnaryOperator::Opcode op,
-                    QualType type);
+  DefinedOrUnknownSVal makeNonLoc(const SymExpr *operand,
+                                  UnaryOperator::Opcode op, QualType type);
 
   /// Create a NonLoc value for cast.
-  nonloc::SymbolVal makeNonLoc(const SymExpr *operand, QualType fromTy,
-                               QualType toTy);
+  DefinedOrUnknownSVal makeNonLoc(const SymExpr *operand, QualType fromTy,
+                                  QualType toTy);
 
   nonloc::ConcreteInt makeTruthVal(bool b, QualType type) {
     return nonloc::ConcreteInt(BasicVals.getTruthValue(b, type));
