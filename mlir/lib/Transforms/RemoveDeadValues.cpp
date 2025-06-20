@@ -704,7 +704,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   }
 
   // 4. Operands
-  for (auto &o : list.operands) {
+  for (OperationToCleanup &o : list.operands) {
     if (o.op->getNumOperands() > 0)
       o.op->eraseOperands(o.nonLive);
   }
