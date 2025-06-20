@@ -585,9 +585,9 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lhu s1, 0(a1)
-; RV64I-NEXT:    lhu s2, 8(a1)
-; RV64I-NEXT:    lhu s3, 16(a1)
+; RV64I-NEXT:    lh s1, 0(a1)
+; RV64I-NEXT:    lh s2, 8(a1)
+; RV64I-NEXT:    lh s3, 16(a1)
 ; RV64I-NEXT:    lhu a2, 24(a1)
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    li a1, 95
@@ -610,9 +610,9 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) nounwind {
 ;
 ; RV64IM-LABEL: dont_fold_urem_power_of_two:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    lhu a2, 0(a1)
-; RV64IM-NEXT:    lhu a3, 8(a1)
-; RV64IM-NEXT:    lhu a4, 16(a1)
+; RV64IM-NEXT:    lh a2, 0(a1)
+; RV64IM-NEXT:    lh a3, 8(a1)
+; RV64IM-NEXT:    lh a4, 16(a1)
 ; RV64IM-NEXT:    lhu a1, 24(a1)
 ; RV64IM-NEXT:    lui a5, %hi(.LCPI3_0)
 ; RV64IM-NEXT:    li a6, 95
