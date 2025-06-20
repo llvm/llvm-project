@@ -146,6 +146,19 @@ class MipsAsmParser : public MCTargetAsmParser {
                        // nullptr, which indicates that no function is currently
                        // selected. This usually happens after an '.end func'
                        // directive.
+  // Because we want do `sw $4, 0($2)
+  //                     addiu $2, $2, 4
+  //                     bne $2, $3, $BB0_1`
+  // to
+  //                    `addiu $2, $2, 4
+  //                     sw $4, -4($2)
+  //                     bne $2, $3, $BB0_1`,
+  // so that the sw can be placed into delay slot.
+  // If true, reprents inst `addiu` following inst `sw`, and save inst
+  // `sw`. Later we will check if inst 'bne' following inst `addiu`.
+  bool saveCurInst;
+  MCInst CurInst;
+
   bool IsLittleEndian;
   bool IsPicEnabled;
   bool IsCpRestoreSet;
@@ -351,6 +364,9 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandSaaAddr(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                      const MCSubtargetInfo *STI);
 
+  MipsAsmParser::MacroExpanderResultTy expandSW(MCInst &Inst, SMLoc IDLoc,
+                                                MCStreamer &Out,
+                                                const MCSubtargetInfo *STI);
   bool reportParseError(const Twine &ErrorMsg);
   bool reportParseError(SMLoc Loc, const Twine &ErrorMsg);
 
@@ -550,6 +566,7 @@ public:
       report_fatal_error("-mno-odd-spreg requires the O32 ABI");
 
     CurrentFn = nullptr;
+    saveCurInst = false;
 
     CurForbiddenSlotAttr = false;
     IsPicEnabled = getContext().getObjectFileInfo()->isPositionIndependent();
@@ -2572,8 +2589,82 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if ((Inst.getNumOperands() == 3) && Inst.getOperand(0).isReg() &&
         Inst.getOperand(1).isReg() && Inst.getOperand(2).isImm()) {
       int64_t ImmValue = Inst.getOperand(2).getImm();
-      if (isInt<16>(ImmValue))
-        return MER_NotAMacro;
+      if (isInt<16>(ImmValue)) {
+        if (saveCurInst == true) {
+          AsmToken ID = getTok();
+          saveCurInst = false;
+          bool doLex = false;
+
+          // If this is a line comment we can drop it safely.
+          while (getLexer().is(AsmToken::EndOfStatement)) {
+            doLex = true;
+            getLexer().Lex();
+          }
+
+          // Get last inst `sw` register info and offset value.
+          MipsTargetStreamer &TOut = getTargetStreamer();
+          MCRegister FirstReg = CurInst.getOperand(0).getReg();
+          MCRegister BaseReg = CurInst.getOperand(1).getReg();
+          MCOperand &OffsetImmOp = CurInst.getOperand(2);
+          unsigned OffsetValue = OffsetImmOp.getImm();
+
+          // Optimize `sw $4, 0($2)
+          //           addiu $2, $2, 4
+          //           bne $2, $3, $BB0_1`
+          // to
+          //          `addiu $2, $2, 4
+          //           sw $4, -4($2)
+          //           bne $2, $3, $BB0_1`.
+          // If match sw+addiu+bne, then emit addiu+sw.
+          if (getTok().getString() == "bne") {
+            if (OffsetValue != 0) {
+              // Back to initial location before return.
+              if (doLex == true)
+                getLexer().UnLex(ID);
+              // If not match, we need to emit the last reserved instruction
+              // `sw`.
+              TOut.emitRRI(CurInst.getOpcode(), FirstReg, BaseReg, OffsetValue,
+                           IDLoc, STI);
+              return MER_NotAMacro;
+            }
+
+            // Get inst `addiu` register info and imm value.
+            MCRegister destReg = Inst.getOperand(0).getReg();
+            MCRegister srcReg = Inst.getOperand(1).getReg();
+            unsigned addImm = Inst.getOperand(2).getImm();
+
+            if (destReg == srcReg && BaseReg == destReg && addImm == 4) {
+              // Emit addiu+sw.
+              TOut.emitRRI(Inst.getOpcode(), destReg, srcReg, addImm, IDLoc,
+                           STI);
+              TOut.emitRRI(CurInst.getOpcode(), FirstReg, BaseReg,
+                           OffsetValue - addImm, IDLoc, STI);
+              // Back to initial location before return.
+              if (doLex == true)
+                getLexer().UnLex(ID);
+              return MER_Success;
+            } else {
+              // Back to initial location before return.
+              if (doLex == true)
+                getLexer().UnLex(ID);
+              // If not match, we need to emit the last reserved instruction
+              // `sw`.
+              TOut.emitRRI(CurInst.getOpcode(), FirstReg, BaseReg, OffsetValue,
+                           IDLoc, STI);
+              return MER_NotAMacro;
+            }
+          } else {
+            // Back to initial location before return.
+            if (doLex == true)
+              getLexer().UnLex(ID);
+            // If not match, we need to emit the last reserved instruction `sw`.
+            TOut.emitRRI(CurInst.getOpcode(), FirstReg, BaseReg, OffsetValue,
+                         IDLoc, STI);
+            return MER_NotAMacro;
+          }
+        } else
+          return MER_NotAMacro;
+      }
       return expandAliasImmediate(Inst, IDLoc, Out, STI) ? MER_Fail
                                                          : MER_Success;
     }
@@ -2646,6 +2737,8 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   case Mips::SaaAddr:
   case Mips::SaadAddr:
     return expandSaaAddr(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::SW:
+    return expandSW(Inst, IDLoc, Out, STI);
   }
 }
 
@@ -5278,6 +5371,33 @@ bool MipsAsmParser::expandDMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
 
   return false;
+}
+
+// Check if match sw+addiu.
+MipsAsmParser::MacroExpanderResultTy
+MipsAsmParser::expandSW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                        const MCSubtargetInfo *STI) {
+  AsmToken ID = getTok();
+  bool doLex = false;
+
+  // If this is a line comment we can drop it safely.
+  while (getLexer().is(AsmToken::EndOfStatement)) {
+    getLexer().Lex();
+    doLex = true;
+  }
+  // If match sw+addiu, then save current Inst,
+  // and back to initial location before return.
+  if (getTok().getString() == "addiu") {
+    if (doLex == true)
+      getLexer().UnLex(ID);
+    CurInst = Inst;
+    saveCurInst = true;
+    return MER_Success;
+  } else {
+    if (doLex == true)
+      getLexer().UnLex(ID);
+    return MER_NotAMacro;
+  }
 }
 
 // Expand 'ld $<reg> offset($reg2)' to 'lw $<reg>, offset($reg2);
