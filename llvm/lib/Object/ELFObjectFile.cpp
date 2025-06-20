@@ -607,6 +607,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1201";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX120E:
     return "gfx120E";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250:
+    return "gfx1250";
 
   // Generic AMDGCN targets
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
