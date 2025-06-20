@@ -239,6 +239,7 @@ struct MissingFeatures {
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
+  static bool ctorMemcpyizer() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

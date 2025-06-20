@@ -390,6 +390,34 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   return lv;
 }
 
+LValue CIRGenFunction::emitLValueForFieldInitialization(
+    LValue base, const clang::FieldDecl *field, llvm::StringRef fieldName) {
+  QualType fieldType = field->getType();
+
+  if (!fieldType->isReferenceType())
+    return emitLValueForField(base, field);
+
+  const CIRGenRecordLayout &layout =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  unsigned fieldIndex = layout.getCIRFieldNo(field);
+
+  Address v =
+      emitAddrOfFieldStorage(base.getAddress(), field, fieldName, fieldIndex);
+
+  // Make sure that the address is pointing to the right type.
+  mlir::Type memTy = convertTypeForMem(fieldType);
+  v = builder.createElementBitCast(getLoc(field->getSourceRange()), v, memTy);
+
+  // TODO: Generate TBAA information that describes this access as a structure
+  // member access and not just an access to an object of the field's type. This
+  // should be similar to what we do in EmitLValueForField().
+  LValueBaseInfo baseInfo = base.getBaseInfo();
+  AlignmentSource fieldAlignSource = baseInfo.getAlignmentSource();
+  LValueBaseInfo fieldBaseInfo(getFieldAlignmentSource(fieldAlignSource));
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(v, fieldType, fieldBaseInfo);
+}
+
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   // Bool has a different representation in memory than in registers,
   // but in ClangIR, it is simply represented as a cir.bool value.
