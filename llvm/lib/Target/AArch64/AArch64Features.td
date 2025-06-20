@@ -825,6 +825,10 @@ def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
                                                "HasDisableFastIncVL", "true",
                                                "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
 
+def FeatureLongCalls : SubtargetFeature<"long-calls", "GenLongCalls", "true",
+                                        "Generate calls via indirect call "
+                                        "instructions">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
