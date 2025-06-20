@@ -209,6 +209,9 @@ struct TemplateSpecializationInfo {
 
   // Template parameters applying to the specialized record/function.
   std::vector<TemplateParamInfo> Params;
+
+  // Used to distinguish class specialization file names.
+  std::optional<SmallString<16>> MangledName;
 };
 
 // Records the template information for a struct or function that is a template

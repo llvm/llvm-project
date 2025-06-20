@@ -491,7 +491,14 @@ Error JSONGenerator::generateDocs(
       CreatedDirs.insert(Path);
     }
 
-    sys::path::append(Path, Info->getFileBaseName() + ".json");
+    SmallString<16> FileBaseName = Info->getFileBaseName();
+    if (Info->IT == InfoType::IT_record) {
+      if (auto Template = static_cast<RecordInfo *>(Info)->Template;
+          Template && Template->Specialization &&
+          Template->Specialization->MangledName)
+        FileBaseName = Template->Specialization->MangledName.value();
+    }
+    sys::path::append(Path, FileBaseName + ".json");
     FileToInfos[Path].push_back(Info);
   }
 
