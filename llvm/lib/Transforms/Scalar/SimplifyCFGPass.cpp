@@ -84,6 +84,10 @@ static cl::opt<bool> UserSpeculateUnpredictables(
     "speculate-unpredictables", cl::Hidden, cl::init(false),
     cl::desc("Speculate unpredictable branches (default = false)"));
 
+static cl::opt<bool> DisableSimplifyCFG(
+    "disable-simplify-cfg", cl::Hidden, cl::init(false),
+    cl::desc("Disable simplify cfg"));
+
 STATISTIC(NumSimpl, "Number of blocks simplified");
 
 static bool
@@ -305,6 +309,9 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
   assert((!RequireAndPreserveDomTree ||
           (DT && DT->verify(DominatorTree::VerificationLevel::Full))) &&
          "Original domtree is invalid?");
+
+  if (DisableSimplifyCFG)
+    return false;
 
   bool Changed = simplifyFunctionCFGImpl(F, TTI, DT, Options);
 
