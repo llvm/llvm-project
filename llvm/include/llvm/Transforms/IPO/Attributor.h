@@ -115,7 +115,6 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
@@ -1293,11 +1292,6 @@ struct InformationCache {
   /// Return TargetLibraryInfo for function \p F.
   TargetLibraryInfo *getTargetLibraryInfoForFunction(const Function &F) {
     return AG.getAnalysis<TargetLibraryAnalysis>(F);
-  }
-
-  /// Return TargetLibraryInfo for function \p F.
-  TargetTransformInfo *getTargetTransformInfoForFunction(const Function &F) {
-    return AG.getAnalysis<TargetIRAnalysis>(F);
   }
 
   /// Return true if \p F has the "kernel" function attribute

@@ -7350,7 +7350,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // Verify callee and caller agree on how the promoted argument would be
     // passed.
     Function &Fn = *getIRPosition().getAnchorScope();
-    const auto *TTI = A.getInfoCache().getTargetTransformInfoForFunction(Fn);
+    const auto *TTI =
+        A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(Fn);
     if (!TTI) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] Missing TTI for function "
                         << Fn.getName() << "\n");
@@ -10210,18 +10211,8 @@ bool AANoUndef::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     return true;
 
   Value &Val = IRP.getAssociatedValue();
-  auto IsTargetGuaranteedNotPoison = [&](Value &V) {
-    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&V)) {
-      const auto *TTI = A.getInfoCache().getTargetTransformInfoForFunction(
-          *ASC->getFunction());
-      return ASC && TTI->isValidAddrSpaceCast(ASC->getSrcAddressSpace(),
-                                              ASC->getDestAddressSpace());
-    }
-    return false;
-  };
   if (IRP.getPositionKind() != IRPosition::IRP_RETURNED &&
-      (isGuaranteedNotToBeUndefOrPoison(&Val) ||
-       IsTargetGuaranteedNotPoison(Val))) {
+      isGuaranteedNotToBeUndefOrPoison(&Val)) {
     LLVMContext &Ctx = Val.getContext();
     A.manifestAttrs(IRP, Attribute::get(Ctx, Attribute::NoUndef));
     return true;
@@ -12961,7 +12952,8 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
 
       // Use getAssumedAddrSpace if the associated function exists.
       if (F) {
-        auto *TTI = A.getInfoCache().getTargetTransformInfoForFunction(*F);
+        auto *TTI =
+            A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(*F);
         unsigned AssumedAS = TTI->getAssumedAddrSpace(&Obj);
         if (AssumedAS != ~0U)
           return takeAddressSpace(AssumedAS);
