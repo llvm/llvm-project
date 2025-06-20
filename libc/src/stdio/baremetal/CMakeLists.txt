@@ -49,7 +49,7 @@ add_entrypoint_object(
     putc.cpp
   HDRS
     ../putc.h
-    DEPENDS
+  DEPENDS
     libc.src.__support.CPP.string_view
     .baremetal_write_utils
 )
@@ -60,7 +60,7 @@ add_entrypoint_object(
     printf.cpp
   HDRS
     ../printf.h
-    DEPENDS
+  DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.__support.arg_list
     .baremetal_write_hooks
