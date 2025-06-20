@@ -221,6 +221,48 @@ namespace clang {
         Record.AddDeclRef(F.second);
     }
 
+    template <typename T> bool shouldSkipWritingSpecializations(T *Spec) {
+      // Now we will only avoid writing specializations if we're generating
+      // reduced BMI.
+      if (!GeneratingReducedBMI)
+        return false;
+
+      assert((isa<FunctionDecl, ClassTemplateSpecializationDecl,
+                  VarTemplateSpecializationDecl>(Spec)));
+
+      ArrayRef<TemplateArgument> Args;
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Spec))
+        Args = CTSD->getTemplateArgs().asArray();
+      else if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Spec))
+        Args = VTSD->getTemplateArgs().asArray();
+      else
+        Args = cast<FunctionDecl>(Spec)
+                   ->getTemplateSpecializationArgs()
+                   ->asArray();
+
+      // If there is any template argument is TULocal, we can avoid writing the
+      // specialization since the consumers of reduced BMI won't get the
+      // specialization anyway.
+      for (const TemplateArgument &TA : Args) {
+        switch (TA.getKind()) {
+        case TemplateArgument::Type: {
+          Linkage L = TA.getAsType()->getLinkage();
+          if (!isExternallyVisible(L))
+            return true;
+          break;
+        }
+        case TemplateArgument::Declaration:
+          if (!TA.getAsDecl()->isExternallyVisible())
+            return true;
+          break;
+        default:
+          break;
+        }
+      }
+
+      return false;
+    }
+
     /// Add to the record the first template specialization from each module
     /// file that provides a declaration of D. We store the DeclId and an
     /// ODRHash of the template arguments of D which should provide enough
@@ -235,6 +277,9 @@ namespace clang {
       CollectFirstDeclFromEachModule(D, /*IncludeLocal*/ true, Firsts);
 
       for (const auto &F : Firsts) {
+        if (shouldSkipWritingSpecializations(F.second))
+          continue;
+
         if (isa<ClassTemplatePartialSpecializationDecl,
                 VarTemplatePartialSpecializationDecl>(F.second))
           PartialSpecsInMap.push_back(F.second);
@@ -1389,7 +1434,7 @@ void ASTDeclWriter::VisitBindingDecl(BindingDecl *D) {
 
 void ASTDeclWriter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
   VisitDecl(D);
-  Record.AddStmt(D->getAsmString());
+  Record.AddStmt(D->getAsmStringExpr());
   Record.AddSourceLocation(D->getRParenLoc());
   Code = serialization::DECL_FILE_SCOPE_ASM;
 }
@@ -2144,11 +2189,7 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
   static_assert(DeclContext::NumDeclContextBits == 13,
                 "You need to update the serializer after you change the "
                 "DeclContextBits");
-
-  uint64_t LexicalOffset = 0;
-  uint64_t VisibleOffset = 0;
-  uint64_t ModuleLocalOffset = 0;
-  uint64_t TULocalOffset = 0;
+  LookupBlockOffsets Offsets;
 
   if (Writer.isGeneratingReducedBMI() && isa<NamespaceDecl>(DC) &&
       cast<NamespaceDecl>(DC)->isFromExplicitGlobalModule()) {
@@ -2157,17 +2198,12 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
     // details.
     Writer.DelayedNamespace.push_back(cast<NamespaceDecl>(DC));
   } else {
-    LexicalOffset =
+    Offsets.LexicalOffset =
         Writer.WriteDeclContextLexicalBlock(Record.getASTContext(), DC);
-    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC,
-                                        VisibleOffset, ModuleLocalOffset,
-                                        TULocalOffset);
+    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC, Offsets);
   }
 
-  Record.AddOffset(LexicalOffset);
-  Record.AddOffset(VisibleOffset);
-  Record.AddOffset(ModuleLocalOffset);
-  Record.AddOffset(TULocalOffset);
+  Record.AddLookupOffsets(Offsets);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {

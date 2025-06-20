@@ -253,10 +253,6 @@ class PredicateInfoBuilder {
   // whether it returned a valid result.
   DenseMap<Value *, unsigned int> ValueInfoNums;
 
-  // The set of edges along which we can only handle phi uses, due to critical
-  // edges.
-  DenseSet<std::pair<BasicBlock *, BasicBlock *>> EdgeUsesOnly;
-
   ValueInfo &getOrCreateValueInfo(Value *);
   const ValueInfo &getValueInfo(Value *) const;
 
@@ -459,8 +455,6 @@ void PredicateInfoBuilder::processBranch(
           PredicateBase *PB =
               new PredicateBranch(V, BranchBB, Succ, Cond, TakenEdge);
           addInfoFor(OpsToRename, V, PB);
-          if (!Succ->getSinglePredecessor())
-            EdgeUsesOnly.insert({BranchBB, Succ});
         }
       }
     }
@@ -487,8 +481,6 @@ void PredicateInfoBuilder::processSwitch(
       PredicateSwitch *PS = new PredicateSwitch(
           Op, SI->getParent(), TargetBlock, C.getCaseValue(), SI);
       addInfoFor(OpsToRename, Op, PS);
-      if (!TargetBlock->getSinglePredecessor())
-        EdgeUsesOnly.insert({BranchBB, TargetBlock});
     }
   }
 }
@@ -637,7 +629,7 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
         // block, and handle it specially. We know that it goes last, and only
         // dominate phi uses.
         auto BlockEdge = getBlockEdge(PossibleCopy);
-        if (EdgeUsesOnly.count(BlockEdge)) {
+        if (!BlockEdge.second->getSinglePredecessor()) {
           VD.LocalNum = LN_Last;
           auto *DomNode = DT.getNode(BlockEdge.first);
           if (DomNode) {
@@ -728,16 +720,12 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
 
 PredicateInfoBuilder::ValueInfo &
 PredicateInfoBuilder::getOrCreateValueInfo(Value *Operand) {
-  auto OIN = ValueInfoNums.find(Operand);
-  if (OIN == ValueInfoNums.end()) {
-    // This will grow it
+  auto Res = ValueInfoNums.try_emplace(Operand, ValueInfos.size());
+  if (Res.second) {
+    // Allocate space for new ValueInfo.
     ValueInfos.resize(ValueInfos.size() + 1);
-    // This will use the new size and give us a 0 based number of the info
-    auto InsertResult = ValueInfoNums.insert({Operand, ValueInfos.size() - 1});
-    assert(InsertResult.second && "Value info number already existed?");
-    return ValueInfos[InsertResult.first->second];
   }
-  return ValueInfos[OIN->second];
+  return ValueInfos[Res.first->second];
 }
 
 const PredicateInfoBuilder::ValueInfo &

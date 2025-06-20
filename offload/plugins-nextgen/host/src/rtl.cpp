@@ -326,9 +326,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 
   /// Print information about the device.
-  Error obtainInfoImpl(InfoQueueTy &Info) override {
+  Expected<InfoTreeNode> obtainInfoImpl() override {
+    InfoTreeNode Info;
     Info.add("Device Type", "Generic-elf-64bit");
-    return Plugin::success();
+    return Info;
   }
 
   /// This plugin should not setup the device environment or memory pool.

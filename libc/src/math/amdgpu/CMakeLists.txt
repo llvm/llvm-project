@@ -1,21 +1,3 @@
-# Math functions not yet available in the libc project, or those not yet tuned
-# for GPU workloads are provided as wrappers over vendor libraries. If we find
-# them ahead of time we will import them statically. Otherwise, we will keep
-# them as external references and expect them to be resolved by the user when
-# they compile. In the future,we will use implementations from the 'libc'
-# project and not provide these wrappers.
-find_package(AMDDeviceLibs QUIET HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-if(AMDDeviceLibs_FOUND)
-  message(STATUS "Found the ROCm device library. Implementations falling back "
-                 "to the vendor libraries will be resolved statically.")
-  get_target_property(ocml_path ocml IMPORTED_LOCATION)
-  set(bitcode_link_flags
-      "SHELL:-Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}")
-else()
-  message(STATUS "Could not find the ROCm device library. Unimplemented "
-                 "functions will be an external reference to the vendor libraries.")
-endif()
-
 add_entrypoint_object(
   ceil
   SRCS

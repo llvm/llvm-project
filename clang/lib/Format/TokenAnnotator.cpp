@@ -1769,7 +1769,15 @@ private:
                        Keywords.kw___has_include_next)) {
         parseHasInclude();
       }
-      if (Style.isCSharp()) {
+      if (IsCpp) {
+        if (Next && Next->is(tok::l_paren) && Prev &&
+            Prev->isOneOf(tok::kw___cdecl, tok::kw___stdcall,
+                          tok::kw___fastcall, tok::kw___thiscall,
+                          tok::kw___regcall, tok::kw___vectorcall)) {
+          Tok->setFinalizedType(TT_FunctionDeclarationName);
+          Next->setFinalizedType(TT_FunctionDeclarationLParen);
+        }
+      } else if (Style.isCSharp()) {
         if (Tok->is(Keywords.kw_where) && Next && Next->isNot(tok::l_paren)) {
           Tok->setType(TT_CSharpGenericTypeConstraint);
           parseCSharpGenericTypeConstraint();
@@ -3970,7 +3978,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   for (auto *Tok = FirstNonComment && FirstNonComment->isNot(tok::kw_using)
                        ? FirstNonComment->Next
                        : nullptr;
-       Tok; Tok = Tok->Next) {
+       Tok && Tok->isNot(BK_BracedInit); Tok = Tok->Next) {
     if (Tok->is(TT_StartOfName))
       SeenName = true;
     if (Tok->Previous->EndsCppAttributeGroup)

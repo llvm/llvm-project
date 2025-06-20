@@ -59,7 +59,7 @@
 "`P2248R8 <https://wg21.link/P2248R8>`__","Enabling list-initialization for algorithms","2024-03 (Tokyo)","","",""
 "`P2810R4 <https://wg21.link/P2810R4>`__","``is_debugger_present`` ``is_replaceable``","2024-03 (Tokyo)","","",""
 "`P1068R11 <https://wg21.link/P1068R11>`__","Vector API for random number generation","2024-03 (Tokyo)","","",""
-"`P2944R3 <https://wg21.link/P2944R3>`__","Comparisons for ``reference_wrapper``","2024-03 (Tokyo)","|Partial|","","Implemented changes to ``reference_wrapper`` and ``pair``"
+"`P2944R3 <https://wg21.link/P2944R3>`__","Comparisons for ``reference_wrapper``","2024-03 (Tokyo)","|Partial|","","The changes to ``optional``, ``tuple`` and ``variant`` are not yet implemented"
 "`P2642R6 <https://wg21.link/P2642R6>`__","Padded ``mdspan`` layouts","2024-03 (Tokyo)","","",""
 "`P3029R1 <https://wg21.link/P3029R1>`__","Better ``mdspan``'s CTAD","2024-03 (Tokyo)","|Complete|","19",""
 "","","","","",""

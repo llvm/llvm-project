@@ -28,6 +28,13 @@ struct MinSequenceContainer {
   template <class It>
   explicit MinSequenceContainer(It first, It last) : data_(first, last) {}
   MinSequenceContainer(std::initializer_list<T> il) : data_(il) {}
+
+  template <class It>
+  void assign(It first, It last) {
+    data_.assign(first, last);
+  }
+  void assign(std::initializer_list<T> il) { data_.assign(il); }
+  void assign(size_type n, value_type t) { data_.assign(n, t); }
   iterator begin() { return iterator(data_.data()); }
   const_iterator begin() const { return const_iterator(data_.data()); }
   const_iterator cbegin() const { return const_iterator(data_.data()); }
@@ -45,6 +52,11 @@ struct MinSequenceContainer {
 
   iterator insert(const_iterator p, T value) {
     return from_vector_iterator(data_.insert(to_vector_iterator(p), std::move(value)));
+  }
+
+  template <class Range>
+  iterator insert_range(const_iterator p, Range&& rg) {
+    return from_vector_iterator(data_.insert_range(to_vector_iterator(p), std::forward<Range>(rg)));
   }
 
   iterator erase(const_iterator first, const_iterator last) {

@@ -1831,6 +1831,22 @@ TEST_P(AArch64ExtensionDependenciesBaseCPUTestFixture,
   }
 }
 
+TEST(TargetParserTest, testAArch64ReconstructFromParsedFeatures) {
+  AArch64::ExtensionSet Extensions;
+  std::vector<std::string> FeatureOptions = {
+      "-sve2", "-Baz", "+sve", "+FooBar", "+sve2", "+neon", "-sve",
+  };
+  std::vector<std::string> NonExtensions;
+  Extensions.reconstructFromParsedFeatures(FeatureOptions, NonExtensions);
+
+  std::vector<std::string> NonExtensionsExpected = {"-Baz", "+FooBar"};
+  ASSERT_THAT(NonExtensions, testing::ContainerEq(NonExtensionsExpected));
+  std::vector<StringRef> Features;
+  Extensions.toLLVMFeatureList(Features);
+  std::vector<StringRef> FeaturesExpected = {"+neon", "-sve", "+sve2"};
+  ASSERT_THAT(Features, testing::ContainerEq(FeaturesExpected));
+}
+
 AArch64ExtensionDependenciesBaseArchTestParams
     AArch64ExtensionDependenciesArchData[] = {
         // Base architecture features

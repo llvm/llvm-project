@@ -52,7 +52,7 @@ class DirectiveLanguage {
 }
 
 // Base class for versioned entities.
-class Versioned<int min = 1, int max = 0x7FFFFFFF> {
+class Versioned<int min = 0, int max = 0x7FFFFFFF> {
   // Mininum version number where this object is valid.
   int minVersion = min;
 
@@ -60,7 +60,7 @@ class Versioned<int min = 1, int max = 0x7FFFFFFF> {
   int maxVersion = max;
 }
 
-class Spelling<string s, int min = 1, int max = 0x7FFFFFFF>
+class Spelling<string s, int min = 0, int max = 0x7FFFFFFF>
     : Versioned<min, max> {
   string spelling = s;
 }
