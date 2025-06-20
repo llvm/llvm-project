@@ -26,7 +26,7 @@ using LIBC_NAMESPACE::fputil::not_equals;
 // - need to see if FPRep could be used?
 
 #define TEST_EQUALS(Name, Type)                                                \
-  TEST(LlvmLibcDyadic##Name##Test, Equals) {                                   \
+  TEST(LlvmLibc##Name##ComparisionOperationsTest, Equals) {                                   \
     using Bits = LIBC_NAMESPACE::fputil::FPBits<Type>;                         \
     Type pos_zero = Bits::zero().get_val();                                    \
     Type neg_zero = -pos_zero;                                                 \
@@ -63,7 +63,7 @@ using LIBC_NAMESPACE::fputil::not_equals;
   }
 
 #define TEST_NOT_EQUALS(Name, Type)                                            \
-  TEST(LlvmLibcDyadic##Name##Test, NotEquals) {                                \
+  TEST(LlvmLibc##Name##ComparisionOperationsTest, NotEquals) {                                \
     using Bits = LIBC_NAMESPACE::fputil::FPBits<Type>;                         \
     Type pos_zero = Bits::zero().get_val();                                    \
     Type neg_zero = Bits::zero(Sign::NEG).get_val();                           \
@@ -95,7 +95,7 @@ using LIBC_NAMESPACE::fputil::not_equals;
   }
 
 #define TEST_LESS_THAN(Name, Type)                                             \
-  TEST(LlvmLibcDyadic##Name##Test, LessThan) {                                 \
+  TEST(LlvmLibc##Name##ComparisionOperationsTest, LessThan) {                                 \
     using Bits = LIBC_NAMESPACE::fputil::FPBits<Type>;                         \
     Type pos_zero = Bits::zero().get_val();                                    \
     Type neg_zero = -pos_zero;                                                 \
@@ -135,7 +135,7 @@ using LIBC_NAMESPACE::fputil::not_equals;
   }
 
 #define TEST_GREATER_THAN(Name, Type)                                          \
-  TEST(LlvmLibcDyadic##Name##Test, GreaterThan) {                              \
+  TEST(LlvmLibc##Name##ComparisionOperationsTest, GreaterThan) {                              \
     using Bits = LIBC_NAMESPACE::fputil::FPBits<Type>;                         \
     Type pos_zero = Bits::zero().get_val();                                    \
     Type neg_zero = -pos_zero;                                                 \
@@ -170,7 +170,7 @@ using LIBC_NAMESPACE::fputil::not_equals;
   }
 
 #define TEST_LESS_THAN_OR_EQUALS(Name, Type)                                   \
-  TEST(LlvmLibcDyadic##Name##Test, LessThanOrEquals) {                         \
+  TEST(LlvmLibc##Name##ComparisionOperationsTest, LessThanOrEquals) {                         \
     using Bits = LIBC_NAMESPACE::fputil::FPBits<Type>;                         \
     Type pos_zero = Bits::zero().get_val();                                    \
     Type neg_zero = -pos_zero;                                                 \
@@ -203,7 +203,7 @@ using LIBC_NAMESPACE::fputil::not_equals;
   }
 
 #define TEST_GREATER_THAN_OR_EQUALS(Name, Type)                                \
-  TEST(LlvmLibcDyadic##Name##Test, GreaterThanOrEquals) {                      \
+  TEST(LlvmLibc##Name##ComparisionOperationsTest, GreaterThanOrEquals) {                      \
     using Bits = LIBC_NAMESPACE::fputil::FPBits<Type>;                         \
     Type pos_zero = Bits::zero().get_val();                                    \
     Type neg_zero = -pos_zero;                                                 \
