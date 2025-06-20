@@ -1694,6 +1694,14 @@ static void handleIFuncAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) IFuncAttr(S.Context, AL, Str));
 }
 
+static void handleStructorNameAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+
+  D->addAttr(::new (S.Context) StructorNameAttr(S.Context, AL, Str));
+}
+
 static void handleAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
@@ -7621,6 +7629,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
 
+  case ParsedAttr::AT_StructorName:
+    handleStructorNameAttr(S, D, AL);
+    break;
   case ParsedAttr::AT_AbiTag:
     handleAbiTagAttr(S, D, AL);
     break;
