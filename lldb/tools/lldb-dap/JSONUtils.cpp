@@ -572,19 +572,19 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto target = frame.GetThread().GetProcess().GetTarget();
-  auto source = CreateSource(frame.GetPCAddress(), target);
+  lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
+  protocol::Source source = CreateSource(frame);
+
   if (!IsAssemblySource(source)) {
     // This is a normal source with a valid line entry.
-    auto line_entry = frame.GetLineEntry();
+    lldb::SBLineEntry line_entry = frame.GetLineEntry();
     object.try_emplace("line", line_entry.GetLine());
-    auto column = line_entry.GetColumn();
+    uint32_t column = line_entry.GetColumn();
     object.try_emplace("column", column);
   } else if (frame.GetSymbol().IsValid()) {
     // This is a source where the disassembly is used, but there is a valid
     // symbol. Calculate the line of the current PC from the start of the
     // current symbol.
-    lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
     lldb::SBInstructionList inst_list = target.ReadInstructions(
         frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
     size_t inst_line = inst_list.GetSize();
