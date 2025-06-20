@@ -6,17 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/workitem/get_enqueued_num_sub_groups.h>
+#include <clc/workitem/clc_get_enqueued_num_sub_groups.h>
 
-_CLC_DEF _CLC_OVERLOAD size_t get_local_size(uint dim) {
-  switch (dim) {
-  case 0:
-    return __nvvm_read_ptx_sreg_ntid_x();
-  case 1:
-    return __nvvm_read_ptx_sreg_ntid_y();
-  case 2:
-    return __nvvm_read_ptx_sreg_ntid_z();
-  default:
-    return 0;
-  }
+_CLC_OVERLOAD _CLC_DEF uint get_enqueued_num_sub_groups() {
+  return __clc_get_enqueued_num_sub_groups();
 }

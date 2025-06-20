@@ -6,17 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#ifndef __CLC_WORKITEM_CLC_GET_GLOBAL_LINEAR_ID_H__
+#define __CLC_WORKITEM_CLC_GET_GLOBAL_LINEAR_ID_H__
 
-_CLC_DEF _CLC_OVERLOAD size_t get_num_groups(uint dim) {
-  switch (dim) {
-  case 0:
-    return __nvvm_read_ptx_sreg_nctaid_x();
-  case 1:
-    return __nvvm_read_ptx_sreg_nctaid_y();
-  case 2:
-    return __nvvm_read_ptx_sreg_nctaid_z();
-  default:
-    return 0;
-  }
-}
+#include <clc/internal/clc.h>
+
+_CLC_OVERLOAD _CLC_DECL size_t __clc_get_global_linear_id();
+
+#endif // __CLC_WORKITEM_CLC_GET_GLOBAL_LINEAR_ID_H__

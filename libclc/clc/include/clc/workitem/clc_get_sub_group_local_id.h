@@ -6,17 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#ifndef __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
+#define __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
 
-_CLC_DEF _CLC_OVERLOAD size_t get_local_id(uint dim) {
-  switch (dim) {
-  case 0:
-    return __nvvm_read_ptx_sreg_tid_x();
-  case 1:
-    return __nvvm_read_ptx_sreg_tid_y();
-  case 2:
-    return __nvvm_read_ptx_sreg_tid_z();
-  default:
-    return 0;
-  }
-}
+#include <clc/internal/clc.h>
+
+_CLC_DEF _CLC_OVERLOAD uint __clc_get_sub_group_local_id();
+
+#endif // __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
