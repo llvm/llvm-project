@@ -2381,6 +2381,16 @@ def fir_IfOp
     static constexpr llvm::StringRef getWeightsAttrAssemblyName() {
       return "weights";
     }
+
+    /// Sets WeightedRegionBranchOpInterface weights to indicate
+    /// that either THEN or ELSE branch is unlikely.
+    /// By default, THEN branch is set to be unlikely.
+    void setUnlikelyIfWeights(bool unlikelyElse = false) {
+      if (unlikelyElse)
+        setWeights({1, 0});
+      else
+        setWeights({0, 1});
+    }
   }];
 }
 
