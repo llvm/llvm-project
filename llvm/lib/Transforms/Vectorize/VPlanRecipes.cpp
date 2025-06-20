@@ -150,6 +150,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
+  case VPReverseInterleavePtrSC:
   case VPVectorEndPointerSC:
     return false;
   case VPInstructionSC:
@@ -2262,6 +2263,33 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPReverseInterleavePtrRecipe::execute(VPTransformState &State) {
+  auto &Builder = State.Builder;
+  Value *Ptr = State.get(getPtr(), /*IsScalar*/ true);
+  Value *RuntimeVF = State.get(getVFValue(), /*IsScalar*/ true);
+  Type *IndexTy = Builder.getInt32Ty();
+  if (RuntimeVF->getType() != IndexTy)
+    RuntimeVF = Builder.CreateZExtOrTrunc(RuntimeVF, IndexTy);
+  Value *Index = Builder.CreateSub(RuntimeVF, Builder.getInt32(1));
+  Index = Builder.CreateMul(Index, Builder.getInt32(Factor));
+  Index = Builder.CreateNeg(Index);
+  Value *ReversePtr =
+      Builder.CreateGEP(IndexedTy, Ptr, Index, "", getGEPNoWrapFlags());
+
+  State.set(this, ReversePtr, /*IsScalar*/ true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPReverseInterleavePtrRecipe::print(raw_ostream &O, const Twine &Indent,
+                                         VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = reverse-interleave-ptr";
+  printFlags(O);
+  printOperands(O, SlotTracker);
+}
+#endif
+
 void VPBlendRecipe::execute(VPTransformState &State) {
   assert(isNormalized() && "Expected blend to be normalized!");
   // We know that all PHIs in non-header blocks are converted into
@@ -3222,25 +3250,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   Value *ResAddr = State.get(Addr, VPLane(0));
   if (auto *I = dyn_cast<Instruction>(ResAddr))
     State.setDebugLocFrom(I->getDebugLoc());
-
-  // If the group is reverse, adjust the index to refer to the last vector lane
-  // instead of the first. We adjust the index from the first vector lane,
-  // rather than directly getting the pointer for lane VF - 1, because the
-  // pointer operand of the interleaved access is supposed to be uniform.
-  if (Group->isReverse()) {
-    Value *RuntimeVF =
-        getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);
-    Value *Index =
-        State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
-    Index = State.Builder.CreateMul(Index,
-                                    State.Builder.getInt32(Group->getFactor()));
-    Index = State.Builder.CreateNeg(Index);
-
-    bool InBounds = false;
-    if (auto *Gep = dyn_cast<GetElementPtrInst>(ResAddr->stripPointerCasts()))
-      InBounds = Gep->isInBounds();
-    ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Index, "", InBounds);
-  }
 
   State.setDebugLocFrom(getDebugLoc());
   Value *PoisonVec = PoisonValue::get(VecTy);

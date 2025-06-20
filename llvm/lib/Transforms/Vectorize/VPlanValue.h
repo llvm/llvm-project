@@ -335,6 +335,7 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
+    VPReverseInterleavePtrSC,
     VPMulAccumulateReductionSC,
     VPExtendedReductionSC,
     VPPartialReductionSC,

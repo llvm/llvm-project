@@ -4261,6 +4261,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPDerivedIVSC:
       case VPDef::VPScalarIVStepsSC:
       case VPDef::VPReplicateSC:
+      case VPDef::VPReverseInterleavePtrSC:
       case VPDef::VPInstructionSC:
       case VPDef::VPCanonicalIVPHISC:
       case VPDef::VPVectorPointerSC:
