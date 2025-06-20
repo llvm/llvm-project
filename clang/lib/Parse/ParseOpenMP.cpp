@@ -3401,7 +3401,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     break;
   case OMPC_looprange:
     Clause = ParseOpenMPLoopRangeClause();
-    break;  
+    break;
   default:
     break;
   }

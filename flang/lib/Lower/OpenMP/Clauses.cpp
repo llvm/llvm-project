@@ -998,7 +998,7 @@ Link make(const parser::OmpClause::Link &inp,
 }
 
 LoopRange make(const parser::OmpClause::Looprange &inp,
-            semantics::SemanticsContext &semaCtx) {
+               semantics::SemanticsContext &semaCtx) {
   llvm_unreachable("Unimplemented: looprange");
 }
 
