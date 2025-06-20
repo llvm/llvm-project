@@ -10866,7 +10866,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       (AS == AMDGPUAS::GLOBAL_ADDRESS &&
        Subtarget->getScalarizeGlobalBehavior() && Load->isSimple() &&
        isMemOpHasNoClobberedMemOperand(Load))) {
-    if ((!Op->isDivergent() || AMDGPUInstrInfo::isUniformMMO(MMO)) &&
+    if ((!Op->isDivergent() || AMDGPU::isUniformMMO(MMO)) &&
         Alignment >= Align(4) && NumElements < 32) {
       if (MemVT.isPow2VectorType() ||
           (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
