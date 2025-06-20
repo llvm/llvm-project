@@ -63,4 +63,41 @@ def SimplifyBoundedAffineOpsOp
   }];
 }
 
+def SimplifyMinMaxAffineOpsOp :
+  Op<Transform_Dialect, "affine.simplify_min_max_affine_ops", [
+    TransformOpInterface,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    TransformEachOpTrait
+  ]> {
+  let description = [{
+    Simplify all the affine.min / affine.max ops being targeted or nested in the
+    target operation, using the `mlir::affine::simplifyAffineMinMaxOps`
+    transform.
+
+    Example:
+    ```
+    %0 = transform.structured.match ops{["gpu.launch", "affine.max"]} in %arg1
+    transform.affine.simplify_min_max_affine_ops %0 : !transform.any_op
+    ```
+
+    #### Return modes
+
+    This transform consumes the target handle and does not produce any results.
+    This transforms never produces errors.
+
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let assemblyFormat = [{
+      $target attr-dict `:` type($target)
+  }];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // Affine_TRANSFORM_OPS

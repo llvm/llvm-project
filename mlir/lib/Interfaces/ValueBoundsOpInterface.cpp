@@ -146,7 +146,7 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
 }
 
 ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
-                                             ArrayRef<Value> mapOperands)
+                                             ValueRange mapOperands)
     : Variable(map, llvm::map_to_vector(mapOperands,
                                         [](Value v) { return Variable(v); })) {}
 
@@ -736,6 +736,44 @@ bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
   return isEmpty;
 }
 
+std::optional<bool> ValueBoundsConstraintSet::strongComparePos(
+    int64_t lhsPos, ComparisonOperator cmp, int64_t rhsPos) {
+  auto strongCmp = [&](ComparisonOperator cmp,
+                       ComparisonOperator negCmp) -> std::optional<bool> {
+    if (comparePos(lhsPos, cmp, rhsPos))
+      return true;
+    if (comparePos(lhsPos, negCmp, rhsPos))
+      return false;
+    return std::nullopt;
+  };
+  switch (cmp) {
+  case ComparisonOperator::LT:
+    return strongCmp(ComparisonOperator::LT, ComparisonOperator::GE);
+  case ComparisonOperator::LE:
+    return strongCmp(ComparisonOperator::LE, ComparisonOperator::GT);
+  case ComparisonOperator::GT:
+    return strongCmp(ComparisonOperator::GT, ComparisonOperator::LE);
+  case ComparisonOperator::GE:
+    return strongCmp(ComparisonOperator::GE, ComparisonOperator::LT);
+  case ComparisonOperator::EQ: {
+    std::optional<bool> le =
+        strongComparePos(lhsPos, ComparisonOperator::LE, rhsPos);
+    if (!le)
+      return std::nullopt;
+    if (!*le)
+      return false;
+    std::optional<bool> ge =
+        strongComparePos(lhsPos, ComparisonOperator::GE, rhsPos);
+    if (!ge)
+      return std::nullopt;
+    if (!*ge)
+      return false;
+    return true;
+  }
+  }
+  llvm_unreachable("invalid comparison operator");
+}
+
 bool ValueBoundsConstraintSet::populateAndCompare(const Variable &lhs,
                                                   ComparisonOperator cmp,
                                                   const Variable &rhs) {
@@ -761,6 +799,25 @@ bool ValueBoundsConstraintSet::compare(const Variable &lhs,
   lhsPos = cstr.populateConstraints(lhs.map, lhs.mapOperands);
   rhsPos = cstr.populateConstraints(rhs.map, rhs.mapOperands);
   return cstr.comparePos(lhsPos, cmp, rhsPos);
+}
+
+std::optional<bool> ValueBoundsConstraintSet::strongCompare(
+    const Variable &lhs, ComparisonOperator cmp, const Variable &rhs) {
+  int64_t lhsPos = -1, rhsPos = -1;
+  auto stopCondition = [&](Value v, std::optional<int64_t> dim,
+                           ValueBoundsConstraintSet &cstr) {
+    // Keep processing as long as lhs/rhs were not processed.
+    if (size_t(lhsPos) >= cstr.positionToValueDim.size() ||
+        size_t(rhsPos) >= cstr.positionToValueDim.size())
+      return false;
+    // Keep processing as long as the strong relation cannot be proven.
+    std::optional<bool> ordered = cstr.strongComparePos(lhsPos, cmp, rhsPos);
+    return ordered ? true : false;
+  };
+  ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
+  lhsPos = cstr.populateConstraints(lhs.map, lhs.mapOperands);
+  rhsPos = cstr.populateConstraints(rhs.map, rhs.mapOperands);
+  return cstr.strongComparePos(lhsPos, cmp, rhsPos);
 }
 
 FailureOr<bool> ValueBoundsConstraintSet::areEqual(const Variable &var1,
