@@ -30,6 +30,11 @@ LLVM_LIBC_FUNCTION(int, fprintf,
   static constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
 
+  write_utils::StreamWriter write_hook = write_utils::get_write_hook(stream);
+  if (write_hook == nullptr) {
+    return 0;
+  }
+
   printf_core::WriteBuffer<printf_core::WriteMode::FLUSH_TO_STREAM> wb(
       buffer, BUFF_SIZE, write_utils::get_write_hook(stream), nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
