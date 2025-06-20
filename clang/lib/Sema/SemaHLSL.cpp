@@ -1078,8 +1078,6 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
 
 bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                                        SourceLocation Loc) {
-  auto Elements = D->getRootElements();
-
   // The following conducts analysis on resource ranges to detect and report
   // any overlaps in resource ranges.
   //
@@ -1106,7 +1104,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
 
   // 1. Collect RangeInfos
   llvm::SmallVector<RangeInfo> Infos;
-  for (const auto &Elem : Elements) {
+  for (const llvm::hlsl::rootsig::RootElement &Elem : D->getRootElements()) {
     if (const auto *Descriptor =
             std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
       RangeInfo Info;
@@ -1175,7 +1173,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
 
     // 3A: Insert range info into corresponding Visibility ResourceRange
     ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Vis)];
-    if (auto Overlapping = VisRange.insert(Info))
+    if (std::optional<const RangeInfo *> Overlapping = VisRange.insert(Info))
       ReportOverlap(&Info, Overlapping.value());
 
     // 3B: Check for overlap in all overlapping Visibility ResourceRanges
@@ -1194,7 +1192,8 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
             : MutableArrayRef<ResourceRange>{Ranges}.take_front();
 
     for (ResourceRange &Range : OverlapRanges)
-      if (auto Overlapping = Range.getOverlapping(Info))
+      if (std::optional<const RangeInfo *> Overlapping =
+              Range.getOverlapping(Info))
         ReportOverlap(&Info, Overlapping.value());
   }
 
