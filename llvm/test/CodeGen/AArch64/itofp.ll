@@ -8182,9 +8182,11 @@ define <2 x half> @utofp_v2i8_v2f16(<2 x i8> %a) {
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v2i8_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-GI-FP16-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-FP16-NEXT:    mov w8, #255 // =0xff
 ; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    fmov s1, w8
+; CHECK-GI-FP16-NEXT:    mov v1.h[1], w8
+; CHECK-GI-FP16-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-FP16-NEXT:    ucvtf v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ret
 entry:

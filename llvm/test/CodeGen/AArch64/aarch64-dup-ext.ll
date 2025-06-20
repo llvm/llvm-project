@@ -184,13 +184,15 @@ define <2 x i16> @dupsext_v2i8_v2i16(i8 %src, <2 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: dupsext_v2i8_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    lsl w8, w0, #8
-; CHECK-GI-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
-; CHECK-GI-NEXT:    sshr v0.2s, v0.2s, #24
+; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-NEXT:    dup v1.4h, w8
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-GI-NEXT:    mul v0.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %in = sext i8 %src to i16
