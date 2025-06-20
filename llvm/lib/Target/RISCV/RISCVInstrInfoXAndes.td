@@ -53,6 +53,26 @@ def simm20_lsb000 : Operand<XLenVT> {
   let DecoderMethod = "decodeSImmOperandAndLslN<20, 3>";
 }
 
+// Predicate: True if immediate is a power of 2.
+def PowerOf2 : PatLeaf<(imm), [{
+  if (N->getValueType(0) == MVT::i32)
+    return isPowerOf2_32(N->getZExtValue());
+  else if (N->getValueType(0) == MVT::i64)
+    return isPowerOf2_64(N->getZExtValue());
+  else
+    return false;
+}]>;
+
+// Transformation function: Get log2 of immediate.
+def Log2 : SDNodeXForm<imm, [{
+  uint64_t Imm;
+  if (N->getValueType(0) == MVT::i32)
+    Imm = Log2_32(N->getZExtValue());
+  else
+    Imm = Log2_64(N->getZExtValue());
+  return CurDAG->getTargetConstant(Imm, SDLoc(N), N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -556,7 +576,43 @@ def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
+class NDS_BBPat<CondCode Cond, NDSRVInstBB Inst>
+    : Pat<(riscv_brcc(and(XLenVT GPR:$rs1), PowerOf2:$mask), 0, Cond,
+              bb:$imm10),
+          (Inst GPR:$rs1, (Log2 PowerOf2:$mask), bare_simm11_lsb0:$imm10)>;
+
+class NDS_BCPat<CondCode Cond, NDSRVInstBC Inst>
+    : Pat<(riscv_brcc(XLenVT GPR:$rs1), uimm7:$cimm, Cond, bb:$imm10),
+          (Inst GPR:$rs1, uimm7:$cimm, bare_simm11_lsb0:$imm10)>;
+
+defm CC_UImmLog2XLen_NDS : SelectCC_GPR_riirr<GPR, uimmlog2xlen>;
+defm CC_UImm7_NDS        : SelectCC_GPR_riirr<GPR, uimm7>;
+
+class SelectNDS_BB<CondCode Cond>
+    : Pat<(riscv_selectcc_frag:$cc(and(XLenVT GPR:$lhs), PowerOf2:$mask), 0,
+              Cond, (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_UImmLog2XLen_NDS GPR:$lhs, (Log2 PowerOf2:$mask),
+              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
+class SelectNDS_BC<CondCode Cond>
+    : Pat<(riscv_selectcc_frag:$cc(XLenVT GPR:$lhs), uimm7:$cimm, Cond,
+              (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_UImm7_NDS GPR:$lhs, uimm7:$cimm,
+              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
 let Predicates = [HasVendorXAndesPerf] in {
+
+def : NDS_BBPat<SETEQ, NDS_BBC>;
+def : NDS_BBPat<SETNE, NDS_BBS>;
+
+def : SelectNDS_BB<SETEQ>;
+def : SelectNDS_BB<SETNE>;
+
+def : NDS_BCPat<SETEQ, NDS_BEQC>;
+def : NDS_BCPat<SETNE, NDS_BNEC>;
+
+def : SelectNDS_BC<SETEQ>;
+def : SelectNDS_BC<SETNE>;
 
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (NDS_BFOS GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (NDS_BFOS GPR:$rs1, 7, 0)>;

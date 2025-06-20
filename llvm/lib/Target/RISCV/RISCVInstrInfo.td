@@ -321,7 +321,7 @@ def uimm6 : RISCVUImmLeafOp<6>;
 def uimm7_opcode : RISCVUImmOp<7> {
   let ParserMatchClass = InsnDirectiveOpcode;
 }
-def uimm7 : RISCVUImmOp<7>;
+def uimm7 : RISCVUImmLeafOp<7>;
 def uimm8 : RISCVUImmOp<8>;
 def uimm16 : RISCVUImmOp<16>;
 def uimm32 : RISCVUImmOp<32>;
