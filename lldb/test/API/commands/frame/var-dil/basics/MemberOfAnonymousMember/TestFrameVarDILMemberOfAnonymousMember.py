@@ -28,7 +28,7 @@ class TestFrameVarDILMemberOfAnonymousMember(TestBase):
         self.expect_var_path("a.y", value="2")
 
         self.expect("frame variable 'b.x'", error=True,
-                    substrs=["no member named 'x' in 'B'"])
+                    substrs=["\"x\" is not a member of \"(B) b\""])
         #self.expect_var_path("b.y", value="0")
         self.expect_var_path("b.z", value="3")
         self.expect_var_path("b.w", value="4")
@@ -44,18 +44,18 @@ class TestFrameVarDILMemberOfAnonymousMember(TestBase):
         self.expect_var_path("d.w", value="10")
 
         self.expect("frame variable 'e.x'", error=True,
-                    substrs=["no member named 'x' in 'E'"])
+                    substrs=["\"x\" is not a member of \"(E) e\""])
         self.expect("frame variable 'f.x'", error=True,
-                    substrs=["no member named 'x' in 'F'"])
+                    substrs=["\"x\" is not a member of \"(F) f\""])
         self.expect_var_path("f.named_field.x", value="12")
 
         self.expect_var_path("unnamed_derived.y", value="2")
         self.expect_var_path("unnamed_derived.z", value="13")
 
         self.expect("frame variable 'derb.x'", error=True,
-                    substrs=["no member named 'x' in 'DerivedB'"])
+                    substrs=["\"x\" is not a member of \"(DerivedB) derb\""])
         self.expect("frame variable 'derb.y'", error=True,
-                    substrs=["no member named 'y' in 'DerivedB'"])
+                    substrs=["\"y\" is not a member of \"(DerivedB) derb\""])
         self.expect_var_path("derb.w", value="14")
         self.expect_var_path("derb.k", value="15")
         self.expect_var_path("derb.a.x", value="1")

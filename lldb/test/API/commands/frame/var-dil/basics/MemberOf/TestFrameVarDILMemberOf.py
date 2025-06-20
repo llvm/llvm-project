@@ -32,7 +32,7 @@ class TestFrameVarDILMemberOf(TestBase):
         self.expect_var_path("sp->r", type="int &")
 
         self.expect("frame variable 'sp->foo'", error=True,
-                    substrs=["no member named 'foo' in 'Sx *'"])
+                    substrs=["\"foo\" is not a member of \"(Sx *) sp\""])
 
         self.expect("frame variable 'sp.x'", error=True,
                     substrs=["member reference type 'Sx *' is a "
