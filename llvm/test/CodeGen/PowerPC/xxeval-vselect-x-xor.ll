@@ -31,10 +31,12 @@ define <2 x i64> @ternary_A_and_BC_xor_BC_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i
 ; CHECK-LABEL: ternary_A_and_BC_xor_BC_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
+; CHECK-NEXT:    xxland vs0, v3, v4
+; CHECK-NEXT:    xxlxor vs1, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxeval v2, v2, v3, v4, 97
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
 ; CHECK-NEXT:    blr
 entry:
   %and = and <2 x i64> %B, %C
@@ -63,10 +65,11 @@ define <2 x i64> @ternary_A_B_xor_BC_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64> %
 ; CHECK-LABEL: ternary_A_B_xor_BC_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
+; CHECK-NEXT:    xxlxor vs0, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxeval v2, v2, v3, v4, 99
+; CHECK-NEXT:    xxsel v2, vs0, v3, v2
 ; CHECK-NEXT:    blr
 entry:
   %xor = xor <2 x i64> %B, %C
@@ -94,10 +97,11 @@ define <2 x i64> @ternary_A_C_xor_BC_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64> %
 ; CHECK-LABEL: ternary_A_C_xor_BC_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
+; CHECK-NEXT:    xxlxor vs0, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxeval v2, v2, v3, v4, 101
+; CHECK-NEXT:    xxsel v2, vs0, v4, v2
 ; CHECK-NEXT:    blr
 entry:
   %xor = xor <2 x i64> %B, %C
@@ -126,10 +130,12 @@ define <2 x i64> @ternary_A_or_BC_xor_BC_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i6
 ; CHECK-LABEL: ternary_A_or_BC_xor_BC_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
+; CHECK-NEXT:    xxlor vs0, v3, v4
+; CHECK-NEXT:    xxlxor vs1, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxeval v2, v2, v3, v4, 103
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
 ; CHECK-NEXT:    blr
 entry:
   %or = or <2 x i64> %B, %C
@@ -160,10 +166,12 @@ define <2 x i64> @ternary_A_nor_BC_xor_BC_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i
 ; CHECK-LABEL: ternary_A_nor_BC_xor_BC_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
+; CHECK-NEXT:    xxlnor vs0, v3, v4
+; CHECK-NEXT:    xxlxor vs1, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxeval v2, v2, v3, v4, 104
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
 ; CHECK-NEXT:    blr
 entry:
   %or = or <2 x i64> %B, %C
