@@ -1,0 +1,702 @@
+{"app_name":"main","timestamp":"2025-06-18 23:37:23.00 -0700","app_version":"","slice_uuid":"7c2f2587-904b-32ff-8be3-746e278e7599","build_version":"","platform":1,"share_with_app_devs":0,"is_first_party":1,"bug_type":"309","os_version":"macOS 26.0 (25A5279m)","roots_installed":0,"incident_id":"E09ABF8E-F31C-481F-BD4A-9ED9622096E8","name":"main"}
+{
+  "uptime" : 230000,
+  "procRole" : "Unspecified",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "Mac16,6",
+  "coalitionID" : 1256,
+  "osVersion" : {
+    "train" : "macOS 26.0",
+    "build" : "",
+    "releaseType" : ""
+  },
+  "captureTime" : "2025-06-18 23:37:23.6289 -0700",
+  "incident" : "E09ABF8E-F31C-481F-BD4A-9ED9622096E8",
+  "pid" : 97417,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "roots_installed" : 0,
+  "bug_type" : "309",
+  "procLaunch" : "2025-06-18 23:37:23.3917 -0700",
+  "procStartAbsTime" : 5624964536402,
+  "procExitAbsTime" : 5624970217634,
+  "procName" : "main",
+  "procPath" : "\/private\/tmp\/main",
+  "parentProc" : "zsh",
+  "parentPid" : 95142,
+  "coalitionName" : "com.apple.Terminal",
+  "crashReporterKey" : "EB3DAF58-4ACB-35AE-1567-3EACE26FFDEF",
+  "sip" : "enabled",
+  "vmRegionInfo" : "0 is not in any region.  Bytes before following region: 4297228288\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      100228000-10022c000    [   16K] r-x\/r-x SM=COW  main",
+  "exception" : {"codes":"0x0000000000000001, 0x0000000000000000","rawCodes":[1,0],"type":"EXC_BAD_ACCESS","signal":"SIGSEGV","subtype":"KERN_INVALID_ADDRESS at 0x0000000000000000"},
+  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":97417},
+  "vmregioninfo" : "0 is not in any region.  Bytes before following region: 4297228288\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      100228000-10022c000    [   16K] r-x\/r-x SM=COW  main",
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":13177,"task_for_pid":1125},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 2,
+  "threads" : [{"id":9224700,"frames":[{"imageOffset":10980,"symbol":"__ulock_wait","symbolLocation":8,"imageIndex":1},{"imageOffset":37040,"symbol":"_pthread_join","symbolLocation":608,"imageIndex":2},{"imageOffset":148252,"symbol":"std::__1::thread::join()","symbolLocation":36,"imageIndex":3},{"imageOffset":2364,"symbol":"main","symbolLocation":164,"imageIndex":0},{"imageOffset":34900,"symbol":"start","symbolLocation":6256,"imageIndex":4}],"threadState":{"x":[{"value":18446744073709551612},{"value":0},{"value":3603},{"value":0},{"value":4297235012,"symbolLocation":24,"symbol":"void std::__1::__libcpp_operator_delete[abi:ne200100]<std::__1::thread*>(std::__1::thread*)"},{"value":3},{"value":0},{"value":0},{"value":3603},{"value":16908290},{"value":17},{"value":4301979472},{"value":2},{"value":10123837726866039554},{"value":18014398509481984},{"value":4192256},{"value":515},{"value":8590563376},{"value":0},{"value":6170210304},{"value":2},{"value":6170210356},{"value":16908290},{"value":8567910432,"symbolLocation":224,"symbol":"_main_thread"},{"value":8567963716,"symbolLocation":0,"symbol":"_pthread_list_lock"},{"value":17},{"value":8567916592,"symbolLocation":0,"symbol":"mach_task_self_"},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6743756976},"cpsr":{"value":1073741824},"fp":{"value":6169649776},"sp":{"value":6169649680},"esr":{"value":1442840704,"description":"(PC alignment)"},"pc":{"value":6743485156},"far":{"value":0}}},{"id":9224708,"frames":[{"imageOffset":10848,"symbol":"kevent_id","symbolLocation":8,"imageIndex":1},{"imageOffset":151132,"symbol":"_dispatch_kq_poll","symbolLocation":228,"imageIndex":6},{"imageOffset":153668,"symbol":"_dispatch_event_loop_wait_for_ownership","symbolLocation":424,"imageIndex":6},{"imageOffset":72676,"symbol":"__DISPATCH_WAIT_FOR_QUEUE__","symbolLocation":340,"imageIndex":6},{"imageOffset":71608,"symbol":"_dispatch_sync_f_slow","symbolLocation":148,"imageIndex":6},{"imageOffset":1732,"symbol":"use_libsystem()","symbolLocation":156,"imageIndex":0},{"imageOffset":8964,"symbol":"decltype(std::declval<void (*)()>()()) std::__1::__invoke[abi:ne200100]<void (*)()>(void (*&&)())","symbolLocation":28,"imageIndex":0},{"imageOffset":8860,"symbol":"void std::__1::__thread_execute[abi:ne200100]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>&, std::__1::__tuple_indices<>)","symbolLocation":28,"imageIndex":0},{"imageOffset":8024,"symbol":"void* std::__1::__thread_proxy[abi:ne200100]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>>(void*)","symbolLocation":84,"imageIndex":0},{"imageOffset":27660,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":2},{"imageOffset":7040,"symbol":"thread_start","symbolLocation":8,"imageIndex":2}],"threadState":{"x":[{"value":0},{"value":0},{"value":2},{"value":6170209560},{"value":2},{"value":0},{"value":0},{"value":1027},{"value":1024},{"value":8567928960,"symbolLocation":0,"symbol":"_dispatch_mgr_q"},{"value":1024},{"value":2303},{"value":6170209632},{"value":137438953472},{"value":9005137670438912},{"value":4194304},{"value":375},{"value":8590564696},{"value":0},{"value":1027},{"value":0},{"value":0},{"value":2},{"value":6170209560},{"value":2},{"value":6170209560},{"value":4302004400},{"value":132096},{"value":8567928960,"symbolLocation":0,"symbol":"_dispatch_mgr_q"}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6742077020},"cpsr":{"value":0},"fp":{"value":6170209536},"sp":{"value":6170209440},"esr":{"value":1442840704,"description":"(PC alignment)"},"pc":{"value":6743485024},"far":{"value":0}}},{"triggered":true,"id":9224710,"threadState":{"x":[{"value":8567956224,"symbolLocation":0,"symbol":"std::__1::cout"},{"value":6171356717},{"value":73896},{"value":39371972610},{"value":8567956232,"symbolLocation":8,"symbol":"std::__1::cout"},{"value":32},{"value":55},{"value":0},{"value":42},{"value":0},{"value":2},{"value":1099511627776},{"value":4294967293},{"value":0},{"value":0},{"value":0},{"value":8590855888,"symbolLocation":24,"symbol":"vtable for std::__1::basic_ostream<char, std::__1::char_traits<char>>"},{"value":15027386065196458752},{"value":0},{"value":6171357184},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4297230460},"cpsr":{"value":1610612736},"fp":{"value":6171356992},"sp":{"value":6171356976},"esr":{"value":2449473606,"description":"(Data Abort) byte write Translation fault"},"pc":{"value":4297230472,"matchesCrashFrame":1},"far":{"value":0}},"frames":[{"imageOffset":2184,"symbol":"use_libc()","symbolLocation":72,"imageIndex":0},{"imageOffset":8964,"symbol":"decltype(std::declval<void (*)()>()()) std::__1::__invoke[abi:ne200100]<void (*)()>(void (*&&)())","symbolLocation":28,"imageIndex":0},{"imageOffset":8860,"symbol":"void std::__1::__thread_execute[abi:ne200100]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>&, std::__1::__tuple_indices<>)","symbolLocation":28,"imageIndex":0},{"imageOffset":8024,"symbol":"void* std::__1::__thread_proxy[abi:ne200100]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>>(void*)","symbolLocation":84,"imageIndex":0},{"imageOffset":27660,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":2},{"imageOffset":7040,"symbol":"thread_start","symbolLocation":8,"imageIndex":2}]},{"id":9224711,"frames":[{"imageOffset":7020,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":2}],"threadState":{"x":[{"value":6171930624},{"value":3855},{"value":6171394048},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":0},"fp":{"value":0},"sp":{"value":6171930624},"esr":{"value":1442840704,"description":"(PC alignment)"},"pc":{"value":6743726956},"far":{"value":0}}}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4297228288,
+    "size" : 16384,
+    "uuid" : "7c2f2587-904b-32ff-8be3-746e278e7599",
+    "path" : "*\/main",
+    "name" : "main"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6743474176,
+    "size" : 242116,
+    "uuid" : "5f631b6b-ebb2-3c89-915f-4b9d8b92097c",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "name" : "libsystem_kernel.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6743719936,
+    "size" : 51784,
+    "uuid" : "ddd4dc41-2526-3b64-83d8-ec904e582767",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "name" : "libsystem_pthread.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6742761472,
+    "size" : 601684,
+    "uuid" : "47ed2c8f-5770-383b-9bdb-015b857c9ba6",
+    "path" : "\/usr\/lib\/libc++.1.dylib",
+    "name" : "libc++.1.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6739824640,
+    "size" : 645244,
+    "uuid" : "f7827194-1d04-3b0b-bb1d-49a8291c0542",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6741925888,
+    "size" : 290400,
+    "uuid" : "f2b356bf-bf9d-3762-af1c-4eaead26bb8e",
+    "path" : "\/usr\/lib\/system\/libdispatch.dylib",
+    "name" : "libdispatch.dylib"
+  }
+],
+  "sharedCache" : {
+  "base" : 6738739200,
+  "size" : 5530566656,
+  "uuid" : "9629e3a7-1c6e-33e0-9158-8ac7da2d73d8"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=893.3M resident=0K(0%) swapped_out_or_unallocated=893.3M(100%)\nWritable regions: Total=90.9M written=176K(0%) resident=176K(0%) swapped_out=0K(0%) unallocated=90.8M(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nActivity Tracing                   256K        1 \nColorSync                           48K        2 \nKernel Alloc Once                   32K        1 \nMALLOC                            80.9M       10 \nMALLOC guard page                   32K        2 \nSTACK GUARD                       56.1M        4 \nStack                             9840K        5 \n__AUTH                            1217K      160 \n__AUTH_CONST                      18.6M      369 \n__CTF                               824        1 \n__DATA                            4689K      326 \n__DATA_CONST                      15.3M      372 \n__DATA_DIRTY                      1380K      306 \n__FONT_DATA                        2352        1 \n__LINKEDIT                       597.4M        2 \n__OBJC_RO                         77.7M        1 \n__OBJC_RW                         2555K        1 \n__TEXT                           295.9M      383 \n__TPRO_CONST                       128K        2 \npage table in kernel               176K        1 \nshared memory                       96K        3 \n===========                     =======  ======= \nTOTAL                              1.1G     1953 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+
+  }
+},
+  "logWritingSignature" : "564f111102be9fc37ce5e3fe652538b258b4d427",
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "648cada15dbc71671bb3aa1b",
+      "factorPackIds" : [
+        "65a81173096f6a1f1ba46525"
+      ],
+      "deploymentId" : 230000118
+    },
+    {
+      "rolloutId" : "6410af69ed1e1e7ab93ed169",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000014
+    },
+    {
+      "rolloutId" : "60f8ddccefea4203d95cbeef",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000030
+    },
+    {
+      "rolloutId" : "6297d96be2c9387df974efa4",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000030
+    },
+    {
+      "rolloutId" : "64b21a7351cbb02ce3442e4e",
+      "factorPackIds" : [
+        "6647f0f7b6a75d3dc32993e7"
+      ],
+      "deploymentId" : 230000040
+    },
+    {
+      "rolloutId" : "661464ecda55e5192b100804",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000003
+    },
+    {
+      "rolloutId" : "668f190e74b02a0dbad5da24",
+      "factorPackIds" : [
+        "66904d6a7c370564915d975b"
+      ],
+      "deploymentId" : 230000002
+    },
+    {
+      "rolloutId" : "644114de41e7236e6177f9bd",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000012
+    },
+    {
+      "rolloutId" : "65a8173205d942272410674b",
+      "factorPackIds" : [
+        "65d39fa4cb0e2417d11ce5f6"
+      ],
+      "deploymentId" : 230000003
+    },
+    {
+      "rolloutId" : "64628732bf2f5257dedc8988",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000002
+    },
+    {
+      "rolloutId" : "654439cdafbf5b61207873a9",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000002
+    },
+    {
+      "rolloutId" : "652eff3d1bce5442b8d753c9",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000004
+    },
+    {
+      "rolloutId" : "64c17a9925d75a7281053d4c",
+      "factorPackIds" : [
+        "64d29746ad29a465b3bbeace"
+      ],
+      "deploymentId" : 230000004
+    },
+    {
+      "rolloutId" : "63508950b3714d3622fc77f7",
+      "factorPackIds" : [
+        "651ef5f9d0c9ce2f459b5326"
+      ],
+      "deploymentId" : 230000011
+    },
+    {
+      "rolloutId" : "5f72dc58705eff005a46b3a9",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000018
+    },
+    {
+      "rolloutId" : "6434420a89ec2e0a7a38bf5a",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000007
+    },
+    {
+      "rolloutId" : "64b1b9b57b7a217c6795f565",
+      "factorPackIds" : [
+        "64b1b9e69aa41116c95f6d9c"
+      ],
+      "deploymentId" : 230000001
+    },
+    {
+      "rolloutId" : "63fe4dd2238e7b23a1f3067d",
+      "factorPackIds" : [
+        "643938cae7268460c2e35a16"
+      ],
+      "deploymentId" : 230000002
+    },
+    {
+      "rolloutId" : "645197bf528fbf3c3af54105",
+      "factorPackIds" : [
+        "6452976a59613d46f6d7e23c"
+      ],
+      "deploymentId" : 230000001
+    },
+    {
+      "rolloutId" : "645eb1d0417dab722a215927",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000001
+    },
+    {
+      "rolloutId" : "6246d6a916a70b047e454124",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000008
+    },
+    {
+      "rolloutId" : "644919193bf9255f23147066",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000002
+    },
+    {
+      "rolloutId" : "639124e81d92412bfb4880b3",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000010
+    },
+    {
+      "rolloutId" : "5fb57dbdbaca86005d037830",
+      "factorPackIds" : [
+        "6430961589ec2e0a7a38bf2c"
+      ],
+      "deploymentId" : 230000007
+    },
+    {
+      "rolloutId" : "6425c75e4327780c10cc4252",
+      "factorPackIds" : [
+        "642600a457e7664b1698eb32"
+      ],
+      "deploymentId" : 230000002
+    },
+    {
+      "rolloutId" : "63f7bdac238e7b23a1f30084",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000008
+    },
+    {
+      "rolloutId" : "63b2ebb52d41213e73573596",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000001
+    },
+    {
+      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000017
+    },
+    {
+      "rolloutId" : "60da5e84ab0ca017dace9abf",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000004
+    },
+    {
+      "rolloutId" : "67181b10c68c361a728c7cfa",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000001
+    },
+    {
+      "rolloutId" : "642da32dea3b2418c750f848",
+      "factorPackIds" : [
+        "66d8b2f77cd4b62688efd2cf"
+      ],
+      "deploymentId" : 230000009
+    },
+    {
+      "rolloutId" : "67648e5334a82511f4acf879",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000002
+    },
+    {
+      "rolloutId" : "66a95062bda2a62b1a6903d4",
+      "factorPackIds" : [
+        "67cf14960b713f3d250b3b34"
+      ],
+      "deploymentId" : 230000016
+    },
+    {
+      "rolloutId" : "60186475825c62000ccf5450",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000086
+    },
+    {
+      "rolloutId" : "66be6abe36001e304c6d6a3c",
+      "factorPackIds" : [
+        "67feca9d9dc968490af7a33b"
+      ],
+      "deploymentId" : 230000010
+    },
+    {
+      "rolloutId" : "67fd77fe1f9da9148f70d6ed",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000003
+    },
+    {
+      "rolloutId" : "61675b89201f677a9a4cbd65",
+      "factorPackIds" : [
+        "65a855f5f087695cfac03d1f"
+      ],
+      "deploymentId" : 230000185
+    },
+    {
+      "rolloutId" : "68095e8ecb2a9d1eaa8463c9",
+      "factorPackIds" : [
+        "68228cf05d9824117a0323a8"
+      ],
+      "deploymentId" : 230000006
+    },
+    {
+      "rolloutId" : "64c025b28b7f0e739e4fbe58",
+      "factorPackIds" : [
+        "657ba0a39ec5da283662e9d2"
+      ],
+      "deploymentId" : 230000043
+    },
+    {
+      "rolloutId" : "6813dc6e1e50e5344eb573e9",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000002
+    },
+    {
+      "rolloutId" : "66205289e2d11d1408c4db24",
+      "factorPackIds" : [
+        "68470d31a0625d2d04256ab2"
+      ],
+      "deploymentId" : 230000024
+    },
+    {
+      "rolloutId" : "66d35d7fe4d6bf7664f40ddf",
+      "factorPackIds" : [
+        "68473ca7b4d8c1072b580d03"
+      ],
+      "deploymentId" : 230000048
+    },
+    {
+      "rolloutId" : "616061f15c43822edc9b3b70",
+      "factorPackIds" : [
+        "684ab815879e5d16f0e65aba"
+      ],
+      "deploymentId" : 230000018
+    },
+    {
+      "rolloutId" : "670ea6eb7a111748a97092a4",
+      "factorPackIds" : [
+        "6847794cb4d8c1072b580d11"
+      ],
+      "deploymentId" : 230000145
+    },
+    {
+      "rolloutId" : "5ffde50ce2aacd000d47a95f",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 230000479
+    }
+  ],
+  "experiments" : [
+    {
+      "treatmentId" : "48b607a1-e282-44e5-913f-6af02b52ee54",
+      "experimentId" : "677d9db29d6e1d6ece20249e",
+      "deploymentId" : 300000009
+    },
+    {
+      "treatmentId" : "145ae38c-d420-436f-980d-b99bc27e30c0",
+      "experimentId" : "67c7b62b2f2d1613edc2ca08",
+      "deploymentId" : 300000008
+    }
+  ]
+},
+  "filteredLog" : [
+  "Timestamp                         Type Thread  Act Process[pid] (Sender)",
+  "2025-06-18 23:36:15.5317 -0700    info 0x8cb818 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.7v4zedm [class TemporaryItems]",
+  "2025-06-18 23:36:15.5350 -0700    info 0x8cb818 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.6eQFKMn [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.5368 -0700    info 0x8cb818 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.6eqfkmn [class TemporaryItems]",
+  "2025-06-18 23:36:15.5417 -0700    info 0x8cb818 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.zw5F9yt [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.5439 -0700    info 0x8cb818 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.zw5f9yt [class TemporaryItems]",
+  "2025-06-18 23:36:15.5808 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.423pRDd [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.5813 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.423prdd [class TemporaryItems]",
+  "2025-06-18 23:36:15.5837 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.XBawM7j [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.5843 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.xbawm7j [class TemporaryItems]",
+  "2025-06-18 23:36:15.5899 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.u8lnSFF [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.5910 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.u8lnsff [class TemporaryItems]",
+  "2025-06-18 23:36:15.5971 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.SrE584B [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.5980 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.sre584b [class TemporaryItems]",
+  "2025-06-18 23:36:15.6027 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.6ZIrZVJ [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.6040 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.6zirzvj [class TemporaryItems]",
+  "2025-06-18 23:36:15.6113 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.S5vYAWv [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.6127 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.s5vyawv [class TemporaryItems]",
+  "2025-06-18 23:36:15.6224 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.osanalytics.internal.plist.ETC6OQU [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.6235 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.etc6oqu [class TemporaryItems]",
+  "2025-06-18 23:36:15.6272 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.xpc.activity2.plist.OITpPIr [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:15.6283 -0700    info 0x8cb8f0 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.xpc.activity2.plist.oitppir [class TemporaryItems]",
+  "2025-06-18 23:36:20.4267 -0700   error 0x8cb8de 0x0 kernel.development[0] (Sandbox_development): 16 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:20.4267 -0700   error 0x8cb8de 0x0 kernel.development[0] (Sandbox_development): Sandbox: spotlightknowledged(4106) deny(1) mach-lookup com.apple.PowerManagement.control",
+  "2025-06-18 23:36:20.7858 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.xpc.activity2.plist.oitppir [class TemporaryItems] expired with 1 entries (4157ms past deadline)",
+  "2025-06-18 23:36:20.7858 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.etc6oqu [class TemporaryItems] expired with 1 entries (4162ms past deadline)",
+  "2025-06-18 23:36:20.7858 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.s5vyawv [class TemporaryItems] expired with 1 entries (4173ms past deadline)",
+  "2025-06-18 23:36:20.7858 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.6zirzvj [class TemporaryItems] expired with 1 entries (4181ms past deadline)",
+  "2025-06-18 23:36:20.7858 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.sre584b [class TemporaryItems] expired with 1 entries (4187ms past deadline)",
+  "2025-06-18 23:36:20.7858 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.u8lnsff [class TemporaryItems] expired with 1 entries (4194ms past deadline)",
+  "2025-06-18 23:36:20.7858 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.xbawm7j [class TemporaryItems] expired with 1 entries (4201ms past deadline)",
+  "2025-06-18 23:36:20.7858 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.423prdd [class TemporaryItems] expired with 1 entries (4204ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.zw5f9yt [class TemporaryItems] expired with 1 entries (4241ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.6eqfkmn [class TemporaryItems] expired with 1 entries (4248ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.7v4zedm [class TemporaryItems] expired with 1 entries (4254ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.rphaqaj [class TemporaryItems] expired with 1 entries (4257ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.novwscp [class TemporaryItems] expired with 1 entries (4261ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.fmyu5tf [class TemporaryItems] expired with 1 entries (4270ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.phqnw0p [class TemporaryItems] expired with 1 entries (4273ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.sxcpbiw [class TemporaryItems] expired with 1 entries (4276ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.1v9k39g [class TemporaryItems] expired with 1 entries (4278ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.tdxjv7o [class TemporaryItems] expired with 1 entries (4280ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.rfrvcni [class TemporaryItems] expired with 1 entries (4282ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.jplp0t8 [class TemporaryItems] expired with 1 entries (4285ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.oeegnfp [class TemporaryItems] expired with 1 entries (4289ms past deadline)",
+  "2025-06-18 23:36:20.7859 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.4xjciw8 [class TemporaryItems] expired with 1 entries (4293ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.yqzwhqm [class TemporaryItems] expired with 1 entries (4296ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.b1mb5b9 [class TemporaryItems] expired with 1 entries (4298ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.i02kran [class TemporaryItems] expired with 1 entries (4305ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.wjjy4xc [class TemporaryItems] expired with 1 entries (4311ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.x4uawt3 [class TemporaryItems] expired with 1 entries (4314ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.s9jizib [class TemporaryItems] expired with 1 entries (4322ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.qlcmsto [class TemporaryItems] expired with 1 entries (4325ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.tjkqc5z [class TemporaryItems] expired with 1 entries (4328ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.aj7mvgu [class TemporaryItems] expired with 1 entries (4331ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.6nzugf1 [class TemporaryItems] expired with 1 entries (4337ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.4u86okl [class TemporaryItems] expired with 1 entries (4346ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.7vr2la3 [class TemporaryItems] expired with 1 entries (4366ms past deadline)",
+  "2025-06-18 23:36:20.7860 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.7xlgjvb [class TemporaryItems] expired with 1 entries (4370ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.wrl67jn [class TemporaryItems] expired with 1 entries (4377ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.nnl3cv0 [class TemporaryItems] expired with 1 entries (4381ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.h21p6pn [class TemporaryItems] expired with 1 entries (4397ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.gqfgqtn [class TemporaryItems] expired with 1 entries (4403ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.uokugsh [class TemporaryItems] expired with 1 entries (4405ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.56u77gp [class TemporaryItems] expired with 1 entries (4418ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.hry7pdl [class TemporaryItems] expired with 1 entries (4421ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.yjwwlc0 [class TemporaryItems] expired with 1 entries (4430ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.5kbgpcy [class TemporaryItems] expired with 1 entries (4438ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.hupbjqx [class TemporaryItems] expired with 1 entries (4441ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.xw27o9w [class TemporaryItems] expired with 1 entries (4446ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.osanalytics.internal.plist.cmyaac3 [class TemporaryItems] expired with 1 entries (4465ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.xpc.activity2.plist.um552zh [class TemporaryItems] expired with 1 entries (4473ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/com.apple.dasd\/temporaryitems\/nsird_dasd_cpf8vx [class TemporaryItems] expired with 1 entries (4473ms past deadline)",
+  "2025-06-18 23:36:20.7861 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.segment.storage.oai.plist.vhdm6gz [class TemporaryItems] expired with 1 entries (4647ms past deadline)",
+  "2025-06-18 23:36:20.7862 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/libexec\/duetexpertd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/duetexpertd\/TemporaryItems\/NSIRD_duetexpertd_fYo0ih [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:20.7880 -0700    info 0x8cb8d3 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/duetexpertd\/temporaryitems\/nsird_duetexpertd_fyo0ih [class TemporaryItems]",
+  "2025-06-18 23:36:23.5655 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): 1 duplicate report for Sandbox: spotlightknowledged(4106) deny(1) mach-lookup com.apple.PowerManagement.control",
+  "2025-06-18 23:36:23.5655 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:23.5779 -0700    info 0x8cb5ee 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/duetexpertd\/temporaryitems\/nsird_duetexpertd_fyo0ih [class TemporaryItems] expired with 1 entries (1789ms past deadline)",
+  "2025-06-18 23:36:24.8611 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/ContextStoreAgent.plist.7Idrykw [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:24.8621 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/contextstoreagent.plist.7idrykw [class TemporaryItems]",
+  "2025-06-18 23:36:24.8632 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.segment.storage.oai.plist.T8smYXv [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:24.8639 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.segment.storage.oai.plist.t8smyxv [class TemporaryItems]",
+  "2025-06-18 23:36:24.8657 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.routined.plist.Z3AO6in [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:24.8673 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/users\/mib\/library\/containers\/com.apple.routined\/data\/library\/preferences\/com.apple.routined.plist [class kTCCServiceSystemPolicyAppData]",
+  "2025-06-18 23:36:24.8673 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.routined.plist.z3ao6in [class TemporaryItems]",
+  "2025-06-18 23:36:24.8723 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.xpc.activity2.plist.fYUOFRz [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:24.8730 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.xpc.activity2.plist.fyuofrz [class TemporaryItems]",
+  "2025-06-18 23:36:24.8735 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.pipagent.plist.KyRHRoZ [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:24.8739 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.pipagent.plist.kyrhroz [class TemporaryItems]",
+  "2025-06-18 23:36:24.8771 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.openai.chat.plist.ElQVV9D [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:24.8801 -0700    info 0x8cb817 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.openai.chat.plist.elqvv9d [class TemporaryItems]",
+  "2025-06-18 23:36:24.9870 -0700   error 0x8cb8de 0x0 kernel.development[0] (Sandbox_development): 43 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:24.9870 -0700   error 0x8cb8de 0x0 kernel.development[0] (Sandbox_development): Sandbox: parsecd(1360) deny(1) mach-lookup com.apple.apsd",
+  "2025-06-18 23:36:26.0473 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:29.1391 -0700    info 0x8cb95d 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.openai.chat.plist.elqvv9d [class TemporaryItems] expired with 1 entries (3258ms past deadline)",
+  "2025-06-18 23:36:29.1391 -0700    info 0x8cb95d 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.pipagent.plist.kyrhroz [class TemporaryItems] expired with 1 entries (3265ms past deadline)",
+  "2025-06-18 23:36:29.1391 -0700    info 0x8cb95d 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.xpc.activity2.plist.fyuofrz [class TemporaryItems] expired with 1 entries (3266ms past deadline)",
+  "2025-06-18 23:36:29.1391 -0700    info 0x8cb95d 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.routined.plist.z3ao6in [class TemporaryItems] expired with 1 entries (3271ms past deadline)",
+  "2025-06-18 23:36:29.1392 -0700    info 0x8cb95d 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.segment.storage.oai.plist.t8smyxv [class TemporaryItems] expired with 1 entries (3275ms past deadline)",
+  "2025-06-18 23:36:29.1392 -0700    info 0x8cb95d 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/contextstoreagent.plist.7idrykw [class TemporaryItems] expired with 1 entries (3276ms past deadline)",
+  "2025-06-18 23:36:29.1392 -0700    info 0x8cb95d 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/libexec\/duetexpertd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/duetexpertd\/TemporaryItems\/NSIRD_duetexpertd_WGr1UX [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:29.1412 -0700    info 0x8cb95d 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/duetexpertd\/temporaryitems\/nsird_duetexpertd_wgr1ux [class TemporaryItems]",
+  "2025-06-18 23:36:29.7379 -0700   error 0x8ca3a9 0x0 kernel.development[0] (Sandbox_development): 15 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:29.7379 -0700   error 0x8ca3a9 0x0 kernel.development[0] (Sandbox_development): Sandbox: com.apple.BKAgentService(61169) deny(1) network-outbound \/private\/var\/run\/mDNSResponder",
+  "2025-06-18 23:36:33.1131 -0700    info 0x8cbb38 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/duetexpertd\/temporaryitems\/nsird_duetexpertd_wgr1ux [class TemporaryItems] expired with 1 entries (2971ms past deadline)",
+  "2025-06-18 23:36:34.1532 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): 1 duplicate report for Sandbox: com.apple.BKAgentService(61169) deny(1) network-outbound \/private\/var\/run\/mDNSResponder",
+  "2025-06-18 23:36:34.1532 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:34.8649 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.xpc.activity2.plist.HaEuOeV [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:34.8661 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.xpc.activity2.plist.haeuoev [class TemporaryItems]",
+  "2025-06-18 23:36:34.8670 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.segment.storage.oai.plist.tnQrlmA [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:34.8677 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.segment.storage.oai.plist.tnqrlma [class TemporaryItems]",
+  "2025-06-18 23:36:36.2084 -0700   error 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): 10 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:36.2084 -0700   error 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): Sandbox: businessservicesd(1624) deny(1) user-preference-read kcfpreferencesanyapplication",
+  "2025-06-18 23:36:36.4181 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): 14 duplicate reports for Sandbox: businessservicesd(1624) deny(1) user-preference-read kcfpreferencesanyapplication",
+  "2025-06-18 23:36:36.4181 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:36.7224 -0700    info 0x8cac34 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.segment.storage.oai.plist.tnqrlma [class TemporaryItems] expired with 1 entries (854ms past deadline)",
+  "2025-06-18 23:36:36.7224 -0700    info 0x8cac34 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.xpc.activity2.plist.haeuoev [class TemporaryItems] expired with 1 entries (856ms past deadline)",
+  "2025-06-18 23:36:37.7371 -0700    info 0x8cbbe3 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_lGMacC [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:37.7390 -0700    info 0x8cbbe3 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_lgmacc [class TemporaryItems]",
+  "2025-06-18 23:36:37.7410 -0700    info 0x8cac34 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_eP5vb2 [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:37.7431 -0700    info 0x8cac34 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_ep5vb2 [class TemporaryItems]",
+  "2025-06-18 23:36:38.0401 -0700    info 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/analyticsd.plist.0yqm2uU [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:38.0410 -0700    info 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/analyticsd.plist.0yqm2uu [class TemporaryItems]",
+  "2025-06-18 23:36:38.0434 -0700    info 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/analyticsd.plist.g58u2lf [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:38.0442 -0700    info 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/analyticsd.plist.g58u2lf [class TemporaryItems]",
+  "2025-06-18 23:36:41.2398 -0700   error 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): 49 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:41.2398 -0700   error 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): Sandbox: imagent(1102) deny(1) user-preference-read com.apple.imdsmsrecordstore",
+  "2025-06-18 23:36:41.7453 -0700    info 0x89028f 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/analyticsd.plist.g58u2lf [class TemporaryItems] expired with 1 entries (2701ms past deadline)",
+  "2025-06-18 23:36:41.7454 -0700    info 0x89028f 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/analyticsd.plist.0yqm2uu [class TemporaryItems] expired with 1 entries (2704ms past deadline)",
+  "2025-06-18 23:36:41.7454 -0700    info 0x89028f 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_ep5vb2 [class TemporaryItems] expired with 1 entries (3002ms past deadline)",
+  "2025-06-18 23:36:41.7454 -0700    info 0x89028f 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_lgmacc [class TemporaryItems] expired with 1 entries (3006ms past deadline)",
+  "2025-06-18 23:36:41.7471 -0700    info 0x89028f 0x0 kernel.development[0] (Sandbox_development): com.apple.macl xattr modified on \/Users\/mib\/Library\/Intents\/Images\/file%3A%2F%2F%2FUsers%2Fmib%2FLibrary%2FMessages%2FAttachments%2F1a%2F10%2Fany%253B+%253Bchat38375992342034008%2FGroupPhotoImage.png by intents_helper [5420]",
+  "2025-06-18 23:36:42.4452 -0700    info 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.coreduetd.plist.wcgCQFJ [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:42.4456 -0700    info 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.coreduetd.plist.wcgcqfj [class TemporaryItems]",
+  "2025-06-18 23:36:42.4463 -0700    info 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.coreduetd.plist.hogz128 [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:42.4473 -0700    info 0x8cb8f2 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.coreduetd.plist.hogz128 [class TemporaryItems]",
+  "2025-06-18 23:36:42.9964 -0700    info 0x8cbcf5 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Library\/PrivateFrameworks\/CoreSuggestions.framework\/Versions\/A\/Support\/suggestd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/NSIRD_suggestd_5sergO [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:42.9994 -0700    info 0x8cbcf5 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/nsird_suggestd_5sergo [class TemporaryItems]",
+  "2025-06-18 23:36:43.4647 -0700    info 0x8cb99c 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.coreduetd.plist.hogz128 [class TemporaryItems] expired with 1 entries (17ms past deadline)",
+  "2025-06-18 23:36:43.4648 -0700    info 0x8cb99c 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.coreduetd.plist.wcgcqfj [class TemporaryItems] expired with 1 entries (19ms past deadline)",
+  "2025-06-18 23:36:43.7998 -0700    info 0x8cbcf5 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Library\/PrivateFrameworks\/CoreSuggestions.framework\/Versions\/A\/Support\/suggestd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/NSIRD_suggestd_yA7lKE [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:43.8603 -0700    info 0x8cbcf5 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/nsird_suggestd_ya7lke [class TemporaryItems]",
+  "2025-06-18 23:36:44.1984 -0700    info 0x8ab7ce 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/nsird_suggestd_5sergo [class TemporaryItems] expired with 1 entries (198ms past deadline)",
+  "2025-06-18 23:36:44.7387 -0700   error 0x8c7d46 0x0 kernel.development[0] (Sandbox_development): 85 duplicate reports for Sandbox: imagent(1102) deny(1) user-preference-read com.apple.imdsmsrecordstore",
+  "2025-06-18 23:36:44.7387 -0700   error 0x8c7d46 0x0 kernel.development[0] (Sandbox_development): Sandbox: siriinferenced(1052) deny(1) iokit-open-user-client AppleKeyStoreUserClient",
+  "2025-06-18 23:36:44.8635 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/nsird_suggestd_ya7lke [class TemporaryItems] expired with 1 entries (3ms past deadline)",
+  "2025-06-18 23:36:44.8636 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.openai.chat.plist.6jvsPvp [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:44.8655 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.openai.chat.plist.6jvspvp [class TemporaryItems]",
+  "2025-06-18 23:36:44.8663 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.IMCoreSpotlight.plist.ry8r0W8 [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:44.8670 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.imcorespotlight.plist.ry8r0w8 [class TemporaryItems]",
+  "2025-06-18 23:36:44.8686 -0700    info 0x8cbdb3 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/TemporaryItems\/com.apple.apsd.plist.zhNs6K8 [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:44.8703 -0700    info 0x8cbdb3 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.apsd.plist.zhns6k8 [class TemporaryItems]",
+  "2025-06-18 23:36:44.8706 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.mail.plist.ImnEj7G [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:44.8714 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/users\/mib\/library\/containers\/com.apple.mail\/data\/library\/preferences\/com.apple.mail.plist [class Mail]",
+  "2025-06-18 23:36:44.8714 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.mail.plist.imnej7g [class TemporaryItems]",
+  "2025-06-18 23:36:44.8723 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.iChat.plist.iMwgT7S [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:44.8739 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.ichat.plist.imwgt7s [class TemporaryItems]",
+  "2025-06-18 23:36:44.8754 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.photolibraryd.plist.xjy4YhF [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:44.8762 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/users\/mib\/library\/containers\/com.apple.photolibraryd\/data\/library\/preferences\/com.apple.photolibraryd.plist [class kTCCServiceSystemPolicyAppData]",
+  "2025-06-18 23:36:44.8763 -0700    info 0x8cbcfe 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.photolibraryd.plist.xjy4yhf [class TemporaryItems]",
+  "2025-06-18 23:36:45.1433 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): 3 duplicate reports for Sandbox: siriinferenced(1052) deny(1) iokit-open-user-client AppleKeyStoreUserClient",
+  "2025-06-18 23:36:45.1433 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:47.0042 -0700    info 0x8cba86 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.photolibraryd.plist.xjy4yhf [class TemporaryItems] expired with 1 entries (1127ms past deadline)",
+  "2025-06-18 23:36:47.0042 -0700    info 0x8cba86 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.ichat.plist.imwgt7s [class TemporaryItems] expired with 1 entries (1130ms past deadline)",
+  "2025-06-18 23:36:47.0042 -0700    info 0x8cba86 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.mail.plist.imnej7g [class TemporaryItems] expired with 1 entries (1132ms past deadline)",
+  "2025-06-18 23:36:47.0042 -0700    info 0x8cba86 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/temporaryitems\/com.apple.apsd.plist.zhns6k8 [class TemporaryItems] expired with 1 entries (1133ms past deadline)",
+  "2025-06-18 23:36:47.0042 -0700    info 0x8cba86 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.imcorespotlight.plist.ry8r0w8 [class TemporaryItems] expired with 1 entries (1137ms past deadline)",
+  "2025-06-18 23:36:47.0042 -0700    info 0x8cba86 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.openai.chat.plist.6jvspvp [class TemporaryItems] expired with 1 entries (1138ms past deadline)",
+  "2025-06-18 23:36:47.0043 -0700    info 0x8cba86 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Library\/PrivateFrameworks\/DoNotDisturbServer.framework\/Support\/donotdisturbd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.donotdisturbd\/TemporaryItems\/NSIRD_donotdisturbd_hYohis [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:47.0055 -0700    info 0x8cba86 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.donotdisturbd\/temporaryitems\/nsird_donotdisturbd_hyohis [class TemporaryItems]",
+  "2025-06-18 23:36:48.3008 -0700    info 0x8cbd4a 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.donotdisturbd\/temporaryitems\/nsird_donotdisturbd_hyohis [class TemporaryItems] expired with 1 entries (295ms past deadline)",
+  "2025-06-18 23:36:54.8615 -0700    info 0x8cbe75 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.segment.storage.oai.plist.DogivQ8 [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:54.8626 -0700    info 0x8cbe75 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.segment.storage.oai.plist.dogivq8 [class TemporaryItems]",
+  "2025-06-18 23:36:54.8641 -0700    info 0x8cbe75 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.sociallayerd.CloudKit.ckwriter.plist.JKMrvnX [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:54.8647 -0700    info 0x8cbe75 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.sociallayerd.cloudkit.ckwriter.plist.jkmrvnx [class TemporaryItems]",
+  "2025-06-18 23:36:54.8659 -0700    info 0x8cbe75 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.pipagent.plist.3Isgeoa [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:36:54.8685 -0700    info 0x8cbe75 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.pipagent.plist.3isgeoa [class TemporaryItems]",
+  "2025-06-18 23:36:59.7494 -0700   error 0x8ca7d3 0x0 kernel.development[0] (Sandbox_development): 92 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:36:59.7494 -0700   error 0x8ca7d3 0x0 kernel.development[0] (Sandbox_development): Sandbox: bluetoothd(45441) deny(1) file-read-metadata \/private\/var\/root\/Library\/Logs\/Bluetooth\/UARPLogs",
+  "2025-06-18 23:37:06.0035 -0700    info 0x8cbde1 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.pipagent.plist.3isgeoa [class TemporaryItems] expired with 1 entries (10134ms past deadline)",
+  "2025-06-18 23:37:06.0035 -0700    info 0x8cbde1 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.sociallayerd.cloudkit.ckwriter.plist.jkmrvnx [class TemporaryItems] expired with 1 entries (10138ms past deadline)",
+  "2025-06-18 23:37:06.0035 -0700    info 0x8cbde1 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.segment.storage.oai.plist.dogivq8 [class TemporaryItems] expired with 1 entries (10140ms past deadline)",
+  "2025-06-18 23:37:06.0035 -0700    info 0x8cbde1 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Library\/PrivateFrameworks\/DoNotDisturbServer.framework\/Support\/donotdisturbd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.donotdisturbd\/TemporaryItems\/NSIRD_donotdisturbd_exRlXt [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:06.0091 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:37:06.0154 -0700    info 0x8cbde1 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.donotdisturbd\/temporaryitems\/nsird_donotdisturbd_exrlxt [class TemporaryItems]",
+  "2025-06-18 23:37:06.0202 -0700   error 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): 14 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:37:06.0202 -0700 default 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): Sandbox: ContextStoreAgent(994) allow file-read-data \/Applications\/ChatGPT.app",
+  "2025-06-18 23:37:06.0204 -0700 default 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): Sandbox: ContextStoreAgent(994) allow file-read-data \/Applications\/ChatGPT.app\/Contents",
+  "2025-06-18 23:37:06.0205 -0700 default 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): Sandbox: ContextStoreAgent(994) allow file-read-data \/Applications\/ChatGPT.app\/Contents\/Info.plist",
+  "2025-06-18 23:37:06.0211 -0700 default 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): Sandbox: ContextStoreAgent(994) allow file-read-data \/Applications\/ChatGPT.app",
+  "2025-06-18 23:37:06.0216 -0700 default 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): Sandbox: ContextStoreAgent(994) allow file-read-data \/Applications\/ChatGPT.app\/Contents\/MacOS\/ChatGPT",
+  "2025-06-18 23:37:06.0218 -0700 default 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): 1 duplicate report for Sandbox: ContextStoreAgent(994) allow file-read-data \/Applications\/ChatGPT.app\/Contents\/MacOS\/ChatGPT",
+  "2025-06-18 23:37:06.0218 -0700 default 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): Sandbox: ContextStoreAgent(994) allow file-read-xattr \/Applications\/ChatGPT.app\/Contents\/MacOS\/ChatGPT",
+  "2025-06-18 23:37:06.0293 -0700 default 0x8cb98b 0x0 kernel.development[0] (Sandbox_development): Sandbox: ContextStoreAgent(994) allow file-read-data \/Applications\/ChatGPT.app\/Contents\/Info.plist",
+  "2025-06-18 23:37:06.0418 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:37:06.0758 -0700    info 0x8cbfdf 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/ContextStoreAgent.plist.0SVKE6V [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:06.0762 -0700    info 0x8cbfdf 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/contextstoreagent.plist.0svke6v [class TemporaryItems]",
+  "2025-06-18 23:37:06.1569 -0700    info 0x8cbbe5 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_5GcSZF [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:06.1577 -0700    info 0x8cbbe5 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_5gcszf [class TemporaryItems]",
+  "2025-06-18 23:37:06.1730 -0700    info 0x8cbfdc 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/libexec\/dasd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/com.apple.dasd\/TemporaryItems\/NSIRD_dasd_SJf3EH [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:06.1767 -0700    info 0x8cbfdc 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/com.apple.dasd\/temporaryitems\/nsird_dasd_sjf3eh [class TemporaryItems]",
+  "2025-06-18 23:37:07.0396 -0700    info 0x8ab7ce 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.donotdisturbd\/temporaryitems\/nsird_donotdisturbd_exrlxt [class TemporaryItems] expired with 1 entries (24ms past deadline)",
+  "2025-06-18 23:37:07.9924 -0700    info 0x8ab7ce 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/com.apple.dasd\/temporaryitems\/nsird_dasd_sjf3eh [class TemporaryItems] expired with 1 entries (815ms past deadline)",
+  "2025-06-18 23:37:07.9924 -0700    info 0x8ab7ce 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_5gcszf [class TemporaryItems] expired with 1 entries (834ms past deadline)",
+  "2025-06-18 23:37:07.9924 -0700    info 0x8ab7ce 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/contextstoreagent.plist.0svke6v [class TemporaryItems] expired with 1 entries (916ms past deadline)",
+  "2025-06-18 23:37:11.2760 -0700    info 0x8cbbe5 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_KvfrSy [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:11.2774 -0700    info 0x8cbbe5 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_kvfrsy [class TemporaryItems]",
+  "2025-06-18 23:37:11.2782 -0700    info 0x8cac33 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_euI4xT [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:11.2791 -0700    info 0x8cac33 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_eui4xt [class TemporaryItems]",
+  "2025-06-18 23:37:11.5804 -0700    info 0x8cbfce 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/libexec\/duetexpertd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/duetexpertd\/TemporaryItems\/NSIRD_duetexpertd_8FsSHs [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:11.5836 -0700    info 0x8cbfce 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/duetexpertd\/temporaryitems\/nsird_duetexpertd_8fsshs [class TemporaryItems]",
+  "2025-06-18 23:37:12.6382 -0700    info 0x8cbbe5 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/duetexpertd\/temporaryitems\/nsird_duetexpertd_8fsshs [class TemporaryItems] expired with 1 entries (54ms past deadline)",
+  "2025-06-18 23:37:12.6382 -0700    info 0x8cbbe5 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_eui4xt [class TemporaryItems] expired with 1 entries (359ms past deadline)",
+  "2025-06-18 23:37:12.6382 -0700    info 0x8cbbe5 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_kvfrsy [class TemporaryItems] expired with 1 entries (360ms past deadline)",
+  "2025-06-18 23:37:13.6540 -0700    info 0x8cac33 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_1jymdE [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:13.6551 -0700    info 0x8cac33 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_1jymde [class TemporaryItems]",
+  "2025-06-18 23:37:13.6574 -0700    info 0x8cc05e 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_ghH7cY [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:13.6589 -0700    info 0x8cc05e 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_ghh7cy [class TemporaryItems]",
+  "2025-06-18 23:37:14.8600 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_ghh7cy [class TemporaryItems] expired with 1 entries (201ms past deadline)",
+  "2025-06-18 23:37:14.8600 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_1jymde [class TemporaryItems] expired with 1 entries (204ms past deadline)",
+  "2025-06-18 23:37:14.8600 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/ContextStoreAgent.plist.uu2Zz2f [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:14.8616 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/contextstoreagent.plist.uu2zz2f [class TemporaryItems]",
+  "2025-06-18 23:37:14.8628 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.pipagent.plist.ZAZd3mJ [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:14.8636 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.pipagent.plist.zazd3mj [class TemporaryItems]",
+  "2025-06-18 23:37:14.8679 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.xpc.activity2.plist.EaPTKpD [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:14.8700 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.xpc.activity2.plist.eaptkpd [class TemporaryItems]",
+  "2025-06-18 23:37:14.8754 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.apple.mail.plist.Khpp7xN [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:14.8765 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/users\/mib\/library\/containers\/com.apple.mail\/data\/library\/preferences\/com.apple.mail.plist [class Mail]",
+  "2025-06-18 23:37:14.8766 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.mail.plist.khpp7xn [class TemporaryItems]",
+  "2025-06-18 23:37:14.8805 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/sbin\/cfprefsd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/com.openai.chat.plist.cMXWVKQ [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:14.8826 -0700    info 0x8cb9b9 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.openai.chat.plist.cmxwvkq [class TemporaryItems]",
+  "2025-06-18 23:37:17.3838 -0700    info 0x8cbfc4 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.openai.chat.plist.cmxwvkq [class TemporaryItems] expired with 1 entries (1501ms past deadline)",
+  "2025-06-18 23:37:17.3838 -0700    info 0x8cbfc4 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.mail.plist.khpp7xn [class TemporaryItems] expired with 1 entries (1507ms past deadline)",
+  "2025-06-18 23:37:17.3838 -0700    info 0x8cbfc4 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.xpc.activity2.plist.eaptkpd [class TemporaryItems] expired with 1 entries (1513ms past deadline)",
+  "2025-06-18 23:37:17.3838 -0700    info 0x8cbfc4 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/com.apple.pipagent.plist.zazd3mj [class TemporaryItems] expired with 1 entries (1520ms past deadline)",
+  "2025-06-18 23:37:17.3838 -0700    info 0x8cbfc4 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/contextstoreagent.plist.uu2zz2f [class TemporaryItems] expired with 1 entries (1522ms past deadline)",
+  "2025-06-18 23:37:17.3838 -0700    info 0x8cbfc4 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Library\/PrivateFrameworks\/CoreSuggestions.framework\/Versions\/A\/Support\/suggestd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/TemporaryItems\/NSIRD_suggestd_2GLpXr [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:17.3846 -0700    info 0x8cbfc4 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/nsird_suggestd_2glpxr [class TemporaryItems]",
+  "2025-06-18 23:37:17.6145 -0700    info 0x8cc0ff 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/libexec\/dasd on \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/T\/com.apple.dasd\/TemporaryItems\/NSIRD_dasd_qhjML7 [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:17.6159 -0700    info 0x8cc0ff 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/com.apple.dasd\/temporaryitems\/nsird_dasd_qhjml7 [class TemporaryItems]",
+  "2025-06-18 23:37:20.0511 -0700   error 0x8cbdea 0x0 kernel.development[0] (Sandbox_development): 108 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:37:20.0511 -0700   error 0x8cbdea 0x0 kernel.development[0] (Sandbox_development): Sandbox: spotlightknowledged(4106) deny(1) mach-lookup com.apple.PowerManagement.control",
+  "2025-06-18 23:37:20.1375 -0700   error 0x027d1 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:37:20.3293 -0700    info 0x8cc04a 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/zz\/zyxvpxvq6csfxvn_n0000000000000\/t\/com.apple.dasd\/temporaryitems\/nsird_dasd_qhjml7 [class TemporaryItems] expired with 1 entries (1713ms past deadline)",
+  "2025-06-18 23:37:20.3293 -0700    info 0x8cc04a 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/temporaryitems\/nsird_suggestd_2glpxr [class TemporaryItems] expired with 1 entries (1944ms past deadline)",
+  "2025-06-18 23:37:21.3432 -0700    info 0x8cac33 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_QsApi9 [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:21.3448 -0700    info 0x8cac33 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_qsapi9 [class TemporaryItems]",
+  "2025-06-18 23:37:21.3464 -0700    info 0x8cc04a 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/System\/Applications\/Mail.app\/Contents\/MacOS\/Mail on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/com.apple.mail\/TemporaryItems\/NSIRD_Mail_IyHcXs [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:21.3486 -0700    info 0x8cc04a 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_iyhcxs [class TemporaryItems]",
+  "2025-06-18 23:37:23.0504 -0700    info 0x8cc04e 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_iyhcxs [class TemporaryItems] expired with 1 entries (701ms past deadline)",
+  "2025-06-18 23:37:23.0505 -0700    info 0x8cc04e 0x0 kernel.development[0] (Sandbox_development): path MACL for \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/com.apple.mail\/temporaryitems\/nsird_mail_qsapi9 [class TemporaryItems] expired with 1 entries (705ms past deadline)",
+  "2025-06-18 23:37:23.0505 -0700    info 0x8cc04e 0x0 kernel.development[0] (Sandbox_development): recording file creator MACL for \/usr\/libexec\/duetexpertd on \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/T\/duetexpertd\/TemporaryItems\/NSIRD_duetexpertd_QbaONx [class TemporaryItems] with options 0x3",
+  "2025-06-18 23:37:23.0522 -0700    info 0x8cc04e 0x0 kernel.development[0] (Sandbox_development): preserved 1 MACL entries from \/private\/var\/folders\/8d\/5zb148s542j68pcw1xx0zjq80000gn\/t\/duetexpertd\/temporaryitems\/nsird_duetexpertd_qbaonx [class TemporaryItems]",
+  "2025-06-18 23:37:24.1296 -0700   error 0x8cc09f 0x0 kernel.development[0] (Sandbox_development): 59 duplicate reports for Sandbox: WindowManager(1096) deny(1) syscall-mach MSC_mach_vm_reclaim_update_kernel_accounting_trap",
+  "2025-06-18 23:37:24.1296 -0700   error 0x8cc09f 0x0 kernel.development[0] (Sandbox_development): Sandbox: WindowManager(1096) deny(1) mach-task-name others [GPGSuite_Updater(97460)]"
+]
+}
