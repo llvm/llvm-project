@@ -142,6 +142,8 @@ uint64_t llvm::get_threadid() {
   return uint64_t(gettid());
 #elif defined(__linux__)
   return uint64_t(syscall(__NR_gettid));
+#elif defined(_AIX)
+  return uint64_t(thread_self());
 #else
   return uint64_t(pthread_self());
 #endif
@@ -316,6 +318,7 @@ static int computeHostNumHardwareThreads() {
     return CPU_COUNT(&mask);
 #elif defined(__linux__)
   cpu_set_t Set;
+  CPU_ZERO(&Set);
   if (sched_getaffinity(0, sizeof(Set), &Set) == 0)
     return CPU_COUNT(&Set);
 #endif

@@ -304,10 +304,6 @@ protected:
   /// The bottom of the unscheduled zone.
   MachineBasicBlock::iterator CurrentBottom;
 
-  /// Record the next node in a scheduled cluster.
-  const SUnit *NextClusterPred = nullptr;
-  const SUnit *NextClusterSucc = nullptr;
-
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// The number of instructions scheduled so far. Used to cut off the
   /// scheduler at the point determined by misched-cutoff.
@@ -367,10 +363,6 @@ public:
   /// Change the position of an instruction within the basic block and update
   /// live ranges and region boundary iterators.
   void moveInstruction(MachineInstr *MI, MachineBasicBlock::iterator InsertPos);
-
-  const SUnit *getNextClusterPred() const { return NextClusterPred; }
-
-  const SUnit *getNextClusterSucc() const { return NextClusterSucc; }
 
   void viewGraph(const Twine &Name, const Twine &Title) override;
   void viewGraph() override;
@@ -1295,6 +1287,9 @@ protected:
   SchedBoundary Top;
   SchedBoundary Bot;
 
+  ClusterInfo *TopCluster;
+  ClusterInfo *BotCluster;
+
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;
   /// Candidate last picked from Bot boundary.
@@ -1334,6 +1329,9 @@ protected:
   SchedCandidate TopCand;
   /// Candidate last picked from Bot boundary.
   SchedCandidate BotCand;
+
+  ClusterInfo *TopCluster;
+  ClusterInfo *BotCluster;
 
 public:
   PostGenericScheduler(const MachineSchedContext *C)

@@ -1387,6 +1387,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     SplitVecRes_PARTIAL_REDUCE_MLA(N, Lo, Hi);
     break;
   case ISD::GET_ACTIVE_LANE_MASK:
@@ -3473,6 +3474,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     Res = SplitVecOp_PARTIAL_REDUCE_MLA(N);
     break;
   }
@@ -6147,7 +6149,12 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
 
   if (ExtType == ISD::NON_EXTLOAD &&
       TLI.isOperationLegalOrCustom(ISD::VP_LOAD, WidenVT) &&
-      TLI.isTypeLegal(WideMaskVT)) {
+      TLI.isTypeLegal(WideMaskVT) &&
+      // If there is a passthru, we shouldn't use vp.load. However,
+      // type legalizer will struggle on masked.load with
+      // scalable vectors, so for scalable vectors, we still use vp.load
+      // but manually merge the load result with the passthru using vp.select.
+      (N->getPassThru()->isUndef() || VT.isScalableVector())) {
     Mask = DAG.getInsertSubvector(dl, DAG.getUNDEF(WideMaskVT), Mask, 0);
     SDValue EVL = DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
                                       VT.getVectorElementCount());
@@ -6155,12 +6162,20 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
         DAG.getLoadVP(N->getAddressingMode(), ISD::NON_EXTLOAD, WidenVT, dl,
                       N->getChain(), N->getBasePtr(), N->getOffset(), Mask, EVL,
                       N->getMemoryVT(), N->getMemOperand());
+    SDValue NewVal = NewLoad;
+
+    // Manually merge with vp.select
+    if (!N->getPassThru()->isUndef()) {
+      assert(WidenVT.isScalableVector());
+      NewVal =
+          DAG.getNode(ISD::VP_SELECT, dl, WidenVT, Mask, NewVal, PassThru, EVL);
+    }
 
     // Modified the chain - switch anything that used the old chain to use
     // the new one.
     ReplaceValueWith(SDValue(N, 1), NewLoad.getValue(1));
 
-    return NewLoad;
+    return NewVal;
   }
 
   // The mask should be widened as well
@@ -6634,8 +6649,12 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
     InOp1 = GetWidenedVector(InOp1);
     InOp2 = GetWidenedVector(InOp2);
   } else {
-    InOp1 = DAG.WidenVector(InOp1, SDLoc(N));
-    InOp2 = DAG.WidenVector(InOp2, SDLoc(N));
+    SDValue Poison = DAG.getPOISON(WidenInVT);
+    SDValue ZeroIdx = DAG.getVectorIdxConstant(0, SDLoc(N));
+    InOp1 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Poison,
+                        InOp1, ZeroIdx);
+    InOp2 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Poison,
+                        InOp2, ZeroIdx);
   }
 
   // Assume that the input and output will be widen appropriately.  If not,

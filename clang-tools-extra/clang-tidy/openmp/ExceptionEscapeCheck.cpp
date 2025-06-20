@@ -20,8 +20,7 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawIgnoredExceptions(Options.get("IgnoredExceptions", "")) {
-  llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
-      IgnoredExceptionsVec;
+  llvm::SmallVector<StringRef, 8> IgnoredExceptionsVec;
 
   llvm::StringSet<> IgnoredExceptions;
   StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);

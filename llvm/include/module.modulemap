@@ -178,9 +178,10 @@ module LLVM_DebugInfo_CodeView {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/DebugInfo/CodeView/CodeViewLanguages.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
-  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
+  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 }
 
 module LLVM_DWARFLinker {

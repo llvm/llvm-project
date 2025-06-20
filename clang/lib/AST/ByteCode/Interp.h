@@ -1035,6 +1035,9 @@ static inline bool IsOpaqueConstantCall(const CallExpr *E) {
           Builtin == Builtin::BI__builtin_function_start);
 }
 
+bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
+                                             const Pointer &RHS);
+
 template <>
 inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
@@ -1067,6 +1070,18 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(LHS.getIntegerRepresentation(),
                                              RHS.getIntegerRepresentation()))));
     return true;
+  }
+
+  // FIXME: The source check here isn't entirely correct.
+  if (LHS.pointsToStringLiteral() && RHS.pointsToStringLiteral() &&
+      LHS.getFieldDesc()->asExpr() != RHS.getFieldDesc()->asExpr()) {
+    if (arePotentiallyOverlappingStringLiterals(LHS, RHS)) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_literal_comparison)
+          << LHS.toDiagnosticString(S.getASTContext())
+          << RHS.toDiagnosticString(S.getASTContext());
+      return false;
+    }
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {

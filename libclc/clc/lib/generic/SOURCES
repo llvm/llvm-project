@@ -9,7 +9,9 @@ geometric/clc_distance.cl
 geometric/clc_dot.cl
 geometric/clc_fast_distance.cl
 geometric/clc_fast_length.cl
+geometric/clc_fast_normalize.cl
 geometric/clc_length.cl
+geometric/clc_normalize.cl
 integer/clc_abs.cl
 integer/clc_abs_diff.cl
 integer/clc_add_sat.cl

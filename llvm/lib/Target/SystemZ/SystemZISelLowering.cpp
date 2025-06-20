@@ -828,19 +828,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Default to having -disable-strictnode-mutation on
   IsStrictFPEnabled = true;
-
-  if (Subtarget.isTargetzOS()) {
-    struct RTLibCallMapping {
-      RTLIB::Libcall Code;
-      const char *Name;
-    };
-    static RTLibCallMapping RTLibCallCommon[] = {
-#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
-#include "ZOSLibcallNames.def"
-    };
-    for (auto &E : RTLibCallCommon)
-      setLibcallName(E.Code, E.Name);
-  }
 }
 
 bool SystemZTargetLowering::useSoftFloat() const {
@@ -1294,6 +1281,20 @@ bool SystemZTargetLowering::allowsMisalignedMemoryAccesses(
   if (Fast)
     *Fast = 1;
   return true;
+}
+
+bool SystemZTargetLowering::hasAndNot(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  // We can use NC(G)RK for types in GPRs ...
+  if (VT == MVT::i32 || VT == MVT::i64)
+    return Subtarget.hasMiscellaneousExtensions3();
+
+  // ... or VNC for types in VRs.
+  if (VT.isVector() || VT == MVT::i128)
+    return Subtarget.hasVector();
+
+  return false;
 }
 
 // Information about the addressing mode for a memory access.

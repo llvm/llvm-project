@@ -38,6 +38,15 @@ enum class TMAReductionOp : uint8_t {
   XOR = 7,
 };
 
+// Enum to represent the cta_group::1 and
+// cta_group::2 variants in TMA/TCGEN05 family of
+// PTX instructions.
+enum class CTAGroupKind : uint8_t {
+  CG_NONE = 0, // default with no cta_group modifier
+  CG_1 = 1,    // cta_group::1 modifier
+  CG_2 = 2,    // cta_group::2 modifier
+};
+
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_f2i_rm_ftz:

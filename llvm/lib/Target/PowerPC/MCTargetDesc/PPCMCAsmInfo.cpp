@@ -13,6 +13,7 @@
 #include "PPCMCAsmInfo.h"
 #include "PPCMCExpr.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -20,82 +21,82 @@ using namespace llvm;
 void PPCELFMCAsmInfo::anchor() { }
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {PPCMCExpr::VK_DTPREL, "DTPREL"},
-    {PPCMCExpr::VK_GOT, "GOT"},
-    {PPCMCExpr::VK_GOT_HA, "got@ha"},
-    {PPCMCExpr::VK_GOT_HI, "got@h"},
-    {PPCMCExpr::VK_GOT_LO, "got@l"},
-    {PPCMCExpr::VK_HA, "ha"},
-    {PPCMCExpr::VK_HI, "h"},
-    {PPCMCExpr::VK_HIGH, "high"},
-    {PPCMCExpr::VK_HIGHA, "higha"},
-    {PPCMCExpr::VK_HIGHER, "higher"},
-    {PPCMCExpr::VK_HIGHERA, "highera"},
-    {PPCMCExpr::VK_HIGHEST, "highest"},
-    {PPCMCExpr::VK_HIGHESTA, "highesta"},
-    {PPCMCExpr::VK_LO, "l"},
-    {PPCMCExpr::VK_L, "l"}, // FIXME: share the name with VK_LO
-    {PPCMCExpr::VK_PCREL, "PCREL"},
-    {PPCMCExpr::VK_PLT, "PLT"},
-    {PPCMCExpr::VK_TLSGD, "tlsgd"},
-    {PPCMCExpr::VK_TLSLD, "tlsld"},
-    {PPCMCExpr::VK_TOC, "toc"},
-    {PPCMCExpr::VK_TOCBASE, "tocbase"},
-    {PPCMCExpr::VK_TOC_HA, "toc@ha"},
-    {PPCMCExpr::VK_TOC_HI, "toc@h"},
-    {PPCMCExpr::VK_TOC_LO, "toc@l"},
-    {PPCMCExpr::VK_TPREL, "TPREL"},
-    {PPCMCExpr::VK_AIX_TLSGD, "gd"},
-    {PPCMCExpr::VK_AIX_TLSGDM, "m"},
-    {PPCMCExpr::VK_AIX_TLSIE, "ie"},
-    {PPCMCExpr::VK_AIX_TLSLD, "ld"},
-    {PPCMCExpr::VK_AIX_TLSLE, "le"},
-    {PPCMCExpr::VK_AIX_TLSML, "ml"},
-    {PPCMCExpr::VK_DTPMOD, "dtpmod"},
-    {PPCMCExpr::VK_DTPREL_HA, "dtprel@ha"},
-    {PPCMCExpr::VK_DTPREL_HI, "dtprel@h"},
-    {PPCMCExpr::VK_DTPREL_HIGH, "dtprel@high"},
-    {PPCMCExpr::VK_DTPREL_HIGHA, "dtprel@higha"},
-    {PPCMCExpr::VK_DTPREL_HIGHER, "dtprel@higher"},
-    {PPCMCExpr::VK_DTPREL_HIGHERA, "dtprel@highera"},
-    {PPCMCExpr::VK_DTPREL_HIGHEST, "dtprel@highest"},
-    {PPCMCExpr::VK_DTPREL_HIGHESTA, "dtprel@highesta"},
-    {PPCMCExpr::VK_DTPREL_LO, "dtprel@l"},
-    {PPCMCExpr::VK_GOT_DTPREL, "got@dtprel"},
-    {PPCMCExpr::VK_GOT_DTPREL_HA, "got@dtprel@ha"},
-    {PPCMCExpr::VK_GOT_DTPREL_HI, "got@dtprel@h"},
-    {PPCMCExpr::VK_GOT_DTPREL_LO, "got@dtprel@l"},
-    {PPCMCExpr::VK_GOT_PCREL, "got@pcrel"},
-    {PPCMCExpr::VK_GOT_TLSGD, "got@tlsgd"},
-    {PPCMCExpr::VK_GOT_TLSGD_HA, "got@tlsgd@ha"},
-    {PPCMCExpr::VK_GOT_TLSGD_HI, "got@tlsgd@h"},
-    {PPCMCExpr::VK_GOT_TLSGD_LO, "got@tlsgd@l"},
-    {PPCMCExpr::VK_GOT_TLSGD_PCREL, "got@tlsgd@pcrel"},
-    {PPCMCExpr::VK_GOT_TLSLD, "got@tlsld"},
-    {PPCMCExpr::VK_GOT_TLSLD_HA, "got@tlsld@ha"},
-    {PPCMCExpr::VK_GOT_TLSLD_HI, "got@tlsld@h"},
-    {PPCMCExpr::VK_GOT_TLSLD_LO, "got@tlsld@l"},
-    {PPCMCExpr::VK_GOT_TLSLD_PCREL, "got@tlsld@pcrel"},
-    {PPCMCExpr::VK_GOT_TPREL, "got@tprel"},
-    {PPCMCExpr::VK_GOT_TPREL_HA, "got@tprel@ha"},
-    {PPCMCExpr::VK_GOT_TPREL_HI, "got@tprel@h"},
-    {PPCMCExpr::VK_GOT_TPREL_LO, "got@tprel@l"},
-    {PPCMCExpr::VK_GOT_TPREL_PCREL, "got@tprel@pcrel"},
-    {PPCMCExpr::VK_LOCAL, "local"},
-    {PPCMCExpr::VK_NOTOC, "notoc"},
-    {PPCMCExpr::VK_PCREL_OPT, "<<invalid>>"},
-    {PPCMCExpr::VK_TLS, "tls"},
-    {PPCMCExpr::VK_TLS_PCREL, "tls@pcrel"},
-    {PPCMCExpr::VK_TPREL_HA, "tprel@ha"},
-    {PPCMCExpr::VK_TPREL_HI, "tprel@h"},
-    {PPCMCExpr::VK_TPREL_HIGH, "tprel@high"},
-    {PPCMCExpr::VK_TPREL_HIGHA, "tprel@higha"},
-    {PPCMCExpr::VK_TPREL_HIGHER, "tprel@higher"},
-    {PPCMCExpr::VK_TPREL_HIGHERA, "tprel@highera"},
-    {PPCMCExpr::VK_TPREL_HIGHEST, "tprel@highest"},
-    {PPCMCExpr::VK_TPREL_HIGHESTA, "tprel@highesta"},
-    {PPCMCExpr::VK_TPREL_LO, "tprel@l"},
-    {PPCMCExpr::VK_U, "u"},
+    {PPC::S_DTPREL, "DTPREL"},
+    {PPC::S_GOT, "GOT"},
+    {PPC::S_GOT_HA, "got@ha"},
+    {PPC::S_GOT_HI, "got@h"},
+    {PPC::S_GOT_LO, "got@l"},
+    {PPC::S_HA, "ha"},
+    {PPC::S_HI, "h"},
+    {PPC::S_HIGH, "high"},
+    {PPC::S_HIGHA, "higha"},
+    {PPC::S_HIGHER, "higher"},
+    {PPC::S_HIGHERA, "highera"},
+    {PPC::S_HIGHEST, "highest"},
+    {PPC::S_HIGHESTA, "highesta"},
+    {PPC::S_LO, "l"},
+    {PPC::S_L, "l"}, // FIXME: share the name with VK_LO
+    {PPC::S_PCREL, "PCREL"},
+    {PPC::S_PLT, "PLT"},
+    {PPC::S_TLSGD, "tlsgd"},
+    {PPC::S_TLSLD, "tlsld"},
+    {PPC::S_TOC, "toc"},
+    {PPC::S_TOCBASE, "tocbase"},
+    {PPC::S_TOC_HA, "toc@ha"},
+    {PPC::S_TOC_HI, "toc@h"},
+    {PPC::S_TOC_LO, "toc@l"},
+    {PPC::S_TPREL, "TPREL"},
+    {PPC::S_AIX_TLSGD, "gd"},
+    {PPC::S_AIX_TLSGDM, "m"},
+    {PPC::S_AIX_TLSIE, "ie"},
+    {PPC::S_AIX_TLSLD, "ld"},
+    {PPC::S_AIX_TLSLE, "le"},
+    {PPC::S_AIX_TLSML, "ml"},
+    {PPC::S_DTPMOD, "dtpmod"},
+    {PPC::S_DTPREL_HA, "dtprel@ha"},
+    {PPC::S_DTPREL_HI, "dtprel@h"},
+    {PPC::S_DTPREL_HIGH, "dtprel@high"},
+    {PPC::S_DTPREL_HIGHA, "dtprel@higha"},
+    {PPC::S_DTPREL_HIGHER, "dtprel@higher"},
+    {PPC::S_DTPREL_HIGHERA, "dtprel@highera"},
+    {PPC::S_DTPREL_HIGHEST, "dtprel@highest"},
+    {PPC::S_DTPREL_HIGHESTA, "dtprel@highesta"},
+    {PPC::S_DTPREL_LO, "dtprel@l"},
+    {PPC::S_GOT_DTPREL, "got@dtprel"},
+    {PPC::S_GOT_DTPREL_HA, "got@dtprel@ha"},
+    {PPC::S_GOT_DTPREL_HI, "got@dtprel@h"},
+    {PPC::S_GOT_DTPREL_LO, "got@dtprel@l"},
+    {PPC::S_GOT_PCREL, "got@pcrel"},
+    {PPC::S_GOT_TLSGD, "got@tlsgd"},
+    {PPC::S_GOT_TLSGD_HA, "got@tlsgd@ha"},
+    {PPC::S_GOT_TLSGD_HI, "got@tlsgd@h"},
+    {PPC::S_GOT_TLSGD_LO, "got@tlsgd@l"},
+    {PPC::S_GOT_TLSGD_PCREL, "got@tlsgd@pcrel"},
+    {PPC::S_GOT_TLSLD, "got@tlsld"},
+    {PPC::S_GOT_TLSLD_HA, "got@tlsld@ha"},
+    {PPC::S_GOT_TLSLD_HI, "got@tlsld@h"},
+    {PPC::S_GOT_TLSLD_LO, "got@tlsld@l"},
+    {PPC::S_GOT_TLSLD_PCREL, "got@tlsld@pcrel"},
+    {PPC::S_GOT_TPREL, "got@tprel"},
+    {PPC::S_GOT_TPREL_HA, "got@tprel@ha"},
+    {PPC::S_GOT_TPREL_HI, "got@tprel@h"},
+    {PPC::S_GOT_TPREL_LO, "got@tprel@l"},
+    {PPC::S_GOT_TPREL_PCREL, "got@tprel@pcrel"},
+    {PPC::S_LOCAL, "local"},
+    {PPC::S_NOTOC, "notoc"},
+    {PPC::S_PCREL_OPT, "<<invalid>>"},
+    {PPC::S_TLS, "tls"},
+    {PPC::S_TLS_PCREL, "tls@pcrel"},
+    {PPC::S_TPREL_HA, "tprel@ha"},
+    {PPC::S_TPREL_HI, "tprel@h"},
+    {PPC::S_TPREL_HIGH, "tprel@high"},
+    {PPC::S_TPREL_HIGHA, "tprel@higha"},
+    {PPC::S_TPREL_HIGHER, "tprel@higher"},
+    {PPC::S_TPREL_HIGHERA, "tprel@highera"},
+    {PPC::S_TPREL_HIGHEST, "tprel@highest"},
+    {PPC::S_TPREL_HIGHESTA, "tprel@highesta"},
+    {PPC::S_TPREL_LO, "tprel@l"},
+    {PPC::S_U, "u"},
 };
 
 PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
@@ -136,6 +137,18 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   initializeVariantKinds(variantKindDescs);
 }
 
+void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                         const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  OS << '@' << getSpecifierName(Expr.getSpecifier());
+}
+
+bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                                MCValue &Res,
+                                                const MCAssembler *Asm) const {
+  return PPC::evaluateAsRelocatableImpl(Expr, Res, Asm);
+}
+
 void PPCXCOFFMCAsmInfo::anchor() {}
 
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
@@ -155,5 +168,18 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   // Support $ as PC in inline asm
   DollarIsPC = true;
 
+  UsesSetToEquateSymbol = true;
+
   initializeVariantKinds(variantKindDescs);
+}
+
+void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                           const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  OS << '@' << getSpecifierName(Expr.getSpecifier());
+}
+
+bool PPCXCOFFMCAsmInfo::evaluateAsRelocatableImpl(
+    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
+  return PPC::evaluateAsRelocatableImpl(Expr, Res, Asm);
 }

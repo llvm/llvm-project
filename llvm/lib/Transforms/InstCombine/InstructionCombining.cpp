@@ -217,6 +217,26 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
   return Offset;
 }
 
+Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
+                                        GEPNoWrapFlags NW, Type *IdxTy,
+                                        bool RewriteGEPs) {
+  Value *Sum = nullptr;
+  for (GEPOperator *GEP : reverse(GEPs)) {
+    Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
+    if (Offset->getType() != IdxTy)
+      Offset = Builder.CreateVectorSplat(
+          cast<VectorType>(IdxTy)->getElementCount(), Offset);
+    if (Sum)
+      Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
+                              NW.isInBounds());
+    else
+      Sum = Offset;
+  }
+  if (!Sum)
+    return Constant::getNullValue(IdxTy);
+  return Sum;
+}
+
 /// Legal integers and common types are considered desirable. This is used to
 /// avoid creating instructions with types that may not be supported well by the
 /// the backend.
@@ -1719,6 +1739,15 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
 
+  // Avoid breaking min/max reduction pattern,
+  // which is necessary for vectorization later.
+  if (isa<MinMaxIntrinsic>(&Op))
+    for (Value *IntrinOp : Op.operands())
+      if (auto *PN = dyn_cast<PHINode>(IntrinOp))
+        for (Value *PhiOp : PN->operands())
+          if (PhiOp == &Op)
+            return nullptr;
+
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
@@ -1729,7 +1758,8 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (auto *CI = dyn_cast<FCmpInst>(SI->getCondition())) {
     if (CI->hasOneUse()) {
       Value *Op0 = CI->getOperand(0), *Op1 = CI->getOperand(1);
-      if ((TV == Op0 && FV == Op1) || (FV == Op0 && TV == Op1))
+      if (((TV == Op0 && FV == Op1) || (FV == Op0 && TV == Op1)) &&
+          !CI->isCommutative())
         return nullptr;
     }
   }
@@ -2200,6 +2230,39 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   // Op(LHSSplat, rev(V2)) -> rev(Op(LHSSplat, V2))
   else if (isSplatValue(LHS) && match(RHS, m_OneUse(m_VecReverse(m_Value(V2)))))
     return createBinOpReverse(LHS, V2);
+
+  auto createBinOpVPReverse = [&](Value *X, Value *Y, Value *EVL) {
+    Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
+    if (auto *BO = dyn_cast<BinaryOperator>(V))
+      BO->copyIRFlags(&Inst);
+
+    ElementCount EC = cast<VectorType>(V->getType())->getElementCount();
+    Value *AllTrueMask = Builder.CreateVectorSplat(EC, Builder.getTrue());
+    Module *M = Inst.getModule();
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_vp_reverse, V->getType());
+    return CallInst::Create(F, {V, AllTrueMask, EVL});
+  };
+
+  Value *EVL;
+  if (match(LHS, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                     m_Value(V1), m_AllOnes(), m_Value(EVL)))) {
+    // Op(rev(V1), rev(V2)) -> rev(Op(V1, V2))
+    if (match(RHS, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                       m_Value(V2), m_AllOnes(), m_Specific(EVL))) &&
+        (LHS->hasOneUse() || RHS->hasOneUse() ||
+         (LHS == RHS && LHS->hasNUses(2))))
+      return createBinOpVPReverse(V1, V2, EVL);
+
+    // Op(rev(V1), RHSSplat)) -> rev(Op(V1, RHSSplat))
+    if (LHS->hasOneUse() && isSplatValue(RHS))
+      return createBinOpVPReverse(V1, RHS, EVL);
+  }
+  // Op(LHSSplat, rev(V2)) -> rev(Op(LHSSplat, V2))
+  else if (isSplatValue(LHS) &&
+           match(RHS, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                          m_Value(V2), m_AllOnes(), m_Value(EVL))))
+    return createBinOpVPReverse(LHS, V2, EVL);
 
   // It may not be safe to reorder shuffles and things like div, urem, etc.
   // because we may trap when executing those ops on unknown vector elements.
@@ -3620,7 +3683,7 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
 
   KnownFPClass KnownClass;
   Value *Simplified =
-      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, &RI);
   if (!Simplified)
     return nullptr;
 
@@ -3957,7 +4020,7 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
       return replaceOperand(SI, 0, V);
   }
 
-  KnownBits Known = computeKnownBits(Cond, 0, &SI);
+  KnownBits Known = computeKnownBits(Cond, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
 
@@ -4757,11 +4820,7 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
     MoveBefore = *MoveBeforeOpt;
   }
 
-  // Don't move to the position of a debug intrinsic.
-  if (isa<DbgInfoIntrinsic>(MoveBefore))
-    MoveBefore = MoveBefore->getNextNonDebugInstruction()->getIterator();
-  // Re-point iterator to come after any debug-info records, if we're
-  // running in "RemoveDIs" mode
+  // Re-point iterator to come after any debug-info records.
   MoveBefore.setHeadBit(false);
 
   bool Changed = false;
@@ -5339,8 +5398,7 @@ bool InstCombinerImpl::run() {
         // We copy the old instruction's DebugLoc to the new instruction, unless
         // InstCombine already assigned a DebugLoc to it, in which case we
         // should trust the more specifically selected DebugLoc.
-        if (!Result->getDebugLoc())
-          Result->setDebugLoc(I->getDebugLoc());
+        Result->setDebugLoc(Result->getDebugLoc().orElse(I->getDebugLoc()));
         // We also copy annotation metadata to the new instruction.
         Result->copyMetadata(*I, LLVMContext::MD_annotation);
         // Everything uses the new instruction now.
@@ -5553,11 +5611,9 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
       continue;
 
     unsigned NumDeadInstInBB;
-    unsigned NumDeadDbgInstInBB;
-    std::tie(NumDeadInstInBB, NumDeadDbgInstInBB) =
-        removeAllNonTerminatorAndEHPadInstructions(&BB);
+    NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
 
-    MadeIRChange |= NumDeadInstInBB + NumDeadDbgInstInBB > 0;
+    MadeIRChange |= NumDeadInstInBB != 0;
     NumDeadInst += NumDeadInstInBB;
   }
 
