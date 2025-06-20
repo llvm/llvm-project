@@ -282,6 +282,7 @@ private:
   bool promoteConstantOffsetToImm(MachineInstr &CI,
                                   MemInfoMap &Visited,
                                   SmallPtrSet<MachineInstr *, 4> &Promoted) const;
+  bool promoteMUBUFLoadStoreScalarOffset(MachineInstr &CI) const;
   void addInstToMergeableList(const CombineInfo &CI,
                   std::list<std::list<CombineInfo> > &MergeableInsts) const;
 
@@ -427,16 +428,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       case AMDGPU::BUFFER_LOAD_DWORD_BOTHEN_exact:
       case AMDGPU::BUFFER_LOAD_DWORD_IDXEN:
       case AMDGPU::BUFFER_LOAD_DWORD_IDXEN_exact:
-      case AMDGPU::BUFFER_LOAD_DWORD_OFFEN:
-      case AMDGPU::BUFFER_LOAD_DWORD_OFFEN_exact:
+      case AMDGPU::BUFFER_LOAD_DWORD_OFFEN://
+      case AMDGPU::BUFFER_LOAD_DWORD_OFFEN_exact://
       case AMDGPU::BUFFER_LOAD_DWORD_OFFSET:
       case AMDGPU::BUFFER_LOAD_DWORD_OFFSET_exact:
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_BOTHEN:
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact:
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_IDXEN:
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact:
-      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFEN:
-      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFEN_exact:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFEN://
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFEN_exact://
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFSET:
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFSET_exact:
         return BUFFER_LOAD;
@@ -2092,25 +2093,25 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (!Base.isReg())
     return;
 
-  MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());
+  MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());//REG_SEQUENCE %LO:vgpr_32, %subreg.sub0, %HI:vgpr_32, %subreg.sub1
   if (!Def || Def->getOpcode() != AMDGPU::REG_SEQUENCE
       || Def->getNumOperands() != 5)
     return;
 
-  MachineOperand BaseLo = Def->getOperand(1);
-  MachineOperand BaseHi = Def->getOperand(3);
+  MachineOperand BaseLo = Def->getOperand(1);//%LO:vgpr_32
+  MachineOperand BaseHi = Def->getOperand(3);//%HI:vgpr_32
   if (!BaseLo.isReg() || !BaseHi.isReg())
     return;
 
-  MachineInstr *BaseLoDef = MRI->getUniqueVRegDef(BaseLo.getReg());
-  MachineInstr *BaseHiDef = MRI->getUniqueVRegDef(BaseHi.getReg());
+  MachineInstr *BaseLoDef = MRI->getUniqueVRegDef(BaseLo.getReg());//%LO:vgpr_32, %c:sreg_64_xexec = V_ADD_CO_U32_e64 %BASE_LO:vgpr_32, %103:sgpr_32,
+  MachineInstr *BaseHiDef = MRI->getUniqueVRegDef(BaseHi.getReg());//%HI:vgpr_32, = V_ADDC_U32_e64 %BASE_HI:vgpr_32, 0, killed %c:sreg_64_xexec
 
   if (!BaseLoDef || BaseLoDef->getOpcode() != AMDGPU::V_ADD_CO_U32_e64 ||
       !BaseHiDef || BaseHiDef->getOpcode() != AMDGPU::V_ADDC_U32_e64)
     return;
 
-  const auto *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);
-  const auto *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);
+  const auto *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);//%BASE_LO:vgpr_32
+  const auto *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);//%103:sgpr_32
 
   auto Offset0P = extractConstOffset(*Src0);
   if (Offset0P)
@@ -2120,12 +2121,12 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
       return;
     BaseLo = *Src0;
   }
-
+//BaseLo = %103:sgpr_32
   if (!BaseLo.isReg())
     return;
 
-  Src0 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src0);
-  Src1 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src1);
+  Src0 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src0);// %BASE_HI:vgpr_32
+  Src1 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src1);// 0
 
   if (Src0->isImm())
     std::swap(Src0, Src1);
@@ -2133,14 +2134,14 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (!Src1->isImm() || Src0->isImm())
     return;
 
-  uint64_t Offset1 = Src1->getImm();
-  BaseHi = *Src0;
+  uint64_t Offset1 = Src1->getImm(); //0
+  BaseHi = *Src0;//%BASE_HI:vgpr_32
 
   if (!BaseHi.isReg())
     return;
 
-  Addr.Base.LoReg = BaseLo.getReg();
-  Addr.Base.HiReg = BaseHi.getReg();
+  Addr.Base.LoReg = BaseLo.getReg();//%103:sgpr_32
+  Addr.Base.HiReg = BaseHi.getReg();//%BASE_HI:vgpr_32
   Addr.Base.LoSubReg = BaseLo.getSubReg();
   Addr.Base.HiSubReg = BaseHi.getSubReg();
   Addr.Offset = (*Offset0P & 0x00000000ffffffff) | (Offset1 << 32);
@@ -2298,6 +2299,39 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   return false;
 }
 
+bool SILoadStoreOptimizer::promoteMUBUFLoadStoreScalarOffset(
+    MachineInstr &MI) const{
+  if(!SIInstrInfo::isMUBUF(MI))
+      return false;
+  LLVM_DEBUG(dbgs() << "tryToPromoteMUBUFLoadStoreScalarOffset:"; MI.dump());
+  auto vaddr = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  if(!vaddr)  return false;
+  LLVM_DEBUG(dbgs() << "\n vaddr:"; vaddr->dump());
+  MachineInstr *Def = MRI->getUniqueVRegDef(vaddr->getReg());
+  if(!Def)  return false;
+  LLVM_DEBUG(dbgs() << "\n def:"; Def->dump());
+  auto opsrc0 = TII->getNamedOperand(*Def, AMDGPU::OpName::src0);
+  if(!opsrc0) return false;
+  auto opsrc1 = TII->getNamedOperand(*Def, AMDGPU::OpName::src1);
+  if(!opsrc1) return false;
+  LLVM_DEBUG(dbgs() << "\n opsrc0:"; opsrc0->dump());
+  LLVM_DEBUG(dbgs() << "\n opsrc1:"; opsrc1->dump());
+  auto isopsrc0scalarreg = TII->getRegisterInfo().isSGPRClass(MRI->getRegClass(opsrc0->getReg()));
+  auto isopsrc1scalarreg = TII->getRegisterInfo().isSGPRClass(MRI->getRegClass(opsrc1->getReg()));
+  LLVM_DEBUG(dbgs() << "\n isopsrc0scalarreg:" << isopsrc0scalarreg << " isopsrc1scalarreg:" << isopsrc1scalarreg;);
+  if(!(isopsrc0scalarreg ^ isopsrc1scalarreg))  return false;
+  auto scalarOp = isopsrc0scalarreg ? opsrc0 : opsrc1;
+  
+    // if (!BaseLoDef || BaseLoDef->getOpcode() != AMDGPU::V_ADD_CO_U32_e64 ||
+    //   !BaseHiDef || BaseHiDef->getOpcode() != AMDGPU::V_ADDC_U32_e64)
+    // return;
+
+  // const auto *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);//%BASE_LO:vgpr_32
+  // const auto *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);//%103:sgpr_32
+
+  return false;
+}
+
 void SILoadStoreOptimizer::addInstToMergeableList(const CombineInfo &CI,
                  std::list<std::list<CombineInfo> > &MergeableInsts) const {
   for (std::list<CombineInfo> &AddrList : MergeableInsts) {
@@ -2329,6 +2363,9 @@ SILoadStoreOptimizer::collectMergeableInsts(
     // We run this before checking if an address is mergeable, because it can produce
     // better code even if the instructions aren't mergeable.
     if (promoteConstantOffsetToImm(MI, Visited, AnchorList))
+      Modified = true;
+
+    if (promoteMUBUFLoadStoreScalarOffset(MI))
       Modified = true;
 
     // Treat volatile accesses, ordered accesses and unmodeled side effects as
