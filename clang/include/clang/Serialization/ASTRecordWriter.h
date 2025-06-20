@@ -17,6 +17,7 @@
 #include "clang/AST/AbstractBasicWriter.h"
 #include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/SourceLocationEncoding.h"
 
@@ -113,6 +114,13 @@ public:
   void AddOffset(uint64_t BitOffset) {
     OffsetIndices.push_back(Record->size());
     Record->push_back(BitOffset);
+  }
+
+  void AddLookupOffsets(const LookupBlockOffsets &Offsets) {
+    AddOffset(Offsets.LexicalOffset);
+    AddOffset(Offsets.VisibleOffset);
+    AddOffset(Offsets.ModuleLocalOffset);
+    AddOffset(Offsets.TULocalOffset);
   }
 
   /// Add the given statement or expression to the queue of

@@ -382,12 +382,11 @@ public:
     return BaseT::isLegalNTLoad(DataType, Alignment);
   }
 
-  InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
-                          Type *AccumType, ElementCount VF,
-                          TTI::PartialReductionExtendKind OpAExtend,
-                          TTI::PartialReductionExtendKind OpBExtend,
-                          std::optional<unsigned> BinOp) const override;
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind) const override;
 
   bool enableOrderedReductions() const override { return true; }
 
