@@ -703,8 +703,8 @@ define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_load_b64 s[4:5], s[4:5], 0x18
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_b32 v1, v0, s[0:1] scale_offset
-; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_load_b32 v0, v0, s[2:3] scale_offset
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
 ; GFX1250-NEXT:    s_wait_loadcnt 0x1
