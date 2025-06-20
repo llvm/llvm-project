@@ -17578,7 +17578,7 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
       }
 
       llvm::APSInt vInt = V.getInt();
-      if (vInt > std::numeric_limits<uint64_t>::max() ||
+      if (vInt > std::numeric_limits<int64_t>::max() || 
           vInt < std::numeric_limits<int64_t>::min()) {
             vInt.toString(Str,16);
       } else {
