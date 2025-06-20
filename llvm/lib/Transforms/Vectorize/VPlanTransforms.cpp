@@ -1164,6 +1164,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def,
+            m_VPInstruction<VPInstruction::ExtractLastElement>(
+                m_VPInstruction<VPInstruction::Broadcast>(m_VPValue(A))))) {
+    Def->replaceAllUsesWith(A);
+    return;
+  }
+
   VPInstruction *OpVPI;
   if (match(Def, m_VPInstruction<VPInstruction::ExtractLastElement>(
                      m_VPInstruction(OpVPI))) &&
@@ -2608,8 +2615,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
       VF = Builder.createScalarCast(Instruction::CastOps::UIToFP, VF, StepTy,
                                     DL);
     else
-      VF =
-          Builder.createScalarCast(Instruction::CastOps::Trunc, VF, StepTy, DL);
+      VF = Builder.createScalarZExtOrTrunc(VF, StepTy,
+                                           TypeInfo.inferScalarType(VF), DL);
 
     Inc = Builder.createNaryOp(MulOp, {Step, VF}, Flags);
     Inc = Builder.createNaryOp(VPInstruction::Broadcast, Inc);
