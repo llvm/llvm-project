@@ -217,10 +217,10 @@ public:
         break;
       }
       }
-      }
+    }
 
-  *Offset = C.tell();
-  return C.takeError();
+    *Offset = C.tell();
+    return C.takeError();
   }
 
   void addInstruction(const Instruction &I) { Instructions.push_back(I); }

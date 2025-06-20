@@ -93,7 +93,8 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
       case 4:
         OS << format(" 0x%" PRIx64, Op->getRawOperand(Operand));
         break;
-      default: assert(false);
+      default:
+        assert(false);
       }
     } else if (Size == DWARFExpression::Operation::SizeBlock) {
       uint64_t Offset = Op->getRawOperand(Operand);

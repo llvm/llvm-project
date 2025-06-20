@@ -65,7 +65,7 @@ public:
 
     /// Description of the encoding of one expression Op.
     struct Description {
-      DwarfVersion Version; ///< Dwarf version where the Op was introduced.
+      DwarfVersion Version;     ///< Dwarf version where the Op was introduced.
       SmallVector<Encoding> Op; ///< Encoding for Op operands.
 
       template <typename... Ts>

@@ -26,10 +26,10 @@ class DWARFUnit;
 struct DIDumpOptions;
 class raw_ostream;
 
-  /// Print a Dwarf expression/
-  /// \param E to be printed
-  /// \param OS to this stream
-  /// \param GetNameForDWARFReg callback to return dwarf register name
+/// Print a Dwarf expression/
+/// \param E to be printed
+/// \param OS to this stream
+/// \param GetNameForDWARFReg callback to return dwarf register name
 void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
                           DIDumpOptions DumpOpts, DWARFUnit *U,
                           bool IsEH = false);
@@ -58,8 +58,8 @@ bool printDwarfExpressionCompact(
 ///
 /// returns true if the Op was successfully printed
 bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
-                                  DIDumpOptions DumpOpts, uint8_t Opcode,
-                                  ArrayRef<uint64_t> Operands);
+                           DIDumpOptions DumpOpts, uint8_t Opcode,
+                           ArrayRef<uint64_t> Operands);
 
 } // end namespace llvm
 

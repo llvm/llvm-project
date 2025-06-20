@@ -213,8 +213,8 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
         Operands[Operand] = Data.getULEB128(&Offset);
         break;
       case 3: // global as uint32
-         Operands[Operand] = Data.getU32(&Offset);
-         break;
+        Operands[Operand] = Data.getU32(&Offset);
+        break;
       default:
         return false; // Unknown Wasm location
       }

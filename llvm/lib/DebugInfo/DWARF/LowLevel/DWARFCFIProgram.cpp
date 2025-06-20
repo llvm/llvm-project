@@ -22,7 +22,6 @@
 using namespace llvm;
 using namespace dwarf;
 
-
 StringRef CFIProgram::callFrameString(unsigned Opcode) const {
   return dwarf::CallFrameString(Opcode, Arch);
 }
