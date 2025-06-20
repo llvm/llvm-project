@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
+#include <set>
 
 namespace llvm {
 
@@ -80,6 +81,44 @@ public:
 private:
   int BisectLimit = Disabled;
   int LastBisectNum = 0;
+};
+
+/// This class implements a mechanism to disable passes and individual
+/// optimizations at compile time based on a command line option
+/// (-opt-disable) in order to study how single transformations, or
+/// combinations thereof, affect the IR.
+class LLVM_ABI OptDisable : public OptPassGate {
+public:
+  /// Default constructor. Initializes the state to empty set. The disabling
+  /// will be enabled by the cl::opt call-back when the command line option
+  /// is processed.
+  /// Clients should not instantiate this class directly.  All access should go
+  /// through LLVMContext.
+  OptDisable() = default;
+
+  virtual ~OptDisable() = default;
+
+  /// Checks the pass name to determine if the specified pass should run.
+  ///
+  /// The method prints the name of the pass, and whether or not the pass
+  /// will be executed. It returns true if the pass should run, i.e. if
+  /// its name is was not provided via command line.
+  ///
+  /// Most passes should not call this routine directly. Instead, it is called
+  /// through helper routines provided by the base classes of the pass. For
+  /// instance, function passes should call FunctionPass::skipFunction().
+  bool shouldRunPass(const StringRef PassName,
+                     StringRef IRDescription) override;
+
+  /// Parses the command line argument to extract the names of the passes
+  /// to be disabled. Multiple pass names can be provided with comma separation.
+  void setDisabled(StringRef Passes);
+
+  /// isEnabled() should return true before calling shouldRunPass().
+  bool isEnabled() const override { return !DisabledPasses.empty(); }
+
+private:
+  std::set<std::string> DisabledPasses = {};
 };
 
 /// Singleton instance of the OptBisect class, so multiple pass managers don't
