@@ -162,25 +162,28 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:     for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:       setLibcallImpl(Func, Impl);
 // CHECK-NEXT:     }
+// CHECK-EMPTY:
 // CHECK-NEXT:    if (TT.hasCompilerRT()) {
-// CHECK-NEXT:      static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:      static const LibcallImplPair LibraryCalls_hasCompilerRT[] = {
 // CHECK-NEXT:          {RTLIB::SHL_I32, RTLIB::__ashlsi3}, // __ashlsi3
 // CHECK-NEXT:          {RTLIB::SRL_I64, RTLIB::__lshrdi3}, // __lshrdi3
 // CHECK-NEXT:      };
 // CHECK-EMPTY:
-// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls) {
+// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_hasCompilerRT) {
 // CHECK-NEXT:        setLibcallImpl(Func, Impl);
 // CHECK-NEXT:      }
+// CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if (TT.getOS() == Triple::bar) {
-// CHECK-NEXT:      static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:      static const LibcallImplPair LibraryCalls_isBarOS[] = {
 // CHECK-NEXT:          {RTLIB::MEMSET, RTLIB::___memset}, // ___memset
 // CHECK-NEXT:      };
 // CHECK-EMPTY:
-// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls) {
+// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_isBarOS) {
 // CHECK-NEXT:        setLibcallImpl(Func, Impl);
 // CHECK-NEXT:      }
+// CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;
@@ -196,6 +199,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:      setLibcallImpl(Func, Impl);
 // CHECK-NEXT:    }
+// CHECK-EMPTY:
 // CHECK-NEXT:   return;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
@@ -208,14 +212,16 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:      setLibcallImpl(Func, Impl);
 // CHECK-NEXT:    }
+// CHECK-EMPTY:
 // CHECK-NEXT:    if (TT.getOS() == Triple::bar) {
-// CHECK-NEXT:      static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:      static const LibcallImplPair LibraryCalls_isBarOS[] = {
 // CHECK-NEXT:          {RTLIB::MEMSET, RTLIB::___memset}, // ___memset
 // CHECK-NEXT:      };
 // CHECK-EMPTY:
-// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls) {
+// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_isBarOS) {
 // CHECK-NEXT:        setLibcallImpl(Func, Impl);
 // CHECK-NEXT:      }
+// CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    return;
@@ -232,6 +238,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
 // CHECK-NEXT:      setLibcallImpl(Func, Impl);
 // CHECK-NEXT:    }
+// CHECK-EMPTY:
 // CHECK-NEXT:   return;
 // CHECK-NEXT: }
 // CHECK-NEXT:  initDefaultLibCallImpls();

@@ -1,0 +1,85 @@
+// RUN: llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s
+
+include "llvm/IR/RuntimeLibCallsImpl.td"
+
+def SDIVREM_I8 : RuntimeLibcall;
+def UDIVREM_I16 : RuntimeLibcall;
+def MALLOC : RuntimeLibcall;
+def TARGET_OVERRIDE_CC : RuntimeLibcall;
+
+//let CallingConv = AVR_BUILTIN in {
+def __divmodqi4 : RuntimeLibcallImpl<SDIVREM_I8>;
+def __udivmodhi4 : RuntimeLibcallImpl<UDIVREM_I16>;
+//}
+
+// Test a case where a target wants to set a different calling
+// convention on a generic builtin
+def __target_override_cc : RuntimeLibcallImpl<TARGET_OVERRIDE_CC>;
+
+def malloc : RuntimeLibcallImpl<MALLOC>;
+
+def isAVR : RuntimeLibcallPredicate<[{TT.getArch() == Triple::avr}]>;
+
+def isAVRHurd : RuntimeLibcallPredicate<
+  [{TT.getArch() == Triple::avr && TT.isOSHurd()}]>;
+
+def AVRLibrary : SystemRuntimeLibrary<isAVR,
+  (add malloc, LibcallsWithCC<(add __divmodqi4, __udivmodhi4), AVR_BUILTIN>)
+>;
+
+// Test with default calling convention
+def AVRHurdLibrary : SystemRuntimeLibrary<isAVRHurd,
+  (add malloc, LibcallsWithCC<(add __divmodqi4, __udivmodhi4), AVR_BUILTIN>)> {
+  let DefaultLibcallCallingConv
+    = LibcallCallingConv<[{isFoo() ? CallingConv::Fast : CallingConv::GHC}]>;
+}
+
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT) {
+// CHECK: if (TT.getArch() == Triple::avr && TT.isOSHurd()) {
+// CHECK-NEXT:   const CallingConv::ID DefaultCC = isFoo() ? CallingConv::Fast : CallingConv::GHC;
+// CHECK-NEXT:   for (CallingConv::ID &Entry : LibcallImplCallingConvs) {
+// CHECK-NEXT:     Entry = isFoo() ? CallingConv::Fast : CallingConv::GHC;
+// CHECK-NEXT:   }
+// CHECK-EMPTY:
+// CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::malloc}, // malloc
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
+// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    }
+// CHECK-EMPTY:
+// CHECK-NEXT:    static const LibcallImplPair LibraryCalls_AlwaysAvailable[] = {
+// CHECK-NEXT:        {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
+// CHECK-NEXT:        {RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4}, // __udivmodhi4
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls_AlwaysAvailable) {
+// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:      setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:    }
+// CHECK-EMPTY:
+// CHECK-NEXT:    return;
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
+// CHECK-NEXT: if (TT.getArch() == Triple::avr) {
+// CHECK-NEXT:   static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:       {RTLIB::MALLOC, RTLIB::malloc}, // malloc
+// CHECK-NEXT:   };
+// CHECK-EMPTY:
+// CHECK-NEXT:   for (const auto [Func, Impl] : LibraryCalls) {
+// CHECK-NEXT:     setLibcallImpl(Func, Impl);
+// CHECK-NEXT:   }
+// CHECK-EMPTY:
+// CHECK-NEXT:   static const LibcallImplPair LibraryCalls_AlwaysAvailable[] = {
+// CHECK-NEXT:       {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
+// CHECK-NEXT:       {RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4}, // __udivmodhi4
+// CHECK-NEXT:   };
+// CHECK-EMPTY:
+// CHECK-NEXT:   for (const auto [Func, Impl] : LibraryCalls_AlwaysAvailable) {
+// CHECK-NEXT:     setLibcallImpl(Func, Impl);
+// CHECK-NEXT:     setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:   }
+// CHECK-EMPTY:
+// CHECK-NEXT:   return;
+// CHECK-NEXT:  }
