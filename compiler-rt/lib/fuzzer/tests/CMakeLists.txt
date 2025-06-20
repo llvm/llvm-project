@@ -45,10 +45,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
     list(APPEND FUZZER_UNWINDER_LIBS ${COMPILER_RT_UNWINDER_LINK_LIBS})
   elseif(COMPILER_RT_HAS_GCC_S_LIB)
     # As a fallback, use the shared libgcc_s library.
-    list(APPEND FUZZER_UNWINDER_LIBS gcc_s)
+    list(APPEND FUZZER_UNWINDER_LIBS -lgcc_s)
   elseif(COMPILER_RT_HAS_GCC_LIB)
     # As a final fallback, use the static libgcc library.
-    list(APPEND FUZZER_UNWINDER_LIBS gcc)
+    list(APPEND FUZZER_UNWINDER_LIBS -lgcc)
   elseif(NOT COMPILER_RT_USE_BUILTINS_LIBRARY)
     # If no unwinder is found and we aren't using the builtins library
     message(FATAL_ERROR "Fuzzer tests require a suitable unwinder, but none was found.")

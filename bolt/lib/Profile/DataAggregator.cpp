@@ -49,6 +49,9 @@ static cl::opt<bool>
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
 
+cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
+                     cl::cat(AggregatorCategory));
+
 static cl::opt<std::string>
     ITraceAggregation("itrace",
                       cl::desc("Generate LBR info with perf itrace argument"),
@@ -181,11 +184,21 @@ void DataAggregator::start() {
 
   findPerfExecutable();
 
+  if (opts::ArmSPE) {
+    // pid    from_ip      to_ip        flags
+    // where flags could be:
+    // P/M: whether branch was Predicted or Mispredicted.
+    // N: optionally appears when the branch was Not-Taken (ie fall-through)
+    // 12345  0x123/0x456/PN/-/-/8/RET/-
+    opts::ITraceAggregation = "bl";
+    opts::ParseMemProfile = true;
+    opts::BasicAggregation = false;
+  }
+
   if (opts::BasicAggregation) {
-    launchPerfProcess("events without LBR",
-                      MainEventsPPI,
+    launchPerfProcess("events without LBR", MainEventsPPI,
                       "script -F pid,event,ip",
-                      /*Wait = */false);
+                      /*Wait = */ false);
   } else if (!opts::ITraceAggregation.empty()) {
     // Disable parsing memory profile from trace data, unless requested by user.
     if (!opts::ParseMemProfile.getNumOccurrences())
@@ -524,8 +537,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
 heatmap:
   // Sort parsed traces for faster processing.
-  if (!opts::BasicAggregation)
-    llvm::sort(Traces, llvm::less_first());
+  llvm::sort(Traces, llvm::less_first());
 
   if (!opts::HeatmapMode)
     return Error::success();
@@ -870,13 +882,9 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 
   // Adjust FromBB if the first LBR is a return from the last instruction in
   // the previous block (that instruction should be a call).
-  if (IsReturn) {
-    if (From)
-      FromBB = BF.getBasicBlockContainingOffset(From - 1);
-    else
-      LLVM_DEBUG(dbgs() << "return to the function start: " << Trace << '\n');
-  } else if (Trace.Branch == Trace::EXTERNAL && From == FromBB->getOffset() &&
-             !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
+  if (Trace.Branch != Trace::FT_ONLY && !BF.containsAddress(Trace.Branch) &&
+      From == FromBB->getOffset() &&
+      (IsReturn ? From : !(FromBB->isEntryPoint() || FromBB->isLandingPad()))) {
     const BinaryBasicBlock *PrevBB =
         BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
@@ -994,9 +1002,22 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   if (std::error_code EC = MispredStrRes.getError())
     return EC;
   StringRef MispredStr = MispredStrRes.get();
-  if (MispredStr.size() != 1 ||
-      (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-')) {
-    reportError("expected single char for mispred bit");
+  // SPE brstack mispredicted flags might be up to two characters long:
+  // 'PN' or 'MN'. Where 'N' optionally appears.
+  bool ValidStrSize = opts::ArmSPE
+                          ? MispredStr.size() >= 1 && MispredStr.size() <= 2
+                          : MispredStr.size() == 1;
+  bool SpeTakenBitErr =
+      (opts::ArmSPE && MispredStr.size() == 2 && MispredStr[1] != 'N');
+  bool PredictionBitErr =
+      !ValidStrSize ||
+      (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-');
+  if (SpeTakenBitErr)
+    reportError("expected 'N' as SPE prediction bit for a not-taken branch");
+  if (PredictionBitErr)
+    reportError("expected 'P', 'M' or '-' char as a prediction bit");
+
+  if (SpeTakenBitErr || PredictionBitErr) {
     Diag << "Found: " << MispredStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }
@@ -1202,12 +1223,14 @@ ErrorOr<Location> DataAggregator::parseLocationOrOffset() {
 std::error_code DataAggregator::parseAggregatedLBREntry() {
   enum AggregatedLBREntry : char {
     INVALID = 0,
-    EVENT_NAME,        // E
-    TRACE,             // T
-    SAMPLE,            // S
-    BRANCH,            // B
-    FT,                // F
-    FT_EXTERNAL_ORIGIN // f
+    EVENT_NAME,         // E
+    TRACE,              // T
+    RETURN,             // R
+    SAMPLE,             // S
+    BRANCH,             // B
+    FT,                 // F
+    FT_EXTERNAL_ORIGIN, // f
+    FT_EXTERNAL_RETURN  // r
   } Type = INVALID;
 
   /// The number of fields to parse, set based on \p Type.
@@ -1235,20 +1258,22 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
     Type = StringSwitch<AggregatedLBREntry>(Str)
                .Case("T", TRACE)
+               .Case("R", RETURN)
                .Case("S", SAMPLE)
                .Case("E", EVENT_NAME)
                .Case("B", BRANCH)
                .Case("F", FT)
                .Case("f", FT_EXTERNAL_ORIGIN)
+               .Case("r", FT_EXTERNAL_RETURN)
                .Default(INVALID);
 
     if (Type == INVALID) {
-      reportError("expected T, S, E, B, F or f");
+      reportError("expected T, R, S, E, B, F, f or r");
       return make_error_code(llvm::errc::io_error);
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum = SSI(Str).Case("T", 3).Case("S", 1).Case("E", 0).Default(2);
+    AddrNum = SSI(Str).Cases("T", "R", 3).Case("S", 1).Case("E", 0).Default(2);
     CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
@@ -1305,17 +1330,30 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   if (ToFunc)
     ToFunc->setHasProfileAvailable();
 
-  /// For legacy fall-through types, adjust locations to match Trace container.
-  if (Type == FT || Type == FT_EXTERNAL_ORIGIN) {
+  /// For fall-through types, adjust locations to match Trace container.
+  if (Type == FT || Type == FT_EXTERNAL_ORIGIN || Type == FT_EXTERNAL_RETURN) {
     Addr[2] = Location(Addr[1]->Offset); // Trace To
     Addr[1] = Location(Addr[0]->Offset); // Trace From
-    // Put a magic value into Trace Branch to differentiate from a full trace.
-    Addr[0] = Location(Type == FT ? Trace::FT_ONLY : Trace::FT_EXTERNAL_ORIGIN);
+    // Put a magic value into Trace Branch to differentiate from a full trace:
+    if (Type == FT)
+      Addr[0] = Location(Trace::FT_ONLY);
+    else if (Type == FT_EXTERNAL_ORIGIN)
+      Addr[0] = Location(Trace::FT_EXTERNAL_ORIGIN);
+    else if (Type == FT_EXTERNAL_RETURN)
+      Addr[0] = Location(Trace::FT_EXTERNAL_RETURN);
+    else
+      llvm_unreachable("Unexpected fall-through type");
   }
 
-  /// For legacy branch type, mark Trace To to differentite from a full trace.
-  if (Type == BRANCH) {
+  /// For branch type, mark Trace To to differentiate from a full trace.
+  if (Type == BRANCH)
     Addr[2] = Location(Trace::BR_ONLY);
+
+  if (Type == RETURN) {
+    if (!Addr[0]->Offset)
+      Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
+    else
+      Returns.emplace(Addr[0]->Offset);
   }
 
   /// Record a trace.
@@ -1497,7 +1535,9 @@ void DataAggregator::printBranchStacksDiagnostics(
 }
 
 std::error_code DataAggregator::parseBranchEvents() {
-  outs() << "PERF2BOLT: parse branch events...\n";
+  std::string BranchEventTypeStr =
+      opts::ArmSPE ? "SPE branch events in LBR-format" : "branch events";
+  outs() << "PERF2BOLT: parse " << BranchEventTypeStr << "...\n";
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
@@ -1525,7 +1565,8 @@ std::error_code DataAggregator::parseBranchEvents() {
     }
 
     NumEntries += Sample.LBR.size();
-    if (BAT && Sample.LBR.size() == 32 && !NeedsSkylakeFix) {
+    if (this->BC->isX86() && BAT && Sample.LBR.size() == 32 &&
+        !NeedsSkylakeFix) {
       errs() << "PERF2BOLT-WARNING: using Intel Skylake bug workaround\n";
       NeedsSkylakeFix = true;
     }
@@ -1548,10 +1589,18 @@ std::error_code DataAggregator::parseBranchEvents() {
     if (NumSamples && NumSamplesNoLBR == NumSamples) {
       // Note: we don't know if perf2bolt is being used to parse memory samples
       // at this point. In this case, it is OK to parse zero LBRs.
-      errs() << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
-                "LBR. Record profile with perf record -j any or run perf2bolt "
-                "in no-LBR mode with -nl (the performance improvement in -nl "
-                "mode may be limited)\n";
+      if (!opts::ArmSPE)
+        errs()
+            << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
+               "LBR. Record profile with perf record -j any or run perf2bolt "
+               "in no-LBR mode with -nl (the performance improvement in -nl "
+               "mode may be limited)\n";
+      else
+        errs()
+            << "PERF2BOLT-WARNING: All recorded samples for this binary lack "
+               "SPE brstack entries. Make sure you are running Linux perf 6.14 "
+               "or later, otherwise you get zero samples. Record the profile "
+               "with: perf record -e 'arm_spe_0/branch_filter=1/'.";
     } else {
       printBranchStacksDiagnostics(NumTotalSamples - NumSamples);
     }
@@ -1565,6 +1614,7 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
+  Returns.emplace(Trace::FT_EXTERNAL_RETURN);
   for (const auto &[Trace, Info] : Traces) {
     bool IsReturn = checkReturn(Trace.Branch);
     // Ignore returns.
