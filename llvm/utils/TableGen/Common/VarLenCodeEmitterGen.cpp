@@ -464,7 +464,7 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
     const Init *Val = ES.Value;
     // If it's a StringInit or DagInit, it's a reference to an operand
     // or part of an operand.
-    if (isa<StringInit>(Val) || isa<DagInit>(Val)) {
+    if (isa<StringInit, DagInit>(Val)) {
       StringRef OperandName;
       unsigned LoBit = 0U;
       if (const auto *SV = dyn_cast<StringInit>(Val)) {

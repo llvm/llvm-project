@@ -560,7 +560,7 @@ void GroupMatcher::optimize() {
 //===- SwitchMatcher ------------------------------------------------------===//
 
 bool SwitchMatcher::isSupportedPredicateType(const PredicateMatcher &P) {
-  return isa<InstructionOpcodeMatcher>(P) || isa<LLTOperandMatcher>(P);
+  return isa<InstructionOpcodeMatcher, LLTOperandMatcher>(P);
 }
 
 bool SwitchMatcher::candidateConditionMatches(
