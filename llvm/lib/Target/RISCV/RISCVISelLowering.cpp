@@ -13237,6 +13237,8 @@ SDValue RISCVTargetLowering::lowerVPMergeMask(SDValue Op,
 SDValue
 RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
                                                SelectionDAG &DAG) const {
+  using namespace SDPatternMatch;
+
   SDLoc DL(Op);
 
   SDValue Op1 = Op.getOperand(0);
@@ -13279,6 +13281,19 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
                                        DAG.getConstant(0, DL, XLenVT), EVL2);
     Op2 = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, Op2, SplatOneOp2,
                       SplatZeroOp2, DAG.getUNDEF(ContainerVT), EVL2);
+  }
+
+  SDValue FirstEle;
+  if (!IsMaskVector &&
+      sd_match(Op1, m_InsertElt(m_Poison(), m_Value(FirstEle), m_Zero())) &&
+      sd_match(Offset, m_Zero()) && sd_match(EVL1, m_One())) {
+    SDValue Result = DAG.getNode(
+        ContainerVT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL
+                                      : RISCVISD::VSLIDE1UP_VL,
+        DL, ContainerVT, DAG.getUNDEF(ContainerVT), Op2, FirstEle, Mask, EVL2);
+    return VT.isFixedLengthVector()
+               ? convertFromScalableVector(VT, Result, DAG, Subtarget)
+               : Result;
   }
 
   int64_t ImmValue = cast<ConstantSDNode>(Offset)->getSExtValue();
