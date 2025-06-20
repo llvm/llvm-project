@@ -1576,7 +1576,7 @@ const char *SBTarget::GetTriple() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    std::string triple(target_sp->GetArchitecture().GetTriple().str(false));
+    std::string triple(target_sp->GetArchitecture().GetTriple().clone(true, false).str());
     // Unique the string so we don't run into ownership issues since the const
     // strings put the string into the string pool once and the strings never
     // comes out

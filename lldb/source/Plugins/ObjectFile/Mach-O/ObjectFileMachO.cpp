@@ -6746,7 +6746,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
       break;
     default:
       error = Status::FromErrorStringWithFormat(
-          "unsupported core architecture: %s", target_triple.str(false).c_str());
+          "unsupported core architecture: %s", target_triple.clone(true, false).str().c_str());
       break;
     }
 

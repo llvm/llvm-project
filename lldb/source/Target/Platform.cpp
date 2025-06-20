@@ -250,7 +250,7 @@ void Platform::GetStatus(Stream &strm) {
 
   ArchSpec arch(GetSystemArchitecture());
   if (arch.IsValid()) {
-    if (!arch.GetTriple().str(false).empty()) {
+    if (!arch.GetTriple().clone(true, false).str().empty()) {
       strm.Printf("    Triple: ");
       arch.DumpTriple(strm.AsRawOstream());
       strm.EOL();

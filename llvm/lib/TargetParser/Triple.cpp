@@ -2107,6 +2107,45 @@ std::string Triple::merge(const Triple &Other) const {
   return Other.str();
 }
 
+Triple Triple::clone(bool IncludeEnvironment, bool IncludeObjectFormat) const {
+  if (str() == "")
+    return Triple();
+  if (IncludeEnvironment && IncludeObjectFormat)
+    return Triple(*this);
+
+  SmallString<64> triple;
+  llvm::StringRef tmp;
+  // arch
+  std::pair<llvm::StringRef, llvm::StringRef> pair = StringRef(Data).split('-'); // pair<arch, vendor/os/env/obj>
+  triple += pair.first;
+  // vendor
+  pair = pair.second.split('-'); // pair<vendor, os/env/obj>
+  triple += "-";
+  triple += pair.first;
+  // os
+  pair = (tmp = pair.second).split('-'); // pair<os, env/obj>
+  triple += "-";
+  triple += pair.first;
+  // environment
+  bool has_environment = tmp != pair.first;
+  pair = (tmp = pair.second).split('-'); // pair<env, obj>
+  bool added_environment = false;
+  if (has_environment && IncludeEnvironment) {
+    triple += "-";
+    triple += pair.first;
+    added_environment = true;
+  }
+  // object format
+  bool has_object_format = tmp != pair.first;
+  if (has_object_format && IncludeObjectFormat) {
+    if (!added_environment)
+      triple += "-";
+    triple += "-";
+    triple += pair.second;
+  }
+  return Triple(triple);
+}
+
 bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,
                                unsigned Micro) const {
   assert(isMacOSX() && "Not an OS X triple!");

@@ -1612,7 +1612,7 @@ bool Module::GetIsDynamicLinkEditor() {
 uint32_t Module::Hash() {
   std::string identifier;
   llvm::raw_string_ostream id_strm(identifier);
-  id_strm << m_arch.GetTriple().str(false) << '-' << m_file.GetPath();
+  id_strm << m_arch.GetTriple().clone(true, false).str() << '-' << m_file.GetPath();
   if (m_object_name)
     id_strm << '(' << m_object_name << ')';
   if (m_object_offset > 0)
@@ -1626,7 +1626,7 @@ uint32_t Module::Hash() {
 std::string Module::GetCacheKey() {
   std::string key;
   llvm::raw_string_ostream strm(key);
-  strm << m_arch.GetTriple().str(false) << '-' << m_file.GetFilename();
+  strm << m_arch.GetTriple().clone(true, false).str() << '-' << m_file.GetFilename();
   if (m_object_name)
     strm << '(' << m_object_name << ')';
   strm << '-' << llvm::format_hex(Hash(), 10);

@@ -461,9 +461,7 @@ public:
   /// @name Direct Component Access
   /// @{
 
-  // const std::string &str() const { return Data; }
-
-  const std::string &str(bool includeObjectFormat) const { return Data; }
+  const std::string &str() const { return Data; }
 
   const std::string &getTriple() const { return Data; }
 
@@ -1227,6 +1225,23 @@ public:
 
   /// Merge target triples.
   std::string merge(const Triple &Other) const;
+
+  /// Clone the triple. Optionally, only keep the first \p N components.
+  ///
+  /// The original triple string is either emmpty or in the following format:
+  /// > [arch]-[vendor]-[os][-[env][-[objfmt]]]
+  ///
+  /// The cloned triple string will preserve the first \p N components exactly
+  /// the same as the original (including the leading "-" and the value, empty
+  /// or not).
+  ///
+  /// E.g. Triple("arm64-apple-ios").clone(5) == "arm64-apple-ios"
+  /// E.g. Triple("arm64-apple-ios--").clone(3) == "arm64-apple-ios"
+  /// E.g. Triple("arm64-apple-ios--").clone(4) == "arm64-apple-ios-"
+  /// E.g. Triple("arm64-apple-ios--").clone(5) == "arm64-apple-ios--"
+  ///
+  /// \returns the cloned triple.
+  Triple clone(int N = 5) const;
 
   /// Some platforms have different minimum supported OS versions that
   /// varies by the architecture specified in the triple. This function

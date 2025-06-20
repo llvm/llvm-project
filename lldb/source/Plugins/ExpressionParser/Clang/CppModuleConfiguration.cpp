@@ -35,8 +35,8 @@ bool CppModuleConfiguration::SetOncePath::TrySet(llvm::StringRef path) {
 static llvm::SmallVector<std::string, 2>
 getTargetIncludePaths(const llvm::Triple &triple) {
   llvm::SmallVector<std::string, 2> paths;
-  if (!triple.str(false).empty()) {
-    paths.push_back("/usr/include/" + triple.str(false));
+  if (!triple.clone(true, false).str().empty()) {
+    paths.push_back("/usr/include/" + triple.clone(true, false).str());
     if (!triple.getArchName().empty() ||
         triple.getOSAndEnvironmentName().empty())
       paths.push_back(("/usr/include/" + triple.getArchName() + "-" +
@@ -75,13 +75,13 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f,
       parent_path(posix_dir, Style::posix).ends_with("c++")) {
     if (!m_std_inc.TrySet(posix_dir))
       return false;
-    if (triple.str(false).empty())
+    if (triple.clone(true, false).str().empty())
       return true;
 
     posix_dir.consume_back("c++/v1");
     // Check if this is a target-specific libc++ include directory.
     return m_std_target_inc.TrySet(
-        (posix_dir + triple.str(false) + "/c++/v1").str());
+        (posix_dir + triple.clone(true, false).str() + "/c++/v1").str());
   }
 
   std::optional<llvm::StringRef> inc_path;
