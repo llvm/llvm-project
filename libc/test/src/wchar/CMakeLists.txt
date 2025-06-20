@@ -24,6 +24,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  mbrtowc_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbrtowc_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.string.memset
+    libc.src.wchar.mbrtowc
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
+)
+
+add_libc_test(
   wctob_test
   SUITE
     libc_wchar_unittests
