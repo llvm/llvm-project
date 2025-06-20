@@ -40,12 +40,14 @@ define <2 x float> @log2_test_v(<2 x float> %in) {
 ; CHECK-LABEL: log2_test_v(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [log2_test_v_param_0];
 ; CHECK-NEXT:    lg2.approx.f32 %r3, %r2;
 ; CHECK-NEXT:    lg2.approx.f32 %r4, %r1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NEXT:    mov.b64 %rd1, {%r4, %r3};
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call <2 x float> @llvm.log2.v2f32(<2 x float> %in)
