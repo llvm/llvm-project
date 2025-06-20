@@ -48,7 +48,7 @@ static cl::opt<bool> DisableBitcodeVersionUpgrade(
 
 static const char *PreservedSymbols[] = {
     // There are global variables, so put it here instead of in
-    // RuntimeLibcalls.def.
+    // RuntimeLibcalls.td.
     // TODO: Are there similar such variables?
     "__ssp_canary_word",
     "__stack_chk_guard",
