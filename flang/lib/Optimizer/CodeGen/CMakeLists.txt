@@ -34,13 +34,13 @@ add_flang_library(FIRCodeGen
 
   MLIR_LIBS
   MLIRComplexToLLVM
+  MLIRComplexToROCDL
   MLIRComplexToStandard
   MLIRGPUDialect
   MLIRMathToFuncs
   MLIRMathToLLVM
   MLIRMathToLibm
   MLIRMathToROCDL
-  MLIRComplexToROCDL
   MLIROpenMPToLLVM
   MLIROpenACCDialect
   MLIRBuiltinToLLVMIRTranslation
