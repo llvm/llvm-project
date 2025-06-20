@@ -318,7 +318,7 @@ public:
     case RISCV::SD_RV32: {
       MCRegister Reg = Inst.getOperand(1).getReg();
       auto TargetRegState = getGPRState(Reg);
-      if (TargetRegState && Reg != RISCV::X0) {
+      if (TargetRegState) {
         Target = *TargetRegState + Inst.getOperand(2).getImm();
         return true;
       }

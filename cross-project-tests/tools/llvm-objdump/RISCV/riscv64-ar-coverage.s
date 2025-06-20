@@ -1,4 +1,5 @@
 # RUN: %clang --target=fuchsia-elf-riscv64 -march=rv64gc_zcb %s -nostdlib -o %t
+# RUN: llvm-objcopy --add-symbol abs=0,global %t
 # RUN: llvm-objdump -d %t | FileCheck %s
 
 # CHECK: 0000000000001000 <_start>:
@@ -20,7 +21,7 @@
 # CHECK-NEXT:     102a: 0511         	addi	a0, a0, 0x4 <target>
 # CHECK-NEXT:     102c: 0505         	addi	a0, a0, 0x1
 # CHECK-NEXT:     102e: 00200037     	lui	zero, 0x200
-# CHECK-NEXT:     1032: 00a02423     	sw	a0, 0x8(zero)
+# CHECK-NEXT:     1032: 00a02423     	sw	a0, 0x8(zero) <abs+0x8>
 # CHECK-NEXT:     1036: 00101097     	auipc	ra, 0x101
 # CHECK-NEXT:     103a: fd6080e7     	jalr	-0x2a(ra) <func>
 # CHECK-NEXT:     103e: 640d         	lui	s0, 0x3
@@ -71,9 +72,11 @@ _start:
   addi a0, a0, 0x4
   addi a0, a0, 0x1   # verify register tracking terminates
 
-  # Test 5 ensures that an instruction writing into the zero register does
-  # not trigger resolution because that register's value cannot change and
-  # the sequence is equivalent to never running the first instruction
+  # Test 5 check instructions providing upper bits does not change the tracked
+  # value of zero register + ensure load/store instructions accessing data
+  # relative to the zero register trigger address resolution. The latter kind
+  # of instructions are essentially memory accesses relative to the zero
+  # register
 
   # test #5
   lui x0, 0x200
