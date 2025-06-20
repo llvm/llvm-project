@@ -807,3 +807,206 @@ end:                                           ; preds = %entry
 
   ret void
 }
+
+define void @test_decompose_bitwise_or(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR_NOT:%.*]] = icmp sgt i4 [[TMP0]], -1
+; CHECK-NEXT:    br i1 [[OR_NOT]], label [[END:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %x, %y
+  %c.1 = icmp sgt i4 %or.1, -1
+  br i1 %c.1, label %then, label %end
+
+then:
+  %t.1 = icmp sgt i4 %x, -1
+  %t.2 = icmp sgt i4 %y, -1
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  ret void
+
+end:
+  ret void
+}
+
+define void @test_decompose_bitwise_or2(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_or2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp slt i4 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %y, %x
+  %c.1 = icmp slt i4 %or.1, 0
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %or.1 < 0
+  ret void
+
+end:
+  ; fact: %or.1 >= 0
+  %t.1 = icmp sgt i4 %x, -1
+  %t.2 = icmp sgt i4 %y, -1
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  ret void
+}
+
+define void @test_decompose_nested_bitwise_or(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @test_decompose_nested_bitwise_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i4 [[TMP0]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_2_NOT:%.*]] = icmp sgt i4 [[TMP1]], -1
+; CHECK-NEXT:    br i1 [[OR_2_NOT]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %x, %y
+  %or.2 = or i4 %or.1, %z
+  %c.1 = icmp sgt i4 %or.2, -1
+  br i1 %c.1, label %then, label %end
+
+then:                                                ; preds = %entry
+  %t.1 = icmp sgt i4 %x, -1
+  %t.2 = icmp sgt i4 %y, -1
+  %t.3 = icmp sgt i4 %z, -1
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  call void @use(i1 %t.3)
+  ret void
+
+end:                                                ; preds = %entry
+  ret void
+}
+
+define void @test_decompose_nested_bitwise_or2(i4 %x, i4 %y, i4 %z, i4 %w) {
+; CHECK-LABEL: @test_decompose_nested_bitwise_or2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i4 [[TMP0]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i4 [[TMP1]], [[W:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp slt i4 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %y, %x
+  %or.2 = or i4 %or.1, %z
+  %or.3 = or i4 %or.2, %w
+  %c.1 = icmp slt i4 %or.3, 0
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %or.3 < 0
+  ret void
+
+end:
+  ; fact: %or.3 >= 0 same as %or.3 > -1
+  %t.1 = icmp sgt i4 %x, -1
+  %t.2 = icmp sgt i4 %y, -1
+  %t.3 = icmp sgt i4 %z, -1
+  %t.4 = icmp sgt i4 %w, -1
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  call void @use(i1 %t.3)
+  call void @use(i1 %t.4)
+  ret void
+}
+
+define void @test_decompose_bitwise_or_negative(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_or_negative(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR_1:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i4 [[OR_1]], -1
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %x, %y
+  %c.1 = icmp sgt i4 %or.1, -1
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %or.1 > -1
+  ret void
+
+end:
+  ; fact: %or.1 <= -1
+  ; %c.2, %c.3 should only be replaced in the bitwise AND case
+  %c.2 = icmp slt i4 %x, 0
+  %c.3 = icmp slt i4 %y, 0
+  call void @use(i1 %c.2)
+  call void @use(i1 %c.3)
+  ret void
+}
+
+define void @test_decompose_bitwise_or_negative2(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_or_negative2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR_1:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i4 [[OR_1]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %y, %x
+  %c.1 = icmp slt i4 %or.1, 0
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %or.1 < 0
+  ; %c.2, %c.3 should only be replaced in the bitwise AND case
+  %c.2 = icmp slt i4 %x, 0
+  %c.3 = icmp slt i4 %y, 0
+  call void @use(i1 %c.2)
+  call void @use(i1 %c.3)
+  ret void
+
+end:
+  ; fact: %or.1 >= 0
+  ret void
+}
