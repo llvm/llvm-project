@@ -215,7 +215,7 @@ getHostEvalInfoStackTop(lower::AbstractConverter &converter) {
 }
 
 /// Stack frame for storing the OpenMPSectionsConstruct currently being
-/// processed so that it can be refered to when lowering the construct.
+/// processed so that it can be referred to when lowering the construct.
 class SectionsConstructStackFrame
     : public mlir::StateStackFrameBase<SectionsConstructStackFrame> {
 public:
@@ -1840,14 +1840,13 @@ static void genTargetClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceAddrSyms,
     llvm::SmallVectorImpl<const semantics::Symbol *> &isDevicePtrSyms,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
-  HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processBare(clauseOps);
   cp.processDefaultMap(stmtCtx, defaultMaps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processHasDeviceAddr(stmtCtx, clauseOps, hasDeviceAddrSyms);
-  if (hostEvalInfo) {
+  if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter)) {
     // Only process host_eval if compiling for the host device.
     processHostEvalClauses(converter, semaCtx, stmtCtx, eval, loc);
     hostEvalInfo->collectValues(clauseOps.hostEvalVars);
@@ -2240,9 +2239,6 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       converter.getCurrentLocation(), clauseOps);
 }
 
-/// This breaks the normal prototype of the gen*Op functions: adding the
-/// sectionBlocks argument so that the enclosed section constructs can be
-/// lowered here with correct reduction symbol remapping.
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -2251,11 +2247,10 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               ConstructQueue::const_iterator item) {
   const parser::OpenMPSectionsConstruct *sectionsConstruct =
       getSectionsConstructStackTop(converter);
-  assert(sectionsConstruct);
+  assert(sectionsConstruct && "Missing additional parsing information");
 
   const auto &sectionBlocks =
       std::get<parser::OmpSectionBlocks>(sectionsConstruct->t);
-  converter.getStateStack().stackPop();
   mlir::omp::SectionsOperands clauseOps;
   llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   genSectionsClauses(converter, semaCtx, item->clauses, loc, clauseOps,
@@ -3810,8 +3805,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, source, directive, clauses)};
 
-  converter.getStateStack().stackPush<SectionsConstructStackFrame>(
-      sectionsConstruct);
+  mlir::SaveStateStack<SectionsConstructStackFrame> saveStateStack{
+      converter.getStateStack(), sectionsConstruct};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
