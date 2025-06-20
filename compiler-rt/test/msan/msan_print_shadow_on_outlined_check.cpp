@@ -1,5 +1,5 @@
 // RUN: %clangxx_msan -fsanitize-recover=memory -mllvm -msan-instrumentation-with-call-threshold=0 -g %s -o %t \
-// RUN:   && not %run %t 2>&1 | FileCheck %s
+// RUN:   && not env MSAN_OPTIONS=verbosity=1 %run %t 2>&1 | FileCheck %s
 
 #include <ctype.h>
 #include <stdio.h>

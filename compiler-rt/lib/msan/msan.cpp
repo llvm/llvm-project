@@ -372,18 +372,19 @@ static void print_shadow_value(void *shadow, u64 size) {
   Printf("\n");
 }
 
-#define MSAN_MAYBE_WARNING(type, size)              \
-  void __msan_maybe_warning_##size(type s, u32 o) { \
-    GET_CALLER_PC_BP;                               \
-                                                    \
-    if (UNLIKELY(s)) {                              \
-      PrintWarningWithOrigin(pc, bp, o);            \
-      print_shadow_value((void *)(&s), sizeof(s));  \
-      if (__msan::flags()->halt_on_error) {         \
-        Printf("Exiting\n");                        \
-        Die();                                      \
-      }                                             \
-    }                                               \
+#define MSAN_MAYBE_WARNING(type, size)               \
+  void __msan_maybe_warning_##size(type s, u32 o) {  \
+    GET_CALLER_PC_BP;                                \
+                                                     \
+    if (UNLIKELY(s)) {                               \
+      PrintWarningWithOrigin(pc, bp, o);             \
+      if (Verbosity() >= 1)                          \
+        print_shadow_value((void *)(&s), sizeof(s)); \
+      if (__msan::flags()->halt_on_error) {          \
+        Printf("Exiting\n");                         \
+        Die();                                       \
+      }                                              \
+    }                                                \
   }
 
 MSAN_MAYBE_WARNING(u8, 1)
@@ -406,7 +407,8 @@ void __msan_maybe_warning_N(void *shadow, u64 size, u32 o) {
 
   if (UNLIKELY(!allZero)) {
     PrintWarningWithOrigin(pc, bp, o);
-    print_shadow_value(shadow, size);
+    if (Verbosity() >= 1)
+      print_shadow_value(shadow, size);
     if (__msan::flags()->halt_on_error) {
       Printf("Exiting\n");
       Die();
