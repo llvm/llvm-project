@@ -14,10 +14,10 @@ function(add_offload_test_device_code test_filename test_name)
     check_cxx_compiler_flag(
       "--target=nvptx64-nvidia-cuda -march=native --cuda-path=${cuda_path}" PLATFORM_HAS_NVPTX)
 
-    if(PLATFORM_HAS_NVPTX)
-      set(nvptx_arch "native")
-    elseif(OFFLOAD_TESTS_FORCE_NVIDIA_ARCH)
+    if(OFFLOAD_TESTS_FORCE_NVIDIA_ARCH)
       set(nvptx_arch "${OFFLOAD_TESTS_FORCE_NVIDIA_ARCH}")
+    elseif(PLATFORM_HAS_NVPTX)
+      set(nvptx_arch "native")
     endif()
 
     if(nvptx_arch AND CUDAToolkit_FOUND)
@@ -38,10 +38,10 @@ function(add_offload_test_device_code test_filename test_name)
   if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     check_cxx_compiler_flag("--target=amdgcn-amd-amdhsa -mcpu=native" PLATFORM_HAS_AMDGPU)
 
-    if(PLATFORM_HAS_AMDGPU)
-      set(amdgpu_arch "native")
-    elseif(OFFLOAD_TESTS_FORCE_AMDGPU_ARCH)
+    if(OFFLOAD_TESTS_FORCE_AMDGPU_ARCH)
       set(amdgpu_arch "${OFFLOAD_TESTS_FORCE_AMDGPU_ARCH}")
+    elseif(PLATFORM_HAS_AMDGPU)
+      set(amdgpu_arch "native")
     endif()
 
     if(amdgpu_arch)
