@@ -5600,23 +5600,19 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   }
 
   // Segmented shuffle matching.
-  if (ST->hasSVE2p1() && CostKind == TTI::TCK_RecipThroughput &&
+  if ((ST->hasSVE2p1() || ST->hasSME2p1()) &&
       Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(Tp) &&
-      Tp->getPrimitiveSizeInBits().isKnownMultipleOf(128)) {
+      Tp->getPrimitiveSizeInBits().isKnownMultipleOf(
+          AArch64::SVEBitsPerBlock)) {
 
     FixedVectorType *VTy = cast<FixedVectorType>(Tp);
-    unsigned Segments = VTy->getPrimitiveSizeInBits() / 128;
+    unsigned Segments =
+        VTy->getPrimitiveSizeInBits() / AArch64::SVEBitsPerBlock;
     unsigned SegmentElts = VTy->getNumElements() / Segments;
 
     // dupq zd.t, zn.t[idx]
-    unsigned Lane = (unsigned)Mask[0];
-    if (SegmentElts * Segments == Mask.size() && Lane < SegmentElts) {
-      bool IsDupQ = true;
-      for (unsigned I = 1; I < Mask.size(); ++I)
-        IsDupQ &= (unsigned)Mask[I] == Lane + ((I / SegmentElts) * SegmentElts);
-      if (IsDupQ)
-        return LT.first;
-    }
+    if (isDUPQMask(Mask, Segments, SegmentElts))
+      return LT.first;
   }
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
