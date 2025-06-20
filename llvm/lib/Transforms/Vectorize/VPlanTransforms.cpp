@@ -2279,9 +2279,9 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened pointer inductions cannot be
   // updated, so bail out if the plan contains any.
-  bool ContainsWidenInductions =
+  bool ContainsWidenPointerInductions =
       any_of(Header->phis(), IsaPred<VPWidenPointerInductionRecipe>);
-  if (ContainsWidenInductions)
+  if (ContainsWidenPointerInductions)
     return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
