@@ -1199,6 +1199,9 @@ def PadTilingInterfaceOp : Op<Transform_Dialect, "structured.pad_tiling_interfac
     provided as operation attributes. The operation returns a handle to the
     padded operation and to the padding operation ("tensor.pad").
 
+    TODO: in the future this should be moved out of a specific Linalg
+    implementation file and into a more general "Structured" file.
+
     #### Return modes
 
     This operation ignores non-Linalg ops and drops them in the return.
