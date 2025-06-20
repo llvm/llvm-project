@@ -2,10 +2,10 @@
 subroutine assumedshape(normal, contig)
   real normal(:)
   real, contiguous :: contig(:)
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wno-known-bad-implicit-interface]
   !BECAUSE: Element of assumed-shape array may not be associated with a dummy argument 'assumedsize=' array
   call seqAssociate(normal(1))
-  !PORTABILITY: Element of contiguous assumed-shape array is accepted for storage sequence association
+  !PORTABILITY: Element of contiguous assumed-shape array is accepted for storage sequence association [-Wno-contiguous-ok-for-seq-association]
   call seqAssociate(contig(1))
 end
 subroutine seqAssociate(assumedSize)

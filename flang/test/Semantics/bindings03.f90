@@ -15,9 +15,9 @@ program test
   use m
   procedure(sub), pointer :: p
   type(t) x
-  !PORTABILITY: Procedure binding 'sub' used as target of a pointer assignment
+  !PORTABILITY: Procedure binding 'sub' used as target of a pointer assignment [-Wno-binding-as-procedure]
   p => x%sub
-  !PORTABILITY: Procedure binding 'sub' passed as an actual argument
+  !PORTABILITY: Procedure binding 'sub' passed as an actual argument [-Wno-binding-as-procedure]
   call sub2(x%sub)
  contains
   subroutine sub2(s)

@@ -1,18 +1,18 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 program p
-  !PORTABILITY: Name 'p' declared in a main program should not have the same name as the main program
+  !PORTABILITY: Name 'p' declared in a main program should not have the same name as the main program [-Wno-benign-name-clash]
   integer :: p
 end
 module m
-  !PORTABILITY: Name 'm' declared in a module should not have the same name as the module
+  !PORTABILITY: Name 'm' declared in a module should not have the same name as the module [-Wno-benign-name-clash]
   integer :: m
 end
 submodule(m) sm
-  !PORTABILITY: Name 'sm' declared in a submodule should not have the same name as the submodule
+  !PORTABILITY: Name 'sm' declared in a submodule should not have the same name as the submodule [-Wno-benign-name-clash]
   integer :: sm
 end
 block data bd
-  !PORTABILITY: Name 'bd' declared in a BLOCK DATA subprogram should not have the same name as the BLOCK DATA subprogram
+  !PORTABILITY: Name 'bd' declared in a BLOCK DATA subprogram should not have the same name as the BLOCK DATA subprogram [-Wno-benign-name-clash]
   type bd
   end type
 end

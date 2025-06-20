@@ -37,7 +37,7 @@ module m
   end subroutine
 
   subroutine selemental1(p)
-    !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
+    !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface [-Wno-portability]
     procedure(cos) :: p ! ok
   end subroutine
 
