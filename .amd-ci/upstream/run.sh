@@ -59,7 +59,7 @@ cmake \
     -DLLVM_TARGETS_TO_BUILD=host \
     -DLLVM_LIT_ARGS=-v \
     -DLLVM_ENABLE_PROJECTS="clang;lld;llvm;flang;mlir" \
-    -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp;flang-rt" \
+    -DLLVM_ENABLE_RUNTIMES="openmp" \
     -S "${WORKSPACE}/llvm-project/llvm" \
     -B "${WORKSPACE}/BUILD" \
     -DPython3_EXECUTABLE:STRING=/proj/csse_jenkins2/swtools/apps/python/versions/3.8.12/bin/python \
