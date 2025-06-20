@@ -449,7 +449,6 @@ LLVM_21 {
     clang_Cursor_getGCCAssemblyOutput;
     clang_Cursor_getGCCAssemblyNumClobbers;
     clang_Cursor_getGCCAssemblyClobber;
-    clang_Cursor_isGCCAssemblySimple;
     clang_Cursor_isGCCAssemblyVolatile;
 };
 
