@@ -134,10 +134,6 @@ public:
 ///  its predecessor.  In Case 2, BB (BB3) only has conditional branches
 ///  as its predecessors.
 bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
-  PHINode *PHI = dyn_cast<PHINode>(BB->begin());
-  if (PHI)
-    return false; // For simplicity, avoid cases containing PHI nodes.
-
   BasicBlock *LastCondBlock = nullptr;
   BasicBlock *FirstCondBlock = nullptr;
   BasicBlock *UnCondBlock = nullptr;
@@ -208,8 +204,12 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
 
     if (Idx == -1)
       Idx = CIdx;
-    else if (CIdx != Idx)
-      return false;
+    else if (CIdx != Idx) {
+      // Inverse Branch Condition
+      IRBuilder<>::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(PBI);
+      InvertBranch(PBI, Builder);
+    }
 
     // PS is the successor which is not BB. Check successors to identify
     // the last conditional branch.
@@ -269,11 +269,6 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   if (!PBI1 || !PBI1->isUnconditional())
     return false;
 
-  // PS2 should not contain PHI node.
-  PHI = dyn_cast<PHINode>(PS2->begin());
-  if (PHI)
-    return false;
-
   // Do the transformation.
   BasicBlock *CB;
   BranchInst *PBI = cast<BranchInst>(FirstCondBlock->getTerminator());
@@ -291,17 +286,45 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     // Merge conditions.
     Builder.SetInsertPoint(PBI);
     Value *NC;
-    if (Idx == 0)
-      // Case 2, use parallel or.
-      NC = Builder.CreateOr(PC, CC);
-    else
+    if (UnCondBlock)
       // Case 1, use parallel and.
       NC = Builder.CreateAnd(PC, CC);
+    else
+      // Case 2, use parallel or.
+      NC = Builder.CreateOr(PC, CC);
+
+    // Fixup PHI node if needed
+    for (BasicBlock *CBS : successors(PBI)) {
+      for (PHINode &Phi : CBS->phis()) {
+        Value *origPhi0 = nullptr;
+        Value *newPhi = nullptr;
+        if (llvm::is_contained(Phi.blocks(), FirstCondBlock)) {
+          origPhi0 = Phi.removeIncomingValue(FirstCondBlock, false);
+          newPhi = origPhi0;
+        }
+        if (llvm::is_contained(Phi.blocks(), CB)) {
+          Value *origPhi1 = Phi.removeIncomingValue(CB, false);
+          newPhi = origPhi1;
+
+          if (origPhi0) {
+            // Swap branch given the conditions
+            if (PBI->getSuccessor(0) == CBS) {
+              newPhi = Builder.CreateSelect(PC, origPhi0, origPhi1);
+            } else {
+              newPhi = Builder.CreateSelect(PC, origPhi1, origPhi0);
+            }
+          }
+        }
+        if (newPhi)
+          Phi.addIncoming(newPhi, FirstCondBlock);
+      }
+    }
 
     PBI->replaceUsesOfWith(CC, NC);
     PC = NC;
     if (CB == LastCondBlock)
       Iteration = false;
+
     // Remove internal conditional branches.
     CB->dropAllReferences();
     // make CB unreachable and let downstream to delete the block.
