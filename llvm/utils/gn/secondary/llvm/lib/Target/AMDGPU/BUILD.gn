@@ -189,6 +189,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPURemoveIncompatibleFunctions.cpp",
     "AMDGPUReserveWWMRegs.cpp",
     "AMDGPUResourceUsageAnalysis.cpp",
+    "AMDGPURewriteAGPRCopyMFMA.cpp",
     "AMDGPURewriteOutArguments.cpp",
     "AMDGPURewriteUndefForPHI.cpp",
     "AMDGPUSelectionDAGInfo.cpp",
