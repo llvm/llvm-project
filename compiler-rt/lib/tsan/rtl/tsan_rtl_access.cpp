@@ -523,7 +523,7 @@ SECOND:
 }
 
 void ShadowSet(RawShadow* p, RawShadow* end, RawShadow v) {
-  DCHECK_LE(p, end);
+  DCHECK_LT(p, end);
   DCHECK(IsShadowMem(p));
   DCHECK(p == end || IsShadowMem(end - 1));
   UNUSED const uptr kAlign = kShadowCnt * kShadowSize;
@@ -569,6 +569,7 @@ static void MemoryRangeSet(uptr addr, uptr size, RawShadow val) {
   RawShadow* mid1 =
       Min(end, reinterpret_cast<RawShadow*>(RoundUp(
                    reinterpret_cast<uptr>(begin) + kPageSize / 2, kPageSize)));
+  // begin must < mid1
   ShadowSet(begin, mid1, val);
   // Reset middle part.
   RawShadow* mid2 = RoundDown(end, kPageSize);
@@ -577,7 +578,8 @@ static void MemoryRangeSet(uptr addr, uptr size, RawShadow val) {
       Die();
   }
   // Set the ending.
-  ShadowSet(mid2, end, val);
+  if (mid2 < end)
+    ShadowSet(mid2, end, val);
 }
 
 void MemoryResetRange(ThreadState* thr, uptr pc, uptr addr, uptr size) {
