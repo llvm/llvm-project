@@ -94,9 +94,9 @@ public:
   }
 
   /// Provide access to all the registered blobs via a callable. During access
-  /// the blobs are guaranteed to remain unchanged.
-  void access(llvm::function_ref<void(const llvm::StringMap<BlobEntry> &)>
-                  accessor) const;
+  /// the blob map is guaranteed to remain unchanged.
+  void getBlobMap(llvm::function_ref<void(const llvm::StringMap<BlobEntry> &)>
+                      accessor) const;
 
 private:
   /// A mutex to protect access to the blob map.

@@ -40,7 +40,7 @@ TEST(DialectResourceBlobManagerTest, Lookup) {
   ASSERT_NE(dialectManager.getBlobManager().lookup("blob1"), nullptr);
 }
 
-TEST(DialectResourceBlobManagerTest, Access) {
+TEST(DialectResourceBlobManagerTest, GetBlobMap) {
   MLIRContext context;
   context.loadDialect<test::TestDialect>();
 
@@ -56,7 +56,7 @@ TEST(DialectResourceBlobManagerTest, Access) {
       resourceAttr.getRawHandle().getManagerInterface(&context);
 
   bool blobsArePresent = false;
-  dialectManager.getBlobManager().access(
+  dialectManager.getBlobManager().getBlobMap(
       [&](const llvm::StringMap<DialectResourceBlobManager::BlobEntry>
               &blobMap) { blobsArePresent = blobMap.contains("blob1"); });
   ASSERT_TRUE(blobsArePresent);
@@ -65,7 +65,7 @@ TEST(DialectResourceBlobManagerTest, Access) {
   block->clear();
 
   blobsArePresent = false;
-  dialectManager.getBlobManager().access(
+  dialectManager.getBlobManager().getBlobMap(
       [&](const llvm::StringMap<DialectResourceBlobManager::BlobEntry>
               &blobMap) { blobsArePresent = blobMap.contains("blob1"); });
   ASSERT_TRUE(blobsArePresent);
