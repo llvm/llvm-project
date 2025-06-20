@@ -10,13 +10,12 @@
 #
 # ------------------------------------------------------------------------------
 """
-Tests that Enum variables display correctly
+Tests that function variables display correctly
 """
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
-import os
 
 
 class TestFunctionVariables(TestBase):
@@ -27,11 +26,12 @@ class TestFunctionVariables(TestBase):
         target, process, thread, _ = lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-        self.assertGreater(thread.GetNumFrames(), 0)
-        frame = thread.GetSelectedFrame()
+        thin_ptr_value = self.frame().FindVariable('c')
+        self.assertEqual(thin_ptr_value.GetNumChildren(), 0)
 
         # Get the function pointer variable from our frame
-        func_ptr_value = frame.FindVariable('func_ptr')
+        func_ptr_value = self.frame().FindVariable('func_ptr')
+        self.assertEqual(func_ptr_value.GetNumChildren(), 2)
 
         # Grab the function pointer value as an unsigned load address
         func_ptr_addr = func_ptr_value.GetValueAsUnsigned()
