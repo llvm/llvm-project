@@ -2934,11 +2934,12 @@ genAtomicUpdate(lower::AbstractConverter &converter,
   mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
 
   // This must exist by now.
-  SomeExpr input = *semantics::GetConvertInput(assign.rhs);
-  std::vector<SomeExpr> args{semantics::GetTopLevelOperation(input).second};
+  SomeExpr input = *Fortran::evaluate::GetConvertInput(assign.rhs);
+  std::vector<SomeExpr> args{
+      Fortran::evaluate::GetTopLevelOperation(input).second};
   assert(!args.empty() && "Update operation without arguments");
   for (auto &arg : args) {
-    if (!semantics::IsSameOrConvertOf(arg, atom)) {
+    if (!Fortran::evaluate::IsSameOrConvertOf(arg, atom)) {
       mlir::Value val = fir::getBase(converter.genExprValue(arg, naCtx, &loc));
       overrides.try_emplace(&arg, val);
     }
