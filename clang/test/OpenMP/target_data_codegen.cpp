@@ -690,4 +690,29 @@ void test_present_modifier(int arg) {
   {++arg;}
 }
 #endif
+///==========================================================================///
+
+// RUN: %clang_cc1 -DCK10 -verify -Wno-vla  -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK10 --check-prefix CK10-64
+// RUN: %clang_cc1 -DCK10 -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck %s  --check-prefix CK10 --check-prefix CK10-64
+// RUN: %clang_cc1 -DCK10 -verify -Wno-vla  -fopenmp -fopenmp-version=60 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK10 --check-prefix CK10-32
+// RUN: %clang_cc1 -DCK10 -fopenmp -fopenmp-version=60 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck %s  --check-prefix CK10 --check-prefix CK10-32
+
+// RUN: %clang_cc1 -DCK10 -verify -Wno-vla  -fopenmp-simd -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK10 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK10 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=60 -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
+
+#ifdef CK10
+void test_self_modifier(int arg) {
+// SELF=0x4000 | FROM=0x2 | TO=0x1 = 0x4003
+// CK10: private unnamed_addr constant [1 x i64] [i64 [[#0x4003]]]
+#pragma omp target data map(self, tofrom \
+                            : arg)
+  {++arg;}
+}
+#endif
 #endif
