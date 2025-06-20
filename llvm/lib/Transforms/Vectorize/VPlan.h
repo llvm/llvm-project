@@ -2034,25 +2034,30 @@ public:
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
-                                      public VPUnrollPartAccessor<3> {
+                                      public VPUnrollPartAccessor<4> {
   bool IsScalarAfterVectorization;
 
 public:
   /// Create a new VPWidenPointerInductionRecipe for \p Phi with start value \p
-  /// Start.
+  /// Start and the number of elements unrolled \p NumUnrolledElems, typically
+  /// VF*UF.
   VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
+                                VPValue *NumUnrolledElems,
                                 const InductionDescriptor &IndDesc,
                                 bool IsScalarAfterVectorization, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenPointerInductionSC, Phi, Start,
                                Step, IndDesc, DL),
-        IsScalarAfterVectorization(IsScalarAfterVectorization) {}
+        IsScalarAfterVectorization(IsScalarAfterVectorization) {
+    addOperand(NumUnrolledElems);
+  }
 
   ~VPWidenPointerInductionRecipe() override = default;
 
   VPWidenPointerInductionRecipe *clone() override {
     return new VPWidenPointerInductionRecipe(
         cast<PHINode>(getUnderlyingInstr()), getOperand(0), getOperand(1),
-        getInductionDescriptor(), IsScalarAfterVectorization, getDebugLoc());
+        getOperand(2), getInductionDescriptor(), IsScalarAfterVectorization,
+        getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenPointerInductionSC)
@@ -2067,7 +2072,7 @@ public:
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getFirstUnrolledPartOperand() {
-    return getUnrollPart(*this) == 0 ? this : getOperand(2);
+    return getUnrollPart(*this) == 0 ? this : getOperand(3);
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

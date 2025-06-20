@@ -155,11 +155,13 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
   return paddedShape;
 }
 
-FailureOr<SmallVector<OpFoldResult>> linalg::computeLinalgPaddedShape(
+FailureOr<SmallVector<OpFoldResult>>
+linalg::computeIndexingMapOpInterfacePaddedShape(
     RewriterBase &rewriter, OpOperand &operandToPad,
     ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options) {
-  auto linalgOp = llvm::dyn_cast<LinalgOp>(operandToPad.getOwner());
-  if (!linalgOp)
+  auto transferOp =
+      llvm::dyn_cast<IndexingMapOpInterface>(operandToPad.getOwner());
+  if (!transferOp)
     return failure();
 
   // clang-format off
@@ -173,7 +175,7 @@ FailureOr<SmallVector<OpFoldResult>> linalg::computeLinalgPaddedShape(
   for (const Range &range : iterationDomain)
     loopUpperBounds.push_back(range.size);
 
-  AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&operandToPad);
+  AffineMap indexingMap = transferOp.getMatchingIndexingMap(&operandToPad);
   return computePaddedShape(
       rewriter, cast<TypedValue<RankedTensorType>>(operandToPad.get()),
       indexingMap, loopUpperBounds, options);
@@ -255,7 +257,18 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
   SmallVector<Value> newOperands;
   newOperands.reserve(opToPad->getNumOperands());
   for (OpOperand &opOperand : opToPad->getOpOperands()) {
-    LLVM_DEBUG(DBGS() << "--start padding oprd: " << opOperand.get() << "\n");
+    Value operand = opOperand.get();
+    LLVM_DEBUG(DBGS() << "--start padding oprd: " << operand << "\n");
+
+    // 2.a. Skip scalar-like operands.
+    Type operandType = operand.getType();
+    if (!isa<RankedTensorType>(operandType)) {
+      assert(!isa<ShapedType>(operandType) ||
+             isa<VectorType>(operandType) &&
+                 "Unexpected non-vector ShapedType");
+      newOperands.push_back(operand);
+      continue;
+    }
     // 2.a. Compute padded shape.
     FailureOr<SmallVector<OpFoldResult>> maybePaddedShape =
         computePaddingSizeFun(rewriter, opOperand, iterationDomain, options);
@@ -266,14 +279,16 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
     // 2.b. Expect proper `paddingValues`.
     // TODO: we may want to allow garbage padding in the future, in which case
     // we would just not assert.
-    assert(opOperand.getOperandNumber() < options.paddingValues.size() &&
-           "--no padding value specified");
+    if (opOperand.getOperandNumber() >= options.paddingValues.size()) {
+      return rewriter.notifyMatchFailure(opToPad,
+                                         "--no padding value specified");
+    }
     Attribute paddingValueAttr =
         options.paddingValues[opOperand.getOperandNumber()];
 
     // 2.c. Perform actual padding.
     Value paddedOperand = padOperand(
-        rewriter, opToPad, cast<TypedValue<RankedTensorType>>(opOperand.get()),
+        rewriter, opToPad, cast<TypedValue<RankedTensorType>>(operand),
         *maybePaddedShape, paddingValueAttr);
     LLVM_DEBUG(DBGS() << "--done padding operand: " << paddedOperand << "\n");
 
