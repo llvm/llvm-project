@@ -93,7 +93,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_and_b32 s2, s2, 63
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, 0x90000, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_cmp_eq_u32 0, 0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s3
 ; GFX12-SDAG-NEXT:    s_barrier_init m0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, 0xc0002
@@ -148,7 +148,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_and_b32 s0, s0, 63
 ; GFX12-GISEL-NEXT:    s_or_b32 s1, s0, 0x90000
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    s_cmp_eq_u32 0, 0
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, s1
 ; GFX12-GISEL-NEXT:    s_barrier_init m0
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, 0xc0002
