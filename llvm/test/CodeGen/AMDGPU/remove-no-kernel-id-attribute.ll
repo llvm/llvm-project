@@ -148,14 +148,15 @@ define amdgpu_kernel void @kernel_lds() {
 
 define internal i16 @mutual_recursion_0(i16 %arg) {
 ; CHECK-LABEL: define internal i16 @mutual_recursion_0(
-; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i16 inreg [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
 ; CHECK-NEXT:    [[RECURSIVE_KERNEL_LDS:%.*]] = getelementptr inbounds [3 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[RECURSIVE_KERNEL_LDS]], align 4
 ; CHECK-NEXT:    [[RECURSIVE_KERNEL_LDS1:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
 ; CHECK-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[RECURSIVE_KERNEL_LDS1]], align 2
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 7
-; CHECK-NEXT:    [[RET:%.*]] = call i16 @mutual_recursion_1(i16 [[LD]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.amdgcn.readfirstlane.i16(i16 [[LD]])
+; CHECK-NEXT:    [[RET:%.*]] = call i16 @mutual_recursion_1(i16 [[TMP3]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[RET]], 1
 ; CHECK-NEXT:    ret i16 [[ADD]]
 ;
@@ -168,7 +169,7 @@ define internal i16 @mutual_recursion_0(i16 %arg) {
 
 define internal void @mutual_recursion_1(i16 %arg) {
 ; CHECK-LABEL: define internal void @mutual_recursion_1(
-; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i16 inreg [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @mutual_recursion_0(i16 [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
@@ -180,7 +181,8 @@ define amdgpu_kernel void @kernel_lds_recursion() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_lds_recursion(
 ; CHECK-SAME: ) #[[ATTR5:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META9:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_lds_recursion.lds) ], !alias.scope [[META10:![0-9]+]], !noalias [[META13:![0-9]+]]
-; CHECK-NEXT:    call void @mutual_recursion_0(i16 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.amdgcn.readfirstlane.i16(i16 0)
+; CHECK-NEXT:    call void @mutual_recursion_0(i16 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @mutual_recursion_0(i16 0)
@@ -197,8 +199,9 @@ define amdgpu_kernel void @kernel_lds_recursion() {
 ; CHECK: attributes #[[ATTR3]] = { "amdgpu-lds-size"="4" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR4]] = { "amdgpu-agpr-alloc"="0" "amdgpu-lds-size"="2" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="0" "amdgpu-lds-size"="4" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR6:[0-9]+]] = { convergent nocallback nofree nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 1}
 ; CHECK: [[META1:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 400}
