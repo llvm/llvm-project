@@ -37,6 +37,18 @@ entry:
   %a7.copy = alloca [2 x i64], align 8
   %a8.copy = alloca [4 x i32], align 4
 
+  ; Try copying no elements
+; CHECK-NOT: memcpy
+  call void @llvm.memcpy.p0.p2.i32(ptr align 4 %a1.copy, ptr addrspace(2) align 4 @a1, i32 0, i1 false)
+
+  ; Try copying only the first element
+; CHECK:    [[CB:%.*]] = load target("dx.CBuffer", {{.*}})), ptr @CB.cb, align 4
+; CHECK:    [[LOAD:%.*]] = call { float, float, float, float } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", {{.*}})) [[CB]], i32 0)
+; CHECK:    [[X:%.*]] = extractvalue { float, float, float, float } [[LOAD]], 0
+; CHECK:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[A1_COPY:%.*]], i32 0
+; CHECK:    store float [[X]], ptr [[DEST]], align 4
+  call void @llvm.memcpy.p0.p2.i32(ptr align 4 %a1.copy, ptr addrspace(2) align 4 @a1, i32 4, i1 false)
+
 ; CHECK:    [[CB:%.*]] = load target("dx.CBuffer", {{.*}})), ptr @CB.cb, align 4
 ; CHECK:    [[LOAD:%.*]] = call { float, float, float, float } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", {{.*}})) [[CB]], i32 0)
 ; CHECK:    [[X:%.*]] = extractvalue { float, float, float, float } [[LOAD]], 0

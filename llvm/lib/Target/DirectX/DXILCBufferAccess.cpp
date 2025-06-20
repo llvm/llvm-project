@@ -199,8 +199,7 @@ static void replaceLoad(LoadInst *LI, CBufferResource &CBR,
 /// itself. Assumes the cbuffer global is an array, and the length of bytes to
 /// copy is divisible by array element allocation size.
 /// The memcpy source must also be a direct cbuffer global reference, not a GEP.
-static void replaceMemCpy(MemCpyInst *MCI, CBufferResource &CBR,
-                          SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+static void replaceMemCpy(MemCpyInst *MCI, CBufferResource &CBR) {
 
   ArrayType *ArrTy = dyn_cast<ArrayType>(CBR.getValueType());
   assert(ArrTy && "MemCpy lowering is only supported for array types");
@@ -219,7 +218,7 @@ static void replaceMemCpy(MemCpyInst *MCI, CBufferResource &CBR,
 
   // If length to copy is zero, no memcpy is needed
   if (ByteLength == 0) {
-    DeadInsts.push_back(MCI);
+    MCI->eraseFromParent();
     return;
   }
 
@@ -290,7 +289,7 @@ static void replaceAccessesWithHandle(CBufferResource &CBR) {
     // If we have a memcpy instruction, replace it with multiple accesses and
     // subsequent stores to the destination
     if (auto *MCI = dyn_cast<MemCpyInst>(Cur)) {
-      replaceMemCpy(MCI, CBR, DeadInsts);
+      replaceMemCpy(MCI, CBR);
       continue;
     }
 
