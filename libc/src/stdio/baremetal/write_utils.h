@@ -10,36 +10,33 @@
 #include "hdr/types/FILE.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/io.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h" // For printf_core::WRITE_OK
+#include "src/stdio/baremetal/write_hooks.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace write_utils {
 
-LIBC_INLINE int stdout_write_hook(cpp::string_view new_str, void *) {
-  write_to_stdout(new_str);
-  return printf_core::WRITE_OK;
-}
-
-LIBC_INLINE int stderr_write_hook(cpp::string_view new_str, void *) {
-  write_to_stderr(new_str);
-  return printf_core::WRITE_OK;
-}
-
 LIBC_INLINE void write(::FILE *f, cpp::string_view new_str) {
   if (f == stdout) {
     write_to_stdout(new_str);
-  } else {
+  } else if (f == stderr) {
     write_to_stderr(new_str);
+  } else {
+    libc_errno = 1;
   }
 }
 
 using StreamWriter = int (*)(cpp::string_view, void *);
 LIBC_INLINE StreamWriter get_write_hook(::FILE *f) {
-  if (f == stdout)
+  if (f == stdout) {
     return &stdout_write_hook;
+  } else if (f == stderr) {
+    return &stderr_write_hook;
+  }
 
-  return &stderr_write_hook;
+  libc_errno = 1;
+  return NULL;
 }
 
 } // namespace write_utils

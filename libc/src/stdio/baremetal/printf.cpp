@@ -10,7 +10,7 @@
 
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/baremetal/write_utils.h"
+#include "src/stdio/baremetal/write_hooks.h"
 #include "src/stdio/printf_core/printf_main.h"
 
 #include <stdarg.h>

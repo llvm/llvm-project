@@ -4,10 +4,10 @@ add_entrypoint_object(
     fprintf.cpp
   HDRS
     ../fprintf.h
-    write_utils.h
-  DEPENDS
+    DEPENDS
     libc.src.__support.CPP.string_view
     libc.src.stdio.printf_core.printf_main
+    .baremetal_write_utils
 )
 
 add_entrypoint_object(
@@ -16,9 +16,9 @@ add_entrypoint_object(
     fputc.cpp
   HDRS
     ../fputc.h
-    write_utils.h
   DEPENDS
     libc.src.__support.CPP.string_view
+    .baremetal_write_utils
 )
 
 add_entrypoint_object(
@@ -49,9 +49,9 @@ add_entrypoint_object(
     putc.cpp
   HDRS
     ../putc.h
-    write_utils.h
-  DEPENDS
+    DEPENDS
     libc.src.__support.CPP.string_view
+    .baremetal_write_utils
 )
 
 add_entrypoint_object(
@@ -60,10 +60,10 @@ add_entrypoint_object(
     printf.cpp
   HDRS
     ../printf.h
-    write_utils.h
-  DEPENDS
+    DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.__support.arg_list
+    .baremetal_write_hooks
 )
 
 add_entrypoint_object(
@@ -119,6 +119,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.__support.arg_list
+    .baremetal_write_hooks
 )
 
 add_entrypoint_object(
@@ -135,6 +136,16 @@ add_entrypoint_object(
 )
 
 add_header_library(
+  baremetal_write_hooks
+  HDRS
+    write_hooks.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+    libc.src.stdio.printf_core.core_structs
+)
+
+add_header_library(
   baremetal_write_utils
   HDRS
     write_utils.h
@@ -143,6 +154,7 @@ add_header_library(
     libc.hdr.stdio_macros
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.string_view
+    .baremetal_write_hooks
     .stdout
     .stderr
 )
