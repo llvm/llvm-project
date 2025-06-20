@@ -2043,9 +2043,9 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr add
 ; SI-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[2:3], s[10:11]
-; SI-NEXT:    v_cmp_nle_f32_e32 vcc, 4.0, v2
-; SI-NEXT:    v_cndmask_b32_e64 v2, v3, -1.0, vcc
-; SI-NEXT:    v_cndmask_b32_e64 v3, v3, -2.0, vcc
+; SI-NEXT:    v_cmp_le_f32_e32 vcc, 4.0, v2
+; SI-NEXT:    v_cndmask_b32_e32 v2, -1.0, v3, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v3, -2.0, v3, vcc
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_dword v3, v[0:1], s[0:3], 0 addr64
@@ -2071,9 +2071,9 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr add
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_cmp_nle_f32_e32 vcc, 4.0, v5
-; VI-NEXT:    v_cndmask_b32_e64 v3, v2, -1.0, vcc
-; VI-NEXT:    v_cndmask_b32_e64 v2, v2, -2.0, vcc
+; VI-NEXT:    v_cmp_le_f32_e32 vcc, 4.0, v5
+; VI-NEXT:    v_cndmask_b32_e32 v3, -1.0, v2, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v2, -2.0, v2, vcc
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -2091,9 +2091,9 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr add
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dword v2, v0, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_cmp_nle_f32_e32 vcc, 4.0, v1
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v2, -1.0, vcc
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, -2.0, vcc
+; GFX10-NEXT:    v_cmp_le_f32_e32 vcc, 4.0, v1
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, -1.0, v2, vcc
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, -2.0, v2, vcc
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_store_dword v0, v2, s[0:1]
@@ -2113,9 +2113,9 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr add
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v2, v0, s[4:5] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_cmp_nle_f32_e32 vcc, 4.0, v1
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v2, -1.0, vcc
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, -2.0, vcc
+; GFX11-NEXT:    v_cmp_le_f32_e32 vcc, 4.0, v1
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, -1.0, v2, vcc
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, -2.0, v2, vcc
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1] dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b32 v0, v2, s[0:1] dlc
@@ -2135,9 +2135,9 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr add
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v2, v0, s[4:5] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_nle_f32_e32 vcc, 4.0, v1
-; GFX12-NEXT:    v_cndmask_b32_e64 v1, v2, -1.0, vcc
-; GFX12-NEXT:    v_cndmask_b32_e64 v2, v2, -2.0, vcc
+; GFX12-NEXT:    v_cmp_le_f32_e32 vcc, 4.0, v1
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, -1.0, v2, vcc
+; GFX12-NEXT:    v_cndmask_b32_e32 v2, -2.0, v2, vcc
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v2, s[0:1] scope:SCOPE_SYS
