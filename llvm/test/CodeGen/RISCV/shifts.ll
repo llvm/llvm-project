@@ -832,24 +832,22 @@ define i128 @shl128_shamt32_arith(i128 %a, i32 signext %b) nounwind {
 ;
 ; RV64I-LABEL: shl128_shamt32_arith:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a2, a2, 1
-; RV64I-NEXT:    slli a4, a2, 32
-; RV64I-NEXT:    srli a4, a4, 32
+; RV64I-NEXT:    addiw a4, a2, 1
 ; RV64I-NEXT:    addi a3, a4, -64
+; RV64I-NEXT:    sll a2, a0, a4
 ; RV64I-NEXT:    bltz a3, .LBB17_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    sll a1, a0, a4
+; RV64I-NEXT:    mv a1, a2
 ; RV64I-NEXT:    j .LBB17_3
 ; RV64I-NEXT:  .LBB17_2:
-; RV64I-NEXT:    sll a1, a1, a2
-; RV64I-NEXT:    srli a5, a0, 1
+; RV64I-NEXT:    sll a1, a1, a4
+; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    not a4, a4
-; RV64I-NEXT:    srl a4, a5, a4
-; RV64I-NEXT:    or a1, a1, a4
+; RV64I-NEXT:    srl a0, a0, a4
+; RV64I-NEXT:    or a1, a1, a0
 ; RV64I-NEXT:  .LBB17_3:
-; RV64I-NEXT:    sll a0, a0, a2
-; RV64I-NEXT:    srai a3, a3, 63
-; RV64I-NEXT:    and a0, a3, a0
+; RV64I-NEXT:    srai a0, a3, 63
+; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    ret
   %c = add i32 %b, 1
   %zext = zext nneg i32 %c to i128
