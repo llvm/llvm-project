@@ -868,6 +868,13 @@ print *, [(j,j=1,10)]
   the elements for each component before proceeding to the next component.
   A program using defined assignment might be able to detect the difference.
 
+* The standard forbids instances of derived types with defined unformatted
+  WRITE subroutines from appearing in the I/O list of an `INQUIRE(IOLENGTH=...)`
+  statement.  It then also says that these defined I/O procedures should be
+  ignored for that statement.  So we allow them to appear (like most
+  compilers) and don't use any defined unformatted WRITE that might have been
+  defined.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
