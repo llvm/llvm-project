@@ -2603,11 +2603,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     if (StepTy->isFloatingPointTy())
       VF = Builder.createScalarCast(Instruction::CastOps::UIToFP, VF, StepTy,
                                     DL);
-    else if (VFTy->getScalarSizeInBits() > StepTy->getScalarSizeInBits())
-      VF =
-          Builder.createScalarCast(Instruction::CastOps::Trunc, VF, StepTy, DL);
-    else if (VFTy->getScalarSizeInBits() < StepTy->getScalarSizeInBits())
-      VF = Builder.createScalarCast(Instruction::CastOps::ZExt, VF, StepTy, DL);
+    else
+      VF = Builder.createScalarZExtOrTrunc(VF, StepTy, VFTy, DL);
 
     Inc = Builder.createNaryOp(MulOp, {Step, VF}, Flags);
     Inc = Builder.createNaryOp(VPInstruction::Broadcast, Inc);
