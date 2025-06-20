@@ -1,0 +1,11 @@
+# For this test, we're not checking any specific output from a generated file,
+# but we do need a file to pass into lldb-rpc-gen so use SBAddress.h from source.
+RUN: %lldb-rpc-gen --output-dir=%t %S/../../../../../include/lldb/API/SBAddress.h
+
+RUN: ls %t | FileCheck %s
+
+# We're just making sure that the tool emits the class names,
+# methods and skipped methods file in the output directory.
+CHECK: SBAPI.def
+CHECK: SBClasses.def
+CHECK: SkippedMethods.txt
