@@ -98,6 +98,12 @@ public:
   // analyses after various module->function or cgscc->function adaptors in the
   // default pipelines.
   bool EagerlyInvalidateAnalyses;
+
+  /// Tuning option to enable/disable whole program devirtualization.
+  /// Its default value is false.
+  /// This is controlled by the `-whole-program-vtables` flag.
+  /// Used only in non-LTO mode.
+  bool WholeProgramDevirt;
 };
 
 /// This class provides access to building LLVM's passes.

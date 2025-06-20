@@ -1359,7 +1359,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
   // Emit type metadata on vtables with LTO or IR instrumentation.
   // In IR instrumentation, the type metadata is used to find out vtable
   // definitions (for type profiling) among all global variables.
-  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr())
+  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr() &&
+      !getCodeGenOpts().WholeProgramVTables)
     return;
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());

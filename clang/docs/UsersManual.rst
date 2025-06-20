@@ -2275,9 +2275,13 @@ are listed below.
 
 .. option:: -fwhole-program-vtables
 
+   In LTO mode:
    Enable whole-program vtable optimizations, such as single-implementation
    devirtualization and virtual constant propagation, for classes with
-   :doc:`hidden LTO visibility <LTOVisibility>`. Requires ``-flto``.
+   :doc:`hidden LTO visibility <LTOVisibility>`.
+   In non-LTO mode:
+   Enables speculative devirtualization only without other features.
+   Doesn't require ``-flto`` or visibility.
 
 .. option:: -f[no]split-lto-unit
 
@@ -5170,7 +5174,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fstandalone-debug      Emit full debug info for all types used by the program
       -fstrict-aliasing	      Enable optimizations based on strict aliasing rules
       -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
-      -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
+      -fwhole-program-vtables Enables whole-program vtable optimization.
       -gcodeview-ghash        Emit type record hashes in a .debug$H section
       -gcodeview              Generate CodeView debug information
       -gline-directives-only  Emit debug line info directives only

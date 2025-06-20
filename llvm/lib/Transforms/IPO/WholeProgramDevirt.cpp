@@ -24,7 +24,8 @@
 //   returns 0, or a single vtable's function returns 1, replace each virtual
 //   call with a comparison of the vptr against that vtable's address.
 //
-// This pass is intended to be used during the regular and thin LTO pipelines:
+// This pass is intended to be used during the regular/thinLTO and non-LTO
+// pipelines:
 //
 // During regular LTO, the pass determines the best optimization for each
 // virtual call and applies the resolutions directly to virtual calls that are
@@ -48,6 +49,13 @@
 //   is supported.
 // - Import phase: (same as with hybrid case above).
 //
+// In non-LTO mode:
+// - The pass apply speculative devirtualization without requiring any type of
+// visibility.
+// - Skips other features like virtual constant propagation, uniform return
+// value
+//   optimization, unique return value optimization, branch funnels to minimize
+//   the drawbacks of wrong speculation.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
@@ -60,7 +68,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -798,6 +808,21 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
+  std::optional<ModuleSummaryIndex> Index;
+  // Force Fallback mode as it's safe in case it's non-LTO mode where
+  // we don't have hidden visibility.
+  if (!InLTOMode) {
+    DevirtCheckMode = WPDCheckMode::Fallback;
+    // In non-LTO mode, we don't have an ExportSummary, so we
+    // build the ExportSummary from the module.
+    assert(!ExportSummary &&
+           "ExportSummary is expected to be empty in non-LTO mode");
+    if (DevirtCheckMode == WPDCheckMode::Fallback && !ExportSummary) {
+      ProfileSummaryInfo PSI(M);
+      Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
+      ExportSummary = Index.has_value() ? &Index.value() : nullptr;
+    }
+  }
   if (!DevirtModule(M, AARGetter, OREGetter, LookupDomTree, ExportSummary,
                     ImportSummary)
            .run())
@@ -1091,10 +1116,12 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!TM.Bits->GV->isConstant())
       return false;
 
-    // We cannot perform whole program devirtualization analysis on a vtable
-    // with public LTO visibility.
-    if (TM.Bits->GV->getVCallVisibility() ==
-        GlobalObject::VCallVisibilityPublic)
+    // If speculative devirtualization is NOT enabled, it's not safe to perform
+    // whole program devirtualization
+    //  analysis on a vtable with public LTO visibility.
+    if (DevirtCheckMode != WPDCheckMode::Fallback &&
+        TM.Bits->GV->getVCallVisibility() ==
+            GlobalObject::VCallVisibilityPublic)
       return false;
 
     Function *Fn = nullptr;
@@ -1111,6 +1138,11 @@ bool DevirtModule::tryFindVirtualCallTargets(
     // We can disregard __cxa_pure_virtual as a possible call target, as
     // calls to pure virtuals are UB.
     if (Fn->getName() == "__cxa_pure_virtual")
+      continue;
+    // In Most cases empty functions will be overridden by the
+    // implementation of the derived class, so we can skip them.
+    if (DevirtCheckMode == WPDCheckMode::Fallback &&
+        Fn->getReturnType()->isVoidTy() && Fn->getInstructionCount() <= 1)
       continue;
 
     // We can disregard unreachable functions as possible call targets, as
@@ -1333,10 +1365,11 @@ bool DevirtModule::trySingleImplDevirt(
   if (!IsExported)
     return false;
 
-  // If the only implementation has local linkage, we must promote to external
-  // to make it visible to thin LTO objects. We can only get here during the
-  // ThinLTO export phase.
-  if (TheFn->hasLocalLinkage()) {
+  // In case of non-speculative devirtualization, If the only implementation has
+  // local linkage, we must promote to external
+  //  to make it visible to thin LTO objects. We can only get here during the
+  //  ThinLTO export phase.
+  if (DevirtCheckMode != WPDCheckMode::Fallback && TheFn->hasLocalLinkage()) {
     std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
     // Since we are renaming the function, any comdats with the same name must
@@ -2315,6 +2348,11 @@ bool DevirtModule::run() {
 
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
+  // If we are applying speculative devirtualization, we can work on the public
+  // type test intrinsics.
+  if (!TypeTestFunc && DevirtCheckMode == WPDCheckMode::Fallback)
+    TypeTestFunc =
+        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   Function *TypeCheckedLoadFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
   Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
@@ -2437,12 +2475,18 @@ bool DevirtModule::run() {
                  .WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
                                   S.first.ByteOffset, ExportSummary)) {
+      trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
+      // In Speculative devirt mode, we skip virtual constant propagation
+      // and branch funneling to minimize the drawback if we got wrong
+      // speculation during devirtualization.
+      if (DevirtCheckMode != WPDCheckMode::Fallback) {
+        if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second,
+                                 Res)) {
+          DidVirtualConstProp |=
+              tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
-      if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res)) {
-        DidVirtualConstProp |=
-            tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
-
-        tryICallBranchFunnel(TargetsForSlot, S.second, Res, S.first);
+          tryICallBranchFunnel(TargetsForSlot, S.second, Res, S.first);
+        }
       }
 
       // Collect functions devirtualized at least for one call site for stats.

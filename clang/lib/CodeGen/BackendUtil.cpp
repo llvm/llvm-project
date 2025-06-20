@@ -902,6 +902,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // non-integrated assemblers don't recognize .cgprofile section.
   PTO.CallGraphProfile = !CodeGenOpts.DisableIntegratedAS;
   PTO.UnifiedLTO = CodeGenOpts.UnifiedLTO;
+  PTO.WholeProgramDevirt = CodeGenOpts.WholeProgramVTables;
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
