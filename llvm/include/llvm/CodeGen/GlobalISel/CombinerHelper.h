@@ -265,6 +265,13 @@ public:
   bool matchCombineShuffleToBuildVector(MachineInstr &MI) const;
   void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
+  /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
+  /// G_BITCAST(G_BUILD_VECTOR(..))
+  bool matchCombineBuildVectorOfBitcast(MachineInstr &MI,
+                                        SmallVector<Register> &Ops) const;
+  void applyCombineBuildVectorOfBitcast(MachineInstr &MI,
+                                        SmallVector<Register> &Ops) const;
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
