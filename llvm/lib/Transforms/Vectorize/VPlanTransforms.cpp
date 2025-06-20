@@ -2519,8 +2519,9 @@ void VPlanTransforms::createInterleaveGroups(
     if (IG->isReverse()) {
       auto *GEP = dyn_cast<GetElementPtrInst>(
           getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts());
-      auto *ReversePtr = new VPReverseInterleavePtrRecipe(
-          Addr, &Plan.getVF(), getLoadStoreType(IRInsertPos), IG->getFactor(),
+      auto *ReversePtr = new VPVectorEndPointerRecipe(
+          Addr, &Plan.getVF(), getLoadStoreType(IRInsertPos),
+          -(int64_t)IG->getFactor(),
           GEP && GEP->isInBounds() ? GEPNoWrapFlags::inBounds()
                                    : GEPNoWrapFlags::none(),
           InsertPos->getDebugLoc());
