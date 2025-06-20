@@ -602,14 +602,16 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
     // Prepare memory intrinsic calls for register stackifying.
     addPass(createWebAssemblyMemIntrinsicResults());
+  }
 
-    // Mark registers as representing wasm's value stack. This is a key
-    // code-compression technique in WebAssembly. We run this pass (and
-    // MemIntrinsicResults above) very late, so that it sees as much code as
-    // possible, including code emitted by PEI and expanded by late tail
-    // duplication.
-    addPass(createWebAssemblyRegStackify());
+  // Mark registers as representing wasm's value stack. This is a key
+  // code-compression technique in WebAssembly. We run this pass (and
+  // MemIntrinsicResults above) very late, so that it sees as much code as
+  // possible, including code emitted by PEI and expanded by late tail
+  // duplication.
+  addPass(createWebAssemblyRegStackify(getOptLevel()));
 
+  if (getOptLevel() != CodeGenOptLevel::None) {
     // Run the register coloring pass to reduce the total number of registers.
     // This runs after stackification so that it doesn't consider registers
     // that become stackified.
