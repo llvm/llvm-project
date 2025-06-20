@@ -22,6 +22,12 @@
 #define TYSAN_INTERCEPT___STRDUP 0
 #endif
 
+#if SANITIZER_POSIX
+#define TYSAN_INTERCEPT___STRNDUP 1
+#else
+#define TYSAN_INTERCEPT___STRNDUP 0
+#endif
+
 #if SANITIZER_LINUX
 extern "C" int mallopt(int param, int value);
 #endif
@@ -86,7 +92,7 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T length, int prot, int flags,
 INTERCEPTOR(char *, strdup, const char *s) {
   char *res = REAL(strdup)(s);
   if (res)
-    tysan_copy_types(res, const_cast<char *>(s), internal_strlen(s));
+    tysan_copy_types(res, s, internal_strlen(s));
   return res;
 }
 
@@ -94,10 +100,19 @@ INTERCEPTOR(char *, strdup, const char *s) {
 INTERCEPTOR(char *, __strdup, const char *s) {
   char *res = REAL(__strdup)(s);
   if (res)
-    tysan_copy_types(res, const_cast<char *>(s), internal_strlen(s));
+    tysan_copy_types(res, s, internal_strlen(s));
   return res;
 }
 #endif // TYSAN_INTERCEPT___STRDUP
+
+#if TYSAN_INTERCEPT___STRNDUP
+INTERCEPTOR(char *, strndup, const char *s, SIZE_T slen) {
+  char *res = REAL(strndup)(s, slen);
+  if (res)
+    tysan_copy_types(res, s, Min(internal_strlen(s), slen));
+  return res;
+}
+#endif
 
 INTERCEPTOR(void *, malloc, uptr size) {
   if (DlsymAlloc::Use())
@@ -223,6 +238,9 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(strdup);
 #if TYSAN_INTERCEPT___STRDUP
   INTERCEPT_FUNCTION(__strdup);
+#endif
+#if TYSAN_INTERCEPT___STRNDUP
+  INTERCEPT_FUNCTION(strndup);
 #endif
 
   INTERCEPT_FUNCTION(malloc);
