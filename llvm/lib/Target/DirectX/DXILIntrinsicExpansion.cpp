@@ -651,58 +651,56 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
   assert((IsDouble || ScalarTy->isIntegerTy(64)) &&
          "Only expand double or int64 scalars or vectors");
 
-  unsigned ExtractNum = 2;
-  if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
-    assert(VT->getNumElements() == 2 &&
+  // Determine if we're dealing with a vector or scalar
+  bool IsVector = isa<FixedVectorType>(BufferTy);
+  if (IsVector) {
+    assert(cast<FixedVectorType>(BufferTy)->getNumElements() == 2 &&
            "TypedBufferStore vector must be size 2");
-    ExtractNum = 4;
   }
+
+  // Create the appropriate vector type for the result
+  Type *Int32Ty = Builder.getInt32Ty();
+  Type *ResultTy = VectorType::get(Int32Ty, IsVector ? 4 : 2, false);
+  Value *Val = PoisonValue::get(ResultTy);
+
+  // Split the 64-bit values into 32-bit components
   if (IsDouble) {
-    Type *SplitElementTy = Builder.getInt32Ty();
-    if (ExtractNum == 4)
+    // Handle double type(s)
+    Type *SplitElementTy = Int32Ty;
+    if (IsVector)
       SplitElementTy = VectorType::get(SplitElementTy, 2, false);
 
-    // Handle double type(s) - keep original behavior
     auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
     Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
                                            {Orig->getOperand(2)});
-    // create our vector
     Value *LowBits = Builder.CreateExtractValue(Split, 0);
     Value *HighBits = Builder.CreateExtractValue(Split, 1);
-    Value *Val;
-    if (ExtractNum == 2) {
-      Val = PoisonValue::get(VectorType::get(Builder.getInt32Ty(), 2, false));
+
+    if (IsVector) {
+      // For vector doubles, use shuffle to create the final vector
+      Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
+    } else {
+      // For scalar doubles, insert the elements
       Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
       Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
-    } else
-      Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
-
-    Builder.CreateIntrinsic(Builder.getVoidTy(),
-                            Intrinsic::dx_resource_store_typedbuffer,
-                            {Orig->getOperand(0), Orig->getOperand(1), Val});
+    }
   } else {
     // Handle int64 type(s)
     Value *InputVal = Orig->getOperand(2);
-    Value *Val;
 
-    if (ExtractNum == 4) {
+    if (IsVector) {
       // Handle vector of int64
-      Type *Int32x4Ty = VectorType::get(Builder.getInt32Ty(), 4, false);
-      Val = PoisonValue::get(Int32x4Ty);
-
       for (unsigned I = 0; I < 2; ++I) {
         // Extract each int64 element
         Value *Int64Val =
             Builder.CreateExtractElement(InputVal, Builder.getInt32(I));
 
-        // Get low 32 bits by truncating to i32
-        Value *LowBits = Builder.CreateTrunc(Int64Val, Builder.getInt32Ty());
-
-        // Get high 32 bits by shifting right by 32 and truncating
+        // Split into low and high 32-bit parts
+        Value *LowBits = Builder.CreateTrunc(Int64Val, Int32Ty);
         Value *ShiftedVal = Builder.CreateLShr(Int64Val, Builder.getInt64(32));
-        Value *HighBits = Builder.CreateTrunc(ShiftedVal, Builder.getInt32Ty());
+        Value *HighBits = Builder.CreateTrunc(ShiftedVal, Int32Ty);
 
-        // Insert into our final vector
+        // Insert into result vector
         Val =
             Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(I * 2));
         Val = Builder.CreateInsertElement(Val, HighBits,
@@ -710,25 +708,19 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
       }
     } else {
       // Handle scalar int64
-      Type *Int32x2Ty = VectorType::get(Builder.getInt32Ty(), 2, false);
-      Val = PoisonValue::get(Int32x2Ty);
-
-      // Get low 32 bits by truncating to i32
-      Value *LowBits = Builder.CreateTrunc(InputVal, Builder.getInt32Ty());
-
-      // Get high 32 bits by shifting right by 32 and truncating
+      Value *LowBits = Builder.CreateTrunc(InputVal, Int32Ty);
       Value *ShiftedVal = Builder.CreateLShr(InputVal, Builder.getInt64(32));
-      Value *HighBits = Builder.CreateTrunc(ShiftedVal, Builder.getInt32Ty());
+      Value *HighBits = Builder.CreateTrunc(ShiftedVal, Int32Ty);
 
-      // Insert into our final vector
       Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
       Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
     }
-
-    Builder.CreateIntrinsic(Builder.getVoidTy(),
-                            Intrinsic::dx_resource_store_typedbuffer,
-                            {Orig->getOperand(0), Orig->getOperand(1), Val});
   }
+
+  // Create the final intrinsic call
+  Builder.CreateIntrinsic(Builder.getVoidTy(),
+                          Intrinsic::dx_resource_store_typedbuffer,
+                          {Orig->getOperand(0), Orig->getOperand(1), Val});
 
   Orig->eraseFromParent();
   return true;
