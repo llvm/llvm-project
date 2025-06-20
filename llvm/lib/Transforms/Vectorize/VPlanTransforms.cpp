@@ -1164,6 +1164,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def,
+            m_VPInstruction<VPInstruction::ExtractLastElement>(
+                m_VPInstruction<VPInstruction::Broadcast>(m_VPValue(A))))) {
+    Def->replaceAllUsesWith(A);
+    return;
+  }
+
   VPInstruction *OpVPI;
   if (match(Def, m_VPInstruction<VPInstruction::ExtractLastElement>(
                      m_VPInstruction(OpVPI))) &&
