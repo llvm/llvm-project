@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines utilities for storing a stack of generic context.
-// The context can be arbitrary data, possibly including file-scoped types.
+// The context can be arbitrary data, possibly including file-scoped types. Data
+// must be derived from StateStackFrameBase and implement MLIR TypeID.
 //
 //===----------------------------------------------------------------------===//
 
