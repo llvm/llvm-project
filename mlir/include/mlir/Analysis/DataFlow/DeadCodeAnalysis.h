@@ -15,6 +15,7 @@
 #ifndef MLIR_ANALYSIS_DATAFLOW_DEADCODEANALYSIS_H
 #define MLIR_ANALYSIS_DATAFLOW_DEADCODEANALYSIS_H
 
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -183,6 +184,11 @@ public:
   /// Visit an operation with control-flow semantics and deduce which of its
   /// successors are live.
   LogicalResult visit(ProgramPoint *point) override;
+
+  static void loadAnalysis(DataFlowSolver &solver) {
+    solver.load<SparseConstantPropagation>();
+    solver.load<DeadCodeAnalysis>();
+  }
 
 private:
   /// Find and mark symbol callables with potentially unknown callsites as
