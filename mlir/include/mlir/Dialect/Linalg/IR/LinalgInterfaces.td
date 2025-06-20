@@ -222,8 +222,7 @@ def LinalgFillOpInterface : OpInterface<"FillOpInterface"> {
   ];
 }
 
-def DomainAndOperandsAffineMapTransferInterface 
-    : OpInterface<"DomainAndOperandsAffineMapTransferInterface"> {
+def IndexingMapOpInterface : OpInterface<"IndexingMapOpInterface"> {
   let description = [{
     Interface for operations that connect an iteration domain to operands via
     affine maps. Provides methods to access indexing maps between iteration
@@ -274,7 +273,7 @@ def DomainAndOperandsAffineMapTransferInterface
 def LinalgStructuredInterface
     : OpInterface<"LinalgOp", [
       DestinationStyleOpInterface,
-      DomainAndOperandsAffineMapTransferInterface
+      IndexingMapOpInterface
   ]> {
   let cppNamespace = "::mlir::linalg";
   let methods = [

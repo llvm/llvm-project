@@ -2229,14 +2229,12 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
       return diag;
     }
 
-    // Only DomainAndOperandsAffineMapTransferInterface ops for now, until
-    // TilingInterface exposes a loopsToOperand map / C++ APIs to compute the
-    // effect of padding on operands.
-    if (!isa<DomainAndOperandsAffineMapTransferInterface>(
-            targetOp.getOperation())) {
-      auto diag = emitSilenceableError()
-                  << "only DomainAndOperandsAffineMapTransferInterface ops "
-                     "supported atm";
+    // Only IndexingMapOpInterface ops for now, until TilingInterface exposes a
+    // loopsToOperand map / C++ APIs to compute the effect of padding on
+    // operands.
+    if (!isa<IndexingMapOpInterface>(targetOp.getOperation())) {
+      auto diag = emitSilenceableError() << "only IndexingMapOpInterface ops "
+                                            "supported atm";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }

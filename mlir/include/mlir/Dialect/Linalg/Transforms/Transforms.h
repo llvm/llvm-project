@@ -612,8 +612,7 @@ using PadSizeComputationFunction =
         const PadTilingInterfaceOptions &)>;
 
 /// Specific helper for Linalg ops.
-FailureOr<SmallVector<OpFoldResult>>
-computeDomainAndOperandsAffineMapTransferInterfacePaddedShape(
+FailureOr<SmallVector<OpFoldResult>> computeIndexingMapOpInterfacePaddedShape(
     RewriterBase &rewriter, OpOperand &operandToPad,
     ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options);
 
@@ -627,12 +626,12 @@ computeDomainAndOperandsAffineMapTransferInterfacePaddedShape(
 //    tensor::PadOp.
 /// * The tensor::PadOp is returned on success.
 
-FailureOr<TilingInterface> rewriteAsPaddedOp(
-    RewriterBase &rewriter, TilingInterface opToPad,
-    const PadTilingInterfaceOptions &constOptions,
-    SmallVector<tensor::PadOp> &padOps,
-    PadSizeComputationFunction computePaddingSizeFun =
-        &computeDomainAndOperandsAffineMapTransferInterfacePaddedShape);
+FailureOr<TilingInterface>
+rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
+                  const PadTilingInterfaceOptions &constOptions,
+                  SmallVector<tensor::PadOp> &padOps,
+                  PadSizeComputationFunction computePaddingSizeFun =
+                      &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {
 
