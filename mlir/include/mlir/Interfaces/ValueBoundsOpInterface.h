@@ -262,11 +262,11 @@ public:
   static bool compare(const Variable &lhs, ComparisonOperator cmp,
                       const Variable &rhs);
   /// This function is similar to `ValueBoundsConstraintSet::compare`, except
-  /// that it returns false if `!(lhs cmp rhs)`, and `std::nullopt` if the
-  /// values couldn't be compared.
-  static std::optional<bool> strongCompare(const Variable &lhs,
-                                           ComparisonOperator cmp,
-                                           const Variable &rhs);
+  /// that it returns false if `!(lhs cmp rhs)`, and `failure` if neither the
+  /// relation nor its inverse relation could be proven.
+  static llvm::FailureOr<bool> strongCompare(const Variable &lhs,
+                                             ComparisonOperator cmp,
+                                             const Variable &rhs);
 
   /// Compute whether the given variables are equal. Return "failure" if
   /// equality could not be determined.
@@ -342,13 +342,13 @@ protected:
 
   /// Return "true" if, based on the current state of the constraint system,
   /// "lhs cmp rhs" was proven to hold. It returns "false" if "!(lhs cmp rhs)"
-  /// can be proven. Otherwise it returns `std::nullopt` meaning the values are
-  /// unordered with respect to the constraints.
+  /// can be proven. Otherwise, it returns `failure` if neither the relation nor
+  /// its inverse relation could be proven.
   ///
   /// This function does not analyze any IR and does not populate any additional
   /// constraints.
-  std::optional<bool> strongComparePos(int64_t lhsPos, ComparisonOperator cmp,
-                                       int64_t rhsPos);
+  llvm::FailureOr<bool> strongComparePos(int64_t lhsPos, ComparisonOperator cmp,
+                                         int64_t rhsPos);
 
   /// Given an affine map with a single result (and map operands), add a new
   /// column to the constraint set that represents the result of the map.

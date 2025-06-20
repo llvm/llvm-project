@@ -78,11 +78,11 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
       });
 
       // Compare the variables.
-      std::optional<bool> cmpResult =
+      FailureOr<bool> cmpResult =
           ValueBoundsConstraintSet::strongCompare(*bound, cmpOp, *nv);
 
       // The variables cannot be compared.
-      if (!cmpResult) {
+      if (failed(cmpResult)) {
         LLVM_DEBUG({
           DBGS() << "-- classes: #" << i << ", #" << jEqClass
                  << " cannot be merged\n";
