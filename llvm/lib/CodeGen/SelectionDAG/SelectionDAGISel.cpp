@@ -1507,7 +1507,6 @@ static bool isFoldedOrDeadInstruction(const Instruction *I,
                                       const FunctionLoweringInfo &FuncInfo) {
   return !I->mayWriteToMemory() && // Side-effecting instructions aren't folded.
          !I->isTerminator() &&     // Terminators aren't folded.
-         !isa<DbgInfoIntrinsic>(I) && // Debug instructions aren't folded.
          !I->isEHPad() &&             // EH pad instructions aren't folded.
          !FuncInfo.isExportedInst(I); // Exported instrs must be computed.
 }
@@ -1593,10 +1592,6 @@ static bool processDbgDeclare(FunctionLoweringInfo &FuncInfo,
 /// in case the declarations refer to arguments.
 static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
   for (const auto &I : instructions(*FuncInfo.Fn)) {
-    const auto *DI = dyn_cast<DbgDeclareInst>(&I);
-    if (DI && processDbgDeclare(FuncInfo, DI->getAddress(), DI->getExpression(),
-                                DI->getVariable(), DI->getDebugLoc()))
-      FuncInfo.PreprocessedDbgDeclares.insert(DI);
     for (const DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
       if (DVR.Type == DbgVariableRecord::LocationType::Declare &&
           processDbgDeclare(FuncInfo, DVR.getVariableLocationOp(0),

@@ -1858,6 +1858,36 @@ def FuncOp : CIR_Op<"func", [
 // CallOp
 //===----------------------------------------------------------------------===//
 
+def CIR_SideEffect : CIR_I32EnumAttr<
+    "SideEffect", "allowed side effects of a function", [
+      I32EnumAttrCase<"All", 1, "all">,
+      I32EnumAttrCase<"Pure", 2, "pure">,
+      I32EnumAttrCase<"Const", 3, "const">
+    ]> {
+  let description = [{
+    The side effect attribute specifies the possible side effects of the callee
+    of a call operation. This is an enumeration attribute and all possible
+    enumerators are:
+
+    - all: The callee can have any side effects. This is the default if no side
+      effects are explicitly listed.
+    - pure: The callee may read data from memory, but it cannot write data to
+      memory. This has the same effect as the GNU C/C++ attribute
+      `__attribute__((pure))`.
+    - const: The callee may not read or write data from memory. This has the
+      same effect as the GNU C/C++ attribute `__attribute__((const))`.
+
+    Examples:
+
+    ```mlir
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    ```
+  }];
+  let cppNamespace = "::cir";
+}
+
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : Op<CIR_Dialect, mnemonic,
          !listconcat(extra_traits,
@@ -1911,7 +1941,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   // will add in the future.
 
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
-      Variadic<CIR_AnyType>:$args);
+      Variadic<CIR_AnyType>:$args,
+      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -1942,20 +1973,26 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let builders = [
     // Build a call op for a direct call
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
-                   "mlir::ValueRange":$operands), [{
+                   "mlir::ValueRange":$operands,
+                   CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       assert(callee && "callee attribute is required for direct call");
       $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
     }]>,
     // Build a call op for an indirect call
     OpBuilder<(ins "mlir::Value":$calleePtr, "mlir::Type":$resType,
-                   "mlir::ValueRange":$operands), [{
+                   "mlir::ValueRange":$operands,
+                   CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       $_state.addOperands(calleePtr);
       $_state.addOperands(operands);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
     }]>,
   ];
 }
@@ -2155,6 +2192,8 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
     `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
     qualified(type($result)) attr-dict
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2350,6 +2389,60 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
       $derived_addr `:` qualified(type($derived_addr))
       (`nonnull` $assume_not_null^)?
       ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
+  let summary = "Create a complex value from its real and imaginary parts";
+  let description = [{
+    The `cir.complex.create` operation takes two operands that represent the
+    real and imaginary part of a complex number, and yields the complex number.
+
+    ```mlir
+    %0 = cir.const #cir.fp<1.000000e+00> : !cir.double
+    %1 = cir.const #cir.fp<2.000000e+00> : !cir.double
+    %2 = cir.complex.create %0, %1 : !cir.double -> !cir.complex<!cir.double>
+    ```
+  }];
+
+  let results = (outs CIR_ComplexType:$result);
+  let arguments = (ins
+    CIR_AnyIntOrFloatType:$real,
+    CIR_AnyIntOrFloatType:$imag
+  );
+
+  let assemblyFormat = [{
+    $real `,` $imag
+    `:` qualified(type($real)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Assume Operations
+//===----------------------------------------------------------------------===//
+
+def AssumeOp : CIR_Op<"assume"> {
+  let summary = "Tell the optimizer that a boolean value is true";
+  let description = [{
+    The `cir.assume` operation takes a single boolean prediate as its only
+    argument and does not have any results. The operation tells the optimizer
+    that the predicate is always true.
+
+    This operation corresponds to the `__assume` and the `__builtin_assume`
+    builtin functions.
+  }];
+
+  let arguments = (ins CIR_BoolType:$predicate);
+
+  let assemblyFormat = [{
+    $predicate `:` type($predicate) attr-dict
   }];
 }
 

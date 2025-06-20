@@ -107,6 +107,9 @@ struct MemsetRange {
 
 } // end anonymous namespace
 
+static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
+                                  MemIntrinsic *MemSrc, BatchAAResults &BAA);
+
 bool MemsetRange::isProfitableToUseMemset(const DataLayout &DL) const {
   // If we found more than 4 stores to merge or 16 bytes, use memset.
   if (TheStores.size() >= 4 || End - Start >= 16)
@@ -1129,14 +1132,29 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     MForwardOffset = *Offset;
   }
 
-  // The length of the memcpy's must be the same, or the preceding one
-  // must be larger than the following one.
-  if (MForwardOffset != 0 || MDep->getLength() != M->getLength()) {
+  Value *CopyLength = M->getLength();
+
+  // The length of the memcpy's must be the same, or the preceding one must be
+  // larger than the following one, or the contents of the overread must be
+  // undefined bytes of a defined size.
+  if (MForwardOffset != 0 || MDep->getLength() != CopyLength) {
     auto *MDepLen = dyn_cast<ConstantInt>(MDep->getLength());
-    auto *MLen = dyn_cast<ConstantInt>(M->getLength());
-    if (!MDepLen || !MLen ||
-        MDepLen->getZExtValue() < MLen->getZExtValue() + MForwardOffset)
+    auto *MLen = dyn_cast<ConstantInt>(CopyLength);
+    // This could be converted to a runtime test (%CopyLength =
+    // min(max(0, MDepLen - MForwardOffset), MLen)), but it is
+    // unclear if that is useful
+    if (!MDepLen || !MLen)
       return false;
+    if (MDepLen->getZExtValue() < MLen->getZExtValue() + MForwardOffset) {
+      if (!overreadUndefContents(MSSA, M, MDep, BAA))
+        return false;
+      if (MDepLen->getZExtValue() <= (uint64_t)MForwardOffset)
+        return false; // Should not reach here (there is obviously no aliasing
+                      // with MDep), so just bail in case it had incomplete info
+                      // somehow
+      CopyLength = ConstantInt::get(CopyLength->getType(),
+                                    MDepLen->getZExtValue() - MForwardOffset);
+    }
   }
 
   IRBuilder<> Builder(M);
@@ -1152,9 +1170,13 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
       eraseInstruction(NewCopySource);
   });
   MaybeAlign CopySourceAlign = MDep->getSourceAlign();
-  // We just need to calculate the actual size of the copy.
-  auto MCopyLoc = MemoryLocation::getForSource(MDep).getWithNewSize(
-      MemoryLocation::getForSource(M).Size);
+  auto MCopyLoc = MemoryLocation::getForSource(MDep);
+  // Truncate the size of the MDep access to just the bytes read
+  if (MDep->getLength() != CopyLength) {
+    auto *ConstLength = cast<ConstantInt>(CopyLength);
+    MCopyLoc = MCopyLoc.getWithNewSize(
+        LocationSize::precise(ConstLength->getZExtValue()));
+  }
 
   // When the forwarding offset is greater than 0, we transform
   //    memcpy(d1 <- s1)
@@ -1223,20 +1245,18 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // example we could be moving from movaps -> movq on x86.
   Instruction *NewM;
   if (UseMemMove)
-    NewM =
-        Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
-                              CopySourceAlign, M->getLength(), M->isVolatile());
+    NewM = Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
+                                 CopySourceAlign, CopyLength, M->isVolatile());
   else if (M->isForceInlined())
     // llvm.memcpy may be promoted to llvm.memcpy.inline, but the converse is
     // never allowed since that would allow the latter to be lowered as a call
     // to an external function.
     NewM = Builder.CreateMemCpyInline(M->getDest(), M->getDestAlign(),
-                                      CopySource, CopySourceAlign,
-                                      M->getLength(), M->isVolatile());
+                                      CopySource, CopySourceAlign, CopyLength,
+                                      M->isVolatile());
   else
     NewM = Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
-                                CopySourceAlign, M->getLength(),
-                                M->isVolatile());
+                                CopySourceAlign, CopyLength, M->isVolatile());
 
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
