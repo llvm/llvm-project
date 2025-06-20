@@ -1163,6 +1163,14 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     });
     return;
   }
+
+  VPInstruction *OpVPI;
+  if (match(Def, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                     m_VPInstruction(OpVPI))) &&
+      OpVPI->isVectorToScalar()) {
+    Def->replaceAllUsesWith(OpVPI);
+    return;
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
@@ -2600,8 +2608,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
       VF = Builder.createScalarCast(Instruction::CastOps::UIToFP, VF, StepTy,
                                     DL);
     else
-      VF =
-          Builder.createScalarCast(Instruction::CastOps::Trunc, VF, StepTy, DL);
+      VF = Builder.createScalarZExtOrTrunc(VF, StepTy,
+                                           TypeInfo.inferScalarType(VF), DL);
 
     Inc = Builder.createNaryOp(MulOp, {Step, VF}, Flags);
     Inc = Builder.createNaryOp(VPInstruction::Broadcast, Inc);

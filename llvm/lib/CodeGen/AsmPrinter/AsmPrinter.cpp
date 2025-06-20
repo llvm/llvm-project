@@ -2424,6 +2424,15 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   if (!RS.needsSection())
     return;
 
+  MCSection *RemarksSection =
+      OutContext.getObjectFileInfo()->getRemarksSection();
+  if (!RemarksSection) {
+    OutContext.reportWarning(SMLoc(), "Current object file format does not "
+                                      "support remarks sections. Use the yaml "
+                                      "remark format instead.");
+    return;
+  }
+
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
   std::optional<SmallString<128>> Filename;
@@ -2441,10 +2450,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   MetaSerializer->emit();
 
   // Switch to the remarks section.
-  MCSection *RemarksSection =
-      OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->switchSection(RemarksSection);
-
   OutStreamer->emitBinaryData(Buf);
 }
 
