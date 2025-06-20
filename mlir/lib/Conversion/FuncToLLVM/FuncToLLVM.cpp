@@ -614,7 +614,6 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
 class CallOpLowering : public CallOpInterfaceLowering<func::CallOp> {
 public:
   explicit CallOpLowering(const LLVMTypeConverter &typeConverter,
-                          // Can be nullptr.
                           SymbolTableCollection *symbolTables = nullptr,
                           PatternBenefit benefit = 1)
       : CallOpInterfaceLowering<func::CallOp>(typeConverter, benefit),
