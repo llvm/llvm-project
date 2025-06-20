@@ -12621,14 +12621,14 @@ have no side effects, and must not capture the value of the pointer.
 If the source is :ref:`poison <poisonvalues>`, the result is
 :ref:`poison <poisonvalues>`.
 
-If the source is not :ref:`poison <poisonvalues>`, and the result pointer is
-non-dereferenceable, the result is :ref:`poison <poisonvalues>`.
-
 If the source is not :ref:`poison <poisonvalues>`, and both source and
 destination are :ref:`integral pointers <nointptrtype>`, and the
 result pointer is dereferenceable, the cast is assumed to be
 reversible (i.e. casting the result back to the original address space
 should yield the original bit pattern).
+
+Which address space casts are supported depends on the target. Unsupported
+address space casts return :ref:`poison <poisonvalues>`.
 
 Example:
 """"""""
