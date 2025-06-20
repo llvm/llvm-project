@@ -92,19 +92,6 @@ struct ValueDFS {
   PredicateBase *PInfo = nullptr;
 };
 
-// Perform a strict weak ordering on instructions and arguments.
-static bool valueComesBefore(const Value *A, const Value *B) {
-  auto *ArgA = dyn_cast_or_null<Argument>(A);
-  auto *ArgB = dyn_cast_or_null<Argument>(B);
-  if (ArgA && !ArgB)
-    return true;
-  if (ArgB && !ArgA)
-    return false;
-  if (ArgA && ArgB)
-    return ArgA->getArgNo() < ArgB->getArgNo();
-  return cast<Instruction>(A)->comesBefore(cast<Instruction>(B));
-}
-
 // This compares ValueDFS structures. Doing so allows us to walk the minimum
 // number of instructions necessary to compute our def/use ordering.
 struct ValueDFS_Compare {
@@ -114,28 +101,34 @@ struct ValueDFS_Compare {
   bool operator()(const ValueDFS &A, const ValueDFS &B) const {
     if (&A == &B)
       return false;
-    // The only case we can't directly compare them is when they in the same
-    // block, and both have localnum == middle.  In that case, we have to use
-    // comesbefore to see what the real ordering is, because they are in the
-    // same basic block.
+    assert(!A.Def && !B.Def && "Should not have Def during comparison");
 
-    assert((A.DFSIn != B.DFSIn || A.DFSOut == B.DFSOut) &&
+    // Order by block first.
+    if (A.DFSIn != B.DFSIn)
+      return A.DFSIn < B.DFSIn;
+    assert(A.DFSOut == B.DFSOut &&
            "Equal DFS-in numbers imply equal out numbers");
-    bool SameBlock = A.DFSIn == B.DFSIn;
+
+    // Then order by first/middle/last.
+    if (A.LocalNum != B.LocalNum)
+      return A.LocalNum < B.LocalNum;
 
     // We want to put the def that will get used for a given set of phi uses,
     // before those phi uses.
     // So we sort by edge, then by def.
     // Note that only phi nodes uses and defs can come last.
-    if (SameBlock && A.LocalNum == LN_Last && B.LocalNum == LN_Last)
+    if (A.LocalNum == LN_Last)
       return comparePHIRelated(A, B);
 
-    bool isADef = A.Def;
-    bool isBDef = B.Def;
-    if (!SameBlock || A.LocalNum != LN_Middle || B.LocalNum != LN_Middle)
-      return std::tie(A.DFSIn, A.LocalNum, isADef) <
-             std::tie(B.DFSIn, B.LocalNum, isBDef);
-    return localComesBefore(A, B);
+    // Use block-local ordering for instructions in the middle.
+    if (A.LocalNum == LN_Middle)
+      return localComesBefore(A, B);
+
+    // The order of PredicateInfo definitions at the start of the block does not
+    // matter.
+    assert(A.LocalNum == LN_First);
+    assert(A.PInfo && B.PInfo && "Must be predicate info def");
+    return false;
   }
 
   // For a phi use, or a non-materialized def, return the edge it represents.
@@ -173,60 +166,32 @@ struct ValueDFS_Compare {
     DomTreeNode *DomBDest = DT.getNode(BDest);
     unsigned AIn = DomADest->getDFSNumIn();
     unsigned BIn = DomBDest->getDFSNumIn();
-    bool isADef = A.Def;
-    bool isBDef = B.Def;
-    assert((!A.Def || !A.U) && (!B.Def || !B.U) &&
+    bool isAUse = A.U;
+    bool isBUse = B.U;
+    assert((!A.PInfo || !A.U) && (!B.PInfo || !B.U) &&
            "Def and U cannot be set at the same time");
     // Now sort by edge destination and then defs before uses.
-    return std::tie(AIn, isADef) < std::tie(BIn, isBDef);
+    return std::tie(AIn, isAUse) < std::tie(BIn, isBUse);
   }
 
-  // Get the definition of an instruction that occurs in the middle of a block.
-  Value *getMiddleDef(const ValueDFS &VD) const {
-    if (VD.Def)
-      return VD.Def;
-    // It's possible for the defs and uses to be null.  For branches, the local
-    // numbering will say the placed predicaeinfos should go first (IE
-    // LN_beginning), so we won't be in this function. For assumes, we will end
-    // up here, beause we need to order the def we will place relative to the
-    // assume.  So for the purpose of ordering, we pretend the def is right
-    // after the assume, because that is where we will insert the info.
-    if (!VD.U) {
-      assert(VD.PInfo &&
-             "No def, no use, and no predicateinfo should not occur");
-      assert(isa<PredicateAssume>(VD.PInfo) &&
-             "Middle of block should only occur for assumes");
-      return cast<PredicateAssume>(VD.PInfo)->AssumeInst->getNextNode();
-    }
-    return nullptr;
-  }
+  const Instruction *getDefOrUser(const ValueDFS &VD) const {
+    if (VD.U)
+      return cast<Instruction>(VD.U->getUser());
 
-  // Return either the Def, if it's not null, or the user of the Use, if the def
-  // is null.
-  const Instruction *getDefOrUser(const Value *Def, const Use *U) const {
-    if (Def)
-      return cast<Instruction>(Def);
-    return cast<Instruction>(U->getUser());
+    // For the purpose of ordering, we pretend the def is right after the
+    // assume, because that is where we will insert the info.
+    assert(VD.PInfo && "No use, and no predicateinfo should not occur");
+    assert(isa<PredicateAssume>(VD.PInfo) &&
+           "Middle of block should only occur for assumes");
+    return cast<PredicateAssume>(VD.PInfo)->AssumeInst->getNextNode();
   }
 
   // This performs the necessary local basic block ordering checks to tell
   // whether A comes before B, where both are in the same basic block.
   bool localComesBefore(const ValueDFS &A, const ValueDFS &B) const {
-    auto *ADef = getMiddleDef(A);
-    auto *BDef = getMiddleDef(B);
-
-    // See if we have real values or uses. If we have real values, we are
-    // guaranteed they are instructions or arguments. No matter what, we are
-    // guaranteed they are in the same block if they are instructions.
-    auto *ArgA = dyn_cast_or_null<Argument>(ADef);
-    auto *ArgB = dyn_cast_or_null<Argument>(BDef);
-
-    if (ArgA || ArgB)
-      return valueComesBefore(ArgA, ArgB);
-
-    auto *AInst = getDefOrUser(ADef, A.U);
-    auto *BInst = getDefOrUser(BDef, B.U);
-    return valueComesBefore(AInst, BInst);
+    const Instruction *AInst = getDefOrUser(A);
+    const Instruction *BInst = getDefOrUser(B);
+    return AInst->comesBefore(BInst);
   }
 };
 
