@@ -352,6 +352,8 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
       (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
 
   if (Version == 1) {
+    // Since the metadata is unversioned, we expect to explicitly see the values
+    // that map to the version 1 behaviour here.
     if (IsSampler)
       return Flags == FlagT::DESCRIPTORS_VOLATILE;
     return Flags == (FlagT::DATA_VOLATILE | FlagT::DESCRIPTORS_VOLATILE);
@@ -395,9 +397,13 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
   }
 
   // When no descriptor flag is set, any data flag is allowed.
-  if (!IsSampler)
-    return (Flags & ~DataFlags) == FlagT::NONE;
-  return (Flags & ~FlagT::NONE) == FlagT::NONE;
+  FlagT Mask = FlagT::NONE;
+  if (!IsSampler) {
+    Mask |= FlagT::DATA_VOLATILE;
+    Mask |= FlagT::DATA_STATIC;
+    Mask |= FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
+  }
+  return (Flags & ~Mask) == FlagT::NONE;
 }
 
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
@@ -434,7 +440,7 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
       if (RSD.Version > 1) {
         if (!verifyDescriptorFlag(Descriptor.Flags))
-          return reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags);
+          return reportValueError(Ctx, "DescriptorRangeFlag", Descriptor.Flags);
       }
       break;
     }
