@@ -15,6 +15,7 @@
 #define MLIR_INTERFACES_CONTROLFLOWINTERFACES_H
 
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
 class BranchOpInterface;
