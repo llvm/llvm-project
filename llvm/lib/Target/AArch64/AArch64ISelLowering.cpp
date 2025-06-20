@@ -7632,7 +7632,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                      bool IsVarArg) const {
   switch (CC) {
   default:
-    report_fatal_error("Unsupported calling convention.");
+    reportFatalUsageError("unsupported calling convention");
   case CallingConv::GHC:
     return CC_AArch64_GHC;
   case CallingConv::PreserveNone:
@@ -7741,6 +7741,12 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   unsigned NumArgs = Ins.size();
   Function::const_arg_iterator CurOrigArg = F.arg_begin();
   unsigned CurArgIdx = 0;
+  bool UseVarArgCC = false;
+  if (IsWin64)
+    UseVarArgCC = isVarArg;
+
+  CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, UseVarArgCC);
+
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ValVT = Ins[i].VT;
     if (Ins[i].isOrigArg()) {
@@ -7757,10 +7763,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       else if (ActualMVT == MVT::i16)
         ValVT = MVT::i16;
     }
-    bool UseVarArgCC = false;
-    if (IsWin64)
-      UseVarArgCC = isVarArg;
-    CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, UseVarArgCC);
     bool Res =
         AssignFn(i, ValVT, ValVT, CCValAssign::Full, Ins[i].Flags, CCInfo);
     assert(!Res && "Call operand has unhandled type");
@@ -8429,6 +8431,8 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
         ArgVT = MVT::i16;
     }
 
+    // FIXME: CCAssignFnForCall should be called once, for the call and not per
+    // argument. This logic should exactly mirror LowerFormalArguments.
     CCAssignFn *AssignFn = TLI.CCAssignFnForCall(CalleeCC, UseVarArgCC);
     bool Res = AssignFn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo);
     assert(!Res && "Call operand has unhandled type");
