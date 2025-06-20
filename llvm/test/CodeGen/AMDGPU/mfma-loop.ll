@@ -2441,38 +2441,23 @@ define amdgpu_kernel void @test_mfma_nested_loop_zeroinit(ptr addrspace(1) %arg)
 ;
 ; GFX942-LABEL: test_mfma_nested_loop_zeroinit:
 ; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_mov_b32 s36, 0
-; GFX942-NEXT:    s_mov_b32 s37, s36
-; GFX942-NEXT:    s_mov_b32 s38, s36
-; GFX942-NEXT:    s_mov_b32 s39, s36
-; GFX942-NEXT:    s_mov_b32 s40, s36
-; GFX942-NEXT:    s_mov_b32 s41, s36
-; GFX942-NEXT:    s_mov_b32 s42, s36
-; GFX942-NEXT:    s_mov_b32 s43, s36
-; GFX942-NEXT:    s_mov_b32 s44, s36
-; GFX942-NEXT:    s_mov_b32 s45, s36
-; GFX942-NEXT:    s_mov_b32 s46, s36
-; GFX942-NEXT:    s_mov_b32 s47, s36
-; GFX942-NEXT:    s_mov_b32 s48, s36
-; GFX942-NEXT:    s_mov_b32 s49, s36
-; GFX942-NEXT:    s_mov_b32 s50, s36
-; GFX942-NEXT:    s_mov_b32 s51, s36
-; GFX942-NEXT:    s_mov_b32 s52, s36
-; GFX942-NEXT:    s_mov_b32 s53, s36
-; GFX942-NEXT:    s_mov_b32 s54, s36
-; GFX942-NEXT:    s_mov_b32 s55, s36
-; GFX942-NEXT:    s_mov_b32 s56, s36
-; GFX942-NEXT:    s_mov_b32 s57, s36
-; GFX942-NEXT:    s_mov_b32 s58, s36
-; GFX942-NEXT:    s_mov_b32 s59, s36
-; GFX942-NEXT:    s_mov_b32 s60, s36
-; GFX942-NEXT:    s_mov_b32 s61, s36
-; GFX942-NEXT:    s_mov_b32 s62, s36
-; GFX942-NEXT:    s_mov_b32 s63, s36
-; GFX942-NEXT:    s_mov_b32 s64, s36
-; GFX942-NEXT:    s_mov_b32 s65, s36
-; GFX942-NEXT:    s_mov_b32 s66, s36
-; GFX942-NEXT:    s_mov_b32 s67, s36
+; GFX942-NEXT:    s_mov_b64 s[36:37], 0
+; GFX942-NEXT:    s_mov_b64 s[38:39], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[40:41], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[42:43], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[44:45], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[46:47], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[48:49], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[50:51], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[52:53], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[54:55], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[56:57], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[58:59], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[60:61], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[62:63], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[64:65], s[36:37]
+; GFX942-NEXT:    s_mov_b64 s[66:67], s[36:37]
+; GFX942-NEXT:    s_mov_b32 s0, 0
 ; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -2494,19 +2479,19 @@ define amdgpu_kernel void @test_mfma_nested_loop_zeroinit(ptr addrspace(1) %arg)
 ; GFX942-NEXT:  .LBB9_1: ; %for.cond.preheader
 ; GFX942-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX942-NEXT:    ; Child Loop BB9_2 Depth 2
-; GFX942-NEXT:    s_mov_b32 s0, 16
+; GFX942-NEXT:    s_mov_b32 s1, 16
 ; GFX942-NEXT:  .LBB9_2: ; %inner.for.cond.preheader
 ; GFX942-NEXT:    ; Parent Loop BB9_1 Depth=1
 ; GFX942-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v32, v[0:31]
-; GFX942-NEXT:    s_add_i32 s0, s0, -1
-; GFX942-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX942-NEXT:    s_add_i32 s1, s1, -1
+; GFX942-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX942-NEXT:    s_cbranch_scc1 .LBB9_2
 ; GFX942-NEXT:  ; %bb.3: ; %inner.exit
 ; GFX942-NEXT:    ; in Loop: Header=BB9_1 Depth=1
-; GFX942-NEXT:    s_add_i32 s36, s36, 1
-; GFX942-NEXT:    s_cmp_lg_u32 s36, 16
+; GFX942-NEXT:    s_add_i32 s0, s0, 1
+; GFX942-NEXT:    s_cmp_lg_u32 s0, 16
 ; GFX942-NEXT:    s_cbranch_scc1 .LBB9_1
 ; GFX942-NEXT:  ; %bb.4: ; %exit
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
