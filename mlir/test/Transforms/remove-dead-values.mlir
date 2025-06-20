@@ -511,6 +511,28 @@ module {
 // CHECK: linalg.yield %[[yield]] : f32
 // CHECK-NOT: arith.subf
 
+
+// -----
+
+// check that ops with zero operands are correctly handled
+
+module {
+  func.func @test_zero_operands(%I: memref<10xindex>, %I2: memref<10xf32>) {
+    %v0 = arith.constant 0 : index
+    %result = memref.alloca_scope -> index {
+      %c = arith.addi %v0, %v0 : index
+      memref.store %c, %I[%v0] : memref<10xindex>
+      memref.alloca_scope.return %c: index
+    }
+    func.return
+  }
+}
+
+// CHECK-LABEL: func @test_zero_operands
+// CHECK: memref.alloca_scope
+// CHECK: memref.store
+// CHECK-NOT: memref.alloca_scope.return
+
 // -----
 
 // CHECK-LABEL: func.func @test_atomic_yield
@@ -525,3 +547,4 @@ func.func @test_atomic_yield(%I: memref<10xf32>, %idx : index) {
   }
   func.return
 }
+
