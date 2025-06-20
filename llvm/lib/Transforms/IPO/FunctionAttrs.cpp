@@ -2060,7 +2060,8 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
 }
 
 static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
-                              SmallSet<Function *, 8> &Changed) {
+                              SmallSet<Function *, 8> &Changed,
+                              bool NoFunctionsAddressIsTaken) {
   // Try and identify functions that do not recurse.
 
   // If the SCC contains multiple nodes we know for sure there is recursion.
@@ -2071,24 +2072,38 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return;
 
-  // If all of the calls in F are identifiable and are to norecurse functions, F
-  // is norecurse. This check also detects self-recursion as F is not currently
-  // marked norecurse, so any called from F to F will not be marked norecurse.
-  for (auto &BB : *F)
-    for (auto &I : BB.instructionsWithoutDebug())
+  // If all of the calls in F are identifiable and can be proven to not
+  // callback F, F is norecurse. This check also detects self-recursion
+  // as F is not currently marked norecurse, so any call from F to F
+  // will not be marked norecurse.
+  for (auto &BB : *F) {
+    for (auto &I : BB.instructionsWithoutDebug()) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         Function *Callee = CB->getCalledFunction();
-        if (!Callee || Callee == F ||
-            (!Callee->doesNotRecurse() &&
-             !(Callee->isDeclaration() &&
-               Callee->hasFnAttribute(Attribute::NoCallback))))
-          // Function calls a potentially recursive function.
-          return;
-      }
 
-  // Every call was to a non-recursive function other than this function, and
-  // we have no indirect recursion as the SCC size is one. This function cannot
-  // recurse.
+        if (!Callee || Callee == F)
+          return;
+
+        if (Callee->doesNotRecurse())
+          continue;
+
+        // If there are no functions with external linkage and none of the
+        // functions' address is taken, it ensures that this Callee does not
+        // have any path leading back to the Caller F.
+        // The 'NoFunctionsAddressIsTaken' flag is only set during post-link
+        // LTO phase after examining all available function definitions.
+        if (NoFunctionsAddressIsTaken ||
+            (Callee->isDeclaration() &&
+             Callee->hasFnAttribute(Attribute::NoCallback)))
+          continue;
+        return;
+      }
+    }
+  }
+
+  // Every call was either to an external function guaranteed to not make a
+  // call to this function or a direct call to internal function. Also, SCC is
+  // one. Together, the above checks ensures, this function cannot norecurse.
   F->setDoesNotRecurse();
   ++NumNoRecurse;
   Changed.insert(F);
@@ -2248,7 +2263,8 @@ static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
 template <typename AARGetterT>
 static SmallSet<Function *, 8>
 deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
-                       bool ArgAttrsOnly) {
+                       bool ArgAttrsOnly,
+                       bool NoFunctionAddressIsTaken = false) {
   SCCNodesResult Nodes = createSCCNodeSet(Functions);
 
   // Bail if the SCC only contains optnone functions.
@@ -2279,7 +2295,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
     addNoAliasAttrs(Nodes.SCCNodes, Changed);
     addNonNullAttrs(Nodes.SCCNodes, Changed);
     inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
-    addNoRecurseAttrs(Nodes.SCCNodes, Changed);
+    addNoRecurseAttrs(Nodes.SCCNodes, Changed, NoFunctionAddressIsTaken);
   }
 
   // Finally, infer the maximal set of attributes from the ones we've inferred
@@ -2322,8 +2338,39 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     Functions.push_back(&N.getFunction());
   }
 
-  auto ChangedFunctions =
-      deriveAttrsInPostOrder(Functions, AARGetter, ArgAttrsOnly);
+  bool NoFunctionsAddressIsTaken = false;
+  // Check if any function in the whole program has its address taken or has
+  // potentially external linkage.
+  // We use this information when inferring norecurse attribute: If there is
+  // no function whose address is taken and all functions have internal
+  // linkage, there is no path for a callback to any user function.
+  if (IsLTOPostLink) {
+    bool AnyFunctionsAddressIsTaken = false;
+    // Get the parent Module of the Function
+    Module &M = *C.begin()->getFunction().getParent();
+    for (Function &F : M) {
+      // We only care about functions defined in user program whose addresses
+      // escape, making them potential callback targets.
+      if (F.isDeclaration())
+        continue;
+
+      // If the function is already marked as norecurse, this should not block
+      // norecurse inference even though it may have external linkage.
+      // For ex: main() in C++.
+      if (F.doesNotRecurse())
+        continue;
+
+      if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
+        AnyFunctionsAddressIsTaken = true;
+        break; // break if we found one
+      }
+    }
+    NoFunctionsAddressIsTaken = !AnyFunctionsAddressIsTaken;
+  }
+
+  auto ChangedFunctions = deriveAttrsInPostOrder(
+      Functions, AARGetter, ArgAttrsOnly, NoFunctionsAddressIsTaken);
+
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
