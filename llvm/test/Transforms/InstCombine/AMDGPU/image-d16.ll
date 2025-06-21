@@ -239,6 +239,140 @@ main_body:
   ret bfloat %res
 }
 
+define amdgpu_ps float @image_sample_2d_single_pkrtz_to_d16(<8 x i32> %surf_desc, <4 x i32> %samp, float %u, float %v) {
+; GFX7-LABEL: @image_sample_2d_single_pkrtz_to_d16(
+; GFX7-NEXT:  main_body:
+; GFX7-NEXT:    [[SAMPLE:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[PACK:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[SAMPLE]], float 0.000000e+00)
+; GFX7-NEXT:    [[H0:%.*]] = extractelement <2 x half> [[PACK]], i64 0
+; GFX7-NEXT:    [[MUL:%.*]] = fmul reassoc arcp contract afn half [[H0]], [[H0]]
+; GFX7-NEXT:    [[DIV:%.*]] = fdiv reassoc arcp contract afn half [[MUL]], [[H0]]
+; GFX7-NEXT:    [[ADD:%.*]] = fadd reassoc arcp contract afn half [[DIV]], [[H0]]
+; GFX7-NEXT:    [[RES:%.*]] = fpext half [[ADD]] to float
+; GFX7-NEXT:    ret float [[RES]]
+;
+; GFX81PLUS-LABEL: @image_sample_2d_single_pkrtz_to_d16(
+; GFX81PLUS-NEXT:  main_body:
+; GFX81PLUS-NEXT:    [[SAMPLE:%.*]] = call half @llvm.amdgcn.image.sample.lz.2d.f16.f32.v8i32.v4i32(i32 1, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[MUL:%.*]] = fmul reassoc arcp contract afn half [[SAMPLE]], [[SAMPLE]]
+; GFX81PLUS-NEXT:    [[DIV:%.*]] = fdiv reassoc arcp contract afn half [[MUL]], [[SAMPLE]]
+; GFX81PLUS-NEXT:    [[ADD:%.*]] = fadd reassoc arcp contract afn half [[DIV]], [[SAMPLE]]
+; GFX81PLUS-NEXT:    [[RES:%.*]] = fpext half [[ADD]] to float
+; GFX81PLUS-NEXT:    ret float [[RES]]
+;
+main_body:
+  %sample = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float %u, float %v, <8 x i32> %surf_desc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %pack = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %sample, float 0.000000e+00)
+  %h0 = extractelement <2 x half> %pack, i64 0
+  %mul = fmul reassoc arcp contract afn half %h0, %h0
+  %div = fdiv reassoc arcp contract afn half %mul, %h0
+  %add = fadd reassoc arcp contract afn half %div, %h0
+  %res = fpext half %add to float
+  ret float %res
+}
+
+define amdgpu_ps float @image_sample_2d_pkrtz_variable_no_d16(<8 x i32> %surf_desc, <4 x i32> %samp, float %u, float %v) {
+; GFX7-LABEL: @image_sample_2d_pkrtz_variable_no_d16(
+; GFX7-NEXT:  main_body:
+; GFX7-NEXT:    [[SAMPLE:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[PACK:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[SAMPLE]], float [[V]])
+; GFX7-NEXT:    [[H0:%.*]] = extractelement <2 x half> [[PACK]], i64 0
+; GFX7-NEXT:    [[H1:%.*]] = extractelement <2 x half> [[PACK]], i64 1
+; GFX7-NEXT:    [[MUL:%.*]] = fmul half [[H0]], [[H1]]
+; GFX7-NEXT:    [[ADD:%.*]] = fadd half [[MUL]], [[H0]]
+; GFX7-NEXT:    [[RES:%.*]] = fpext half [[ADD]] to float
+; GFX7-NEXT:    ret float [[RES]]
+;
+; GFX81PLUS-LABEL: @image_sample_2d_pkrtz_variable_no_d16(
+; GFX81PLUS-NEXT:  main_body:
+; GFX81PLUS-NEXT:    [[SAMPLE:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[PACK:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[SAMPLE]], float [[V]])
+; GFX81PLUS-NEXT:    [[H0:%.*]] = extractelement <2 x half> [[PACK]], i64 0
+; GFX81PLUS-NEXT:    [[H1:%.*]] = extractelement <2 x half> [[PACK]], i64 1
+; GFX81PLUS-NEXT:    [[MUL:%.*]] = fmul half [[H0]], [[H1]]
+; GFX81PLUS-NEXT:    [[ADD:%.*]] = fadd half [[MUL]], [[H0]]
+; GFX81PLUS-NEXT:    [[RES:%.*]] = fpext half [[ADD]] to float
+; GFX81PLUS-NEXT:    ret float [[RES]]
+;
+main_body:
+  %sample = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float %u, float %v, <8 x i32> %surf_desc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %pack = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %sample, float %v)
+  %h0 = extractelement <2 x half> %pack, i64 0
+  %h1 = extractelement <2 x half> %pack, i64 1
+  %mul = fmul half %h0, %h1
+  %add = fadd half %mul, %h0
+  %res = fpext half %add to float
+  ret float %res
+}
+
+define amdgpu_ps float @image_sample_2d_pkrtz_constant_no_fold(<8 x i32> %surf_desc, <4 x i32> %samp, float %u, float %v) {
+; GFX7-LABEL: @image_sample_2d_pkrtz_constant_no_fold(
+; GFX7-NEXT:  main_body:
+; GFX7-NEXT:    [[SAMPLE:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[PACK:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[SAMPLE]], float 0.000000e+00)
+; GFX7-NEXT:    [[H0:%.*]] = extractelement <2 x half> [[PACK]], i64 0
+; GFX7-NEXT:    [[H1:%.*]] = extractelement <2 x half> [[PACK]], i64 1
+; GFX7-NEXT:    [[MUL:%.*]] = fmul half [[H0]], [[H1]]
+; GFX7-NEXT:    [[ADD:%.*]] = fadd half [[MUL]], [[H0]]
+; GFX7-NEXT:    [[RES:%.*]] = fpext half [[ADD]] to float
+; GFX7-NEXT:    ret float [[RES]]
+;
+; GFX81PLUS-LABEL: @image_sample_2d_pkrtz_constant_no_fold(
+; GFX81PLUS-NEXT:  main_body:
+; GFX81PLUS-NEXT:    [[SAMPLE:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[PACK:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[SAMPLE]], float 0.000000e+00)
+; GFX81PLUS-NEXT:    [[H0:%.*]] = extractelement <2 x half> [[PACK]], i64 0
+; GFX81PLUS-NEXT:    [[H1:%.*]] = extractelement <2 x half> [[PACK]], i64 1
+; GFX81PLUS-NEXT:    [[MUL:%.*]] = fmul half [[H0]], [[H1]]
+; GFX81PLUS-NEXT:    [[ADD:%.*]] = fadd half [[MUL]], [[H0]]
+; GFX81PLUS-NEXT:    [[RES:%.*]] = fpext half [[ADD]] to float
+; GFX81PLUS-NEXT:    ret float [[RES]]
+;
+main_body:
+  %sample = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float %u, float %v, <8 x i32> %surf_desc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %pack = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %sample, float 0.000000e+00)
+  %h0 = extractelement <2 x half> %pack, i64 0
+  %h1 = extractelement <2 x half> %pack, i64 1
+  %mul = fmul half %h0, %h1
+  %add = fadd half %mul, %h0
+  %res = fpext half %add to float
+  ret float %res
+}
+
+define amdgpu_ps float @image_sample_2d_single_pkrtz_high_no_d16(<8 x i32> %surf_desc, <4 x i32> %samp, float %u, float %v) {
+; GFX7-LABEL: @image_sample_2d_single_pkrtz_high_no_d16(
+; GFX7-NEXT:  main_body:
+; GFX7-NEXT:    [[SAMPLE:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[PACK:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 0.000000e+00, float [[SAMPLE]])
+; GFX7-NEXT:    [[H0:%.*]] = extractelement <2 x half> [[PACK]], i64 1
+; GFX7-NEXT:    [[MUL:%.*]] = fmul reassoc arcp contract afn half [[H0]], [[H0]]
+; GFX7-NEXT:    [[DIV:%.*]] = fdiv reassoc arcp contract afn half [[MUL]], [[H0]]
+; GFX7-NEXT:    [[ADD:%.*]] = fadd reassoc arcp contract afn half [[DIV]], [[H0]]
+; GFX7-NEXT:    [[RES:%.*]] = fpext half [[ADD]] to float
+; GFX7-NEXT:    ret float [[RES]]
+;
+; GFX81PLUS-LABEL: @image_sample_2d_single_pkrtz_high_no_d16(
+; GFX81PLUS-NEXT:  main_body:
+; GFX81PLUS-NEXT:    [[SAMPLE:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float [[U:%.*]], float [[V:%.*]], <8 x i32> [[SURF_DESC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[PACK:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 0.000000e+00, float [[SAMPLE]])
+; GFX81PLUS-NEXT:    [[H0:%.*]] = extractelement <2 x half> [[PACK]], i64 1
+; GFX81PLUS-NEXT:    [[MUL:%.*]] = fmul reassoc arcp contract afn half [[H0]], [[H0]]
+; GFX81PLUS-NEXT:    [[DIV:%.*]] = fdiv reassoc arcp contract afn half [[MUL]], [[H0]]
+; GFX81PLUS-NEXT:    [[ADD:%.*]] = fadd reassoc arcp contract afn half [[DIV]], [[H0]]
+; GFX81PLUS-NEXT:    [[RES:%.*]] = fpext half [[ADD]] to float
+; GFX81PLUS-NEXT:    ret float [[RES]]
+;
+main_body:
+  %sample = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float %u, float %v, <8 x i32> %surf_desc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %pack = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 0.000000e+00, float %sample)
+  %h0 = extractelement <2 x half> %pack, i64 1
+  %mul = fmul reassoc arcp contract afn half %h0, %h0
+  %div = fdiv reassoc arcp contract afn half %mul, %h0
+  %add = fadd reassoc arcp contract afn half %div, %h0
+  %res = fpext half %add to float
+  ret float %res
+}
+
 define amdgpu_ps half @image_gather4_2d_v4f32(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
 ; GFX7-LABEL: @image_gather4_2d_v4f32(
 ; GFX7-NEXT:  main_body:

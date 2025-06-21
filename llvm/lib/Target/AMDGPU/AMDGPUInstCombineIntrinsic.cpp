@@ -247,6 +247,42 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                                        ArgTys[0] = User->getType();
                                      });
         }
+
+        // Fold image.sample + cvt.pkrtz -> extractelement idx0 into a single
+        // d16 image sample.
+        // Pattern to match:
+        //   %sample = call float @llvm.amdgcn.image.sample...
+        //   %pack = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %sample,
+        //   float %any)
+        //   %low = extractelement <2 x half> %pack, i64 0
+        // Replacement:
+        //   call half @llvm.amdgcn.image.sample
+        //
+        // Folding criteria:
+        //   1. The only user of the image.sample intrinsic is amdgcn.cvt.pkrtz.
+        //   2. That cvt.pkrtz call has exactly one use.
+        //   3. Its sole user is an extractelement instruction with index zero.
+        // Otherwise, folding is not performed, because D16 sampling only
+        // guarantees that the element at index 0 is defined; index 1 is
+        // undefined and using it will result in poison.
+        if (auto *CvtPkrtzCall = dyn_cast<CallInst>(User)) {
+          if (CvtPkrtzCall->getIntrinsicID() == Intrinsic::amdgcn_cvt_pkrtz &&
+              CvtPkrtzCall->hasOneUse()) {
+            // Unique use must be extractelement idx == 0
+            if (auto *Ext =
+                    dyn_cast<ExtractElementInst>(*CvtPkrtzCall->user_begin())) {
+              if (isa<ConstantInt>(Ext->getIndexOperand()) &&
+                  cast<ConstantInt>(Ext->getIndexOperand())->isZero()) {
+
+                return modifyIntrinsicCall(
+                    II, *CvtPkrtzCall, ImageDimIntr->Intr, IC,
+                    [&](auto &Args, auto &ArgTys) {
+                      ArgTys[0] = CvtPkrtzCall->getType();
+                    });
+              }
+            }
+          }
+        }
       }
 
       // Only perform D16 folding if every user of the image sample is
