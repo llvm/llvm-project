@@ -1516,6 +1516,23 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     MSGuidTagDecl = buildImplicitRecord("_GUID");
     getTranslationUnitDecl()->addDecl(MSGuidTagDecl);
   }
+
+  // size_t (C99TC3 6.5.3.4), signed size_t (C++23 5.13.2) and
+  // ptrdiff_t (C99TC3 6.5.6) Although these types are not built-in, they are
+  // part of the core language and are widely used.
+  if (!LangOpts.HLSL) {
+    // Using PredefinedSugarType makes these types as named sugar types rather
+    // than standard integer types, enabling better hints and diagnostics.
+    using Kind = PredefinedSugarType::Kind;
+    SizeType = getPredefinedSugarType(llvm::to_underlying(Kind::SizeT));
+    SignedSizeType =
+        getPredefinedSugarType(llvm::to_underlying(Kind::SignedSizeT));
+    PtrdiffType = getPredefinedSugarType(llvm::to_underlying(Kind::PtrdiffT));
+  } else {
+    SizeType = getFromTargetType(Target.getSizeType());
+    SignedSizeType = getFromTargetType(Target.getSignedSizeType());
+    PtrdiffType = getFromTargetType(Target.getPtrDiffType(LangAS::Default));
+  }
 }
 
 DiagnosticsEngine &ASTContext::getDiagnostics() const {
@@ -2595,7 +2612,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = static_cast<unsigned>(Width);
     }
   }
+
   break;
+
+  case Type::PredefinedSugar:
+    return getTypeInfo(cast<PredefinedSugarType>(T)->desugar().getTypePtr());
 
   case Type::Pipe:
     Width = Target->getPointerWidth(LangAS::opencl_global);
@@ -5216,6 +5237,25 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
   return QualType(New, 0);
 }
 
+QualType ASTContext::getPredefinedSugarType(uint32_t KD) const {
+  using Kind = PredefinedSugarType::Kind;
+  auto getUnderlyingType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
+    switch (KDI) {
+    case Kind::SizeT:
+      return Ctx.getFromTargetType(Ctx.Target->getSizeType());
+    case Kind::SignedSizeT:
+      return Ctx.getFromTargetType(Ctx.Target->getSignedSizeType());
+    case Kind::PtrdiffT:
+      return Ctx.getFromTargetType(Ctx.Target->getPtrDiffType(LangAS::Default));
+    }
+    llvm_unreachable("unexpected kind");
+  };
+  auto *New = new (*this, alignof(PredefinedSugarType)) PredefinedSugarType(
+      static_cast<Kind>(KD), getUnderlyingType(*this, static_cast<Kind>(KD)));
+  Types.push_back(New);
+  return QualType(New, 0);
+}
+
 #ifndef NDEBUG
 static bool NeedsInjectedClassNameType(const RecordDecl *D) {
   if (!isa<CXXRecordDecl>(D)) return false;
@@ -6797,14 +6837,25 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
 /// of the sizeof operator (C99 6.5.3.4p4). The value is target dependent and
 /// needs to agree with the definition in <stddef.h>.
-CanQualType ASTContext::getSizeType() const {
+QualType ASTContext::getSizeType() const { return SizeType; }
+
+CanQualType ASTContext::getCanonicalSizeType() const {
   return getFromTargetType(Target->getSizeType());
 }
 
 /// Return the unique signed counterpart of the integer type
 /// corresponding to size_t.
-CanQualType ASTContext::getSignedSizeType() const {
-  return getFromTargetType(Target->getSignedSizeType());
+QualType ASTContext::getSignedSizeType() const { return SignedSizeType; }
+
+/// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
+/// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
+QualType ASTContext::getPointerDiffType() const { return PtrdiffType; }
+
+/// Return the unique unsigned counterpart of "ptrdiff_t"
+/// integer type. The standard (C11 7.21.6.1p7) refers to this type
+/// in the definition of %tu format specifier.
+QualType ASTContext::getUnsignedPointerDiffType() const {
+  return getFromTargetType(Target->getUnsignedPtrDiffType(LangAS::Default));
 }
 
 /// getIntMaxType - Return the unique type for "intmax_t" (C99 7.18.1.5).
@@ -6837,19 +6888,6 @@ QualType ASTContext::getIntPtrType() const {
 
 QualType ASTContext::getUIntPtrType() const {
   return getCorrespondingUnsignedType(getIntPtrType());
-}
-
-/// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
-/// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
-QualType ASTContext::getPointerDiffType() const {
-  return getFromTargetType(Target->getPtrDiffType(LangAS::Default));
-}
-
-/// Return the unique unsigned counterpart of "ptrdiff_t"
-/// integer type. The standard (C11 7.21.6.1p7) refers to this type
-/// in the definition of %tu format specifier.
-QualType ASTContext::getUnsignedPointerDiffType() const {
-  return getFromTargetType(Target->getUnsignedPtrDiffType(LangAS::Default));
 }
 
 /// Return the unique type for "pid_t" defined in
@@ -14610,6 +14648,9 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                       DX->isCountInBytes(), DX->isOrNull(),
                                       CDX);
   }
+  case Type::PredefinedSugar:
+    // FIXME: Should this be reachable here?
+    return QualType();
   }
   llvm_unreachable("Unhandled Type Class");
 }

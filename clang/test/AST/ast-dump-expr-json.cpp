@@ -1545,7 +1545,8 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "unsigned long"
+// CHECK-NEXT:         "desugaredQualType": "unsigned long",
+// CHECK-NEXT:         "qualType": "__size_t"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "name": "Ts"
@@ -1587,7 +1588,8 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "long"
+// CHECK-NEXT:           "desugaredQualType": "long",
+// CHECK-NEXT:           "qualType": "__ptrdiff_t"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "opcode": "-",
@@ -1880,7 +1882,8 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "unsigned long"
+// CHECK-NEXT:           "desugaredQualType": "unsigned long",
+// CHECK-NEXT:           "qualType": "__size_t"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "IntegralCast",
@@ -1957,7 +1960,8 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "unsigned long"
+// CHECK-NEXT:           "desugaredQualType": "unsigned long",
+// CHECK-NEXT:           "qualType": "__size_t"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "IntegralCast",

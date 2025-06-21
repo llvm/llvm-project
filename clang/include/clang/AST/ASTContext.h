@@ -1567,6 +1567,8 @@ public:
   /// and bit count.
   QualType getDependentBitIntType(bool Unsigned, Expr *BitsExpr) const;
 
+  QualType getPredefinedSugarType(uint32_t KD) const;
+
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.
   QualType getBlockDescriptorExtendedType() const;
@@ -1990,6 +1992,12 @@ private:
                                                         bool IsDependent,
                                                         QualType Canon) const;
 
+  // The core language uses these types as the result types of some expressions,
+  // which are typically standard integer types and consistent with it's
+  // typedefs (if any).
+  QualType SizeType;       // __size_t
+  QualType SignedSizeType; // __signed_size_t
+  QualType PtrdiffType;    // __ptrdiff_t
 public:
   /// Return the unique reference to the type for the specified TagDecl
   /// (struct/union/class/enum) decl.
@@ -1999,11 +2007,13 @@ public:
   /// <stddef.h>.
   ///
   /// The sizeof operator requires this (C99 6.5.3.4p4).
-  CanQualType getSizeType() const;
+  QualType getSizeType() const;
+
+  CanQualType getCanonicalSizeType() const;
 
   /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
-  CanQualType getSignedSizeType() const;
+  QualType getSignedSizeType() const;
 
   /// Return the unique type for "intmax_t" (C99 7.18.1.5), defined in
   /// <stdint.h>.

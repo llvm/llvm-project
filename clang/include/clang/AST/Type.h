@@ -2258,6 +2258,27 @@ protected:
     unsigned NumExpansions;
   };
 
+  enum class PredefinedSugarKind {
+    /// The "size_t" type.
+    SizeT,
+
+    /// The "signed size_t" type.
+    SignedSizeT,
+
+    /// The "ptrdiff_t" type.
+    PtrdiffT
+  };
+
+  class PresefinedSugarTypeBitfields {
+    friend class PredefinedSugarType;
+
+    LLVM_PREFERRED_TYPE(TypeBitfields)
+    unsigned : NumTypeBits;
+
+    LLVM_PREFERRED_TYPE(PredefinedSugarKind)
+    unsigned Kind : 8;
+  };
+
   class CountAttributedTypeBitfields {
     friend class CountAttributedType;
 
@@ -2297,6 +2318,7 @@ protected:
       DependentTemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
     CountAttributedTypeBitfields CountAttributedTypeBits;
+    PresefinedSugarTypeBitfields PredefinedSugarTypeBits;
   };
 
 private:
@@ -8040,6 +8062,32 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == DependentBitInt;
+  }
+};
+
+class PredefinedSugarType final : public Type {
+public:
+  friend class ASTContext;
+  using Kind = PredefinedSugarKind;
+
+private:
+  PredefinedSugarType(Kind KD, QualType UnderlyingType)
+      : Type(PredefinedSugar, UnderlyingType->getCanonicalTypeInternal(),
+             TypeDependence::None) {
+    PredefinedSugarTypeBits.Kind = llvm::to_underlying(KD);
+  }
+
+public:
+  bool isSugared() const { return true; }
+
+  QualType desugar() const { return getCanonicalTypeInternal(); }
+
+  Kind getKind() const { return Kind(PredefinedSugarTypeBits.Kind); }
+
+  StringRef getName() const;
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == PredefinedSugar;
   }
 };
 
