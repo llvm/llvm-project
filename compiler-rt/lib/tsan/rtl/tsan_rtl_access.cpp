@@ -578,11 +578,10 @@ static void MemoryRangeSet(uptr addr, uptr size, RawShadow val) {
       Die();
   }
   // Set the ending.
-  if (mid2 < end) {
+  if (mid2 < end)
     ShadowSet(mid2, end, val);
-  } else {
+  else
     DCHECK_EQ(mid2, end);
-  }
 }
 
 void MemoryResetRange(ThreadState* thr, uptr pc, uptr addr, uptr size) {
