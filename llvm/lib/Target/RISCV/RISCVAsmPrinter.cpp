@@ -292,7 +292,7 @@ void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
     NontemporalMode += 0b10;
 
   MCInst Hint;
-  if (STI->hasStdExtCOrZca() && STI->enableRVCHintInstrs())
+  if (STI->hasStdExtCOrZca())
     Hint.setOpcode(RISCV::C_ADD_HINT);
   else
     Hint.setOpcode(RISCV::ADD);
