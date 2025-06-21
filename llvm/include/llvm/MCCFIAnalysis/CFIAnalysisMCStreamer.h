@@ -4,11 +4,9 @@
 #include "UnwindInfoAnalysis.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include <cstdio>
-#include <memory>
 #include <optional>
 
 namespace llvm {
@@ -19,35 +17,23 @@ namespace llvm {
 // TODO one by one. Also in each function unit, an instruction with associated
 // TODO directives should be emitted. The analysis should be run by the
 // TODO receiver.
-class CFIAnalysisMCStreamer : public MCStreamer {
+class FunctionUnitStreamer : public MCStreamer {
   MCInstrInfo const &MCII;
 
-  struct CFIDirectivesState {
-    int DirectiveIndex;
+  std::vector<unsigned> FrameIndices;
+  std::vector<UnwindInfoAnalysis> UIAs;
 
-    CFIDirectivesState();
-
-    CFIDirectivesState(int FrameIndex, int InstructionIndex);
-  } LastCFIDirectivesState;
-  std::vector<int> FrameIndices;
-  std::vector<UnwindInfoAnalysis> CFIAs;
-
-  struct ICFI {
-    MCInst Instruction;
-    std::pair<unsigned, unsigned> CFIDirectivesRange;
-
-    ICFI(MCInst Instruction, std::pair<unsigned, unsigned> CFIDirectives);
-  };
-
+  unsigned LastDirectiveIndex;
   std::optional<MCInst> LastInstruction;
 
-  std::pair<unsigned, unsigned> getCFIDirectivesRange();
+  void updateUIA();
 
-  void feedCFIA();
+  std::pair<unsigned, unsigned> updateDirectivesRange();
 
 public:
-  CFIAnalysisMCStreamer(MCContext &Context, const MCInstrInfo &MCII,
-                        std::unique_ptr<MCInstrAnalysis> MCIA);
+  FunctionUnitStreamer(MCContext &Context, const MCInstrInfo &MCII)
+      : MCStreamer(Context), MCII(MCII), LastDirectiveIndex(0),
+        LastInstruction(std::nullopt) {}
 
   bool hasRawTextSupport() const override { return true; }
   void emitRawTextImpl(StringRef String) override {}
