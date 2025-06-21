@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-class CFIAnalysis {
+class UnwindInfoAnalysis {
   MCContext *Context;
   MCInstrInfo const &MCII;
   MCRegisterInfo const *MCRI;
@@ -41,9 +41,9 @@ private:
   MCPhysReg getSuperReg(MCPhysReg Reg);
 
 public:
-  CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
-              MCInstrAnalysis *MCIA, bool IsEH,
-              ArrayRef<MCCFIInstruction> PrologueCFIDirectives);
+  UnwindInfoAnalysis(MCContext *Context, MCInstrInfo const &MCII,
+                     MCInstrAnalysis *MCIA, bool IsEH,
+                     ArrayRef<MCCFIInstruction> PrologueCFIDirectives);
 
   void update(const MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives);
 
