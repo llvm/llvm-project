@@ -776,6 +776,12 @@ Bug Fixes to Attribute Support
 - Clang will warn if a complete type specializes a deprecated partial specialization.
   (#GH44496)
 
+Bug Fixes to C Support
+^^^^^^^^^^^^^^^^^^^^^^
+
+- No longer applying Named Return Value Optimization (NRVO) in C as it is a
+  non-conforming optimization in C. (#GH100902)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
