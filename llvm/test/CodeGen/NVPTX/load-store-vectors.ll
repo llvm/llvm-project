@@ -237,17 +237,14 @@ define void @generic_2xi16(ptr %a) {
 ; CHECK-LABEL: generic_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [generic_2xi16_param_0];
-; CHECK-NEXT:    ld.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.v2.b16 [%rd1], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x i16>, ptr %a
   %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
@@ -657,17 +654,14 @@ define void @generic_volatile_2xi16(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_2xi16_param_0];
-; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.volatile.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.volatile.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.v2.b16 [%rd1], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x i16>, ptr %a
   %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
@@ -1060,17 +1054,14 @@ define void @global_2xi16(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [global_2xi16_param_0];
-; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.global.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.global.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.global.v2.b16 [%rd1], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x i16>, ptr addrspace(1) %a
   %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
@@ -1461,17 +1452,14 @@ define void @global_volatile_2xi16(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_2xi16_param_0];
-; CHECK-NEXT:    ld.volatile.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.volatile.global.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.volatile.global.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.global.v2.b16 [%rd1], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x i16>, ptr addrspace(1) %a
   %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
@@ -1864,17 +1852,14 @@ define void @shared_2xi16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [shared_2xi16_param_0];
-; CHECK-NEXT:    ld.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.shared.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.shared.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.shared.v2.b16 [%rd1], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x i16>, ptr addrspace(3) %a
   %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
@@ -2265,17 +2250,14 @@ define void @shared_volatile_2xi16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_2xi16_param_0];
-; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.volatile.shared.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.shared.v2.b16 [%rd1], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x i16>, ptr addrspace(3) %a
   %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
@@ -2668,17 +2650,14 @@ define void @local_2xi16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_2xi16_param_0];
-; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.local.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.local.v2.b16 [%rd1], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
   %a.load = load <2 x i16>, ptr addrspace(5) %a
   %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
@@ -3069,17 +3048,14 @@ define void @local_volatile_2xi16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_2xi16_param_0];
-; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.local.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.local.v2.b16 [%rd1], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <2 x i16>, ptr addrspace(5) %a
   %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
