@@ -624,9 +624,7 @@ struct CheckFallThroughDiagnostics {
   }
 };
 
-} // anonymous namespace
-
-static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
+bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   if (!FD->hasBody())
     return false;
   const Stmt *Body = FD->getBody();
@@ -651,6 +649,7 @@ static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   return false; // Not known to always throw.
 }
 
+} // anonymous namespace
 /// CheckFallThroughForBody - Check that we don't fall off the end of a
 /// function that should return a value.  Check that we don't fall off the end
 /// of a noreturn function.  We assume that functions and blocks not marked
