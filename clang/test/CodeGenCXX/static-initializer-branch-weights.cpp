@@ -118,7 +118,8 @@ void use_b() {
 }
 
 // CHECK-LABEL: define {{.*}}tls_init()
-// CHECK: load i8, ptr @__tls_guard, align 1
+// CHECK: [[TLS_GUARD_ADDR:%.+]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK: load i8, ptr [[TLS_GUARD_ADDR]], align 1
 // CHECK: icmp eq i8 {{.*}}, 0
 // CHECK: br i1 {{.*}}, !prof ![[WEIGHTS_THREAD_LOCAL]]
 
