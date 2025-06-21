@@ -626,6 +626,31 @@ struct CheckFallThroughDiagnostics {
 
 } // anonymous namespace
 
+static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
+  if (!FD->hasBody())
+    return false;
+  const Stmt *Body = FD->getBody();
+  const Stmt *OnlyStmt = nullptr;
+
+  if (const auto *Compound = dyn_cast<CompoundStmt>(Body)) {
+    if (Compound->size() != 1)
+      return false; // More than one statement, can't be known to always throw.
+    OnlyStmt = *Compound->body_begin();
+  } else {
+    OnlyStmt = Body;
+  }
+
+  // Unwrap ExprWithCleanups if necessary.
+  if (const auto *EWC = dyn_cast<ExprWithCleanups>(OnlyStmt)) {
+    OnlyStmt = EWC->getSubExpr();
+  }
+  // Check if the only statement is a throw expression.
+  if (isa<CXXThrowExpr>(OnlyStmt)) {
+    return true; // Known to always throw.
+  }
+  return false; // Not known to always throw.
+}
+
 /// CheckFallThroughForBody - Check that we don't fall off the end of a
 /// function that should return a value.  Check that we don't fall off the end
 /// of a noreturn function.  We assume that functions and blocks not marked
@@ -681,6 +706,26 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
       if (CD.diag_FallThrough_HasNoReturn)
         S.Diag(RBrace, CD.diag_FallThrough_HasNoReturn) << CD.FunKind;
     } else if (!ReturnsVoid && CD.diag_FallThrough_ReturnsNonVoid) {
+      // If the final statement is a call to an always-throwing function,
+      // don't warn about the fall-through.
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+        if (const auto *CS = dyn_cast<CompoundStmt>(Body)) {
+          if (!CS->body_empty()) {
+            const Stmt *LastStmt = CS->body_back();
+            // Unwrap ExprWithCleanups if necessary.
+            if (const auto *EWC = dyn_cast<ExprWithCleanups>(LastStmt)) {
+              LastStmt = EWC->getSubExpr();
+            }
+            if (const auto *CE = dyn_cast<CallExpr>(LastStmt)) {
+              if (const FunctionDecl *Callee = CE->getDirectCallee()) {
+                if (isKnownToAlwaysThrow(Callee)) {
+                  return; // Don't warn about fall-through.
+                }
+              }
+            }
+          }
+        }
+      }
       bool NotInAllControlPaths = FallThroughType == MaybeFallThrough;
       S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid)
           << CD.FunKind << NotInAllControlPaths;
