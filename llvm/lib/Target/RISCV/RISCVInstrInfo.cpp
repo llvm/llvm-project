@@ -1002,6 +1002,14 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
     return RISCVCC::COND_QC_BGEUI;
   case RISCV::QC_E_BGEUI:
     return RISCVCC::COND_QC_E_BGEUI;
+  case RISCV::NDS_BBC:
+    return RISCVCC::COND_NDS_BBC;
+  case RISCV::NDS_BBS:
+    return RISCVCC::COND_NDS_BBS;
+  case RISCV::NDS_BEQC:
+    return RISCVCC::COND_NDS_BEQC;
+  case RISCV::NDS_BNEC:
+    return RISCVCC::COND_NDS_BNEC;
   }
 }
 
@@ -1083,6 +1091,14 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
     return RISCV::QC_BGEUI;
   case RISCVCC::COND_QC_E_BGEUI:
     return RISCV::QC_E_BGEUI;
+  case RISCVCC::COND_NDS_BBC:
+    return RISCV::NDS_BBC;
+  case RISCVCC::COND_NDS_BBS:
+    return RISCV::NDS_BBS;
+  case RISCVCC::COND_NDS_BEQC:
+    return RISCV::NDS_BEQC;
+  case RISCVCC::COND_NDS_BNEC:
+    return RISCV::NDS_BNEC;
   }
 }
 
@@ -1134,6 +1150,14 @@ RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
     return RISCVCC::COND_QC_BLTUI;
   case RISCVCC::COND_QC_E_BGEUI:
     return RISCVCC::COND_QC_E_BLTUI;
+  case RISCVCC::COND_NDS_BBC:
+    return RISCVCC::COND_NDS_BBS;
+  case RISCVCC::COND_NDS_BBS:
+    return RISCVCC::COND_NDS_BBC;
+  case RISCVCC::COND_NDS_BEQC:
+    return RISCVCC::COND_NDS_BNEC;
+  case RISCVCC::COND_NDS_BNEC:
+    return RISCVCC::COND_NDS_BEQC;
   }
 }
 
@@ -1501,6 +1525,11 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   switch (BranchOp) {
   default:
     llvm_unreachable("Unexpected opcode!");
+  case RISCV::NDS_BBC:
+  case RISCV::NDS_BBS:
+  case RISCV::NDS_BEQC:
+  case RISCV::NDS_BNEC:
+    return isIntN(11, BrOffset);
   case RISCV::BEQ:
   case RISCV::BNE:
   case RISCV::BLT:
