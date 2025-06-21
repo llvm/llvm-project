@@ -17,6 +17,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <sstream>
 
 using namespace llvm;
 
@@ -37,8 +38,8 @@ static cl::opt<bool> OptBisectVerbose(
     cl::desc("Show verbose output when opt-bisect-limit is set"), cl::Hidden,
     cl::init(true), cl::Optional);
 
-static void printPassMessage(const StringRef &Name, int PassNum,
-                             StringRef TargetDesc, bool Running) {
+static void printBisectPassMessage(const StringRef &Name, int PassNum,
+                                   StringRef TargetDesc, bool Running) {
   StringRef Status = Running ? "" : "NOT ";
   errs() << "BISECT: " << Status << "running pass "
          << "(" << PassNum << ") " << Name << " on " << TargetDesc << "\n";
@@ -51,10 +52,64 @@ bool OptBisect::shouldRunPass(const StringRef PassName,
   int CurBisectNum = ++LastBisectNum;
   bool ShouldRun = (BisectLimit == -1 || CurBisectNum <= BisectLimit);
   if (OptBisectVerbose)
-    printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
+    printBisectPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
   return ShouldRun;
 }
 
 const int OptBisect::Disabled;
 
-OptPassGate &llvm::getGlobalPassGate() { return getOptBisector(); }
+static OptDisable &getOptDisabler() {
+  static OptDisable OptDisabler;
+  return OptDisabler;
+}
+
+static cl::opt<std::string> OptDisablePass(
+    "opt-disable", cl::Hidden, cl::init(""), cl::Optional,
+    cl::cb<void, std::string>([](std::string Passes) {
+      getOptDisabler().setDisabled(Passes);
+    }),
+    cl::desc("Optimization pass(es) to disable (comma separated)"));
+
+static cl::opt<bool>
+    OptDisableVerbose("opt-disable-verbose",
+                      cl::desc("Show verbose output when opt-disable is set"),
+                      cl::Hidden, cl::init(false), cl::Optional);
+
+static void printDisablePassMessage(const StringRef &Name, StringRef TargetDesc,
+                                    bool Running) {
+  StringRef Status = Running ? "" : "NOT ";
+  errs() << "DISABLE: " << Status << "running pass " << Name << " on "
+         << TargetDesc << "\n";
+}
+
+void OptDisable::setDisabled(StringRef Passes) {
+  std::stringstream StrStream(Passes.str());
+  std::string Token;
+
+  while (std::getline(StrStream, Token, ',')) {
+    if (!Token.empty()) {
+      std::transform(Token.begin(), Token.end(), Token.begin(), ::tolower);
+      DisabledPasses.insert(Token);
+    }
+  }
+}
+
+bool OptDisable::shouldRunPass(const StringRef PassName,
+                               StringRef IRDescription) {
+  assert(isEnabled());
+
+  std::string LowerName = PassName.str();
+  std::transform(LowerName.begin(), LowerName.end(), LowerName.begin(),
+                 ::tolower);
+
+  bool ShouldRun = DisabledPasses.find(LowerName) == DisabledPasses.end();
+  if (OptDisableVerbose)
+    printDisablePassMessage(PassName, IRDescription, ShouldRun);
+  return ShouldRun;
+}
+
+OptPassGate &llvm::getGlobalPassGate() {
+  if (getOptDisabler().isEnabled())
+    return getOptDisabler();
+  return getOptBisector();
+}
