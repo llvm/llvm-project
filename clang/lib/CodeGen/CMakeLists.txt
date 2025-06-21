@@ -115,6 +115,7 @@ add_clang_library(clangCodeGen
   ModuleBuilder.cpp
   ObjectFilePCHContainerWriter.cpp
   PatternInit.cpp
+  QualTypeMapper.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
   TargetBuiltins/ARM.cpp
@@ -166,6 +167,7 @@ add_clang_library(clangCodeGen
 
   LINK_LIBS
   clangAST
+  LLVMABI
   clangAnalysis
   clangBasic
   clangFrontend
