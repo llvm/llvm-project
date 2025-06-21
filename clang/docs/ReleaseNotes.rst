@@ -721,6 +721,10 @@ Bug Fixes in This Version
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
