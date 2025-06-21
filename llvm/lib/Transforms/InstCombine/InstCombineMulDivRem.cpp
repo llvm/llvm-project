@@ -2233,6 +2233,16 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   if (Instruction *Mul = foldFDivPowDivisor(I, Builder))
     return Mul;
 
+  // exp(exp(X)) / exp(X) -> exp(exp(X) - X)
+  if (I.hasAllowReassoc() &&
+      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::exp>(
+                     m_Intrinsic<Intrinsic::exp>(m_Value(X))))) &&
+      match(Op1, m_Intrinsic<Intrinsic::exp>(m_Specific(X)))) {
+    Value *ExpDiff = Builder.CreateFSubFMF(Op1, X, &I);
+    Value *NewExp = Builder.CreateUnaryIntrinsic(Intrinsic::exp, ExpDiff, &I);
+    return replaceInstUsesWith(I, NewExp);
+  }
+
   if (Instruction *Mul = foldFDivSqrtDivisor(I, Builder))
     return Mul;
 

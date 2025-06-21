@@ -6,8 +6,8 @@ define half @fdiv_exp_half(half %x) {
 ; CHECK-SAME: half [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[EXP_X:%.*]] = call fast half @llvm.exp.f16(half [[X]])
-; CHECK-NEXT:    [[EXP_EXP_X:%.*]] = call fast half @llvm.exp.f16(half [[EXP_X]])
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast half [[EXP_EXP_X]], [[EXP_X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fsub fast half [[EXP_X]], [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = call fast half @llvm.exp.f16(half [[TMP0]])
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
 entry:
@@ -22,8 +22,8 @@ define float @fdiv_exp_float(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[EXP_X:%.*]] = call fast float @llvm.exp.f32(float [[X]])
-; CHECK-NEXT:    [[EXP_EXP_X:%.*]] = call fast float @llvm.exp.f32(float [[EXP_X]])
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[EXP_EXP_X]], [[EXP_X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fsub fast float [[EXP_X]], [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = call fast float @llvm.exp.f32(float [[TMP0]])
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
 entry:
@@ -38,8 +38,8 @@ define double @fdiv_exp_double(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[EXP_X:%.*]] = call fast double @llvm.exp.f64(double [[X]])
-; CHECK-NEXT:    [[EXP_EXP_X:%.*]] = call fast double @llvm.exp.f64(double [[EXP_X]])
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[EXP_EXP_X]], [[EXP_X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fsub fast double [[EXP_X]], [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = call fast double @llvm.exp.f64(double [[TMP0]])
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
 entry:
