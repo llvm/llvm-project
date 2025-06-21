@@ -10,7 +10,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/Twine.h"
 #include <array>
 #include <optional>
 #include <utility>
@@ -19,16 +18,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-static std::string tryPrintVariable(const BinaryOperator *BO) {
+static const NamedDecl *
+getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
   if (BO->isCompoundAssignmentOp()) {
     const auto *DelcRefLHS =
         dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreImpCasts());
-    if (DelcRefLHS)
-      return ("variable '" +
-              llvm::Twine(DelcRefLHS->getDecl()->getNameAsString()) + "'")
-          .str();
+    return DelcRefLHS ? DelcRefLHS->getDecl() : nullptr;
   }
-  return "values";
+  return nullptr;
 }
 
 static bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
@@ -50,19 +47,6 @@ static bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
 
   return (PrevTok && PrevTok->is(tok::l_paren)) &&
          (NextTok && NextTok->is(tok::r_paren));
-}
-
-template <typename AstNode>
-static bool isInTemplateFunction(const AstNode *AN, ASTContext &Context) {
-  DynTypedNodeList Parents = Context.getParents(*AN);
-  for (const DynTypedNode &Parent : Parents) {
-    if (const auto *FD = Parent.template get<FunctionDecl>())
-      return FD->isTemplateInstantiation() ||
-             FD->getTemplatedKind() != FunctionDecl::TK_NonTemplate;
-    if (const auto *S = Parent.template get<Stmt>())
-      return isInTemplateFunction(S, Context);
-  }
-  return false;
 }
 
 constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
@@ -101,9 +85,9 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(
           unless(isExpansionInSystemHeader()),
           hasAnyOperatorName("|", "&", "|=", "&="),
-          hasEitherOperand(expr(ignoringImpCasts(hasType(booleanType())))),
-          optionally(hasAncestor( // to simple implement transformations like
-                                  // `a&&b|c` -> `a&&(b||c)`
+          hasEitherOperand(expr(hasType(booleanType()))),
+          optionally(hasParent( // to simple implement transformations like
+                                // `a&&b|c` -> `a&&(b||c)`
               binaryOperator().bind("p"))))
           .bind("op"),
       this);
@@ -113,25 +97,27 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
 
   auto DiagEmitterProc = [MatchedExpr, this] {
+    const NamedDecl *ND = getLHSNamedDeclIfCompoundAssign(MatchedExpr);
     return diag(MatchedExpr->getOperatorLoc(),
-                "use logical operator '%0' for boolean %1 instead of "
-                "bitwise operator '%2'")
-           << translate(MatchedExpr->getOpcodeStr())
-           << tryPrintVariable(MatchedExpr) << MatchedExpr->getOpcodeStr();
+                "use logical operator '%0' for boolean %select{variable "
+                "%2|values}1 instead of "
+                "bitwise operator '%3'")
+           << translate(MatchedExpr->getOpcodeStr()) << (ND == nullptr) << ND
+           << MatchedExpr->getOpcodeStr();
   };
   auto DiagEmitter = llvm::make_scope_exit(DiagEmitterProc);
-
-  if (isInTemplateFunction(MatchedExpr, *Result.Context))
-    return;
 
   const bool HasVolatileOperand = llvm::any_of(
       std::array{MatchedExpr->getLHS(), MatchedExpr->getRHS()},
       [](const Expr *E) {
         return E->IgnoreImpCasts()->getType().isVolatileQualified();
       });
+  if (HasVolatileOperand)
+    return;
+
   const bool HasSideEffects =
       MatchedExpr->getRHS()->HasSideEffects(*Result.Context, StrictMode);
-  if (HasVolatileOperand || HasSideEffects)
+  if (HasSideEffects)
     return;
 
   SourceLocation Loc = MatchedExpr->getOperatorLoc();
@@ -189,16 +175,11 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
   std::optional<BinaryOperatorKind> ParentOpcode;
-  if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
-      Parent && llvm::any_of(std::array{Parent->getLHS(), Parent->getRHS()},
-                             [&](const Expr *E) {
-                               return dyn_cast<BinaryOperator>(
-                                          E->IgnoreImpCasts()) == MatchedExpr;
-                             }))
+  if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p"); Parent)
     ParentOpcode = Parent->getOpcode();
 
   const auto *RHS =
-      dyn_cast<BinaryOperator>(MatchedExpr->getRHS()->IgnoreParenCasts());
+      dyn_cast<BinaryOperator>(MatchedExpr->getRHS()->IgnoreImpCasts());
   std::optional<BinaryOperatorKind> RHSOpcode;
   if (RHS)
     RHSOpcode = RHS->getOpcode();
