@@ -62,6 +62,36 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
+  /// Force break after the left parenthesis of an if control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (          vs.       if constexpr (a ||
+  ///      a || b)                                      b)
+  /// \endcode
+  /// \version 21
+  bool BreakAfterOpenBracketIf;
+
+  /// Force break after the left parenthesis of a loop control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   while (                  vs.      while (a &&
+  ///      a && b) {                             b) {
+  /// \endcode
+  /// \version 21
+  bool BreakAfterOpenBracketLoop;
+
+  /// Force break after the left parenthesis of a switch control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   switch (                 vs.      switch (a &&
+  ///      a && b) {                              b) {
+  /// \endcode
+  /// \version 21
+  bool BreakAfterOpenBracketSwitch;
+
   /// Different styles for aligning after open brackets.
   enum BracketAlignmentStyle : int8_t {
     /// Align parameters on the open bracket, e.g.:
@@ -2214,6 +2244,45 @@ struct FormatStyle {
   /// The brace breaking style to use.
   /// \version 3.7
   BraceBreakingStyle BreakBeforeBraces;
+
+  /// Force break before the right parenthesis of an if control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (          vs.       if constexpr (
+  ///      a || b                            a || b )
+  ///   )
+  /// \endcode
+  /// \version 21
+  bool BreakBeforeCloseBracketIf;
+
+  /// Force break before the right parenthesis of a loop control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   while (                  vs.      while (
+  ///      a && b                            a && b) {
+  ///   ) {
+  /// \endcode
+  /// \version 21
+  bool BreakBeforeCloseBracketLoop;
+
+  /// Force break before the right parenthesis of a switch control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   switch (                 vs.      switch (
+  ///      a && b                            a && b) {
+  ///   ) {
+  /// \endcode
+  /// \version 21
+  bool BreakBeforeCloseBracketSwitch;
 
   /// Different ways to break before concept declarations.
   enum BreakBeforeConceptDeclarationsStyle : int8_t {
@@ -5354,10 +5423,16 @@ struct FormatStyle {
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterOpenBracketIf == R.BreakAfterOpenBracketIf &&
+           BreakAfterOpenBracketLoop == R.BreakAfterOpenBracketLoop &&
+           BreakAfterOpenBracketSwitch == R.BreakAfterOpenBracketSwitch &&
            BreakAfterReturnType == R.BreakAfterReturnType &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
+           BreakBeforeCloseBracketIf == R.BreakBeforeCloseBracketIf &&
+           BreakBeforeCloseBracketLoop == R.BreakBeforeCloseBracketLoop &&
+           BreakBeforeCloseBracketSwitch == R.BreakBeforeCloseBracketSwitch &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&
