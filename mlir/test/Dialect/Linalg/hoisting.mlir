@@ -82,12 +82,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop
+// CHECK-LABEL: func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_before_write
 // CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
 // CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index)
-func.func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
+func.func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_before_write(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
 
@@ -124,8 +124,49 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_after_write
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
+// CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index)
+func.func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_after_write(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+// CHECK:             scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+// CHECK:               %[[READ:.*]] = vector.transfer_read %[[MEM]][%[[C0]], %[[C0]]], %[[PAD]] : memref<?x?xf32>, vector<1xf32>
+// CHECK:               %[[USE:.*]] = "val_use"(%[[READ]]) : (vector<1xf32>) -> vector<1xf32>
+// CHECK:               vector.transfer_write %[[USE]], %[[MEM]][%[[C0]], %[[C0]]] : vector<1xf32>, memref<?x?xf32>
+// CHECK:               "mem_use"(%[[MEM]]) : (memref<?x?xf32>) -> ()
+// CHECK:             }
+// CHECK:           }
+  scf.for %i = %lb to %ub step %step {
+    scf.for %j = %lb to %ub step %step {
+      %r3 = vector.transfer_read %mem[%c0, %c0], %pad: memref<?x?xf32>, vector<1xf32>
+      %u3 = "val_use"(%r3) : (vector<1xf32>) -> vector<1xf32>
+      vector.transfer_write %u3, %mem[%c0, %c0] : vector<1xf32>, memref<?x?xf32>
+      "mem_use"(%mem) : (memref<?x?xf32>) -> ()
+    }
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func @hoist_vector_transfer_pairs(
-//  CHECK-SAME:   %[[MEMREF3:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[MEMREF4:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[MEMREF5:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[VAL:[a-zA-Z0-9]*]]: index,
@@ -134,37 +175,29 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:   %[[STEP:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[CMP:[a-zA-Z0-9]*]]: i1
 func.func @hoist_vector_transfer_pairs(
-    %memref3: memref<?x?xf32>, %memref4: memref<?x?xf32>, %memref5: memref<?x?xf32>,
+    %memref4: memref<?x?xf32>, %memref5: memref<?x?xf32>,
     %val: index, %lb : index, %ub : index, %step: index, %cmp: i1) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
 
 // CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
 // CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-// CHECK:     vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<4xf32>
 // CHECK:     "some_crippling_use"(%[[MEMREF4]]) : (memref<?x?xf32>) -> ()
 // CHECK:     vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<5xf32>
-// CHECK:     "some_use"(%{{.*}}) : (vector<4xf32>) -> vector<4xf32>
 // CHECK:     "some_use"(%{{.*}}) : (vector<5xf32>) -> vector<5xf32>
-// CHECK:     vector.transfer_write %{{.*}} : vector<4xf32>, memref<?x?xf32>
 // CHECK:     vector.transfer_write %{{.*}} : vector<5xf32>, memref<?x?xf32>
-// CHECK:     "some_crippling_use"(%[[MEMREF3]]) : (memref<?x?xf32>) -> ()
 // CHECK:   }
 // CHECK: }
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
-      %r3 = vector.transfer_read %memref3[%c0, %c0], %cst: memref<?x?xf32>, vector<4xf32>
       "some_crippling_use"(%memref4) : (memref<?x?xf32>) -> ()
       %r4 = vector.transfer_read %memref4[%c0, %c0], %cst: memref<?x?xf32>, vector<5xf32>
       %r5 = vector.transfer_read %memref5[%c0, %c0], %cst: memref<?x?xf32>, vector<6xf32>
       "some_crippling_use"(%memref5) : (memref<?x?xf32>) -> ()
-      %u3 = "some_use"(%r3) : (vector<4xf32>) -> vector<4xf32>
       %u4 = "some_use"(%r4) : (vector<5xf32>) -> vector<5xf32>
       %u5 = "some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
-      vector.transfer_write %u3, %memref3[%c0, %c0] : vector<4xf32>, memref<?x?xf32>
       vector.transfer_write %u4, %memref4[%c0, %c0] : vector<5xf32>, memref<?x?xf32>
       vector.transfer_write %u5, %memref5[%c0, %c0] : vector<6xf32>, memref<?x?xf32>
-      "some_crippling_use"(%memref3) : (memref<?x?xf32>) -> ()
     }
   }
   return
