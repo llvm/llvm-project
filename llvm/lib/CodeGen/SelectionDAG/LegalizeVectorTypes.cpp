@@ -3245,11 +3245,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
       PtrInfo, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
       Alignment);
 
-  unsigned EltWidth = VT.getScalarSizeInBits() / 8;
-  SDValue OffsetToV2 =
-      DAG.getNode(ISD::MUL, DL, PtrVT, DAG.getZExtOrTrunc(EVL1, DL, PtrVT),
-                  DAG.getConstant(EltWidth, DL, PtrVT));
-  SDValue StackPtr2 = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, OffsetToV2);
+  SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, EVL1);
 
   SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
   SDValue StoreV1 = DAG.getStoreVP(DAG.getEntryNode(), DL, V1, StackPtr,
@@ -3266,9 +3262,11 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
     Load = DAG.getLoadVP(VT, DL, StoreV2, StackPtr, Mask, EVL2, LoadMMO);
   } else {
     uint64_t TrailingElts = -Imm;
+    unsigned EltWidth = VT.getScalarSizeInBits() / 8;
     SDValue TrailingBytes = DAG.getConstant(TrailingElts * EltWidth, DL, PtrVT);
 
     // Make sure TrailingBytes doesn't exceed the size of vec1.
+    SDValue OffsetToV2 = DAG.getNode(ISD::SUB, DL, PtrVT, StackPtr2, StackPtr);
     TrailingBytes =
         DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, OffsetToV2);
 
