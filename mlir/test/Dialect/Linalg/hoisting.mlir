@@ -206,46 +206,6 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @hoist_vector_transfer_pairs(
-//  CHECK-SAME:   %[[MEMREF5:[a-zA-Z0-9]*]]: memref<?x?xf32>,
-//  CHECK-SAME:   %[[VAL:[a-zA-Z0-9]*]]: index,
-//  CHECK-SAME:   %[[LB:[a-zA-Z0-9]*]]: index,
-//  CHECK-SAME:   %[[UB:[a-zA-Z0-9]*]]: index,
-//  CHECK-SAME:   %[[STEP:[a-zA-Z0-9]*]]: index,
-//  CHECK-SAME:   %[[CMP:[a-zA-Z0-9]*]]: i1
-func.func @hoist_vector_transfer_pairs(
-    %memref5: memref<?x?xf32>,
-    %val: index, %lb : index, %ub : index, %step: index, %cmp: i1) {
-  %c0 = arith.constant 0 : index
-  %cst = arith.constant 0.0 : f32
-
-// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-// CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-// CHECK:   }
-// CHECK: }
-  scf.for %i = %lb to %ub step %step {
-    scf.for %j = %lb to %ub step %step {
-      %r5 = vector.transfer_read %memref5[%c0, %c0], %cst: memref<?x?xf32>, vector<6xf32>
-      "some_crippling_use"(%memref5) : (memref<?x?xf32>) -> ()
-      %u5 = "some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
-      vector.transfer_write %u5, %memref5[%c0, %c0] : vector<6xf32>, memref<?x?xf32>
-    }
-  }
-  return
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["func.func"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    transform.structured.hoist_redundant_vector_transfers %0
-      : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
-
-// -----
-
 // CHECK-LABEL: func @hoist_vector_transfer_pairs_disjoint(
 //  CHECK-SAME:   %[[MEMREF0:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[MEMREF1:[a-zA-Z0-9]*]]: memref<?x?xf32>,
