@@ -4610,6 +4610,10 @@ public:
   void EmitPointerAuthCopy(PointerAuthQualifier Qualifier, QualType Type,
                            Address DestField, Address SrcField);
 
+  llvm::Instruction *EmitPointerAuthRelocationFixup(QualType ElementType,
+                                                    Address Dst, Address Src,
+                                                    llvm::Value *SrcEnd);
+
   std::pair<llvm::Value *, CGPointerAuthInfo>
   EmitOrigPointerRValue(const Expr *E);
 
@@ -4618,6 +4622,46 @@ public:
   Address authPointerToPointerCast(Address Ptr, QualType SourceType,
                                    QualType DestType);
 
+private:
+  llvm::Instruction *EmitArrayPointerAuthRelocationFixup(QualType ElementType,
+                                                         Address Dst,
+                                                         Address Src,
+                                                         llvm::Value *Count);
+
+  struct RelocatedAddressDiscriminatedPointerAuthFixup {
+    using FieldFixup = std::pair<KnownNonNull_t, PointerAuthQualifier>;
+    CharUnits Offset;
+    RelocatedAddressDiscriminatedPointerAuthFixup(
+        CharUnits Offset, KnownNonNull_t IsKnownNonNull,
+        PointerAuthQualifier Qualifier)
+        : Offset(Offset), Info(FieldFixup{IsKnownNonNull, Qualifier}) {}
+    RelocatedAddressDiscriminatedPointerAuthFixup(
+        CharUnits Offset, const ConstantArrayType *ArrayType)
+        : Offset(Offset), Info(ArrayType) {}
+    const ConstantArrayType *getAsConstantArrayType() const {
+      if (!std::holds_alternative<const ConstantArrayType *>(Info))
+        return nullptr;
+      return std::get<const ConstantArrayType *>(Info);
+    }
+    std::pair<KnownNonNull_t, PointerAuthQualifier> getValueFixup() const {
+      assert(std::holds_alternative<FieldFixup>(Info));
+      return std::get<FieldFixup>(Info);
+    }
+
+  private:
+    std::variant<FieldFixup, const ConstantArrayType *> Info;
+  };
+
+  using FixupVectorTy =
+      llvm::SmallVector<RelocatedAddressDiscriminatedPointerAuthFixup>;
+  class FixupFinder;
+  llvm::DenseMap<QualType, std::unique_ptr<FixupVectorTy>> FixupLists;
+
+  void EmitSingleObjectPointerAuthRelocationFixup(const FixupVectorTy &Fixups,
+                                                  QualType ElementType,
+                                                  Address Dst, Address Src);
+
+public:
   Address getAsNaturalAddressOf(Address Addr, QualType PointeeTy);
 
   llvm::Value *getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
