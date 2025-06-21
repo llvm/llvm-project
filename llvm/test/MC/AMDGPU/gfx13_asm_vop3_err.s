@@ -17,7 +17,7 @@ v_ashrrev_i64 v[4:5], v2, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-NEXT:{{^}}                                 ^
 
 v_ashrrev_i64 v[4:5], v2, v[6:7] quad_perm:[3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
 // GFX13-NEXT:{{^}}v_ashrrev_i64 v[4:5], v2, v[6:7] quad_perm:[3,2,1,0]
 // GFX13-NEXT:{{^}}                                 ^
 
@@ -105,7 +105,7 @@ v_fma_f64 v[4:5], v[2:3], v[6:7], v[8:9] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-NEXT:{{^}}                                         ^
 
 v_fma_f64 v[4:5], v[2:3], v[6:7], v[8:9] quad_perm:[3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
 // GFX13-NEXT:{{^}}v_fma_f64 v[4:5], v[2:3], v[6:7], v[8:9] quad_perm:[3,2,1,0]
 // GFX13-NEXT:{{^}}                                         ^
 
@@ -115,7 +115,7 @@ v_ldexp_f64 v[4:5], v[2:3], v6 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-NEXT:{{^}}                               ^
 
 v_ldexp_f64 v[4:5], v[2:3], v6 quad_perm:[3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
 // GFX13-NEXT:{{^}}v_ldexp_f64 v[4:5], v[2:3], v6 quad_perm:[3,2,1,0]
 // GFX13-NEXT:{{^}}                               ^
 
@@ -125,7 +125,7 @@ v_lshrrev_b64 v[4:5], v2, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-NEXT:{{^}}                                 ^
 
 v_lshrrev_b64 v[4:5], v2, v[6:7] quad_perm:[3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
 // GFX13-NEXT:{{^}}v_lshrrev_b64 v[4:5], v2, v[6:7] quad_perm:[3,2,1,0]
 // GFX13-NEXT:{{^}}                                 ^
 

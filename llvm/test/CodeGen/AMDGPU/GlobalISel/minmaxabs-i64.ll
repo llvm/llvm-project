@@ -252,9 +252,9 @@ define i64 @test_abs_i64(i64 %a) {
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_mov_b32_e32 v3, v2
-; GFX13-NEXT:    v_add_nc_u64_e32 v[0:1], v[0:1], v[2:3]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v2, vcc_lo
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX13-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]

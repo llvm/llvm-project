@@ -139,7 +139,7 @@ define amdgpu_kernel void @sadd64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %add = add i64 %a, %b
@@ -259,7 +259,7 @@ define amdgpu_kernel void @sadd64ri(ptr addrspace(1) %out, i64 %a) {
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %add = add i64 20015998343286, %a
@@ -366,12 +366,13 @@ define amdgpu_kernel void @vadd64rr(ptr addrspace(1) %out, i64 %a) {
 ; GFX1300-LABEL: vadd64rr:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1300-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-NEXT:    v_add_nc_u64_e32 v[2:3], s[2:3], v[0:1]
-; GFX1300-NEXT:    global_store_b64 v1, v[2:3], s[0:1]
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_u32 v0, s2, s2, v0
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s2
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -478,12 +479,13 @@ define amdgpu_kernel void @vadd64ri(ptr addrspace(1) %out) {
 ; GFX1300-LABEL: vadd64ri:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX1300-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-NEXT:    v_add_nc_u64_e32 v[2:3], lit64(0x123456789876), v[0:1]
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_u32 v0, s2, 0x56789876, v0
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x1234, 0, s2
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    global_store_b64 v1, v[2:3], s[0:1]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -602,7 +604,7 @@ define amdgpu_kernel void @suaddo32(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    s_add_co_i32 s0, s0, s1
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX1300-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX1300-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
   %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %uadd, 0
@@ -751,8 +753,8 @@ define amdgpu_kernel void @uaddo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
 ; GFX1300-NEXT:    s_clause 0x1
-; GFX1300-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1300-NEXT:    global_store_b8 v0, v2, s[2:3]
+; GFX1300-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b8 v0, v2, s[2:3] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
   %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %uadd, 0
@@ -916,8 +918,8 @@ define amdgpu_kernel void @suaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
 ; GFX1300-NEXT:    s_clause 0x1
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1300-NEXT:    global_store_b8 v2, v3, s[2:3]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b8 v2, v3, s[2:3] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
   %uadd = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %uadd, 0
@@ -1075,16 +1077,18 @@ define amdgpu_kernel void @vuaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1300-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1300-NEXT:    v_add_nc_u64_e32 v[2:3], s[6:7], v[0:1]
-; GFX1300-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[6:7], v[2:3]
-; GFX1300-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_u32 v0, s4, s6, v0
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, s7, 0, s4
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[6:7], v[0:1]
+; GFX1300-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; GFX1300-NEXT:    s_clause 0x1
-; GFX1300-NEXT:    global_store_b64 v1, v[2:3], s[0:1]
-; GFX1300-NEXT:    global_store_b8 v1, v0, s[2:3]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b8 v2, v3, s[2:3] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -1223,7 +1227,7 @@ define amdgpu_kernel void @ssub64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %sub = sub i64 %a, %b
@@ -1343,7 +1347,7 @@ define amdgpu_kernel void @ssub64ri(ptr addrspace(1) %out, i64 %a) {
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %sub = sub i64 20015998343286, %a
@@ -1450,12 +1454,13 @@ define amdgpu_kernel void @vsub64rr(ptr addrspace(1) %out, i64 %a) {
 ; GFX1300-LABEL: vsub64rr:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1300-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-NEXT:    v_sub_nc_u64_e32 v[2:3], s[2:3], v[0:1]
-; GFX1300-NEXT:    global_store_b64 v1, v[2:3], s[0:1]
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-NEXT:    v_sub_co_u32 v0, s2, s2, v0
+; GFX1300-NEXT:    v_sub_co_ci_u32_e64 v1, null, s3, 0, s2
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1562,12 +1567,13 @@ define amdgpu_kernel void @vsub64ri(ptr addrspace(1) %out) {
 ; GFX1300-LABEL: vsub64ri:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX1300-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-NEXT:    v_sub_nc_u64_e32 v[2:3], lit64(0x123456789876), v[0:1]
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-NEXT:    v_sub_co_u32 v0, s2, 0x56789876, v0
+; GFX1300-NEXT:    v_sub_co_ci_u32_e64 v1, null, 0x1234, 0, s2
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    global_store_b64 v1, v[2:3], s[0:1]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1687,7 +1693,7 @@ define amdgpu_kernel void @susubo32(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    s_sub_co_i32 s0, s0, s1
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX1300-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX1300-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
   %usub = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %usub, 0
@@ -1836,8 +1842,8 @@ define amdgpu_kernel void @usubo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
 ; GFX1300-NEXT:    s_clause 0x1
-; GFX1300-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1300-NEXT:    global_store_b8 v0, v2, s[2:3]
+; GFX1300-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b8 v0, v2, s[2:3] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
   %usub = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %usub, 0
@@ -2001,8 +2007,8 @@ define amdgpu_kernel void @susubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
 ; GFX1300-NEXT:    s_clause 0x1
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1300-NEXT:    global_store_b8 v2, v3, s[2:3]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b8 v2, v3, s[2:3] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
   %usub = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %usub, 0
@@ -2160,16 +2166,18 @@ define amdgpu_kernel void @vusubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1300-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1300-NEXT:    v_sub_nc_u64_e32 v[2:3], s[6:7], v[0:1]
-; GFX1300-NEXT:    v_cmp_lt_u64_e32 vcc_lo, s[6:7], v[2:3]
-; GFX1300-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-NEXT:    v_sub_co_u32 v0, s4, s6, v0
+; GFX1300-NEXT:    v_sub_co_ci_u32_e64 v1, null, s7, 0, s4
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_cmp_lt_u64_e32 vcc_lo, s[6:7], v[0:1]
+; GFX1300-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; GFX1300-NEXT:    s_clause 0x1
-; GFX1300-NEXT:    global_store_b64 v1, v[2:3], s[0:1]
-; GFX1300-NEXT:    global_store_b8 v1, v0, s[2:3]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b8 v2, v3, s[2:3] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -3636,7 +3644,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1300-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1300-NEXT:  .LBB16_3:
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[8:9]
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[8:9] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 ; GFX1300-NEXT:  .LBB16_4:
 ; GFX1300-NEXT:    ; implicit-def: $vgpr0_vgpr1

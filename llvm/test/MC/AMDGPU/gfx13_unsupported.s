@@ -375,3 +375,12 @@ v_pk_mul_f32 v[0:1], v[0:1], v[0:1]
 
 v_mad_u32 v0, v0, v0, v0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_add_nc_u64 v[0:1], v[2:3], v[4:5]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_sub_nc_u64 v[0:1], v[2:3], v[4:5]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_lshl_add_u64 v[2:3], s[4:5], v7, v[8:9]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
