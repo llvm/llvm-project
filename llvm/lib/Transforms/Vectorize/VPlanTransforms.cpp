@@ -3107,28 +3107,22 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 /// that feeds a store interleave group at index \p Idx, \p WideMember0 is the
 /// recipe feeding the same interleave group at index 0. A VPWidenLoadRecipe can
 /// be narrowed to an index-independent load if it feeds all wide ops at all
-/// indices (checked by via the operands of the wide recipe at lane0, \p
-/// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
-/// is defined at \p Idx of a load interleave group.
+/// indices (\p OpV must be the operand at index \p OpIdx for both the recipe at
+/// lane 0, \p WideMember0, and \p WideMember). A VPInterleaveRecipe can be
+/// narrowed to a wide load, if \p V is defined at \p Idx of a load interleave
+/// group.
 static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
-                          VPValue *V, unsigned Idx) {
-  auto *DefR = V->getDefiningRecipe();
+                          unsigned OpIdx, VPValue *OpV, unsigned Idx) {
+  auto *DefR = OpV->getDefiningRecipe();
   if (!DefR)
     return false;
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
-    return !W->getMask() &&
-           all_of(zip(WideMember0->operands(), WideMember->operands()),
-                  [V](const auto P) {
-                    // V must be as at the same places in both WideMember0 and
-                    // WideMember.
-                    const auto &[WideMember0Op, WideMemberOp] = P;
-                    return (WideMember0Op == V) == (WideMemberOp == V);
-                  });
+    return !W->getMask() && WideMember0->getOperand(OpIdx) == OpV;
 
   if (auto *IR = dyn_cast<VPInterleaveRecipe>(DefR))
     return IR->getInterleaveGroup()->getFactor() ==
                IR->getInterleaveGroup()->getNumMembers() &&
-           IR->getVPValue(Idx) == V;
+           IR->getVPValue(Idx) == OpV;
   return false;
 }
 
@@ -3243,9 +3237,11 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;
-      if (any_of(R->operands(), [WideMember0, Idx = I, R](VPValue *V) {
-            return !canNarrowLoad(WideMember0, R, V, Idx);
-          }))
+      if (any_of(enumerate(R->operands()),
+                 [WideMember0, Idx = I, R](const auto &P) {
+                   const auto &[OpIdx, OpV] = P;
+                   return !canNarrowLoad(WideMember0, R, OpIdx, OpV, Idx);
+                 }))
         return;
     }
     StoreGroups.push_back(InterleaveR);
