@@ -61,27 +61,6 @@ define i64 @test_pow2_or_zero(i64 %arg) {
   ret i64 %rem
 }
 
-;; Make sure it doesn't work if the value isn't known to be a power of 2.
-;; In this case a vscale without a `vscale_range` attribute on the function.
-define i64 @no_pow2() {
-; CHECK-LABEL: define i64 @no_pow2() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
-; CHECK-NEXT:    [[REM:%.*]] = and i64 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    ret i64 [[REM]]
-;
-entry:
-  %0 = call i64 @llvm.vscale.i64()
-  %1 = shl i64 %0, 4
-  %2 = shl i64 %0, 3
-  %3 = add i64 %2, -1
-  %rem = and i64 %1, %3
-  ret i64 %rem
-}
-
 ;; Make sure it doesn't work if the shift on the -1 side is greater
 define i64 @minus_shift_greater(i64 %arg) {
 ; CHECK-LABEL: define i64 @minus_shift_greater

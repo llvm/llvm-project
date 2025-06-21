@@ -67,9 +67,8 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    br i1 [[CONFLICT_RDX9]], label [[SCALAR_PH]], label [[ENTRY:%.*]]
 ; NORMAL_DEP_LIMIT:       vector.ph:
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NORMAL_DEP_LIMIT-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP4]], 2
-; NORMAL_DEP_LIMIT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
-; NORMAL_DEP_LIMIT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; NORMAL_DEP_LIMIT-NEXT:    [[DOTNEG:%.*]] = mul i64 [[TMP4]], -4
+; NORMAL_DEP_LIMIT-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], [[DOTNEG]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
@@ -96,7 +95,7 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; NORMAL_DEP_LIMIT-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NORMAL_DEP_LIMIT:       middle.block:
-; NORMAL_DEP_LIMIT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
+; NORMAL_DEP_LIMIT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NORMAL_DEP_LIMIT-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; NORMAL_DEP_LIMIT:       scalar.ph:
 ;
