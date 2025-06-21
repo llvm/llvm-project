@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx942 -start-before=machine-scheduler -verify-misched -misched-print-dags -stop-after=machine-scheduler -filetype=null %s 2>&1 | FileCheck -check-prefix=GCN %s
+
+--- |
+  define amdgpu_kernel void @check_subreg_dep() { ret void }
+  ; GCN-LABEL: SU(2):   $vgpr0_vgpr1 = contract nofpexcept V_PK_MUL_F32 8, undef $vgpr2_vgpr3, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:    # preds left       : 4
+  ; GCN-NEXT:    # succs left       : 1
+  ; GCN-NEXT:    # rdefs left       : 0
+  ; GCN-NEXT:    Latency            : 1
+  ; GCN-NEXT:    Depth              : 1
+  ; GCN-NEXT:    Height             : 1
+  ; GCN-NEXT:    Predecessors:
+  ; GCN-NEXT:      SU(1): Out  Latency=1
+  ; GCN-NEXT:      SU(1): Ord  Latency=0 Artificial
+  ; GCN-NEXT:      SU(0): Out  Latency=1
+  ; GCN-NEXT:      SU(0): Data Latency=1 Reg=$vgpr0_vgpr1
+  ; GCN-NEXT:    Successors:
+  ; GCN-NEXT:      SU(3): Data Latency=1 Reg=$vgpr0_vgpr1
+...
+
+---
+name:            check_subreg_dep
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+ bb.0:
+  $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+  $vgpr0_vgpr1 = contract nofpexcept V_PK_MUL_F32 8, undef $vgpr2_vgpr3, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  FLAT_STORE_DWORDX2 undef $vgpr2_vgpr3, $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+  S_ENDPGM 0
+...
