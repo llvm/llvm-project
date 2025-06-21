@@ -83,11 +83,12 @@ static cl::opt<bool> LargeTable(
              "in the table instead of the default 16 bits."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
-static cl::opt<bool> UseLambdaInDecodetoMCInst(
-    "use-lambda-in-decode-to-mcinst",
-    cl::desc("Use a table of lambdas instead of a switch case in the\n"
-             "generated `decodeToMCInst` function. Helps improve compile time\n"
-             "of the generated code."),
+static cl::opt<bool> UseFnTableInDecodetoMCInst(
+    "use-fn-table-in-decode-to-mcinst",
+    cl::desc(
+        "Use a table of function pointers instead of a switch case in the\n"
+        "generated `decodeToMCInst` function. Helps improve compile time\n"
+        "of the generated code."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
 STATISTIC(NumEncodings, "Number of encodings considered");
@@ -1073,53 +1074,57 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
 void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
                                          DecoderSet &Decoders,
                                          indent Indent) const {
-  // The decoder function is just a big switch statement based on the
-  // input decoder index.
-  OS << Indent << "template <typename InsnType>\n";
-  OS << Indent << "static DecodeStatus decodeToMCInst(DecodeStatus S,"
-     << " unsigned Idx, InsnType insn, MCInst &MI,\n";
-  OS << Indent << "                                   uint64_t "
-     << "Address, const MCDisassembler *Decoder, bool &DecodeComplete) {\n";
-  Indent += 2;
-  OS << Indent << "DecodeComplete = true;\n";
+  // The decoder function is just a big switch statement or a table of function
+  // pointers based on the input decoder index.
+
   // TODO: When InsnType is large, using uint64_t limits all fields to 64 bits
   // It would be better for emitBinaryParser to use a 64-bit tmp whenever
   // possible but fall back to an InsnType-sized tmp for truly large fields.
-  OS << Indent
-     << "using TmpType = "
-        "std::conditional_t<std::is_integral<InsnType>::"
-        "value, InsnType, uint64_t>;\n";
+  StringRef TmpTypeDecl =
+      "using TmpType = std::conditional_t<std::is_integral<InsnType>::value, "
+      "InsnType, uint64_t>;\n";
+  StringRef DecodeParams =
+      "DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const "
+      "MCDisassembler *Decoder, bool &DecodeComplete";
 
-  if (UseLambdaInDecodetoMCInst) {
-    // Emit one lambda for each case first.
+  if (UseFnTableInDecodetoMCInst) {
+    // Emit a function for each case first.
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
-      OS << Indent << "auto decodeLambda" << Index << " = [](DecodeStatus S,\n"
-         << Indent << "                   InsnType insn, MCInst &MI,\n"
-         << Indent << "                   uint64_t Address, \n"
-         << Indent << "                   const MCDisassembler *Decoder,\n"
-         << Indent << "                   bool &DecodeComplete) {\n";
-      OS << Indent + 2 << "[[maybe_unused]] TmpType tmp;\n";
+      OS << Indent << "template <typename InsnType>\n";
+      OS << Indent << "DecodeStatus decodeFn" << Index << "(" << DecodeParams
+         << ") {\n";
+      Indent += 2;
+      OS << Indent << TmpTypeDecl;
+      OS << Indent << "[[maybe_unused]] TmpType tmp;\n";
       OS << Decoder;
-      OS << Indent + 2 << "return S;\n";
-      OS << Indent << "};\n";
+      OS << Indent << "return S;\n";
+      Indent -= 2;
+      OS << Indent << "}\n\n";
     }
-    // Build a table of lambdas.
+  }
 
-    OS << R"(
-  using LambdaTy =
-      function_ref<DecodeStatus(DecodeStatus, InsnType, MCInst &, uint64_t,
-                                const MCDisassembler *, bool &)>;
-    )";
-    OS << Indent << "const static LambdaTy decodeLambdaTable[] = {\n";
+  OS << Indent << "// Handling " << Decoders.size() << " cases.\n";
+  OS << Indent << "template <typename InsnType>\n";
+  OS << Indent << "static DecodeStatus decodeToMCInst(unsigned Idx, "
+     << DecodeParams << ") {\n";
+  Indent += 2;
+  OS << Indent << "DecodeComplete = true;\n";
+
+  if (UseFnTableInDecodetoMCInst) {
+    // Build a table of function pointers.
+    OS << Indent << "using DecodeFnTy = DecodeStatus (*)(" << DecodeParams
+       << ");\n";
+    OS << Indent << "static constexpr DecodeFnTy decodeFnTable[] = {\n";
     for (size_t Index : llvm::seq(Decoders.size()))
-      OS << Indent + 2 << "decodeLambda" << Index << ",\n";
+      OS << Indent + 2 << "decodeFn" << Index << ",\n";
     OS << Indent << "};\n";
     OS << Indent << "if (Idx >= " << Decoders.size() << ")\n";
     OS << Indent + 2 << "llvm_unreachable(\"Invalid index!\");\n";
     OS << Indent
-       << "return decodeLambdaTable[Idx](S, insn, MI, Address, Decoder, "
+       << "return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
           "DecodeComplete);\n";
   } else {
+    OS << Indent << TmpTypeDecl;
     OS << Indent << "TmpType tmp;\n";
     OS << Indent << "switch (Idx) {\n";
     OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
@@ -1306,7 +1311,8 @@ std::pair<unsigned, bool> FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   // FIXME: emitDecoder() function can take a buffer directly rather than
   // a stream.
   raw_svector_ostream S(Decoder);
-  bool HasCompleteDecoder = emitDecoder(S, indent(4), Opc);
+  indent Indent(UseFnTableInDecodetoMCInst ? 2 : 4);
+  bool HasCompleteDecoder = emitDecoder(S, Indent, Opc);
 
   // Using the full decoder string as the key value here is a bit
   // heavyweight, but is effective. If the string comparisons become a
@@ -2410,7 +2416,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
        << "      makeUp(insn, Len);";
   }
   OS << R"(
-      S = decodeToMCInst(S, DecodeIdx, insn, MI, Address, DisAsm, DecodeComplete);
+      S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
       assert(DecodeComplete);
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
@@ -2432,7 +2438,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       MCInst TmpMI;
       TmpMI.setOpcode(Opc);
       bool DecodeComplete;
-      S = decodeToMCInst(S, DecodeIdx, insn, TmpMI, Address, DisAsm, DecodeComplete);
+      S = decodeToMCInst(DecodeIdx, S, insn, TmpMI, Address, DisAsm, DecodeComplete);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_TryDecode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": ");
 

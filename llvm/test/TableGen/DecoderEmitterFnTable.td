@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -use-lambda-in-decode-to-mcinst -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-disassembler -use-fn-table-in-decode-to-mcinst -I %p/../../include %s | FileCheck %s
 
 include "llvm/Target/Target.td"
 
@@ -71,14 +71,14 @@ def Inst3 : TestInstruction {
   let AsmString = "Inst3";
 }
 
+// CHECK-LABEL: decodeFn0
+// CHECK-LABEL: decodeFn1
+// CHECK-LABEL: decodeFn2
+// CHECK-LABEL: decodeFn3
 // CHECK-LABEL: decodeToMCInst
-// CHECK: decodeLambda0 =
-// CHECK: decodeLambda1 =
-// CHECK: decodeLambda2 =
-// CHECK: decodeLambda3 =
-// CHECK: decodeLambdaTable[]
-// CHECK-NEXT: decodeLambda0
-// CHECK-NEXT: decodeLambda1
-// CHECK-NEXT: decodeLambda2
-// CHECK-NEXT: decodeLambda3
-// CHECK: return decodeLambdaTable[Idx]
+// CHECK: static constexpr DecodeFnTy decodeFnTable[]
+// CHECK-NEXT: decodeFn0,
+// CHECK-NEXT: decodeFn1,
+// CHECK-NEXT: decodeFn2,
+// CHECK-NEXT: decodeFn3,
+// CHECK: return decodeFnTable[Idx]
