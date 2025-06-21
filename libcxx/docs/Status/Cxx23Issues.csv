@@ -189,7 +189,7 @@
 "`LWG3028 <https://wg21.link/LWG3028>`__","Container requirements tables should distinguish ``const`` and non-``const`` variables","2022-11 (Kona)","","",""
 "`LWG3118 <https://wg21.link/LWG3118>`__","``fpos`` equality comparison unspecified","2022-11 (Kona)","","",""
 "`LWG3177 <https://wg21.link/LWG3177>`__","Limit permission to specialize variable templates to program-defined types","2022-11 (Kona)","|Nothing To Do|","",""
-"`LWG3515 <https://wg21.link/LWG3515>`__","§[stacktrace.basic.nonmem]: ``operator<<`` should be less templatized","2022-11 (Kona)","","",""
+"`LWG3515 <https://wg21.link/LWG3515>`__","§[stacktrace.basic.nonmem]: ``operator<<`` should be less templatized","2022-11 (Kona)","|Nothing To Do|","",""
 "`LWG3545 <https://wg21.link/LWG3545>`__","``std::pointer_traits`` should be SFINAE-friendly","2022-11 (Kona)","|Complete|","18",""
 "`LWG3569 <https://wg21.link/LWG3569>`__","``join_view`` fails to support ranges of ranges with non-default_initializable iterators","2022-11 (Kona)","","",""
 "`LWG3594 <https://wg21.link/LWG3594>`__","``inout_ptr`` — inconsistent ``release()`` in destructor","2022-11 (Kona)","|Complete|","19",""
