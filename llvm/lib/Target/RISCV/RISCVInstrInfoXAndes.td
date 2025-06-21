@@ -55,21 +55,12 @@ def simm20_lsb000 : Operand<XLenVT> {
 
 // Predicate: True if immediate is a power of 2.
 def PowerOf2 : PatLeaf<(imm), [{
-  if (N->getValueType(0) == MVT::i32)
-    return isPowerOf2_32(N->getZExtValue());
-  else if (N->getValueType(0) == MVT::i64)
-    return isPowerOf2_64(N->getZExtValue());
-  else
-    return false;
+  return isPowerOf2_64(N->getZExtValue());
 }]>;
 
 // Transformation function: Get log2 of immediate.
 def Log2 : SDNodeXForm<imm, [{
-  uint64_t Imm;
-  if (N->getValueType(0) == MVT::i32)
-    Imm = Log2_32(N->getZExtValue());
-  else
-    Imm = Log2_64(N->getZExtValue());
+  uint64_t Imm = Log2_64(N->getZExtValue());
   return CurDAG->getTargetConstant(Imm, SDLoc(N), N->getValueType(0));
 }]>;
 
