@@ -244,11 +244,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
       // Clamp to the negation range.
       Value min = rewriter.create<arith::ConstantIntOp>(
-          loc, APInt::getSignedMinValue(inputBitWidth).getSExtValue(),
-          intermediateType);
+          loc, intermediateType,
+          APInt::getSignedMinValue(inputBitWidth).getSExtValue());
       Value max = rewriter.create<arith::ConstantIntOp>(
-          loc, APInt::getSignedMaxValue(inputBitWidth).getSExtValue(),
-          intermediateType);
+          loc, intermediateType,
+          APInt::getSignedMaxValue(inputBitWidth).getSExtValue());
       auto clamp = clampIntHelper(loc, sub, min, max, rewriter, false);
 
       // Truncate to the final value.

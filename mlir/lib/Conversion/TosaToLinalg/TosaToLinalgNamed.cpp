@@ -1073,11 +1073,11 @@ public:
             int64_t outBitwidth = resultETy.getIntOrFloatBitWidth();
 
             auto min = rewriter.create<arith::ConstantIntOp>(
-                loc, APInt::getSignedMinValue(outBitwidth).getSExtValue(),
-                accETy);
+                loc, accETy,
+                APInt::getSignedMinValue(outBitwidth).getSExtValue());
             auto max = rewriter.create<arith::ConstantIntOp>(
-                loc, APInt::getSignedMaxValue(outBitwidth).getSExtValue(),
-                accETy);
+                loc, accETy,
+                APInt::getSignedMaxValue(outBitwidth).getSExtValue());
             auto clamp = clampIntHelper(loc, scaled, min, max, rewriter,
                                         /*isUnsigned=*/false);
 

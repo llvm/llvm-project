@@ -257,9 +257,7 @@ void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
-                                 int64_t value, Type type) {
-  assert(type.isSignlessInteger() &&
-         "ConstantIntOp can only have signless integer type values");
+                                 Type type, int64_t value) {
   arith::ConstantOp::build(builder, result, type,
                            builder.getIntegerAttr(type, value));
 }
@@ -271,7 +269,7 @@ bool arith::ConstantIntOp::classof(Operation *op) {
 }
 
 void arith::ConstantFloatOp::build(OpBuilder &builder, OperationState &result,
-                                   const APFloat &value, FloatType type) {
+                                   FloatType type, const APFloat &value) {
   arith::ConstantOp::build(builder, result, type,
                            builder.getFloatAttr(type, value));
 }
@@ -2363,7 +2361,7 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
           rewriter.create<arith::XOrIOp>(
               op.getLoc(), op.getCondition(),
               rewriter.create<arith::ConstantIntOp>(
-                  op.getLoc(), 1, op.getCondition().getType())));
+                  op.getLoc(), op.getCondition().getType(), 1)));
       return success();
     }
 
