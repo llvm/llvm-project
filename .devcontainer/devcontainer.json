@@ -1,0 +1,16 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:debian", // Latest Debian stable
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}, // Optional: Ensure Git is installed
+    "ghcr.io/devcontainers/features/github-cli:1": {} // Optional: GitHub CLI
+  },
+  "forwardPorts": [3000], // Example: Forward port 3000
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next", // Example extensions
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}
