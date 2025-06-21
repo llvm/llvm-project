@@ -7384,7 +7384,40 @@ private:
     // dimension.
     uint64_t DimSize = 1;
 
-    bool IsNonContiguous = CombinedInfo.NonContigInfo.IsNonContiguous;
+    // Detects non-contiguous updates due to strided accesses.
+    // Sets the 'IsNonContiguous' flag so that the 'MapType' bits are set
+    // correctly when generating information to be passed to the runtime. The
+    // flag is set to true if any array section has a stride not equal to 1, or
+    // if the stride is not a constant expression (conservatively assumed
+    // non-contiguous).
+    bool IsNonContiguous = false;
+    for (const auto &Component : Components) {
+      const auto *OASE =
+          dyn_cast<ArraySectionExpr>(Component.getAssociatedExpression());
+      if (OASE) {
+        const Expr *StrideExpr = OASE->getStride();
+        if (StrideExpr) {
+          // Check if the stride is a constant integer expression
+          if (StrideExpr->isIntegerConstantExpr(CGF.getContext())) {
+            if (auto Constant =
+                    StrideExpr->getIntegerConstantExpr(CGF.getContext())) {
+              int64_t StrideVal = Constant->getExtValue();
+              if (StrideVal != 1) {
+                // Set flag if stride is not 1 (i.e., non-contiguous update)
+                IsNonContiguous = true;
+                break;
+              }
+            }
+          } else {
+            // If stride is not a constant, conservatively treat as
+            // non-contiguous
+            IsNonContiguous = true;
+            break;
+          }
+        }
+      }
+    }
+
     bool IsPrevMemberReference = false;
 
     bool IsPartialMapped =
