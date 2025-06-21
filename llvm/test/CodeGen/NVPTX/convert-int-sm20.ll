@@ -14,7 +14,7 @@ define i16 @cvt_i16_i32(i32 %x) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %r1, [cvt_i16_i32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [cvt_i16_i32_param_0];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %a = trunc i32 %x to i16
@@ -24,11 +24,11 @@ define i16 @cvt_i16_i32(i32 %x) {
 define i16 @cvt_i16_i64(i64 %x) {
 ; CHECK-LABEL: cvt_i16_i64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %r1, [cvt_i16_i64_param_0];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [cvt_i16_i64_param_0];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %a = trunc i64 %x to i16
   ret i16 %a
@@ -52,11 +52,11 @@ define i32 @cvt_i32_i16(i16 %x) {
 define i32 @cvt_i32_i64(i64 %x) {
 ; CHECK-LABEL: cvt_i32_i64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [cvt_i32_i64_param_0];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [cvt_i32_i64_param_0];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %a = trunc i64 %x to i32
   ret i32 %a

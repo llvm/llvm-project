@@ -62,15 +62,13 @@ define i64 @abs_i64(i64 %a) {
 define %struct.S16 @i32_to_2xi16(i32 noundef %in) {
 ; CHECK-LABEL: i32_to_2xi16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [i32_to_2xi16_param_0];
-; CHECK-NEXT:    cvt.u16.u32 %rs1, %r1;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs2}, %r1; }
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
-; CHECK-NEXT:    st.param.b16 [func_retval0+2], %rs2;
+; CHECK-NEXT:    shr.u32 %r2, %r1, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b16 [func_retval0+2], %r2;
 ; CHECK-NEXT:    ret;
   %low = trunc i32 %in to i16
   %high32 = lshr i32 %in, 16
@@ -84,15 +82,13 @@ define %struct.S16 @i32_to_2xi16(i32 noundef %in) {
 define %struct.S16 @i32_to_2xi16_lh(i32 noundef %in) {
 ; CHECK-LABEL: i32_to_2xi16_lh(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [i32_to_2xi16_lh_param_0];
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r1; }
-; CHECK-NEXT:    cvt.u16.u32 %rs2, %r1;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs2;
-; CHECK-NEXT:    st.param.b16 [func_retval0+2], %rs1;
+; CHECK-NEXT:    shr.u32 %r2, %r1, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b16 [func_retval0+2], %r2;
 ; CHECK-NEXT:    ret;
   %high32 = lshr i32 %in, 16
   %high = trunc i32 %high32 to i16
@@ -106,16 +102,13 @@ define %struct.S16 @i32_to_2xi16_lh(i32 noundef %in) {
 define %struct.S16 @i32_to_2xi16_not(i32 noundef %in) {
 ; CHECK-LABEL: i32_to_2xi16_not(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [i32_to_2xi16_not_param_0];
-; CHECK-NEXT:    cvt.u16.u32 %rs1, %r1;
 ; CHECK-NEXT:    shr.u32 %r2, %r1, 15;
-; CHECK-NEXT:    cvt.u16.u32 %rs2, %r2;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
-; CHECK-NEXT:    st.param.b16 [func_retval0+2], %rs2;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b16 [func_retval0+2], %r2;
 ; CHECK-NEXT:    ret;
   %low = trunc i32 %in to i16
   ;  Shift by any value other than 16 blocks the conversiopn to mov.
@@ -129,15 +122,13 @@ define %struct.S16 @i32_to_2xi16_not(i32 noundef %in) {
 define %struct.S32 @i64_to_2xi32(i64 noundef %in) {
 ; CHECK-LABEL: i64_to_2xi32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [i64_to_2xi32_param_0];
-; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r2}, %rd1; }
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+4], %r2;
+; CHECK-NEXT:    shr.u64 %rd2, %rd1, 32;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %rd1;
+; CHECK-NEXT:    st.param.b32 [func_retval0+4], %rd2;
 ; CHECK-NEXT:    ret;
   %low = trunc i64 %in to i32
   %high64 = lshr i64 %in, 32
@@ -150,16 +141,13 @@ define %struct.S32 @i64_to_2xi32(i64 noundef %in) {
 define %struct.S32 @i64_to_2xi32_not(i64 noundef %in) {
 ; CHECK-LABEL: i64_to_2xi32_not(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [i64_to_2xi32_not_param_0];
-; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    shr.u64 %rd2, %rd1, 31;
-; CHECK-NEXT:    cvt.u32.u64 %r2, %rd2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+4], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %rd1;
+; CHECK-NEXT:    st.param.b32 [func_retval0+4], %rd2;
 ; CHECK-NEXT:    ret;
   %low = trunc i64 %in to i32
   ;  Shift by any value other than 32 blocks the conversiopn to mov.
@@ -174,8 +162,7 @@ define %struct.S32 @i64_to_2xi32_not(i64 noundef %in) {
 define %struct.S16 @i32_to_2xi16_shr(i32 noundef %i){
 ; CHECK-LABEL: i32_to_2xi16_shr(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [i32_to_2xi16_shr_param_0];
@@ -189,10 +176,9 @@ define %struct.S16 @i32_to_2xi16_shr(i32 noundef %i){
 ; CHECK-NEXT:    );
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    shr.s32 %r2, %r1, 16;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r1; }
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs2}, %r2; }
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
-; CHECK-NEXT:    st.param.b16 [func_retval0+2], %rs2;
+; CHECK-NEXT:    shr.u32 %r3, %r2, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r2;
+; CHECK-NEXT:    st.param.b16 [func_retval0+2], %r3;
 ; CHECK-NEXT:    ret;
   call void @escape_int(i32 %i); // Force %i to be loaded completely.
   %i1 = ashr i32 %i, 16
