@@ -7506,6 +7506,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::FCmp:
   case Instruction::GetElementPtr:
     return false;
+  case Instruction::AddrSpaceCast:
+    return true;
   default: {
     const auto *CE = dyn_cast<ConstantExpr>(Op);
     if (isa<CastInst>(Op) || (CE && CE->isCast()))
