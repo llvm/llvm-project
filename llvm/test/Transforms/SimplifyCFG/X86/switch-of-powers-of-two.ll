@@ -6,25 +6,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @switch_of_powers_two(i32 %arg) {
 ; CHECK-LABEL: @switch_of_powers_two(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[DEFAULT_CASE:%.*]] [
-; CHECK-NEXT:      i32 1, label [[RETURN:%.*]]
-; CHECK-NEXT:      i32 8, label [[BB2:%.*]]
-; CHECK-NEXT:      i32 16, label [[BB3:%.*]]
-; CHECK-NEXT:      i32 32, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 64, label [[BB5:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       default_case:
-; CHECK-NEXT:    unreachable
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb5:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = phi i32 [ 2, [[BB2]] ], [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 42, [[BB5]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 true)
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers_two, i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 entry:
