@@ -81,6 +81,9 @@ Improvements and New Features
 - The ``bitset::to_string`` function has been optimized, resulting in a performance improvement of up to 8.3x for bitsets
   with uniformly distributed zeros and ones, and up to 13.5x and 16.1x for sparse and dense bitsets, respectively.
 
+- The ``flat_map::insert`` and ``flat_set::insert_range`` have been optimized, resulting in a performance improvement of up
+  to 10x for inserting elements into a ``flat_map`` when the input range is a ``flat_map`` or a ``zip_view``.
+
 Deprecations and Removals
 -------------------------
 

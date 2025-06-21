@@ -1522,6 +1522,7 @@ module std [system] {
     }
     module permutable                 { header "__iterator/permutable.h" }
     module prev                       { header "__iterator/prev.h" }
+    module product_iterator           { header "__iterator/product_iterator.h" }
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
     module readable_traits            { header "__iterator/readable_traits.h" }
