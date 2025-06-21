@@ -1,11 +1,18 @@
 // RUN: mlir-opt  -transform-interpreter -canonicalize --split-input-file --allow-unregistered-dialect %s | FileCheck %s
 
-// CHECK-LABEL: func @xfer_pair_double_loop_mem_use_outside
+///----------------------------------------------------------------------------------------
+/// Tests for vector.transfer_read + vector.transfer_write pairs
+///
+/// * Nested in double loops
+//  * Indices depend on induction variables
+///----------------------------------------------------------------------------------------
+
+// CHECK-LABEL: func @mem_use_outside
 // CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
 // CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index)
-func.func @xfer_pair_double_loop_mem_use_outside(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
+func.func @mem_use_outside(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
   %pad = arith.constant 0.0 : f32
 
 // CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
@@ -41,12 +48,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @xfer_pair_double_loop_mem_use_inside_outer_loop
+// CHECK-LABEL: func @mem_use_inside_outer_loop
 // CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
 // CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index)
-func.func @xfer_pair_double_loop_mem_use_inside_outer_loop(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
+func.func @mem_use_inside_outer_loop(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
   %pad = arith.constant 0.0 : f32
 
 // CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
@@ -82,12 +89,19 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_before_write
+///----------------------------------------------------------------------------------------
+/// Tests for vector.transfer_read + vector.transfer_write pairs
+///
+/// * Nested in double loops
+//  * Indices are constant
+///----------------------------------------------------------------------------------------
+
+// CHECK-LABEL: func @negative_mem_use_inside_inner_loop_before_write
 // CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
 // CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index)
-func.func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_before_write(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
+func.func @negative_mem_use_inside_inner_loop_before_write(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
 
@@ -124,12 +138,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_after_write
+// CHECK-LABEL: func @negative_mem_use_inside_inner_loop_after_write
 // CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
 // CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index)
-func.func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_after_write(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
+func.func @negative_mem_use_inside_inner_loop_after_write(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
 
@@ -166,12 +180,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_before_read
+// CHECK-LABEL: func @negative_mem_use_inside_inner_loop_before_read
 // CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
 // CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
 // CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index)
-func.func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_before_read(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
+func.func @negative_mem_use_inside_inner_loop_before_read(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
 
@@ -205,6 +219,13 @@ module attributes {transform.with_named_sequence} {
 }
 
 // -----
+
+///----------------------------------------------------------------------------------------
+/// Other tests
+///
+/// TODO: Document
+///----------------------------------------------------------------------------------------
+
 
 // CHECK-LABEL: func @hoist_vector_transfer_pairs_disjoint(
 //  CHECK-SAME:   %[[MEMREF0:[a-zA-Z0-9]*]]: memref<?x?xf32>,
