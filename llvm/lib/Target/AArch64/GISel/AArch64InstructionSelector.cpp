@@ -2197,8 +2197,14 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     }
     return Changed;
   }
-  case TargetOpcode::G_PTR_ADD:
+  case TargetOpcode::G_PTR_ADD: {
+    // If Checked Pointer Arithmetic (FEAT_CPA) is present, preserve the pointer
+    // arithmetic semantics instead of falling back to regular arithmetic.
+    const auto &TL = STI.getTargetLowering();
+    if (TL->shouldPreservePtrArith(MF.getFunction(), EVT()))
+      return false;
     return convertPtrAddToAdd(I, MRI);
+  }
   case TargetOpcode::G_LOAD: {
     // For scalar loads of pointers, we try to convert the dest type from p0
     // to s64 so that our imported patterns can match. Like with the G_PTR_ADD
