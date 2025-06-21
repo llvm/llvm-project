@@ -997,6 +997,89 @@ static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
   return success();
 }
 
+static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
+  CppEmitter::Scope classScope(emitter);
+  raw_indented_ostream &os = emitter.ostream();
+  os << "class " << classOp.getSymName() << " final {\n";
+  os << "public:\n";
+
+  os.indent();
+<<<<<<< Updated upstream
+  for (Operation &op : classOp) {
+    if (isa<FieldOp>(op)) {
+      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+        return failure();
+    }
+  }
+  os << "\nconst std::map<std::string, char*> _buffer_map {\n";
+=======
+  os << "const std::map<std::string, char*> _buffer_map {\n";
+>>>>>>> Stashed changes
+  for (Operation &op : classOp) {
+    if (auto fieldOp = dyn_cast<FieldOp>(op)) {
+      os << "  { \"" << fieldOp.getSymName() << "\", reinterpret_cast<char*>(&"
+         << fieldOp.getSymName() << ") },\n";
+    }
+  }
+  os << "};\n";
+
+  os << "char* getBufferForName(const std::string& name) const {\n";
+  os << "  auto it = _buffer_map.find(name);\n";
+  os << "  return (it == _buffer_map.end()) ? nullptr : it->second;\n";
+<<<<<<< Updated upstream
+  os << "}\n\n";
+  for (Operation &op : classOp) {
+    if (!isa<FieldOp>(op)) {
+      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
+        return failure();
+    }
+=======
+  os << "}\n";
+  for (Operation &op : classOp) {
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
+      return failure();
+>>>>>>> Stashed changes
+  }
+
+  os.unindent();
+  os << "};";
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, FieldOp fieldOp) {
+  raw_ostream &os = emitter.ostream();
+<<<<<<< Updated upstream
+  Location loc = fieldOp->getLoc();
+  Type type = fieldOp.getType();
+  if (failed(emitter.emitType(loc, type)))
+    return failure();
+  os << " " << fieldOp.getSymName();
+=======
+  if (failed(emitter.emitType(fieldOp->getLoc(), fieldOp.getType())))
+    return failure();
+  os << " " << fieldOp.getSymName() << ";";
+>>>>>>> Stashed changes
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    GetFieldOp getFieldOp) {
+  raw_indented_ostream &os = emitter.ostream();
+  Location loc = getFieldOp->getLoc();
+
+  if (getFieldOp->getNumResults() > 0) {
+    Value result = getFieldOp->getResult(0);
+    if (failed(emitter.emitType(loc, result.getType())))
+      return failure();
+    os << " ";
+    if (failed(emitter.emitOperand(result)))
+      return failure();
+    os << " = ";
+  }
+  os << getFieldOp.getFieldName().str();
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, FileOp file) {
   if (!emitter.shouldEmitFile(file))
     return success();
@@ -1612,7 +1695,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::LoadOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
                 emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
                 emitc::SubOp, emitc::SwitchOp, emitc::UnaryMinusOp,
-                emitc::UnaryPlusOp, emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::UnaryPlusOp, emitc::VariableOp, emitc::VerbatimOp,
+                emitc::ClassOp, emitc::FieldOp, emitc::GetFieldOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
