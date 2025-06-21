@@ -354,7 +354,7 @@ Status PlatformRemoteGDBServer::LaunchProcess(ProcessLaunchInfo &launch_info) {
   m_gdb_client_up->SendEnvironment(launch_info.GetEnvironment());
 
   ArchSpec arch_spec = launch_info.GetArchitecture();
-  const char *arch_triple = arch_spec.GetTriple().clone(true, false).str().c_str();
+  const char *arch_triple = arch_spec.GetTriple().str(4).str().c_str();
 
   m_gdb_client_up->SendLaunchArchPacket(arch_triple);
   LLDB_LOGF(

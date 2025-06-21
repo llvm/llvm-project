@@ -2107,43 +2107,28 @@ std::string Triple::merge(const Triple &Other) const {
   return Other.str();
 }
 
-Triple Triple::clone(bool IncludeEnvironment, bool IncludeObjectFormat) const {
-  if (str() == "")
-    return Triple();
-  if (IncludeEnvironment && IncludeObjectFormat)
-    return Triple(*this);
+StringRef Triple::str(size_t N) const {
+  // If empty, return empty
+  if (N == 0 || Data == "")
+    return "";
 
-  SmallString<64> triple;
-  llvm::StringRef tmp;
-  // arch
-  std::pair<llvm::StringRef, llvm::StringRef> pair = StringRef(Data).split('-'); // pair<arch, vendor/os/env/obj>
-  triple += pair.first;
-  // vendor
-  pair = pair.second.split('-'); // pair<vendor, os/env/obj>
-  triple += "-";
-  triple += pair.first;
-  // os
-  pair = (tmp = pair.second).split('-'); // pair<os, env/obj>
-  triple += "-";
-  triple += pair.first;
-  // environment
-  bool has_environment = tmp != pair.first;
-  pair = (tmp = pair.second).split('-'); // pair<env, obj>
-  bool added_environment = false;
-  if (has_environment && IncludeEnvironment) {
-    triple += "-";
-    triple += pair.first;
-    added_environment = true;
+  // If keeping all components, return a full clone
+  if (N >= 5)
+    return Data;
+
+  // Find the N-th separator (which is after the N'th component)
+  size_t p = StringRef::npos;
+  for (uint32_t i = 0; i < N; ++i) {
+    p = Data.find('-', p + 1);
+    if (p == StringRef::npos)
+      break;
   }
-  // object format
-  bool has_object_format = tmp != pair.first;
-  if (has_object_format && IncludeObjectFormat) {
-    if (!added_environment)
-      triple += "-";
-    triple += "-";
-    triple += pair.second;
-  }
-  return Triple(triple);
+
+  // Create a triple
+  if (p == StringRef::npos)
+    return Data;
+  else
+    return StringRef(Data).substr(0, p);
 }
 
 bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,

@@ -497,8 +497,8 @@ static void ParseLangArgs(LangOptions &Opts, ArchSpec arch) {
 TypeSystemClang::TypeSystemClang(llvm::StringRef name,
                                  llvm::Triple target_triple) {
   m_display_name = name.str();
-  if (!target_triple.clone(true, false).str().empty())
-    SetTargetTriple(target_triple.clone(true, false).str());
+  if (!target_triple.str(4).empty())
+    SetTargetTriple(target_triple.str(4));
   // The caller didn't pass an ASTContext so create a new one for this
   // TypeSystemClang.
   CreateASTContext();
@@ -509,7 +509,7 @@ TypeSystemClang::TypeSystemClang(llvm::StringRef name,
 TypeSystemClang::TypeSystemClang(llvm::StringRef name,
                                  ASTContext &existing_ctxt) {
   m_display_name = name.str();
-  SetTargetTriple(existing_ctxt.getTargetInfo().getTriple().clone(true, false).str());
+  SetTargetTriple(existing_ctxt.getTargetInfo().getTriple().str(4));
 
   m_ast_up.reset(&existing_ctxt);
   GetASTMap().Insert(&existing_ctxt, this);

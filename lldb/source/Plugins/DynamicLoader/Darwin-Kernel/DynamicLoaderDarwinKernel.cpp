@@ -494,11 +494,12 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
         } else {
           uuid_str = "and no LC_UUID found in load commands ";
         }
-        LLDB_LOGF(
-            log,
-            "DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: "
-            "kernel binary image found at 0x%" PRIx64 " with arch '%s' %s",
-            addr, kernel_arch.GetTriple().clone(true, false).str().c_str(), uuid_str.c_str());
+        LLDB_LOGF(log,
+                  "DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: "
+                  "kernel binary image found at 0x%" PRIx64
+                  " with arch '%s' %s",
+                  addr, kernel_arch.GetTriple().str(4).str().c_str(),
+                  uuid_str.c_str());
       }
       return memory_module_sp->GetUUID();
     }

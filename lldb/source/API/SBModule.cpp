@@ -576,7 +576,7 @@ const char *SBModule::GetTriple() {
   if (!module_sp)
     return nullptr;
 
-  std::string triple(module_sp->GetArchitecture().GetTriple().clone(true, false).str());
+  std::string triple(module_sp->GetArchitecture().GetTriple().str(4));
   // Unique the string so we don't run into ownership issues since the const
   // strings put the string into the string pool once and the strings never
   // comes out

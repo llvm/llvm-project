@@ -112,7 +112,7 @@ void SBModuleSpec::SetObjectName(const char *name) {
 const char *SBModuleSpec::GetTriple() {
   LLDB_INSTRUMENT_VA(this);
 
-  std::string triple(m_opaque_up->GetArchitecture().GetTriple().clone(true, false).str());
+  std::string triple(m_opaque_up->GetArchitecture().GetTriple().str(4));
   // Unique the string so we don't run into ownership issues since the const
   // strings put the string into the string pool once and the strings never
   // comes out

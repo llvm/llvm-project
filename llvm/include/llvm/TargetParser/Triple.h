@@ -463,6 +463,27 @@ public:
 
   const std::string &str() const { return Data; }
 
+  /// Return the triple string but only keep the first \p N components.
+  ///
+  /// The returned string will preserve the first \p N components exactly the
+  /// same as the original (including the leading "-" and the value, empty or
+  /// not).
+  ///
+  /// E.g. Triple("arm64-apple-ios").str(5) == "arm64-apple-ios"
+  /// E.g. Triple("arm64-apple-ios--").str(5) == "arm64-apple-ios--"
+  /// E.g. Triple("arm64-apple-ios--").str(4) == "arm64-apple-ios-"
+  /// E.g. Triple("arm64-apple-ios--").str(3) == "arm64-apple-ios"
+  /// E.g. Triple("arm64-apple-ios--").str(2) == "arm64-apple"
+  /// E.g. Triple("arm64-apple-ios--").str(1) == "arm64"
+  /// E.g. Triple("arm64-apple-ios--").str(0) == ""
+  ///
+  /// This method does not normalize any triple strings. Clients that need to
+  /// handle the non-canonical triples that users often specify should use the
+  /// normalize method.
+  ///
+  /// \returns the (shorterned) triple string.
+  StringRef str(size_t N) const;
+
   const std::string &getTriple() const { return Data; }
 
   /// Whether the triple is empty / default constructed.
@@ -1225,23 +1246,6 @@ public:
 
   /// Merge target triples.
   std::string merge(const Triple &Other) const;
-
-  /// Clone the triple. Optionally, only keep the first \p N components.
-  ///
-  /// The original triple string is either emmpty or in the following format:
-  /// > [arch]-[vendor]-[os][-[env][-[objfmt]]]
-  ///
-  /// The cloned triple string will preserve the first \p N components exactly
-  /// the same as the original (including the leading "-" and the value, empty
-  /// or not).
-  ///
-  /// E.g. Triple("arm64-apple-ios").clone(5) == "arm64-apple-ios"
-  /// E.g. Triple("arm64-apple-ios--").clone(3) == "arm64-apple-ios"
-  /// E.g. Triple("arm64-apple-ios--").clone(4) == "arm64-apple-ios-"
-  /// E.g. Triple("arm64-apple-ios--").clone(5) == "arm64-apple-ios--"
-  ///
-  /// \returns the cloned triple.
-  Triple clone(int N = 5) const;
 
   /// Some platforms have different minimum supported OS versions that
   /// varies by the architecture specified in the triple. This function
