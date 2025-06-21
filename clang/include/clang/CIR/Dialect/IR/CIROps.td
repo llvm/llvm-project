@@ -1942,7 +1942,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
-      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
+      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
+      ExtraFuncAttributesAttr:$extra_attrs);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -1971,29 +1972,17 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let arguments = commonArgs;
 
   let builders = [
-    // Build a call op for a direct call
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
                    "mlir::ValueRange":$operands,
                    CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
-      assert(callee && "callee attribute is required for direct call");
       $_state.addOperands(operands);
-      $_state.addAttribute("callee", callee);
+      if (callee)
+        $_state.addAttribute("callee", callee);
       $_state.addAttribute("side_effect",
         SideEffectAttr::get($_builder.getContext(), sideEffect));
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
-    }]>,
-    // Build a call op for an indirect call
-    OpBuilder<(ins "mlir::Value":$calleePtr, "mlir::Type":$resType,
-                   "mlir::ValueRange":$operands,
-                   CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
-      $_state.addOperands(calleePtr);
-      $_state.addOperands(operands);
-      if (resType && !isa<VoidType>(resType))
-        $_state.addTypes(resType);
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
-    }]>,
+    }]>
   ];
 }
 

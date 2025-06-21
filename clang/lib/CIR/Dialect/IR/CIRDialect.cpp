@@ -65,6 +65,11 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << (boolAttr.getValue() ? "true" : "false");
       return AliasResult::FinalAlias;
     }
+    if (auto extraFuncAttr =
+            mlir::dyn_cast<cir::ExtraFuncAttributesAttr>(attr)) {
+      os << "fn_attr";
+      return AliasResult::FinalAlias;
+    }
     return AliasResult::NoAlias;
   }
 };
@@ -549,7 +554,8 @@ unsigned cir::CallOp::getNumArgOperands() {
 }
 
 static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
-                                         mlir::OperationState &result) {
+                                         mlir::OperationState &result,
+                                         llvm::StringRef extraAttrsAttrName) {
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> ops;
   llvm::SMLoc opsLoc;
   mlir::FlatSymbolRefAttr calleeAttr;
@@ -586,6 +592,21 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     result.addAttribute("side_effect", attr);
   }
 
+  Attribute extraAttrs;
+  if (mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parser.parseAttribute(extraAttrs).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+  } else {
+    NamedAttrList empty;
+    extraAttrs = cir::ExtraFuncAttributesAttr::get(
+        empty.getDictionary(parser.getContext()));
+  }
+  result.addAttribute(extraAttrsAttrName, extraAttrs);
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return ::mlir::failure();
 
@@ -609,6 +630,7 @@ static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
                             mlir::OpAsmPrinter &printer,
+                            cir::ExtraFuncAttributesAttr extraAttrs,
                             cir::SideEffect sideEffect) {
   printer << ' ';
 
@@ -631,7 +653,14 @@ static void printCallCommon(mlir::Operation *op,
     printer << ")";
   }
 
-  printer.printOptionalAttrDict(op->getAttrs(), {"callee", "side_effect"});
+  if (!extraAttrs.getElements().empty()) {
+    printer << " extra(";
+    printer.printAttributeWithoutType(extraAttrs);
+    printer << ")";
+  }
+
+  printer.printOptionalAttrDict(op->getAttrs(),
+                                {"callee", "extra_attrs", "side_effect"});
 
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
@@ -640,13 +669,14 @@ static void printCallCommon(mlir::Operation *op,
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
                                      mlir::OperationState &result) {
-  return parseCallCommon(parser, result);
+  return parseCallCommon(parser, result, getExtraAttrsAttrName(result.name));
 }
 
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
-  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, sideEffect);
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getExtraAttrs(),
+                  sideEffect);
 }
 
 static LogicalResult

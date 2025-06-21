@@ -166,6 +166,7 @@ public:
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
   void constructAttributeList(CIRGenCalleeInfo calleeInfo,
+                              mlir::NamedAttrList &attrs,
                               cir::SideEffect &sideEffect);
 
   /// Return a constant array for the given string.
