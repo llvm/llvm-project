@@ -1606,7 +1606,7 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   case RISCV::NDS_BBS:
   case RISCV::NDS_BEQC:
   case RISCV::NDS_BNEC:
-    return isIntN(11, BrOffset);
+    return isInt<11>(BrOffset);
   case RISCV::BEQ:
   case RISCV::BNE:
   case RISCV::BLT:
