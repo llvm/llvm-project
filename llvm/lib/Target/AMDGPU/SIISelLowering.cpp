@@ -3805,7 +3805,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (!CLI.CB)
-    report_fatal_error("unsupported libcall legalization");
+    return lowerUnhandledCall(CLI, InVals, "unsupported libcall legalization");
 
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
