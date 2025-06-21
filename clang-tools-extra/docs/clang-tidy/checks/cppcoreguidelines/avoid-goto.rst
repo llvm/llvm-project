@@ -57,5 +57,5 @@ Options
 
 .. option:: IgnoreMacros
 
-   If set to `true`, the check will not warn if ``goto`` statement is placed
-   inside a macro. Default is `false`.
+   If set to `true`, the check will not warn if a ``goto`` statement is
+   expanded from a macro. Default is `false`.
