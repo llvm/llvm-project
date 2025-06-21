@@ -415,7 +415,11 @@ template <size_t Bits> struct DyadicFloat {
     if constexpr (cpp::is_same_v<T, float16>)
       return generic_as<T, ShouldSignalExceptions>();
 #endif
-    return fast_as<T, ShouldSignalExceptions>();
+    if constexpr (cpp::is_same_v<T, bfloat16>) {
+      return generic_as<T, ShouldSignalExceptions>();
+    } else {
+      return fast_as<T, ShouldSignalExceptions>();
+    }
   }
 
   template <typename T,

@@ -42,6 +42,7 @@ if(LIBC_TESTS_CAN_USE_MPFR)
     libc.src.__support.CPP.stringstream
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fpbits_str
+    libc.src.__support.FPUtil.bfloat16
     LibcTest.unit
   )
   if(EXISTS ${LLVM_LIBC_MPFR_INSTALL_PATH})
