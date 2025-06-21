@@ -1948,14 +1948,21 @@ static void materializePack(VPlan &Plan) {
                           !vputils::isSingleScalar(RepR->getOperand(1)));
         });
       }
-      if (all_of(Def->users(),
-                 [Def](VPUser *U) { return U->usesScalars(Def); }))
+      if (all_of(Def->users(), [Def](VPUser *U) {
+            auto *R = cast<VPRecipeBase>(U);
+            return U->usesScalars(Def) &&
+                   (!R->getParent()->getParent() ||
+                    !R->getParent()->getParent()->getParent());
+          }))
         continue;
 
       auto *Pack = new VPInstruction(VPInstruction::Pack, {Def});
       Pack->insertAfter(Def);
       Def->replaceUsesWithIf(Pack, [Pack, Def](VPUser &U, unsigned) {
-        return &U != Pack && !U.usesScalars(Def) &&
+        auto *R = cast<VPRecipeBase>(&U);
+        return &U != Pack &&
+               (!U.usesScalars(Def) ||
+                (R->getParent()->getParent() && R->getParent()->getParent())) &&
                (!isa<VPInstruction>(&U) ||
                 (cast<VPInstruction>(&U)->getOpcode() !=
                      VPInstruction::ExtractLastElement &&
