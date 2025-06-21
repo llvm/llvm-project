@@ -14,10 +14,10 @@
 
 ; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 1
 ; GCN-PROMOTE: s_cselect_b32 [[IND1:s[0-9]+]], 1, 0
-; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 2
-; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], [[IND1]], 2
-; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
-; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], [[IND2]], 3
+; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 2
+; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], 2, [[IND1]]
+; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 3
+; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], 3, [[IND2]]
 ; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_read_alloca_bitcast(ptr addrspace(1) %out, i32 %index) {
@@ -288,10 +288,10 @@ entry:
 
 ; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 1
 ; GCN-PROMOTE: s_cselect_b32 [[IND1:s[0-9]+]], 1, 0
-; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 2
-; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], [[IND1]], 2
-; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
-; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], [[IND2]], 3
+; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 2
+; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], 2, [[IND1]]
+; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 3
+; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], 3, [[IND2]]
 
 ; GCN-PROMOTE: ScratchSize: 0
 

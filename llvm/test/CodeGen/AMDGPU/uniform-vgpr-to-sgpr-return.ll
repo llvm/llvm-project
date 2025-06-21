@@ -6,9 +6,9 @@ define amdgpu_ps i32 @uniform_v_to_s_i32(float inreg %a, float inreg %b) {
 ; GFX11-LABEL: uniform_v_to_s_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f32_e64 v0, s0, s1
-; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f32_e64 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0x7fc00000, s0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
@@ -37,14 +37,14 @@ define amdgpu_ps <2 x i32> @uniform_v_to_s_2_i32(<2 x float> inreg %a, <2 x floa
 ; GFX11-LABEL: uniform_v_to_s_2_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f32_e64 v0, s0, s2
-; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s0, s2
+; GFX11-NEXT:    v_cmp_u_f32_e64 s0, s0, s2
 ; GFX11-NEXT:    v_max_f32_e64 v1, s1, s3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v0, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s1, s3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0x7fc00000, s0
+; GFX11-NEXT:    v_cmp_u_f32_e64 s0, s1, s3
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7fc00000, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v1, vcc_lo
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
   %max0 = call <2 x float> @llvm.maximum.f32(<2 x float> %a, <2 x float> %b)
@@ -94,9 +94,9 @@ define amdgpu_ps <2 x i16> @uniform_v_to_s_2_i16(float inreg %a, float inreg %b)
 ; GFX11-LABEL: uniform_v_to_s_2_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f32_e64 v0, s0, s1
-; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f32_e64 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0x7fc00000, s0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
@@ -107,19 +107,19 @@ define amdgpu_ps <2 x i16> @uniform_v_to_s_2_i16(float inreg %a, float inreg %b)
 define amdgpu_ps i16 @uniform_v_to_s_i16(half inreg %a, half inreg %b) {
 ; GFX11-TRUE16-LABEL: uniform_v_to_s_i16:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s2, s0, s1
+; GFX11-TRUE16-NEXT:    v_cmp_u_f16_e64 s2, s0, s1
 ; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, s0, s1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.l, s2
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, 0x7e00, s2
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: uniform_v_to_s_i16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    v_max_f16_e64 v0, s0, s1
-; GFX11-FAKE16-NEXT:    v_cmp_o_f16_e64 vcc_lo, s0, s1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v0, vcc_lo
+; GFX11-FAKE16-NEXT:    v_cmp_u_f16_e64 s0, s0, s1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, v0, 0x7e00, s0
 ; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-FAKE16-NEXT:    ; return to shader part epilog
   %max = call half @llvm.maximum.f16(half %a, half %b)

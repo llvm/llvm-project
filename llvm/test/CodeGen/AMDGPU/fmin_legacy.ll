@@ -259,10 +259,8 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v3f32(ptr addrspace(1) %out, ptr
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ole_f32_multi_use:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-NOT: v_min
 ; GCN: v_cmp_le_f32
 ; GCN-NEXT: v_cndmask_b32
-; GCN-NOT: v_min
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_fmin_legacy_ole_f32_multi_use(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1

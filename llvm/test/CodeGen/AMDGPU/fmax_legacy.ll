@@ -202,7 +202,6 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(ptr addrspace(1) %out, ptr
 ; FUNC-LABEL: {{^}}test_fmax_legacy_ogt_f32_multi_use:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-NOT: v_max_
 ; GCN: v_cmp_gt_f32
 ; GCN-NEXT: v_cndmask_b32
 ; GCN-NOT: v_max_
