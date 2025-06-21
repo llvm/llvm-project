@@ -2681,6 +2681,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT)
           continue;
 
+        if (!ST->hasImageInsts() &&
+            (CT == EXP_CNT || CT == SAMPLE_CNT || CT == BVH_CNT))
+          continue;
+
         BuildMI(EntryBB, I, DebugLoc(),
                 TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(0);
