@@ -274,6 +274,26 @@ struct RewriterState {
 // IR rewrites
 //===----------------------------------------------------------------------===//
 
+static void notifyIRErased(RewriterBase::Listener *listener, Operation &op);
+
+/// Notify the listener that the given block and its contents are being erased.
+static void notifyIRErased(RewriterBase::Listener *listener, Block &b) {
+  for (Operation &op : b)
+    notifyIRErased(listener, op);
+  listener->notifyBlockErased(&b);
+}
+
+/// Notify the listener that the given operation and its contents are being
+/// erased.
+static void notifyIRErased(RewriterBase::Listener *listener, Operation &op) {
+  for (Region &r : op.getRegions()) {
+    for (Block &b : r) {
+      notifyIRErased(listener, b);
+    }
+  }
+  listener->notifyOperationErased(&op);
+}
+
 /// An IR rewrite that can be committed (upon success) or rolled back (upon
 /// failure).
 ///
@@ -422,17 +442,20 @@ public:
   }
 
   void commit(RewriterBase &rewriter) override {
-    // Erase the block.
     assert(block && "expected block");
-    assert(block->empty() && "expected empty block");
 
-    // Notify the listener that the block is about to be erased.
+    // Notify the listener that the block and its contents are being erased.
     if (auto *listener =
             dyn_cast_or_null<RewriterBase::Listener>(rewriter.getListener()))
-      listener->notifyBlockErased(block);
+      notifyIRErased(listener, *block);
   }
 
   void cleanup(RewriterBase &rewriter) override {
+    // Erase the contents of the block.
+    for (auto &op : llvm::make_early_inc_range(llvm::reverse(*block)))
+      rewriter.eraseOp(&op);
+    assert(block->empty() && "expected empty block");
+
     // Erase the block.
     block->dropAllDefinedValueUses();
     delete block;
@@ -1147,12 +1170,9 @@ void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
   if (getConfig().unlegalizedOps)
     getConfig().unlegalizedOps->erase(op);
 
-  // Notify the listener that the operation (and its nested operations) was
-  // erased.
-  if (listener) {
-    op->walk<WalkOrder::PostOrder>(
-        [&](Operation *op) { listener->notifyOperationErased(op); });
-  }
+  // Notify the listener that the operation and its contents are being erased.
+  if (listener)
+    notifyIRErased(listener, *op);
 
   // Do not erase the operation yet. It may still be referenced in `mapping`.
   // Just unlink it for now and erase it during cleanup.
@@ -1605,6 +1625,8 @@ void ConversionPatternRewriterImpl::replaceOp(
 }
 
 void ConversionPatternRewriterImpl::eraseBlock(Block *block) {
+  assert(!wasOpReplaced(block->getParentOp()) &&
+         "attempting to erase a block within a replaced/erased op");
   appendRewrite<EraseBlockRewrite>(block);
 
   // Unlink the block from its parent region. The block is kept in the rewrite
@@ -1612,6 +1634,9 @@ void ConversionPatternRewriterImpl::eraseBlock(Block *block) {
   // allows us to keep the operations in the block live and undo the removal by
   // re-inserting the block.
   block->getParent()->getBlocks().remove(block);
+
+  // Mark all nested ops as erased.
+  block->walk([&](Operation *op) { replacedOps.insert(op); });
 }
 
 void ConversionPatternRewriterImpl::notifyBlockInserted(
@@ -1709,13 +1734,6 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
 }
 
 void ConversionPatternRewriter::eraseBlock(Block *block) {
-  assert(!impl->wasOpReplaced(block->getParentOp()) &&
-         "attempting to erase a block within a replaced/erased op");
-
-  // Mark all ops for erasure.
-  for (Operation &op : *block)
-    eraseOp(&op);
-
   impl->eraseBlock(block);
 }
 
