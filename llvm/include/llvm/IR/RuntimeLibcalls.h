@@ -58,8 +58,8 @@ struct RuntimeLibcallsInfo {
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
       FloatABI::ABIType FloatABI = FloatABI::Default,
-      EABI EABIVersion = EABI::Default) {
-    initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion);
+      EABI EABIVersion = EABI::Default, StringRef ABIName = "") {
+    initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
   }
 
   /// Rename the default libcall routine name for the specified libcall.
@@ -150,7 +150,8 @@ private:
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
   LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
-                             FloatABI::ABIType FloatABI, EABI ABIType);
+                             FloatABI::ABIType FloatABI, EABI ABIType,
+                             StringRef ABIName);
 };
 
 } // namespace RTLIB

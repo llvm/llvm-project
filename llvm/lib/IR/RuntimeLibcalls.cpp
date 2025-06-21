@@ -359,7 +359,7 @@ static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
-                                       EABI EABIVersion) {
+                                       EABI EABIVersion, StringRef ABIName) {
   initSoftFloatCmpLibcallPredicates();
 
   initSoftFloatCmpLibcallPredicates();
