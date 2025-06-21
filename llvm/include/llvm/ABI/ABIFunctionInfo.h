@@ -110,10 +110,12 @@ public:
   bool isDirect() const { return TheKind == Direct; }
   bool isIndirect() const { return TheKind == Indirect; }
   bool isIgnore() const { return TheKind == Ignore; }
+  bool isExtend() const { return TheKind == Extend; }
   bool isExpand() const { return TheKind == Expand; }
   bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
   bool isInAlloca() const { return TheKind == InAlloca; }
   bool isInReg() const { return InReg; }
+  bool isSignExt() const { return SignExt; }
   bool hasPaddingInReg() const { return PaddingInReg; }
 
   unsigned getIndirectAlign() const {
@@ -127,7 +129,8 @@ public:
   }
 
   const Type *getCoerceToType() const {
-    assert((isDirect() || isCoerceAndExpand()) && "Invalid Kind!");
+    assert((isDirect() || isExtend() || isCoerceAndExpand()) &&
+           "Invalid Kind!");
     return CoercionType;
   }
 

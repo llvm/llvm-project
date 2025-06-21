@@ -28,7 +28,7 @@ public:
 
   virtual ABIArgInfo classifyReturnType(const Type *RetTy) const = 0;
   virtual ABIArgInfo classifyArgumentType(const Type *ArgTy) const = 0;
-  void computeInfo(ABIFunctionInfo &FI) const;
+  virtual void computeInfo(ABIFunctionInfo &FI) const = 0;
   virtual bool isPassByRef(const Type *Ty) const { return false; }
 };
 
