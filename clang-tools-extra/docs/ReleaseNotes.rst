@@ -165,6 +165,10 @@ Changes in existing checks
   false positives on deleted constructors that cannot be used to construct
   objects, even if they have public or protected access.
 
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
+
 - Added an option to :doc:`bugprone-multi-level-implicit-pointer-conversion
   <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` to
   choose whether to enable the check in C code or not.
