@@ -1203,23 +1203,25 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 }
 
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *VT, ArrayRef<int> Mask,
+                                           VectorType *DstTy, VectorType *SrcTy,
+                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
-  if (!isa<FixedVectorType>(VT))
-    return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
+  if (!isa<FixedVectorType>(SrcTy))
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                                 SubTp);
 
-  Kind = improveShuffleKindFromMask(Kind, Mask, VT, Index, SubTp);
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
-  unsigned ScalarSize = DL.getTypeSizeInBits(VT->getElementType());
+  unsigned ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       (ScalarSize == 16 ||
        (ScalarSize == 8 && ST->shouldCoerceIllegalTypes()))) {
     // Larger vector widths may require additional instructions, but are
     // typically cheaper than scalarized versions.
-    unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
+    unsigned NumVectorElts = cast<FixedVectorType>(SrcTy)->getNumElements();
     unsigned RequestedElts =
         count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
     unsigned EltsPerReg = 32 / ScalarSize;
@@ -1261,7 +1263,8 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                               SubTp);
 }
 
 /// Whether it is profitable to sink the operands of an
