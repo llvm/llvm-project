@@ -5479,7 +5479,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
 
     std::string SysRegStr;
-    unsigned SysRegOp0 = (BuiltinID != clang::AArch64::BI__sys)
+    unsigned SysRegOp0 = (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
+                          BuiltinID == clang::AArch64::BI_WriteStatusReg)
                              ? ((1 << 1) | ((SysReg >> 14) & 1))
                              : 1;
     llvm::raw_string_ostream(SysRegStr)
