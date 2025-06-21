@@ -2073,9 +2073,6 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 }
 
 void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
-  // AMDGPUAnnotateKernelFeaturesPass is missing here, but it will hopefully be
-  // deleted soon.
-
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(AMDGPUPreloadKernelArgumentsPass(TM));
 
