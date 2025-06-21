@@ -48,6 +48,10 @@ static void emutls_shutdown(emutls_address_array *array);
 #ifndef _WIN32
 
 #include <pthread.h>
+#include <stdalign.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <sys/mman.h>
 
 static pthread_mutex_t emutls_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_key_t emutls_pthread_key;
@@ -62,6 +66,67 @@ typedef unsigned int gcc_pointer __attribute__((mode(pointer)));
 #define EMUTLS_USE_POSIX_MEMALIGN 0
 #endif
 
+static __inline void *emutls_alloc(size_t size) {
+
+#if !defined(MAP_ANONYMOUS)
+#define MAP_ANONYMOUS 0
+#endif
+
+#define REQUIRED_ADDITIONAL_SPACE sizeof(size_t)
+#define REQUIRED_ALIGNMENT alignof(max_align_t)
+
+  // The size of the allocation is stored immediately in bytes returned by mmap.
+  // The payload available to the user then starts after an fixed size offset to
+  // ensure correct alignment of the memory. This way the originally mmapped
+  // memory can be calculated by subtracting the alignment offset from the
+  // pointer.
+
+  COMPILE_TIME_ASSERT(REQUIRED_ADDITIONAL_SPACE <= REQUIRED_ALIGNMENT);
+
+  // Memory returned by mmap is aligned to page size boundary. We assume that
+  // the page size meets the alignment requirement imposed by
+  // REQUIRED_ALIGNMENT.
+  void *const object =
+      mmap(NULL, size + REQUIRED_ALIGNMENT, PROT_READ | PROT_WRITE,
+           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+  if (object == MAP_FAILED) {
+    perror("emutls: mmapping new memory failed");
+    abort();
+  }
+
+  (*(size_t *)object) = size;
+
+  return (void *)((char *)(object) + REQUIRED_ALIGNMENT);
+}
+
+static __inline void emutls_free(void *ptr) {
+  void *const object = ((char *)ptr) - REQUIRED_ALIGNMENT;
+  size_t const size = (*(size_t *)object);
+
+  if (-1 == munmap(object, size)) {
+    perror("emutls: munmapping memory failed");
+    abort();
+  }
+}
+
+static __inline void *emutls_realloc(void *old_data, size_t new_size) {
+
+  void *const old_object = ((char *)old_data) - REQUIRED_ALIGNMENT;
+  size_t const old_size = (*(size_t *)old_object);
+
+  void *const new_data = emutls_alloc(new_size);
+
+  // The array is always resized to accommodate more data and never shrinks.
+  // Therefore,  old_size < new_size always holds and it's save to copy the
+  // data the without checking for the minimum value.
+  memcpy(new_data, old_data, old_size);
+
+  emutls_free(old_data);
+
+  return new_data;
+}
+
 static __inline void *emutls_memalign_alloc(size_t align, size_t size) {
   void *base;
 #if EMUTLS_USE_POSIX_MEMALIGN
@@ -69,9 +134,8 @@ static __inline void *emutls_memalign_alloc(size_t align, size_t size) {
     abort();
 #else
 #define EXTRA_ALIGN_PTR_BYTES (align - 1 + sizeof(void *))
-  char *object;
-  if ((object = (char *)malloc(EXTRA_ALIGN_PTR_BYTES + size)) == NULL)
-    abort();
+  char *const object = (char *)emutls_alloc(EXTRA_ALIGN_PTR_BYTES + size);
+
   base = (void *)(((uintptr_t)(object + EXTRA_ALIGN_PTR_BYTES)) &
                   ~(uintptr_t)(align - 1));
 
@@ -85,7 +149,7 @@ static __inline void emutls_memalign_free(void *base) {
   free(base);
 #else
   // The mallocated address is in ((void**)base)[-1]
-  free(((void **)base)[-1]);
+  emutls_free(((void **)base)[-1]);
 #endif
 }
 
@@ -110,13 +174,15 @@ static void emutls_key_destructor(void *ptr) {
     emutls_setspecific(array);
   } else {
     emutls_shutdown(array);
-    free(ptr);
+    emutls_free(array);
   }
 }
 
 static __inline void emutls_init(void) {
-  if (pthread_key_create(&emutls_pthread_key, emutls_key_destructor) != 0)
+  if (pthread_key_create(&emutls_pthread_key, emutls_key_destructor) != 0) {
+    perror("emutls: pthread_key_create failed");
     abort();
+  }
   emutls_key_created = true;
 }
 
@@ -158,6 +224,26 @@ static void win_error(DWORD last_err, const char *hint) {
 static __inline void win_abort(DWORD last_err, const char *hint) {
   win_error(last_err, hint);
   abort();
+}
+
+static __inline void *emutls_alloc(size_t size) {
+  void *const object = malloc(size);
+
+  if (object == NULL)
+    win_abort(GetLastError(), "malloc");
+
+  return object;
+}
+
+static __inline void emutls_free(void *ptr) { free(ptr); }
+
+static __inline void *emutls_realloc(void *old_data, size_t new_size) {
+  void *const object = realloc(old_data, new_size);
+
+  if (object == NULL)
+    win_abort(GetLastError(), "realloc");
+
+  return object;
 }
 
 static __inline void *emutls_memalign_alloc(size_t align, size_t size) {
@@ -297,8 +383,10 @@ static __inline void *emutls_allocate_object(__emutls_control *control) {
   if (align < sizeof(void *))
     align = sizeof(void *);
   // Make sure that align is power of 2.
-  if ((align & (align - 1)) != 0)
+  if ((align & (align - 1)) != 0) {
+    perror("emutls: requested alignment is not by power of two!");
     abort();
+  }
 
   base = emutls_memalign_alloc(align, size);
   if (control->value)
@@ -327,8 +415,10 @@ static __inline uintptr_t emutls_get_index(__emutls_control *control) {
 // Updates newly allocated thread local emutls_address_array.
 static __inline void emutls_check_array_set_size(emutls_address_array *array,
                                                  uintptr_t size) {
-  if (array == NULL)
+  if (array == NULL) {
+    perror("emutls: emutls_check_array_set_size called with null array.");
     abort();
+  }
   array->size = size;
   emutls_setspecific(array);
 }
@@ -356,19 +446,17 @@ emutls_get_address_array(uintptr_t index) {
   emutls_address_array *array = emutls_getspecific();
   if (array == NULL) {
     uintptr_t new_size = emutls_new_data_array_size(index);
-    array = (emutls_address_array *)malloc(emutls_asize(new_size));
-    if (array) {
-      memset(array->data, 0, new_size * sizeof(void *));
-      array->skip_destructor_rounds = EMUTLS_SKIP_DESTRUCTOR_ROUNDS;
-    }
+    uintptr_t new_number_bytes = emutls_asize(new_size);
+    array = (emutls_address_array *)emutls_alloc(new_number_bytes);
+    memset(array->data, 0, new_size * sizeof(void *));
+    array->skip_destructor_rounds = EMUTLS_SKIP_DESTRUCTOR_ROUNDS;
     emutls_check_array_set_size(array, new_size);
   } else if (index > array->size) {
     uintptr_t orig_size = array->size;
     uintptr_t new_size = emutls_new_data_array_size(index);
-    array = (emutls_address_array *)realloc(array, emutls_asize(new_size));
-    if (array)
-      memset(array->data + orig_size, 0,
-             (new_size - orig_size) * sizeof(void *));
+    array =
+        (emutls_address_array *)emutls_realloc(array, emutls_asize(new_size));
+    memset(array->data + orig_size, 0, (new_size - orig_size) * sizeof(void *));
     emutls_check_array_set_size(array, new_size);
   }
   return array;
