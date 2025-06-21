@@ -74,6 +74,41 @@ TEST_F(SocketTest, DecodeHostAndPort) {
       llvm::HasValue(Socket::HostAndPort{"abcd:12fg:AF58::1", 12345}));
 }
 
+TEST_F(SocketTest, CreatePair) {
+  std::vector<std::optional<Socket::SocketProtocol>> functional_protocols = {
+      std::nullopt,
+      Socket::ProtocolTcp,
+#if LLDB_ENABLE_POSIX
+      Socket::ProtocolUnixDomain,
+      Socket::ProtocolUnixAbstract,
+#endif
+  };
+  for (auto p : functional_protocols) {
+    auto expected_socket_pair = Socket::CreatePair(p);
+    ASSERT_THAT_EXPECTED(expected_socket_pair, llvm::Succeeded());
+    Socket &a = *expected_socket_pair->first;
+    Socket &b = *expected_socket_pair->second;
+    size_t num_bytes = 1;
+    ASSERT_THAT_ERROR(a.Write("a", num_bytes).takeError(), llvm::Succeeded());
+    ASSERT_EQ(num_bytes, 1);
+    char c;
+    ASSERT_THAT_ERROR(b.Read(&c, num_bytes).takeError(), llvm::Succeeded());
+    ASSERT_EQ(num_bytes, 1);
+    ASSERT_EQ(c, 'a');
+  }
+
+  std::vector<Socket::SocketProtocol> erroring_protocols = {
+#if !LLDB_ENABLE_POSIX
+      Socket::ProtocolUnixDomain,
+      Socket::ProtocolUnixAbstract,
+#endif
+  };
+  for (auto p : erroring_protocols) {
+    ASSERT_THAT_EXPECTED(Socket::CreatePair(p),
+                         llvm::FailedWithMessage("Unsupported protocol"));
+  }
+}
+
 #if LLDB_ENABLE_POSIX
 TEST_F(SocketTest, DomainListenConnectAccept) {
   llvm::SmallString<64> Path;
