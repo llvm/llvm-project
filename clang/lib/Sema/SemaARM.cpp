@@ -1084,7 +1084,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   // converted to a register of the form S1_2_C3_C4_5. Let the hardware throw
   // an exception for incorrect registers. This matches MSVC behavior.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
-      BuiltinID == AArch64::BI_WriteStatusReg)
+      BuiltinID == AArch64::BI_WriteStatusReg || BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x7fff);
 
   if (BuiltinID == AArch64::BI__getReg)
