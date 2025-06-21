@@ -16,10 +16,36 @@ template <typename T> Value Value::from(ExecutorAddr Ty, T result) {
   return Val;
 }
 
+template <typename T>
+struct LongEquivalentType {
+  static_assert(sizeof(T) == 0, "LongEquivalentType is only defined for long and unsigned long");
+};
+
+template <> struct LongEquivalentType<long> {
+  static_assert(sizeof(long) == 4 || sizeof(long) == 8,
+                "'long' must be either 4 or 8 bytes");
+
+  using type = std::conditional_t<sizeof(long) == 4, int32_t, int64_t>;
+};
+
+template <> struct LongEquivalentType<unsigned long> {
+  static_assert(sizeof(unsigned long) == 4 || sizeof(unsigned long) == 8,
+                "'unsigned long' must be either 4 or 8 bytes");
+
+  using type =
+      std::conditional_t<sizeof(unsigned long) == 4, uint32_t, uint64_t>;
+};
+
+template <typename T>
+using NormalizedIntType = typename LongEquivalentType<T>::type;
+
 template <typename T> void Value::setValue(T Val) {
   using DecayedT = std::decay_t<T>;
-  if constexpr (std::is_void_v<DecayedT>) {
-    ValueKind = Value::K_Void;
+
+  if constexpr (std::is_same_v<DecayedT, long> || std::is_same_v<DecayedT, unsigned long>) {
+    using CanonicalType = typename LongEquivalentType<DecayedT>::type;
+    setValue(static_cast<CanonicalType>(Val));
+    return;
   }
 #define X(type, name)                                                          \
   else if constexpr (std::is_same_v<DecayedT, type>) {                         \
@@ -28,10 +54,9 @@ template <typename T> void Value::setValue(T Val) {
   }
 
   BUILTIN_TYPES
+
 #undef X
   else {
-    // static_assert(std::is_trivially_copyable_v<T> || std::is_pointer_v<T>,
-    //               "Unsupported type for setValue");
     static_assert(std::is_pointer_v<T>, "Unsupported type for setValue");
 
     // if constexpr (std::is_function_v<T>) {

@@ -29,13 +29,13 @@ namespace orc {
   X(unsigned short, UShort)                                                    \
   X(int, Int)                                                                  \
   X(unsigned int, UInt)                                                        \
-  X(long, Long)                                                                \
-  X(unsigned long, ULong)                                                      \
   X(long long, LongLong)                                                       \
   X(unsigned long long, ULongLong)                                             \
-  X(float, Float)                                                              \
-  X(double, Double)                                                            \
-  X(long double, LongDouble)
+  // X(long, Long)                                                                \
+  // X(unsigned long, ULong)                                                      \
+  // X(float, Float)                                                              \
+  // X(double, Double)                                                            \
+  // X(long double, LongDouble)
 
 class Value {
 public:
