@@ -228,7 +228,8 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
   // out as packed bits within an integer-sized unit, we can imagine the bits
   // counting from the most-significant-bit instead of the
   // least-significant-bit.
-  assert(!cir::MissingFeatures::isBigEndian());
+  if (dataLayout.isBigEndian())
+    info.offset = info.storageSize - (info.offset + info.size);
 
   info.volatileStorageSize = 0;
   info.volatileOffset = 0;

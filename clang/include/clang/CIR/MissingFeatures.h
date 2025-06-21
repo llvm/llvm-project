@@ -150,7 +150,6 @@ struct MissingFeatures {
   static bool cxxabiAppleARM64CXXABI() { return false; }
   static bool cxxabiStructorImplicitParam() { return false; }
   static bool isDiscreteBitFieldABI() { return false; }
-  static bool isBigEndian() { return false; }
 
   // Address class
   static bool addressOffset() { return false; }
