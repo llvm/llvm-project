@@ -2444,7 +2444,7 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
   // CHECK-LABEL: @testBlockPredecessorsSuccessors
   fprintf(stderr, "@testBlockPredecessorsSuccessors\n");
 
-  const char *moduleString = R"(
+  const char *moduleString = R"""(
     #loc2 = loc("arg1")
     #loc3 = loc("middle")
     #loc4 = loc("successor")
@@ -2458,7 +2458,7 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
       } loc(#loc)
     } loc(#loc)
     #loc = loc(unknown)
-  )";
+  )""";
 
   MlirModule module =
       mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
