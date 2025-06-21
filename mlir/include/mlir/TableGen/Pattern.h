@@ -275,14 +275,14 @@ public:
 
     // Structure to uniquely distinguish different locations of the symbols.
     //
-    // * If a symbol is defined as an operand of an operation, `dag` specifies
-    //   the DAG of the operation, `operandIndexOrNumValues` specifies the
-    //   operand index, and `variadicSubIndex` must be set to `std::nullopt`.
+    // * If a symbol is defined as an operand or attribute of an operation,
+    //   `dag` specifies the DAG of the operation, `argIndexOrNumValues`
+    //   specifies its argument index, and `variadicSubIndex` must be set to
+    //   `std::nullopt`.
     //
     // * If a symbol is defined in a `variadic` DAG, `dag` specifies the DAG
-    //   of the parent operation, `operandIndexOrNumValues` specifies the
-    //   declared operand index of the variadic operand in the parent
-    //   operation.
+    //   of the parent operation, `argIndexOrNumValues` specifies the
+    //   declared index of the variadic operand in the parent operation.
     //
     //   - If the symbol is defined as a result of `variadic` DAG, the
     //     `variadicSubIndex` must be set to `std::nullopt`, which means that
@@ -292,9 +292,9 @@ public:
     //     be set to the index within the variadic sub-operand list.
     //
     // * If a symbol is defined in a `either` DAG, `dag` specifies the DAG
-    //   of the parent operation, `operandIndexOrNumValues` specifies the
-    //   operand index in the parent operation (not necessary the index in the
-    //   DAG).
+    //   of the parent operation, `argIndexOrNumValues` specifies the
+    //   operand's index in the parent operation (not necessarily its index
+    //   in the DAG).
     //
     // * If a symbol is defined as a result, specifies the number of returning
     //   value.
@@ -347,17 +347,17 @@ public:
       // DagNode and DagLeaf are accessed by value which means it can't be used
       // as identifier here. Use an opaque pointer type instead.
       const void *dag;
-      int operandIndexOrNumValues;
+      int argIndexOrNumValues;
       std::optional<int> variadicSubIndex;
 
-      DagAndConstant(const void *dag, int operandIndexOrNumValues,
+      DagAndConstant(const void *dag, int argIndexOrNumValues,
                      std::optional<int> variadicSubIndex)
-          : dag(dag), operandIndexOrNumValues(operandIndexOrNumValues),
+          : dag(dag), argIndexOrNumValues(argIndexOrNumValues),
             variadicSubIndex(variadicSubIndex) {}
 
       bool operator==(const DagAndConstant &rhs) const {
         return dag == rhs.dag &&
-               operandIndexOrNumValues == rhs.operandIndexOrNumValues &&
+               argIndexOrNumValues == rhs.argIndexOrNumValues &&
                variadicSubIndex == rhs.variadicSubIndex;
       }
     };
@@ -385,11 +385,11 @@ public:
       return SymbolInfo(nullptr, Kind::Attr, std::nullopt);
     }
     static SymbolInfo
-    getOperand(DagNode node, const Operator *op, int operandIndex,
+    getOperand(DagNode node, const Operator *op, int index,
                std::optional<int> variadicSubIndex = std::nullopt) {
-      return SymbolInfo(op, Kind::Operand,
-                        DagAndConstant(node.getAsOpaquePointer(), operandIndex,
-                                       variadicSubIndex));
+      return SymbolInfo(
+          op, Kind::Operand,
+          DagAndConstant(node.getAsOpaquePointer(), index, variadicSubIndex));
     }
     static SymbolInfo getResult(const Operator *op) {
       return SymbolInfo(op, Kind::Result, std::nullopt);
@@ -427,10 +427,10 @@ public:
                                const char *separator) const;
 
     // The argument index (for `Attr` and `Operand` only)
-    int getArgIndex() const { return dagAndConstant->operandIndexOrNumValues; }
+    int getArgIndex() const { return dagAndConstant->argIndexOrNumValues; }
 
     // The number of values in the MultipleValue
-    int getSize() const { return dagAndConstant->operandIndexOrNumValues; }
+    int getSize() const { return dagAndConstant->argIndexOrNumValues; }
 
     // The variadic sub-operands index (for variadic `Operand` only)
     std::optional<int> getVariadicSubIndex() const {
