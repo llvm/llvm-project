@@ -197,6 +197,10 @@ Changes in existing checks
   <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
   where ``strerror`` was flagged as MT-unsafe.
 
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fixing false negatives when pointer arithmetic was used through type aliases.
+
 - Improved :doc:`google-readability-namespace-comments
   <clang-tidy/checks/google/readability-namespace-comments>` check by adding
   the option `AllowOmittingNamespaceComments` to accept if a namespace comment
