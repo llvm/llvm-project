@@ -171,9 +171,6 @@ DWARFASTParserClang::GetCXXObjectParameter(const DWARFDIE &subprogram,
          subprogram.Tag() == DW_TAG_inlined_subroutine ||
          subprogram.Tag() == DW_TAG_subroutine_type);
 
-  if (!decl_ctx_die.IsStructUnionOrClass())
-    return {};
-
   // The DW_AT_object_pointer may be either encoded as a reference to a DIE,
   // in which case that's the object parameter we want. Or it can be a constant
   // index of the parameter.
@@ -214,6 +211,9 @@ DWARFASTParserClang::GetCXXObjectParameter(const DWARFDIE &subprogram,
   // If no DW_AT_object_pointer was specified, assume the implicit object
   // parameter is the first parameter to the function, is called "this" and is
   // artificial (which is what most compilers would generate).
+  if (!decl_ctx_die.IsStructUnionOrClass())
+    return {};
+
   if (!object_pointer.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
     return {};
 
