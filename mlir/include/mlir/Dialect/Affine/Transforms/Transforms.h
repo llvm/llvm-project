@@ -132,7 +132,7 @@ OpFoldResult materializeComputedBound(
 /// Tries to simplify all affine min or max operations under `topOp`. The
 /// transform works by finding disjoint sets of affine result expressions
 /// bounded by a common affine expression on the min/max operation. It populates
-/// `modifiedOps` with all the operations modified by the transform/
+/// `modifiedOps` with all the operations modified by the transform.
 ///
 /// In concrete terms, given an operation like:
 /// `affine.min affine_map<(d0)[s0, s1] -> (d0, s1, s0, 128)>(%i)[%s0, %s1]`
