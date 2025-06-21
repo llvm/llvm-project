@@ -15,8 +15,7 @@ define i32 @bbc(i32 %a) nounwind {
 ; CHECK-NEXT:  .LBB0_2: # %t
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    ret
-  %mask = shl i32 1, 16
-  %and = and i32 %a, %mask
+  %and = and i32 %a, 65536
   %tst = icmp eq i32 %and, 0
   br i1 %tst, label %t, label %f
 f:
@@ -39,8 +38,7 @@ define i32 @select_bbc(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-  %mask = shl i32 1, 16
-  %and = and i32 %a, %mask
+  %and = and i32 %a, 65536
   %tst = icmp eq i32 %and, 0
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
@@ -59,8 +57,7 @@ define i32 @bbs(i32 %a) nounwind {
 ; CHECK-NEXT:  .LBB2_2: # %t
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    ret
-  %mask = shl i32 1, 16
-  %and = and i32 %a, %mask
+  %and = and i32 %a, 65536
   %tst = icmp ne i32 %and, 0
   br i1 %tst, label %t, label %f
 f:
@@ -83,8 +80,7 @@ define i32 @select_bbs(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-  %mask = shl i32 1, 16
-  %and = and i32 %a, %mask
+  %and = and i32 %a, 65536
   %tst = icmp ne i32 %and, 0
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
