@@ -14,21 +14,19 @@
 template <class T>
 struct test_equal_to {
   int data_;
-  TEST_CONSTEXPR_CXX26 explicit test_equal_to() : data_(0) {}
-  TEST_CONSTEXPR_CXX26 explicit test_equal_to(int data) : data_(data) {}
-  TEST_CONSTEXPR_CXX26 bool operator()(const T& a, const T& b) const { return a == b; }
-  TEST_CONSTEXPR_CXX26 friend bool operator==(const test_equal_to& a, const test_equal_to& b) {
-    return a.data_ == b.data_;
-  }
+  TEST_CONSTEXPR explicit test_equal_to() : data_(0) {}
+  TEST_CONSTEXPR explicit test_equal_to(int data) : data_(data) {}
+  TEST_CONSTEXPR bool operator()(const T& a, const T& b) const { return a == b; }
+  TEST_CONSTEXPR friend bool operator==(const test_equal_to& a, const test_equal_to& b) { return a.data_ == b.data_; }
 };
 
 template <class T>
 struct test_less {
   int data_;
-  TEST_CONSTEXPR_CXX26 explicit test_less() : data_(0) {}
-  TEST_CONSTEXPR_CXX26 explicit test_less(int data) : data_(data) {}
-  TEST_CONSTEXPR_CXX26 bool operator()(const T& a, const T& b) const { return a < b; }
-  TEST_CONSTEXPR_CXX26 friend bool operator==(const test_less& a, const test_less& b) { return a.data_ == b.data_; }
+  TEST_CONSTEXPR explicit test_less() : data_(0) {}
+  TEST_CONSTEXPR explicit test_less(int data) : data_(data) {}
+  TEST_CONSTEXPR bool operator()(const T& a, const T& b) const { return a < b; }
+  TEST_CONSTEXPR friend bool operator==(const test_less& a, const test_less& b) { return a.data_ == b.data_; }
 };
 
 #endif // TEST_COMPARE_H
