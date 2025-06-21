@@ -31,6 +31,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ValueBoundsOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 
 // Include the attribute definitions.
@@ -2374,6 +2375,24 @@ def ForwardBufferOp : TEST_Op<"forward_buffer", [Pure]> {
 //===----------------------------------------------------------------------===//
 // Test ValueBoundsOpInterface
 //===----------------------------------------------------------------------===//
+
+def TestValueWithBoundsOp : TEST_Op<"value_with_bounds", [
+    DeclareOpInterfaceMethods<ValueBoundsOpInterface, ["populateBoundsForIndexValue"]>
+  ]> {
+  let description = [{
+    Creates a value with specified [min, max] range for value bounds analysis.
+
+    Example:
+
+    ```mlir
+    %0 = test.value_with_bounds { min = 4 : index, max = 5 : index}
+    ```
+  }];
+  let arguments = (ins IndexAttr:$min, IndexAttr:$max);
+  let results = (outs Index:$result);
+  let assemblyFormat = "attr-dict";
+}
+
 
 def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
   let description = [{
