@@ -90,7 +90,7 @@ constexpr bool test() {
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), m.end())), void);
   }
 
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     {
       auto insert_func = [](auto& m, auto key_arg, auto value_arg) {
         using FlatMap    = std::decay_t<decltype(m)>;

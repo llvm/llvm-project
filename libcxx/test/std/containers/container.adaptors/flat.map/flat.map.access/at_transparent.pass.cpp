@@ -60,7 +60,7 @@ constexpr void test() {
     assert(m.at(Transparent<int>{4}) == 4.5);
     assert(m.at(Transparent<int>{5}) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    if (!std::is_constant_evaluated()) {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
       try {
         TEST_IGNORE_NODISCARD m.at(Transparent<int>{6});
         assert(false);
@@ -83,7 +83,7 @@ constexpr void test() {
     assert(m.at(Transparent<int>{4}) == 4.5);
     assert(m.at(Transparent<int>{5}) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    if (!std::is_constant_evaluated()) {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
       try {
         TEST_IGNORE_NODISCARD m.at(Transparent<int>{6});
         assert(false);
@@ -100,7 +100,7 @@ constexpr void test() {
 constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<double>>();

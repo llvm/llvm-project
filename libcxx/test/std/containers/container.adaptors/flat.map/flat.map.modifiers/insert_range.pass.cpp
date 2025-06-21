@@ -82,7 +82,7 @@ constexpr void test() {
 constexpr bool test() {
   test<std::vector<int>, std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<int>>();
@@ -106,7 +106,7 @@ constexpr bool test() {
     std::pair<int, int> expected[] = {{1, 1}, {3, 3}, {4, 4}, {5, 5}};
     assert(std::ranges::equal(m, expected));
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto insert_func = [](auto& m, const auto& newValues) { m.insert_range(newValues); };
     test_insert_range_exception_guarantee(insert_func);
   }

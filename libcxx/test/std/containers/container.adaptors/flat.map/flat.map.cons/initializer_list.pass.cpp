@@ -89,7 +89,7 @@ constexpr void test() {
     assert(m2 == m);
     assert(m2.key_comp() == C(10));
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // flat_map(initializer_list<value_type>, const key_compare&);
     // Sorting uses the comparator that was passed in
     using M = std::flat_map<int, short, std::function<bool(int, int)>, KeyContainer<int, min_allocator<int>>>;
@@ -157,7 +157,7 @@ constexpr bool test() {
   test<std::vector, std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque, std::deque>();

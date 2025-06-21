@@ -39,7 +39,7 @@ constexpr bool test() {
     assert(vc({1, '2'}, {2, '1'}));
     assert(!vc({2, '1'}, {1, '2'}));
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     using Comp = std::function<bool(int, int)>;
     using M    = std::flat_map<int, int, Comp>;
     Comp comp  = std::greater<int>();
@@ -73,7 +73,7 @@ constexpr bool test() {
     assert(vc({1, 2}, {2, 1}));
     assert(!vc({2, 1}, {1, 2}));
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     using Comp = std::function<bool(const std::vector<int>&, const std::vector<int>&)>;
     using M    = std::flat_map<std::vector<int>, int, Comp>;
     Comp comp  = [i = 1](const auto& x, const auto& y) { return x[i] < y[i]; };

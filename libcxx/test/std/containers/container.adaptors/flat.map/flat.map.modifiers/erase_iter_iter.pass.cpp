@@ -99,7 +99,7 @@ constexpr void test() {
 constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<double>>();
@@ -107,7 +107,7 @@ constexpr bool test() {
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto erase_function = [](auto& m, auto) { m.erase(m.begin(), m.begin() + 2); };
     test_erase_exception_guarantee(erase_function);
   }

@@ -46,7 +46,7 @@ constexpr void test() {
   }
   {
     M m;
-    std::size_t s = std::is_constant_evaluated() ? 100 : 1000000;
+    std::size_t s = TEST_IS_CONSTANT_EVALUATED ? 100 : 1000000;
     for (auto i = 0u; i < s; ++i) {
       m.emplace(i, 'a');
     }
@@ -59,7 +59,7 @@ constexpr void test() {
 constexpr bool test() {
   test<std::vector<int>, std::vector<char>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<char>>();

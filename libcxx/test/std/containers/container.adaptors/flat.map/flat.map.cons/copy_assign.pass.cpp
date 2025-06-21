@@ -72,7 +72,7 @@ constexpr void test() {
     assert(mo.keys().get_allocator() == other_allocator<int>(6));
     assert(mo.values().get_allocator() == other_allocator<char>(7));
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // comparator is copied and invariant is preserved
     using M = std::flat_map<int, int, std::function<bool(int, int)>>;
     M mo    = M({{1, 2}, {3, 4}}, std::less<int>());
@@ -96,7 +96,7 @@ constexpr bool test() {
   test<std::vector, std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque, std::deque>();

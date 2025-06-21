@@ -154,14 +154,14 @@ constexpr bool test() {
   test_emplaceable<std::vector<int, min_allocator<int>>, std::vector<Emplaceable, min_allocator<Emplaceable>>>();
 
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<double>>();
     test_emplaceable<std::deque<int>, std::vector<Emplaceable>>();
   }
 
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto emplace_func = [](auto& m, auto key_arg, auto value_arg) {
       m.emplace(std::piecewise_construct, std::tuple(key_arg), std::tuple(value_arg));
     };

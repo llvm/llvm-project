@@ -60,7 +60,7 @@ constexpr void test() {
     auto expected = M{{1, 1}, {2, 2}, {4, 4}, {5, 5}};
     assert(m == expected);
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // flat_map(sorted_unique_t, InputIterator, InputIterator, const key_compare&);
     // cpp_17_input_iterator
     using M = std::flat_map<Key, Value, std::function<bool(Key, Value)>>;
@@ -190,7 +190,7 @@ constexpr bool test() {
   test_alloc<std::vector, std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<double>>();

@@ -60,7 +60,7 @@ constexpr void test() {
     assert(m.keys().get_allocator() == A());
     assert(m.values().get_allocator() == A());
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // A moved-from flat_map maintains its class invariant in the presence of moved-from comparators.
     using M = std::flat_map<int, int, std::function<bool(int, int)>, KeyContainer<int>, ValueContainer<int>>;
     M mo    = M({{1, 1}, {2, 2}, {3, 1}}, std::less<int>());
@@ -92,7 +92,7 @@ constexpr bool test() {
   test<std::vector, std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque, std::deque>();

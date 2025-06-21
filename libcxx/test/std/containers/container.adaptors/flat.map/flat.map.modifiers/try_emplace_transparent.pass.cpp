@@ -141,7 +141,7 @@ constexpr void test() {
 constexpr bool test() {
   test<std::vector<int>, std::vector<Moveable>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<Moveable>>();
@@ -178,7 +178,7 @@ constexpr bool test() {
     auto it2 = m.try_emplace(m.begin(), "beta2", 2);
     assert(it2 == m.begin() + 2);
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     {
       auto try_emplace = [](auto& m, auto key_arg, auto value_arg) {
         using M   = std::decay_t<decltype(m)>;

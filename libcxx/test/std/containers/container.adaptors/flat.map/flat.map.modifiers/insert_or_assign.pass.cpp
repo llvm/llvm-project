@@ -314,7 +314,7 @@ constexpr void test_rv_key() {
 constexpr bool test() {
   test_cv_key<std::vector<int>, std::vector<Moveable>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test_cv_key<std::deque<int>, std::vector<Moveable>>();

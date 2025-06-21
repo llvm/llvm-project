@@ -213,7 +213,7 @@ bool constexpr test() {
   test<std::vector, std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque, std::vector>();

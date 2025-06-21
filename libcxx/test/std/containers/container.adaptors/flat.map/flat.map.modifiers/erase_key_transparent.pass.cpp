@@ -98,7 +98,7 @@ constexpr bool test() {
                               std::vector<int, min_allocator<int>>>();
 
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test_simple<std::deque<int>, std::vector<double>>();
@@ -137,7 +137,7 @@ constexpr bool test() {
     assert(n == 1);
     assert(transparent_used);
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto erase_transparent = [](auto& m, auto key_arg) {
       using Map = std::decay_t<decltype(m)>;
       using Key = typename Map::key_type;

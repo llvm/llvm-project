@@ -52,7 +52,7 @@ constexpr void test() {
 constexpr bool test() {
   test<std::vector<int>, std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<int>>();
@@ -72,7 +72,7 @@ constexpr bool test() {
     LIBCPP_ASSERT(m.values().size() == 0);
   }
 
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     using KeyContainer   = std::vector<int>;
     using ValueContainer = ThrowOnMoveContainer<int>;

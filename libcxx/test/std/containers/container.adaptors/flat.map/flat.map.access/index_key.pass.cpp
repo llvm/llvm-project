@@ -62,7 +62,7 @@ constexpr void test() {
 constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque<int>, std::vector<double>>();
@@ -70,7 +70,7 @@ constexpr bool test() {
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto index_func = [](auto& m, auto key_arg, auto value_arg) {
       using FlatMap                             = std::decay_t<decltype(m)>;
       const typename FlatMap::key_type key      = key_arg;
