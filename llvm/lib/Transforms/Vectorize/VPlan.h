@@ -1001,6 +1001,13 @@ private:
   /// value for lane \p Lane.
   Value *generatePerLane(VPTransformState &State, const VPLane &Lane);
 
+#if !defined(NDEBUG)
+  /// Return the number of operands determined by the opcode of the
+  /// VPInstruction. Returns -1 if the number of operands cannot be determined
+  /// directly by the opcode.
+  unsigned getNumOperandsForOpcode() const;
+#endif
+
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL = {},
                 const Twine &Name = "")
@@ -1061,6 +1068,41 @@ public:
     default:
       return true;
     }
+  }
+
+  bool isMasked() const {
+    return getNumOperandsForOpcode() + 1 == getNumOperands();
+  }
+
+  bool needsMask() const {
+    if (getNumOperandsForOpcode() == -1u)
+      return false;
+    if (Opcode == VPInstruction::BranchOnCond ||
+        Opcode == VPInstruction::BranchOnCount ||
+        Opcode == VPInstruction::Not || Opcode == Instruction::ExtractValue ||
+        Opcode == Instruction::FNeg)
+      return false;
+
+    switch (Opcode) {
+    case Instruction::SDiv:
+    case Instruction::SRem:
+    case Instruction::UDiv:
+    case Instruction::URem:
+      return true;
+    default:
+      return mayReadFromMemory() || mayWriteToMemory() || mayHaveSideEffects();
+    }
+  }
+
+  void addMask(VPValue *Mask) {
+    if (!needsMask())
+      return;
+    assert(!isMasked() && "recipe is already masked");
+    addOperand(Mask);
+  }
+
+  VPValue *getMask() const {
+    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
   }
 
   /// Returns true if the underlying opcode may read from or write to memory.

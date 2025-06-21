@@ -7721,9 +7721,9 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
-VPWidenMemoryRecipe *
-VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
-                                  VFRange &Range) {
+VPWidenMemoryRecipe *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
+                                                       VFRange &Range) {
+  Instruction *I = VPI->getUnderlyingInstr();
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Must be called with either a load or store");
 
@@ -7745,7 +7745,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
 
   VPValue *Mask = nullptr;
   if (Legal->isMaskRequired(I))
-    Mask = getBlockInMask(Builder.getInsertBlock());
+    Mask = VPI->getMask();
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -7755,7 +7755,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
 
-  VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
+  VPValue *Ptr = isa<LoadInst>(I) ? VPI->getOperand(0) : VPI->getOperand(1);
   if (Consecutive) {
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
@@ -7784,9 +7784,9 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
                                  VPIRMetadata(*Load, LVer), I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, VPIRMetadata(*Store, LVer),
-                                I->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Ptr, VPI->getOperand(0), Mask,
+                                Consecutive, Reverse,
+                                VPIRMetadata(*Store, LVer), I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
@@ -7865,9 +7865,9 @@ VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
   return nullptr;
 }
 
-VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
-                                                   ArrayRef<VPValue *> Operands,
+VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
                                                    VFRange &Range) {
+  CallInst *CI = cast<CallInst>(VPI->getUnderlyingInstr());
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [this, CI](ElementCount VF) {
         return CM.isScalarWithPredication(CI, VF);
@@ -7884,7 +7884,8 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
              ID == Intrinsic::experimental_noalias_scope_decl))
     return nullptr;
 
-  SmallVector<VPValue *, 4> Ops(Operands.take_front(CI->arg_size()));
+  SmallVector<VPValue *> Operands(VPI->operands());
+  SmallVector<VPValue *, 4> Ops(ArrayRef(Operands).take_front(CI->arg_size()));
 
   // Is it beneficial to perform intrinsic call compared to lib call?
   bool ShouldUseVectorIntrinsic =
@@ -7930,6 +7931,9 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       },
       Range);
   if (ShouldUseVectorCall) {
+    VPValue *Mask = nullptr;
+    if (VPI->isMasked())
+      Mask = Operands.pop_back_val();
     if (MaskPos.has_value()) {
       // We have 2 cases that would require a mask:
       //   1) The block needs to be predicated, either due to a conditional
@@ -7938,10 +7942,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       //   2) No mask is required for the block, but the only available
       //      vector variant at this VF requires a mask, so we synthesize an
       //      all-true mask.
-      VPValue *Mask = nullptr;
-      if (Legal->isMaskRequired(CI))
-        Mask = getBlockInMask(Builder.getInsertBlock());
-      else
+      if (!Legal->isMaskRequired(CI))
         Mask = Plan.getOrAddLiveIn(
             ConstantInt::getTrue(IntegerType::getInt1Ty(CI->getContext())));
 
@@ -7969,20 +7970,22 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
                                                              Range);
 }
 
-VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
-                                           ArrayRef<VPValue *> Operands) {
-  switch (I->getOpcode()) {
+VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VPInstruction *VPI) {
+  ArrayRef<VPValue *> Operands(VPI->operands());
+  switch (VPI->getOpcode()) {
   default:
     return nullptr;
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
   case Instruction::URem: {
+    VPValue *Mask = Operands.back();
+    if (VPI->isMasked())
+      Operands = Operands.drop_back();
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
     if (CM.isPredicatedInst(I)) {
       SmallVector<VPValue *> Ops(Operands);
-      VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
       VPValue *One =
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
       auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
@@ -8047,9 +8050,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   };
 }
 
-VPHistogramRecipe *
-VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
-                                     ArrayRef<VPValue *> Operands) {
+VPHistogramRecipe *VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
+                                                        VPInstruction *VPI) {
   // FIXME: Support other operations.
   unsigned Opcode = HI->Update->getOpcode();
   assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
@@ -8057,14 +8059,14 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
-  HGramOps.push_back(Operands[1]);
+  HGramOps.push_back(VPI->getOperand(1));
   // Increment value.
   HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1)));
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
   if (Legal->isMaskRequired(HI->Store))
-    HGramOps.push_back(getBlockInMask(Builder.getInsertBlock()));
+    HGramOps.push_back(VPI->getMask());
 
   return new VPHistogramRecipe(Opcode, HGramOps, HI->Store->getDebugLoc());
 }
@@ -8295,6 +8297,10 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     return PhiRecipe;
   }
 
+  auto *VPI = cast<VPInstruction>(R);
+  if (VPI->isMasked())
+    Operands.pop_back();
+
   if (isa<TruncInst>(Instr) && (Recipe = tryToOptimizeInductionTruncate(
                                     cast<TruncInst>(Instr), Operands, Range)))
     return Recipe;
@@ -8304,18 +8310,19 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
           [&](ElementCount VF) { return VF.isScalar(); }, Range))
     return nullptr;
 
-  if (auto *CI = dyn_cast<CallInst>(Instr))
-    return tryToWidenCall(CI, Operands, Range);
+  if (VPI->getOpcode() == Instruction::Call)
+    return tryToWidenCall(VPI, Range);
 
   if (StoreInst *SI = dyn_cast<StoreInst>(Instr))
     if (auto HistInfo = Legal->getHistogramInfo(SI))
-      return tryToWidenHistogram(*HistInfo, Operands);
+      return tryToWidenHistogram(*HistInfo, VPI);
 
-  if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
-    return tryToWidenMemory(Instr, Operands, Range);
+  if (VPI->getOpcode() == Instruction::Load ||
+      VPI->getOpcode() == Instruction::Store)
+    return tryToWidenMemory(VPI, Range);
 
   if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
-    return tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value());
+    return tryToCreatePartialReduction(VPI, ScaleFactor.value());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8328,51 +8335,48 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   }
 
   if (auto *CI = dyn_cast<CastInst>(Instr)) {
-    return new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(),
-                                 *CI);
+    return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
+                                 CI->getType(), *CI);
   }
 
-  return tryToWiden(Instr, Operands);
+  return tryToWiden(Instr, VPI);
 }
 
 VPRecipeBase *
-VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
-                                             ArrayRef<VPValue *> Operands,
+VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
                                              unsigned ScaleFactor) {
-  assert(Operands.size() == 2 &&
-         "Unexpected number of operands for partial reduction");
-
-  VPValue *BinOp = Operands[0];
-  VPValue *Accumulator = Operands[1];
+  VPValue *BinOp = Reduction->getOperand(0);
+  VPValue *Accumulator = Reduction->getOperand(0);
   VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
   if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
   unsigned ReductionOpcode = Reduction->getOpcode();
+  auto *ReductionI = Reduction->getUnderlyingInstr();
   if (ReductionOpcode == Instruction::Sub) {
-    auto *const Zero = ConstantInt::get(Reduction->getType(), 0);
+    auto *const Zero = ConstantInt::get(ReductionI->getType(), 0);
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
     Ops.push_back(BinOp);
-    BinOp = new VPWidenRecipe(*Reduction, Ops);
+    BinOp = new VPWidenRecipe(*ReductionI, Ops);
     Builder.insert(BinOp->getDefiningRecipe());
     ReductionOpcode = Instruction::Add;
   }
 
   VPValue *Cond = nullptr;
-  if (CM.blockNeedsPredicationForAnyReason(Reduction->getParent())) {
+  if (Reduction->isMasked()) {
     assert((ReductionOpcode == Instruction::Add ||
             ReductionOpcode == Instruction::Sub) &&
            "Expected an ADD or SUB operation for predicated partial "
            "reductions (because the neutral element in the mask is zero)!");
-    Cond = getBlockInMask(Builder.getInsertBlock());
+    Cond = Reduction->getMask();
     VPValue *Zero =
-        Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
+        Plan.getOrAddLiveIn(ConstantInt::get(ReductionI->getType(), 0));
     BinOp = Builder.createSelect(Cond, BinOp, Zero, Reduction->getDebugLoc());
   }
   return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
-                                      ScaleFactor, Reduction);
+                                      ScaleFactor, ReductionI);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8807,8 +8811,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
         // Only create recipe for the final invariant store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
+          auto Ops = R.operands();
+          if (cast<VPInstruction>(R).isMasked())
+            Ops = drop_end(Ops);
           auto *Recipe =
-              new VPReplicateRecipe(SI, R.operands(), true /* IsUniform */,
+              new VPReplicateRecipe(SI, Ops, true /* IsUniform */,
                                     nullptr /*Mask*/, VPIRMetadata(*SI, LVer));
           Recipe->insertBefore(*MiddleVPBB, MBIP);
         }
@@ -8820,6 +8827,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
           RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
       if (!Recipe) {
         SmallVector<VPValue *, 4> Operands(R.operands());
+        if (cast<VPInstruction>(R).isMasked()) {
+          Operands.pop_back();
+        }
         Recipe = RecipeBuilder.handleReplication(Instr, Operands, Range);
       }
 
