@@ -119,13 +119,15 @@ private:
     //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct t->
     //     OmpBeginLoopDirective t-> OmpLoopDirective
     //   [ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct u->
-    ///    OmpBeginLoopDirective t-> OmpLoopDirective t-> Tile v-> OMP_tile]
+    //     OmpBeginLoopDirective t-> OmpLoopDirective t-> Tile v-> OMP_tile]
     //   ExecutableConstruct -> DoConstruct
-    //   [ExecutableConstruct -> OmpEndLoopDirective]
+    //   [ExecutableConstruct -> OmpEndLoopDirective] (note: tile)
     //   ExecutableConstruct -> OmpEndLoopDirective (if available)
     //
     // After rewriting:
     //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct t->
+    //     [OpenMPLoopConstruct t -> OmpBeginLoopDirective -> OmpLoopDirective
+    //                               OmpEndLoopDirective] (note: tile)
     //     OmpBeginLoopDirective t -> OmpLoopDirective -> DoConstruct
     //     OmpEndLoopDirective (if available)
     parser::Block::iterator nextIt;
