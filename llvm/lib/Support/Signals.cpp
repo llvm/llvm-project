@@ -221,7 +221,7 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
   for (int i = 0; i < Depth; i++) {
     auto PrintLineHeader = [&]() {
       OS << right_justify(formatv("#{0}", frame_no++).str(),
-                          std::log10(Depth) + 2)
+                          NumDigits(Depth) + 1)
          << ' ' << format_ptr(StackTrace[i]) << ' ';
     };
     if (!Modules[i]) {
