@@ -366,6 +366,10 @@ Modified Compiler Flags
 
 - The ``-fveclib=libmvec`` option now supports AArch64 targets (requires GLIBC 2.40 or newer).
 
+- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``,
+  reducing performance slightly while reducing the number of optimized-out
+  variables. (#GH118026)
+
 Removed Compiler Flags
 -------------------------
 

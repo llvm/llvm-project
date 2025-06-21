@@ -4072,6 +4072,21 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     if (MemTy != DstTy)
       return UnableToLegalize;
 
+    Align Alignment = LoadMI.getAlign();
+    // Given an alignment larger than the size of the memory, we can increase
+    // the size of the load without needing to scalarize it.
+    if (Alignment.value() * 8 > MemSizeInBits &&
+        isPowerOf2_64(DstTy.getScalarSizeInBits())) {
+      LLT MoreTy = LLT::fixed_vector(NextPowerOf2(DstTy.getNumElements()),
+                                     DstTy.getElementType());
+      MachineMemOperand *NewMMO = MF.getMachineMemOperand(&MMO, 0, MoreTy);
+      auto NewLoad = MIRBuilder.buildLoad(MoreTy, PtrReg, *NewMMO);
+      MIRBuilder.buildDeleteTrailingVectorElements(LoadMI.getReg(0),
+                                                   NewLoad.getReg(0));
+      LoadMI.eraseFromParent();
+      return Legalized;
+    }
+
     // TODO: We can do better than scalarizing the vector and at least split it
     // in half.
     return reduceLoadStoreWidth(LoadMI, 0, DstTy.getElementType());
