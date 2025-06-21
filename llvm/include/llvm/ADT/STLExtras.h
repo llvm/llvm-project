@@ -1032,13 +1032,17 @@ class concat_iterator
 
   static constexpr bool ReturnsByValue =
       !(std::is_reference_v<decltype(*std::declval<IterTs>())> && ...);
+  static constexpr bool ReturnsConvertiblePointer =
+      std::is_pointer_v<ValueT> &&
+      (std::is_convertible_v<decltype(*std::declval<IterTs>()), ValueT> && ...);
 
   using reference_type =
-      typename std::conditional_t<ReturnsByValue, ValueT, ValueT &>;
+      typename std::conditional_t<ReturnsByValue || ReturnsConvertiblePointer,
+                                  ValueT, ValueT &>;
 
-  using handle_type =
-      typename std::conditional_t<ReturnsByValue, std::optional<ValueT>,
-                                  ValueT *>;
+  using handle_type = typename std::conditional_t<
+      ReturnsConvertiblePointer, ValueT,
+      std::conditional_t<ReturnsByValue, std::optional<ValueT>, ValueT *>>;
 
   /// We store both the current and end iterators for each concatenated
   /// sequence in a tuple of pairs.
@@ -1088,7 +1092,7 @@ class concat_iterator
     if (Begin == End)
       return {};
 
-    if constexpr (ReturnsByValue)
+    if constexpr (ReturnsByValue || ReturnsConvertiblePointer)
       return *Begin;
     else
       return &*Begin;
@@ -1105,8 +1109,12 @@ class concat_iterator
 
     // Loop over them, and return the first result we find.
     for (auto &GetHelperFn : GetHelperFns)
-      if (auto P = (this->*GetHelperFn)())
-        return *P;
+      if (auto P = (this->*GetHelperFn)()) {
+        if constexpr (ReturnsConvertiblePointer)
+          return P;
+        else
+          return *P;
+      }
 
     llvm_unreachable("Attempted to get a pointer from an end concat iterator!");
   }
