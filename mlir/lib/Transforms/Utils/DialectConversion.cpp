@@ -1580,21 +1580,18 @@ void ConversionPatternRewriterImpl::replaceOp(
 
   // Check if replaced op is an unresolved materialization, i.e., an
   // unrealized_conversion_cast op that was created by the conversion driver.
-  bool isUnresolvedMaterialization = false;
-  if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
-    if (unresolvedMaterializations.contains(castOp))
-      isUnresolvedMaterialization = true;
+  if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op)) {
+    // Make sure that the user does not mess with unresolved materializations
+    // that were inserted by the conversion driver. We keep track of these
+    // ops in internal data structures.
+    assert(!unresolvedMaterializations.contains(castOp) &&
+           "attempting to replace/erase an unresolved materialization");
+  }
 
   // Create mappings for each of the new result values.
   for (auto [repl, result] : llvm::zip_equal(newValues, op->getResults())) {
     if (repl.empty()) {
       // This result was dropped and no replacement value was provided.
-      if (isUnresolvedMaterialization) {
-        // Do not create another materializations if we are erasing a
-        // materialization.
-        continue;
-      }
-
       // Materialize a replacement value "out of thin air".
       buildUnresolvedMaterialization(
           MaterializationKind::Source, computeInsertPoint(result),
@@ -1602,15 +1599,6 @@ void ConversionPatternRewriterImpl::replaceOp(
           /*outputTypes=*/result.getType(), /*originalType=*/Type(),
           currentTypeConverter);
       continue;
-    } else {
-      // Make sure that the user does not mess with unresolved materializations
-      // that were inserted by the conversion driver. We keep track of these
-      // ops in internal data structures. Erasing them must be allowed because
-      // this can happen when the user is erasing an entire block (including
-      // its body). But replacing them with another value should be forbidden
-      // to avoid problems with the `mapping`.
-      assert(!isUnresolvedMaterialization &&
-             "attempting to replace an unresolved materialization");
     }
 
     // Remap result to replacement value.
