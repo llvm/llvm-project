@@ -18,12 +18,15 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -35,8 +38,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
+#include <iostream>
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "wasm-lower"
 
@@ -3287,6 +3293,63 @@ static SDValue performSETCCCombine(SDNode *N,
 
   return SDValue();
 }
+static SmallVector<int> buildPowerIndexArray(int Power, int NumElements) {
+  int From = pow(Power, 2);
+  int To = pow(Power + 1, 2);
+
+  SmallVector<int> Res;
+  for (int I = From; I < To; I++)
+    Res.push_back(I);
+
+  for (int I = To; I < NumElements; I++)
+    Res.push_back(-1);
+
+  llvm::errs() << "Created res: ";
+  for (auto N : Res)
+    llvm::errs() << N << " ";
+  llvm::errs() << "\n";
+  return Res;
+}
+static bool isAndShuffle(SDNode *N, SDValue Result, int Power) {
+  // base case when power = n/2
+  EVT VT = N->getOperand(0)->getValueType(0);
+  int NumElements = VT.getVectorNumElements();
+  bool IsBaseCase = NumElements / 2 == Power;
+
+  // build power indices
+  SmallVector<int> PowerIndices = buildPowerIndexArray(Power, NumElements);
+  // Base case: A shuffle for a setcc (v), (ne, 0) for half elements
+  if (IsBaseCase)
+    return sd_match(N, m_Shuffle(m_SetCC(m_Value(Result), m_Zero(),
+                                         m_SpecificCondCode(ISD::SETNE)),
+                                 m_Opc(ISD::POISON),
+                                 m_SpecificMask(PowerIndices)));
+
+  // Recursive case: Check if it is an AND.
+  if (N->getOpcode() != ISD::AND)
+    return false;
+
+  SDValue Matched;
+  if (sd_match(N, m_And(m_Value(Result),
+                        m_Shuffle(m_SetCC(m_Value(Matched), m_Zero(),
+                                          m_SpecificCondCode(ISD::SETNE)),
+                                  m_Opc(ISD::POISON),
+                                  m_SpecificMask(PowerIndices))))) {
+    return isAndShuffle(Matched.getNode(), Result, Power * 2);
+  }
+  return false;
+}
+static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG) {
+  // FIX: Not sure why but Dagcombine doesn't see an AND opcode to hook to the
+  // function even though initial selection dag entry has AND nodes
+  assert(N->getOpcode() == ISD::AND);
+  SDLoc DL(N);
+  SDValue Matched;
+
+  if (isAndShuffle(N, Matched, 0))
+    return Matched;
+  return SDValue();
+}
 
 static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::MUL);
@@ -3378,6 +3441,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
+  // N->print(llvm::errs());
+  // std::cout << "\n";
   switch (N->getOpcode()) {
   default:
     return SDValue();
@@ -3402,6 +3467,8 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performTruncateCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performLowerPartialReduction(N, DCI.DAG);
+  case ISD::AND:
+    return performANDCombine(N, DCI.DAG);
   case ISD::MUL:
     return performMulCombine(N, DCI.DAG);
   }
