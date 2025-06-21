@@ -67,6 +67,9 @@ vsetvli a2, a0, e8,m1,tut,mu
 vsetvli a2, a0, e8,1,ta,ma
 # CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
+vsetvli a2, a0, ma,tu,m1,e8
+# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 vsetvli a2, a0,
 # CHECK-ERROR: unknown operand
 
