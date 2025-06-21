@@ -2285,7 +2285,7 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   // If the outer shuffle is a permute, then create a fake inner all-poison
   // shuffle. This is easier than accounting for length-changing shuffles below.
   SmallVector<int, 16> PoisonMask1;
-  if (Match0 && !Match1 && isa<PoisonValue>(OuterV1)) {
+  if (!Match1 && isa<PoisonValue>(OuterV1)) {
     X1 = X0;
     Y1 = Y0;
     PoisonMask1.append(InnerMask0.size(), PoisonMaskElem);
