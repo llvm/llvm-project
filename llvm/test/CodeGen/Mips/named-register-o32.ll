@@ -4,12 +4,39 @@
 
 declare i32 @llvm.read_register.i32(metadata)
 
+define i32 @get_$28() {
+; CHECK-LABEL: get_$28:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    move $2, $gp
+  %1 = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %1
+}
+
 define i32 @get_gp() {
 ; CHECK-LABEL: get_gp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    move $2, $gp
-  %1 = call i32 @llvm.read_register.i32(metadata !0)
+  %1 = call i32 @llvm.read_register.i32(metadata !1)
+  ret i32 %1
+}
+
+define i32 @get_$gp() {
+; CHECK-LABEL: get_$gp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    move $2, $gp
+  %1 = call i32 @llvm.read_register.i32(metadata !2)
+  ret i32 %1
+}
+
+define i32 @get_$29() {
+; CHECK-LABEL: get_$29:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    move $2, $sp
+  %1 = call i32 @llvm.read_register.i32(metadata !3)
   ret i32 %1
 }
 
@@ -18,12 +45,29 @@ define i32 @get_sp() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    move $2, $sp
-  %1 = call i32 @llvm.read_register.i32(metadata !1)
+  %1 = call i32 @llvm.read_register.i32(metadata !4)
+  ret i32 %1
+}
+
+define i32 @get_$sp() {
+; CHECK-LABEL: get_$sp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    move $2, $sp
+  %1 = call i32 @llvm.read_register.i32(metadata !5)
   ret i32 %1
 }
 
 !llvm.named.register.$28 = !{!0}
-!llvm.named.register.sp = !{!1}
+!llvm.named.register.gp = !{!1}
+!llvm.named.register.$gp = !{!2}
+!llvm.named.register.$29 = !{!3}
+!llvm.named.register.sp = !{!4}
+!llvm.named.register.$sp = !{!5}
 
 !0 = !{!"$28"}
-!1 = !{!"sp"}
+!1 = !{!"gp"}
+!2 = !{!"$gp"}
+!3 = !{!"$29"}
+!4 = !{!"sp"}
+!5 = !{!"$sp"}
