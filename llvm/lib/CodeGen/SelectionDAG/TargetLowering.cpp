@@ -8147,6 +8147,44 @@ SDValue TargetLowering::expandFunnelShift(SDNode *Node,
   return DAG.getNode(ISD::OR, DL, VT, ShX, ShY);
 }
 
+SDValue TargetLowering::expandCLMUL(SDNode *Node,
+                                    SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue V1 = Node->getOperand(0);
+  SDValue V2 = Node->getOperand(1);
+  unsigned NumBitsPerElt = VT.getScalarSizeInBits();
+
+  EVT SetCCType =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  // Only expand vector types if we have the appropriate vector bit operations.
+  // FIXME: Should really try to split the vector in case it's legal on a
+  // subvector.
+  if (VT.isVector() && (!isPowerOf2_32(NumBitsPerElt) ||
+                        (!isOperationLegalOrCustom(ISD::SRL, VT) ||
+                        !isOperationLegalOrCustom(ISD::SHL, VT) ||
+                        !isOperationLegalOrCustom(ISD::XOR, VT) ||
+                        !isOperationLegalOrCustom(ISD::AND, VT) ||
+                        !isOperationLegalOrCustom(ISD::SELECT, VT))))
+    return DAG.UnrollVectorOp(Node);
+
+  SDValue Res = DAG.getConstant(0, DL, VT);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue OneForShift = DAG.getShiftAmountConstant(1, VT, DL);
+  for (unsigned I = 0; I < NumBitsPerElt; ++I) {
+    SDValue LowBit = DAG.getNode(ISD::AND, DL, VT, V1, One);
+    SDValue LowBool = DAG.getSetCC(DL, SetCCType, LowBit, Zero, ISD::SETNE);
+    SDValue Pred = DAG.getNode(ISD::SELECT, DL, VT, LowBool, V2, Zero);
+    Res = DAG.getNode(ISD::XOR, DL, VT, Res, Pred);
+    if (I != NumBitsPerElt - 1) {
+      V1 = DAG.getNode(ISD::SRL, DL, VT, V1, OneForShift);
+      V2 = DAG.getNode(ISD::SHL, DL, VT, V2, OneForShift);
+    }
+  }
+  return Res;
+}
+
 // TODO: Merge with expandFunnelShift.
 SDValue TargetLowering::expandROT(SDNode *Node, bool AllowVectorOps,
                                   SelectionDAG &DAG) const {
