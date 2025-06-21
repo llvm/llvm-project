@@ -1914,21 +1914,44 @@ define <30 x i32> @bitcast_v15i64_to_v30i32(<15 x i64> %a, i32 %b) {
 ; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX13-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
+; GFX13-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX13-NEXT:  .LBB6_2: ; %end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -2281,21 +2304,44 @@ define inreg <30 x i32> @bitcast_v15i64_to_v30i32_scalar(<15 x i64> inreg %a, i3
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX13-NEXT:  .LBB7_3:
 ; GFX13-NEXT:  .LBB7_4: ; %cmp.true
-; GFX13-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
+; GFX13-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -16995,21 +17041,44 @@ define <30 x float> @bitcast_v15i64_to_v30f32(<15 x i64> %a, i32 %b) {
 ; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-NEXT:    s_cbranch_execz .LBB22_2
 ; GFX13-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
+; GFX13-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX13-NEXT:  .LBB22_2: ; %end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -17362,21 +17431,44 @@ define inreg <30 x float> @bitcast_v15i64_to_v30f32_scalar(<15 x i64> inreg %a, 
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX13-NEXT:  .LBB23_3:
 ; GFX13-NEXT:  .LBB23_4: ; %cmp.true
-; GFX13-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
+; GFX13-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -31444,21 +31536,44 @@ define <15 x double> @bitcast_v15i64_to_v15f64(<15 x i64> %a, i32 %b) {
 ; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-NEXT:    s_cbranch_execz .LBB36_2
 ; GFX13-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
 ; GFX13-NEXT:  .LBB36_2: ; %end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -31811,21 +31926,44 @@ define inreg <15 x double> @bitcast_v15i64_to_v15f64_scalar(<15 x i64> inreg %a,
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX13-NEXT:  .LBB37_3:
 ; GFX13-NEXT:  .LBB37_4: ; %cmp.true
-; GFX13-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -33319,21 +33457,44 @@ define <60 x i16> @bitcast_v15i64_to_v60i16(<15 x i64> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:    s_cbranch_execz .LBB40_2
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX13-TRUE16-NEXT:  .LBB40_2: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -33400,21 +33561,44 @@ define <60 x i16> @bitcast_v15i64_to_v60i16(<15 x i64> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-FAKE16-NEXT:    s_cbranch_execz .LBB40_4
 ; GFX13-FAKE16-NEXT:  ; %bb.3: ; %cmp.true
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v30, 16, v29 :: v_dual_lshrrev_b32 v31, 16, v28
 ; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v32, 16, v27 :: v_dual_lshrrev_b32 v33, 16, v26
 ; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v34, 16, v25 :: v_dual_lshrrev_b32 v35, 16, v24
@@ -39624,21 +39808,44 @@ define <60 x half> @bitcast_v15i64_to_v60f16(<15 x i64> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:    s_cbranch_execz .LBB44_2
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-TRUE16-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX13-TRUE16-NEXT:  .LBB44_2: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -39705,21 +39912,44 @@ define <60 x half> @bitcast_v15i64_to_v60f16(<15 x i64> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-FAKE16-NEXT:    s_cbranch_execz .LBB44_4
 ; GFX13-FAKE16-NEXT:  ; %bb.3: ; %cmp.true
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[28:29], 3, v[28:29]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[26:27], 3, v[26:27]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[24:25], 3, v[24:25]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[22:23], 3, v[22:23]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[20:21], 3, v[20:21]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[18:19], 3, v[18:19]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[16:17], 3, v[16:17]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[14:15], 3, v[14:15]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[12:13], 3, v[12:13]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[10:11], 3, v[10:11]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[8:9], 3, v[8:9]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[6:7], 3, v[6:7]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[4:5], 3, v[4:5]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[2:3], 3, v[2:3]
-; GFX13-FAKE16-NEXT:    v_add_nc_u64_e32 v[0:1], 3, v[0:1]
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v28, vcc_lo, v28, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v29, null, 0, v29, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v26, vcc_lo, v26, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v27, null, 0, v27, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v24, vcc_lo, v24, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v25, null, 0, v25, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v22, vcc_lo, v22, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v23, null, 0, v23, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v20, vcc_lo, v20, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v21, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v14, vcc_lo, v14, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v15, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v12, vcc_lo, v12, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v13, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v8, vcc_lo, v8, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v6, vcc_lo, v6, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
+; GFX13-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v30, 16, v29 :: v_dual_lshrrev_b32 v31, 16, v28
 ; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v32, 16, v27 :: v_dual_lshrrev_b32 v33, 16, v26
 ; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v34, 16, v25 :: v_dual_lshrrev_b32 v35, 16, v24
