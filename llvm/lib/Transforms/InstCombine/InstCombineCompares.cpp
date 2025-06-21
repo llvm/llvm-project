@@ -7728,6 +7728,30 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  // icmp slt (sub nsw x, y), (add nsw x, y)  -->  icmp sgt y, 0
+  // icmp ult (sub nuw x, y), (add nuw x, y)  -->  icmp ugt y, 0
+  // icmp eq (sub nsw/nuw x, y), (add nsw/nuw x, y)   -->  icmp eq y, 0
+  {
+    Value *A, *B;
+    CmpPredicate CmpPred;
+    if (match(&I, m_c_ICmp(CmpPred, m_Sub(m_Value(A), m_Value(B)),
+                           m_c_Add(m_Deferred(A), m_Deferred(B))))) {
+      auto *I0 = cast<OverflowingBinaryOperator>(Op0);
+      auto *I1 = cast<OverflowingBinaryOperator>(Op1);
+      bool I0NUW = I0->hasNoUnsignedWrap();
+      bool I1NUW = I1->hasNoUnsignedWrap();
+      bool I0NSW = I0->hasNoSignedWrap();
+      bool I1NSW = I1->hasNoSignedWrap();
+      if ((ICmpInst::isUnsigned(Pred) && I0NUW && I1NUW) ||
+          (ICmpInst::isSigned(Pred) && I0NSW && I1NSW) ||
+          (ICmpInst::isEquality(Pred) &&
+           ((I0NUW || I0NSW) && (I1NUW || I1NSW)))) {
+        return new ICmpInst(CmpPredicate::getSwapped(CmpPred), B,
+                            ConstantInt::get(Op0->getType(), 0));
+      }
+    }
+  }
+
   // Try to optimize equality comparisons against alloca-based pointers.
   if (Op0->getType()->isPointerTy() && I.isEquality()) {
     assert(Op1->getType()->isPointerTy() &&

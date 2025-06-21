@@ -1015,6 +1015,8 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
+  State->CFG.DTU.flush();
+
   VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
   if (!Header)
     return;
@@ -1029,17 +1031,11 @@ void VPlan::execute(VPTransformState *State) {
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    if (isa<VPWidenInductionRecipe>(&R)) {
-      PHINode *Phi = nullptr;
-      if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-        Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
-      } else {
-        auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-               "recipe generating only scalars should have been replaced");
-        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-        Phi = cast<PHINode>(GEP->getPointerOperand());
-      }
+    if (auto *WidenPhi = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
+      assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+             "recipe generating only scalars should have been replaced");
+      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
+      PHINode *Phi = cast<PHINode>(GEP->getPointerOperand());
 
       Phi->setIncomingBlock(1, VectorLatchBB);
 
@@ -1047,10 +1043,6 @@ void VPlan::execute(VPTransformState *State) {
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
       Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
-
-      // Use the steps for the last part as backedge value for the induction.
-      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
       continue;
     }
 
@@ -1071,7 +1063,14 @@ void VPlan::execute(VPTransformState *State) {
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   // For now only return the cost of the vector loop region, ignoring any other
   // blocks, like the preheader or middle blocks.
-  return getVectorLoopRegion()->cost(VF, Ctx);
+  InstructionCost Cost = getVectorLoopRegion()->cost(VF, Ctx);
+
+  // If any instructions in the middle block are invalid return invalid.
+  // TODO: Remove once no VPlans with VF == vscale x 1 and first-order recurrences are created.
+  if (!getMiddleBlock()->cost(VF, Ctx).isValid())
+    return InstructionCost::getInvalid();
+
+  return Cost;
 }
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {

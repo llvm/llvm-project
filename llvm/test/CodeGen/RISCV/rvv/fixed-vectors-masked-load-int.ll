@@ -341,3 +341,16 @@ define <7 x i8> @masked_load_v7i8(ptr %a, <7 x i1> %mask) {
   ret <7 x i8> %load
 }
 
+define <7 x i8> @masked_load_passthru_v7i8(ptr %a, <7 x i1> %mask) {
+; CHECK-LABEL: masked_load_passthru_v7i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 127
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    vmand.mm v0, v0, v8
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %load = call <7 x i8> @llvm.masked.load.v7i8(ptr %a, i32 8, <7 x i1> %mask, <7 x i8> zeroinitializer)
+  ret <7 x i8> %load
+}

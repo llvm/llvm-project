@@ -338,6 +338,8 @@ public:
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
 
+  bool isLValueSuitableForInlineAtomic(LValue lv);
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -770,6 +772,10 @@ public:
 
   LValue emitCastLValue(const CastExpr *e);
 
+  /// Emits an argument for a call to a `__builtin_assume`. If the builtin
+  /// sanitizer is enabled, a runtime check is also emitted.
+  mlir::Value emitCheckedArgForAssume(const Expr *e);
+
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
   void emitConstructorBody(FunctionArgList &args);
@@ -859,6 +865,12 @@ public:
                                      bool useCurrentScope);
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+
+  /// Emit the computation of the specified expression of complex type,
+  /// returning the result.
+  mlir::Value emitComplexExpr(const Expr *e);
+
+  LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -960,6 +972,9 @@ public:
                       LValue lvalue, bool capturedByInit = false);
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
+
+  void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
+                          bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,

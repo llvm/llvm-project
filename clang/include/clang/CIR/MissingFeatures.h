@@ -95,7 +95,6 @@ struct MissingFeatures {
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
-  static bool opCallSideEffect() { return false; }
   static bool opCallNoPrototypeFunc() { return false; }
   static bool opCallMustTail() { return false; }
   static bool opCallVirtual() { return false; }
@@ -150,6 +149,8 @@ struct MissingFeatures {
   static bool cxxabiUseARMGuardVarABI() { return false; }
   static bool cxxabiAppleARM64CXXABI() { return false; }
   static bool cxxabiStructorImplicitParam() { return false; }
+  static bool isDiscreteBitFieldABI() { return false; }
+  static bool isBigEndian() { return false; }
 
   // Address class
   static bool addressOffset() { return false; }
@@ -236,6 +237,11 @@ struct MissingFeatures {
   static bool runCleanupsScope() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
+  static bool asmLabelAttr() { return false; }
+  static bool builtinCall() { return false; }
+  static bool builtinCallF128() { return false; }
+  static bool builtinCallMathErrno() { return false; }
+  static bool nonFineGrainedBitfields() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -251,7 +257,6 @@ struct MissingFeatures {
   // Future CIR operations
   static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool complexCreateOp() { return false; }
   static bool complexImagOp() { return false; }
   static bool complexRealOp() { return false; }
   static bool ifOp() { return false; }
