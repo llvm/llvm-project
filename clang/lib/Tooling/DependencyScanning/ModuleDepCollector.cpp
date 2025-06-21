@@ -714,7 +714,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
-  if (MDC.Service.getFormat() == ScanningOutputFormat::P1689)
+  if (const auto Format = MDC.Service.getFormat();
+      Format == ScanningOutputFormat::P1689 ||
+      Format == ScanningOutputFormat::Full)
     MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
         MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
 

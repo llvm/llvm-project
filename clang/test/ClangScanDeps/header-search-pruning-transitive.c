@@ -98,7 +98,7 @@ module X { header "X.h" }
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
 // CHECK:            "clang-context-hash": "{{.*}}",
-// CHECK-NEXT:       "clang-module-deps": [
+// CHECK:            "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_X]]",
 // CHECK-NEXT:           "module-name": "X"
@@ -153,7 +153,7 @@ module X { header "X.h" }
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
 // CHECK:            "clang-context-hash": "{{.*}}",
-// CHECK-NEXT:       "clang-module-deps": [
+// CHECK:            "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "{{.*}}",
 // CHECK-NEXT:           "module-name": "X"

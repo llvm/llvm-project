@@ -78,7 +78,7 @@ framework module FW_Private {
 // CHECK_TU-NEXT:   "translation-units": [
 // CHECK_TU-NEXT:     {
 // CHECK_TU:            "clang-context-hash": "{{.*}}",
-// CHECK_TU-NEXT:       "clang-module-deps": [
+// CHECK_TU:            "clang-module-deps": [
 // CHECK_TU-NEXT:         {
 // CHECK_TU-NEXT:           "context-hash": "{{.*}}",
 // CHECK_TU-NEXT:           "module-name": "FW"
@@ -195,7 +195,7 @@ module Mod { header "Mod.h" }
 // CHECK_MODULE-NEXT:   "translation-units": [
 // CHECK_MODULE-NEXT:     {
 // CHECK_MODULE:            "clang-context-hash": "{{.*}}",
-// CHECK_MODULE-NEXT:       "clang-module-deps": [
+// CHECK_MODULE:            "clang-module-deps": [
 // CHECK_MODULE-NEXT:         {
 // CHECK_MODULE-NEXT:           "context-hash": "{{.*}}",
 // CHECK_MODULE-NEXT:           "module-name": "Mod"

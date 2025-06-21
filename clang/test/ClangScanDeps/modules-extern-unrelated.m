@@ -107,7 +107,7 @@ module second { header "second.h" }
 // CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "clang-context-hash": "{{.*}}",
-// CHECK-NEXT:           "clang-module-deps": [
+// CHECK:                "clang-module-deps": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "{{.*}}",
 // CHECK-NEXT:               "module-name": "zeroth"

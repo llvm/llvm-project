@@ -30,7 +30,7 @@
 // CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "clang-context-hash": "{{.*}}",
-// CHECK-NEXT:           "clang-module-deps": [],
+// CHECK:                "clang-module-deps": [],
 // CHECK-NEXT:           "command-line": [
 // CHECK:                  "-D"
 // CHECK-NEXT:             "ONE"
@@ -46,7 +46,7 @@
 // CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "clang-context-hash": "{{.*}}",
-// CHECK-NEXT:           "clang-module-deps": [],
+// CHECK:                "clang-module-deps": [],
 // CHECK-NEXT:           "command-line": [
 // CHECK:                  "-D"
 // CHECK-NEXT:             "TWO"
