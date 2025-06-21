@@ -610,15 +610,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::BuildStructVector: {
     // For struct types, we need to build a new 'wide' struct type, where each
-    // element is widened.
+    // element is widened, i.e. we crate a struct of vectors .
     auto *StructTy =
         cast<StructType>(State.TypeAnalysis.inferScalarType(getOperand(0)));
-    auto NumOfElements = ElementCount::getFixed(getNumOperands());
-    Value *Res = PoisonValue::get(toVectorizedTy(StructTy, NumOfElements));
-    assert(NumOfElements.getKnownMinValue() == StructTy->getNumElements() &&
-           "number of operands must match number of elements in StructTy");
+    Value *Res = PoisonValue::get(toVectorizedTy(StructTy, State.VF));
     for (const auto &[Idx, Op] : enumerate(operands())) {
-      for (unsigned I = 0; I != NumOfElements.getKnownMinValue(); I++) {
+      for (unsigned I = 0; I != StructTy->getNumElements(); I++) {
         Value *ScalarValue = Builder.CreateExtractValue(State.get(Op, true), I);
         Value *VectorValue = Builder.CreateExtractValue(Res, I);
         VectorValue =
@@ -2688,6 +2685,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     }
     State.set(this, State.packScalarIntoVectorizedValue(this, WideValue,
                                                         *State.Lane));
+  }
 }
 
 bool VPReplicateRecipe::shouldPack() const {

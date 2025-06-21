@@ -936,9 +936,9 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
-    /// Creates a struct of fixed-width vectors containing all operands. The
-    /// number of operands
-    /// matches the number of fields in the struct.
+    /// Given operands of (the same) struct type, creates a struct of fixed-
+    /// width vectors each containing a struct field of all operands. The
+    /// number of operands matches the element count of every vector.
     BuildStructVector,
     /// Creates a fixed-width vector containing all operands. The number of
     /// operands matches the vector element count.

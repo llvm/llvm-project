@@ -1148,6 +1148,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         BuildVector->getOperand(BuildVector->getNumOperands() - 1));
     return;
   }
+
   // Look through ExtractPenultimateElement (BuildVector ....).
   if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
                     m_BuildVector()))) {

@@ -511,22 +511,25 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
         LaneDefs.push_back(cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I)));
 
+      if (RepR->getNumUsers() == 0) {
+        RepR->eraseFromParent();
+        continue;
+      }
+
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       RepR->replaceUsesWithIf(LaneDefs[0], [RepR](VPUser &U, unsigned) {
         return U.onlyFirstLaneUsed(RepR);
       });
 
-      Type *ResTy = RepR->getUnderlyingInstr()->getType();
       // If needed, create a Build(Struct)Vector recipe to insert the scalar
       // lane values into a vector.
-      if (!ResTy->isVoidTy()) {
-        VPValue *VecRes = Builder.createNaryOp(
-            ResTy->isStructTy() ? VPInstruction::BuildStructVector
-                                : VPInstruction::BuildVector,
-            LaneDefs);
-        RepR->replaceAllUsesWith(VecRes);
-      }
+      Type *ResTy = RepR->getUnderlyingInstr()->getType();
+      VPValue *VecRes = Builder.createNaryOp(
+          ResTy->isStructTy() ? VPInstruction::BuildStructVector
+                              : VPInstruction::BuildVector,
+          LaneDefs);
+      RepR->replaceAllUsesWith(VecRes);
       RepR->eraseFromParent();
     }
   }
