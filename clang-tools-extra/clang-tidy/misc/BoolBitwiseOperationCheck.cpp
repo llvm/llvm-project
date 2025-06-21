@@ -100,8 +100,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
     const NamedDecl *ND = getLHSNamedDeclIfCompoundAssign(MatchedExpr);
     return diag(MatchedExpr->getOperatorLoc(),
                 "use logical operator '%0' for boolean %select{variable "
-                "%2|values}1 instead of "
-                "bitwise operator '%3'")
+                "%2|values}1 instead of bitwise operator '%3'")
            << translate(MatchedExpr->getOpcodeStr()) << (ND == nullptr) << ND
            << MatchedExpr->getOpcodeStr();
   };
