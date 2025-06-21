@@ -38,8 +38,8 @@ Options
 
 .. option:: StrictMode
 
-    Disabling this option promotes more fix-it hints even when they might
-    change evaluation order or skip side effects. Default value is `true`.
+    Enabling this option promotes more fix-it hints even when they might
+    change evaluation order or skip side effects. Default value is `false`.
 
 .. option:: IgnoreMacros
 

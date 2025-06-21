@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s misc-bool-bitwise-operation %t \
 // RUN:   -config="{CheckOptions: { \
-// RUN:     misc-bool-bitwise-operation.StrictMode: false }}"
+// RUN:     misc-bool-bitwise-operation.StrictMode: true }}"
 
 bool function_with_possible_side_effects();
 

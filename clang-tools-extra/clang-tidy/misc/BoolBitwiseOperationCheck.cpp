@@ -71,7 +71,7 @@ static std::string translate(llvm::StringRef Value) {
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.get("StrictMode", true)),
+      StrictMode(Options.get("StrictMode", false)),
       IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void BoolBitwiseOperationCheck::storeOptions(
@@ -114,8 +114,8 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (HasVolatileOperand)
     return;
 
-  const bool HasSideEffects =
-      MatchedExpr->getRHS()->HasSideEffects(*Result.Context, StrictMode);
+  const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(
+      *Result.Context, /*IncludePossibleEffects=*/!StrictMode);
   if (HasSideEffects)
     return;
 
