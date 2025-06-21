@@ -424,32 +424,17 @@ if (ExpectedSizeInBytes == Size) {
   // store only the first ExpectedSizeInBytes bytes of Old
   llvm::Type *OldType = Old->getType();
 
-  llvm::Align SrcAlignLLVM = DL.getABITypeAlign(OldType);
-  llvm::Align DstAlignLLVM = DL.getABITypeAlign(ExpectedType);
-
-  clang::CharUnits SrcAlign = clang::CharUnits::fromQuantity(SrcAlignLLVM.value());
-  clang::CharUnits DstAlign = clang::CharUnits::fromQuantity(DstAlignLLVM.value());
-
   // Allocate temporary storage for Old value
-  llvm::AllocaInst *Alloca = CGF.CreateTempAlloca(OldType, "old.tmp");
-
-  // Wrap into clang::CodeGen::Address with proper type and alignment
-  Address OldStorage(Alloca, OldType, SrcAlign);
+  Address OldTmp = CGF.CreateTempAlloca(OldType, Ptr.getAlignment(), "old.tmp");
 
   // Store Old into this temporary
-  CGF.Builder.CreateStore(Old, OldStorage);
-
-  // Bitcast pointers to i8*
-  llvm::Type *I8PtrTy = llvm::PointerType::getUnqual(CGF.getLLVMContext());
-
-  llvm::Value *SrcPtr = CGF.Builder.CreateBitCast(OldStorage.getBasePointer(), I8PtrTy);
-  llvm::Value *DstPtr = CGF.Builder.CreateBitCast(ExpectedResult.getBasePointer(), I8PtrTy);
+  CGF.Builder.CreateStore(Old, OldTmp);
 
   // Perform memcpy for first ExpectedSizeInBytes bytes
   CGF.Builder.CreateMemCpy(
-    DstPtr, DstAlignLLVM,
-    SrcPtr, SrcAlignLLVM,
-    llvm::ConstantInt::get(CGF.IntPtrTy, ExpectedSizeInBytes),
+    ExpectedResult,
+    OldTmp,
+    ExpectedSizeInBytes,
     /*isVolatile=*/false);
 }
 
