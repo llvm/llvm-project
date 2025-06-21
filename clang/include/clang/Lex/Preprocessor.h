@@ -1789,9 +1789,6 @@ public:
   void HandleCXXImportDirective(Token Import);
   void HandleCXXModuleDirective(Token Module);
 
-  void setFirstPPToken(const Token &Tok) { FirstPPToken = Tok; }
-  Token getFirstPPToken() const { return FirstPPToken; }
-
   /// Callback invoked when the lexer sees one of export, import or module token
   /// at the start of a line.
   ///

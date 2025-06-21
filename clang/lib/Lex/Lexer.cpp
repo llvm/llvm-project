@@ -3752,9 +3752,6 @@ bool Lexer::Lex(Token &Result) {
   (void) isRawLex;
   bool returnedToken = LexTokenInternal(Result, atPhysicalStartOfLine);
 
-  if (returnedToken && Result.isFirstPPToken() && PP)
-    PP->setFirstPPToken(Result);
-
   // (After the LexTokenInternal call, the lexer might be destroyed.)
   assert((returnedToken || !isRawLex) && "Raw lex must succeed");
 
