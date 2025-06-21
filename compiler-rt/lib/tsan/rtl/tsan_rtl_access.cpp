@@ -525,7 +525,7 @@ SECOND:
 void ShadowSet(RawShadow* p, RawShadow* end, RawShadow v) {
   DCHECK_LT(p, end);
   DCHECK(IsShadowMem(p));
-  DCHECK(p == end || IsShadowMem(end - 1));
+  DCHECK(IsShadowMem(end - 1));
   UNUSED const uptr kAlign = kShadowCnt * kShadowSize;
   DCHECK_EQ(reinterpret_cast<uptr>(p) % kAlign, 0);
   DCHECK_EQ(reinterpret_cast<uptr>(end) % kAlign, 0);
@@ -578,8 +578,11 @@ static void MemoryRangeSet(uptr addr, uptr size, RawShadow val) {
       Die();
   }
   // Set the ending.
-  if (mid2 < end)
+  if (mid2 < end) {
     ShadowSet(mid2, end, val);
+  } else {
+    DCHECK_EQ(mid2, end);
+  }
 }
 
 void MemoryResetRange(ThreadState* thr, uptr pc, uptr addr, uptr size) {
