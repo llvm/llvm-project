@@ -6632,6 +6632,8 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return std::move(Err);
   }
 
+  QualType ToTmpTy = Importer.getToContext().IntTy;
+  ToTmpTy = ToTmpTy.withCVRQualifiers(D->getType().getCVRQualifiers());
   using PartVarSpecDecl = VarTemplatePartialSpecializationDecl;
   // Create a new specialization.
   if (auto *FromPartial = dyn_cast<PartVarSpecDecl>(D)) {
@@ -6642,7 +6644,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     PartVarSpecDecl *ToPartial;
     if (GetImportedOrCreateDecl(ToPartial, D, Importer.getToContext(), DC,
                                 *BeginLocOrErr, *IdLocOrErr, *ToTPListOrErr,
-                                VarTemplate, QualType(), nullptr,
+                                VarTemplate, ToTmpTy, nullptr,
                                 D->getStorageClass(), TemplateArgs))
       return ToPartial;
 
@@ -6661,10 +6663,9 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     // to adopt template parameters.
     // updateLookupTableForTemplateParameters(**ToTPListOrErr);
   } else { // Full specialization
-    if (GetImportedOrCreateDecl(D2, D, Importer.getToContext(), DC,
-                                *BeginLocOrErr, *IdLocOrErr, VarTemplate,
-                                QualType(), nullptr, D->getStorageClass(),
-                                TemplateArgs))
+    if (GetImportedOrCreateDecl(
+            D2, D, Importer.getToContext(), DC, *BeginLocOrErr, *IdLocOrErr,
+            VarTemplate, ToTmpTy, nullptr, D->getStorageClass(), TemplateArgs))
       return D2;
   }
 
