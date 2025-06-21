@@ -7910,7 +7910,14 @@ Sema::BuildExprRequirement(
     auto *IDC = TC->getImmediatelyDeclaredConstraint();
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
-    if (Constraint.isInvalid()) {
+    bool HasError = Constraint.isInvalid();
+    if (!HasError) {
+      SubstitutedConstraintExpr =
+          cast<ConceptSpecializationExpr>(Constraint.get());
+      if (SubstitutedConstraintExpr->getSatisfaction().ContainsErrors)
+        HasError = true;
+    }
+    if (HasError) {
       return new (Context) concepts::ExprRequirement(
           createSubstDiagAt(IDC->getExprLoc(),
                             [&](llvm::raw_ostream &OS) {
@@ -7919,8 +7926,6 @@ Sema::BuildExprRequirement(
                             }),
           IsSimple, NoexceptLoc, ReturnTypeRequirement);
     }
-    SubstitutedConstraintExpr =
-        cast<ConceptSpecializationExpr>(Constraint.get());
     if (!SubstitutedConstraintExpr->isSatisfied())
       Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
   }
