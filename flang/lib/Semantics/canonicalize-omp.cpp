@@ -160,16 +160,13 @@ private:
               std::get<parser::OmpBeginLoopDirective>(innerOmpLoop->t)};
           auto &innerDir{std::get<parser::OmpLoopDirective>(innerBeginDir.t)};
           if (innerDir.v == llvm::omp::Directive::OMPD_tile) {
-            std::get<std::optional<
+            auto &innerLoop = std::get<std::optional<
                 common::Indirection<parser::OpenMPLoopConstruct>>>(
-                loops.back()->t) = std::move(*innerOmpLoop);
+                loops.back()->t);
+            innerLoop = std::move(*innerOmpLoop);
             // Retrieveing the address so that DoConstruct or inner loop can be
             // set later.
-            loops.push_back(&(std::get<std::optional<
-                    common::Indirection<parser::OpenMPLoopConstruct>>>(
-                loops.back()->t)
-                    .value()
-                    .value()));
+            loops.push_back(&(innerLoop.value().value()));
             nextIt = block.erase(nextIt);
           }
         }
@@ -186,9 +183,23 @@ private:
           while (nextIt != block.end() && !loops.empty()) {
             if (auto *endDir{
                     GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
-              std::get<std::optional<parser::OmpEndLoopDirective>>(
-                  loops.back()->t) = std::move(*endDir);
-              nextIt = block.erase(nextIt);
+              auto &endOmpDirective{
+                  std::get<parser::OmpLoopDirective>(endDir->t)};
+              auto &loopBegin{
+                  std::get<parser::OmpBeginLoopDirective>(loops.back()->t)};
+              auto &loopDir{std::get<parser::OmpLoopDirective>(loopBegin.t)};
+
+              // If the directive is a tile we try to match the corresponding
+              // end tile if it exsists. If it is not a tile directive we
+              // always assign the end loop directive and fall back on the
+              // existing directive structure checks.
+              if (loopDir.v != llvm::omp::Directive::OMPD_tile ||
+                  loopDir.v == endOmpDirective.v) {
+                std::get<std::optional<parser::OmpEndLoopDirective>>(
+                    loops.back()->t) = std::move(*endDir);
+                nextIt = block.erase(nextIt);
+              }
+
               loops.pop_back();
             } else {
               // If there is a mismatch bail out.
