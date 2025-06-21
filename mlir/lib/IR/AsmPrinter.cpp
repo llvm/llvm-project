@@ -478,10 +478,13 @@ public:
   void printDimensionList(ArrayRef<int64_t> shape);
 
 protected:
-  void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
-                             ArrayRef<StringRef> elidedAttrs = {},
-                             bool withKeyword = false);
-  void printNamedAttribute(NamedAttribute attr);
+  void printOptionalAttrDict(
+      ArrayRef<NamedAttribute> attrs, ArrayRef<StringRef> elidedAttrs = {},
+      bool withKeyword = false,
+      function_ref<LogicalResult(NamedAttribute)> printNamedAttrFn = nullptr);
+  void printNamedAttribute(
+      NamedAttribute attr,
+      function_ref<LogicalResult(NamedAttribute)> printNamedAttrFn = nullptr);
   void printTrailingLocation(Location loc, bool allowAlias = true);
   void printLocationInternal(LocationAttr loc, bool pretty = false,
                              bool isTopLevel = false);
@@ -818,9 +821,10 @@ private:
   /// Print the given set of attributes with names not included within
   /// 'elidedAttrs'.
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
-                             ArrayRef<StringRef> elidedAttrs = {}) override {
-    if (attrs.empty())
-      return;
+                             ArrayRef<StringRef> elidedAttrs = {},
+                             function_ref<LogicalResult(NamedAttribute)>
+                                 printNamedAttrFn = nullptr) override {
+    (void)printNamedAttrFn;
     if (elidedAttrs.empty()) {
       for (const NamedAttribute &attr : attrs)
         printAttribute(attr.getValue());
@@ -2834,9 +2838,10 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       .Default([&](Type type) { return printDialectType(type); });
 }
 
-void AsmPrinter::Impl::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
-                                             ArrayRef<StringRef> elidedAttrs,
-                                             bool withKeyword) {
+void AsmPrinter::Impl::printOptionalAttrDict(
+    ArrayRef<NamedAttribute> attrs, ArrayRef<StringRef> elidedAttrs,
+    bool withKeyword,
+    function_ref<LogicalResult(NamedAttribute)> printNamedAttrFn) {
   // If there are no attributes, then there is nothing to be done.
   if (attrs.empty())
     return;
@@ -2849,8 +2854,9 @@ void AsmPrinter::Impl::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
 
     // Otherwise, print them all out in braces.
     os << " {";
-    interleaveComma(filteredAttrs,
-                    [&](NamedAttribute attr) { printNamedAttribute(attr); });
+    interleaveComma(filteredAttrs, [&](NamedAttribute attr) {
+      printNamedAttribute(attr, printNamedAttrFn);
+    });
     os << '}';
   };
 
@@ -2867,7 +2873,9 @@ void AsmPrinter::Impl::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
   if (!filteredAttrs.empty())
     printFilteredAttributesFn(filteredAttrs);
 }
-void AsmPrinter::Impl::printNamedAttribute(NamedAttribute attr) {
+void AsmPrinter::Impl::printNamedAttribute(
+    NamedAttribute attr,
+    function_ref<LogicalResult(NamedAttribute)> printNamedAttrFn) {
   // Print the name without quotes if possible.
   ::printKeywordOrString(attr.getName().strref(), os);
 
@@ -2876,6 +2884,11 @@ void AsmPrinter::Impl::printNamedAttribute(NamedAttribute attr) {
     return;
 
   os << " = ";
+  if (printNamedAttrFn && succeeded(printNamedAttrFn(attr))) {
+    /// If we print via the `printNamedAttrFn` callback, skip the generic
+    /// attribute printing (i.e. the call to `printAttribute`).
+    return;
+  }
   printAttribute(attr.getValue());
 }
 
@@ -3296,8 +3309,11 @@ public:
 
   /// Print an optional attribute dictionary with a given set of elided values.
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
-                             ArrayRef<StringRef> elidedAttrs = {}) override {
-    Impl::printOptionalAttrDict(attrs, elidedAttrs);
+                             ArrayRef<StringRef> elidedAttrs = {},
+                             function_ref<LogicalResult(NamedAttribute)>
+                                 printNamedAttrFn = nullptr) override {
+    Impl::printOptionalAttrDict(attrs, elidedAttrs, /*withKeyword=*/false,
+                                printNamedAttrFn);
   }
   void printOptionalAttrDictWithKeyword(
       ArrayRef<NamedAttribute> attrs,
