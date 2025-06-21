@@ -4,8 +4,7 @@
 define i32 @negb(i32 %b) {
 ; CHECK-LABEL: negb:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    sub w0, w8, w0
+; CHECK-NEXT:    neg w0, w0
 ; CHECK-NEXT:    ret
   %sub = sub nsw i32 0, %b
   ret i32 %sub

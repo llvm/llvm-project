@@ -1201,6 +1201,19 @@ Register AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
             SI->getOpcode() == Instruction::AShr   )
           std::swap(LHS, RHS);
 
+  // Special case: sub 0, x -> neg x (use zero register directly)
+  if (!UseAdd && isa<Constant>(LHS) && cast<Constant>(LHS)->isNullValue()) {
+    Register RHSReg = getRegForValue(RHS);
+    if (!RHSReg)
+      return Register();
+
+    if (NeedExtend)
+      RHSReg = emitIntExt(SrcVT, RHSReg, RetVT, IsZExt);
+
+    Register ZeroReg = RetVT == MVT::i64 ? AArch64::XZR : AArch64::WZR;
+    return emitAddSub_rr(UseAdd, RetVT, ZeroReg, RHSReg, SetFlags, WantResult);
+  }
+
   Register LHSReg = getRegForValue(LHS);
   if (!LHSReg)
     return Register();
