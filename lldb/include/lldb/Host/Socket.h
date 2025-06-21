@@ -106,6 +106,10 @@ public:
   static std::unique_ptr<Socket> Create(const SocketProtocol protocol,
                                         Status &error);
 
+  static llvm::Expected<
+      std::pair<std::unique_ptr<Socket>, std::unique_ptr<Socket>>>
+  CreatePair(std::optional<SocketProtocol> protocol = std::nullopt);
+
   virtual Status Connect(llvm::StringRef name) = 0;
   virtual Status Listen(llvm::StringRef name, int backlog) = 0;
 
