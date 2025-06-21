@@ -166,8 +166,47 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_before_read
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
+// CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index)
+func.func @negative_xfer_pair_double_loop_mem_use_inside_inner_loop_before_read(%mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+
+// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+// CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+// CHECK:     "mem_use"(%[[MEM]]) : (memref<?x?xf32>) -> ()
+// CHECK:     vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<1xf32>
+// CHECK:     "val_use"(%{{.*}}) : (vector<1xf32>) -> vector<1xf32>
+// CHECK:     vector.transfer_write %{{.*}} : vector<1xf32>, memref<?x?xf32>
+// CHECK:   }
+// CHECK: }
+  scf.for %i = %lb to %ub step %step {
+    scf.for %j = %lb to %ub step %step {
+      "mem_use"(%mem) : (memref<?x?xf32>) -> ()
+      %read = vector.transfer_read %mem[%c0, %c0], %pad: memref<?x?xf32>, vector<1xf32>
+      %use = "val_use"(%read) : (vector<1xf32>) -> vector<1xf32>
+      vector.transfer_write %use, %mem[%c0, %c0] : vector<1xf32>, memref<?x?xf32>
+    }
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func @hoist_vector_transfer_pairs(
-//  CHECK-SAME:   %[[MEMREF4:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[MEMREF5:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[VAL:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[LB:[a-zA-Z0-9]*]]: index,
@@ -175,28 +214,20 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:   %[[STEP:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[CMP:[a-zA-Z0-9]*]]: i1
 func.func @hoist_vector_transfer_pairs(
-    %memref4: memref<?x?xf32>, %memref5: memref<?x?xf32>,
+    %memref5: memref<?x?xf32>,
     %val: index, %lb : index, %ub : index, %step: index, %cmp: i1) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
 
 // CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
 // CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-// CHECK:     "some_crippling_use"(%[[MEMREF4]]) : (memref<?x?xf32>) -> ()
-// CHECK:     vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<5xf32>
-// CHECK:     "some_use"(%{{.*}}) : (vector<5xf32>) -> vector<5xf32>
-// CHECK:     vector.transfer_write %{{.*}} : vector<5xf32>, memref<?x?xf32>
 // CHECK:   }
 // CHECK: }
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
-      "some_crippling_use"(%memref4) : (memref<?x?xf32>) -> ()
-      %r4 = vector.transfer_read %memref4[%c0, %c0], %cst: memref<?x?xf32>, vector<5xf32>
       %r5 = vector.transfer_read %memref5[%c0, %c0], %cst: memref<?x?xf32>, vector<6xf32>
       "some_crippling_use"(%memref5) : (memref<?x?xf32>) -> ()
-      %u4 = "some_use"(%r4) : (vector<5xf32>) -> vector<5xf32>
       %u5 = "some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
-      vector.transfer_write %u4, %memref4[%c0, %c0] : vector<5xf32>, memref<?x?xf32>
       vector.transfer_write %u5, %memref5[%c0, %c0] : vector<6xf32>, memref<?x?xf32>
     }
   }
