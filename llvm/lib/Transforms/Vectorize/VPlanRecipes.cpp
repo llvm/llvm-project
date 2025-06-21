@@ -73,8 +73,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
-  case VPExtendedReductionSC:
-  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -123,8 +121,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
-  case VPExtendedReductionSC:
-  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -163,8 +159,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
-  case VPExtendedReductionSC:
-  case VPMulAccumulateReductionSC:
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
@@ -2447,30 +2441,193 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             Ctx.CostKind);
 }
 
-InstructionCost
-VPExtendedReductionRecipe::computeCost(ElementCount VF,
-                                       VPCostContext &Ctx) const {
-  unsigned Opcode = RecurrenceDescriptor::getOpcode(getRecurrenceKind());
-  Type *RedTy = Ctx.Types.inferScalarType(this);
-  auto *SrcVecTy =
-      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
-  assert(RedTy->isIntegerTy() &&
-         "ExtendedReduction only support integer type currently.");
-  return Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), RedTy, SrcVecTy,
-                                          std::nullopt, Ctx.CostKind);
+void VPBundleRecipe::bundle(ArrayRef<VPValue *> Operands) {
+  assert(!BundledRecipes.empty() && "Nothing to bundle?");
+
+  // Bundle up the operand recipes.
+  SmallPtrSet<VPUser *, 4> BundledUsers;
+  for (auto *R : BundledRecipes)
+    BundledUsers.insert(R);
+
+  // Recipes in the bundle, except the last one, must only be used inside the
+  // bundle. If there other external users, clone the recipes for the bundle.
+  for (unsigned Idx = 0; Idx != BundledRecipes.size() - 1; ++Idx) {
+    VPSingleDefRecipe *R = BundledRecipes[Idx];
+    if (all_of(R->users(), [&BundledUsers](VPUser *U) {
+          return BundledUsers.contains(U);
+        })) {
+      if (R->getParent())
+        R->removeFromParent();
+      continue;
+    }
+    // The users external to the bundle. Clone the recipe for use in the
+    // bundle and update all its in-bundle users.
+    VPSingleDefRecipe *Copy = R->clone();
+    BundledRecipes[Idx] = Copy;
+    BundledUsers.insert(Copy);
+    R->replaceUsesWithIf(Copy, [&BundledUsers](VPUser &U, unsigned) {
+      return BundledUsers.contains(&U);
+    });
+  }
+  if (BundledRecipes.back()->getParent())
+    BundledRecipes.back()->removeFromParent();
+
+  // Internalize all external operands to the bundled operations. To do so,
+  // create new temporary VPValues for all operands not defined by recipe in
+  // the bundle. The original operands are added as operands of the
+  // VPBundleRecipe.
+  for (auto *R : BundledRecipes) {
+    for (const auto &[Idx, Op] : enumerate(R->operands())) {
+      auto *Def = Op->getDefiningRecipe();
+      if (Def && BundledUsers.contains(Def))
+        continue;
+      if (Operands.empty())
+        addOperand(Op);
+      else
+        addOperand(Operands[TmpValues.size()]);
+      TmpValues.push_back(new VPValue());
+      R->setOperand(Idx, TmpValues.back());
+    }
+  }
 }
 
-InstructionCost
-VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
+void VPBundleRecipe::unbundle() {
+  for (auto *R : BundledRecipes)
+    if (!R->getParent())
+      R->insertBefore(this);
+
+  for (const auto &[Idx, Op] : enumerate(operands()))
+    TmpValues[Idx]->replaceAllUsesWith(Op);
+
+  replaceAllUsesWith(getResultRecipe());
+
+  if (BundleType == BundleTypes::MulAccumulateReduction &&
+      BundledRecipes.size() == 5) {
+    // Note that we will drop the extend after mul which transforms
+    // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
+    // TODO: This transform should be done separately from bundling/unbundling.
+    auto *Ext0 = cast<VPWidenCastRecipe>(BundledRecipes[0]);
+    auto *Ext1 = cast<VPWidenCastRecipe>(BundledRecipes[1]);
+    auto *Ext2 = cast<VPWidenCastRecipe>(BundledRecipes[3]);
+    auto *Op0 =
+        new VPWidenCastRecipe(Ext0->getOpcode(), Ext0->getOperand(0),
+                              Ext2->getResultType(), *Ext0, getDebugLoc());
+    Op0->insertBefore(Ext0);
+
+    VPSingleDefRecipe *Op1 = Op0;
+    if (Ext0 != Ext1) {
+      Op1 = new VPWidenCastRecipe(Ext1->getOpcode(), Ext1->getOperand(0),
+                                  Ext2->getResultType(), *Ext1, getDebugLoc());
+      Op1->insertBefore(Ext1);
+    }
+    auto *Mul = cast<VPWidenRecipe>(BundledRecipes[2]);
+    auto *Red = cast<VPReductionRecipe>(BundledRecipes[4]);
+    Mul->setOperand(0, Op0);
+    Mul->setOperand(1, Op1);
+    Red->setOperand(1, Mul);
+    Ext0->eraseFromParent();
+    Ext2->eraseFromParent();
+    if (Ext0 != Ext1)
+      Ext1->eraseFromParent();
+  }
+  BundledRecipes.clear();
+}
+
+InstructionCost VPBundleRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
   Type *RedTy = Ctx.Types.inferScalarType(this);
-  auto *SrcVecTy =
-      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  return Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy,
-                                        Ctx.CostKind);
+  auto *SrcVecTy = cast<VectorType>(
+      toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
+  assert(RedTy->isIntegerTy() &&
+         "ExtendedReduction only support integer type currently.");
+  switch (BundleType) {
+  case BundleTypes::ExtendedReduction: {
+    unsigned Opcode = RecurrenceDescriptor::getOpcode(
+        cast<VPReductionRecipe>(BundledRecipes[1])->getRecurrenceKind());
+    return Ctx.TTI.getExtendedReductionCost(
+        Opcode,
+        cast<VPWidenCastRecipe>(BundledRecipes.front())->getOpcode() ==
+            Instruction::ZExt,
+        RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
+  }
+  case BundleTypes::MulAccumulateReduction:
+    return Ctx.TTI.getMulAccReductionCost(
+        BundledRecipes.size() > 2
+            ? cast<VPWidenCastRecipe>(BundledRecipes.front())->getOpcode() ==
+                  Instruction::ZExt
+            : false,
+        RedTy, SrcVecTy, Ctx.CostKind);
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+
+void VPBundleRecipe::print(raw_ostream &O, const Twine &Indent,
+                           VPSlotTracker &SlotTracker) const {
+  O << Indent << "BUNDLE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  auto *Red = cast<VPReductionRecipe>(BundledRecipes.back());
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+
+  switch (BundleType) {
+  case BundleTypes::ExtendedReduction: {
+    getOperand(1)->printAsOperand(O, SlotTracker);
+    O << " +";
+    O << " reduce." << Instruction::getOpcodeName(Opcode) << " (";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    Red->printFlags(O);
+
+    auto *Ext0 = cast<VPWidenCastRecipe>(BundledRecipes[0]);
+    O << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
+      << *Ext0->getResultType();
+    if (Red->isConditional()) {
+      O << ", ";
+      Red->getCondOp()->printAsOperand(O, SlotTracker);
+    }
+    O << ")";
+    break;
+  }
+  case BundleTypes::MulAccumulateReduction: {
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    O << " + ";
+    O << "reduce."
+      << Instruction::getOpcodeName(
+             RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
+      << " (";
+    O << "mul";
+    auto *Mul = cast<VPWidenRecipe>(
+        BundledRecipes.size() == 2 ? BundledRecipes[0] : BundledRecipes[2]);
+    Mul->printFlags(O);
+    bool IsExtended = BundledRecipes.size() > 2;
+    if (IsExtended)
+      O << "(";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    if (IsExtended) {
+      auto *Ext0 = cast<VPWidenCastRecipe>(
+          BundledRecipes.size() == 5 ? BundledRecipes[3] : BundledRecipes[0]);
+      O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
+        << *Ext0->getResultType() << "), (";
+    } else {
+      O << ", ";
+    }
+    getOperand(1)->printAsOperand(O, SlotTracker);
+    if (IsExtended) {
+      auto *Ext1 = cast<VPWidenCastRecipe>(
+          BundledRecipes.size() == 5 ? BundledRecipes[3] : BundledRecipes[1]);
+      O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
+        << *Ext1->getResultType() << ")";
+    }
+    if (Red->isConditional()) {
+      O << ", ";
+      Red->getCondOp()->printAsOperand(O, SlotTracker);
+    }
+    O << ")";
+    break;
+  }
+  }
+}
+
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "REDUCE ";
@@ -2513,58 +2670,6 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << ")";
 }
 
-void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                      VPSlotTracker &SlotTracker) const {
-  O << Indent << "EXTENDED-REDUCE ";
-  printAsOperand(O, SlotTracker);
-  O << " = ";
-  getChainOp()->printAsOperand(O, SlotTracker);
-  O << " +";
-  O << " reduce."
-    << Instruction::getOpcodeName(
-           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
-    << " (";
-  getVecOp()->printAsOperand(O, SlotTracker);
-  printFlags(O);
-  O << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType();
-  if (isConditional()) {
-    O << ", ";
-    getCondOp()->printAsOperand(O, SlotTracker);
-  }
-  O << ")";
-}
-
-void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "MULACC-REDUCE ";
-  printAsOperand(O, SlotTracker);
-  O << " = ";
-  getChainOp()->printAsOperand(O, SlotTracker);
-  O << " + ";
-  O << "reduce."
-    << Instruction::getOpcodeName(
-           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
-    << " (";
-  O << "mul";
-  printFlags(O);
-  if (isExtended())
-    O << "(";
-  getVecOp0()->printAsOperand(O, SlotTracker);
-  if (isExtended())
-    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
-      << "), (";
-  else
-    O << ", ";
-  getVecOp1()->printAsOperand(O, SlotTracker);
-  if (isExtended())
-    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
-      << ")";
-  if (isConditional()) {
-    O << ", ";
-    getCondOp()->printAsOperand(O, SlotTracker);
-  }
-  O << ")";
-}
 #endif
 
 /// A helper function to scalarize a single Instruction in the innermost loop.

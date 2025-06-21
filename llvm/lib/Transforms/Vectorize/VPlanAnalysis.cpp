@@ -267,6 +267,14 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
+          .Case<VPBundleRecipe>([this](const auto *R) {
+            unsigned RdxOpIdxOffset =
+                cast<VPReductionRecipe>(R->getResultRecipe())->isConditional()
+                    ? 2
+                    : 1;
+            return inferScalarType(
+                R->getOperand(R->getNumOperands() - RdxOpIdxOffset));
+          })
           .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
                 VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
                 VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe>(
@@ -296,8 +304,6 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPExtendedReductionRecipe, VPMulAccumulateReductionRecipe>(
-              [](const auto *R) { return R->getResultType(); })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
