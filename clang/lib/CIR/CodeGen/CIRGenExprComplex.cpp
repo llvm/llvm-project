@@ -41,6 +41,7 @@ public:
 
   mlir::Value VisitBinAssign(const BinaryOperator *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
+  mlir::Value VisitChooseExpr(ChooseExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(const InitListExpr *e);
@@ -138,6 +139,10 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
     return emitLoadOfLValue(e);
 
   return cgf.emitCallExpr(e).getValue();
+}
+
+mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
+  return Visit(e->getChosenSubExpr());
 }
 
 mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
