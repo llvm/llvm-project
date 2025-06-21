@@ -149,9 +149,7 @@ Changes in existing checks
 - Improved :doc: `bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check by adding
   `WarnOnSizeOfInLoopTermination` option to detect misuses of ``sizeof``
-  expression in loop conditions. The check detects the use of ``sizeof``
-  opertaor to determine the number of elements in the array, where the
-  array size is higher than the number of elements in the array.
+  expression in loop conditions.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
