@@ -3724,14 +3724,14 @@ static SDValue lowerBuildVectorViaVID(SDValue Op, SelectionDAG &DAG,
       SplatStepVal = Log2_64(std::abs(StepNumerator));
     }
 
-    // Only emit VIDs with suitably-small steps/addends. We use imm5 is a
-    // threshold since it's the immediate value many RVV instructions accept.
-    // There is no vmul.vi instruction so ensure multiply constant can fit in
-    // a single addi instruction.
+    // Only emit VIDs with suitably-small steps. We use imm5 as a threshold
+    // since it's the immediate value many RVV instructions accept. There is
+    // no vmul.vi instruction so ensure multiply constant can fit in a
+    // single addi instruction.  For the addend, we allow up to 32 bits..
     if (((StepOpcode == ISD::MUL && isInt<12>(SplatStepVal)) ||
          (StepOpcode == ISD::SHL && isUInt<5>(SplatStepVal))) &&
         isPowerOf2_32(StepDenominator) &&
-        (SplatStepVal >= 0 || StepDenominator == 1) && isInt<5>(Addend)) {
+        (SplatStepVal >= 0 || StepDenominator == 1) && isInt<32>(Addend)) {
       MVT VIDVT =
           VT.isFloatingPoint() ? VT.changeVectorElementTypeToInteger() : VT;
       MVT VIDContainerVT =

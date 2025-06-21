@@ -1112,6 +1112,12 @@ def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
   "Has point sample acceleration feature"
 >;
 
+def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
+  "HasWaitXcnt",
+  "true",
+  "Has s_wait_xcnt instruction"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1926,6 +1932,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
+   FeatureWaitXcnt,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
@@ -2589,6 +2596,9 @@ def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
 
 def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
   AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
+
+def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
+  AssemblerPredicate<(all_of FeatureWaitXcnt)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;
