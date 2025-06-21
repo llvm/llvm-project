@@ -524,14 +524,10 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 
-  std::unique_ptr<MCInstrAnalysis> MCIA(
-      TheTarget->createMCInstrAnalysis(MCII.get()));
-  assert(MCIA && "Unable to create instruction analysis!");
-
   std::unique_ptr<MCInstPrinter> IP;
   if (ValidateCFI) {
     assert(FileType == OFT_Null);
-    auto *CFIAMCS = new CFIAnalysisMCStreamer(Ctx, *MCII, std::move(MCIA));
+    auto *CFIAMCS = new FunctionUnitStreamer(Ctx, *MCII);
     TheTarget->createNullTargetStreamer(*CFIAMCS);
     Str.reset(CFIAMCS);
   } else if (FileType == OFT_AssemblyFile) {
