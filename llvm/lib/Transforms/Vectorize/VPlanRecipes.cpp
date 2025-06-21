@@ -418,7 +418,8 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
 }
 
 bool VPInstruction::doesGeneratePerAllLanes() const {
-  return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);
+  return (Opcode == VPInstruction::PtrAdd || Opcode == VPInstruction::Unpack) &&
+         !vputils::onlyFirstLaneUsed(this);
 }
 
 bool VPInstruction::canGenerateScalarForFirstLane() const {
@@ -438,6 +439,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::AnyOf:
+  case VPInstruction::Unpack:
     return true;
   default:
     return false;
@@ -448,10 +450,17 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
                                       const VPLane &Lane) {
   IRBuilderBase &Builder = State.Builder;
 
-  assert(getOpcode() == VPInstruction::PtrAdd &&
-         "only PtrAdd opcodes are supported for now");
-  return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
-                              State.get(getOperand(1), Lane), Name);
+  switch (getOpcode()) {
+  case VPInstruction::PtrAdd:
+    return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
+                                State.get(getOperand(1), Lane), Name);
+
+  case VPInstruction::Unpack: {
+    Value *LaneV = Lane.getAsRuntimeExpr(State.Builder, State.VF);
+    return Builder.CreateExtractElement(State.get(getOperand(0)), LaneV);
+  }
+  }
+  llvm_unreachable("all supported opcodes must be handled above");
 }
 
 /// Create a conditional branch using \p Cond branching to the successors of \p
@@ -775,6 +784,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
           State.packScalarIntoVectorizedValue(getOperand(0), WideValue, Lane);
     return WideValue;
   }
+  case VPInstruction::Unpack: {
+    assert(vputils::onlyFirstLaneUsed(this) &&
+           "can only generate first lane for PtrAdd");
+    return generatePerLane(State, VPLane(0));
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -934,6 +948,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::Pack:
+  case VPInstruction::Unpack:
     return false;
   default:
     return true;
@@ -1077,6 +1092,10 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::Pack:
     O << "pack-into-vector";
     break;
+  case VPInstruction::Unpack:
+    O << "unpack-into-scalars";
+    break;
+
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }

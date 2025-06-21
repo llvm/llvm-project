@@ -1927,6 +1927,27 @@ static void materializePack(VPlan &Plan) {
             cast<VPInstruction>(&R)->doesGeneratePerAllLanes()))
         continue;
       auto *Def = cast<VPSingleDefRecipe>(&R);
+      for (auto *Op : to_vector(Def->operands())) {
+        VPRecipeBase *OpDef = Op->getDefiningRecipe();
+        if (!OpDef || isa<VPReplicateRecipe>(OpDef) ||
+            vputils::isSingleScalar(Op) ||
+            (isa<VPInstruction>(OpDef) &&
+             cast<VPInstruction>(OpDef)->doesGeneratePerAllLanes()) ||
+            isa<VPScalarIVStepsRecipe>(OpDef))
+          continue;
+
+        auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Op});
+        if (OpDef->isPhi())
+          Unpack->insertBefore(*OpDef->getParent(),
+                               OpDef->getParent()->getFirstNonPhi());
+        else
+          Unpack->insertAfter(OpDef);
+        Op->replaceUsesWithIf(Unpack, [](VPUser &U, unsigned) {
+          auto *RepR = dyn_cast<VPReplicateRecipe>(&U);
+          return RepR && (!isa<StoreInst>(RepR->getUnderlyingInstr()) ||
+                          !vputils::isSingleScalar(RepR->getOperand(1)));
+        });
+      }
       if (all_of(Def->users(),
                  [Def](VPUser *U) { return U->usesScalars(Def); }))
         continue;

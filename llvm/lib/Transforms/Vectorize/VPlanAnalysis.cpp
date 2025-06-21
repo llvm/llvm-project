@@ -101,6 +101,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return Type::getIntNTy(Ctx, 32);
   case Instruction::PHI:
   case VPInstruction::Pack:
+  case VPInstruction::Unpack:
     // Infer the type of first operand only, as other operands of header phi's
     // may lead to infinite recursion.
     return inferScalarType(R->getOperand(0));
@@ -442,7 +443,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       break;
     for (VPRecipeBase &R : *VPBB) {
       if (isa<VPInstruction>(&R) &&
-          cast<VPInstruction>(&R)->getOpcode() == VPInstruction::Pack)
+          (cast<VPInstruction>(&R)->getOpcode() == VPInstruction::Pack ||
+           cast<VPInstruction>(&R)->getOpcode() == VPInstruction::Unpack))
         continue;
       Idx2Recipe.push_back(&R);
 

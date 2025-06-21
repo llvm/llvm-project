@@ -15,12 +15,14 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
-; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 4: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF 4: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
 ;
-; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 8: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF 8: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
@@ -66,17 +68,20 @@ exit:
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
 ;
-; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 2: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF 2: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
 ;
-; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 4: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF 4: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
 ;
-; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 8: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF 8: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
@@ -123,32 +128,38 @@ exit:
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
 ;
-; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 2: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF 2: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
 ;
-; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 4: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF 4: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
 ;
-; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 8: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF 8: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
 ;
-; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF vscale x 1: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF vscale x 1: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF vscale x 1: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF vscale x 1: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
 ;
-; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF vscale x 2: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF vscale x 2: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF vscale x 2: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF vscale x 2: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>
 ;
-; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF vscale x 4: EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-COST: Cost of 0 for VF vscale x 4: EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>

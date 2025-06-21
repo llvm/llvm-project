@@ -8,7 +8,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-COST-LABEL: arm_offset_q15
 ; CHECK-COST: LV: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Cost of 36 for VF 2: REPLICATE ir<%1> = call @llvm.sadd.sat.i16(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 36 for VF 2: REPLICATE ir<%1> = call @llvm.sadd.sat.i16(vp<{{.+}}>, ir<%offset>)
 ; CHECK-COST: Cost of 8 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
 ; CHECK-COST: Cost of 2 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
 

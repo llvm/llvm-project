@@ -462,8 +462,9 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     WIDEN ir<%v3> = add nuw ir<%iv>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[SCALARS:%.+]]> = unpack-into-scalars ir<%v3>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
-; CHECK-NEXT:     REPLICATE store ir<%v3>, ir<%gep>
+; CHECK-NEXT:     REPLICATE store vp<[[SCALARS]]>, ir<%gep>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
@@ -905,6 +906,7 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:    WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN-CAST ir<%zext> = zext nneg ir<%l>
+; CHECK-NEXT:    EMIT vp<[[SCALARS:%.+]]> = unpack-into-scalars ir<%zext>
 ; CHECK-NEXT:    REPLICATE store ir<%zext>, ir<%p1>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
