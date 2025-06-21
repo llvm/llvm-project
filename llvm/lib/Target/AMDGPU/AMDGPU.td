@@ -2244,9 +2244,29 @@ def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
+def isGFX12Not12_50 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+
+def isGFX12PlusNot12_50 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+
+def isGFX125xOnly :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def isGFX1250Plus :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def isNotGFX1250Plus :
+  Predicate<"!Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def HasMinimum3Maximum3F32 :
   Predicate<"Subtarget->hasMinimum3Maximum3F32()">,

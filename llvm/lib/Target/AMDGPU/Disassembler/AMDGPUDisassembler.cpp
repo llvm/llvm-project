@@ -717,6 +717,12 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         Address, CS))
         break;
 
+      // FIXME: Should use DecoderTableGFX1250_FAKE1632, but it is not generated
+      //        yet.
+      if (isGFX1250() &&
+          tryDecodeInst(DecoderTableGFX125032, MI, DW, Address, CS))
+        break;
+
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
                         Address, CS))
@@ -2021,6 +2027,8 @@ bool AMDGPUDisassembler::isGFX12() const {
 bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
 }
+
+bool AMDGPUDisassembler::isGFX1250() const { return AMDGPU::isGFX1250(STI); }
 
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
