@@ -136,3 +136,134 @@ module {
     }
   }
 }
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<()[s0, s1] -> (-s1 + (s0 ceildiv 16) * 16)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 16)>
+
+//     CHECK-LABEL: pad_lhs
+func.func @pad_lhs(
+  %arg0: tensor<24x?xf32>, %arg1: tensor<?x25xf32>, %arg2: tensor<24x25xf32>)
+     -> tensor<24x25xf32>
+{
+  //      CHECK: %[[D0_0:.*]] = tensor.dim
+  //      CHECK: %[[D0_1:.*]] = tensor.dim
+  //      CHECK: %[[H0:.*]] = affine.apply #[[$MAP0]]()[%[[D0_0]], %[[D0_1]]]
+  //      CHECK: tensor.pad %{{.*}} low[0, 0] high[0, %[[H0]]]
+  //      CHECK:   : tensor<24x?xf32> to tensor<24x?xf32>
+
+  //      CHECK: %[[D0_2:.*]] = tensor.dim
+  //      CHECK: %[[H1:.*]] = affine.apply #[[$MAP0]]()[%[[D0_0]], %[[D0_2]]]
+  //      CHECK: tensor.pad %{{.*}} low[0, 0] high[%[[H1]], 0]
+  //      CHECK:   : tensor<?x25xf32> to tensor<?x25xf32>
+  //      CHECK: scf.for %{{.*}} -> (tensor<24x25xf32>)
+
+  // TODO: Not yet simplified enough..
+  //      CHECK:    linalg.matmul ins(%{{.*}}, %{{.*}}: tensor<8x?xf32>, tensor<?x25xf32>) outs(%extracted_slice_5 : tensor<8x25xf32>) -> tensor<8x25xf32>
+  
+  //      CHECK:   tensor.insert_slice %{{.*}} into %{{.*}}[%{{.*}}, 0] [8, 25] [1, 1]
+  // CHECK-SAME:     : tensor<8x25xf32> into tensor<24x25xf32>
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<24x?xf32>, tensor<?x25xf32>) outs(%arg2 : tensor<24x25xf32>) -> tensor<24x25xf32>
+  func.return %0 : tensor<24x25xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+
+    // Pad then tile should produce static shapes.
+    %matmul_padded, %_ = transform.structured.pad_tiling_interface %matmul to padding_sizes [8, 16] pad_to_multiple_of {
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 2]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+    %m, %l0, %l1 = transform.structured.tile_using_for %matmul_padded tile_sizes [8, 0, 16] 
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 16)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (-d0 + 16)>
+
+//     CHECK-LABEL: pad_lhs
+func.func @pad_lhs(
+  %arg0: tensor<24x?xf32>, %arg1: tensor<?x25xf32>, %arg2: tensor<24x25xf32>)
+     -> tensor<24x25xf32>
+{
+  //      CHECK: scf.for %{{.*}} -> (tensor<24x25xf32>)
+  //      CHECK:   %[[MIN:.*]] = affine.min #[[$MAP0]](%{{.*}})
+  //      CHECK:   %[[H0:.*]] = affine.apply #[[$MAP1]](%[[MIN]])
+  //      CHECK:   tensor.pad %{{.*}} low[0, 0] high[0, %[[H0]]]
+  //      CHECK:     : tensor<8x?xf32> to tensor<8x16xf32>
+
+  //      CHECK:   %[[H1:.*]] = affine.apply #[[$MAP1]](%[[MIN]])
+  //      CHECK:   tensor.pad %{{.*}} low[0, 0] high[%[[H1]], 0]
+  //      CHECK:     : tensor<?x25xf32> to tensor<16x25xf32>
+
+  //      CHECK:   linalg.matmul ins(%{{.*}}, %{{.*}} : tensor<8x16xf32>, tensor<16x25xf32>) outs(%{{.*}} : tensor<8x25xf32>) -> tensor<8x25xf32>
+  
+  //      CHECK:   tensor.insert_slice %{{.*}} into %{{.*}}[%{{.*}}, 0] [8, 25] [1, 1]
+  // CHECK-SAME:     : tensor<8x25xf32> into tensor<24x25xf32>
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<24x?xf32>, tensor<?x25xf32>) outs(%arg2 : tensor<24x25xf32>) -> tensor<24x25xf32>
+  func.return %0 : tensor<24x25xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+
+    // Tile then pad should produce static shapes.
+    %m, %l0, %l1 = transform.structured.tile_using_for %matmul tile_sizes [8, 0, 16] 
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+    %matmul_padded, %_ = transform.structured.pad_tiling_interface %m to padding_sizes [8, 16] pad_to_multiple_of {
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 2]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (-d0 + 20, 8)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 16)>
+// CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (-d0 + 8)>
+// CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0) -> (-d0 + 16)>
+
+//     CHECK-LABEL: pad_lhs
+func.func @pad_lhs(
+  %arg0: tensor<20x?xf32>, %arg1: tensor<?x25xf32>, %arg2: tensor<20x25xf32>)
+     -> tensor<20x25xf32>
+{
+  //      CHECK:   linalg.matmul ins(%{{.*}}, %{{.*}} : tensor<8x16xf32>, tensor<16x25xf32>) outs(%{{.*}} : tensor<8x25xf32>) -> tensor<8x25xf32>
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<20x?xf32>, tensor<?x25xf32>) outs(%arg2 : tensor<20x25xf32>) -> tensor<20x25xf32>
+  func.return %0 : tensor<20x25xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+
+    // Tile then pad should produce static shapes.
+    %m, %l0, %l1 = transform.structured.tile_using_for %matmul tile_sizes [8, 0, 16] 
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+    %matmul_padded, %_ = transform.structured.pad_tiling_interface %m to padding_sizes [8, 16] pad_to_multiple_of {
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 2]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+    transform.yield
+  }
+}
+

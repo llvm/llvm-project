@@ -135,7 +135,7 @@ public:
 
     /// Construct a variable for a map and its operands.
     Variable(AffineMap map, ArrayRef<Variable> mapOperands);
-    Variable(AffineMap map, ArrayRef<Value> mapOperands);
+    Variable(AffineMap map, ValueRange mapOperands);
 
     MLIRContext *getContext() const { return map.getContext(); }
 

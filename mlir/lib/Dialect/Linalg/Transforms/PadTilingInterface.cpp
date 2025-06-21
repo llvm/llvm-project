@@ -84,7 +84,7 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
       getDimsToSize(rewriter, indexingSizes, options);
 
   // For each dimension in the operand's shape, iterate over indexingSizes and
-  // add
+  // add the various term contributions.
   for (const auto &enResults : enumerate(indexingMap.getResults())) {
     int64_t resultIndex = enResults.index();
     AffineMap partialIndexingMap = indexingMap.getSubMap(
@@ -122,7 +122,8 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
         AffineMap composedMap = projectedMap.compose(ceilMap);
         OpFoldResult paddingDimOfr = affine::makeComposedFoldedAffineApply(
             rewriter, loc, composedMap,
-            {indexingSizes[paddingDim], paddingSize});
+            {indexingSizes[paddingDim], paddingSize},
+            /*composeAffineMin=*/true);
         terms.push_back(paddingDimOfr);
       } else {
         // Otherwise just set to paddingSize.
