@@ -4492,11 +4492,8 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
                      .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
                      .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
                      .Default(Register());
-
-  if (Reg == AMDGPU::NoRegister) {
-    report_fatal_error(
-        Twine("invalid register name \"" + StringRef(RegName) + "\"."));
-  }
+  if (!Reg)
+    return Reg;
 
   if (!Subtarget->hasFlatScrRegister() &&
       Subtarget->getRegisterInfo()->regsOverlap(Reg, AMDGPU::FLAT_SCR)) {
