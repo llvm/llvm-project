@@ -114,6 +114,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool IsCommand = true;
   const char *Crt1;
+  const char *Crt2 = nullptr;
   const char *Entry = nullptr;
 
   // When -shared is specified, use the reactor exec model unless
@@ -143,13 +144,21 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     Crt1 = "crt1.o";
     if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
       Crt1 = "crt1-command.o";
+    // Link another object as well if it's provided. It's planned to
+    // be used to fix https://github.com/WebAssembly/wasi-libc/issues/485
+    if (ToolChain.GetFilePath("crt2-command.o") != "crt2-command.o") {
+      Crt2 = "crt2-command.o";
+    }
   } else {
     Crt1 = "crt1-reactor.o";
     Entry = "_initialize";
   }
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles))
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(Crt1)));
+    if (Crt2)
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(Crt2)));
+  }
   if (Entry) {
     CmdArgs.push_back(Args.MakeArgString("--entry"));
     CmdArgs.push_back(Args.MakeArgString(Entry));
