@@ -2,6 +2,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xandesperf -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
+; NDS.BFOZ
+
+; MSB >= LSB
+
 define i32 @bfoz_from_and_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_and_i32:
 ; CHECK:       # %bb.0:
@@ -59,6 +63,200 @@ define i64 @bfoz_from_lshr_and_i64(i64 %x) {
   %shifted = lshr i64 %masked, 24
   ret i64 %shifted
 }
+
+; MSB = 0
+
+define i32 @bfoz_from_and_shl_with_msb_zero_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_with_msb_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 15
+; CHECK-NEXT:    ret
+  %shifted = shl i32 %x, 15
+  %masked = and i32 %shifted, 32768
+  ret i32 %masked
+}
+
+define i64 @bfoz_from_and_shl_with_msb_zero_i64(i64 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_with_msb_zero_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 48
+; CHECK-NEXT:    ret
+  %shifted = shl i64 %x, 48
+  %masked = and i64 %shifted, 281474976710656
+  ret i64 %masked
+}
+
+define i32 @bfoz_from_lshr_shl_with_msb_zero_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_with_msb_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 18
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 31
+  %lshr = lshr i32 %shl, 13
+  ret i32 %lshr
+}
+
+define i64 @bfoz_from_lshr_shl_with_msb_zero_i64(i64 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_with_msb_zero_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 44
+; CHECK-NEXT:    ret
+  %shl = shl i64 %x, 63
+  %lshr = lshr i64 %shl, 19
+  ret i64 %lshr
+}
+
+; MSB < LSB
+
+define i32 @bfoz_from_and_shl_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 12, 23
+; CHECK-NEXT:    ret
+  %shifted = shl i32 %x, 12
+  %masked = and i32 %shifted, 16773120
+  ret i32 %masked
+}
+
+define i64 @bfoz_from_and_shl_i64(i64 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 24, 35
+; CHECK-NEXT:    ret
+  %shifted = shl i64 %x, 24
+  %masked = and i64 %shifted, 68702699520
+  ret i64 %masked
+}
+
+define i32 @bfoz_from_lshr_shl_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 19, 24
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 26
+  %lshr = lshr i32 %shl, 7
+  ret i32 %lshr
+}
+
+define i64 @bfoz_from_lshr_shl_i64(i64 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfoz a0, a0, 25, 48
+; CHECK-NEXT:    ret
+  %shl = shl i64 %x, 40
+  %lshr = lshr i64 %shl, 15
+  ret i64 %lshr
+}
+
+; NDS.BFOS
+
+; MSB >= LSB
+
+define i32 @bfos_from_ashr_shl_i32(i32 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 23, 16
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 8
+  %ashr = ashr i32 %shl, 24
+  ret i32 %ashr
+}
+
+define i64 @bfos_from_ashr_shl_i64(i64 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 55, 16
+; CHECK-NEXT:    ret
+  %shl = shl i64 %x, 8
+  %ashr = ashr i64 %shl, 24
+  ret i64 %ashr
+}
+
+define i32 @bfos_from_ashr_sexti8_i32(i8 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti8_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 7, 5
+; CHECK-NEXT:    ret
+  %sext = sext i8 %x to i32
+  %ashr = ashr i32 %sext, 5
+  ret i32 %ashr
+}
+
+define i64 @bfos_from_ashr_sexti8_i64(i8 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti8_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 7, 5
+; CHECK-NEXT:    ret
+  %sext = sext i8 %x to i64
+  %ashr = ashr i64 %sext, 5
+  ret i64 %ashr
+}
+
+define i32 @bfos_from_ashr_sexti16_i32(i16 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti16_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 15, 11
+; CHECK-NEXT:    ret
+  %sext = sext i16 %x to i32
+  %ashr = ashr i32 %sext, 11
+  ret i32 %ashr
+}
+
+define i64 @bfos_from_ashr_sexti16_i64(i16 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti16_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 15, 11
+; CHECK-NEXT:    ret
+  %sext = sext i16 %x to i64
+  %ashr = ashr i64 %sext, 11
+  ret i64 %ashr
+}
+
+; MSB = 0
+
+define i32 @bfos_from_ashr_shl_with_msb_zero_insert_i32(i32 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_with_msb_zero_insert_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 0, 14
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 31
+  %lshr = ashr i32 %shl, 17
+  ret i32 %lshr
+}
+
+define i64 @bfos_from_ashr_shl_with_msb_zero_insert_i64(i64 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_with_msb_zero_insert_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 0, 46
+; CHECK-NEXT:    ret
+  %shl = shl i64 %x, 63
+  %lshr = ashr i64 %shl, 17
+  ret i64 %lshr
+}
+
+; MSB < LSB
+
+define i32 @bfos_from_ashr_shl_insert_i32(i32 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_insert_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 18, 20
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 29
+  %lshr = ashr i32 %shl, 11
+  ret i32 %lshr
+}
+
+define i64 @bfos_from_ashr_shl_insert_i64(i64 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_insert_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nds.bfos a0, a0, 18, 52
+; CHECK-NEXT:    ret
+  %shl = shl i64 %x, 29
+  %lshr = ashr i64 %shl, 11
+  ret i64 %lshr
+}
+
+; sext
 
 define signext i32 @sexti1_i32(i32 signext %a) {
 ; CHECK-LABEL: sexti1_i32:

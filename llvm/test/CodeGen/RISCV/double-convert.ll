@@ -1937,7 +1937,7 @@ define zeroext i16 @fcvt_wu_s_sat_i16(double %a) nounwind {
 ; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call __gtdf2
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    blez a0, .LBB28_2
 ; RV64I-NEXT:  # %bb.1: # %start
 ; RV64I-NEXT:    mv a0, a1

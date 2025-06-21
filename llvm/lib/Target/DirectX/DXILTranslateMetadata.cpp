@@ -79,7 +79,8 @@ static NamedMDNode *emitResourceMetadata(Module &M, DXILResourceMap &DRM,
 
   for (ResourceInfo &RI : DRM)
     if (!RI.hasSymbol())
-      RI.createSymbol(M, DRTM[RI.getHandleTy()].createElementStruct());
+      RI.createSymbol(M,
+                      DRTM[RI.getHandleTy()].createElementStruct(RI.getName()));
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
   for (const ResourceInfo &RI : DRM.srvs())
@@ -409,6 +410,7 @@ public:
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<DXILResourceBindingWrapperPass>();
   }
 
   bool runOnModule(Module &M) override {

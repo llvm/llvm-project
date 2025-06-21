@@ -715,7 +715,7 @@ public:
   /// variables vector are acceptable.
   ///
   /// LastParamTransformed, if non-null, will be set to the index of the last
-  /// parameter on which transfromation was started. In the event of an error,
+  /// parameter on which transformation was started. In the event of an error,
   /// this will contain the parameter which failed to instantiate.
   ///
   /// Return true on error.
@@ -13121,12 +13121,6 @@ TreeTransform<Derived>::TransformOpaqueValueExpr(OpaqueValueExpr *E) {
   return E;
 }
 
-template<typename Derived>
-ExprResult
-TreeTransform<Derived>::TransformTypoExpr(TypoExpr *E) {
-  return E;
-}
-
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformRecoveryExpr(RecoveryExpr *E) {
   llvm::SmallVector<Expr *, 8> Children;
@@ -16228,7 +16222,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
   return getDerived().RebuildSizeOfPackExpr(
       E->getOperatorLoc(), E->getPack(), E->getPackLoc(), E->getRParenLoc(),
       /*Length=*/static_cast<unsigned>(Args.size()),
-      /*PartialArgs=*/std::nullopt);
+      /*PartialArgs=*/{});
 }
 
 template <typename Derived>

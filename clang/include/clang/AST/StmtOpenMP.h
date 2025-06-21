@@ -5787,10 +5787,13 @@ class OMPReverseDirective final : public OMPLoopTransformationDirective {
     TransformedStmtOffset,
   };
 
-  explicit OMPReverseDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+  explicit OMPReverseDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                               unsigned NumLoops)
       : OMPLoopTransformationDirective(OMPReverseDirectiveClass,
                                        llvm::omp::OMPD_reverse, StartLoc,
-                                       EndLoc, 1) {}
+                                       EndLoc, NumLoops) {
+    setNumGeneratedLoops(NumLoops);
+  }
 
   void setPreInits(Stmt *PreInits) {
     Data->getChildren()[PreInitsOffset] = PreInits;
@@ -5806,19 +5809,23 @@ public:
   /// \param C         Context of the AST.
   /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
   /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param NumLoops Number of affected loops
   /// \param AssociatedStmt  The outermost associated loop.
   /// \param TransformedStmt The loop nest after tiling, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits   Helper preinits statements for the loop nest.
-  static OMPReverseDirective *
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits);
+  static OMPReverseDirective *Create(const ASTContext &C,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     Stmt *AssociatedStmt, unsigned NumLoops,
+                                     Stmt *TransformedStmt, Stmt *PreInits);
 
   /// Build an empty '#pragma omp reverse' AST node for deserialization.
   ///
   /// \param C          Context of the AST.
-  /// \param NumClauses Number of clauses to allocate.
-  static OMPReverseDirective *CreateEmpty(const ASTContext &C);
+  /// \param NumLoops   Number of associated loops to allocate
+  static OMPReverseDirective *CreateEmpty(const ASTContext &C,
+                                          unsigned NumLoops);
 
   /// Gets/sets the associated loops after the transformation, i.e. after
   /// de-sugaring.
@@ -5857,7 +5864,7 @@ class OMPInterchangeDirective final : public OMPLoopTransformationDirective {
       : OMPLoopTransformationDirective(OMPInterchangeDirectiveClass,
                                        llvm::omp::OMPD_interchange, StartLoc,
                                        EndLoc, NumLoops) {
-    setNumGeneratedLoops(3 * NumLoops);
+    setNumGeneratedLoops(NumLoops);
   }
 
   void setPreInits(Stmt *PreInits) {

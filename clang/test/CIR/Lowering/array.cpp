@@ -2,33 +2,33 @@
 // RUN: FileCheck --input-file=%t-cir.ll %s
 
 int a[10];
-// CHECK: @a = dso_local global [10 x i32] zeroinitializer
+// CHECK: @a = global [10 x i32] zeroinitializer
 
 int aa[10][5];
-// CHECK: @aa = dso_local global [10 x [5 x i32]] zeroinitializer
+// CHECK: @aa = global [10 x [5 x i32]] zeroinitializer
 
 int c[10] = {};
-// CHECK: @c = dso_local global [10 x i32] zeroinitializer
+// CHECK: @c = global [10 x i32] zeroinitializer
 
 int d[3] = {1, 2, 3};
-// CHECK: @d = dso_local global [3 x i32] [i32 1, i32 2, i32 3]
+// CHECK: @d = global [3 x i32] [i32 1, i32 2, i32 3]
 
 int dd[3][2] = {{1, 2}, {3, 4}, {5, 6}};
-// CHECK: @dd = dso_local global [3 x [2 x i32]] [
+// CHECK: @dd = global [3 x [2 x i32]] [
 // CHECK: [2 x i32] [i32 1, i32 2], [2 x i32]
 // CHECK: [i32 3, i32 4], [2 x i32] [i32 5, i32 6]]
 
 int e[10] = {1, 2};
-// CHECK: @e = dso_local global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+// CHECK: @e = global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
 
 int f[5] = {1, 2};
-// CHECK: @f = dso_local global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
+// CHECK: @f = global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
 
 extern int b[10];
-// CHECK: @b = external dso_local global [10 x i32]
+// CHECK: @b = external global [10 x i32]
 
 extern int bb[10][5];
-// CHECK: @bb = external dso_local global [10 x [5 x i32]]
+// CHECK: @bb = external global [10 x [5 x i32]]
 
 // This function is only here to make sure the external globals are emitted.
 void reference_externs() {

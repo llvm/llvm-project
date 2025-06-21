@@ -118,7 +118,7 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
                                    LostDebugLocObserver &LocObserver) {
-  LLVM_DEBUG(dbgs() << "Legalizing: " << MI);
+  LLVM_DEBUG(dbgs() << "\nLegalizing: " << MI);
 
   MIRBuilder.setInstrAndDebugLoc(MI);
 
@@ -4071,6 +4071,21 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     // TODO: Handle vector extloads
     if (MemTy != DstTy)
       return UnableToLegalize;
+
+    Align Alignment = LoadMI.getAlign();
+    // Given an alignment larger than the size of the memory, we can increase
+    // the size of the load without needing to scalarize it.
+    if (Alignment.value() * 8 > MemSizeInBits &&
+        isPowerOf2_64(DstTy.getScalarSizeInBits())) {
+      LLT MoreTy = LLT::fixed_vector(NextPowerOf2(DstTy.getNumElements()),
+                                     DstTy.getElementType());
+      MachineMemOperand *NewMMO = MF.getMachineMemOperand(&MMO, 0, MoreTy);
+      auto NewLoad = MIRBuilder.buildLoad(MoreTy, PtrReg, *NewMMO);
+      MIRBuilder.buildDeleteTrailingVectorElements(LoadMI.getReg(0),
+                                                   NewLoad.getReg(0));
+      LoadMI.eraseFromParent();
+      return Legalized;
+    }
 
     // TODO: We can do better than scalarizing the vector and at least split it
     // in half.
@@ -8446,10 +8461,10 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
     }
   }
 
-  if (DstTy.isScalar())
-    MIRBuilder.buildCopy(DstReg, BuildVec[0]);
-  else
+  if (DstTy.isVector())
     MIRBuilder.buildBuildVector(DstReg, BuildVec);
+  else
+    MIRBuilder.buildCopy(DstReg, BuildVec[0]);
   MI.eraseFromParent();
   return Legalized;
 }

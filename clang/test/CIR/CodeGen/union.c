@@ -47,7 +47,7 @@ union U4 {
 union IncompleteU *p;
 
 // CIR:  cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteU>
-// LLVM: @p = dso_local global ptr null
+// LLVM: @p = global ptr null
 // OGCG: @p = global ptr null, align 8
 
 void f1(void) {

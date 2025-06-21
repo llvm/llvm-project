@@ -190,9 +190,7 @@ namespace clang {
     bool ArgsInvalid;
 
     /// Retrieves a pointer to the template arguments
-    ParsedTemplateArgument *getTemplateArgs() {
-      return getTrailingObjects<ParsedTemplateArgument>();
-    }
+    ParsedTemplateArgument *getTemplateArgs() { return getTrailingObjects(); }
 
     /// Creates a new TemplateIdAnnotation with NumArgs arguments and
     /// appends it to List.

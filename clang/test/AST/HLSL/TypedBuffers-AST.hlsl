@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
 // RUN:   -DRESOURCE=RWBuffer %s | FileCheck -DRESOURCE=RWBuffer -check-prefix=EMPTY %s
 //
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
 // RUN:   -DRESOURCE=Buffer %s | FileCheck -DRESOURCE=Buffer -check-prefix=EMPTY %s
 //
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -DRESOURCE=RWBuffer %s | FileCheck -DRESOURCE=RWBuffer \
 // RUN:   -check-prefixes=CHECK,CHECK-UAV %s
 //
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -DRESOURCE=Buffer %s | FileCheck -DRESOURCE=Buffer \
 // RUN:   -check-prefixes=CHECK,CHECK-SRV %s
 

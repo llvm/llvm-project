@@ -70,9 +70,6 @@ struct CompileUnitIdentifiers {
 LLVM_ABI Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
                      OnCuIndexOverflow OverflowOptValue);
 
-LLVM_ABI unsigned getContributionIndex(DWARFSectionKind Kind,
-                                       uint32_t IndexVersion);
-
 LLVM_ABI Error handleSection(
     const StringMap<std::pair<MCSection *, DWARFSectionKind>> &KnownSections,
     const MCSection *StrSection, const MCSection *StrOffsetSection,

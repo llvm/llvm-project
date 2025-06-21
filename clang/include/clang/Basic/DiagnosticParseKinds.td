@@ -1456,6 +1456,9 @@ def err_acc_unexpected_directive
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
 def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;
+def warn_acc_unsupported_extension_clause
+    : Warning<"unsupported OpenACC extension clause %0">,
+      InGroup<DiagGroup<"unknown-acc-extension-clause">>;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
 def err_acc_invalid_open_paren
     : Error<"expected clause-list or newline in OpenACC directive">;
@@ -1578,8 +1581,10 @@ def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
 def err_omp_unexpected_execution_modifier : Error<
   "unexpected 'execution' modifier in non-executable context">;
-def err_omp_unknown_adjust_args_op : Error<
-  "incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'">;
+def err_omp_unknown_adjust_args_op
+    : Error<
+          "incorrect 'adjust_args' type, expected 'need_device_ptr'%select{|, "
+          "'need_device_addr',}0 or 'nothing'">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
@@ -1856,7 +1861,11 @@ def err_hlsl_unexpected_end_of_params
     : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
-def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
+def err_hlsl_number_literal_overflow : Error<
+  "%select{integer|float}0 literal is too large to be represented as a "
+  "%select{32-bit %select{signed|}1 integer|float}0 type">;
+def err_hlsl_number_literal_underflow : Error<
+  "float literal has a magnitude that is too small to be represented as a float type">;
 def err_hlsl_rootsig_non_zero_flag : Error<"flag value is neither a literal 0 nor a named value">;
 
 } // end of Parser diagnostics

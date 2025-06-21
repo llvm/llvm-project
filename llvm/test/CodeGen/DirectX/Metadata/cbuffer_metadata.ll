@@ -66,9 +66,9 @@ define void @test() #0 {
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 
-; CHECK: @CB1 = external constant %cbuffer
-; CHECK: @CB2 = external constant %cbuffer.0
-; CHECK: @MyConstants = external constant %cbuffer.1
+; CHECK: @CB1 = external constant %CBuffer.CB1
+; CHECK: @CB2 = external constant %CBuffer.CB2
+; CHECK: @MyConstants = external constant %CBuffer.MyConstants
 
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
 

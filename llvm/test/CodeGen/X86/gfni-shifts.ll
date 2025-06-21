@@ -1261,7 +1261,7 @@ define <32 x i8> @constant_shl_v32i8(<32 x i8> %a) nounwind {
 ; GFNIAVX512VL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0]
 ; GFNIAVX512VL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
 ; GFNIAVX512VL-NEXT:    vpsllw $8, %ymm0, %ymm0
-; GFNIAVX512VL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 | (ymm1 & mem)
+; GFNIAVX512VL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 | (ymm1 & m32bcst)
 ; GFNIAVX512VL-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: constant_shl_v32i8:
@@ -2634,7 +2634,7 @@ define <64 x i8> @constant_shl_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX512VL-NEXT:    vpmaddubsw %ymm3, %ymm1, %ymm1
 ; GFNIAVX512VL-NEXT:    vpsllw $8, %ymm1, %ymm1
 ; GFNIAVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; GFNIAVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 | (zmm2 & mem)
+; GFNIAVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 | (zmm2 & m32bcst)
 ; GFNIAVX512VL-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: constant_shl_v64i8:
@@ -2642,7 +2642,7 @@ define <64 x i8> @constant_shl_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1 # [1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0]
 ; GFNIAVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
 ; GFNIAVX512BW-NEXT:    vpsllw $8, %zmm0, %zmm0
-; GFNIAVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 | (zmm1 & mem)
+; GFNIAVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 | (zmm1 & m32bcst)
 ; GFNIAVX512BW-NEXT:    retq
   %shift = shl <64 x i8> %a, <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>
   ret <64 x i8> %shift

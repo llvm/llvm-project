@@ -369,7 +369,11 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
     Alignment = InAlign;
 
   // If the GV has a specified alignment, take it into account.
-  const MaybeAlign GVAlign(GV->getAlign());
+  MaybeAlign GVAlign;
+  if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+    GVAlign = GVar->getAlign();
+  else if (auto *F = dyn_cast<Function>(GV))
+    GVAlign = F->getAlign();
   if (!GVAlign)
     return Alignment;
 
@@ -561,8 +565,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView &&
-        (TM.getTargetTriple().isOSWindows() || TM.getTargetTriple().isUEFI()))
+    // On Windows targets, emit minimal CodeView compiler info even when debug
+    // info is disabled.
+    if ((TM.getTargetTriple().isOSWindows() &&
+         M.getNamedMetadata("llvm.dbg.cu")) ||
+        (TM.getTargetTriple().isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -2322,7 +2329,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   }
 
   if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
-    llvm::report_fatal_error("IFuncs are not supported on this platform");
+    reportFatalUsageError("IFuncs are not supported on this platform");
 
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
   // implements the symbol resolution duties of the IFunc.
@@ -2376,6 +2383,15 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   if (!RS.needsSection())
     return;
 
+  MCSection *RemarksSection =
+      OutContext.getObjectFileInfo()->getRemarksSection();
+  if (!RemarksSection) {
+    OutContext.reportWarning(SMLoc(), "Current object file format does not "
+                                      "support remarks sections. Use the yaml "
+                                      "remark format instead.");
+    return;
+  }
+
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
   std::optional<SmallString<128>> Filename;
@@ -2393,10 +2409,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   MetaSerializer->emit();
 
   // Switch to the remarks section.
-  MCSection *RemarksSection =
-      OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->switchSection(RemarksSection);
-
   OutStreamer->emitBinaryData(Buf);
 }
 
@@ -4330,6 +4343,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
       OutStreamer->emitLabel(Sym);
   } else if (isVerbose() && MBB.isMachineBlockAddressTaken()) {
     OutStreamer->AddComment("Block address taken");
+  } else if (isVerbose() && MBB.isInlineAsmBrIndirectTarget()) {
+    OutStreamer->AddComment("Inline asm indirect target");
   }
 
   // Print some verbose block comments.

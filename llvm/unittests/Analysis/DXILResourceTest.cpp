@@ -367,10 +367,12 @@ TEST(DXILResource, AnnotationsAndMetadata) {
 
   // cbuffer cb0 { float4 g_X; float4 g_Y; }
   {
-    StructType *CBufType0 =
+    StructType *CBufStruct =
         StructType::create(Context, {Floatx4Ty, Floatx4Ty}, "cb0");
-    ResourceTypeInfo RTI(llvm::TargetExtType::get(Context, "dx.CBuffer",
-                                                  CBufType0, {/*Size=*/32}));
+    TargetExtType *CBufLayoutType =
+        llvm::TargetExtType::get(Context, "dx.Layout", CBufStruct, {32, 0, 16});
+    ResourceTypeInfo RTI(
+        llvm::TargetExtType::get(Context, "dx.CBuffer", CBufLayoutType));
     EXPECT_EQ(RTI.getResourceClass(), ResourceClass::CBuffer);
     EXPECT_EQ(RTI.getCBufferSize(DL), 32u);
     EXPECT_EQ(RTI.getResourceKind(), ResourceKind::CBuffer);

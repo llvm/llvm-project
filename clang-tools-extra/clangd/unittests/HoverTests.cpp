@@ -974,7 +974,7 @@ class Foo final {})cpp";
          HI.Name = "abc";
          HI.Kind = index::SymbolKind::Variable;
          HI.NamespaceScope = "";
-         HI.Definition = "int abc = <recovery - expr>()";
+         HI.Definition = "int abc";
          HI.Type = "int";
          HI.AccessSpecifier = "public";
        }},

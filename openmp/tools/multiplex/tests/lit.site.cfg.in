@@ -11,6 +11,10 @@ config.omp_library_dir = "@LIBOMP_LIBRARY_DIR@"
 config.omp_header_dir = "@LIBOMP_INCLUDE_DIR@"
 config.ompt_print_callback_dir = "@OMPT_PRINT_CALLBACKS_DIR@"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

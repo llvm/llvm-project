@@ -26,7 +26,6 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -612,8 +611,7 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:
-    DepFS =
-        new DependencyScanningWorkerFilesystem(Service.getSharedCache(), FS);
+    DepFS = new DependencyScanningWorkerFilesystem(Service, FS);
     BaseFS = DepFS;
     break;
   case ScanningMode::CanonicalPreprocessing:

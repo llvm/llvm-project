@@ -20,7 +20,7 @@ namespace test {
   }
 }
 
-// CHECK-DAG: cir.global internal @_ZN12_GLOBAL__N_12g1E = #cir.int<1> : !s32i
+// CHECK-DAG: cir.global "private" internal dsolocal @_ZN12_GLOBAL__N_12g1E = #cir.int<1> : !s32i
 // CHECK-DAG: cir.global external @_ZN4test2g2E = #cir.int<2> : !s32i
 // CHECK-DAG: cir.global external @_ZN4test5test22g3E = #cir.int<3> : !s32i
 // CHECK-DAG: cir.func @_ZN12_GLOBAL__N_12f1Ev()
@@ -50,3 +50,46 @@ int f4(void) {
 // CHECK:   %[[G3_ADDR:.*]] = cir.get_global @_ZN4test5test22g3E : !cir.ptr<!s32i>
 // CHECK:   %[[G3_VAL:.*]] = cir.load{{.*}} %[[G3_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CHECK:   %[[SUM2:.*]] = cir.binop(add, %[[SUM]], %[[G3_VAL]]) nsw : !s32i
+
+using test2::f3;
+using test2::g3;
+
+int f5() {
+  f3();
+  return g3;
+}
+
+// CHECK: cir.func @_Z2f5v()
+// CHECK:   cir.call @_ZN4test5test22f3Ev()
+// CHECK:   %[[G3_ADDR:.*]] = cir.get_global @_ZN4test5test22g3E : !cir.ptr<!s32i>
+// CHECK:   %[[G3_VAL:.*]] = cir.load{{.*}} %[[G3_ADDR]] : !cir.ptr<!s32i>, !s32i
+
+namespace test3 {
+  struct S {
+    int a;
+  } s;
+}
+
+using test3::s;
+
+int f6() {
+  return s.a;
+}
+
+// CHECK: cir.func @_Z2f6v()
+// CHECK:   cir.get_global @_ZN5test31sE : !cir.ptr<!rec_test33A3AS>
+// CHECK:   cir.get_member %{{.*}}[0] {name = "a"}
+
+int shadowedFunc() {
+  return 3;
+}
+
+namespace shadow {
+  using ::shadowedFunc;
+}
+
+void f7() {
+  shadow::shadowedFunc();
+}
+
+// CHECK: cir.func @_Z2f7v()

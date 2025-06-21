@@ -469,7 +469,6 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
         return;
       }
       const ir2vec::Vocab &Vocabulary = VocabRes.getVocabulary();
-      unsigned Dimension = VocabRes.getDimension();
 
    Note that ``IR2VecVocabAnalysis`` pass is immutable.
 
@@ -481,7 +480,7 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
       // Assuming F is an llvm::Function&
       // For example, using IR2VecKind::Symbolic:
       Expected<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
-          ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary, Dimension);
+          ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
 
       if (auto Err = EmbOrErr.takeError()) {
         // Handle error in embedder creation

@@ -5,13 +5,25 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// CIR: cir.global external @[[STR1_GLOBAL:.*]] = #cir.const_array<"1\00" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
-// CIR: cir.global external @[[STR2_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 1>
-// CIR: cir.global external @[[STR3_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 2>
+char g_str[] = "1234";
 
-// LLVM: @[[STR1_GLOBAL:.*]] = dso_local global [2 x i8] c"1\00"
-// LLVM: @[[STR2_GLOBAL:.*]] = dso_local global [1 x i8] zeroinitializer
-// LLVM: @[[STR3_GLOBAL:.*]] = dso_local global [2 x i8] zeroinitializer
+// CIR: cir.global external @g_str = #cir.const_array<"1234\00" : !cir.array<!s8i x 5>> : !cir.array<!s8i x 5>
+
+char g_oversized[100] = "123";
+
+// CIR: cir.global external @g_oversized = #cir.const_array<"123" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 100>
+
+char g_exact[4] = "123";
+
+// CIR: cir.global external @g_exact = #cir.const_array<"123\00" : !cir.array<!s8i x 4>> : !cir.array<!s8i x 4>
+
+// CIR: cir.global "private" cir_private dsolocal @[[STR1_GLOBAL:.*]] = #cir.const_array<"1\00" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
+// CIR: cir.global "private" cir_private dsolocal @[[STR2_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 1>
+// CIR: cir.global "private" cir_private dsolocal @[[STR3_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 2>
+
+// LLVM: @[[STR1_GLOBAL:.*]] = private global [2 x i8] c"1\00"
+// LLVM: @[[STR2_GLOBAL:.*]] = private global [1 x i8] zeroinitializer
+// LLVM: @[[STR3_GLOBAL:.*]] = private global [2 x i8] zeroinitializer
 
 // OGCG: @[[STR1_GLOBAL:.*]] = private unnamed_addr constant [2 x i8] c"1\00"
 // OGCG: @[[STR2_GLOBAL:.*]] = private unnamed_addr constant [1 x i8] zeroinitializer

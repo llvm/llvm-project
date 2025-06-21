@@ -15,10 +15,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
-#include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 

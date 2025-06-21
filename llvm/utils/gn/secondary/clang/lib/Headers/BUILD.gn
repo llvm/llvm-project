@@ -103,6 +103,7 @@ copy("Headers") {
     "__clang_hip_math.h",
     "__clang_hip_runtime_wrapper.h",
     "__clang_hip_stdlib.h",
+    "__clang_spirv_builtins.h",
     "__stdarg___gnuc_va_list.h",
     "__stdarg___va_copy.h",
     "__stdarg_header_macro.h",

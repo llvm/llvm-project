@@ -6,28 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains MemProf summary support and related interfaces.
+// This file contains MemProf summary support.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_PROFILEDATA_MEMPROFSUMMARY_H
 #define LLVM_PROFILEDATA_MEMPROFSUMMARY_H
 
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/MemProf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace memprof {
-
-/// Return the allocation type for a given set of memory profile values.
-AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
-                            uint64_t AllocCount, uint64_t TotalLifetime);
-
-/// Helper to generate a single hash id for a given callstack, used for emitting
-/// matching statistics and useful for uniquing such statistics across modules.
-/// Also used to dedup contexts when computing the summary.
-uint64_t computeFullStackId(ArrayRef<Frame> CallStack);
 
 class MemProfSummary {
 private:
@@ -57,11 +47,12 @@ public:
   uint64_t getMaxColdTotalSize() const { return MaxColdTotalSize; }
   uint64_t getMaxWarmTotalSize() const { return MaxWarmTotalSize; }
   uint64_t getMaxHotTotalSize() const { return MaxHotTotalSize; }
-  void printSummaryYaml(raw_ostream &OS) const;
+  LLVM_ABI void printSummaryYaml(raw_ostream &OS) const;
   /// Write to indexed MemProf profile.
-  void write(ProfOStream &OS) const;
+  LLVM_ABI void write(ProfOStream &OS) const;
   /// Read from indexed MemProf profile.
-  static std::unique_ptr<MemProfSummary> deserialize(const unsigned char *&);
+  LLVM_ABI static std::unique_ptr<MemProfSummary>
+  deserialize(const unsigned char *&);
 };
 
 } // namespace memprof

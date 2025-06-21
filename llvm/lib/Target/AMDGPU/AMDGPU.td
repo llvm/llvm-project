@@ -487,6 +487,12 @@ def FeatureGFX12Insts : SubtargetFeature<"gfx12-insts",
   "Additional instructions for GFX12+"
 >;
 
+def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
+  "GFX1250Insts",
+  "true",
+  "Additional instructions for GFX1250+"
+>;
+
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
   "GFX10_3Insts",
   "true",
@@ -1104,6 +1110,12 @@ def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
   "HasPointSampleAccel",
   "true",
   "Has point sample acceleration feature"
+>;
+
+def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
+  "HasWaitXcnt",
+  "true",
+  "Has s_wait_xcnt instruction"
 >;
 
 //===------------------------------------------------------------===//
@@ -1882,6 +1894,54 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureBVHDualAndBVH8Insts
    ]>;
 
+def FeatureISAVersion12_50 : FeatureSet<
+  [FeatureGFX12,
+   FeatureGFX1250Insts,
+   FeatureCuMode,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureFmacF64Inst,
+   FeaturePackedFP32Ops,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesHiLoRegisters,
+   FeatureArchitectedFlatScratch,
+   FeatureArchitectedSGPRs,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
+   FeatureFlatAtomicFaddF32Inst,
+   FeatureFP8ConversionInsts,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans,
+   FeatureHasRestrictedSOffset,
+   FeatureScalarDwordx3Loads,
+   FeatureDPPSrc1SGPR,
+   FeatureBitOp3Insts,
+   FeatureBF16ConversionInsts,
+   FeatureCvtPkF16F32Inst,
+   FeatureMinimum3Maximum3PKF16,
+   FeaturePrngInst,
+   FeaturePermlane16Swap,
+   FeatureAshrPkInsts,
+   FeatureSupportsSRAMECC,
+   FeatureMaxHardClauseLength63,
+   FeatureWaitXcnt,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureFlatBufferGlobalAtomicFaddF64Inst,
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureKernargPreload,
+   FeatureLshlAddU64Inst,
+]>;
+
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
     [FeatureRequiresCOV6])>;
@@ -2537,6 +2597,9 @@ def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
 
 def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
   AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
+
+def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
+  AssemblerPredicate<(all_of FeatureWaitXcnt)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;

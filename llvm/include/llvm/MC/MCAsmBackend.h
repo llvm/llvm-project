@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
 
@@ -39,7 +40,7 @@ class StringRef;
 class raw_ostream;
 
 /// Generic interface to target specific assembler backends.
-class MCAsmBackend {
+class LLVM_ABI MCAsmBackend {
 protected: // Can only create subclasses.
   MCAsmBackend(llvm::endianness Endian) : Endian(Endian) {}
 
@@ -198,8 +199,9 @@ public:
   virtual bool writeNopData(raw_ostream &OS, uint64_t Count,
                             const MCSubtargetInfo *STI) const = 0;
 
-  /// Give backend an opportunity to finish layout after relaxation
-  virtual void finishLayout(MCAssembler const &Asm) const {}
+  // Return true if fragment offsets have been adjusted and an extra layout
+  // iteration is needed.
+  virtual bool finishLayout(const MCAssembler &Asm) const { return false; }
 
   /// Generate the compact unwind encoding for the CFI instructions.
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
