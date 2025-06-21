@@ -32,22 +32,23 @@
 #endif
 
 #if defined(_WIN32)
- #if defined(_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS) || (defined(__MINGW32__) && !defined(_LIBCXXABI_BUILDING_LIBRARY))
-  #define _LIBCXXABI_HIDDEN
-  #define _LIBCXXABI_DATA_VIS
-  #define _LIBCXXABI_FUNC_VIS
-  #define _LIBCXXABI_TYPE_VIS
- #elif defined(_LIBCXXABI_BUILDING_LIBRARY)
-  #define _LIBCXXABI_HIDDEN
-  #define _LIBCXXABI_DATA_VIS __declspec(dllexport)
-  #define _LIBCXXABI_FUNC_VIS __declspec(dllexport)
-  #define _LIBCXXABI_TYPE_VIS __declspec(dllexport)
- #else
-  #define _LIBCXXABI_HIDDEN
-  #define _LIBCXXABI_DATA_VIS __declspec(dllimport)
-  #define _LIBCXXABI_FUNC_VIS __declspec(dllimport)
-  #define _LIBCXXABI_TYPE_VIS __declspec(dllimport)
- #endif
+#  if defined(_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS) ||                                                            \
+      (defined(__MINGW32__) && !defined(_LIBCXXABI_BUILDING_LIBRARY))
+#    define _LIBCXXABI_HIDDEN
+#    define _LIBCXXABI_DATA_VIS
+#    define _LIBCXXABI_FUNC_VIS
+#    define _LIBCXXABI_TYPE_VIS
+#  elif defined(_LIBCXXABI_BUILDING_LIBRARY)
+#    define _LIBCXXABI_HIDDEN
+#    define _LIBCXXABI_DATA_VIS __declspec(dllexport)
+#    define _LIBCXXABI_FUNC_VIS __declspec(dllexport)
+#    define _LIBCXXABI_TYPE_VIS __declspec(dllexport)
+#  else
+#    define _LIBCXXABI_HIDDEN
+#    define _LIBCXXABI_DATA_VIS __declspec(dllimport)
+#    define _LIBCXXABI_FUNC_VIS __declspec(dllimport)
+#    define _LIBCXXABI_TYPE_VIS __declspec(dllimport)
+#  endif
 #else
  #if !defined(_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
   #define _LIBCXXABI_HIDDEN __attribute__((__visibility__("hidden")))
@@ -108,5 +109,39 @@
 #else
 #  define _LIBCXXABI_NOEXCEPT noexcept
 #endif
+
+#if __has_include(<ptrauth.h>)
+#  include <ptrauth.h>
+#endif
+
+#if defined(__APPLE__) && __has_feature(ptrauth_qualifier)
+#  define _LIBCXXABI_PTRAUTH(__key, __address_discriminated, __discriminator)                                          \
+    __ptrauth(__key, __address_discriminated, ptrauth_string_discriminator(__discriminator))
+// This work around is required to support divergence in spelling
+// during the ptrauth upstreaming process.
+#  if __has_feature(ptrauth_restricted_intptr_qualifier)
+#    define _LIBCXXABI_PTRAUTH_RESTRICTED_INTPTR(__key, __address_discriminated, __discriminator)                      \
+      __ptrauth_restricted_intptr(__key, __address_discriminated, ptrauth_string_discriminator(__discriminator))
+#  else
+#    define _LIBCXXABI_PTRAUTH_RESTRICTED_INTPTR(__key, __address_discriminated, __discriminator)                      \
+      __ptrauth(__key, __address_discriminated, ptrauth_string_discriminator(__discriminator))
+#  endif
+#else
+#  define _LIBCXXABI_PTRAUTH(__key, __address_discriminated, __discriminator)
+#  define _LIBCXXABI_PTRAUTH_RESTRICTED_INTPTR(__key, __address_discriminated, __discriminator)
+#endif
+
+// Helper wrappers for pointer auth qualifiers because we use a lot of variants
+// Suffixes:
+//  * _RI : qualifier is __ptrauth_restricted_intptr
+//  * PDD : key is ptrauth_key_process_dependent_data
+//  * FN  : key is ptrauth_key_function_pointer
+#define _LIBCXXABI_PTRAUTH_PDD(__discriminator)                                                                        \
+  _LIBCXXABI_PTRAUTH(ptrauth_key_process_dependent_data, /*__address_discriminated=*/1, __discriminator)
+#define _LIBCXXABI_PTRAUTH_FN(__discriminator)                                                                         \
+  _LIBCXXABI_PTRAUTH(ptrauth_key_function_pointer, /*__address_discriminated=*/1, __discriminator)
+#define _LIBCXXABI_PTRAUTH_RI_PDD(__discriminator)                                                                     \
+  _LIBCXXABI_PTRAUTH_RESTRICTED_INTPTR(ptrauth_key_process_dependent_data, /*__address_discriminated=*/1,              \
+                                       __discriminator)
 
 #endif // ____CXXABI_CONFIG_H
