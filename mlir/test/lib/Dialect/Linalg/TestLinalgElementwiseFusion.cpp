@@ -151,9 +151,14 @@ struct TestLinalgElementwiseFusion
     MLIRContext *context = &this->getContext();
     func::FuncOp funcOp = this->getOperation();
 
+    auto controlFn = [](OpOperand *operand) {
+      auto owner = cast<linalg::LinalgOp>(operand->getOwner());
+      auto producer = cast<linalg::LinalgOp>(operand->get().getDefiningOp());
+      return (linalg::isElementwise(owner) && linalg::isElementwise(producer)) && (!isa<linalg::BroadcastOp>(producer) && !isa<linalg::BroadcastOp>(owner));
+    };
     if (fuseGenericOps) {
       RewritePatternSet fusionPatterns(context);
-      auto controlFn = [](OpOperand *operand) { return true; };
+      // auto controlFn = [](OpOperand *operand) { return true; };
       linalg::populateElementwiseOpsFusionPatterns(fusionPatterns, controlFn);
       if (failed(applyPatternsGreedily(funcOp.getBody(),
                                        std::move(fusionPatterns))))
