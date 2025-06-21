@@ -55,6 +55,7 @@ FunctionPass *createNVPTXTagInvariantLoadsPass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 MachineFunctionPass *createNVPTXForwardParamsPass();
+FunctionPass *createNVPTXIncreaseLocalAlignmentPass();
 
 void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
@@ -76,6 +77,7 @@ void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 void initializeNVPTXPeepholePass(PassRegistry &);
 void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
+void initializeNVPTXIncreaseLocalAlignmentLegacyPassPass(PassRegistry &);
 
 struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -108,6 +110,11 @@ public:
 };
 
 struct NVPTXTagInvariantLoadsPass : PassInfoMixin<NVPTXTagInvariantLoadsPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct NVPTXIncreaseLocalAlignmentPass
+    : PassInfoMixin<NVPTXIncreaseLocalAlignmentPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
