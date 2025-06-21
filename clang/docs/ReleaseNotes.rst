@@ -643,6 +643,8 @@ Improvements to Clang's diagnostics
   #GH36703, #GH32903, #GH23312, #GH69874.
 
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
