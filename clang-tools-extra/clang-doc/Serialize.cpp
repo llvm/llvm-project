@@ -401,6 +401,8 @@ std::string serialize(std::unique_ptr<Info> &I) {
     return serialize(*static_cast<FunctionInfo *>(I.get()));
   case InfoType::IT_concept:
     return serialize(*static_cast<ConceptInfo *>(I.get()));
+  case InfoType::IT_variable:
+    return serialize(*static_cast<VarInfo *>(I.get()));
   case InfoType::IT_typedef:
   case InfoType::IT_default:
     return "";
@@ -508,6 +510,10 @@ static void InsertChild(ScopeChildren &Scope, ConceptInfo Info) {
   Scope.Concepts.push_back(std::move(Info));
 }
 
+static void InsertChild(ScopeChildren &Scope, VarInfo Info) {
+  Scope.Variables.push_back(std::move(Info));
+}
+
 // Creates a parent of the correct type for the given child and inserts it into
 // that parent.
 //
@@ -549,6 +555,7 @@ static std::unique_ptr<Info> makeAndInsertIntoParent(ChildType Child) {
   case InfoType::IT_function:
   case InfoType::IT_typedef:
   case InfoType::IT_concept:
+  case InfoType::IT_variable:
     break;
   }
   llvm_unreachable("Invalid reference type for parent namespace");
@@ -1162,6 +1169,26 @@ emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
     return {};
 
   return {nullptr, makeAndInsertIntoParent<ConceptInfo &&>(std::move(Concept))};
+}
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly) {
+  VarInfo Var;
+  bool IsInAnonymousNamespace = false;
+  populateSymbolInfo(Var, D, FC, Loc, IsInAnonymousNamespace);
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  if (D->getStorageClass() == StorageClass::SC_Static)
+    Var.IsStatic = true;
+  Var.Type =
+      getTypeInfoForType(D->getType(), D->getASTContext().getPrintingPolicy());
+
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  return {nullptr, makeAndInsertIntoParent<VarInfo &&>(std::move(Var))};
 }
 
 } // namespace serialize

@@ -69,6 +69,7 @@ enum BlockId {
   BI_CONSTRAINT_BLOCK_ID,
   BI_TYPEDEF_BLOCK_ID,
   BI_CONCEPT_BLOCK_ID,
+  BI_VAR_BLOCK_ID,
   BI_LAST,
   BI_FIRST = BI_VERSION_BLOCK_ID
 };
@@ -142,6 +143,10 @@ enum RecordId {
   CONCEPT_IS_TYPE,
   CONCEPT_CONSTRAINT_EXPRESSION,
   CONSTRAINT_EXPRESSION,
+  VAR_USR,
+  VAR_NAME,
+  VAR_DEFLOCATION,
+  VAR_IS_STATIC,
   RI_LAST,
   RI_FIRST = VERSION
 };
@@ -190,6 +195,7 @@ public:
   void emitBlock(const ConceptInfo &T);
   void emitBlock(const ConstraintInfo &T);
   void emitBlock(const Reference &B, FieldId F);
+  void emitBlock(const VarInfo &B);
 
 private:
   class AbbreviationMap {
