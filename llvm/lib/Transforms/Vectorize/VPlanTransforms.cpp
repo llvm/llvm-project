@@ -1917,6 +1917,34 @@ static void removeBranchOnConst(VPlan &Plan) {
   }
 }
 
+static void materializePack(VPlan &Plan) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!(RepR && !RepR->isSingleScalar()) &&
+          !(isa<VPInstruction>(&R) &&
+            cast<VPInstruction>(&R)->doesGeneratePerAllLanes()))
+        continue;
+      auto *Def = cast<VPSingleDefRecipe>(&R);
+      if (all_of(Def->users(),
+                 [Def](VPUser *U) { return U->usesScalars(Def); }))
+        continue;
+
+      auto *Pack = new VPInstruction(VPInstruction::Pack, {Def});
+      Pack->insertAfter(Def);
+      Def->replaceUsesWithIf(Pack, [Pack, Def](VPUser &U, unsigned) {
+        return &U != Pack && !U.usesScalars(Def) &&
+               (!isa<VPInstruction>(&U) ||
+                (cast<VPInstruction>(&U)->getOpcode() !=
+                     VPInstruction::ExtractLastElement &&
+                 cast<VPInstruction>(&U)->getOpcode() !=
+                     VPInstruction::ExtractPenultimateElement));
+      });
+    }
+  }
+}
+
 void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantCanonicalIVs, Plan);
   runPass(removeRedundantInductionCasts, Plan);
@@ -1934,6 +1962,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(createAndOptimizeReplicateRegions, Plan);
   runPass(mergeBlocksIntoPredecessors, Plan);
   runPass(licm, Plan);
+  runPass(materializePack, Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace

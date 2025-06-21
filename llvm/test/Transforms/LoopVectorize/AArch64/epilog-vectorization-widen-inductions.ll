@@ -20,10 +20,10 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_START_1:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr> [[TMP4]], ptr [[NEXT_GEP1]], i32 1
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr> [[TMP4]], ptr [[NEXT_GEP1]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP2]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[NEXT_GEP3]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <2 x ptr> [[TMP5]], zeroinitializer

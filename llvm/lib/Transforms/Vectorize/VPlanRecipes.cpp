@@ -766,6 +766,15 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
                                                 true, Name);
   }
+  case VPInstruction::Pack: {
+    assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+    Value *WideValue = PoisonValue::get(
+        toVectorizedTy(State.TypeAnalysis.inferScalarType(this), State.VF));
+    for (unsigned Lane = 0; Lane < State.VF.getFixedValue(); ++Lane)
+      WideValue =
+          State.packScalarIntoVectorizedValue(getOperand(0), WideValue, Lane);
+    return WideValue;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -894,10 +903,11 @@ void VPInstruction::execute(VPTransformState &State) {
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  assert(
-      (GeneratedValue->getType()->isVectorTy() == !GeneratesPerFirstLaneOnly ||
-       State.VF.isScalar()) &&
-      "scalar value but not only first lane defined");
+  assert(((GeneratedValue->getType()->isVectorTy() ||
+           GeneratedValue->getType()->isStructTy()) ==
+              !GeneratesPerFirstLaneOnly ||
+          State.VF.isScalar()) &&
+         "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
 }
@@ -923,6 +933,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::WideIVStep:
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::Pack:
     return false;
   default:
     return true;
@@ -1062,6 +1073,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ReductionStartVector:
     O << "reduction-start-vector";
+    break;
+  case VPInstruction::Pack:
+    O << "pack-into-vector";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
