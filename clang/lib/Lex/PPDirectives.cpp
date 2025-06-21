@@ -183,9 +183,9 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
     AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
         AttributeCommonInfo::getCXX11AttrArgsInfo(II);
     if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
-      return PP.isNextPPTokenLParen();
+      return PP.isNextPPTokenOneOf<tok::l_paren>();
 
-    return !PP.isNextPPTokenLParen() ||
+    return !PP.isNextPPTokenOneOf<tok::l_paren>() ||
            AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
