@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -303,7 +304,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       //   1. indices, vector type and permutation map are the same (i.e., the
       //      transfer_read/transfer_write ops are matching),
       //   2. source operands for transfer.{read|write} do not originate from
-      //      Ops implementing ViewLikeOpInterface.
+      //      ops implementing ViewLikeOpInterface, except
+      //      memref::AssumeAlingmentOp.
       //   3. no other operations in the loop access the same memref except
       //      for transfer_read/transfer_write accessing statically disjoint
       //      slices.
@@ -313,11 +315,13 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
         return WalkResult::advance();
 
       auto *source = transferRead.getBase().getDefiningOp();
-      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
+      if (source && isa_and_nonnull<ViewLikeOpInterface>(source) &&
+          !isa<memref::AssumeAlignmentOp>(source))
         return WalkResult::advance();
 
       source = transferWrite.getBase().getDefiningOp();
-      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
+      if (source && isa_and_nonnull<ViewLikeOpInterface>(source) &&
+          !isa<memref::AssumeAlignmentOp>(source))
         return WalkResult::advance();
 
       // TODO: may want to memoize this information for performance but it
