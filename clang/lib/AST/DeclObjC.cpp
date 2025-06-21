@@ -1512,7 +1512,7 @@ ObjCTypeParamList::ObjCTypeParamList(SourceLocation lAngleLoc,
                                      ArrayRef<ObjCTypeParamDecl *> typeParams,
                                      SourceLocation rAngleLoc)
     : Brackets(lAngleLoc, rAngleLoc), NumParams(typeParams.size()) {
-  std::copy(typeParams.begin(), typeParams.end(), begin());
+  llvm::copy(typeParams, begin());
 }
 
 ObjCTypeParamList *ObjCTypeParamList::create(

@@ -387,7 +387,7 @@ public:
     assert(
         DK.size() == NumKinds &&
         "Number of directive kinds is not the same as the preallocated buffer");
-    std::copy(DK.begin(), DK.end(), getDirectiveKinds().begin());
+    llvm::copy(DK, getDirectiveKinds().begin());
   }
 
   SourceLocation getLParenLoc() { return LParenLoc; }
@@ -5917,7 +5917,7 @@ protected:
   void setUniqueDecls(ArrayRef<ValueDecl *> UDs) {
     assert(UDs.size() == NumUniqueDeclarations &&
            "Unexpected amount of unique declarations.");
-    std::copy(UDs.begin(), UDs.end(), getUniqueDeclsRef().begin());
+    llvm::copy(UDs, getUniqueDeclsRef().begin());
   }
 
   /// Get the number of lists per declaration that are in the trailing
@@ -5939,7 +5939,7 @@ protected:
   void setDeclNumLists(ArrayRef<unsigned> DNLs) {
     assert(DNLs.size() == NumUniqueDeclarations &&
            "Unexpected amount of list numbers.");
-    std::copy(DNLs.begin(), DNLs.end(), getDeclNumListsRef().begin());
+    llvm::copy(DNLs, getDeclNumListsRef().begin());
   }
 
   /// Get the cumulative component lists sizes that are in the trailing
@@ -5965,7 +5965,7 @@ protected:
   void setComponentListSizes(ArrayRef<unsigned> CLSs) {
     assert(CLSs.size() == NumComponentLists &&
            "Unexpected amount of component lists.");
-    std::copy(CLSs.begin(), CLSs.end(), getComponentListSizesRef().begin());
+    llvm::copy(CLSs, getComponentListSizesRef().begin());
   }
 
   /// Get the components that are in the trailing objects of the class.
@@ -5989,7 +5989,7 @@ protected:
            "Unexpected amount of component lists.");
     assert(CLSs.size() == NumComponentLists &&
            "Unexpected amount of list sizes.");
-    std::copy(Components.begin(), Components.end(), getComponentsRef().begin());
+    llvm::copy(Components, getComponentsRef().begin());
   }
 
   /// Fill the clause information from the list of declarations and
@@ -6063,7 +6063,7 @@ protected:
         ++CLSI;
 
         // Append components after the current components iterator.
-        CI = std::copy(C.begin(), C.end(), CI);
+        CI = llvm::copy(C, CI);
       }
     }
   }
@@ -6107,7 +6107,7 @@ protected:
            "Unexpected number of user-defined mappers.");
     assert(SupportsMapper &&
            "Must be a clause that is possible to have user-defined mappers");
-    std::copy(DMDs.begin(), DMDs.end(), getUDMapperRefs().begin());
+    llvm::copy(DMDs, getUDMapperRefs().begin());
   }
 
 public:
