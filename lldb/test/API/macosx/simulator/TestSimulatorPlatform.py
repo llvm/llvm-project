@@ -74,26 +74,46 @@ class TestSimulatorPlatformLaunching(TestBase):
         log = self.getBuildArtifact("packets.log")
         self.expect("log enable gdb-remote packets -f " + log)
         lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("hello.c")
+            self, "break here", lldb.SBFileSpec("hello.cpp")
         )
         triple_re = "-".join([arch, "apple", os + vers + ".*"] + env_list)
         self.expect("image list -b -t", patterns=[r"a\.out " + triple_re])
+        self.check_debugserver(log, os + env, vers)
+
         if expected_platform is not None:
             # Verify the platform name.
-            self.expect("platform status", patterns=[r"Platform: " + expected_platform])
+            self.expect(
+                "platform status",
+                patterns=[r"Platform: " + expected_platform + "-simulator"],
+            )
+
+            # Launch exe in simulator and verify that `platform process list` can find the process.
+            # This separate launch is needed because the command ignores processes which are being debugged.
+            device_udid = lldbutil.get_latest_apple_simulator(
+                expected_platform, self.trace
+            )
+            _, matched_strings = lldbutil.launch_exe_in_apple_simulator(
+                device_udid,
+                self.getBuildArtifact("a.out"),
+                exe_args=[],
+                stderr_lines_to_read=1,  # in hello.cpp, the pid is printed first
+                stderr_patterns=[r"PID: (.*)"],
+                log=self.trace,
+            )
+
+            # Make sure we found the PID.
+            self.assertIsNotNone(matched_strings[0])
+            pid = int(matched_strings[0])
+
             # Verify that processes on the platform can be listed.
-            #
-            # Note: The `Host::FindProcessesImpl()` of some of the Hosts filters out processes which are being debugged.
-            # (e.g. code for iOS simulator linked below). So we cannot verify that `a.out` is in the process list
-            # (because its already being debugged by this test).
-            # https://github.com/llvm/llvm-project/blob/b5dbf8210a57b986b9802304745f4c5c108cf37b/lldb/source/Host/macosx/objcxx/Host.mm#L724
             self.expect(
                 "platform process list",
                 patterns=[
-                    r"\d+ matching processes were found on \"%s\"" % expected_platform
+                    r"\d+ matching processes were found on \"%s-simulator\""
+                    % expected_platform,
+                    r"%d .+ a.out" % pid,
                 ],
             )
-        self.check_debugserver(log, os + env, vers)
 
     @skipIfAsan
     @skipUnlessDarwin
@@ -107,7 +127,7 @@ class TestSimulatorPlatformLaunching(TestBase):
             vers="",
             env="simulator",
             expected_load_command="LC_BUILD_VERSION",
-            expected_platform="ios-simulator",
+            expected_platform="ios",
         )
 
     @skipIfAsan
