@@ -141,3 +141,66 @@ func.func @elementwise_ops(%in1: tensor<8xf32>, %in2: tensor<8x10xf32>) -> tenso
 //  CHECK-NEXT:     %[[SQRT:.*]] = math.sqrt %[[ADD]]
 //  CHECK-NEXT:     linalg.yield %[[SQRT]] 
 //   CHECK-NOT:   linalg.map
+
+// -----
+
+func.func @map_multi_ops(%arg0: tensor<8xf32>, %arg1: tensor<8xf32>, %arg2: tensor<8xf32>) -> tensor<8xf32> {
+    %fill = tensor.empty() : tensor<8xf32>
+    %add_exp = linalg.map ins(%arg0, %arg1: tensor<8xf32>, tensor<8xf32>) outs(%fill: tensor<8xf32>)
+    (%in0 : f32, %in1 : f32) {
+      %add = arith.addf %in0, %in1 : f32
+      %exp = math.exp %add : f32
+      linalg.yield %exp : f32
+  }
+    %sqrt_mul = linalg.map ins(%add_exp, %arg2 : tensor<8xf32>, tensor<8xf32>) outs(%fill : tensor<8xf32>)
+    (%in0 : f32, %in1 : f32) {
+      %sqrt = math.sqrt %in0 : f32
+      %mul = arith.mulf %sqrt, %in1 : f32
+      linalg.yield %mul : f32
+  }
+    return %sqrt_mul : tensor<8xf32>
+}
+
+// CHECK-LABEL: func @map_multi_ops
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: tensor<8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<8xf32>
+//  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9]+]]: tensor<8xf32>
+//       CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<8xf32>
+//       CHECK:   %[[FUSED_OP:.+]] = linalg.generic
+//  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]], %[[ARG2]] : {{.*}}) outs(%[[EMPTY]] :
+//  CHECK-NEXT:   ^bb0(%[[IN0:.*]]: f32, %[[IN1:.*]]: f32, %[[IN2:.*]]: f32, %[[OUT:.*]]: f32):
+//  CHECK-NEXT:     %[[ADD:.*]] = arith.addf %[[IN0]], %[[IN1]]
+//  CHECK-NEXT:     %[[EXP:.*]] = math.exp %[[ADD]]
+//  CHECK-NEXT:     %[[SQRT:.*]] = math.sqrt %[[EXP]]
+//  CHECK-NEXT:     %[[MUL:.*]] = arith.mulf %[[SQRT]], %[[IN2]]
+//  CHECK-NEXT:     linalg.yield %[[MUL]] 
+//   CHECK-NOT:   linalg.map
+
+// -----
+
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#bcast = affine_map<(d0, d1) -> (d0)>
+func.func @map_genric_ops(%arg0: tensor<8xf32>, %arg1: tensor<8x10xf32>) -> tensor<8x10xf32> {
+    %fill = tensor.empty() : tensor<8x10xf32>
+    %add = linalg.generic
+      {indexing_maps = [#bcast, #identity, #identity], iterator_types = ["parallel", "parallel"]}
+      ins(%arg0, %arg1: tensor<8xf32>, tensor<8x10xf32>) outs(%fill: tensor<8x10xf32>) {
+  ^bb0(%in0: f32, %in1: f32, %out: f32):
+    %add = arith.addf %in0, %in1 : f32
+    linalg.yield %add : f32 
+  } -> tensor<8x10xf32>
+    %sqrt = linalg.map { math.sqrt } ins(%add : tensor<8x10xf32>) outs(%fill : tensor<8x10xf32>)
+    return %sqrt : tensor<8x10xf32>
+}
+
+// CHECK-LABEL: func @map_genric_ops
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: tensor<8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<8x10xf32>
+//       CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<8x10xf32>
+//       CHECK:   %[[FUSED_OP:.+]] = linalg.generic
+//  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] : {{.*}}) outs(%[[EMPTY]] :
+//  CHECK-NEXT:   ^bb0(%[[IN0:.*]]: f32, %[[IN1:.*]]: f32, %[[OUT:.*]]: f32):
+//  CHECK-NEXT:     %[[ADD:.*]] = arith.addf %[[IN0]], %[[IN1]]
+//  CHECK-NEXT:     %[[SQRT:.*]] = math.sqrt %[[ADD]]
+//  CHECK-NEXT:     linalg.yield %[[SQRT]] 
+//   CHECK-NOT:   linalg.map
