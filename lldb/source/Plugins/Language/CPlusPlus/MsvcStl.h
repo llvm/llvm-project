@@ -37,6 +37,10 @@ bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlSmartPointerSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
 
+bool IsMsvcStlVector(ValueObject &valobj);
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlVectorSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
