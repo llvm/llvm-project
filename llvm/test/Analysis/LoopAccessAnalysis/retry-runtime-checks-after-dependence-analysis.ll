@@ -320,28 +320,34 @@ exit:
 define void @retry_after_dep_check_with_unknown_offset(ptr %A, i32 %offset) {
 ; CHECK-LABEL: 'retry_after_dep_check_with_unknown_offset'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l.A = load float, ptr %A, align 4 ->
-; CHECK-NEXT:            store float 0.000000e+00, ptr %A.100.iv.offset.3, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l.A = load float, ptr %A, align 4 ->
-; CHECK-NEXT:            store float %l.A, ptr %A.100.iv, align 8
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %A.100.iv = getelementptr { float, float }, ptr %A.100, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %A.100.iv.offset.3 = getelementptr i8, ptr %A.100, i64 %iv.offset.3
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %A.100.iv = getelementptr { float, float }, ptr %A.100, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:        ptr %A
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %A.100.iv.offset.3 = getelementptr i8, ptr %A.100, i64 %iv.offset.3
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %A High: (4 + %A))
-; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:          (Low: (100 + %A) High: (96 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A))
+; CHECK-NEXT:            Member: {(100 + %A),+,8}<%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (100 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A) High: (96 + (16 * (zext i32 %offset to i64))<nuw><nsw> + %A))
 ; CHECK-NEXT:            Member: {(100 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A),+,8}<%loop>
 ; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: (100 + %A) High: (96 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A))
-; CHECK-NEXT:            Member: {(100 + %A),+,8}<%loop>
+; CHECK-NEXT:          (Low: %A High: (4 + %A))
+; CHECK-NEXT:            Member: %A
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
