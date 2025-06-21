@@ -30,15 +30,15 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "Template": {
-// CHECK-NOT:         "Constraints": [
-// CHECK-NOT:           {
-// CHECK-NOT:             "Expression": "Incrementable<T>",
-// CHECK-NOT:             "Name": "Incrementable",
-// CHECK-NOT:             "Path": "",
-// CHECK-NOT:             "QualName": "Incrementable",
-// CHECK-NOT:             "USR": "{{[0-9A-F]*}}"
-// CHECK-NOT:           }
-// CHECK-NOT:         ],
+// CHECK-NEXT:        "Constraints": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "Expression": "Incrementable<T>",
+// CHECK-NEXT:            "Name": "Incrementable",
+// CHECK-NEXT:            "Path": "",
+// CHECK-NEXT:            "QualName": "Incrementable",
+// CHECK-NEXT:            "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ],
 // CHECK-NEXT:        "Parameters": [
 // CHECK-NEXT:          "typename T"
 // CHECK-NEXT:        ]
@@ -62,15 +62,15 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "Template": {
-// CHECK-NOT:         "Constraints": [
-// CHECK-NOT:           {
-// CHECK-NOT:             "Expression": "Incrementable<T>",
-// CHECK-NOT:             "Name": "Incrementable",
-// CHECK-NOT:             "Path": "",
-// CHECK-NOT:             "QualName": "Incrementable",
-// CHECK-NOT:             "USR": "{{[0-9A-F]*}}"
-// CHECK-NOT:           }
-// CHECK-NOT:         ],
+// CHECK-NEXT:        "Constraints": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "Expression": "Incrementable<T>",
+// CHECK-NEXT:            "Name": "Incrementable",
+// CHECK-NEXT:            "Path": "",
+// CHECK-NEXT:            "QualName": "Incrementable",
+// CHECK-NEXT:            "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ],
 // CHECK-NEXT:        "Parameters": [
 // CHECK-NEXT:          "Incrementable T"
 // CHECK-NEXT:        ]

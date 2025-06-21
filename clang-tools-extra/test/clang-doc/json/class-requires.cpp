@@ -18,15 +18,15 @@ struct MyClass;
 // CHECK-NEXT:  "Path": "GlobalNamespace",
 // CHECK-NEXT:  "TagType": "struct",
 // CHECK-NEXT:  "Template": {
-// CHECK-NOT:     "Constraints": [
-// CHECK-NOT:       {
-// CHECK-NOT:         "Expression": "Addable<T>",
-// CHECK-NOT:         "Name": "Addable",
-// CHECK-NOT:         "Path": "",
-// CHECK-NOT:         "QualName": "Addable",
-// CHECK-NOT:         "USR": "{{[0-9A-F]*}}"
-// CHECK-NOT:       }
-// CHECK-NOT:     ],
+// CHECK-NEXT:    "Constraints": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "Expression": "Addable<T>",
+// CHECK-NEXT:        "Name": "Addable",
+// CHECK-NEXT:        "Path": "",
+// CHECK-NEXT:        "QualName": "Addable",
+// CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
 // CHECK-NEXT:    "Parameters": [
 // CHECK-NEXT:      "typename T"
 // CHECK-NEXT:    ]
