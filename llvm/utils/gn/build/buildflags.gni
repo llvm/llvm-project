@@ -11,6 +11,9 @@ declare_args() {
   # Whether to build with asan.
   use_asan = false
 
+  # Whether to build with hwasan.
+  use_hwasan = false
+
   # Whether to enable assertions.
   llvm_enable_assertions = true
 
