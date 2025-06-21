@@ -798,7 +798,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
     This operation decomposes all the scalar elements from a vector. The
     decomposed scalar elements are returned in row-major order. The number of
     scalar results must match the number of elements in the input vector type.
-    All the result elements have the same result type, which must match the
+    All the result elements have the same type, which must match the
     element type of the input vector. Scalable vectors are not supported.
 
     Examples:
@@ -813,7 +813,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
     // %0#0 = %v1[0]
     // %0#1 = %v1[1]
 
-    // Decompose a 2-D.
+    // Decompose a 2-D vector.
     %0:6 = vector.to_elements %v2 : vector<2x3xf32>
     // %0#0 = %v2[0, 0]
     // %0#1 = %v2[0, 1]
@@ -835,6 +835,13 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
 
   let arguments = (ins AnyVectorOfAnyRank:$source);
   let results = (outs Variadic<AnyType>:$elements);
+
+
+  let builders = [
+    // Build method that infers the result types from `elements`.
+    OpBuilder<(ins "Value":$elements)>,
+  ];
+
   let assemblyFormat = "$source attr-dict `:` type($source)";
   let hasFolder = 1;
 }
