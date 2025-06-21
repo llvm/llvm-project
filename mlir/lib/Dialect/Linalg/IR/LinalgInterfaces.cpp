@@ -77,7 +77,37 @@ bool linalg::isaCopyOpInterface(LinalgOp op) {
 //===----------------------------------------------------------------------===//
 // FillOpInterface implementation
 //===----------------------------------------------------------------------===//
-std::optional<Value> linalg::isaFillOpInterface(GenericOp op) {
+/// Detects if a linalg.generic operation represents a fill with an inlined
+/// constant. If so, returns the constant value. Otherwise, returns
+/// std::nullopt.
+static std::optional<Value> isaInlinedFillOp(GenericOp op) {
+  if (!op.isAllParallelLoops() || op.getNumDpsInits() != 1 ||
+      op.getNumDpsInputs() != 0)
+    return std::nullopt;
+
+  // Init should not be referenced.
+  if (op.payloadUsesValueFromOperand(op.getDpsInitOperand(0)))
+    return std::nullopt;
+
+  Block *body = op.getBody();
+  if (body->getOperations().size() != 1)
+    return std::nullopt;
+
+  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
+  if (!yieldOp || yieldOp.getNumOperands() != 1)
+    return std::nullopt;
+
+  Value yieldOperand = yieldOp->getOperand(0);
+  if (!yieldOperand.getDefiningOp<arith::ConstantOp>() &&
+      !yieldOperand.getDefiningOp<complex::ConstantOp>())
+    return std::nullopt;
+
+  return yieldOperand;
+}
+
+/// Detects if a linalg.generic operation represents an external scalar input.
+/// If so, returns the constant value. Otherwise, returns std::nullopt.
+static std::optional<Value> isaExternalFillOp(GenericOp op) {
   // Structural.
   if (!op.isAllParallelLoops() || !op.isSingleInputOutput() ||
       !op.isSingleYieldOp())
@@ -92,6 +122,12 @@ std::optional<Value> linalg::isaFillOpInterface(GenericOp op) {
   if (!op.isScalar(value))
     return std::nullopt;
   return value->get();
+}
+
+std::optional<Value> linalg::isaFillOpInterface(GenericOp op) {
+  if (auto fillVal = isaInlinedFillOp(op))
+    return fillVal;
+  return isaExternalFillOp(op);
 }
 
 //===----------------------------------------------------------------------===//
