@@ -1,4 +1,12 @@
-// RUN: %check_clang_tidy %s modernize-use-emplace %t -- \
+// RUN: %check_clang_tidy %s -std=c++11 modernize-use-emplace %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:             {modernize-use-emplace.ContainersWithPushBack: \
+// RUN:                '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector', \
+// RUN:              modernize-use-emplace.TupleTypes: \
+// RUN:                '::std::pair; std::tuple; ::test::Single', \
+// RUN:              modernize-use-emplace.TupleMakeFunctions: \
+// RUN:                '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}}"
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-emplace -check-suffixes=,CPP20 %t  -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {modernize-use-emplace.ContainersWithPushBack: \
 // RUN:                '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector', \
@@ -1237,10 +1245,6 @@ void testBracedInitTemporaries() {
 
   // These should not be noticed or fixed; after the correction, the code won't
   // compile.
-  v1.push_back(NonTrivialNoCtor{""});
-  v1.push_back({""});
-  v1.push_back(NonTrivialNoCtor{InnerType{""}});
-  v1.push_back({InnerType{""}});
   v1.emplace_back(NonTrivialNoCtor{""});
 
   std::vector<NonTrivialWithVector> v2;
@@ -1288,8 +1292,6 @@ void testBracedInitTemporaries() {
   // compile.
   v2.push_back(NonTrivialWithVector{{0}});
   v2.push_back({{0}});
-  v2.push_back(NonTrivialWithVector{std::vector<int>{0}});
-  v2.push_back({std::vector<int>{0}});
   v2.emplace_back(NonTrivialWithVector{std::vector<int>{0}});
 
   std::vector<NonTrivialWithCtor> v3;
@@ -1433,4 +1435,34 @@ void testWithPointerTypes() {
   sp->emplace(Something{});
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: unnecessary temporary object created while calling emplace
   // CHECK-FIXES: sp->emplace();
+}
+
+namespace GH1225740 {
+
+void CXX20testBracedInitTemporaries(){
+
+  std::vector<NonTrivialNoCtor> v1;
+
+  v1.push_back(NonTrivialNoCtor{""});
+  // CHECK-MESSAGES-CPP20: :[[@LINE-1]]:6: warning: use emplace_back instead of push_back
+  // CHECK-FIXES-CPP20: v1.emplace_back("");
+  v1.push_back({""});
+  // CHECK-MESSAGES-CPP20: :[[@LINE-1]]:6: warning: use emplace_back instead of push_back
+  // CHECK-FIXES-CPP20: v1.emplace_back("");
+  v1.push_back(NonTrivialNoCtor{InnerType{""}});
+  // CHECK-MESSAGES-CPP20: :[[@LINE-1]]:6: warning: use emplace_back instead of push_back
+  // CHECK-FIXES-CPP20: v1.emplace_back(InnerType{""});
+  v1.push_back({InnerType{""}});
+  // CHECK-MESSAGES-CPP20: :[[@LINE-1]]:6: warning: use emplace_back instead of push_back
+  // CHECK-FIXES-CPP20: v1.emplace_back(InnerType{""});
+
+  std::vector<NonTrivialWithVector> v2;
+
+  v2.push_back(NonTrivialWithVector{std::vector<int>{0}});
+  // CHECK-MESSAGES-CPP20: :[[@LINE-1]]:6: warning: use emplace_back instead of push_back
+  // CHECK-FIXES-CPP20: v2.emplace_back(std::vector<int>{0});
+  v2.push_back({std::vector<int>{0}});
+  // CHECK-MESSAGES-CPP20: :[[@LINE-1]]:6: warning: use emplace_back instead of push_back
+  // CHECK-FIXES-CPP20: v2.emplace_back(std::vector<int>{0});
+  }
 }
