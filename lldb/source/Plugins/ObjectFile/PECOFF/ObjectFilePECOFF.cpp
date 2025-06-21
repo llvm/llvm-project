@@ -1036,11 +1036,22 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     m_sections_up->AddSection(header_sp);
     unified_section_list.AddSection(header_sp);
 
+    std::vector<llvm::StringRef> truncated_dwarf_sections;
     const uint32_t nsects = m_sect_headers.size();
     for (uint32_t idx = 0; idx < nsects; ++idx) {
       llvm::StringRef sect_name = GetSectionName(m_sect_headers[idx]);
       ConstString const_sect_name(sect_name);
       SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
+
+      // Detect unknown sections matching ".debug_*"
+      // In PECOFF files, the section name in the section header can only
+      // contain 8 bytes. If a section name doesn't fit there, it can be
+      // extended in the string table. Since, officially, executable images
+      // don't have a string table, the default link.exe truncates section names
+      // to fit in the section header.
+      if (section_type == eSectionTypeOther && sect_name.size() == 8 &&
+          sect_name.starts_with(".debug_"))
+        truncated_dwarf_sections.emplace_back(sect_name);
 
       SectionSP section_sp(new Section(
           module_sp,       // Module to which this section belongs
@@ -1071,6 +1082,16 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
       m_sections_up->AddSection(section_sp);
       unified_section_list.AddSection(section_sp);
     }
+
+    if (!truncated_dwarf_sections.empty())
+      module_sp->ReportWarning(
+          "contains {} DWARF sections with truncated names ({}).\nWindows "
+          "executable (PECOFF) images produced by the default link.exe don't "
+          "include the required section names. A third party linker like "
+          "lld-link is required (compile with -fuse-ld=lld-link when using "
+          "Clang).",
+          truncated_dwarf_sections.size(),
+          llvm::join(truncated_dwarf_sections, ", "));
   }
 }
 
