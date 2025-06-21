@@ -10,9 +10,8 @@
 #include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
-#include <mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h>
-#include <mlir/Analysis/DataFlow/DeadCodeAnalysis.h>
 #include <mlir/Analysis/DataFlow/SparseAnalysis.h>
+#include <mlir/Analysis/DataFlow/Utils.h>
 #include <mlir/Analysis/DataFlowFramework.h>
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/Value.h>
@@ -249,8 +248,7 @@ void LivenessAnalysis::setToExitState(Liveness *lattice) {
 RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
   SymbolTableCollection symbolTable;
 
-  solver.load<DeadCodeAnalysis>();
-  solver.load<SparseConstantPropagation>();
+  loadBaselineAnalyses(solver);
   solver.load<LivenessAnalysis>(symbolTable);
   (void)solver.initializeAndRun(op);
 }

@@ -1927,16 +1927,11 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
       }
     }
 
-    // Remove debug info intrinsics if we're not keeping inline info.
+    // Remove debug info records if we're not keeping inline info.
     if (NoInlineLineTables) {
       BasicBlock::iterator BI = FI->begin();
       while (BI != FI->end()) {
-        if (isa<DbgInfoIntrinsic>(BI)) {
-          BI = BI->eraseFromParent();
-          continue;
-        } else {
-          BI->dropDbgRecords();
-        }
+        BI->dropDbgRecords();
         ++BI;
       }
     }

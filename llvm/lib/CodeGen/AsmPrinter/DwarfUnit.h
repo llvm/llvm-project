@@ -273,7 +273,11 @@ public:
   void constructContainingTypeDIEs();
 
   /// Construct function argument DIEs.
-  void constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args);
+  ///
+  /// \returns The index of the object parameter in \c Args if one exists.
+  /// Returns std::nullopt otherwise.
+  std::optional<unsigned> constructSubprogramArguments(DIE &Buffer,
+                                                       DITypeRefArray Args);
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.

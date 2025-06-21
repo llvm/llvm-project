@@ -173,6 +173,12 @@ func.func @float16(%arg0: f16) { return }
 // NOEMU-SAME: f64
 func.func @float64(%arg0: f64) { return }
 
+// CHECK-LABEL: spirv.func @bfloat16
+// CHECK-SAME: f32
+// NOEMU-LABEL: func.func @bfloat16
+// NOEMU-SAME: bf16
+func.func @bfloat16(%arg0: bf16) { return }
+
 // f80 is not supported by SPIR-V.
 // CHECK-LABEL: func.func @float80
 // CHECK-SAME: f80
@@ -201,18 +207,6 @@ func.func @float16(%arg0: f16) { return }
 // NOEMU-LABEL: spirv.func @float64
 // NOEMU-SAME: f64
 func.func @float64(%arg0: f64) { return }
-
-} // end module
-
-// -----
-
-// Check that bf16 is not supported.
-module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
-} {
-
-// CHECK-NOT: spirv.func @bf16_type
-func.func @bf16_type(%arg0: bf16) { return }
 
 } // end module
 

@@ -92,6 +92,10 @@ public:
                        PatternBenefit benefit = 1);
 
 protected:
+  /// See `ConversionPattern::ConversionPattern` for information on the other
+  /// available constructors.
+  using ConversionPattern::ConversionPattern;
+
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect &getDialect() const;
 
@@ -228,6 +232,47 @@ public:
     SmallVector<Value> oneToOneOperands =
         getOneToOneAdaptorOperands(adaptor.getOperands());
     return matchAndRewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
+  }
+
+private:
+  using ConvertToLLVMPattern::matchAndRewrite;
+};
+
+/// Utility class for operation conversions targeting the LLVM dialect that
+/// allows for matching and rewriting against an instance of an OpInterface
+/// class.
+template <typename SourceOp>
+class ConvertOpInterfaceToLLVMPattern : public ConvertToLLVMPattern {
+public:
+  explicit ConvertOpInterfaceToLLVMPattern(
+      const LLVMTypeConverter &typeConverter, PatternBenefit benefit = 1)
+      : ConvertToLLVMPattern(typeConverter, Pattern::MatchInterfaceOpTypeTag(),
+                             SourceOp::getInterfaceID(), benefit,
+                             &typeConverter.getContext()) {}
+
+  /// Wrappers around the RewritePattern methods that pass the derived op type.
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
+  }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
+  }
+
+  /// Methods that operate on the SourceOp type. One of these must be
+  /// overridden by the derived pattern class.
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    return matchAndRewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
   }
 
 private:

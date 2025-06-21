@@ -302,8 +302,7 @@ protected:
   void setVarRefs(ArrayRef<Expr *> VL) {
     assert(VL.size() == NumVars &&
            "Number of variables is not the same as the preallocated buffer");
-    std::copy(VL.begin(), VL.end(),
-              static_cast<T *>(this)->template getTrailingObjects<Expr *>());
+    llvm::copy(VL, getVarRefs().begin());
   }
 
 public:
@@ -388,9 +387,7 @@ public:
     assert(
         DK.size() == NumKinds &&
         "Number of directive kinds is not the same as the preallocated buffer");
-    std::copy(DK.begin(), DK.end(),
-              static_cast<T *>(this)
-                  ->template getTrailingObjects<OpenMPDirectiveKind>());
+    std::copy(DK.begin(), DK.end(), getDirectiveKinds().begin());
   }
 
   SourceLocation getLParenLoc() { return LParenLoc; }
@@ -980,20 +977,14 @@ public:
 
   /// Returns the tile size expressions.
   MutableArrayRef<Expr *> getSizesRefs() {
-    return static_cast<OMPSizesClause *>(this)
-        ->template getTrailingObjects<Expr *>(NumSizes);
+    return getTrailingObjects(NumSizes);
   }
-  ArrayRef<Expr *> getSizesRefs() const {
-    return static_cast<const OMPSizesClause *>(this)
-        ->template getTrailingObjects<Expr *>(NumSizes);
-  }
+  ArrayRef<Expr *> getSizesRefs() const { return getTrailingObjects(NumSizes); }
 
   /// Sets the tile size expressions.
   void setSizesRefs(ArrayRef<Expr *> VL) {
     assert(VL.size() == NumSizes);
-    std::copy(VL.begin(), VL.end(),
-              static_cast<OMPSizesClause *>(this)
-                  ->template getTrailingObjects<Expr *>());
+    llvm::copy(VL, getSizesRefs().begin());
   }
 
   child_range children() {
@@ -1043,8 +1034,7 @@ class OMPPermutationClause final
   /// Sets the permutation index expressions.
   void setArgRefs(ArrayRef<Expr *> VL) {
     assert(VL.size() == NumLoops && "Expecting one expression per loop");
-    llvm::copy(VL, static_cast<OMPPermutationClause *>(this)
-                       ->template getTrailingObjects<Expr *>());
+    llvm::copy(VL, getTrailingObjects());
   }
 
   /// Build an empty clause.
@@ -1083,14 +1073,8 @@ public:
 
   /// Returns the permutation index expressions.
   ///@{
-  MutableArrayRef<Expr *> getArgsRefs() {
-    return static_cast<OMPPermutationClause *>(this)
-        ->template getTrailingObjects<Expr *>(NumLoops);
-  }
-  ArrayRef<Expr *> getArgsRefs() const {
-    return static_cast<const OMPPermutationClause *>(this)
-        ->template getTrailingObjects<Expr *>(NumLoops);
-  }
+  MutableArrayRef<Expr *> getArgsRefs() { return getTrailingObjects(NumLoops); }
+  ArrayRef<Expr *> getArgsRefs() const { return getTrailingObjects(NumLoops); }
   ///@}
 
   child_range children() {
@@ -9239,9 +9223,7 @@ class OMPAffinityClause final
                                             SourceLocation(), N) {}
 
   /// Sets the affinity modifier for the clause, if any.
-  void setModifier(Expr *E) {
-    getTrailingObjects<Expr *>()[varlist_size()] = E;
-  }
+  void setModifier(Expr *E) { getTrailingObjects()[varlist_size()] = E; }
 
   /// Sets the location of ':' symbol.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
@@ -9268,10 +9250,8 @@ public:
   static OMPAffinityClause *CreateEmpty(const ASTContext &C, unsigned N);
 
   /// Gets affinity modifier.
-  Expr *getModifier() { return getTrailingObjects<Expr *>()[varlist_size()]; }
-  Expr *getModifier() const {
-    return getTrailingObjects<Expr *>()[varlist_size()];
-  }
+  Expr *getModifier() { return getTrailingObjects()[varlist_size()]; }
+  Expr *getModifier() const { return getTrailingObjects()[varlist_size()]; }
 
   /// Gets the location of ':' symbol.
   SourceLocation getColonLoc() const { return ColonLoc; }

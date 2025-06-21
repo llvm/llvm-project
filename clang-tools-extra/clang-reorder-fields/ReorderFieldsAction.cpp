@@ -86,6 +86,10 @@ getNewFieldsOrder(const RecordDecl *Definition,
 static void
 addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
                std::map<std::string, tooling::Replacements> &Replacements) {
+  if (Old.getBegin().isMacroID())
+    Old = Context.getSourceManager().getExpansionRange(Old).getAsRange();
+  if (New.getBegin().isMacroID())
+    New = Context.getSourceManager().getExpansionRange(New).getAsRange();
   StringRef NewText =
       Lexer::getSourceText(CharSourceRange::getTokenRange(New),
                            Context.getSourceManager(), Context.getLangOpts());

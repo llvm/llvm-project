@@ -473,3 +473,26 @@ void func10(int *a) {
 // OGCG:  %[[ELE:.*]] = getelementptr inbounds i32, ptr %[[TMP_1]], i64 5
 // OGCG:  %[[TMP_2:.*]] = load i32, ptr %[[ELE]], align 4
 // OGCG:  store i32 %[[TMP_2]], ptr %[[INIT]], align 4
+
+void func11() { int _Complex a[4]; }
+
+// CIR: %[[ARR:.*]] = cir.alloca !cir.array<!cir.complex<!s32i> x 4>, !cir.ptr<!cir.array<!cir.complex<!s32i> x 4>>, ["a"]
+
+// LLVM: %[[ARR:.*]] = alloca [4 x { i32, i32 }], i64 1, align 16
+
+// OGCG: %[[ARR:.*]] = alloca [4 x { i32, i32 }], align 16
+
+void func12() {
+  struct Point {
+    int x;
+    int y;
+  };
+
+  Point a[4];
+}
+
+// CIR: %[[ARR:.*]] = cir.alloca !cir.array<!rec_Point x 4>, !cir.ptr<!cir.array<!rec_Point x 4>>, ["a"]
+
+// LLVM: %[[ARR:.*]] = alloca [4 x %struct.Point], i64 1, align 16
+
+// OGCG: %[[ARR:.*]] = alloca [4 x %struct.Point], align 16

@@ -736,7 +736,7 @@ class OpenACCUpdateConstruct final
                              OpenACCDirectiveKind::Update, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
     std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCUpdateConstruct(SourceLocation Start, SourceLocation DirectiveLoc,

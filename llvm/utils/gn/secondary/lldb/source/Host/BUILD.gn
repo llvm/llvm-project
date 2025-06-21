@@ -27,6 +27,7 @@ static_library("Host") {
     "common/HostNativeThreadBase.cpp",
     "common/HostProcess.cpp",
     "common/HostThread.cpp",
+    "common/JSONTransport.cpp",
     "common/LZMA.cpp",
     "common/LockFileBase.cpp",
     "common/MainLoopBase.cpp",

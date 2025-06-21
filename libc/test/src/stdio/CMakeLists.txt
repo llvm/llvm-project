@@ -362,6 +362,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  perror_test
+  HERMETIC_TEST_ONLY # writes to libc's stderr
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    perror_test.cpp
+  DEPENDS
+    libc.src.stdio.perror
+    libc.src.errno.errno
+)
+
+add_libc_test(
   fputs_test
   HERMETIC_TEST_ONLY # writes to libc's stdout and stderr
   SUITE
@@ -484,6 +496,7 @@ add_libc_test(
     libc.src.stdio.fwrite
     libc.src.stdio.getc
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
@@ -507,6 +520,7 @@ add_libc_test(
     libc.src.stdio.fwrite
     libc.src.stdio.getc_unlocked
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
@@ -525,6 +539,7 @@ add_libc_test(
     libc.src.stdio.fopen
     libc.src.stdio.fwrite
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(

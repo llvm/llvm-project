@@ -44,16 +44,19 @@ void GCNRegPressure::inc(unsigned Reg,
                          LaneBitmask PrevMask,
                          LaneBitmask NewMask,
                          const MachineRegisterInfo &MRI) {
-  if (SIRegisterInfo::getNumCoveredRegs(NewMask) ==
-      SIRegisterInfo::getNumCoveredRegs(PrevMask))
+  unsigned NewNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(NewMask);
+  unsigned PrevNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(PrevMask);
+  if (NewNumCoveredRegs == PrevNumCoveredRegs)
     return;
 
   int Sign = 1;
   if (NewMask < PrevMask) {
     std::swap(NewMask, PrevMask);
+    std::swap(NewNumCoveredRegs, PrevNumCoveredRegs);
     Sign = -1;
   }
-  assert(PrevMask < NewMask && "prev mask should always be lesser than new");
+  assert(PrevMask < NewMask && PrevNumCoveredRegs < NewNumCoveredRegs &&
+         "prev mask should always be lesser than new");
 
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
@@ -66,7 +69,24 @@ void GCNRegPressure::inc(unsigned Reg,
       Value[TupleIdx] += Sign * TRI->getRegClassWeight(RC).RegWeight;
     }
     // Pressure scales with number of new registers covered by the new mask.
-    Sign *= SIRegisterInfo::getNumCoveredRegs(~PrevMask & NewMask);
+    // Note when true16 is enabled, we can no longer safely use the following
+    // approach to calculate the difference in the number of 32-bit registers
+    // between two masks:
+    //
+    // Sign *= SIRegisterInfo::getNumCoveredRegs(~PrevMask & NewMask);
+    //
+    // The issue is that the mask calculation `~PrevMask & NewMask` doesn't
+    // properly account for partial usage of a 32-bit register when dealing with
+    // 16-bit registers.
+    //
+    // Consider this example:
+    // Assume PrevMask = 0b0010 and NewMask = 0b1111. Here, the correct register
+    // usage difference should be 1, because even though PrevMask uses only half
+    // of a 32-bit register, it should still be counted as a full register use.
+    // However, the mask calculation yields `~PrevMask & NewMask = 0b1101`, and
+    // calling `getNumCoveredRegs` returns 2 instead of 1. This incorrect
+    // calculation can lead to integer overflow when Sign = -1.
+    Sign *= NewNumCoveredRegs - PrevNumCoveredRegs;
   }
   Value[RegKind] += Sign;
 }

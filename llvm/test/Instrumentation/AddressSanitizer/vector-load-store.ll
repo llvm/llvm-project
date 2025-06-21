@@ -402,7 +402,7 @@ define void @store.v2i32.align8(ptr %p) sanitize_address {
 define void @load.nxv1i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @load.nxv1i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -445,7 +445,7 @@ define void @load.nxv1i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @load.nxv1i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 32
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
@@ -459,7 +459,7 @@ define void @load.nxv1i32(ptr %p) sanitize_address {
 define void @load.nxv2i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @load.nxv2i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -502,7 +502,7 @@ define void @load.nxv2i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @load.nxv2i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 64
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
@@ -516,7 +516,7 @@ define void @load.nxv2i32(ptr %p) sanitize_address {
 define void @load.nxv4i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @load.nxv4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 128
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 128
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -559,7 +559,7 @@ define void @load.nxv4i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @load.nxv4i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 128
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 128
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
@@ -573,7 +573,7 @@ define void @load.nxv4i32(ptr %p) sanitize_address {
 define void @load.nxv8i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @load.nxv8i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 256
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 256
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -616,7 +616,7 @@ define void @load.nxv8i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @load.nxv8i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 256
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 256
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
@@ -630,7 +630,7 @@ define void @load.nxv8i32(ptr %p) sanitize_address {
 define void @load.nxv16i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @load.nxv16i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 512
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 512
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -673,7 +673,7 @@ define void @load.nxv16i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @load.nxv16i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 512
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 512
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
@@ -688,7 +688,7 @@ define void @load.nxv16i32(ptr %p) sanitize_address {
 define void @store.nxv1i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @store.nxv1i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -731,7 +731,7 @@ define void @store.nxv1i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @store.nxv1i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 32
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
@@ -745,7 +745,7 @@ define void @store.nxv1i32(ptr %p) sanitize_address {
 define void @store.nxv2i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @store.nxv2i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -788,7 +788,7 @@ define void @store.nxv2i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @store.nxv2i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 64
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
@@ -802,7 +802,7 @@ define void @store.nxv2i32(ptr %p) sanitize_address {
 define void @store.nxv4i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @store.nxv4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 128
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 128
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -845,7 +845,7 @@ define void @store.nxv4i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @store.nxv4i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 128
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 128
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
@@ -859,7 +859,7 @@ define void @store.nxv4i32(ptr %p) sanitize_address {
 define void @store.nxv8i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @store.nxv8i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 256
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 256
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -902,7 +902,7 @@ define void @store.nxv8i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @store.nxv8i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 256
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 256
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
@@ -916,7 +916,7 @@ define void @store.nxv8i32(ptr %p) sanitize_address {
 define void @store.nxv16i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @store.nxv16i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 512
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 512
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -959,7 +959,7 @@ define void @store.nxv16i32(ptr %p) sanitize_address {
 ;
 ; CALLS-LABEL: @store.nxv16i32(
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 512
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 512
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
@@ -977,7 +977,7 @@ define <vscale x 2 x i32> @local_alloca() sanitize_address {
 ; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 2 x i32>, align 8
 ; CHECK-NEXT:    call void @clobber(ptr [[A]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
@@ -1022,7 +1022,7 @@ define <vscale x 2 x i32> @local_alloca() sanitize_address {
 ; CALLS-NEXT:    [[A:%.*]] = alloca <vscale x 2 x i32>, align 8
 ; CALLS-NEXT:    call void @clobber(ptr [[A]])
 ; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CALLS-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 64
 ; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])

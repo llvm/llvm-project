@@ -3,6 +3,7 @@ LLDB Formatters for LLVM data types.
 
 Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 """
+
 from __future__ import annotations
 
 import collections
@@ -81,6 +82,11 @@ def __lldb_init_module(debugger, internal_dict):
         "type synthetic add -w llvm "
         f"-l {__name__}.DenseMapSynthetic "
         '-x "^llvm::DenseMap<.+>$"'
+    )
+    debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.DenseSetSynthetic "
+        '-x "^llvm::DenseSet<.+>$"'
     )
 
     debugger.HandleCommand(
@@ -372,7 +378,8 @@ class DenseMapSynthetic:
         # For each key, collect a list of buckets it appears in.
         key_buckets: dict[str, list[int]] = collections.defaultdict(list)
         for index in range(num_buckets):
-            key = buckets.GetValueForExpressionPath(f"[{index}].first")
+            bucket = buckets.GetValueForExpressionPath(f"[{index}]")
+            key = bucket.GetChildAtIndex(0)
             key_buckets[str(key.data)].append(index)
 
         # Heuristic: This is not a multi-map, any repeated (non-unique) keys are
@@ -381,6 +388,26 @@ class DenseMapSynthetic:
         for indexes in key_buckets.values():
             if len(indexes) == 1:
                 self.child_buckets.append(indexes[0])
+
+
+class DenseSetSynthetic:
+    valobj: lldb.SBValue
+    map: lldb.SBValue
+
+    def __init__(self, valobj: lldb.SBValue, _) -> None:
+        self.valobj = valobj
+
+    def num_children(self) -> int:
+        return self.map.num_children
+
+    def get_child_at_index(self, idx: int) -> lldb.SBValue:
+        map_entry = self.map.child[idx]
+        set_entry = map_entry.GetChildAtIndex(0)
+        return set_entry.Clone(f"[{idx}]")
+
+    def update(self):
+        raw_map = self.valobj.GetChildMemberWithName("TheMap")
+        self.map = raw_map.GetSyntheticValue()
 
 
 class ExpectedSynthetic:

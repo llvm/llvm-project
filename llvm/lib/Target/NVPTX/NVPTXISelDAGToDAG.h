@@ -44,7 +44,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool doMulWide;
 
   NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
-  bool usePrecSqrtF32() const;
+  bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
   bool allowFMA() const;
   bool allowUnsafeFPMath() const;
@@ -75,7 +75,8 @@ private:
   void SelectTexSurfHandle(SDNode *N);
   bool tryLoad(SDNode *N);
   bool tryLoadVector(SDNode *N);
-  bool tryLDGLDU(SDNode *N);
+  bool tryLDU(SDNode *N);
+  bool tryLDG(MemSDNode *N);
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
   bool tryLoadParam(SDNode *N);

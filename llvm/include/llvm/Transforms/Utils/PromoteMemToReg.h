@@ -14,6 +14,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_PROMOTEMEMTOREG_H
 #define LLVM_TRANSFORMS_UTILS_PROMOTEMEMTOREG_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 template <typename T> class ArrayRef;

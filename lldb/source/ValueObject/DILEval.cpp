@@ -430,4 +430,36 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
   return base->GetSyntheticArrayMember(signed_child_idx, true);
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BitFieldExtractionNode *node) {
+  auto lhs_or_err = Evaluate(node->GetBase());
+  if (!lhs_or_err)
+    return lhs_or_err;
+  lldb::ValueObjectSP base = *lhs_or_err;
+  int64_t first_index = node->GetFirstIndex();
+  int64_t last_index = node->GetLastIndex();
+
+  // if the format given is [high-low], swap range
+  if (first_index > last_index)
+    std::swap(first_index, last_index);
+
+  Status error;
+  if (base->GetCompilerType().IsReferenceType()) {
+    base = base->Dereference(error);
+    if (error.Fail())
+      return error.ToError();
+  }
+  lldb::ValueObjectSP child_valobj_sp =
+      base->GetSyntheticBitFieldChild(first_index, last_index, true);
+  if (!child_valobj_sp) {
+    std::string message = llvm::formatv(
+        "bitfield range {0}-{1} is not valid for \"({2}) {3}\"", first_index,
+        last_index, base->GetTypeName().AsCString("<invalid type>"),
+        base->GetName().AsCString());
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node->GetLocation());
+  }
+  return child_valobj_sp;
+}
+
 } // namespace lldb_private::dil

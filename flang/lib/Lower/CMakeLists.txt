@@ -23,6 +23,7 @@ add_flang_library(FortranLower
   LoweringOptions.cpp
   Mangler.cpp
   OpenACC.cpp
+  OpenMP/Atomic.cpp
   OpenMP/ClauseProcessor.cpp
   OpenMP/Clauses.cpp
   OpenMP/DataSharingProcessor.cpp

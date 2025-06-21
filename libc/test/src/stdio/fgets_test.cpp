@@ -13,9 +13,11 @@
 #include "src/stdio/fopen.h"
 #include "src/stdio/fwrite.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcFgetsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST_F(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   constexpr char FILENAME[] = "testdata/fgets.test";
@@ -30,15 +32,16 @@ TEST_F(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   char buff[8];
   char *output;
 
-  ASSERT_EQ(WRITE_SIZE, LIBC_NAMESPACE::fwrite(CONTENT, 1, WRITE_SIZE, file));
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite(CONTENT, 1, WRITE_SIZE, file),
+              Succeeds(WRITE_SIZE));
   // This is a write-only file so reads should fail.
-  ASSERT_TRUE(LIBC_NAMESPACE::fgets(buff, 8, file) == nullptr);
+  ASSERT_THAT(LIBC_NAMESPACE::fgets(buff, 8, file),
+              Fails(EBADF, static_cast<char *>(nullptr)));
   // This is an error and not a real EOF.
   ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
   ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
-  ASSERT_ERRNO_FAILURE();
 
-  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds());
 
   file = LIBC_NAMESPACE::fopen(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
@@ -56,6 +59,7 @@ TEST_F(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   // This is also implementation defined.
   output = LIBC_NAMESPACE::fgets(buff, 0, file);
   ASSERT_TRUE(output == nullptr);
+  ASSERT_ERRNO_SUCCESS();
 #endif
 
   const char *output_arr[] = {
@@ -87,5 +91,5 @@ TEST_F(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   ASSERT_NE(LIBC_NAMESPACE::feof(file), 0);
   ASSERT_ERRNO_SUCCESS();
 
-  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds());
 }
