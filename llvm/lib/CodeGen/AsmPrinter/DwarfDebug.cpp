@@ -32,7 +32,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
