@@ -136,6 +136,13 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses>`
+  check.
+
+  Finds calls to ``operator[]`` in STL containers and suggests replacing them
+  with safe alternatives.
+
 - New :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
 
