@@ -236,7 +236,7 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
   LLDB_LOGF(log,
             "DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress: "
             "kernel binary image found at 0x%" PRIx64 " with arch '%s' %s",
-            addr, kernel_arch.GetTriple().str(4),
+            addr, kernel_arch.GetTriple().str(4).str().c_str(),
             uuid_str.c_str());
 
   return memory_module_sp->GetUUID();

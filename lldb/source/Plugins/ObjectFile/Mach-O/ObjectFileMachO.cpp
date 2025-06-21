@@ -5148,6 +5148,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   llvm::Triple base_triple = base_arch.GetTriple();
   base_triple.setOS(llvm::Triple::UnknownOS);
   base_triple.setOSName(llvm::StringRef());
+  base_triple.setObjectFormat(llvm::Triple::MachO);
 
   if (header.filetype == MH_PRELOAD) {
     if (header.cputype == CPU_TYPE_ARM) {
@@ -6745,9 +6746,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
       make_core = true;
       break;
     default:
-      error = Status::FromErrorStringWithFormat(
-          "unsupported core architecture: %s",
-          target_triple.str(4).str().c_str());
+      error =
+          Status::FromErrorStringWithFormat("unsupported core architecture: %s",
+                                            target_triple.str(4).str().c_str());
       break;
     }
 

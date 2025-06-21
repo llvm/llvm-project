@@ -354,13 +354,13 @@ Status PlatformRemoteGDBServer::LaunchProcess(ProcessLaunchInfo &launch_info) {
   m_gdb_client_up->SendEnvironment(launch_info.GetEnvironment());
 
   ArchSpec arch_spec = launch_info.GetArchitecture();
-  const char *arch_triple = arch_spec.GetTriple().str(4).str().c_str();
+  const std::string arch_triple = arch_spec.GetTriple().str(4).str();
 
-  m_gdb_client_up->SendLaunchArchPacket(arch_triple);
+  m_gdb_client_up->SendLaunchArchPacket(arch_triple.c_str());
   LLDB_LOGF(
       log,
       "PlatformRemoteGDBServer::%s() set launch architecture triple to '%s'",
-      __FUNCTION__, arch_triple ? arch_triple : "<NULL>");
+      __FUNCTION__, !arch_triple.empty() ? arch_triple.c_str() : "<NULL>");
 
   {
     // Scope for the scoped timeout object
