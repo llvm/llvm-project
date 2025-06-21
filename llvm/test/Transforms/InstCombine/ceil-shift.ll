@@ -275,3 +275,34 @@ define i1 @ceil_shift_not_add_or(i32 %arg0) {
   %res = icmp eq i32 %quot_and_rem, 0
   ret i1 %res
 }
+
+define i32 @ceil_shift_should_infer_ge_zero(i32 %x) {
+; CHECK-LABEL: define i32 @ceil_shift_should_infer_ge_zero(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[COND_NOT]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 20
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], 1048575
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i32 [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    ret i32 0
+;
+  %cond = icmp ne i32 %x, 0
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %quot = lshr i32 %x, 20
+  %rem = and i32 %x, 1048575
+  %has_rem = icmp ne i32 %rem, 0
+  %zext_has_rem = zext i1 %has_rem to i32
+  %ceil = add nuw nsw i32 %quot, %zext_has_rem
+  %max = call i32 @llvm.umax.i32(i32 %ceil, i32 1)
+  ret i32 %max
+
+if.else:
+  ret i32 0
+}
