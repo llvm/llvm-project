@@ -989,11 +989,28 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   }
 
   // Check to see if any of the object file plugins tried and failed to save.
-  // If none ran, set the error message.
-  if (error.Success())
-    error = Status::FromErrorString(
-        "no ObjectFile plugins were able to save a core for this process");
-  return error;
+  // if any failure, return the error message.
+  if (error.Fail())
+    return error;
+
+  // Report only for the plugin that was specified.
+  if (!plugin_name.empty())
+    return Status::FromErrorStringWithFormatv(
+        "The \"{}\" plugin is not able to save a core for this process.",
+        plugin_name);
+
+  return Status::FromErrorString(
+      "no ObjectFile plugins were able to save a core for this process");
+}
+
+std::vector<llvm::StringRef> PluginManager::GetSaveCorePluginNames() {
+  std::vector<llvm::StringRef> plugin_names;
+  auto instances = GetObjectFileInstances().GetSnapshot();
+  for (auto &instance : instances) {
+    if (instance.save_core)
+      plugin_names.emplace_back(instance.name);
+  }
+  return plugin_names;
 }
 
 #pragma mark ObjectContainer
