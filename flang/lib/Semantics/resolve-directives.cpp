@@ -867,14 +867,6 @@ private:
   void CollectAssociatedLoopLevelsFromInnerLoopContruct(
       const parser::OpenMPLoopConstruct &, llvm::SmallVector<std::int64_t> &,
       llvm::SmallVector<const parser::OmpClause *> &);
-  template <typename T>
-  void CollectAssociatedLoopLevelFromClauseValue(
-      const parser::OmpClause &clause, llvm::SmallVector<std::int64_t> &,
-      llvm::SmallVector<const parser::OmpClause *> &);
-  template <typename T>
-  void CollectAssociatedLoopLevelFromClauseSize(const parser::OmpClause &,
-      llvm::SmallVector<std::int64_t> &,
-      llvm::SmallVector<const parser::OmpClause *> &);
   void CollectAssociatedLoopLevelsFromClauses(const parser::OmpClauseList &,
       llvm::SmallVector<std::int64_t> &,
       llvm::SmallVector<const parser::OmpClause *> &);
@@ -2124,40 +2116,34 @@ void OmpAttributeVisitor::CollectAssociatedLoopLevelsFromInnerLoopContruct(
   }
 }
 
-template <typename T>
-void OmpAttributeVisitor::CollectAssociatedLoopLevelFromClauseValue(
-    const parser::OmpClause &clause, llvm::SmallVector<std::int64_t> &levels,
-    llvm::SmallVector<const parser::OmpClause *> &clauses) {
-  if (const auto tclause{std::get_if<T>(&clause.u)}) {
-    std::int64_t level = 0;
-    if (const auto v{EvaluateInt64(context_, tclause->v)}) {
-      level = *v;
-    }
-    levels.push_back(level);
-    clauses.push_back(&clause);
-  }
-}
-
-template <typename T>
-void OmpAttributeVisitor::CollectAssociatedLoopLevelFromClauseSize(
-    const parser::OmpClause &clause, llvm::SmallVector<std::int64_t> &levels,
-    llvm::SmallVector<const parser::OmpClause *> &clauses) {
-  if (const auto tclause{std::get_if<T>(&clause.u)}) {
-    levels.push_back(tclause->v.size());
-    clauses.push_back(&clause);
-  }
-}
-
 void OmpAttributeVisitor::CollectAssociatedLoopLevelsFromClauses(
     const parser::OmpClauseList &x, llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
   for (const auto &clause : x.v) {
-    CollectAssociatedLoopLevelFromClauseValue<parser::OmpClause::Ordered>(
-        clause, levels, clauses);
-    CollectAssociatedLoopLevelFromClauseValue<parser::OmpClause::Collapse>(
-        clause, levels, clauses);
-    CollectAssociatedLoopLevelFromClauseSize<parser::OmpClause::Sizes>(
-        clause, levels, clauses);
+    if (const auto oclause{
+            std::get_if<parser::OmpClause::Ordered>(&clause.u)}) {
+      std::int64_t level = 0;
+      if (const auto v{EvaluateInt64(context_, oclause->v)}) {
+        level = *v;
+      }
+      levels.push_back(level);
+      clauses.push_back(&clause);
+    }
+
+    if (const auto cclause{
+            std::get_if<parser::OmpClause::Collapse>(&clause.u)}) {
+      std::int64_t level = 0;
+      if (const auto v{EvaluateInt64(context_, cclause->v)}) {
+        level = *v;
+      }
+      levels.push_back(level);
+      clauses.push_back(&clause);
+    }
+
+    if (const auto tclause{std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
+      levels.push_back(tclause->v.size());
+      clauses.push_back(&clause);
+    }
   }
 }
 
