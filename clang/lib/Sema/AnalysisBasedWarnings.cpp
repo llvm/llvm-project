@@ -722,6 +722,10 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
                 }
               }
             }
+            // Direct throw.
+            if (isa<CXXThrowExpr>(LastStmt)) {
+              return; // Don't warn about fall-through.
+            }
           }
         }
       }

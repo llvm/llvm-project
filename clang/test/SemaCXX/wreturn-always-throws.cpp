@@ -20,3 +20,7 @@ int ensureZero(const int i) {
   if (i == 0) return 0;
   throwError("ERROR"); // no-warning
 }
+
+int alwaysThrows() {
+  throw std::runtime_error("This function always throws"); // no-warning
+}
