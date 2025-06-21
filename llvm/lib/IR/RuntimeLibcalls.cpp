@@ -65,7 +65,17 @@ static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
 #undef LCALLNAME5
 }
 
-static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
+static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
+                               FloatABI::ABIType FloatABIType,
+                               EABI EABIVersion) {
+  if (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) {
+    CallingConv::ID DefaultCC = FloatABIType == FloatABI::Hard
+                                    ? CallingConv::ARM_AAPCS_VFP
+                                    : CallingConv::ARM_AAPCS;
+    for (RTLIB::Libcall LC : RTLIB::libcalls())
+      Info.setLibcallCallingConv(LC, DefaultCC);
+  }
+
   // Register based DivRem for AEABI (RTABI 4.2)
   if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
       TT.isTargetMuslAEABI() || TT.isOSWindows()) {
@@ -346,7 +356,10 @@ static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
-void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
+void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
+                                       ExceptionHandling ExceptionModel,
+                                       FloatABI::ABIType FloatABI,
+                                       EABI EABIVersion) {
   initSoftFloatCmpLibcallPredicates();
 
   initSoftFloatCmpLibcallPredicates();
@@ -360,6 +373,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment())
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
+
+  if (TT.isX86() || TT.isVE()) {
+    if (ExceptionModel == ExceptionHandling::SjLj)
+      setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
+  }
 
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
   if (TT.isPPC()) {
@@ -539,7 +557,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   if (TT.isAArch64())
     setAArch64LibcallNames(*this, TT);
   else if (TT.isARM() || TT.isThumb())
-    setARMLibcallNames(*this, TT);
+    setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
   else if (TT.getArch() == Triple::ArchType::avr) {
     // Division rtlib functions (not supported), use divmod functions instead
     setLibcallName(RTLIB::SDIV_I8, nullptr);
