@@ -278,7 +278,16 @@ static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
 
 bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
                               unsigned Depth) {
-  return computeKnownBits(V, SQ, Depth).isNonNegative();
+  if (computeKnownBits(V, SQ, Depth).isNonNegative())
+    return true;
+
+  Value *X, *Y;
+  if (match(V, m_NSWSub(m_Value(X), m_Value(Y))))
+    if (std::optional<bool> result =
+            isImpliedByDomCondition(ICmpInst::ICMP_SLE, Y, X, SQ.CxtI, SQ.DL))
+      return *result;
+
+  return false;
 }
 
 bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
