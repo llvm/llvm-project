@@ -27,6 +27,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -52,6 +53,13 @@ static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
   if (auto *CI =
           mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get()))
     return CI->getZExtValue();
+  return std::nullopt;
+}
+
+static std::optional<APFloat> extractMdFloatValue(MDNode *Node,
+                                                  unsigned int OpId) {
+  if (auto *CI = mdconst::dyn_extract<ConstantFP>(Node->getOperand(OpId).get()))
+    return CI->getValue();
   return std::nullopt;
 }
 
@@ -261,6 +269,81 @@ static bool parseDescriptorTable(LLVMContext *Ctx,
   return false;
 }
 
+static bool parseStaticSampler(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
+                               MDNode *StaticSamplerNode) {
+  if (StaticSamplerNode->getNumOperands() != 14)
+    return reportError(Ctx, "Invalid format for Static Sampler");
+
+  dxbc::RTS0::v1::StaticSampler Sampler;
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 1))
+    Sampler.Filter = *Val;
+  else
+    return reportError(Ctx, "Invalid value for Filter");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 2))
+    Sampler.AddressU = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressU");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 3))
+    Sampler.AddressV = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressV");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 4))
+    Sampler.AddressW = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressW");
+
+  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 5))
+    Sampler.MipLODBias = Val->convertToFloat();
+  else
+    return reportError(Ctx, "Invalid value for MipLODBias");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 6))
+    Sampler.MaxAnisotropy = *Val;
+  else
+    return reportError(Ctx, "Invalid value for MaxAnisotropy");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 7))
+    Sampler.ComparisonFunc = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ComparisonFunc ");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 8))
+    Sampler.BorderColor = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ComparisonFunc ");
+
+  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 9))
+    Sampler.MinLOD = Val->convertToFloat();
+  else
+    return reportError(Ctx, "Invalid value for MinLOD");
+
+  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 10))
+    Sampler.MaxLOD = Val->convertToFloat();
+  else
+    return reportError(Ctx, "Invalid value for MaxLOD");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 11))
+    Sampler.ShaderRegister = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ShaderRegister");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 12))
+    Sampler.RegisterSpace = *Val;
+  else
+    return reportError(Ctx, "Invalid value for RegisterSpace");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 13))
+    Sampler.ShaderVisibility = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ShaderVisibility");
+
+  RSD.StaticSamplers.push_back(Sampler);
+  return false;
+}
+
 static bool parseRootSignatureElement(LLVMContext *Ctx,
                                       mcdxbc::RootSignatureDesc &RSD,
                                       MDNode *Element) {
@@ -276,6 +359,7 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
           .Case("RootSRV", RootSignatureElementKind::SRV)
           .Case("RootUAV", RootSignatureElementKind::UAV)
           .Case("DescriptorTable", RootSignatureElementKind::DescriptorTable)
+          .Case("StaticSampler", RootSignatureElementKind::StaticSamplers)
           .Default(RootSignatureElementKind::Error);
 
   switch (ElementKind) {
@@ -290,6 +374,8 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
     return parseRootDescriptors(Ctx, RSD, Element, ElementKind);
   case RootSignatureElementKind::DescriptorTable:
     return parseDescriptorTable(Ctx, RSD, Element);
+  case RootSignatureElementKind::StaticSamplers:
+    return parseStaticSampler(Ctx, RSD, Element);
   case RootSignatureElementKind::Error:
     return reportError(Ctx, "Invalid Root Signature Element: " + *ElementText);
   }
@@ -406,6 +492,69 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
   return (Flags & ~Mask) == FlagT::NONE;
 }
 
+static bool verifySamplerFilter(uint32_t Value) {
+  dxbc::StaticSamplerFilter Filter = dxbc::StaticSamplerFilter(Value);
+
+  dxbc::StaticSamplerFilter Mask = dxbc::StaticSamplerFilter::MIN_MAG_MIP_POINT;
+
+#define STATIC_SAMPLER_FILTER(Num, Val) Mask |= dxbc::StaticSamplerFilter::Val;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  return popcount(llvm::to_underlying(Filter & Mask)) == 1;
+}
+
+// Values allowed here:
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode#syntax
+static bool verifyAddress(uint32_t Address) {
+  switch (Address) {
+  case llvm::to_underlying(dxbc::TextureAddressMode::Border):
+  case llvm::to_underlying(dxbc::TextureAddressMode::Clamp):
+  case llvm::to_underlying(dxbc::TextureAddressMode::Mirror):
+  case llvm::to_underlying(dxbc::TextureAddressMode::MirrorOnce):
+  case llvm::to_underlying(dxbc::TextureAddressMode::Wrap):
+    return true;
+  }
+
+  return false;
+}
+
+static bool verifyMipLODBias(float MipLODBias) {
+  return MipLODBias >= -16.f && MipLODBias <= 16.f;
+}
+
+static bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
+  return MaxAnisotropy <= 16u;
+}
+
+static bool verifyComparisonFunc(uint32_t ComparisonFunc) {
+  switch (ComparisonFunc) {
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Never):
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Less):
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Equal):
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::LessEqual):
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Greater):
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::NotEqual):
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::GreaterEqual):
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Always):
+    return true;
+  }
+  return false;
+}
+
+static bool verifyBorderColor(uint32_t BorderColor) {
+  switch (BorderColor) {
+  case llvm::to_underlying(dxbc::SamplersBorderColor::TransparentBlack):
+  case llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueBlack):
+  case llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueWhite):
+  case llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueBlackUint):
+  case llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueWhiteUint):
+    return true;
+  }
+  return false;
+}
+
+static bool verifyLOD(float LOD) { return !std::isnan(LOD); }
+
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
   if (!verifyVersion(RSD.Version)) {
@@ -461,6 +610,48 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
       break;
     }
     }
+  }
+
+  for (const dxbc::RTS0::v1::StaticSampler &Sampler : RSD.StaticSamplers) {
+    if (!verifySamplerFilter(Sampler.Filter))
+      return reportValueError(Ctx, "Filter", Sampler.Filter);
+
+    if (!verifyAddress(Sampler.AddressU))
+      return reportValueError(Ctx, "AddressU", Sampler.AddressU);
+
+    if (!verifyAddress(Sampler.AddressV))
+      return reportValueError(Ctx, "AddressV", Sampler.AddressV);
+
+    if (!verifyAddress(Sampler.AddressW))
+      return reportValueError(Ctx, "AddressW", Sampler.AddressW);
+
+    if (!verifyMipLODBias(Sampler.MipLODBias))
+      return reportValueError(Ctx, "MipLODBias", Sampler.MipLODBias);
+
+    if (!verifyMaxAnisotropy(Sampler.MaxAnisotropy))
+      return reportValueError(Ctx, "MaxAnisotropy", Sampler.MaxAnisotropy);
+
+    if (!verifyComparisonFunc(Sampler.ComparisonFunc))
+      return reportValueError(Ctx, "ComparisonFunc", Sampler.ComparisonFunc);
+
+    if (!verifyBorderColor(Sampler.BorderColor))
+      return reportValueError(Ctx, "BorderColor", Sampler.BorderColor);
+
+    if (!verifyLOD(Sampler.MinLOD))
+      return reportValueError(Ctx, "MinLOD", Sampler.MinLOD);
+
+    if (!verifyLOD(Sampler.MaxLOD))
+      return reportValueError(Ctx, "MaxLOD", Sampler.MaxLOD);
+
+    if (!verifyRegisterValue(Sampler.ShaderRegister))
+      return reportValueError(Ctx, "ShaderRegister", Sampler.ShaderRegister);
+
+    if (!verifyRegisterSpace(Sampler.RegisterSpace))
+      return reportValueError(Ctx, "RegisterSpace", Sampler.RegisterSpace);
+
+    if (!dxbc::isValidShaderVisibility(Sampler.ShaderVisibility))
+      return reportValueError(Ctx, "ShaderVisibility",
+                              Sampler.ShaderVisibility);
   }
 
   return false;
@@ -541,6 +732,9 @@ analyzeModule(Module &M) {
     // sequence. First the header, then the root parameters. So the header
     // offset will always equal to the header size.
     RSD.RootParameterOffset = sizeof(dxbc::RTS0::v1::RootSignatureHeader);
+
+    // static sampler offset is calculated when writting dxcontainer.
+    RSD.StaticSamplersOffset = 0u;
 
     if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
       return RSDMap;
