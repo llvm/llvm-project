@@ -869,6 +869,7 @@ module std [system] {
 
     header "array"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module atomic {
@@ -1223,6 +1224,7 @@ module std [system] {
 
     header "deque"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module exception {
@@ -1298,6 +1300,7 @@ module std [system] {
 
     header "flat_map"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module flat_set {
@@ -1314,6 +1317,7 @@ module std [system] {
     export std.flat_map.sorted_unique
     export std.flat_map.sorted_equivalent
     export *
+    export std.iterator.reverse_iterator
   }
 
   module format {
@@ -1369,6 +1373,7 @@ module std [system] {
   module forward_list {
     header "forward_list"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module fstream {
@@ -1543,6 +1548,7 @@ module std [system] {
   module list {
     header "list"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module locale {
@@ -1585,6 +1591,7 @@ module std [system] {
     module fwd { header "__fwd/map.h" }
     header "map"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module mdspan {
@@ -1931,6 +1938,7 @@ module std [system] {
   module regex {
     header "regex"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module scoped_allocator {
@@ -1947,6 +1955,7 @@ module std [system] {
     module fwd { header "__fwd/set.h" }
     header "set"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module shared_mutex {
@@ -1964,6 +1973,7 @@ module std [system] {
 
     header "span"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module sstream {
@@ -2016,6 +2026,7 @@ module std [system] {
 
     header "string"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module string_view {
@@ -2023,6 +2034,7 @@ module std [system] {
 
     header "string_view"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module strstream {
@@ -2104,11 +2116,13 @@ module std [system] {
   module unordered_map {
     header "unordered_map"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module unordered_set {
     header "unordered_set"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module utility {
@@ -2197,6 +2211,7 @@ module std [system] {
     }
 
     header "vector"
+    export std.iterator.reverse_iterator
     export *
   }
 
