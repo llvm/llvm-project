@@ -46,7 +46,7 @@ int main() {
   // If the shadow memory is cleared completely, the following read should not
   // cause a race.
   // CHECK-NOT: WARNING: ThreadSanitizer: data race
-  __tsan_read1(&buf[0]);       // Access 2
+  __tsan_read1(&buf[0]);        // Access 2
   __tsan_read1(&buf[Size - 1]); // Access 2
   pthread_join(t, 0);
 
