@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 
+// CIR: #[[FN_ATTR:.+]] = #cir<extra({nothrow = #cir.nothrow})>
+
 void f1() {}
 void f2() {
   f1();
@@ -102,3 +104,16 @@ void f12() {
 // LLVM:         %[[#slot:]] = alloca %struct.S, i64 1, align 4
 // LLVM-NEXT:    %[[#ret:]] = call %struct.S @_Z3f10v()
 // LLVM-NEXT:    store %struct.S %[[#ret]], ptr %[[#slot]], align 4
+
+void f13() noexcept;
+void f14() {
+  f13();
+}
+
+// CIR-LABEL: cir.func @_Z3f14v()
+// CIR:         cir.call @_Z3f13v() extra(#[[FN_ATTR]]) : () -> ()
+// CIR:       }
+
+// LLVM-LABEL: define void @_Z3f14v()
+// LLVM:         call void @_Z3f13v()
+// LLVM:       }

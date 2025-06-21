@@ -368,4 +368,34 @@ def CIR_VisibilityAttr : CIR_Attr<"Visibility", "visibility"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ExtraFuncAttributesAttr
+//===----------------------------------------------------------------------===//
+
+def ExtraFuncAttributesAttr : CIR_Attr<"ExtraFuncAttributes", "extra"> {
+  let summary = "Represents aggregated attributes for a function";
+  let description = [{
+    This is a wrapper of attribute dictionary that contains extra attributes of
+    a function.
+  }];
+
+  let parameters = (ins "mlir::DictionaryAttr":$elements);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::DictionaryAttr":$elements), [{
+      return $_get(elements.getContext(), elements);
+    }]>
+  ];
+
+  let assemblyFormat = [{ `(` $elements `)` }];
+}
+
+//===----------------------------------------------------------------------===//
+// Unit Function Attributes
+//===----------------------------------------------------------------------===//
+
+def NoThrowAttr : CIRUnitAttr<"NoThrow", "nothrow"> {
+  let storageType = "NoThrowAttr";
+}
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD

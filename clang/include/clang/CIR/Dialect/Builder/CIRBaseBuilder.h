@@ -228,25 +228,41 @@ public:
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
                            mlir::Type returnType, mlir::ValueRange operands,
-                           cir::SideEffect sideEffect = cir::SideEffect::All) {
-    return create<cir::CallOp>(loc, callee, returnType, operands, sideEffect);
+                           cir::SideEffect sideEffect = cir::SideEffect::All,
+                           cir::ExtraFuncAttributesAttr extraFuncAttr = {}) {
+    auto op =
+        create<cir::CallOp>(loc, callee, returnType, operands, sideEffect);
+
+    if (extraFuncAttr) {
+      op->setAttr("extra_attrs", extraFuncAttr);
+    } else {
+      mlir::NamedAttrList empty;
+      op->setAttr("extra_attrs", cir::ExtraFuncAttributesAttr::get(
+                                     empty.getDictionary(getContext())));
+    }
+
+    return op;
   }
 
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
                            mlir::ValueRange operands,
-                           cir::SideEffect sideEffect = cir::SideEffect::All) {
+                           cir::SideEffect sideEffect = cir::SideEffect::All,
+                           cir::ExtraFuncAttributesAttr extraFuncAttr = {}) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands,
-                        sideEffect);
+                        sideEffect, extraFuncAttr);
   }
 
-  cir::CallOp createIndirectCallOp(mlir::Location loc,
-                                   mlir::Value indirectTarget,
-                                   cir::FuncType funcType,
-                                   mlir::ValueRange operands,
-                                   cir::SideEffect sideEffect) {
-    return create<cir::CallOp>(loc, indirectTarget, funcType.getReturnType(),
-                               operands, sideEffect);
+  cir::CallOp
+  createIndirectCallOp(mlir::Location loc, mlir::Value indirectTarget,
+                       cir::FuncType funcType, mlir::ValueRange operands,
+                       cir::SideEffect sideEffect,
+                       cir::ExtraFuncAttributesAttr extraFuncAttr = {}) {
+    llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
+    resOperands.append(operands.begin(), operands.end());
+
+    return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
+                        resOperands, sideEffect, extraFuncAttr);
   }
 
   //===--------------------------------------------------------------------===//
