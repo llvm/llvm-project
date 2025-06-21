@@ -366,6 +366,11 @@ public:
     return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
   }
 
+  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
+  }
+
   /// Create a cir.ptr_stride operation to get access to an array element.
   /// \p idx is the index of the element to access, \p shouldDecay is true if
   /// the result should decay to a pointer to the element type.
