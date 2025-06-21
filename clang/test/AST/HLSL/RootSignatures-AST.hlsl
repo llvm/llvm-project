@@ -10,7 +10,7 @@
   "  CBV(b1), " \
   "  SRV(t1, numDescriptors = 8, " \
   "          flags = DESCRIPTORS_VOLATILE), " \
-  "  UAV(u1, numDescriptors = 0, " \
+  "  UAV(u1, numDescriptors = 1, " \
   "          flags = DESCRIPTORS_VOLATILE) " \
   "), " \
   "DescriptorTable(Sampler(s0, numDescriptors = 4, space = 1))"
@@ -21,7 +21,7 @@
 // CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = DataStaticWhileSetAtExecute),
 // CHECK-SAME:   SRV(t1, numDescriptors = 8, space = 0,
 // CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile),
-// CHECK-SAME:   UAV(u1, numDescriptors = 0, space = 0,
+// CHECK-SAME:   UAV(u1, numDescriptors = 1, space = 0,
 // CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile),
 // CHECK-SAME:   DescriptorTable(numClauses = 3, visibility = All),
 // CHECK-SAME:   Sampler(s0, numDescriptors = 4, space = 1,
@@ -48,7 +48,7 @@ void same_rs_main() {}
   "  CBV(b1), " \
   "  SRV(t1, numDescriptors = 8, " \
   "          flags = DESCRIPTORS_VOLATILE), " \
-  "  UAV(u1, numDescriptors = 0, " \
+  "  UAV(u1, numDescriptors = 1, " \
   "          flags = DESCRIPTORS_VOLATILE) " \
   "), " \
   "DescriptorTable(Sampler(s0, numDescriptors = 4, space = 1))"
