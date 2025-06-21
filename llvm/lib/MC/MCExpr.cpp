@@ -754,12 +754,3 @@ const MCSpecifierExpr *MCSpecifierExpr::create(const MCSymbol *Sym, Spec S,
                                                MCContext &Ctx, SMLoc Loc) {
   return new (Ctx) MCSpecifierExpr(MCSymbolRefExpr::create(Sym, Ctx), S, Loc);
 }
-
-bool MCSpecifierExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-
-  Res.setSpecifier(specifier);
-  return !Res.getSubSym();
-}

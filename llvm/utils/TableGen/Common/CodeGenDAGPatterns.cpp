@@ -3604,16 +3604,14 @@ class InstAnalyzer {
   const CodeGenDAGPatterns &CDP;
 
 public:
-  bool hasSideEffects;
-  bool mayStore;
-  bool mayLoad;
-  bool isBitcast;
-  bool isVariadic;
-  bool hasChain;
+  bool hasSideEffects = false;
+  bool mayStore = false;
+  bool mayLoad = false;
+  bool isBitcast = false;
+  bool isVariadic = false;
+  bool hasChain = false;
 
-  InstAnalyzer(const CodeGenDAGPatterns &cdp)
-      : CDP(cdp), hasSideEffects(false), mayStore(false), mayLoad(false),
-        isBitcast(false), isVariadic(false), hasChain(false) {}
+  InstAnalyzer(const CodeGenDAGPatterns &cdp) : CDP(cdp) {}
 
   void Analyze(const PatternToMatch &Pat) {
     const TreePatternNode &N = Pat.getSrcPattern();

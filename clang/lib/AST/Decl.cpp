@@ -5380,7 +5380,7 @@ PragmaCommentDecl *PragmaCommentDecl::Create(const ASTContext &C,
       new (C, DC, additionalSizeToAlloc<char>(Arg.size() + 1))
           PragmaCommentDecl(DC, CommentLoc, CommentKind);
   memcpy(PCD->getTrailingObjects(), Arg.data(), Arg.size());
-  PCD->getTrailingObjects<char>()[Arg.size()] = '\0';
+  PCD->getTrailingObjects()[Arg.size()] = '\0';
   return PCD;
 }
 

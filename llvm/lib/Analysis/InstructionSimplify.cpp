@@ -6969,6 +6969,23 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     }
     return nullptr;
   }
+  case Intrinsic::experimental_vp_reverse: {
+    Value *Vec = Call->getArgOperand(0);
+    Value *Mask = Call->getArgOperand(1);
+    Value *EVL = Call->getArgOperand(2);
+
+    Value *X;
+    // vp.reverse(vp.reverse(X)) == X (with all ones mask and matching EVL)
+    if (match(Mask, m_AllOnes()) &&
+        match(Vec, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                       m_Value(X), m_AllOnes(), m_Specific(EVL))))
+      return X;
+
+    // vp.reverse(splat(X)) -> splat(X) (regardless of mask and EVL)
+    if (isSplatValue(Vec))
+      return Vec;
+    return nullptr;
+  }
   default:
     return nullptr;
   }

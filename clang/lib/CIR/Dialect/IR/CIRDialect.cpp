@@ -92,6 +92,46 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
 // Helpers
 //===----------------------------------------------------------------------===//
 
+// Parses one of the keywords provided in the list `keywords` and returns the
+// position of the parsed keyword in the list. If none of the keywords from the
+// list is parsed, returns -1.
+static int parseOptionalKeywordAlternative(AsmParser &parser,
+                                           ArrayRef<llvm::StringRef> keywords) {
+  for (auto en : llvm::enumerate(keywords)) {
+    if (succeeded(parser.parseOptionalKeyword(en.value())))
+      return en.index();
+  }
+  return -1;
+}
+
+namespace {
+template <typename Ty> struct EnumTraits {};
+
+#define REGISTER_ENUM_TYPE(Ty)                                                 \
+  template <> struct EnumTraits<cir::Ty> {                                     \
+    static llvm::StringRef stringify(cir::Ty value) {                          \
+      return stringify##Ty(value);                                             \
+    }                                                                          \
+    static unsigned getMaxEnumVal() { return cir::getMaxEnumValFor##Ty(); }    \
+  }
+
+REGISTER_ENUM_TYPE(SideEffect);
+} // namespace
+
+/// Parse an enum from the keyword, return failure if the keyword is not found.
+template <typename EnumTy, typename RetTy = EnumTy>
+static ParseResult parseCIRKeyword(AsmParser &parser, RetTy &result) {
+  llvm::SmallVector<llvm::StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return failure();
+  result = static_cast<RetTy>(index);
+  return success();
+}
+
 // Check if a region's termination omission is valid and, if so, creates and
 // inserts the omitted terminator into the region.
 static LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
@@ -534,6 +574,18 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseRParen())
     return mlir::failure();
 
+  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    cir::SideEffect sideEffect;
+    if (parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
+    result.addAttribute("side_effect", attr);
+  }
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return ::mlir::failure();
 
@@ -556,7 +608,8 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
 static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer) {
+                            mlir::OpAsmPrinter &printer,
+                            cir::SideEffect sideEffect) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -572,7 +625,13 @@ static void printCallCommon(mlir::Operation *op,
   }
   printer << "(" << ops << ")";
 
-  printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
+  if (sideEffect != cir::SideEffect::All) {
+    printer << " side_effect(";
+    printer << stringifySideEffect(sideEffect);
+    printer << ")";
+  }
+
+  printer.printOptionalAttrDict(op->getAttrs(), {"callee", "side_effect"});
 
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
@@ -586,7 +645,8 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  printCallCommon(*this, getCalleeAttr(), indirectCallee, p);
+  cir::SideEffect sideEffect = getSideEffect();
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, sideEffect);
 }
 
 static LogicalResult
@@ -1587,6 +1647,104 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return elements[index];
+}
+
+//===----------------------------------------------------------------------===//
+// VecCmpOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
+  auto lhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
+  auto rhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
+  if (!lhsVecAttr || !rhsVecAttr)
+    return {};
+
+  mlir::Type inputElemTy =
+      mlir::cast<cir::VectorType>(lhsVecAttr.getType()).getElementType();
+  if (!isAnyIntegerOrFloatingPointType(inputElemTy))
+    return {};
+
+  cir::CmpOpKind opKind = adaptor.getKind();
+  mlir::ArrayAttr lhsVecElhs = lhsVecAttr.getElts();
+  mlir::ArrayAttr rhsVecElhs = rhsVecAttr.getElts();
+  uint64_t vecSize = lhsVecElhs.size();
+
+  SmallVector<mlir::Attribute, 16> elements(vecSize);
+  bool isIntAttr = vecSize && mlir::isa<cir::IntAttr>(lhsVecElhs[0]);
+  for (uint64_t i = 0; i < vecSize; i++) {
+    mlir::Attribute lhsAttr = lhsVecElhs[i];
+    mlir::Attribute rhsAttr = rhsVecElhs[i];
+    int cmpResult = 0;
+    switch (opKind) {
+    case cir::CmpOpKind::lt: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::le: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::gt: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::ge: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::eq: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() ==
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() ==
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::ne: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() !=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() !=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    }
+
+    elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);
+  }
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
 }
 
 //===----------------------------------------------------------------------===//

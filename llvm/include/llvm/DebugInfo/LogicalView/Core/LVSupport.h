@@ -13,7 +13,6 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSUPPORT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSUPPORT_H
 
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVStringPool.h"
 #include "llvm/Support/Compiler.h"
@@ -21,9 +20,11 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <bitset>
 #include <cctype>
 #include <map>
 #include <sstream>
+#include <type_traits>
 
 namespace llvm {
 namespace logicalview {
@@ -38,14 +39,32 @@ using LVLexicalIndex =
 
 // Used to record specific characteristics about the objects.
 template <typename T> class LVProperties {
-  SmallBitVector Bits = SmallBitVector(static_cast<unsigned>(T::LastEntry) + 1);
+  static constexpr unsigned N_PROPS = static_cast<unsigned>(T::LastEntry);
+  // Use uint32_t as the underlying type if the `T` enum has at most 32
+  // enumerators; otherwise, fallback to the generic `std::bitset` case.
+  std::conditional_t<(N_PROPS > 32), std::bitset<N_PROPS>, uint32_t> Bits{};
 
 public:
   LVProperties() = default;
 
-  void set(T Idx) { Bits[static_cast<unsigned>(Idx)] = 1; }
-  void reset(T Idx) { Bits[static_cast<unsigned>(Idx)] = 0; }
-  bool get(T Idx) const { return Bits[static_cast<unsigned>(Idx)]; }
+  void set(T Idx) {
+    if constexpr (std::is_same_v<decltype(Bits), uint32_t>)
+      Bits |= 1 << static_cast<unsigned>(Idx);
+    else
+      Bits.set(static_cast<unsigned>(Idx));
+  }
+  void reset(T Idx) {
+    if constexpr (std::is_same_v<decltype(Bits), uint32_t>)
+      Bits &= ~(1 << static_cast<unsigned>(Idx));
+    else
+      Bits.reset(static_cast<unsigned>(Idx));
+  }
+  bool get(T Idx) const {
+    if constexpr (std::is_same_v<decltype(Bits), uint32_t>)
+      return Bits & (1 << static_cast<unsigned>(Idx));
+    else
+      return Bits[static_cast<unsigned>(Idx)];
+  }
 };
 
 // Generate get, set and reset 'bool' functions for LVProperties instances.

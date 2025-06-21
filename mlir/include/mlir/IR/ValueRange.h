@@ -126,7 +126,7 @@ public:
   /// and range length. `operandSegments` is an optional set of operand segments
   /// to be updated when mutating the operand list.
   MutableOperandRange(Operation *owner, unsigned start, unsigned length,
-                      ArrayRef<OperandSegment> operandSegments = std::nullopt);
+                      ArrayRef<OperandSegment> operandSegments = {});
   MutableOperandRange(Operation *owner);
 
   /// Construct a new mutable range for the given OpOperand.
@@ -409,7 +409,7 @@ public:
       : ValueRange(ResultRange(values)) {}
   ValueRange(ArrayRef<BlockArgument> values)
       : ValueRange(ArrayRef<Value>(values.data(), values.size())) {}
-  ValueRange(ArrayRef<Value> values = std::nullopt);
+  ValueRange(ArrayRef<Value> values = {});
   ValueRange(OperandRange values);
   ValueRange(ResultRange values);
 

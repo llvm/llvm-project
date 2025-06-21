@@ -176,3 +176,83 @@ void foo7() {
 // OGCG: store float %[[TMP_A]], ptr %[[C_REAL_PTR]], align 4
 // OGCG: store float 2.000000e+00, ptr %[[C_IMAG_PTR]], align 4
 
+void foo8() {
+  double _Complex c = 2.00i;
+}
+
+// CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.fp<0.000000e+00> : !cir.double, #cir.fp<2.000000e+00> : !cir.double> : !cir.complex<!cir.double>
+
+// LLVM: %[[COMPLEX:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: store { double, double } { double 0.000000e+00, double 2.000000e+00 }, ptr %[[COMPLEX]], align 8
+
+// OGCG: %[[COMPLEX:.*]] = alloca { double, double }, align 8
+// OGCG: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 0
+// OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 1
+// OGCG: store double 0.000000e+00, ptr %[[C_REAL_PTR]], align 8
+// OGCG: store double 2.000000e+00, ptr %[[C_IMAG_PTR]], align 8
+
+void foo9(double a, double b) {
+  double _Complex c = __builtin_complex(a, b);
+}
+
+// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.double>, !cir.double
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.double>, !cir.double
+// CIR: %[[COMPLEX:.*]] = cir.complex.create %[[TMP_A]], %[[TMP_B]] : !cir.double -> !cir.complex<!cir.double>
+// CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+
+// LLVM: %[[COMPLEX:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[TMP_A:.*]] = load double, ptr {{.*}}, align 8
+// LLVM: %[[TMP_B:.*]] = load double, ptr {{.*}}, align 8
+// LLVM: %[[TMP:.*]] = insertvalue { double, double } undef, double %[[TMP_A]], 0
+// LLVM: %[[TMP_2:.*]] = insertvalue { double, double } %[[TMP]], double %[[TMP_B]], 1
+// LLVM: store { double, double } %[[TMP_2]], ptr %[[COMPLEX]], align 8
+
+// OGCG: %[[COMPLEX]] = alloca { double, double }, align 8
+// OGCG: %[[TMP_A:.*]] = load double, ptr {{.*}}, align 8
+// OGCG: %[[TMP_B:.*]] = load double, ptr {{.*}}, align 8
+// OGCG: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 0
+// OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 1
+// OGCG: store double %[[TMP_A]], ptr %[[C_REAL_PTR]], align 8
+// OGCG: store double %[[TMP_B]], ptr %[[C_IMAG_PTR]], align 8
+
+void foo14() {
+  int _Complex c = 2i;
+}
+
+// CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<0> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
+
+// LLVM: %[[COMPLEX:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: store { i32, i32 } { i32 0, i32 2 }, ptr %[[COMPLEX]], align 4
+
+// OGCG: %[[COMPLEX:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX]], i32 0, i32 0
+// OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX]], i32 0, i32 1
+// OGCG: store i32 0, ptr %[[C_REAL_PTR]], align 4
+// OGCG: store i32 2, ptr %[[C_IMAG_PTR]], align 4
+
+void foo15() {
+  int _Complex a;
+  int _Complex b = a;
+}
+
+// CIR: %[[COMPLEX_A:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[COMPLEX_A]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[COMPLEX_B]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { i32, i32 }, ptr %[[COMPLEX_A]], align 4
+// LLVM: store { i32, i32 } %[[TMP_A]], ptr %[[COMPLEX_B]], align 4
+
+// OGCG: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_A]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load i32, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_A]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load i32, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 0
+// OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 1
+// OGCG: store i32 %[[A_REAL]], ptr %[[B_REAL_PTR]], align 4
+// OGCG: store i32 %[[A_IMAG]], ptr %[[B_IMAG_PTR]], align 4
