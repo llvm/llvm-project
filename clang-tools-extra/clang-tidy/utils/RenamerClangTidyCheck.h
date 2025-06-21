@@ -118,6 +118,8 @@ public:
   void addUsage(const NamedDecl *Decl, SourceRange Range,
                 const SourceManager &SourceMgr);
 
+  bool skipSystemMacros() const { return SkipSystemMacros; }
+
 protected:
   /// Overridden by derived classes, returns information about if and how a Decl
   /// failed the check. A 'std::nullopt' result means the Decl did not fail the
@@ -162,6 +164,7 @@ private:
 
   NamingCheckFailureMap NamingCheckFailures;
   const bool AggressiveDependentMemberLookup;
+  const bool SkipSystemMacros;
 };
 
 } // namespace tidy

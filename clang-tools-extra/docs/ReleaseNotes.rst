@@ -296,6 +296,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` to avoid processing system
+  macros (unless the `SystemHeaders` option is enabled).
+
 Removed checks
 ^^^^^^^^^^^^^^
 
