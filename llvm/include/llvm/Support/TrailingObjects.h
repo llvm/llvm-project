@@ -228,12 +228,17 @@ class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
 
   using ParentType::getTrailingObjectsImpl;
 
-  // This function contains only a static_assert BaseTy is final. The
-  // static_assert must be in a function, and not at class-level
-  // because BaseTy isn't complete at class instantiation time, but
-  // will be by the time this function is instantiated.
-  static void verifyTrailingObjectsAssertions() {
+  template <bool Strict> static void verifyTrailingObjectsAssertions() {
+    // The static_assert for BaseTy must be in a function, and not at
+    // class-level  because BaseTy isn't complete at class instantiation time,
+    // but will be by the time this function is instantiated.
     static_assert(std::is_final<BaseTy>(), "BaseTy must be final.");
+
+    // Verify that templated getTrailingObjects() is used only with multiple
+    // trailing types, unless strict mode is disabled.
+    static_assert(!Strict || sizeof...(TrailingTys) > 1,
+                  "Use templated getTrailingObjects() only when there are "
+                  "multiple trailing types");
   }
 
   // These two methods are the base of the recursion for this method.
@@ -282,8 +287,9 @@ public:
   /// Returns a pointer to the trailing object array of the given type
   /// (which must be one of those specified in the class template). The
   /// array may have zero or more elements in it.
-  template <typename T> const T *getTrailingObjects() const {
-    verifyTrailingObjectsAssertions();
+  template <typename T, bool Strict = true>
+  const T *getTrailingObjects() const {
+    verifyTrailingObjectsAssertions<Strict>();
     // Forwards to an impl function with overloads, since member
     // function templates can't be specialized.
     return this->getTrailingObjectsImpl(
@@ -294,8 +300,8 @@ public:
   /// Returns a pointer to the trailing object array of the given type
   /// (which must be one of those specified in the class template). The
   /// array may have zero or more elements in it.
-  template <typename T> T *getTrailingObjects() {
-    verifyTrailingObjectsAssertions();
+  template <typename T, bool Strict = true> T *getTrailingObjects() {
+    verifyTrailingObjectsAssertions<Strict>();
     // Forwards to an impl function with overloads, since member
     // function templates can't be specialized.
     return this->getTrailingObjectsImpl(
@@ -310,23 +316,25 @@ public:
     static_assert(sizeof...(TrailingTys) == 1,
                   "Can use non-templated getTrailingObjects() only when there "
                   "is a single trailing type");
-    return getTrailingObjects<FirstTrailingType>();
+    return getTrailingObjects<FirstTrailingType, /*Strict=*/false>();
   }
 
   FirstTrailingType *getTrailingObjects() {
     static_assert(sizeof...(TrailingTys) == 1,
                   "Can use non-templated getTrailingObjects() only when there "
                   "is a single trailing type");
-    return getTrailingObjects<FirstTrailingType>();
+    return getTrailingObjects<FirstTrailingType, /*Strict=*/false>();
   }
 
   // Functions that return the trailing objects as ArrayRefs.
-  template <typename T> MutableArrayRef<T> getTrailingObjects(size_t N) {
-    return MutableArrayRef(getTrailingObjects<T>(), N);
+  template <typename T, bool Strict = true>
+  MutableArrayRef<T> getTrailingObjects(size_t N) {
+    return MutableArrayRef(getTrailingObjects<T, Strict>(), N);
   }
 
-  template <typename T> ArrayRef<T> getTrailingObjects(size_t N) const {
-    return ArrayRef(getTrailingObjects<T>(), N);
+  template <typename T, bool Strict = true>
+  ArrayRef<T> getTrailingObjects(size_t N) const {
+    return ArrayRef(getTrailingObjects<T, Strict>(), N);
   }
 
   MutableArrayRef<FirstTrailingType> getTrailingObjects(size_t N) {
