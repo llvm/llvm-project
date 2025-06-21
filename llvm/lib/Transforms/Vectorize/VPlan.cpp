@@ -360,17 +360,9 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   // resulting vectors are stored in State, we will only generate the
   // insertelements once.
   Value *VectorValue = nullptr;
-  if (IsSingleScalar) {
-    VectorValue = GetBroadcastInstrs(ScalarValue);
-    set(Def, VectorValue);
-  } else {
-    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    // Initialize packing with insertelements to start from poison.
-    VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
-    for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
-      VectorValue = packScalarIntoVectorizedValue(Def, VectorValue, Lane);
-    set(Def, VectorValue);
-  }
+  assert(IsSingleScalar && "replicates must be packed explicitly");
+  VectorValue = GetBroadcastInstrs(ScalarValue);
+  set(Def, VectorValue);
   Builder.restoreIP(OldIP);
   return VectorValue;
 }
