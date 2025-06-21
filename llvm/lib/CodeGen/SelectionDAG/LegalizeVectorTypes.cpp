@@ -3269,7 +3269,8 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
     SDValue TrailingBytes = DAG.getConstant(TrailingElts * EltWidth, DL, PtrVT);
 
     // Make sure TrailingBytes doesn't exceed the size of vec1.
-    TrailingBytes = DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, OffsetToV2);
+    TrailingBytes =
+        DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, OffsetToV2);
 
     // Calculate the start address of the spliced result.
     StackPtr2 = DAG.getNode(ISD::SUB, DL, PtrVT, StackPtr2, TrailingBytes);
