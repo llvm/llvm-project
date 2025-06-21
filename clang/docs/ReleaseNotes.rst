@@ -648,6 +648,12 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
+- Clang no longer warns about missing return statements (-Wreturn-type)
+  if the final statement of a non-void function is a `throw` expression
+  or a call to a function that is known to always throw. This avoids
+  false positives in code patterns where control flow is intentionally
+  terminated via exceptions.
+
   
 Improvements to Clang's time-trace
 ----------------------------------

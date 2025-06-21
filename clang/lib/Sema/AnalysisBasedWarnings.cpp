@@ -643,10 +643,7 @@ bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
     OnlyStmt = EWC->getSubExpr();
   }
   // Check if the only statement is a throw expression.
-  if (isa<CXXThrowExpr>(OnlyStmt)) {
-    return true; // Known to always throw.
-  }
-  return false; // Not known to always throw.
+  return isa<CXXThrowExpr>(OnlyStmt);
 }
 
 } // anonymous namespace
@@ -708,24 +705,22 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
       // If the final statement is a call to an always-throwing function,
       // don't warn about the fall-through.
       if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-        if (const auto *CS = dyn_cast<CompoundStmt>(Body)) {
-          if (!CS->body_empty()) {
-            const Stmt *LastStmt = CS->body_back();
-            // Unwrap ExprWithCleanups if necessary.
-            if (const auto *EWC = dyn_cast<ExprWithCleanups>(LastStmt)) {
-              LastStmt = EWC->getSubExpr();
-            }
-            if (const auto *CE = dyn_cast<CallExpr>(LastStmt)) {
-              if (const FunctionDecl *Callee = CE->getDirectCallee()) {
-                if (isKnownToAlwaysThrow(Callee)) {
-                  return; // Don't warn about fall-through.
-                }
-              }
-            }
-            // Direct throw.
-            if (isa<CXXThrowExpr>(LastStmt)) {
+        if (const auto *CS = dyn_cast<CompoundStmt>(Body);
+            CS && !CS->body_empty()) {
+          const Stmt *LastStmt = CS->body_back();
+          // Unwrap ExprWithCleanups if necessary.
+          if (const auto *EWC = dyn_cast<ExprWithCleanups>(LastStmt)) {
+            LastStmt = EWC->getSubExpr();
+          }
+          if (const auto *CE = dyn_cast<CallExpr>(LastStmt)) {
+            if (const FunctionDecl *Callee = CE->getDirectCallee();
+                Callee && isKnownToAlwaysThrow(Callee)) {
               return; // Don't warn about fall-through.
             }
+          }
+          // Direct throw.
+          if (isa<CXXThrowExpr>(LastStmt)) {
+            return; // Don't warn about fall-through.
           }
         }
       }
