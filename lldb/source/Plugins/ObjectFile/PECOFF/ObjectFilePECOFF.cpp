@@ -1036,11 +1036,17 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     m_sections_up->AddSection(header_sp);
     unified_section_list.AddSection(header_sp);
 
+    std::vector<llvm::StringRef> truncated_dwarf_sections;
     const uint32_t nsects = m_sect_headers.size();
     for (uint32_t idx = 0; idx < nsects; ++idx) {
       llvm::StringRef sect_name = GetSectionName(m_sect_headers[idx]);
       ConstString const_sect_name(sect_name);
       SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
+
+      // Detect unknown sections matching ^\.debug_[a-z]$
+      if (section_type == eSectionTypeOther && sect_name.size() == 8 &&
+          sect_name.starts_with(".debug_") && llvm::isLower(sect_name.back()))
+        truncated_dwarf_sections.emplace_back(sect_name);
 
       SectionSP section_sp(new Section(
           module_sp,       // Module to which this section belongs
@@ -1071,6 +1077,15 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
       m_sections_up->AddSection(section_sp);
       unified_section_list.AddSection(section_sp);
     }
+
+    if (!truncated_dwarf_sections.empty())
+      module_sp->ReportWarning(
+          "contains {} truncated DWARF sections ({}).\n"
+          "Executable images on Windows can't include the required names "
+          "when linking with the default link.exe. A third party linker like "
+          "lld-link is required (compile with -fuse-ld=lld-link on Clang).",
+          truncated_dwarf_sections.size(),
+          llvm::join(truncated_dwarf_sections, ", "));
   }
 }
 
