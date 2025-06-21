@@ -721,6 +721,9 @@ Bug Fixes in This Version
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
