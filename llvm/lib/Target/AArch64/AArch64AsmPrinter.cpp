@@ -19,7 +19,7 @@
 #include "AArch64TargetObjectFile.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
@@ -910,15 +910,15 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // have a chance to save them.
       EmitToStreamer(MCInstBuilder(AArch64::ADRP)
                          .addReg(AArch64::X16)
-                         .addExpr(MCSpecifierExpr::create(
-                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
-                             OutContext)));
+                         .addExpr(MCSpecifierExpr::create(HwasanTagMismatchRef,
+                                                          AArch64::S_GOT_PAGE,
+                                                          OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
                          .addReg(AArch64::X16)
                          .addReg(AArch64::X16)
-                         .addExpr(MCSpecifierExpr::create(
-                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
-                             OutContext)));
+                         .addExpr(MCSpecifierExpr::create(HwasanTagMismatchRef,
+                                                          AArch64::S_GOT_LO12,
+                                                          OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }

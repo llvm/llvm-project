@@ -12,7 +12,7 @@
 
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -310,9 +310,8 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
   // R_AARCH64_TLSLE_ADD_TPREL_HI12 and R_AARCH64_TLSLD_ADD_DTPREL_HI12.
   if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
     AArch64MCExpr::Specifier RefKind = A64E->getSpecifier();
-    if (RefKind == AArch64MCExpr::VK_TPREL_HI12 ||
-        RefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
-        RefKind == AArch64MCExpr::VK_SECREL_HI12)
+    if (RefKind == AArch64::S_TPREL_HI12 || RefKind == AArch64::S_DTPREL_HI12 ||
+        RefKind == AArch64::S_SECREL_HI12)
       ShiftVal = 12;
   }
   return ShiftVal == 0 ? 0 : (1 << ShiftVal);
@@ -720,13 +719,13 @@ unsigned AArch64MCCodeEmitter::fixMOVZ(const MCInst &MI, unsigned EncodedValue,
   const MCExpr *E = UImm16MO.getExpr();
   if (auto *A64E = dyn_cast<MCSpecifierExpr>(E)) {
     switch (A64E->getSpecifier()) {
-    case AArch64MCExpr::VK_DTPREL_G2:
-    case AArch64MCExpr::VK_DTPREL_G1:
-    case AArch64MCExpr::VK_DTPREL_G0:
-    case AArch64MCExpr::VK_GOTTPREL_G1:
-    case AArch64MCExpr::VK_TPREL_G2:
-    case AArch64MCExpr::VK_TPREL_G1:
-    case AArch64MCExpr::VK_TPREL_G0:
+    case AArch64::S_DTPREL_G2:
+    case AArch64::S_DTPREL_G1:
+    case AArch64::S_DTPREL_G0:
+    case AArch64::S_GOTTPREL_G1:
+    case AArch64::S_TPREL_G2:
+    case AArch64::S_TPREL_G1:
+    case AArch64::S_TPREL_G0:
       return EncodedValue & ~(1u << 30);
     default:
       // Nothing to do for an unsigned fixup.

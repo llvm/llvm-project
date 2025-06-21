@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -66,12 +66,12 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     return true;
   case FK_Data_4:
     Log2Size = Log2_32(4);
-    if (Spec == AArch64MCExpr::M_GOT)
+    if (Spec == AArch64::S_MACHO_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case FK_Data_8:
     Log2Size = Log2_32(8);
-    if (Spec == AArch64MCExpr::M_GOT)
+    if (Spec == AArch64::S_MACHO_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case AArch64::fixup_aarch64_add_imm12:
@@ -84,13 +84,13 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     switch (Spec) {
     default:
       return false;
-    case AArch64MCExpr::M_PAGEOFF:
+    case AArch64::S_MACHO_PAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGEOFF12);
       return true;
-    case AArch64MCExpr::M_GOTPAGEOFF:
+    case AArch64::S_MACHO_GOTPAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12);
       return true;
-    case AArch64MCExpr::M_TLVPPAGEOFF:
+    case AArch64::S_MACHO_TLVPPAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12);
       return true;
     }
@@ -101,13 +101,13 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     default:
       reportError(Fixup.getLoc(), "ADR/ADRP relocations must be GOT relative");
       return false;
-    case AArch64MCExpr::M_PAGE:
+    case AArch64::S_MACHO_PAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGE21);
       return true;
-    case AArch64MCExpr::M_GOTPAGE:
+    case AArch64::S_MACHO_GOTPAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_GOT_LOAD_PAGE21);
       return true;
-    case AArch64MCExpr::M_TLVPPAGE:
+    case AArch64::S_MACHO_TLVPPAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_TLVP_LOAD_PAGE21);
       return true;
     }
@@ -218,7 +218,7 @@ void AArch64MachObjectWriter::recordRelocation(
     // Check for "_foo@got - .", which comes through here as:
     // Ltmp0:
     //    ... _foo@got - Ltmp0
-    if (Target.getSpecifier() == AArch64MCExpr::M_GOT &&
+    if (Target.getSpecifier() == AArch64::S_MACHO_GOT &&
         Asm.getSymbolOffset(*B) ==
             Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
@@ -229,7 +229,7 @@ void AArch64MachObjectWriter::recordRelocation(
       MRE.r_word1 = (IsPCRel << 24) | (Log2Size << 25) | (Type << 28);
       Writer->addRelocation(A_Base, Fragment->getParent(), MRE);
       return;
-    } else if (Target.getSpecifier() != AArch64MCExpr::None) {
+    } else if (Target.getSpecifier() != AArch64::S_None) {
       // Otherwise, neither symbol can be modified.
       reportError(Fixup.getLoc(), "unsupported relocation of modified symbol");
       return;
@@ -382,8 +382,8 @@ void AArch64MachObjectWriter::recordRelocation(
     Value = 0;
   }
 
-  if (Target.getSpecifier() == AArch64MCExpr::VK_AUTH ||
-      Target.getSpecifier() == AArch64MCExpr::VK_AUTHADDR) {
+  if (Target.getSpecifier() == AArch64::S_AUTH ||
+      Target.getSpecifier() == AArch64::S_AUTHADDR) {
     auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
 
     assert(Type == MachO::ARM64_RELOC_UNSIGNED);
