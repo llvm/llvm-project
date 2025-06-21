@@ -46,7 +46,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1262,6 +1261,28 @@ private:
         L2Result.Val.getKind() == APValue::Float) {
       llvm::APFloat L1 = L1Result.Val.getFloat();
       llvm::APFloat L2 = L2Result.Val.getFloat();
+      // Note that L1 and L2 do not necessarily have the same type.  For example
+      // `x != 0 || x != 1.0`, if `x` is a float16, the two literals `0` and
+      // `1.0` are float16 and double respectively.  In this case, we should do
+      // a conversion before comparing L1 and L2.  Their types must be
+      // compatible since they are comparing with the same DRE.
+      int Order = Context->getFloatingTypeSemanticOrder(NumExpr1->getType(),
+                                                        NumExpr2->getType());
+      bool Ignored = false;
+
+      if (Order > 0) {
+        // type rank L1 > L2:
+        if (llvm::APFloat::opOK !=
+            L2.convert(L1.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
+          return {};
+      } else if (Order < 0)
+        // type rank L1 < L2:
+        if (llvm::APFloat::opOK !=
+            L1.convert(L2.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
+          return {};
+
       llvm::APFloat MidValue = L1;
       MidValue.add(L2, llvm::APFloat::rmNearestTiesToEven);
       MidValue.divide(llvm::APFloat(MidValue.getSemantics(), "2.0"),
@@ -5841,16 +5862,17 @@ static void print_construction_context(raw_ostream &OS,
 }
 
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
-                       const CFGElement &E);
+                       const CFGElement &E, bool TerminateWithNewLine = true);
 
-void CFGElement::dumpToStream(llvm::raw_ostream &OS) const {
+void CFGElement::dumpToStream(llvm::raw_ostream &OS,
+                              bool TerminateWithNewLine) const {
   LangOptions LangOpts;
   StmtPrinterHelper Helper(nullptr, LangOpts);
-  print_elem(OS, Helper, *this);
+  print_elem(OS, Helper, *this, TerminateWithNewLine);
 }
 
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
-                       const CFGElement &E) {
+                       const CFGElement &E, bool TerminateWithNewLine) {
   switch (E.getKind()) {
   case CFGElement::Kind::Statement:
   case CFGElement::Kind::CXXRecordTypedCall:
@@ -5867,7 +5889,9 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (Children.begin() != Children.end()) {
         OS << "({ ... ; ";
         Helper.handledStmt(*SE->getSubStmt()->body_rbegin(),OS);
-        OS << " })\n";
+        OS << " })";
+        if (TerminateWithNewLine)
+          OS << '\n';
         return;
       }
     }
@@ -5876,7 +5900,8 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (B->getOpcode() == BO_Comma) {
         OS << "... , ";
         Helper.handledStmt(B->getRHS(),OS);
-        OS << '\n';
+        if (TerminateWithNewLine)
+          OS << '\n';
         return;
       }
     }
@@ -5904,15 +5929,14 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     }
 
     // Expressions need a newline.
-    if (isa<Expr>(S))
+    if (isa<Expr>(S) && TerminateWithNewLine)
       OS << '\n';
 
-    break;
+    return;
   }
 
   case CFGElement::Kind::Initializer:
     print_initializer(OS, Helper, E.castAs<CFGInitializer>().getInitializer());
-    OS << '\n';
     break;
 
   case CFGElement::Kind::AutomaticObjectDtor: {
@@ -5926,43 +5950,44 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
 
     OS << ".~";
     T.getUnqualifiedType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << "() (Implicit destructor)\n";
+    OS << "() (Implicit destructor)";
     break;
   }
 
   case CFGElement::Kind::CleanupFunction:
     OS << "CleanupFunction ("
-       << E.castAs<CFGCleanupFunction>().getFunctionDecl()->getName() << ")\n";
+       << E.castAs<CFGCleanupFunction>().getFunctionDecl()->getName() << ")";
     break;
 
   case CFGElement::Kind::LifetimeEnds:
     Helper.handleDecl(E.castAs<CFGLifetimeEnds>().getVarDecl(), OS);
-    OS << " (Lifetime ends)\n";
+    OS << " (Lifetime ends)";
     break;
 
   case CFGElement::Kind::LoopExit:
-    OS << E.castAs<CFGLoopExit>().getLoopStmt()->getStmtClassName() << " (LoopExit)\n";
+    OS << E.castAs<CFGLoopExit>().getLoopStmt()->getStmtClassName()
+       << " (LoopExit)";
     break;
 
   case CFGElement::Kind::ScopeBegin:
     OS << "CFGScopeBegin(";
     if (const VarDecl *VD = E.castAs<CFGScopeBegin>().getVarDecl())
       OS << VD->getQualifiedNameAsString();
-    OS << ")\n";
+    OS << ")";
     break;
 
   case CFGElement::Kind::ScopeEnd:
     OS << "CFGScopeEnd(";
     if (const VarDecl *VD = E.castAs<CFGScopeEnd>().getVarDecl())
       OS << VD->getQualifiedNameAsString();
-    OS << ")\n";
+    OS << ")";
     break;
 
   case CFGElement::Kind::NewAllocator:
     OS << "CFGNewAllocator(";
     if (const CXXNewExpr *AllocExpr = E.castAs<CFGNewAllocator>().getAllocatorExpr())
       AllocExpr->getType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << ")\n";
+    OS << ")";
     break;
 
   case CFGElement::Kind::DeleteDtor: {
@@ -5974,14 +5999,14 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
         const_cast<CXXDeleteExpr*>(DE.getDeleteExpr());
     Helper.handledStmt(cast<Stmt>(DelExpr->getArgument()), OS);
     OS << "->~" << RD->getName().str() << "()";
-    OS << " (Implicit destructor)\n";
+    OS << " (Implicit destructor)";
     break;
   }
 
   case CFGElement::Kind::BaseDtor: {
     const CXXBaseSpecifier *BS = E.castAs<CFGBaseDtor>().getBaseSpecifier();
     OS << "~" << BS->getType()->getAsCXXRecordDecl()->getName() << "()";
-    OS << " (Base object destructor)\n";
+    OS << " (Base object destructor)";
     break;
   }
 
@@ -5990,7 +6015,7 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     const Type *T = FD->getType()->getBaseElementTypeUnsafe();
     OS << "this->" << FD->getName();
     OS << ".~" << T->getAsCXXRecordDecl()->getName() << "()";
-    OS << " (Member object destructor)\n";
+    OS << " (Member object destructor)";
     break;
   }
 
@@ -5999,10 +6024,12 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
         E.castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
     OS << "~";
     BT->getType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << "() (Temporary object destructor)\n";
+    OS << "() (Temporary object destructor)";
     break;
   }
   }
+  if (TerminateWithNewLine)
+    OS << '\n';
 }
 
 static void print_block(raw_ostream &OS, const CFG* cfg,

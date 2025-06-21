@@ -151,9 +151,8 @@ public:
   ///
   /// \returns true to indicate the diagnostic options are invalid, or false
   /// otherwise.
-  virtual bool
-  ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                        StringRef ModuleFilename, bool Complain) {
+  virtual bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
+                                     StringRef ModuleFilename, bool Complain) {
     return false;
   }
 
@@ -285,7 +284,7 @@ public:
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
-  bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+  bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                              StringRef ModuleFilename, bool Complain) override;
   bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override;
@@ -326,7 +325,7 @@ public:
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
-  bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+  bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                              StringRef ModuleFilename, bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                StringRef ModuleFilename, bool ReadMacros,
@@ -373,6 +372,24 @@ struct LazySpecializationInfoLookupTable;
 } // namespace reader
 
 } // namespace serialization
+
+struct VisibleLookupBlockOffsets {
+  uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  uint64_t TULocalOffset = 0;
+
+  operator bool() const {
+    return VisibleOffset || ModuleLocalOffset || TULocalOffset;
+  }
+};
+
+struct LookupBlockOffsets : VisibleLookupBlockOffsets {
+  uint64_t LexicalOffset = 0;
+
+  operator bool() const {
+    return VisibleLookupBlockOffsets::operator bool() || LexicalOffset;
+  }
+};
 
 /// Reads an AST files chain containing the contents of a translation
 /// unit.
@@ -536,13 +553,6 @@ private:
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
 
-  struct LookupBlockOffsets {
-    uint64_t LexicalOffset;
-    uint64_t VisibleOffset;
-    uint64_t ModuleLocalOffset;
-    uint64_t TULocalOffset;
-  };
-
   using DelayedNamespaceOffsetMapTy =
       llvm::DenseMap<GlobalDeclID, LookupBlockOffsets>;
 
@@ -566,7 +576,7 @@ private:
   /// modules. It is used for the following cases:
   /// - Lambda inside a template function definition: The main declaration is
   ///   the enclosing function, and the related declarations are the lambda
-  ///   declarations.
+  ///   call operators.
   /// - Friend function defined inside a template CXXRecord declaration: The
   ///   main declaration is the enclosing record, and the related declarations
   ///   are the friend functions.

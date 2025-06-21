@@ -95,8 +95,9 @@ public:
                                                 unsigned &NumIntermediates,
                                                 MVT &RegisterVT) const override;
 
-  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                            EVT VT) const override;
+  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                            unsigned SelectOpcode, SDValue X,
+                                            SDValue Y) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
@@ -152,6 +153,12 @@ public:
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
                                            unsigned Depth) const override;
+
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
 
   bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
@@ -356,6 +363,15 @@ public:
   static std::pair<unsigned, unsigned>
   computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
 
+  /// Given a vector (either fixed or scalable), return the scalable vector
+  /// corresponding to a vector register (i.e. an m1 register group).
+  static MVT getM1VT(MVT VT) {
+    unsigned EltSizeInBits = VT.getVectorElementType().getSizeInBits();
+    assert(EltSizeInBits <= RISCV::RVVBitsPerBlock && "Unexpected vector MVT");
+    return MVT::getScalableVectorVT(VT.getVectorElementType(),
+                                    RISCV::RVVBitsPerBlock / EltSizeInBits);
+  }
+
   static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
@@ -450,6 +466,8 @@ public:
   MachineBasicBlock *emitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
+  ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -535,6 +553,9 @@ private:
                                             unsigned ExtendOpc) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
@@ -550,6 +571,7 @@ private:
 
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

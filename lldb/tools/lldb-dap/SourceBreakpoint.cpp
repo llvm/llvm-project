@@ -13,11 +13,14 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBMutex.h"
+#include "lldb/API/SBSymbol.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <cctype>
 #include <cstdlib>
@@ -33,16 +36,51 @@ SourceBreakpoint::SourceBreakpoint(DAP &dap,
       m_line(breakpoint.line),
       m_column(breakpoint.column.value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
-void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
+llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
   lldb::SBMutex lock = m_dap.GetAPIMutex();
   std::lock_guard<lldb::SBMutex> guard(lock);
 
-  lldb::SBFileSpecList module_list;
-  m_bp = m_dap.target.BreakpointCreateByLocation(
-      source_path.str().c_str(), m_line, m_column, 0, module_list);
+  if (m_line == 0)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Invalid line number.");
+
+  if (source.sourceReference) {
+    // Breakpoint set by assembly source.
+    lldb::SBAddress source_address(*source.sourceReference, m_dap.target);
+    if (!source_address.IsValid())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Invalid sourceReference.");
+
+    lldb::SBSymbol symbol = source_address.GetSymbol();
+    if (!symbol.IsValid()) {
+      // FIXME: Support assembly breakpoints without a valid symbol.
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Breakpoints in assembly without a valid "
+                                     "symbol are not supported yet.");
+    }
+
+    lldb::SBInstructionList inst_list =
+        m_dap.target.ReadInstructions(symbol.GetStartAddress(), m_line);
+    if (inst_list.GetSize() < m_line)
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Invalid instruction list size.");
+
+    lldb::SBAddress address =
+        inst_list.GetInstructionAtIndex(m_line - 1).GetAddress();
+
+    m_bp = m_dap.target.BreakpointCreateBySBAddress(address);
+  } else {
+    // Breakpoint set by a regular source file.
+    const auto source_path = source.path.value_or("");
+    lldb::SBFileSpecList module_list;
+    m_bp = m_dap.target.BreakpointCreateByLocation(source_path.c_str(), m_line,
+                                                   m_column, 0, module_list);
+  }
+
   if (!m_log_message.empty())
     SetLogMessage();
   Breakpoint::SetBreakpoint();
+  return llvm::Error::success();
 }
 
 void SourceBreakpoint::UpdateBreakpoint(const SourceBreakpoint &request_bp) {

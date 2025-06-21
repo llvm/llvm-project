@@ -295,16 +295,14 @@ protected:
 
   /// Fetches list of variables associated with this clause.
   MutableArrayRef<Expr *> getVarRefs() {
-    return MutableArrayRef<Expr *>(
-        static_cast<T *>(this)->template getTrailingObjects<Expr *>(), NumVars);
+    return static_cast<T *>(this)->template getTrailingObjects<Expr *>(NumVars);
   }
 
   /// Sets the list of variables for this clause.
   void setVarRefs(ArrayRef<Expr *> VL) {
     assert(VL.size() == NumVars &&
            "Number of variables is not the same as the preallocated buffer");
-    std::copy(VL.begin(), VL.end(),
-              static_cast<T *>(this)->template getTrailingObjects<Expr *>());
+    llvm::copy(VL, getVarRefs().begin());
   }
 
 public:
@@ -336,8 +334,7 @@ public:
 
   /// Fetches list of all variables in the clause.
   ArrayRef<const Expr *> getVarRefs() const {
-    return llvm::ArrayRef(
-        static_cast<const T *>(this)->template getTrailingObjects<Expr *>(),
+    return static_cast<const T *>(this)->template getTrailingObjects<Expr *>(
         NumVars);
   }
 };
@@ -382,19 +379,15 @@ public:
   }
 
   MutableArrayRef<OpenMPDirectiveKind> getDirectiveKinds() {
-    return MutableArrayRef<OpenMPDirectiveKind>(
-        static_cast<T *>(this)
-            ->template getTrailingObjects<OpenMPDirectiveKind>(),
-        NumKinds);
+    return static_cast<T *>(this)
+        ->template getTrailingObjects<OpenMPDirectiveKind>(NumKinds);
   }
 
   void setDirectiveKinds(ArrayRef<OpenMPDirectiveKind> DK) {
     assert(
         DK.size() == NumKinds &&
         "Number of directive kinds is not the same as the preallocated buffer");
-    std::copy(DK.begin(), DK.end(),
-              static_cast<T *>(this)
-                  ->template getTrailingObjects<OpenMPDirectiveKind>());
+    std::copy(DK.begin(), DK.end(), getDirectiveKinds().begin());
   }
 
   SourceLocation getLParenLoc() { return LParenLoc; }
@@ -984,22 +977,14 @@ public:
 
   /// Returns the tile size expressions.
   MutableArrayRef<Expr *> getSizesRefs() {
-    return MutableArrayRef<Expr *>(static_cast<OMPSizesClause *>(this)
-                                       ->template getTrailingObjects<Expr *>(),
-                                   NumSizes);
+    return getTrailingObjects(NumSizes);
   }
-  ArrayRef<Expr *> getSizesRefs() const {
-    return ArrayRef<Expr *>(static_cast<const OMPSizesClause *>(this)
-                                ->template getTrailingObjects<Expr *>(),
-                            NumSizes);
-  }
+  ArrayRef<Expr *> getSizesRefs() const { return getTrailingObjects(NumSizes); }
 
   /// Sets the tile size expressions.
   void setSizesRefs(ArrayRef<Expr *> VL) {
     assert(VL.size() == NumSizes);
-    std::copy(VL.begin(), VL.end(),
-              static_cast<OMPSizesClause *>(this)
-                  ->template getTrailingObjects<Expr *>());
+    llvm::copy(VL, getSizesRefs().begin());
   }
 
   child_range children() {
@@ -1049,8 +1034,7 @@ class OMPPermutationClause final
   /// Sets the permutation index expressions.
   void setArgRefs(ArrayRef<Expr *> VL) {
     assert(VL.size() == NumLoops && "Expecting one expression per loop");
-    llvm::copy(VL, static_cast<OMPPermutationClause *>(this)
-                       ->template getTrailingObjects<Expr *>());
+    llvm::copy(VL, getTrailingObjects());
   }
 
   /// Build an empty clause.
@@ -1089,16 +1073,8 @@ public:
 
   /// Returns the permutation index expressions.
   ///@{
-  MutableArrayRef<Expr *> getArgsRefs() {
-    return MutableArrayRef<Expr *>(static_cast<OMPPermutationClause *>(this)
-                                       ->template getTrailingObjects<Expr *>(),
-                                   NumLoops);
-  }
-  ArrayRef<Expr *> getArgsRefs() const {
-    return ArrayRef<Expr *>(static_cast<const OMPPermutationClause *>(this)
-                                ->template getTrailingObjects<Expr *>(),
-                            NumLoops);
-  }
+  MutableArrayRef<Expr *> getArgsRefs() { return getTrailingObjects(NumLoops); }
+  ArrayRef<Expr *> getArgsRefs() const { return getTrailingObjects(NumLoops); }
   ///@}
 
   child_range children() {
@@ -3820,10 +3796,10 @@ class OMPReductionClause final
 
   /// Get the list of help private variable reduction flags
   MutableArrayRef<bool> getPrivateVariableReductionFlags() {
-    return MutableArrayRef(getTrailingObjects<bool>(), varlist_size());
+    return getTrailingObjects<bool>(varlist_size());
   }
   ArrayRef<bool> getPrivateVariableReductionFlags() const {
-    return ArrayRef(getTrailingObjects<bool>(), varlist_size());
+    return getTrailingObjects<bool>(varlist_size());
   }
 
   /// Returns the number of Expr* objects in trailing storage
@@ -3841,7 +3817,7 @@ class OMPReductionClause final
     return MutableArrayRef<Expr *>(getLHSExprs().end(), varlist_size());
   }
   ArrayRef<const Expr *> getRHSExprs() const {
-    return llvm::ArrayRef(getLHSExprs().end(), varlist_size());
+    return ArrayRef(getLHSExprs().end(), varlist_size());
   }
 
   /// Set list of helper reduction expressions, required for proper
@@ -5925,18 +5901,15 @@ protected:
   /// Get the unique declarations that are in the trailing objects of the
   /// class.
   MutableArrayRef<ValueDecl *> getUniqueDeclsRef() {
-    return MutableArrayRef<ValueDecl *>(
-        static_cast<T *>(this)->template getTrailingObjects<ValueDecl *>(),
+    return static_cast<T *>(this)->template getTrailingObjects<ValueDecl *>(
         NumUniqueDeclarations);
   }
 
   /// Get the unique declarations that are in the trailing objects of the
   /// class.
   ArrayRef<ValueDecl *> getUniqueDeclsRef() const {
-    return ArrayRef<ValueDecl *>(
-        static_cast<const T *>(this)
-            ->template getTrailingObjects<ValueDecl *>(),
-        NumUniqueDeclarations);
+    return static_cast<const T *>(this)
+        ->template getTrailingObjects<ValueDecl *>(NumUniqueDeclarations);
   }
 
   /// Set the unique declarations that are in the trailing objects of the
@@ -5950,16 +5923,14 @@ protected:
   /// Get the number of lists per declaration that are in the trailing
   /// objects of the class.
   MutableArrayRef<unsigned> getDeclNumListsRef() {
-    return MutableArrayRef<unsigned>(
-        static_cast<T *>(this)->template getTrailingObjects<unsigned>(),
+    return static_cast<T *>(this)->template getTrailingObjects<unsigned>(
         NumUniqueDeclarations);
   }
 
   /// Get the number of lists per declaration that are in the trailing
   /// objects of the class.
   ArrayRef<unsigned> getDeclNumListsRef() const {
-    return ArrayRef<unsigned>(
-        static_cast<const T *>(this)->template getTrailingObjects<unsigned>(),
+    return static_cast<const T *>(this)->template getTrailingObjects<unsigned>(
         NumUniqueDeclarations);
   }
 
@@ -5999,18 +5970,14 @@ protected:
 
   /// Get the components that are in the trailing objects of the class.
   MutableArrayRef<MappableComponent> getComponentsRef() {
-    return MutableArrayRef<MappableComponent>(
-        static_cast<T *>(this)
-            ->template getTrailingObjects<MappableComponent>(),
-        NumComponents);
+    return static_cast<T *>(this)
+        ->template getTrailingObjects<MappableComponent>(NumComponents);
   }
 
   /// Get the components that are in the trailing objects of the class.
   ArrayRef<MappableComponent> getComponentsRef() const {
-    return ArrayRef<MappableComponent>(
-        static_cast<const T *>(this)
-            ->template getTrailingObjects<MappableComponent>(),
-        NumComponents);
+    return static_cast<const T *>(this)
+        ->template getTrailingObjects<MappableComponent>(NumComponents);
   }
 
   /// Set the components that are in the trailing objects of the class.
@@ -9256,9 +9223,7 @@ class OMPAffinityClause final
                                             SourceLocation(), N) {}
 
   /// Sets the affinity modifier for the clause, if any.
-  void setModifier(Expr *E) {
-    getTrailingObjects<Expr *>()[varlist_size()] = E;
-  }
+  void setModifier(Expr *E) { getTrailingObjects()[varlist_size()] = E; }
 
   /// Sets the location of ':' symbol.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
@@ -9285,10 +9250,8 @@ public:
   static OMPAffinityClause *CreateEmpty(const ASTContext &C, unsigned N);
 
   /// Gets affinity modifier.
-  Expr *getModifier() { return getTrailingObjects<Expr *>()[varlist_size()]; }
-  Expr *getModifier() const {
-    return getTrailingObjects<Expr *>()[varlist_size()];
-  }
+  Expr *getModifier() { return getTrailingObjects()[varlist_size()]; }
+  Expr *getModifier() const { return getTrailingObjects()[varlist_size()]; }
 
   /// Gets the location of ':' symbol.
   SourceLocation getColonLoc() const { return ColonLoc; }
@@ -9660,8 +9623,7 @@ public:
 
   /// Get the clauses storage.
   MutableArrayRef<OMPClause *> getClauses() {
-    return llvm::MutableArrayRef(getTrailingObjects<OMPClause *>(),
-                                     NumClauses);
+    return getTrailingObjects<OMPClause *>(NumClauses);
   }
   ArrayRef<OMPClause *> getClauses() const {
     return const_cast<OMPChildren *>(this)->getClauses();

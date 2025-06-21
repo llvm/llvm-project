@@ -13,20 +13,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "OffloadAPI.h"
+#include "OffloadError.h"
+#include "llvm/Support/Error.h"
 
 #include <cstring>
 
 template <typename T, typename Assign>
-ol_errc_t getInfoImpl(size_t ParamValueSize, void *ParamValue,
-                      size_t *ParamValueSizeRet, T Value, size_t ValueSize,
-                      Assign &&AssignFunc) {
+llvm::Error getInfoImpl(size_t ParamValueSize, void *ParamValue,
+                        size_t *ParamValueSizeRet, T Value, size_t ValueSize,
+                        Assign &&AssignFunc) {
   if (!ParamValue && !ParamValueSizeRet) {
-    return OL_ERRC_INVALID_NULL_POINTER;
+    return error::createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                     "value and size outputs are nullptr");
   }
 
   if (ParamValue != nullptr) {
     if (ParamValueSize < ValueSize) {
-      return OL_ERRC_INVALID_SIZE;
+      return error::createOffloadError(error::ErrorCode::INVALID_SIZE,
+                                       "provided size is invalid");
     }
     AssignFunc(ParamValue, Value, ValueSize);
   }
@@ -35,12 +39,12 @@ ol_errc_t getInfoImpl(size_t ParamValueSize, void *ParamValue,
     *ParamValueSizeRet = ValueSize;
   }
 
-  return OL_ERRC_SUCCESS;
+  return llvm::Error::success();
 }
 
 template <typename T>
-ol_errc_t getInfo(size_t ParamValueSize, void *ParamValue,
-                  size_t *ParamValueSizeRet, T Value) {
+llvm::Error getInfo(size_t ParamValueSize, void *ParamValue,
+                    size_t *ParamValueSizeRet, T Value) {
   auto Assignment = [](void *ParamValue, T Value, size_t) {
     *static_cast<T *>(ParamValue) = Value;
   };
@@ -50,17 +54,17 @@ ol_errc_t getInfo(size_t ParamValueSize, void *ParamValue,
 }
 
 template <typename T>
-ol_errc_t getInfoArray(size_t array_length, size_t ParamValueSize,
-                       void *ParamValue, size_t *ParamValueSizeRet,
-                       const T *Value) {
+llvm::Error getInfoArray(size_t array_length, size_t ParamValueSize,
+                         void *ParamValue, size_t *ParamValueSizeRet,
+                         const T *Value) {
   return getInfoImpl(ParamValueSize, ParamValue, ParamValueSizeRet, Value,
                      array_length * sizeof(T), memcpy);
 }
 
 template <>
-inline ol_errc_t getInfo<const char *>(size_t ParamValueSize, void *ParamValue,
-                                       size_t *ParamValueSizeRet,
-                                       const char *Value) {
+inline llvm::Error
+getInfo<const char *>(size_t ParamValueSize, void *ParamValue,
+                      size_t *ParamValueSizeRet, const char *Value) {
   return getInfoArray(strlen(Value) + 1, ParamValueSize, ParamValue,
                       ParamValueSizeRet, Value);
 }
@@ -79,12 +83,12 @@ public:
         ParamValueSizeRet(ParamValueSize) {}
 
   // Scalar return Value
-  template <class T> ol_errc_t operator()(const T &t) {
+  template <class T> llvm::Error operator()(const T &t) {
     return getInfo(ParamValueSize, ParamValue, ParamValueSizeRet, t);
   }
 
   // Array return Value
-  template <class T> ol_errc_t operator()(const T *t, size_t s) {
+  template <class T> llvm::Error operator()(const T *t, size_t s) {
     return getInfoArray(s, ParamValueSize, ParamValue, ParamValueSizeRet, t);
   }
 

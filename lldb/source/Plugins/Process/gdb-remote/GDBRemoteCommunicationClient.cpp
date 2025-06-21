@@ -406,7 +406,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_qXfer_memory_map_read = eLazyBoolYes;
       else if (x == "qXfer:siginfo:read+")
         m_supports_qXfer_siginfo_read = eLazyBoolYes;
-      else if (x == "qEcho")
+      else if (x == "qEcho+")
         m_supports_qEcho = eLazyBoolYes;
       else if (x == "QPassSignals+")
         m_supports_QPassSignals = eLazyBoolYes;
@@ -1567,7 +1567,7 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
   PacketResult packet_result =
       SendPacketAndWaitForResponse(packet.GetString(), response);
   if (packet_result != PacketResult::Success)
-    error = Status::FromErrorString("Sending isconnect packet failed.");
+    error = Status::FromErrorString("Sending disconnect packet failed.");
   return error;
 }
 

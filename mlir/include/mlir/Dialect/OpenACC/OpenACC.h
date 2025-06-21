@@ -151,6 +151,12 @@ mlir::ValueRange getDataOperands(mlir::Operation *accOp);
 /// Used to get a mutable range iterating over the data operands.
 mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
 
+/// Used to obtain the enclosing compute construct operation that contains
+/// the provided `region`. Returns nullptr if no compute construct operation
+/// is found. The returns operation is one of types defined by
+///`ACC_COMPUTE_CONSTRUCT_OPS`.
+mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
+
 /// Used to check whether the provided `type` implements the `PointerLikeType`
 /// interface.
 inline bool isPointerLikeType(mlir::Type type) {

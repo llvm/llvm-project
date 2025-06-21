@@ -330,8 +330,7 @@ int64_t MLInlineAdvisor::getModuleIRSize() const {
 }
 
 FunctionPropertiesInfo &MLInlineAdvisor::getCachedFPI(Function &F) const {
-  auto InsertPair =
-      FPICache.insert(std::make_pair(&F, FunctionPropertiesInfo()));
+  auto InsertPair = FPICache.try_emplace(&F);
   if (!InsertPair.second)
     return InsertPair.first->second;
   InsertPair.first->second = FAM.getResult<FunctionPropertiesAnalysis>(F);
@@ -442,7 +441,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures) =
+    *ModelRunner->getTensor<int64_t>(FeatureIndex::NumberOfFeatures) =
         GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }

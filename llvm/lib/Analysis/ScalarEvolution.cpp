@@ -62,7 +62,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -6368,7 +6367,7 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S) {
     // ask ValueTracking for known bits
     const SCEVUnknown *U = cast<SCEVUnknown>(S);
     unsigned Known =
-        computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT)
+        computeKnownBits(U->getValue(), getDataLayout(), &AC, nullptr, &DT)
             .countMinTrailingZeros();
     return GetShiftedByZeros(Known);
   }
@@ -6486,8 +6485,8 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   if (!TC || TC >= BitWidth)
     return FullSet;
 
-  auto KnownStart = computeKnownBits(Start, DL, 0, &AC, nullptr, &DT);
-  auto KnownStep = computeKnownBits(Step, DL, 0, &AC, nullptr, &DT);
+  auto KnownStart = computeKnownBits(Start, DL, &AC, nullptr, &DT);
+  auto KnownStep = computeKnownBits(Step, DL, &AC, nullptr, &DT);
   assert(KnownStart.getBitWidth() == BitWidth &&
          KnownStep.getBitWidth() == BitWidth);
 
@@ -6864,13 +6863,13 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
     // See if ValueTracking can give us a useful range.
     const DataLayout &DL = getDataLayout();
-    KnownBits Known = computeKnownBits(V, DL, 0, &AC, nullptr, &DT);
+    KnownBits Known = computeKnownBits(V, DL, &AC, nullptr, &DT);
     if (Known.getBitWidth() != BitWidth)
       Known = Known.zextOrTrunc(BitWidth);
 
     // ValueTracking may be able to compute a tighter result for the number of
     // sign bits than for the value of those sign bits.
-    unsigned NS = ComputeNumSignBits(V, DL, 0, &AC, nullptr, &DT);
+    unsigned NS = ComputeNumSignBits(V, DL, &AC, nullptr, &DT);
     if (U->getType()->isPointerTy()) {
       // If the pointer size is larger than the index size type, this can cause
       // NS to be larger than BitWidth. So compensate for this.
@@ -7819,8 +7818,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         unsigned TZ = A.countr_zero();
         unsigned BitWidth = A.getBitWidth();
         KnownBits Known(BitWidth);
-        computeKnownBits(BO->LHS, Known, getDataLayout(),
-                         0, &AC, nullptr, &DT);
+        computeKnownBits(BO->LHS, Known, getDataLayout(), &AC, nullptr, &DT);
 
         APInt EffectiveMask =
             APInt::getLowBitsSet(BitWidth, BitWidth - LZ - TZ).shl(TZ);
@@ -8371,7 +8369,7 @@ ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   if (BTI.hasFullInfo())
     return BTI;
 
-  auto Pair = PredicatedBackedgeTakenCounts.insert({L, BackedgeTakenInfo()});
+  auto Pair = PredicatedBackedgeTakenCounts.try_emplace(L);
 
   if (!Pair.second)
     return Pair.first->second;
@@ -8390,7 +8388,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // code elsewhere that it shouldn't attempt to request a new
   // backedge-taken count, which could result in infinite recursion.
   std::pair<DenseMap<const Loop *, BackedgeTakenInfo>::iterator, bool> Pair =
-      BackedgeTakenCounts.insert({L, BackedgeTakenInfo()});
+      BackedgeTakenCounts.try_emplace(L);
   if (!Pair.second)
     return Pair.first->second;
 
@@ -9486,7 +9484,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
     // {K,ashr,<positive-constant>} stabilizes to signum(K) in at most
     // bitwidth(K) iterations.
     Value *FirstValue = PN->getIncomingValueForBlock(Predecessor);
-    KnownBits Known = computeKnownBits(FirstValue, DL, 0, &AC,
+    KnownBits Known = computeKnownBits(FirstValue, DL, &AC,
                                        Predecessor->getTerminator(), &DT);
     auto *Ty = cast<IntegerType>(RHS->getType());
     if (Known.isNonNegative())
@@ -10894,13 +10892,22 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
     }
     break;
   case ICmpInst::ICMP_UGE:
-    if (!getUnsignedRangeMin(RHS).isMinValue()) {
+    // If RHS is an op we can fold the -1, try that first.
+    // Otherwise prefer LHS to preserve the nuw flag.
+    if ((isa<SCEVConstant>(RHS) ||
+         (isa<SCEVAddExpr, SCEVAddRecExpr>(RHS) &&
+          isa<SCEVConstant>(cast<SCEVNAryExpr>(RHS)->getOperand(0)))) &&
+        !getUnsignedRangeMin(RHS).isMinValue()) {
       RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS);
       Pred = ICmpInst::ICMP_UGT;
       Changed = true;
     } else if (!getUnsignedRangeMax(LHS).isMaxValue()) {
       LHS = getAddExpr(getConstant(RHS->getType(), 1, true), LHS,
                        SCEV::FlagNUW);
+      Pred = ICmpInst::ICMP_UGT;
+      Changed = true;
+    } else if (!getUnsignedRangeMin(RHS).isMinValue()) {
+      RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS);
       Pred = ICmpInst::ICMP_UGT;
       Changed = true;
     }
@@ -10961,6 +10968,56 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
   if (!Mul)
     return false;
   return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
+}
+
+bool ScalarEvolution::isKnownMultipleOf(
+    const SCEV *S, uint64_t M,
+    SmallVectorImpl<const SCEVPredicate *> &Assumptions) {
+  if (M == 0)
+    return false;
+  if (M == 1)
+    return true;
+
+  // Recursively check AddRec operands. An AddRecExpr S is a multiple of M if S
+  // starts with a multiple of M and at every iteration step S only adds
+  // multiples of M.
+  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
+    return isKnownMultipleOf(AddRec->getStart(), M, Assumptions) &&
+           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Assumptions);
+
+  // For a constant, check that "S % M == 0".
+  if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
+    APInt C = Cst->getAPInt();
+    return C.urem(M) == 0;
+  }
+
+  // TODO: Also check other SCEV expressions, i.e., SCEVAddRecExpr, etc.
+
+  // Basic tests have failed.
+  // Check "S % M == 0" at compile time and record runtime Assumptions.
+  auto *STy = dyn_cast<IntegerType>(S->getType());
+  const SCEV *SmodM =
+      getURemExpr(S, getConstant(ConstantInt::get(STy, M, false)));
+  const SCEV *Zero = getZero(STy);
+
+  // Check whether "S % M == 0" is known at compile time.
+  if (isKnownPredicate(ICmpInst::ICMP_EQ, SmodM, Zero))
+    return true;
+
+  // Check whether "S % M != 0" is known at compile time.
+  if (isKnownPredicate(ICmpInst::ICMP_NE, SmodM, Zero))
+    return false;
+
+  const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
+
+  // Detect redundant predicates.
+  for (auto *A : Assumptions)
+    if (A->implies(P, *this))
+      return true;
+
+  // Only record non-redundant predicates.
+  Assumptions.push_back(P);
+  return true;
 }
 
 std::pair<const SCEV *, const SCEV *>
@@ -12480,26 +12537,21 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   if (!ICmpInst::isRelational(Pred))
     return false;
 
-  const SCEVAddRecExpr *LAR = dyn_cast<SCEVAddRecExpr>(LHS);
-  if (!LAR)
+  const SCEV *LStart, *RStart, *Step;
+  const Loop *L;
+  if (!match(LHS,
+             m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step), m_Loop(L))) ||
+      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step),
+                                      m_SpecificLoop(L))))
     return false;
-  const SCEVAddRecExpr *RAR = dyn_cast<SCEVAddRecExpr>(RHS);
-  if (!RAR)
-    return false;
-  if (LAR->getLoop() != RAR->getLoop())
-    return false;
-  if (!LAR->isAffine() || !RAR->isAffine())
-    return false;
-
-  if (LAR->getStepRecurrence(SE) != RAR->getStepRecurrence(SE))
-    return false;
-
+  const SCEVAddRecExpr *LAR = cast<SCEVAddRecExpr>(LHS);
+  const SCEVAddRecExpr *RAR = cast<SCEVAddRecExpr>(RHS);
   SCEV::NoWrapFlags NW = ICmpInst::isSigned(Pred) ?
                          SCEV::FlagNSW : SCEV::FlagNUW;
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
     return false;
 
-  return SE.isKnownPredicate(Pred, LAR->getStart(), RAR->getStart());
+  return SE.isKnownPredicate(Pred, LStart, RStart);
 }
 
 /// Is LHS `Pred` RHS true on the virtue of LHS or RHS being a Min or Max
@@ -12716,7 +12768,7 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
   case ICmpInst::ICMP_SLE: {
     // If operand >=s 0 then ZExt == SExt. If operand <s 0 then SExt <s ZExt.
     return match(LHS, m_scev_SExt(m_SCEV(Op))) &&
-           match(RHS, m_scev_ZExt(m_Specific(Op)));
+           match(RHS, m_scev_ZExt(m_scev_Specific(Op)));
   }
   case ICmpInst::ICMP_UGE:
     std::swap(LHS, RHS);
@@ -12724,7 +12776,7 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
   case ICmpInst::ICMP_ULE: {
     // If operand >=u 0 then ZExt == SExt.  If operand <u 0 then ZExt <u SExt.
     return match(LHS, m_scev_ZExt(m_SCEV(Op))) &&
-           match(RHS, m_scev_SExt(m_Specific(Op)));
+           match(RHS, m_scev_SExt(m_scev_Specific(Op)));
   }
   default:
     return false;
@@ -15860,10 +15912,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
 
     const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-      auto I = Map.find(Expr);
-      if (I == Map.end())
-        return Expr;
-      return I->second;
+      return Map.lookup_or(Expr, Expr);
     }
 
     const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {

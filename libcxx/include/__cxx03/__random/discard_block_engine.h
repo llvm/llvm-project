@@ -40,14 +40,14 @@ public:
   typedef typename _Engine::result_type result_type;
 
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const size_t block_size = __p;
-  static _LIBCPP_CONSTEXPR const size_t used_block = __r;
+  static const size_t block_size = __p;
+  static const size_t used_block = __r;
 
   static const result_type _Min = _Engine::_Min;
   static const result_type _Max = _Engine::_Max;
 
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
+  _LIBCPP_HIDE_FROM_ABI static result_type min() { return _Engine::min(); }
+  _LIBCPP_HIDE_FROM_ABI static result_type max() { return _Engine::max(); }
 
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI discard_block_engine() : __n_(0) {}
@@ -100,10 +100,10 @@ public:
 };
 
 template <class _Engine, size_t __p, size_t __r>
-_LIBCPP_CONSTEXPR const size_t discard_block_engine<_Engine, __p, __r>::block_size;
+const size_t discard_block_engine<_Engine, __p, __r>::block_size;
 
 template <class _Engine, size_t __p, size_t __r>
-_LIBCPP_CONSTEXPR const size_t discard_block_engine<_Engine, __p, __r>::used_block;
+const size_t discard_block_engine<_Engine, __p, __r>::used_block;
 
 template <class _Engine, size_t __p, size_t __r>
 typename discard_block_engine<_Engine, __p, __r>::result_type discard_block_engine<_Engine, __p, __r>::operator()() {

@@ -439,7 +439,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   // Src2 must accept the same operand types as vdst, namely VGPRs only
   let Src2RC64 = getVOP3VRegForVT<Src2VT, IsTrue16, !not(IsRealTrue16)>.ret;
   let Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, 3,
-                       0, HasModifiers, HasModifiers, HasOMod,
+                       HasClamp, HasModifiers, HasModifiers, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
   let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
@@ -448,7 +448,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                     DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins Dpp16FI:$fi));
   let InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, RegisterOperand<VGPR_32>, 3,
-                       0, HasModifiers, HasModifiers, HasOMod,
+                       HasClamp, HasModifiers, HasModifiers, HasOMod,
                        Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel>.ret;
   // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
   let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);

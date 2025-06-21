@@ -65,6 +65,7 @@ ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsLegacyPass();
 FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
+ModulePass *createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *);
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() {}
@@ -233,14 +234,13 @@ extern char &GCNRegPressurePrinterID;
 void initializeAMDGPUPreloadKernArgPrologLegacyPass(PassRegistry &);
 extern char &AMDGPUPreloadKernArgPrologLegacyID;
 
+void initializeAMDGPUPreloadKernelArgumentsLegacyPass(PassRegistry &);
+extern char &AMDGPUPreloadKernelArgumentsLegacyID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
-
-FunctionPass *createAMDGPUPromoteAllocaToVector();
-void initializeAMDGPUPromoteAllocaToVectorPass(PassRegistry&);
-extern char &AMDGPUPromoteAllocaToVectorID;
 
 struct AMDGPUPromoteAllocaPass : PassInfoMixin<AMDGPUPromoteAllocaPass> {
   AMDGPUPromoteAllocaPass(TargetMachine &TM) : TM(TM) {}
@@ -347,6 +347,16 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+class AMDGPUPreloadKernelArgumentsPass
+    : public PassInfoMixin<AMDGPUPreloadKernelArgumentsPass> {
+  const TargetMachine &TM;
+
+public:
+  explicit AMDGPUPreloadKernelArgumentsPass(const TargetMachine &TM) : TM(TM) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 class AMDGPUAnnotateUniformValuesPass
     : public PassInfoMixin<AMDGPUAnnotateUniformValuesPass> {
 public:
@@ -428,10 +438,6 @@ struct AMDGPUPrintfRuntimeBindingPass
     : PassInfoMixin<AMDGPUPrintfRuntimeBindingPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
-
-ModulePass* createAMDGPUUnifyMetadataPass();
-void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
-extern char &AMDGPUUnifyMetadataID;
 
 struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

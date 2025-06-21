@@ -17,7 +17,6 @@
 #include "ReduceSpecialGlobals.h"
 #include "Utils.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 
 using namespace llvm;

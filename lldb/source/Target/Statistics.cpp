@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -294,6 +295,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   const bool include_targets = options.GetIncludeTargets();
   const bool include_modules = options.GetIncludeModules();
   const bool include_transcript = options.GetIncludeTranscript();
+  const bool include_plugins = options.GetIncludePlugins();
 
   json::Array json_targets;
   json::Array json_modules;
@@ -309,7 +311,6 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
 
-  std::vector<ModuleStats> modules;
   std::lock_guard<std::recursive_mutex> guard(
       Module::GetAllocationModuleCollectionMutex());
   const uint64_t num_modules = target != nullptr
@@ -488,6 +489,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
     }
+  }
+
+  if (include_plugins) {
+    global_stats.try_emplace("plugins", PluginManager::GetJSON());
   }
 
   return std::move(global_stats);

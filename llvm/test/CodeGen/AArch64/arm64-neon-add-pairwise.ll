@@ -139,7 +139,7 @@ define i32 @addp_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    addp v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    rev64 v1.2s, v0.2s
+; CHECK-GI-NEXT:    dup v1.2s, v0.s[1]
 ; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret

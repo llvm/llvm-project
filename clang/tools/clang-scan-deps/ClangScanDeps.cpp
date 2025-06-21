@@ -85,6 +85,7 @@ static ScanningOutputFormat Format = ScanningOutputFormat::Make;
 static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
 static bool EagerLoadModules;
+static bool CacheNegativeStats = true;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
 static std::optional<std::string> ModuleName;
@@ -190,6 +191,8 @@ static void ParseArgs(int argc, char **argv) {
     OutputFileName = A->getValue();
 
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
+
+  CacheNegativeStats = !Args.hasArg(OPT_no_cache_negative_stats);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
     StringRef S{A->getValue()};
@@ -346,18 +349,11 @@ template <typename Container>
 static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   return [&JOS, Strings = std::forward<Container>(Strings)] {
     for (StringRef Str : Strings)
-      JOS.value(Str);
+      // Not reporting SDKSettings.json so that test checks can remain (mostly)
+      // platform-agnostic.
+      if (!Str.ends_with("SDKSettings.json"))
+        JOS.value(Str);
   };
-}
-
-static auto toJSONModuleID(llvm::json::OStream &JOS, StringRef ContextHash,
-                           StringRef ModuleName, bool Exported) {
-  return JOS.object([&] {
-    JOS.attribute("context-hash", StringRef(ContextHash));
-    JOS.attribute("module-name", StringRef(ModuleName));
-    if (Exported)
-      JOS.attribute("exported", StringRef("true"));
-  });
 }
 
 // Technically, we don't need to sort the dependency list to get determinism.
@@ -365,17 +361,11 @@ static auto toJSONModuleID(llvm::json::OStream &JOS, StringRef ContextHash,
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
   llvm::sort(V);
   return [&JOS, V = std::move(V)] {
-    for (const auto &MID : V)
-      toJSONModuleID(JOS, MID.ContextHash, MID.ModuleName, false);
-  };
-}
-
-static auto toJSONSorted(llvm::json::OStream &JOS,
-                         std::vector<ModuleDeps::DepInfo> V) {
-  llvm::sort(V);
-  return [&JOS, V = std::move(V)] {
-    for (const ModuleDeps::DepInfo &MID : V)
-      toJSONModuleID(JOS, MID.ID.ContextHash, MID.ID.ModuleName, MID.Exported);
+    for (const ModuleID &MID : V)
+      JOS.object([&] {
+        JOS.attribute("context-hash", StringRef(MID.ContextHash));
+        JOS.attribute("module-name", StringRef(MID.ModuleName));
+      });
   };
 }
 
@@ -449,11 +439,11 @@ public:
   // Returns \c true if any command lines fail to round-trip. We expect
   // commands already be canonical when output by the scanner.
   bool roundTripCommands(raw_ostream &ErrOS) {
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
-    TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
+    DiagnosticOptions DiagOpts;
+    TextDiagnosticPrinter DiagConsumer(ErrOS, DiagOpts);
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
         CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                            &*DiagOpts, &DiagConsumer,
+                                            DiagOpts, &DiagConsumer,
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
@@ -498,7 +488,12 @@ public:
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
             JOS.attributeArray("file-deps", [&] {
-              MD.forEachFileDep([&](StringRef FileDep) { JOS.value(FileDep); });
+              MD.forEachFileDep([&](StringRef FileDep) {
+                // Not reporting SDKSettings.json so that test checks can remain
+                // (mostly) platform-agnostic.
+                if (!FileDep.ends_with("SDKSettings.json"))
+                  JOS.value(FileDep);
+              });
             });
             JOS.attributeArray("link-libraries",
                                toJSONSorted(JOS, MD.LinkLibraries));
@@ -771,9 +766,10 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
         CompilationDB, ErrorMessage,
         tooling::JSONCommandLineSyntax::AutoDetect);
 
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions);
+                                          DiagOpts);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
   TheDriver.setCheckInputsExist(false);
@@ -1087,8 +1083,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     });
   };
 
-  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
-                                    EagerLoadModules, /*TraceVFS=*/Verbose);
+  DependencyScanningService Service(
+      ScanMode, Format, OptimizeArgs, EagerLoadModules, /*TraceVFS=*/Verbose,
+      llvm::sys::toTimeT(std::chrono::system_clock::now()), CacheNegativeStats);
 
   llvm::Timer T;
   T.startTimer();

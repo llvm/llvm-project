@@ -19,7 +19,6 @@
 #include "Writer.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Driver.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
@@ -28,7 +27,6 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -190,7 +188,6 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   case ARM64:
     return mt == ARM64 || mt == ARM64X;
   case ARM64EC:
-    return isArm64EC(mt) || mt == AMD64;
   case ARM64X:
     return isAnyArm64(mt) || mt == AMD64;
   case IMAGE_FILE_MACHINE_UNKNOWN:
@@ -492,6 +489,12 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_alternatename:
       file->symtab.parseAlternateName(arg->getValue());
       break;
+    case OPT_arm64xsameaddress:
+      if (!file->symtab.isEC())
+        Warn(ctx) << arg->getSpelling()
+                  << " is not allowed in non-ARM64EC files (" << toString(file)
+                  << ")";
+      break;
     case OPT_defaultlib:
       if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
         enqueuePath(*path, false, false);
@@ -499,7 +502,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_entry:
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      ctx.forEachSymtab([&](SymbolTable &symtab) {
+      ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
         symtab.entry = symtab.addGCRoot(symtab.mangle(arg->getValue()), true);
       });
       break;
@@ -657,9 +660,13 @@ void LinkerDriver::setMachine(MachineTypes machine) {
 
   ctx.config.machine = machine;
 
-  if (machine != ARM64X) {
+  if (!isArm64EC(machine)) {
     ctx.symtab.machine = machine;
   } else {
+    // Set up a hybrid symbol table on ARM64EC/ARM64X. This is primarily useful
+    // on ARM64X, where both the native and EC symbol tables are meaningful.
+    // However, since ARM64EC can include native object files, we also need to
+    // support a hybrid symbol table there.
     ctx.symtab.machine = ARM64EC;
     ctx.hybridSymtab.emplace(ctx, ARM64);
   }
@@ -979,7 +986,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   };
 
   getExports(ctx.symtab, exports);
-  if (ctx.hybridSymtab)
+  if (ctx.config.machine == ARM64X)
     getExports(*ctx.hybridSymtab, nativeExports);
 
   std::string libName = getImportName(asLib);
@@ -1383,13 +1390,13 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
       return;
 
     if (ctx.symtab.hadExplicitExports ||
-        (ctx.hybridSymtab && ctx.hybridSymtab->hadExplicitExports))
+        (ctx.config.machine == ARM64X && ctx.hybridSymtab->hadExplicitExports))
       return;
     if (args.hasArg(OPT_exclude_all_symbols))
       return;
   }
 
-  ctx.forEachSymtab([&](SymbolTable &symtab) {
+  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
     AutoExporter exporter(symtab, excludedSymbols);
 
     for (auto *arg : args.filtered(OPT_wholearchive_file))
@@ -2305,7 +2312,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_deffile)) {
     // parseModuleDefs mutates Config object.
     ctx.symtab.parseModuleDefs(arg->getValue());
-    if (ctx.hybridSymtab) {
+    if (ctx.config.machine == ARM64X) {
       // MSVC ignores the /defArm64Native argument on non-ARM64X targets.
       // It is also ignored if the /def option is not specified.
       if (auto *arg = args.getLastArg(OPT_defarm64native))
@@ -2332,7 +2339,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Handle /entry and /dll
-  ctx.forEachSymtab([&](SymbolTable &symtab) {
+  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
     llvm::TimeTraceScope timeScope("Entry point");
     if (auto *arg = args.getLastArg(OPT_entry)) {
       if (!arg->getValue()[0])
@@ -2364,7 +2371,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     llvm::TimeTraceScope timeScope("Delay load");
     for (auto *arg : args.filtered(OPT_delayload)) {
       config->delayLoads.insert(StringRef(arg->getValue()).lower());
-      ctx.forEachSymtab([&](SymbolTable &symtab) {
+      ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
         if (symtab.machine == I386) {
           symtab.delayLoadHelper = symtab.addGCRoot("___delayLoadHelper2@8");
         } else {
@@ -2538,7 +2545,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
             u->setWeakAlias(symtab.addUndefined(to));
           }
         }
+      });
 
+      ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
         // If any inputs are bitcode files, the LTO code generator may create
         // references to library functions that are not explicit in the bitcode
         // file's symbol table. If any of those library functions are defined in
@@ -2568,7 +2577,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /includeglob
   for (StringRef pat : args::getStrings(args, OPT_incl_glob))
-    ctx.forEachSymtab(
+    ctx.forEachActiveSymtab(
         [&](SymbolTable &symtab) { symtab.addUndefinedGlob(pat); });
 
   // Create wrapped symbols for -wrap option.
@@ -2685,12 +2694,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // need to create a .lib file. In MinGW mode, we only do that when the
   // -implib option is given explicitly, for compatibility with GNU ld.
   if (config->dll || !ctx.symtab.exports.empty() ||
-      (ctx.hybridSymtab && !ctx.hybridSymtab->exports.empty())) {
+      (ctx.config.machine == ARM64X && !ctx.hybridSymtab->exports.empty())) {
     llvm::TimeTraceScope timeScope("Create .lib exports");
-    ctx.forEachSymtab([](SymbolTable &symtab) { symtab.fixupExports(); });
+    ctx.forEachActiveSymtab([](SymbolTable &symtab) { symtab.fixupExports(); });
     if (!config->noimplib && (!config->mingw || !config->implib.empty()))
       createImportLibrary(/*asLib=*/false);
-    ctx.forEachSymtab(
+    ctx.forEachActiveSymtab(
         [](SymbolTable &symtab) { symtab.assignExportOrdinals(); });
   }
 
@@ -2756,7 +2765,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (ctx.symtab.isEC())
     ctx.symtab.initializeECThunks();
-  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.initializeLoadConfig(); });
+  ctx.forEachActiveSymtab(
+      [](SymbolTable &symtab) { symtab.initializeLoadConfig(); });
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {

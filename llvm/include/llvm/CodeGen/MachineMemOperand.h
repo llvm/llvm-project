@@ -25,6 +25,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -89,32 +90,32 @@ struct MachinePointerInfo {
 
   /// Return true if memory region [V, V+Offset+Size) is known to be
   /// dereferenceable.
-  bool isDereferenceable(unsigned Size, LLVMContext &C,
-                         const DataLayout &DL) const;
+  LLVM_ABI bool isDereferenceable(unsigned Size, LLVMContext &C,
+                                  const DataLayout &DL) const;
 
   /// Return the LLVM IR address space number that this pointer points into.
-  unsigned getAddrSpace() const;
+  LLVM_ABI unsigned getAddrSpace() const;
 
   /// Return a MachinePointerInfo record that refers to the constant pool.
-  static MachinePointerInfo getConstantPool(MachineFunction &MF);
+  LLVM_ABI static MachinePointerInfo getConstantPool(MachineFunction &MF);
 
   /// Return a MachinePointerInfo record that refers to the specified
   /// FrameIndex.
-  static MachinePointerInfo getFixedStack(MachineFunction &MF, int FI,
-                                          int64_t Offset = 0);
+  LLVM_ABI static MachinePointerInfo getFixedStack(MachineFunction &MF, int FI,
+                                                   int64_t Offset = 0);
 
   /// Return a MachinePointerInfo record that refers to a jump table entry.
-  static MachinePointerInfo getJumpTable(MachineFunction &MF);
+  LLVM_ABI static MachinePointerInfo getJumpTable(MachineFunction &MF);
 
   /// Return a MachinePointerInfo record that refers to a GOT entry.
-  static MachinePointerInfo getGOT(MachineFunction &MF);
+  LLVM_ABI static MachinePointerInfo getGOT(MachineFunction &MF);
 
   /// Stack pointer relative access.
-  static MachinePointerInfo getStack(MachineFunction &MF, int64_t Offset,
-                                     uint8_t ID = 0);
+  LLVM_ABI static MachinePointerInfo getStack(MachineFunction &MF,
+                                              int64_t Offset, uint8_t ID = 0);
 
   /// Stack memory without other information.
-  static MachinePointerInfo getUnknownStack(MachineFunction &MF);
+  LLVM_ABI static MachinePointerInfo getUnknownStack(MachineFunction &MF);
 };
 
 
@@ -188,12 +189,14 @@ public:
   /// and atomic ordering requirements must also be specified. For cmpxchg
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
+  LLVM_ABI
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
                     Align a, const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
                     AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  LLVM_ABI
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LLT type, Align a,
                     const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
@@ -256,7 +259,7 @@ public:
 
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
-  Align getAlign() const;
+  LLVM_ABI Align getAlign() const;
 
   /// Return the minimum known alignment in bytes of the base address, without
   /// the offset.
@@ -318,7 +321,7 @@ public:
   /// Update this MachineMemOperand to reflect the alignment of MMO, if it has a
   /// greater alignment. This must only be used when the new alignment applies
   /// to all users of this MachineMemOperand.
-  void refineAlignment(const MachineMemOperand *MMO);
+  LLVM_ABI void refineAlignment(const MachineMemOperand *MMO);
 
   /// Change the SourceValue for this MachineMemOperand. This should only be
   /// used when an object is being relocated and all references to it are being
@@ -337,9 +340,10 @@ public:
 
   /// Support for operator<<.
   /// @{
-  void print(raw_ostream &OS, ModuleSlotTracker &MST,
-             SmallVectorImpl<StringRef> &SSNs, const LLVMContext &Context,
-             const MachineFrameInfo *MFI, const TargetInstrInfo *TII) const;
+  LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
+                      SmallVectorImpl<StringRef> &SSNs,
+                      const LLVMContext &Context, const MachineFrameInfo *MFI,
+                      const TargetInstrInfo *TII) const;
   /// @}
 
   friend bool operator==(const MachineMemOperand &LHS,

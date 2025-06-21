@@ -10,10 +10,11 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_combine_sext_trunc_of_sextload
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[SEXTLOAD]](s64)
-    ; CHECK: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s64) = G_SEXTLOAD %0:_(p0) :: (load (s16))
     %2:_(s32) = G_TRUNC %1:_(s64)
@@ -29,9 +30,10 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_combine_sext_of_sextload
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK: $w0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_SEXTLOAD %0:_(p0) :: (load (s16))
     %2:_(s32) = COPY %1:_(s32)
@@ -48,9 +50,10 @@ body: |
     ; Here we're trying to extend from a smaller value than was extended in the load.
     ; CHECK-LABEL: name: test_combine_sext_of_sextload_not_matching
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK: $w0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_SEXTLOAD %0:_(p0) :: (load (s16))
     %2:_(s32) = COPY %1:_(s32)

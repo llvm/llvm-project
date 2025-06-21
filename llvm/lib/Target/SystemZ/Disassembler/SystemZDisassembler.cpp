@@ -13,6 +13,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
@@ -45,7 +46,8 @@ static MCDisassembler *createSystemZDisassembler(const Target &T,
 }
 
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSystemZTarget(),
                                          createSystemZDisassembler);
@@ -280,9 +282,9 @@ static DecodeStatus decodePCDBLOperand(MCInst &Inst, uint64_t Imm,
                                        uint64_t Address, bool isBranch,
                                        const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid PC-relative offset");
-  uint64_t Value = SignExtend64<N>(Imm) * 2 + Address;
+  uint64_t Value = SignExtend64<N>(Imm) * 2;
 
-  if (!tryAddingSymbolicOperand(Value, isBranch, Address, 2, N / 8,
+  if (!tryAddingSymbolicOperand(Value + Address, isBranch, Address, 2, N / 8,
                                 Inst, Decoder))
     Inst.addOperand(MCOperand::createImm(Value));
 

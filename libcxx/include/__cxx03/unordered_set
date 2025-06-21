@@ -598,7 +598,7 @@ public:
   template <class _Value2, class _Hash2, class _Pred2, class _Alloc2>
   friend class _LIBCPP_TEMPLATE_VIS unordered_multiset;
 
-  _LIBCPP_HIDE_FROM_ABI unordered_set() _NOEXCEPT_(is_nothrow_default_constructible<__table>::value) {}
+  _LIBCPP_HIDE_FROM_ABI unordered_set() {}
   explicit _LIBCPP_HIDE_FROM_ABI
   unordered_set(size_type __n, const hasher& __hf = hasher(), const key_equal& __eql = key_equal());
 
@@ -663,9 +663,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __table_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_set& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
-    __table_.swap(__u.__table_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_set& __u) { __table_.swap(__u.__table_); }
 
   _LIBCPP_HIDE_FROM_ABI hasher hash_function() const { return __table_.hash_function(); }
   _LIBCPP_HIDE_FROM_ABI key_equal key_eq() const { return __table_.key_eq(); }
@@ -769,8 +767,7 @@ inline void unordered_set<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator _
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(unordered_set<_Value, _Hash, _Pred, _Alloc>& __x, unordered_set<_Value, _Hash, _Pred, _Alloc>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(unordered_set<_Value, _Hash, _Pred, _Alloc>& __x, unordered_set<_Value, _Hash, _Pred, _Alloc>& __y) {
   __x.swap(__y);
 }
 
@@ -829,7 +826,7 @@ public:
   template <class _Value2, class _Hash2, class _Pred2, class _Alloc2>
   friend class _LIBCPP_TEMPLATE_VIS unordered_multiset;
 
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset() _NOEXCEPT_(is_nothrow_default_constructible<__table>::value) {}
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset() {}
   explicit _LIBCPP_HIDE_FROM_ABI
   unordered_multiset(size_type __n, const hasher& __hf = hasher(), const key_equal& __eql = key_equal());
   _LIBCPP_HIDE_FROM_ABI
@@ -897,9 +894,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __table_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multiset& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
-    __table_.swap(__u.__table_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multiset& __u) { __table_.swap(__u.__table_); }
 
   _LIBCPP_HIDE_FROM_ABI hasher hash_function() const { return __table_.hash_function(); }
   _LIBCPP_HIDE_FROM_ABI key_equal key_eq() const { return __table_.key_eq(); }
@@ -1007,8 +1002,7 @@ inline void unordered_multiset<_Value, _Hash, _Pred, _Alloc>::insert(_InputItera
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x, unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x, unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __y) {
   __x.swap(__y);
 }
 

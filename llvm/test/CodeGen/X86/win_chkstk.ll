@@ -1,6 +1,8 @@
 ; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck %s -check-prefix=WIN_X32
 ; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck %s -check-prefix=WIN_X64
 ; RUN: llc < %s -mtriple=x86_64-pc-win32 -code-model=large | FileCheck %s -check-prefix=WIN64_LARGE
+; RUN: llc < %s -mtriple=x86_64-uefi | FileCheck %s -check-prefix=WIN_X64
+; RUN: llc < %s -mtriple=x86_64-uefi -code-model=large | FileCheck %s -check-prefix=WIN64_LARGE
 ; RUN: llc < %s -mtriple=i686-pc-mingw32 | FileCheck %s -check-prefix=MINGW_X32
 ; RUN: llc < %s -mtriple=x86_64-pc-mingw32 | FileCheck %s -check-prefix=MINGW_X64
 ; RUN: llc < %s -mtriple=i386-pc-linux | FileCheck %s -check-prefix=LINUX

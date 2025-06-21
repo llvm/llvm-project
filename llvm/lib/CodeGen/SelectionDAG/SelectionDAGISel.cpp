@@ -101,7 +101,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -345,13 +344,12 @@ SelectionDAGISelLegacy::SelectionDAGISelLegacy(
 
 bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
   // If we already selected that function, we do not need to run SDISel.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return false;
 
   // Do some sanity-checking on the command-line options.
   if (EnableFastISelAbort && !Selector->TM.Options.EnableFastISel)
-    report_fatal_error("-fast-isel-abort > 0 requires -fast-isel");
+    reportFatalUsageError("-fast-isel-abort > 0 requires -fast-isel");
 
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
@@ -388,10 +386,7 @@ SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOptLevel OL)
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-SelectionDAGISel::~SelectionDAGISel() {
-  delete CurDAG;
-  delete SwiftError;
-}
+SelectionDAGISel::~SelectionDAGISel() { delete CurDAG; }
 
 void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   CodeGenOptLevel OptLevel = Selector->OptLevel;
@@ -421,13 +416,12 @@ PreservedAnalyses
 SelectionDAGISelPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
   // If we already selected that function, we do not need to run SDISel.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return PreservedAnalyses::all();
 
   // Do some sanity-checking on the command-line options.
   if (EnableFastISelAbort && !Selector->TM.Options.EnableFastISel)
-    report_fatal_error("-fast-isel-abort > 0 requires -fast-isel");
+    reportFatalUsageError("-fast-isel-abort > 0 requires -fast-isel");
 
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
@@ -800,7 +794,7 @@ static void reportFastISelFailure(MachineFunction &MF,
     R << (" (in function: " + MF.getName() + ")").str();
 
   if (ShouldAbort)
-    report_fatal_error(Twine(R.getMsg()));
+    reportFatalUsageError(Twine(R.getMsg()));
 
   ORE.emit(R);
   LLVM_DEBUG(dbgs() << R.getMsg() << "\n");
@@ -1513,7 +1507,6 @@ static bool isFoldedOrDeadInstruction(const Instruction *I,
                                       const FunctionLoweringInfo &FuncInfo) {
   return !I->mayWriteToMemory() && // Side-effecting instructions aren't folded.
          !I->isTerminator() &&     // Terminators aren't folded.
-         !isa<DbgInfoIntrinsic>(I) && // Debug instructions aren't folded.
          !I->isEHPad() &&             // EH pad instructions aren't folded.
          !FuncInfo.isExportedInst(I); // Exported instrs must be computed.
 }
@@ -1599,10 +1592,6 @@ static bool processDbgDeclare(FunctionLoweringInfo &FuncInfo,
 /// in case the declarations refer to arguments.
 static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
   for (const auto &I : instructions(*FuncInfo.Fn)) {
-    const auto *DI = dyn_cast<DbgDeclareInst>(&I);
-    if (DI && processDbgDeclare(FuncInfo, DI->getAddress(), DI->getExpression(),
-                                DI->getVariable(), DI->getDebugLoc()))
-      FuncInfo.PreprocessedDbgDeclares.insert(DI);
     for (const DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
       if (DVR.Type == DbgVariableRecord::LocationType::Declare &&
           processDbgDeclare(FuncInfo, DVR.getVariableLocationOp(0),
@@ -1883,7 +1872,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
     if (SP->shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
-          TLI->getSSPStackGuardCheck(*Fn.getParent());
+          TLI->getSSPStackGuardCheck(*Fn.getParent()) && Fn.hasMinSize();
       SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
                                    FunctionBasedInstrumentation);
     }
@@ -1956,8 +1945,7 @@ SelectionDAGISel::FinishBasicBlock() {
 
     // Add load and check to the basicblock.
     FuncInfo->MBB = ParentMBB;
-    FuncInfo->InsertPt =
-        findSplitPointForStackProtector(ParentMBB, *TII);
+    FuncInfo->InsertPt = findSplitPointForStackProtector(ParentMBB, *TII);
     SDB->visitSPDescriptorParent(SDB->SPDescriptor, ParentMBB);
     CurDAG->setRoot(SDB->getRoot());
     SDB->clear();
@@ -1979,8 +1967,7 @@ SelectionDAGISel::FinishBasicBlock() {
         findSplitPointForStackProtector(ParentMBB, *TII);
 
     // Splice the terminator of ParentMBB into SuccessMBB.
-    SuccessMBB->splice(SuccessMBB->end(), ParentMBB,
-                       SplitPoint,
+    SuccessMBB->splice(SuccessMBB->end(), ParentMBB, SplitPoint,
                        ParentMBB->end());
 
     // Add compare/jump on neq/jump to the parent BB.
@@ -3264,6 +3251,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::AssertSext:
   case ISD::AssertZext:
+  case ISD::AssertNoFPClass:
   case ISD::AssertAlign:
     ReplaceUses(SDValue(NodeToMatch, 0), NodeToMatch->getOperand(0));
     CurDAG->RemoveDeadNode(NodeToMatch);
@@ -4415,6 +4403,8 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
   std::string msg;
   raw_string_ostream Msg(msg);
   Msg << "Cannot select: ";
+
+  Msg.enable_colors(errs().has_colors());
 
   if (N->getOpcode() != ISD::INTRINSIC_W_CHAIN &&
       N->getOpcode() != ISD::INTRINSIC_WO_CHAIN &&

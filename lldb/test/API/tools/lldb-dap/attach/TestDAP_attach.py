@@ -2,15 +2,11 @@
 Test lldb-dap attach request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import os
-import shutil
 import subprocess
-import tempfile
 import threading
 import time
 
@@ -26,8 +22,6 @@ def spawn_and_wait(program, delay):
 
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def set_and_hit_breakpoint(self, continueToExit=True):
-        self.dap_server.wait_for_stopped()
-
         source = "main.c"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
@@ -36,7 +30,12 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
-        self.continue_to_breakpoints(breakpoint_ids)
+        # Test binary will sleep for 10s, offset the breakpoint timeout
+        # accordingly.
+        timeout_offset = 10
+        self.continue_to_breakpoints(
+            breakpoint_ids, timeout=timeout_offset + self.DEFAULT_TIMEOUT
+        )
         if continueToExit:
             self.continue_to_exit()
 
@@ -160,7 +159,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Continue after launch and hit the "pause()" call and stop the target.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after we stop.
-        self.dap_server.request_continue()
+        self.do_continue()
         time.sleep(0.5)
         self.dap_server.request_pause()
         self.dap_server.wait_for_stopped()
@@ -198,9 +197,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(
-        archs=["arm", "aarch64"]
-    )  # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5517/steps/test/logs/stdio
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during

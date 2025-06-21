@@ -1004,6 +1004,16 @@ protected:
         Function::Create(FuncType, GlobalValue::ExternalLinkage, "g", OldM);
     G->addMetadata(LLVMContext::MD_type, *MDNode::get(C, {}));
 
+    auto *NonEntryBlock = BasicBlock::Create(C, "", F);
+    IBuilder.SetInsertPoint(NonEntryBlock);
+    IBuilder.CreateRetVoid();
+
+    // Create a global that contains the block address in its initializer.
+    auto *BlockAddress = BlockAddress::get(NonEntryBlock);
+    new GlobalVariable(*OldM, BlockAddress->getType(), /*isConstant=*/true,
+                       GlobalVariable::ExternalLinkage, BlockAddress,
+                       "blockaddr");
+
     // Finalize the debug info
     DBuilder.finalize();
   }
@@ -1264,6 +1274,15 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
   VM.clear();
   delete BB3;
 #undef EXPECT_ATOM
+}
+
+// Checks that block addresses in global initializers are properly cloned.
+TEST_F(CloneModule, GlobalWithBlockAddressesInitializer) {
+  auto *OriginalBa = cast<BlockAddress>(
+      OldM->getGlobalVariable("blockaddr")->getInitializer());
+  auto *ClonedBa = cast<BlockAddress>(
+      NewM->getGlobalVariable("blockaddr")->getInitializer());
+  ASSERT_NE(OriginalBa->getBasicBlock(), ClonedBa->getBasicBlock());
 }
 
 } // namespace

@@ -135,6 +135,7 @@ endif()
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
@@ -220,6 +221,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   if(LIBC_LIBDIR_SUBDIR)
     string(APPEND LIBC_TARGET_SUBDIR /${LIBC_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBC_TARGET_SUBDIR)
 endif()
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND (LIBC_ENABLE_USE_BY_CLANG OR LIBC_TARGET_OS_IS_GPU))

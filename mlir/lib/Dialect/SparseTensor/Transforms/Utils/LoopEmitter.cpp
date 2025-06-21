@@ -263,7 +263,7 @@ void LoopEmitter::initializeLoopEmit(
         denseTp = bufferization::getMemRefTypeWithFullyDynamicLayout(rtp);
 
       Value denseVal =
-          builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+          builder.create<bufferization::ToBufferOp>(loc, denseTp, tensor);
       // Dense outputs need special handling.
       if (isOutput && updater)
         denseVal = updater(builder, loc, denseVal, tensor);
@@ -404,7 +404,7 @@ void LoopEmitter::categorizeIterators(
       spIters.push_back(it);
   }
 
-  std::stable_sort(spIters.begin(), spIters.end(), [](auto lhs, auto rhs) {
+  llvm::stable_sort(spIters, [](auto lhs, auto rhs) {
     // AffineUnRed > Affine > Slice > Trivial
     return static_cast<uint8_t>(lhs->kind) > static_cast<uint8_t>(rhs->kind);
   });

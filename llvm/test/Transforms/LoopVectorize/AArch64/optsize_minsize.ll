@@ -24,11 +24,10 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 0
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; DEFAULT-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
 ; DEFAULT-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
@@ -57,11 +56,10 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; OPTSIZE:       [[VECTOR_BODY]]:
-; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 0
-; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; OPTSIZE-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; OPTSIZE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; OPTSIZE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; OPTSIZE-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
 ; OPTSIZE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
@@ -90,11 +88,10 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; MINSIZE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MINSIZE:       [[VECTOR_BODY]]:
-; MINSIZE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 0
-; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
+; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; MINSIZE-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
+; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; MINSIZE-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP3]], align 4
 ; MINSIZE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
@@ -397,9 +394,9 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT-NEXT:    store i8 [[TMP71]], ptr [[TMP70]], align 1
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE36]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE36]]:
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <16 x i8> [[VEC_IND]], splat (i8 16)
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT2]] = add <16 x i8> [[VEC_IND1]], splat (i8 16)
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; DEFAULT-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
@@ -504,26 +501,26 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
+; DEFAULT-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
 ; DEFAULT-NEXT:    [[N_RND_UP:%.*]] = add i64 15, [[TMP2]]
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 16
+; DEFAULT-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 16
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 16
+; DEFAULT-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 16
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = sub i64 15, [[TMP6]]
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = icmp ugt i64 15, [[TMP6]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
 ; DEFAULT-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 15)
-; DEFAULT-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[C]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT3]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = mul <vscale x 16 x i8> [[TMP10]], splat (i8 1)
 ; DEFAULT-NEXT:    [[INDUCTION:%.*]] = add <vscale x 16 x i8> zeroinitializer, [[TMP11]]
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP4]] to i8
@@ -580,26 +577,26 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; OPTSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; OPTSIZE:       [[VECTOR_PH]]:
 ; OPTSIZE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; OPTSIZE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
+; OPTSIZE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; OPTSIZE-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
 ; OPTSIZE-NEXT:    [[N_RND_UP:%.*]] = add i64 15, [[TMP2]]
 ; OPTSIZE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; OPTSIZE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; OPTSIZE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; OPTSIZE-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 16
+; OPTSIZE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 16
 ; OPTSIZE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; OPTSIZE-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 16
+; OPTSIZE-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 16
 ; OPTSIZE-NEXT:    [[TMP7:%.*]] = sub i64 15, [[TMP6]]
 ; OPTSIZE-NEXT:    [[TMP8:%.*]] = icmp ugt i64 15, [[TMP6]]
 ; OPTSIZE-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
 ; OPTSIZE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 15)
-; OPTSIZE-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i64 0
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B]], i64 0
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[C]], i64 0
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT3]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; OPTSIZE-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
 ; OPTSIZE-NEXT:    [[TMP11:%.*]] = mul <vscale x 16 x i8> [[TMP10]], splat (i8 1)
 ; OPTSIZE-NEXT:    [[INDUCTION:%.*]] = add <vscale x 16 x i8> zeroinitializer, [[TMP11]]
 ; OPTSIZE-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP4]] to i8
@@ -656,26 +653,26 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; MINSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; MINSIZE:       [[VECTOR_PH]]:
 ; MINSIZE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; MINSIZE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
+; MINSIZE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; MINSIZE-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
 ; MINSIZE-NEXT:    [[N_RND_UP:%.*]] = add i64 15, [[TMP2]]
 ; MINSIZE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; MINSIZE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; MINSIZE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; MINSIZE-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 16
+; MINSIZE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 16
 ; MINSIZE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; MINSIZE-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 16
+; MINSIZE-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 16
 ; MINSIZE-NEXT:    [[TMP7:%.*]] = sub i64 15, [[TMP6]]
 ; MINSIZE-NEXT:    [[TMP8:%.*]] = icmp ugt i64 15, [[TMP6]]
 ; MINSIZE-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
 ; MINSIZE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 15)
-; MINSIZE-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
 ; MINSIZE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i64 0
 ; MINSIZE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; MINSIZE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B]], i64 0
 ; MINSIZE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; MINSIZE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[C]], i64 0
 ; MINSIZE-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT3]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; MINSIZE-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
 ; MINSIZE-NEXT:    [[TMP11:%.*]] = mul <vscale x 16 x i8> [[TMP10]], splat (i8 1)
 ; MINSIZE-NEXT:    [[INDUCTION:%.*]] = add <vscale x 16 x i8> zeroinitializer, [[TMP11]]
 ; MINSIZE-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP4]] to i8

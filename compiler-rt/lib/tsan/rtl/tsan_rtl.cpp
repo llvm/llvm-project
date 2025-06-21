@@ -679,6 +679,12 @@ void CheckUnwind() {
 
 bool is_initialized;
 
+// Symbolization indirectly calls dl_iterate_phdr. If a CHECK() fails early on
+// (prior to the dl_iterate_phdr interceptor setup), resulting in an attempted
+// symbolization, it will segfault.
+// dl_iterate_phdr is not intercepted for Android.
+bool ready_to_symbolize = SANITIZER_ANDROID;
+
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
   if (is_initialized)

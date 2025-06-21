@@ -354,8 +354,9 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
             disconnected = true;
             Disconnect();
           }
+        } else {
+          timed_out = true;
         }
-        timed_out = true;
         break;
       case eConnectionStatusSuccess:
         // printf ("status = success but error = %s\n",
@@ -924,9 +925,8 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     debugserver_args.AppendArgument(fd_arg.GetString());
     // Send "pass_comm_fd" down to the inferior so it can use it to
     // communicate back with this process. Ignored on Windows.
-#ifndef _WIN32
-    launch_info.AppendDuplicateFileAction((int)pass_comm_fd, (int)pass_comm_fd);
-#endif
+    launch_info.AppendDuplicateFileAction((int64_t)pass_comm_fd,
+                                          (int64_t)pass_comm_fd);
   }
 
   // use native registers, not the GDB registers
