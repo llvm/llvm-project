@@ -532,7 +532,7 @@ static void StopBackgroundThread() {
 
 void DontNeedShadowFor(uptr addr, uptr size) {
   ReleaseMemoryPagesToOS(reinterpret_cast<uptr>(MemToShadow(addr)),
-                         reinterpret_cast<uptr>(MemToEndShadow(addr + size)));
+                         reinterpret_cast<uptr>(MemToShadow(addr + size)));
 }
 
 #if !SANITIZER_GO
@@ -566,13 +566,18 @@ static bool IsValidMmapRange(uptr addr, uptr size) {
   return false;
 }
 
-void UnmapShadow(ThreadState *thr, uptr addr, uptr size) {
+void UnmapShadow(ThreadState* thr, uptr addr, uptr size) {
   if (size == 0 || !IsValidMmapRange(addr, size))
     return;
-  DontNeedShadowFor(addr, size);
+  // unmap shadow is related to semantic of mmap/munmap, so we
+  // should clear the whole shadow range, including the tail shadow
+  // while addr + size % kShadowCell != 0.
+  uptr size_for_shadow = RoundUp(addr + size, kShadowCell) - addr;
+  DontNeedShadowFor(addr, size_for_shadow);
   ScopedGlobalProcessor sgp;
   SlotLocker locker(thr, true);
-  ctx->metamap.ResetRange(thr->proc(), addr, size, true);
+  uptr size_for_meta = RoundUp(addr + size, kMetaShadowCell) - addr;
+  ctx->metamap.ResetRange(thr->proc(), addr, size_for_meta, true);
 }
 #endif
 
