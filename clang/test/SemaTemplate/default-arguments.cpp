@@ -107,7 +107,7 @@ struct add_pointer {
   };
 };
 
-template<typename T, template<typename> class X = T::template apply>
+template<typename T, template<typename> class X = T::template apply> // expected-warning{{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
   struct X4;
 int array4[is_same<X4<add_pointer>,
                    X4<add_pointer, add_pointer::apply> >::value? 1 : -1];

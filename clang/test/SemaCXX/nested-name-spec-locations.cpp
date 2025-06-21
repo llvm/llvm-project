@@ -141,7 +141,7 @@ struct DependentTemplateTemplateArgumentTester {
               typename add_reference<U>::type
               * // expected-error{{declared as a pointer to a reference of type}}
             >::
-            template X>
+            template X> // expected-warning{{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
     type;
 };
 
