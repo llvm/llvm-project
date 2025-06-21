@@ -7,10 +7,15 @@ start:
   %0 = extractvalue { i8, i32 } %a, 0
   store volatile i8 %0, ptr inttoptr (i64 4 to ptr)
 
-  ; CHECK-NEXT: sts     8, r24
-  ; CHECK-NEXT: sts     7, r23
-  ; CHECK-NEXT: sts     6, r22
   ; CHECK-NEXT: sts     5, r21
+
+  ; redundant instructions, should be deleted
+  ; CHECK-NEXT:	mov     r18, r22
+  ; CHECK-NEXT:	mov     r19, r23
+
+  ; CHECK-NEXT: sts     7, r19
+  ; CHECK-NEXT: sts     6, r18
+  ; CHECK-NEXT: sts     8, r24
   %1 = extractvalue { i8, i32 } %a, 1
   store volatile i32 %1, ptr inttoptr (i64 5 to ptr)
   ret void
@@ -62,17 +67,22 @@ start:
   %0 = extractvalue { i8, i32 } %a, 0
   store volatile i8 %0, ptr inttoptr (i64 4 to ptr)
 
-  ; CHECK-NEXT: sts     8, r24
-  ; CHECK-NEXT: sts     7, r23
-  ; CHECK-NEXT: sts     6, r22
   ; CHECK-NEXT: sts     5, r21
+
+  ; redundant instructions, should be deleted
+  ; CHECK-NEXT:	mov     r20, r22
+  ; CHECK-NEXT:	mov     r21, r23
+
+  ; CHECK-NEXT: sts     7, r21
+  ; CHECK-NEXT: sts     6, r20
+  ; CHECK-NEXT: sts     8, r24
   %1 = extractvalue { i8, i32 } %a, 1
   store volatile i32 %1, ptr inttoptr (i64 5 to ptr)
 
-  ; CHECK-NEXT:      sts     9, r17
-  ; CHECK-NEXT:      sts     8, r16
-  ; CHECK-NEXT:      sts     7, r15
-  ; CHECK-NEXT:      sts     6, r14
+  ; CHECK-NEXT: sts     9, r17
+  ; CHECK-NEXT: sts     8, r16
+  ; CHECK-NEXT: sts     7, r15
+  ; CHECK-NEXT: sts     6, r14
   %2 = extractvalue { i32, i8 } %b, 0
   store volatile i32 %2, ptr inttoptr (i64 6 to ptr)
 

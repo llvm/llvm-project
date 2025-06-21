@@ -436,6 +436,8 @@ private:
   bool optimizeExt(Instruction *&I);
   bool optimizeExtUses(Instruction *I);
   bool optimizeLoadExt(LoadInst *Load);
+  bool optimizeStoreMisalign(StoreInst *ST);
+  bool optimizeLoadMisalign(LoadInst *ST);
   bool optimizeShiftInst(BinaryOperator *BO);
   bool optimizeFunnelShift(IntrinsicInst *Fsh);
   bool optimizeSelectInst(SelectInst *SI);
@@ -7353,6 +7355,138 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   return true;
 }
 
+static bool isOptimizeMisalignCandidate(Instruction *I, const DataLayout *DL,
+                                        const TargetLowering *TLI,
+                                        const DominatorTree *DT) {
+  if (!isa<StoreInst>(I) && !isa<LoadInst>(I))
+    return false;
+
+  Value *Ptr = I->getOperand(isa<StoreInst>(I) ? 1 : 0);
+  Align Alignment = isa<StoreInst>(I) ? cast<StoreInst>(I)->getAlign()
+                                      : cast<LoadInst>(I)->getAlign();
+  Type *ValTy = isa<StoreInst>(I) ? I->getOperand(0)->getType() : I->getType();
+
+  if (ValTy->isScalableTy() || !ValTy->isSized())
+    return false;
+
+  unsigned BitWidth = DL->getTypeSizeInBits(ValTy);
+
+  // DAG legalization can handle this situation well
+  if (Alignment.value() * 8 >= BitWidth / 2)
+    return false;
+
+  Type *PtrTy = Ptr->getType();
+  EVT ValVT = TLI->getValueType(*DL, ValTy, true);
+  if (!ValVT.isSimple() || ValVT == MVT::Other ||
+      TLI->allowsMisalignedMemoryAccesses(
+          ValVT, PtrTy->getPointerAddressSpace(), Alignment))
+    return false;
+
+  KnownBits Known = computeKnownBits(Ptr, *DL, nullptr, I, DT);
+  if (Known.isUnknown())
+    return false;
+
+  unsigned PtrWidth = DL->getPointerTypeSizeInBits(PtrTy);
+  KnownBits AlignKnown =
+      KnownBits::makeConstant(APInt(PtrWidth, Alignment.value()));
+
+  if (KnownBits::add(Known, AlignKnown).countMinTrailingZeros() <=
+      AlignKnown.countMinTrailingZeros())
+    return false;
+  return true;
+}
+
+bool CodeGenPrepare::optimizeStoreMisalign(StoreInst *SI) {
+  if (!isOptimizeMisalignCandidate(SI, DL, TLI, DT.get()))
+    return false;
+
+  IRBuilder<> Builder(SI);
+  Value *Val = SI->getValueOperand();
+  unsigned BitWidth = DL->getTypeSizeInBits(Val->getType());
+  if (!Val->getType()->isIntegerTy())
+    Val =
+        Builder.CreateBitCast(Val, Type::getIntNTy(SI->getContext(), BitWidth));
+
+  bool IsLE = DL->isLittleEndian();
+  bool IsVolatile = SI->isVolatile();
+  Align Alignment = SI->getAlign();
+  Value *Ptr = SI->getPointerOperand();
+  unsigned RemainingBits = BitWidth;
+  Type *Int8Ty = Type::getInt8Ty(SI->getContext());
+  Type *Int32Ty = Type::getInt32Ty(SI->getContext());
+
+  while (RemainingBits > 0) {
+    unsigned ChunkBits =
+        std::min((uint64_t)(RemainingBits), 8 * Alignment.value());
+    Type *ChunkTy = Type::getIntNTy(SI->getContext(), ChunkBits);
+    Value *ChunkVal;
+    if (IsLE) {
+      ChunkVal = Builder.CreateTrunc(Val, ChunkTy);
+    } else {
+      Value *ShiftR = Builder.CreateLShr(Val, BitWidth - ChunkBits);
+      ChunkVal = Builder.CreateTrunc(ShiftR, ChunkTy);
+    }
+    Builder.CreateAlignedStore(ChunkVal, Ptr, Alignment, IsVolatile);
+    RemainingBits -= ChunkBits;
+    if (RemainingBits == 0)
+      break;
+
+    Val = IsLE ? Builder.CreateLShr(Val, ChunkBits)
+               : Builder.CreateShl(Val, ChunkBits);
+    Ptr = Builder.CreateGEP(Int8Ty, Ptr,
+                            ConstantInt::get(Int32Ty, ChunkBits / 8));
+    Alignment = getKnownAlignment(Ptr, *DL);
+  }
+
+  SI->eraseFromParent();
+  return true;
+}
+
+bool CodeGenPrepare::optimizeLoadMisalign(LoadInst *LI) {
+  if (!isOptimizeMisalignCandidate(LI, DL, TLI, DT.get()))
+    return false;
+
+  IRBuilder<> Builder(LI);
+  Type *ValTy = LI->getType();
+
+  unsigned BitWidth = DL->getTypeSizeInBits(LI->getType());
+  bool IsLE = DL->isLittleEndian();
+  bool IsVolatile = LI->isVolatile();
+  Align Alignment = LI->getAlign();
+  Value *Ptr = LI->getPointerOperand();
+  unsigned RemainingBits = BitWidth;
+  Type *IntTy = Type::getIntNTy(LI->getContext(), BitWidth);
+  Type *Int8Ty = Type::getInt8Ty(LI->getContext());
+  Type *Int32Ty = Type::getInt32Ty(LI->getContext());
+  Value *Val = ConstantInt::get(IntTy, 0);
+
+  while (RemainingBits > 0) {
+    unsigned ChunkBits =
+        std::min((uint64_t)(RemainingBits), 8 * Alignment.value());
+    Type *ChunkTy = Type::getIntNTy(LI->getContext(), ChunkBits);
+    Value *ChunkVal = Builder.CreateZExt(
+        Builder.CreateAlignedLoad(ChunkTy, Ptr, Alignment, IsVolatile), IntTy);
+    if (IsLE) {
+      ChunkVal = Builder.CreateShl(ChunkVal, BitWidth - RemainingBits);
+    } else {
+      ChunkVal = Builder.CreateShl(Val, RemainingBits - ChunkBits);
+    }
+    Val = Builder.CreateOr(Val, ChunkVal);
+    RemainingBits -= ChunkBits;
+    if (RemainingBits == 0)
+      break;
+    Ptr = Builder.CreateGEP(Int8Ty, Ptr,
+                            ConstantInt::get(Int32Ty, ChunkBits / 8));
+    Alignment = getKnownAlignment(Ptr, *DL);
+  }
+
+  if (!ValTy->isIntegerTy())
+    Val = Builder.CreateBitCast(Val, ValTy);
+  LI->replaceAllUsesWith(Val);
+  LI->eraseFromParent();
+  return true;
+}
+
 /// Check if V (an operand of a select instruction) is an expensive instruction
 /// that is only used once.
 static bool sinkSelectOperand(const TargetTransformInfo *TTI, Value *V) {
@@ -8750,6 +8884,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+    if (optimizeLoadMisalign(LI))
+      return true;
     LI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     bool Modified = optimizeLoadExt(LI);
     unsigned AS = LI->getPointerAddressSpace();
@@ -8759,6 +8895,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
 
   if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (splitMergedValStore(*SI, *DL, *TLI))
+      return true;
+    if (optimizeStoreMisalign(SI))
       return true;
     SI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     unsigned AS = SI->getPointerAddressSpace();

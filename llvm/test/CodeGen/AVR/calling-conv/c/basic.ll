@@ -12,10 +12,15 @@ define void @ret_void_args_i8_i32(i8 %a, i32 %b) {
   ; CHECK:      sts     4, r24
   store volatile i8 %a, ptr inttoptr (i64 4 to ptr)
 
-  ; CHECK-NEXT: sts     8, r23
-  ; CHECK-NEXT: sts     7, r22
-  ; CHECK-NEXT: sts     6, r21
   ; CHECK-NEXT: sts     5, r20
+
+  ; redundant instructions, should be deleted
+  ; CHECK-NEXT: mov     r24, r21
+  ; CHECK-NEXT: mov     r25, r22
+
+  ; CHECK-NEXT: sts     7, r25
+  ; CHECK-NEXT: sts     6, r24
+  ; CHECK-NEXT: sts     8, r23
   store volatile i32 %b, ptr inttoptr (i64 5 to ptr)
   ret void
 }

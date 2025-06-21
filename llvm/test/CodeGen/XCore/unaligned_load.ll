@@ -24,8 +24,11 @@ entry:
 
 ; Constant offset from word aligned base.
 ; CHECK-LABEL: align3:
-; CHECK: ldw {{r[0-9]+}}, dp
-; CHECK: ldw {{r[0-9]+}}, dp
+; CHECK: ldaw {{r[0-9]+}}, dp
+; CHECK: ld8u
+; CHECK: ld16s
+; CHECK: or
+; CHECK: ld8u
 ; CHECK: or
 define i32 @align3() nounwind {
 entry:
