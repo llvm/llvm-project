@@ -58,6 +58,19 @@ public:
 
   // arithmetic
 
+#if _LIBCPP_STD_VER >= 20
+  _LIBCPP_HIDE_FROM_ABI constexpr time_point& operator++() {
+    ++__d_;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr time_point operator++(int) { return time_point{__d_++}; }
+  _LIBCPP_HIDE_FROM_ABI constexpr time_point& operator--() {
+    --__d_;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr time_point operator--(int) { return time_point{__d_--}; }
+#endif // _LIBCPP_STD_VER >= 20
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 time_point& operator+=(const duration& __d) {
     __d_ += __d;
     return *this;

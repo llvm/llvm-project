@@ -448,3 +448,19 @@ llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : 
 }
 
 llvm.func extern_weak @extern_func()
+
+// -----
+
+llvm.func @invoke_branch_weights_callee()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_branch_weights() -> i32 attributes {personality = @__gxx_personality_v0} {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // expected-error @below{{expects number of branch weights to match number of successors: 1 vs 2}}
+  llvm.invoke @invoke_branch_weights_callee() to ^bb2 unwind ^bb1 {branch_weights = array<i32 : 42>} : () -> ()
+^bb1:  // pred: ^bb0
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.br ^bb2
+^bb2:  // 2 preds: ^bb0, ^bb1
+  llvm.return %0 : i32
+}

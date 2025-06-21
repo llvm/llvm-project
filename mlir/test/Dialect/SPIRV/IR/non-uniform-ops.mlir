@@ -184,6 +184,14 @@ func.func @group_non_uniform_fmul_clustered_reduce(%val: vector<2xf32>) -> vecto
 
 // -----
 
+func.func @group_non_uniform_bf16_fmul_reduce(%val: bf16) -> bf16 {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformFMul <Workgroup> <Reduce> %val : bf16 -> bf16
+  return %0: bf16
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.GroupNonUniformFMax
 //===----------------------------------------------------------------------===//
@@ -193,6 +201,14 @@ func.func @group_non_uniform_fmax_reduce(%val: f32) -> f32 {
   // CHECK: %{{.+}} = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %{{.+}} : f32 -> f32
   %0 = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %val : f32 -> f32
   return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_bf16_fmax_reduce(%val: bf16) -> bf16 {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %val : bf16 -> bf16
+  return %0: bf16
 }
 
 // -----

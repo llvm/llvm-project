@@ -20,6 +20,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/Casting.h"
 
 #include <memory>
@@ -66,6 +67,10 @@ struct CIRRecordLowering final {
     return MemberInfo(offset, MemberInfo::InfoKind::Field, data);
   }
 
+  // Layout routines.
+  void setBitFieldInfo(const FieldDecl *fd, CharUnits startOffset,
+                       mlir::Type storageType);
+
   void lower();
   void lowerUnion();
 
@@ -77,6 +82,9 @@ struct CIRRecordLowering final {
   void accumulateBases(const CXXRecordDecl *cxxRecordDecl);
   void accumulateVPtrs();
   void accumulateFields();
+  RecordDecl::field_iterator
+  accumulateBitFields(RecordDecl::field_iterator field,
+                      RecordDecl::field_iterator fieldEnd);
 
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
@@ -86,6 +94,9 @@ struct CIRRecordLowering final {
 
   CharUnits getSize(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
+  }
+  CharUnits getSizeInBits(mlir::Type ty) {
+    return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
   CharUnits getAlignment(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
@@ -124,6 +135,17 @@ struct CIRRecordLowering final {
   mlir::Type getStorageType(const CXXRecordDecl *RD) {
     return cirGenTypes.getCIRGenRecordLayout(RD).getBaseSubobjectCIRType();
   }
+  // This is different from LLVM traditional codegen because CIRGen uses arrays
+  // of bytes instead of arbitrary-sized integers. This is important for packed
+  // structures support.
+  mlir::Type getBitfieldStorageType(unsigned numBits) {
+    unsigned alignedBits = llvm::alignTo(numBits, astContext.getCharWidth());
+    if (cir::isValidFundamentalIntWidth(alignedBits))
+      return builder.getUIntNTy(alignedBits);
+
+    mlir::Type type = getCharType();
+    return cir::ArrayType::get(type, alignedBits / astContext.getCharWidth());
+  }
 
   mlir::Type getStorageType(const FieldDecl *fieldDecl) {
     mlir::Type type = cirGenTypes.convertTypeForMem(fieldDecl->getType());
@@ -157,6 +179,7 @@ struct CIRRecordLowering final {
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
+  llvm::DenseMap<const FieldDecl *, CIRGenBitFieldInfo> bitFields;
   llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
   cir::CIRDataLayout dataLayout;
@@ -185,6 +208,32 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       dataLayout(cirGenTypes.getCGModule().getModule()),
       zeroInitializable(true), zeroInitializableAsBase(true), packed(packed),
       padded(false) {}
+
+void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
+                                        CharUnits startOffset,
+                                        mlir::Type storageType) {
+  CIRGenBitFieldInfo &info = bitFields[fd->getCanonicalDecl()];
+  info.isSigned = fd->getType()->isSignedIntegerOrEnumerationType();
+  info.offset =
+      (unsigned)(getFieldBitOffset(fd) - astContext.toBits(startOffset));
+  info.size = fd->getBitWidthValue();
+  info.storageSize = getSizeInBits(storageType).getQuantity();
+  info.storageOffset = startOffset;
+  info.storageType = storageType;
+  info.name = fd->getName();
+
+  if (info.size > info.storageSize)
+    info.size = info.storageSize;
+  // Reverse the bit offsets for big endian machines. Since bitfields are laid
+  // out as packed bits within an integer-sized unit, we can imagine the bits
+  // counting from the most-significant-bit instead of the
+  // least-significant-bit.
+  assert(!cir::MissingFeatures::isBigEndian());
+
+  info.volatileStorageSize = 0;
+  info.volatileOffset = 0;
+  info.volatileStorageOffset = CharUnits::Zero();
+}
 
 void CIRRecordLowering::lower() {
   if (recordDecl->isUnion()) {
@@ -233,6 +282,8 @@ void CIRRecordLowering::fillOutputFields() {
             fieldTypes.size() - 1;
       // A field without storage must be a bitfield.
       assert(!cir::MissingFeatures::bitfields());
+      if (!member.data)
+        setBitFieldInfo(member.fieldDecl, member.offset, fieldTypes.back());
     } else if (member.kind == MemberInfo::InfoKind::Base) {
       nonVirtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
     }
@@ -240,16 +291,217 @@ void CIRRecordLowering::fillOutputFields() {
   }
 }
 
-void CIRRecordLowering::accumulateFields() {
-  for (const FieldDecl *field : recordDecl->fields()) {
-    if (field->isBitField()) {
-      cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                         "accumulate bitfields");
+RecordDecl::field_iterator
+CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
+                                       RecordDecl::field_iterator fieldEnd) {
+  assert(!cir::MissingFeatures::isDiscreteBitFieldABI());
+
+  CharUnits regSize =
+      bitsToCharUnits(astContext.getTargetInfo().getRegisterWidth());
+  unsigned charBits = astContext.getCharWidth();
+
+  // Data about the start of the span we're accumulating to create an access
+  // unit from. 'Begin' is the first bitfield of the span. If 'begin' is
+  // 'fieldEnd', we've not got a current span. The span starts at the
+  // 'beginOffset' character boundary. 'bitSizeSinceBegin' is the size (in bits)
+  // of the span -- this might include padding when we've advanced to a
+  // subsequent bitfield run.
+  RecordDecl::field_iterator begin = fieldEnd;
+  CharUnits beginOffset;
+  uint64_t bitSizeSinceBegin;
+
+  // The (non-inclusive) end of the largest acceptable access unit we've found
+  // since 'begin'. If this is 'begin', we're gathering the initial set of
+  // bitfields of a new span. 'bestEndOffset' is the end of that acceptable
+  // access unit -- it might extend beyond the last character of the bitfield
+  // run, using available padding characters.
+  RecordDecl::field_iterator bestEnd = begin;
+  CharUnits bestEndOffset;
+  bool bestClipped; // Whether the representation must be in a byte array.
+
+  for (;;) {
+    // atAlignedBoundary is true if 'field' is the (potential) start of a new
+    // span (or the end of the bitfields). When true, limitOffset is the
+    // character offset of that span and barrier indicates whether the new
+    // span cannot be merged into the current one.
+    bool atAlignedBoundary = false;
+    bool barrier = false; // a barrier can be a zero Bit Width or non bit member
+    if (field != fieldEnd && field->isBitField()) {
+      uint64_t bitOffset = getFieldBitOffset(*field);
+      if (begin == fieldEnd) {
+        // Beginning a new span.
+        begin = field;
+        bestEnd = begin;
+
+        assert((bitOffset % charBits) == 0 && "Not at start of char");
+        beginOffset = bitsToCharUnits(bitOffset);
+        bitSizeSinceBegin = 0;
+      } else if ((bitOffset % charBits) != 0) {
+        // Bitfield occupies the same character as previous bitfield, it must be
+        // part of the same span. This can include zero-length bitfields, should
+        // the target not align them to character boundaries. Such non-alignment
+        // is at variance with the standards, which require zero-length
+        // bitfields be a barrier between access units. But of course we can't
+        // achieve that in the middle of a character.
+        assert(bitOffset ==
+                   astContext.toBits(beginOffset) + bitSizeSinceBegin &&
+               "Concatenating non-contiguous bitfields");
+      } else {
+        // Bitfield potentially begins a new span. This includes zero-length
+        // bitfields on non-aligning targets that lie at character boundaries
+        // (those are barriers to merging).
+        if (field->isZeroLengthBitField())
+          barrier = true;
+        atAlignedBoundary = true;
+      }
+    } else {
+      // We've reached the end of the bitfield run. Either we're done, or this
+      // is a barrier for the current span.
+      if (begin == fieldEnd)
+        break;
+
+      barrier = true;
+      atAlignedBoundary = true;
+    }
+
+    // 'installBest' indicates whether we should create an access unit for the
+    // current best span: fields ['begin', 'bestEnd') occupying characters
+    // ['beginOffset', 'bestEndOffset').
+    bool installBest = false;
+    if (atAlignedBoundary) {
+      // 'field' is the start of a new span or the end of the bitfields. The
+      // just-seen span now extends to 'bitSizeSinceBegin'.
+
+      // Determine if we can accumulate that just-seen span into the current
+      // accumulation.
+      CharUnits accessSize = bitsToCharUnits(bitSizeSinceBegin + charBits - 1);
+      if (bestEnd == begin) {
+        // This is the initial run at the start of a new span. By definition,
+        // this is the best seen so far.
+        bestEnd = field;
+        bestEndOffset = beginOffset + accessSize;
+        // Assume clipped until proven not below.
+        bestClipped = true;
+        if (!bitSizeSinceBegin)
+          // A zero-sized initial span -- this will install nothing and reset
+          // for another.
+          installBest = true;
+      } else if (accessSize > regSize) {
+        // Accumulating the just-seen span would create a multi-register access
+        // unit, which would increase register pressure.
+        installBest = true;
+      }
+
+      if (!installBest) {
+        // Determine if accumulating the just-seen span will create an expensive
+        // access unit or not.
+        mlir::Type type = getUIntNType(astContext.toBits(accessSize));
+        if (!astContext.getTargetInfo().hasCheapUnalignedBitFieldAccess())
+          cirGenTypes.getCGModule().errorNYI(
+              field->getSourceRange(), "NYI CheapUnalignedBitFieldAccess");
+
+        if (!installBest) {
+          // Find the next used storage offset to determine what the limit of
+          // the current span is. That's either the offset of the next field
+          // with storage (which might be field itself) or the end of the
+          // non-reusable tail padding.
+          CharUnits limitOffset;
+          for (auto probe = field; probe != fieldEnd; ++probe)
+            if (!isEmptyFieldForLayout(astContext, *probe)) {
+              // A member with storage sets the limit.
+              assert((getFieldBitOffset(*probe) % charBits) == 0 &&
+                     "Next storage is not byte-aligned");
+              limitOffset = bitsToCharUnits(getFieldBitOffset(*probe));
+              goto FoundLimit;
+            }
+          assert(!cir::MissingFeatures::cxxSupport());
+          limitOffset = astRecordLayout.getDataSize();
+        FoundLimit:
+          CharUnits typeSize = getSize(type);
+          if (beginOffset + typeSize <= limitOffset) {
+            // There is space before limitOffset to create a naturally-sized
+            // access unit.
+            bestEndOffset = beginOffset + typeSize;
+            bestEnd = field;
+            bestClipped = false;
+          }
+          if (barrier) {
+            // The next field is a barrier that we cannot merge across.
+            installBest = true;
+          } else if (cirGenTypes.getCGModule()
+                         .getCodeGenOpts()
+                         .FineGrainedBitfieldAccesses) {
+            assert(!cir::MissingFeatures::nonFineGrainedBitfields());
+            cirGenTypes.getCGModule().errorNYI(field->getSourceRange(),
+                                               "NYI FineGrainedBitfield");
+          } else {
+            // Otherwise, we're not installing. Update the bit size
+            // of the current span to go all the way to limitOffset, which is
+            // the (aligned) offset of next bitfield to consider.
+            bitSizeSinceBegin = astContext.toBits(limitOffset - beginOffset);
+          }
+        }
+      }
+    }
+
+    if (installBest) {
+      assert((field == fieldEnd || !field->isBitField() ||
+              (getFieldBitOffset(*field) % charBits) == 0) &&
+             "Installing but not at an aligned bitfield or limit");
+      CharUnits accessSize = bestEndOffset - beginOffset;
+      if (!accessSize.isZero()) {
+        // Add the storage member for the access unit to the record. The
+        // bitfields get the offset of their storage but come afterward and
+        // remain there after a stable sort.
+        mlir::Type type;
+        if (bestClipped) {
+          assert(getSize(getUIntNType(astContext.toBits(accessSize))) >
+                     accessSize &&
+                 "Clipped access need not be clipped");
+          type = getByteArrayType(accessSize);
+        } else {
+          type = getUIntNType(astContext.toBits(accessSize));
+          assert(getSize(type) == accessSize &&
+                 "Unclipped access must be clipped");
+        }
+        members.push_back(makeStorageInfo(beginOffset, type));
+        for (; begin != bestEnd; ++begin)
+          if (!begin->isZeroLengthBitField())
+            members.push_back(MemberInfo(
+                beginOffset, MemberInfo::InfoKind::Field, nullptr, *begin));
+      }
+      // Reset to start a new span.
+      field = bestEnd;
+      begin = fieldEnd;
+    } else {
+      assert(field != fieldEnd && field->isBitField() &&
+             "Accumulating past end of bitfields");
+      assert(!barrier && "Accumulating across barrier");
+      // Accumulate this bitfield into the current (potential) span.
+      bitSizeSinceBegin += field->getBitWidthValue();
       ++field;
+    }
+  }
+
+  return field;
+}
+
+void CIRRecordLowering::accumulateFields() {
+  for (RecordDecl::field_iterator field = recordDecl->field_begin(),
+                                  fieldEnd = recordDecl->field_end();
+       field != fieldEnd;) {
+    if (field->isBitField()) {
+      RecordDecl::field_iterator start = field;
+      // Iterate to gather the list of bitfields.
+      for (++field; field != fieldEnd && field->isBitField(); ++field)
+        ;
+      field = accumulateBitFields(start, field);
+      assert((field == fieldEnd || !field->isBitField()) &&
+             "Failed to accumulate all the bitfields");
     } else if (!field->isZeroSize(astContext)) {
-      members.push_back(MemberInfo(bitsToCharUnits(getFieldBitOffset(field)),
+      members.push_back(MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
                                    MemberInfo::InfoKind::Field,
-                                   getStorageType(field), field));
+                                   getStorageType(*field), *field));
       ++field;
     } else {
       // TODO(cir): do we want to do anything special about zero size members?
@@ -382,6 +634,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
 
   // Add all the field numbers.
   rl->fieldIdxMap.swap(lowering.fieldIdxMap);
+
+  rl->bitFields.swap(lowering.bitFields);
 
   // Dump the layout, if requested.
   if (getASTContext().getLangOpts().DumpRecordLayouts) {

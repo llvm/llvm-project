@@ -1,6 +1,8 @@
 header: time.h
 header_template: time.h.def
-macros: []
+macros:
+  - macro_name: NULL
+    macro_header: null-macro.h
 types:
   - type_name: struct_timeval
   - type_name: clockid_t

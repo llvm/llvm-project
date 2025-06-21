@@ -45,6 +45,7 @@ static_library("cppcoreguidelines") {
     "RvalueReferenceParamNotMovedCheck.cpp",
     "SlicingCheck.cpp",
     "SpecialMemberFunctionsCheck.cpp",
+    "UseEnumClassCheck.cpp",
     "VirtualClassDestructorCheck.cpp",
   ]
 }

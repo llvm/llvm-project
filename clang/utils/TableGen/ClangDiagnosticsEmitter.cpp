@@ -1794,8 +1794,8 @@ static std::string getDiagCategoryEnum(StringRef name) {
   if (name.empty())
     return "DiagCat_None";
   SmallString<256> enumName = StringRef("DiagCat_");
-  for (StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
-    enumName += isalnum(*I) ? *I : '_';
+  for (char C : name)
+    enumName += isalnum(C) ? C : '_';
   return std::string(enumName);
 }
 
@@ -2225,13 +2225,10 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
       else
         OS << "Also controls ";
 
-      bool First = true;
       sort(GroupInfo.SubGroups);
-      for (StringRef Name : GroupInfo.SubGroups) {
-        if (!First) OS << ", ";
-        OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
-        First = false;
-      }
+      ListSeparator LS;
+      for (StringRef Name : GroupInfo.SubGroups)
+        OS << LS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
       OS << ".\n\n";
     }
 

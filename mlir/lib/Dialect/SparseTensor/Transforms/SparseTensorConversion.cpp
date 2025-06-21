@@ -867,7 +867,9 @@ public:
     // Converts MemRefs back to Tensors.
     assert(retVal.size() + retLen.size() == op.getNumResults());
     for (unsigned i = 0, sz = retVal.size(); i < sz; i++) {
-      auto tensor = rewriter.create<bufferization::ToTensorOp>(loc, retVal[i]);
+      auto tensor = rewriter.create<bufferization::ToTensorOp>(
+          loc, memref::getTensorTypeFromMemRefType(retVal[i].getType()),
+          retVal[i]);
       retVal[i] =
           rewriter.create<tensor::CastOp>(loc, op.getResultTypes()[i], tensor);
     }

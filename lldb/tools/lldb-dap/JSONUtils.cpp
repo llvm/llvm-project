@@ -482,15 +482,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   return event;
 }
 
-protocol::ExceptionBreakpointsFilter
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  protocol::ExceptionBreakpointsFilter filter;
-  filter.filter = bp.GetFilter();
-  filter.label = bp.GetLabel();
-  filter.defaultState = ExceptionBreakpoint::kDefaultValue;
-  return filter;
-}
-
 // "StackFrame": {
 //   "type": "object",
 //   "description": "A Stackframe contains the source location.",

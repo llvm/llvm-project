@@ -41,6 +41,7 @@ public:
   bool VisitFunctionDecl(const FunctionDecl *D);
   bool VisitTypedefDecl(const TypedefDecl *D);
   bool VisitTypeAliasDecl(const TypeAliasDecl *D);
+  bool VisitConceptDecl(const ConceptDecl *D);
 
 private:
   template <typename T> bool mapDecl(const T *D, bool IsDefinition);

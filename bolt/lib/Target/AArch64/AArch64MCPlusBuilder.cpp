@@ -14,7 +14,7 @@
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "bolt/Core/BinaryBasicBlock.h"
@@ -179,13 +179,10 @@ public:
 
   bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
-    const auto &AArch64ExprA = cast<AArch64MCExpr>(A);
-    const auto &AArch64ExprB = cast<AArch64MCExpr>(B);
-    if (AArch64ExprA.getKind() != AArch64ExprB.getKind())
+    if (A.getSpecifier() != B.getSpecifier())
       return false;
 
-    return MCPlusBuilder::equals(*AArch64ExprA.getSubExpr(),
-                                 *AArch64ExprB.getSubExpr(), Comp);
+    return MCPlusBuilder::equals(*A.getSubExpr(), *B.getSubExpr(), Comp);
   }
 
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
@@ -1084,7 +1081,7 @@ public:
 
     if (isADR(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_LO21 ||
         RelType == ELF::R_AARCH64_TLSDESC_ADR_PREL21) {
-      return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS, Ctx);
     } else if (isADRP(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21 ||
                RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21_NC ||
                RelType == ELF::R_AARCH64_TLSDESC_ADR_PAGE21 ||
@@ -1092,7 +1089,7 @@ public:
                RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
       // Never emit a GOT reloc, we handled this in
       // RewriteInstance::readRelocations().
-      return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE, Ctx);
     } else {
       switch (RelType) {
       case ELF::R_AARCH64_ADD_ABS_LO12_NC:
@@ -1106,18 +1103,18 @@ public:
       case ELF::R_AARCH64_TLSDESC_LD64_LO12:
       case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
       case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_LO12, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_LO12, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G3:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G3, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G3, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G2:
       case ELF::R_AARCH64_MOVW_UABS_G2_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G2_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G2_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G1:
       case ELF::R_AARCH64_MOVW_UABS_G1_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G1_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G1_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G0:
       case ELF::R_AARCH64_MOVW_UABS_G0_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G0_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G0_NC, Ctx);
       default:
         break;
       }
@@ -1142,7 +1139,7 @@ public:
   }
 
   const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
-    auto *AArchExpr = dyn_cast<AArch64MCExpr>(Expr);
+    auto *AArchExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetSymbol(AArchExpr->getSubExpr());
 
@@ -1162,7 +1159,7 @@ public:
   }
 
   int64_t getTargetAddend(const MCExpr *Expr) const override {
-    auto *AArchExpr = dyn_cast<AArch64MCExpr>(Expr);
+    auto *AArchExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetAddend(AArchExpr->getSubExpr());
 
@@ -2030,9 +2027,8 @@ public:
     MCInst Inst;
     Inst.setOpcode(AArch64::MOVZXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G3, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G3, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x30));
     Seq.emplace_back(Inst);
 
@@ -2040,9 +2036,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G2_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G2_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x20));
     Seq.emplace_back(Inst);
 
@@ -2050,9 +2045,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G1_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G1_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x10));
     Seq.emplace_back(Inst);
 
@@ -2060,9 +2054,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G0_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G0_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0));
     Seq.emplace_back(Inst);
 

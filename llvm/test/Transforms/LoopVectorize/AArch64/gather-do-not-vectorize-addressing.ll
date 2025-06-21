@@ -72,16 +72,16 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; SVE:       for.body.preheader:
 ; SVE-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SIZE]] to i64
 ; SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; SVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; SVE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SVE:       vector.ph:
 ; SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; SVE-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2
+; SVE-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 2
 ; SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SVE:       vector.body:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

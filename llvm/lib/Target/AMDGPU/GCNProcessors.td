@@ -325,3 +325,7 @@ def : ProcessorModel<"gfx1201", GFX12SpeedModel,
 def : ProcessorModel<"gfx12-generic", GFX12SpeedModel,
   FeatureISAVersion12_Generic.Features
 >;
+
+def : ProcessorModel<"gfx1250", GFX12SpeedModel,
+  FeatureISAVersion12_50.Features
+>;

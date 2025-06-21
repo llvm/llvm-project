@@ -72,7 +72,7 @@ void MCTargetStreamer::emitValue(const MCExpr *Value) {
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
 
-  Value->print(OS, Streamer.getContext().getAsmInfo());
+  Streamer.getContext().getAsmInfo()->printExpr(OS, *Value);
   Streamer.emitRawText(OS.str());
 }
 

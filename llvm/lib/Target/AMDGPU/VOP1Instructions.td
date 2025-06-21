@@ -393,7 +393,6 @@ def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
   let Ins64 = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let InsVOP3OpSel = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let Asm64 = "$vdst, $src0$bound_ctrl$fi";
-  let AsmVOP3OpSel = "$vdst, $src0$bound_ctrl$fi";
 }
 
 // Special case because there are no true output operands.  Hack vdst
@@ -775,7 +774,8 @@ defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
      DisableEncoding="$vdst_in,$src0_out",
-     SchedRW = [Write32Bit, Write32Bit] in {
+     SchedRW = [Write32Bit, Write32Bit],
+     isConvergent = 1 in {
 let SubtargetPredicate = HasPermlane16Swap in {
 defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP>;
 }
@@ -1550,8 +1550,11 @@ defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
 defm V_PRNG_B32            : VOP1_Real_gfx9 <0x58>;
+
+let isConvergent = 1 in {
 defm V_PERMLANE16_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x059>;
 defm V_PERMLANE32_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x05a>;
+}
 
 class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
   (vt (int_amdgcn_mov_dpp8 vt:$src, timm:$dpp8)),

@@ -1978,6 +1978,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   if (D->isModulePrivate())
     return false;
 
+  Module *DeclTopModule = DeclModule->getTopLevelModule();
+
   // [module.reach]/p1
   //   A translation unit U is necessarily reachable from a point P if U is a
   //   module interface unit on which the translation unit containing P has an
@@ -1996,17 +1998,28 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   //
   // Here we only check for the first condition. Since we couldn't see
   // DeclModule if it isn't (transitively) imported.
-  if (DeclModule->getTopLevelModule()->isModuleInterfaceUnit())
+  if (DeclTopModule->isModuleInterfaceUnit())
     return true;
 
-  // [module.reach]/p2
+  // [module.reach]/p1,2
+  //   A translation unit U is necessarily reachable from a point P if U is a
+  //   module interface unit on which the translation unit containing P has an
+  //   interface dependency, or the translation unit containing P imports U, in
+  //   either case prior to P
+  //
   //   Additional translation units on
   //   which the point within the program has an interface dependency may be
   //   considered reachable, but it is unspecified which are and under what
   //   circumstances.
-  //
-  // The decision here is to treat all additional tranditional units as
-  // unreachable.
+  Module *CurrentM = SemaRef.getCurrentModule();
+
+  // Directly imported module are necessarily reachable.
+  // Since we can't export import a module implementation partition unit, we
+  // don't need to count for Exports here.
+  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+    return true;
+
+  // Then we treat all module implementation partition unit as unreachable.
   return false;
 }
 
@@ -5431,40 +5444,6 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
   return FailedCorrection(Typo, TypoName.getLoc(), RecordFailure && !SecondBestTC);
 }
 
-TypoExpr *Sema::CorrectTypoDelayed(
-    const DeclarationNameInfo &TypoName, Sema::LookupNameKind LookupKind,
-    Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
-    TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC, CorrectTypoKind Mode,
-    DeclContext *MemberContext, bool EnteringContext,
-    const ObjCObjectPointerType *OPT) {
-  auto Consumer = makeTypoCorrectionConsumer(
-      TypoName, LookupKind, S, SS, CCC, MemberContext, EnteringContext, OPT,
-      Mode == CorrectTypoKind::ErrorRecovery);
-
-  // Give the external sema source a chance to correct the typo.
-  TypoCorrection ExternalTypo;
-  if (ExternalSource && Consumer) {
-    ExternalTypo = ExternalSource->CorrectTypo(
-        TypoName, LookupKind, S, SS, *Consumer->getCorrectionValidator(),
-        MemberContext, EnteringContext, OPT);
-    if (ExternalTypo)
-      Consumer->addCorrection(ExternalTypo);
-  }
-
-  if (!Consumer || Consumer->empty())
-    return nullptr;
-
-  // Make sure the best edit distance (prior to adding any namespace qualifiers)
-  // is not more that about a third of the length of the typo's identifier.
-  unsigned ED = Consumer->getBestEditDistance(true);
-  IdentifierInfo *Typo = TypoName.getName().getAsIdentifierInfo();
-  if (!ExternalTypo && ED > 0 && Typo->getName().size() / ED < 3)
-    return nullptr;
-  ExprEvalContexts.back().NumTypos++;
-  return createDelayedTypo(std::move(Consumer), std::move(TDG), std::move(TRC),
-                           TypoName.getLoc());
-}
-
 void TypoCorrection::addCorrectionDecl(NamedDecl *CDecl) {
   if (!CDecl) return;
 
@@ -5787,32 +5766,6 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
   // Add any extra diagnostics.
   for (const PartialDiagnostic &PD : Correction.getExtraDiagnostics())
     Diag(Correction.getCorrectionRange().getBegin(), PD);
-}
-
-TypoExpr *Sema::createDelayedTypo(std::unique_ptr<TypoCorrectionConsumer> TCC,
-                                  TypoDiagnosticGenerator TDG,
-                                  TypoRecoveryCallback TRC,
-                                  SourceLocation TypoLoc) {
-  assert(TCC && "createDelayedTypo requires a valid TypoCorrectionConsumer");
-  auto TE = new (Context) TypoExpr(Context.DependentTy, TypoLoc);
-  auto &State = DelayedTypos[TE];
-  State.Consumer = std::move(TCC);
-  State.DiagHandler = std::move(TDG);
-  State.RecoveryHandler = std::move(TRC);
-  if (TE)
-    TypoExprs.push_back(TE);
-  return TE;
-}
-
-const Sema::TypoExprState &Sema::getTypoExprState(TypoExpr *TE) const {
-  auto Entry = DelayedTypos.find(TE);
-  assert(Entry != DelayedTypos.end() &&
-         "Failed to get the state for a TypoExpr!");
-  return Entry->second;
-}
-
-void Sema::clearDelayedTypo(TypoExpr *TE) {
-  DelayedTypos.erase(TE);
 }
 
 void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {

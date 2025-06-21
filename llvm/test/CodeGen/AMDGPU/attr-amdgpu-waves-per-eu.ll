@@ -26,10 +26,10 @@ attributes #1 = {"amdgpu-waves-per-eu"="5,5"}
 
 ; Exactly 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_exactly_10:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 3
+; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @empty_exactly_10() #2 {
 entry:
   ret void
@@ -38,10 +38,10 @@ attributes #2 = {"amdgpu-waves-per-eu"="10,10"}
 
 ; At least 1 wave per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_least_1:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 3
+; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @empty_at_least_1() #3 {
 entry:
   ret void
@@ -50,10 +50,10 @@ attributes #3 = {"amdgpu-waves-per-eu"="1"}
 
 ; At least 5 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_least_5:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 3
+; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @empty_at_least_5() #4 {
 entry:
   ret void
@@ -62,10 +62,10 @@ attributes #4 = {"amdgpu-waves-per-eu"="5"}
 
 ; At least 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_least_10:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 3
+; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @empty_at_least_10() #5 {
 entry:
   ret void
@@ -88,10 +88,10 @@ attributes #6 = {"amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="1,64
 
 ; At most 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_most_10:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 3
+; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @empty_at_most_10() #7 {
 entry:
   ret void
@@ -102,10 +102,10 @@ attributes #7 = {"amdgpu-waves-per-eu"="1,10"}
 
 ; Between 5 and 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_between_5_and_10:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 3
+; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @empty_between_5_and_10() #8 {
 entry:
   ret void

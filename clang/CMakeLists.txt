@@ -345,9 +345,6 @@ configure_file(
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common -Woverloaded-virtual")
-  if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
-  endif ()
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
   if (NOT LLVM_ENABLE_PEDANTIC)

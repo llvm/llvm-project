@@ -363,6 +363,15 @@ public:
   static std::pair<unsigned, unsigned>
   computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
 
+  /// Given a vector (either fixed or scalable), return the scalable vector
+  /// corresponding to a vector register (i.e. an m1 register group).
+  static MVT getM1VT(MVT VT) {
+    unsigned EltSizeInBits = VT.getVectorElementType().getSizeInBits();
+    assert(EltSizeInBits <= RISCV::RVVBitsPerBlock && "Unexpected vector MVT");
+    return MVT::getScalableVectorVT(VT.getVectorElementType(),
+                                    RISCV::RVVBitsPerBlock / EltSizeInBits);
+  }
+
   static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
@@ -544,6 +553,9 @@ private:
                                             unsigned ExtendOpc) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;

@@ -599,9 +599,7 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
       Ctx(Conf), CombinedModule(std::make_unique<Module>("ld-temp.o", Ctx)),
-      Mover(std::make_unique<IRMover>(*CombinedModule)) {
-  CombinedModule->IsNewDbgInfoFormat = true;
-}
+      Mover(std::make_unique<IRMover>(*CombinedModule)) {}
 
 LTO::ThinLTOState::ThinLTOState(ThinBackend BackendParam)
     : Backend(std::move(BackendParam)), CombinedIndex(/*HaveGVs*/ false) {

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -88,8 +88,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   unsigned Kind = Fixup.getTargetKind();
   AArch64MCExpr::Specifier RefKind =
       static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-  AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
-  bool IsNC = AArch64MCExpr::isNotChecked(RefKind);
+  AArch64MCExpr::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
+  bool IsNC = AArch64::isNotChecked(RefKind);
 
   switch (SymLoc) {
   case AArch64MCExpr::VK_DTPREL:
@@ -356,8 +356,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
       if ((SymLoc == AArch64MCExpr::VK_GOT ||
            SymLoc == AArch64MCExpr::VK_GOT_AUTH) &&
           IsNC) {
-        AArch64MCExpr::Specifier AddressLoc =
-            AArch64MCExpr::getAddressFrag(RefKind);
+        AArch64MCExpr::Specifier AddressLoc = AArch64::getAddressFrag(RefKind);
         bool IsAuth = (SymLoc == AArch64MCExpr::VK_GOT_AUTH);
         if (!IsILP32) {
           if (AddressLoc == AArch64MCExpr::VK_LO15)

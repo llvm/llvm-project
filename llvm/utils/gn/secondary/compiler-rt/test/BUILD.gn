@@ -50,7 +50,6 @@ write_cmake_config("lit_common_configured") {
         rebase_path("$root_build_dir/bin/clang") + ext,
     "COMPILER_RT_TEST_COMPILER_ID=Clang",
     "Python3_EXECUTABLE=$python_path",
-    "Python3_ROOT_DIR=",  # FIXME
     "COMPILER_RT_BUILD_STANDALONE_LIBATOMIC_PYBOOL=False",
     "COMPILER_RT_DEBUG_PYBOOL=False",
     "COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER_PYBOOL=False",

@@ -345,6 +345,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_f_owner_ex",
+    hdrs = ["hdr/types/struct_f_owner_ex.h"],
+    deps = [":hdr_fcntl_overlay"],
+)
+
+libc_support_library(
+    name = "types_struct_flock",
+    hdrs = ["hdr/types/struct_flock.h"],
+    deps = [":hdr_fcntl_overlay"],
+)
+
+libc_support_library(
+    name = "types_struct_flock64",
+    hdrs = ["hdr/types/struct_flock64.h"],
+    deps = [":hdr_fcntl_overlay"],
+)
+
+libc_support_library(
     name = "types_struct_timespec",
     hdrs = ["hdr/types/struct_timespec.h"],
 )
@@ -1381,6 +1399,28 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_fcntl",
+    srcs = ["src/__support/OSUtil/linux/fcntl.cpp"],
+    hdrs = ["src/__support/OSUtil/fcntl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":hdr_errno_macros",
+        ":hdr_fcntl_macros",
+        ":types_mode_t",
+        ":types_off_t",
+        ":types_struct_f_owner_ex",
+        ":types_struct_flock",
+        ":types_struct_flock64",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_exit",
     srcs = ["src/__support/OSUtil/linux/exit.cpp"],
     hdrs = ["src/__support/OSUtil/exit.h"],
@@ -1602,6 +1642,7 @@ libc_header_library(
     name = "libcxx_shared_headers",
     hdrs = [
         "shared/fp_bits.h",
+        "shared/libc_common.h",
         "shared/str_to_float.h",
         "shared/str_to_integer.h",
     ],
@@ -1616,12 +1657,21 @@ libc_header_library(
 ############################### errno ########################################
 
 libc_support_library(
+    name = "__support_libc_errno",
+    hdrs = ["src/__support/libc_errno.h"],
+    deps = [
+        ":__support_macros_config",
+        ":hdr_errno_macros",
+    ],
+)
+
+libc_support_library(
     name = "errno",
     srcs = ["src/errno/libc_errno.cpp"],
-    hdrs = ["src/errno/libc_errno.h"],
     deps = [
         ":__support_common",
         ":__support_cpp_atomic",
+        ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
         ":hdr_errno_macros",
@@ -1969,6 +2019,32 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_exp_float_constants",
+    hdrs = ["src/__support/math/exp_float_constants.h"],
+    deps = [
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_expf",
+    hdrs = ["src/__support/math/expf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_exp_float_constants",
     ],
 )
 
@@ -2569,13 +2645,8 @@ libc_math_function(
 libc_math_function(
     name = "expf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":common_constants",
+        ":__support_math_expf",
+        ":errno",
     ],
 )
 
@@ -4444,10 +4515,25 @@ libc_function(
     }),
     deps = [
         ":__support_common",
-        ":__support_osutil_syscall",
+        ":__support_osutil_fcntl",
         ":errno",
         ":hdr_fcntl_macros",
         ":types_mode_t",
+    ],
+)
+
+libc_function(
+    name = "fcntl",
+    srcs = ["src/fcntl/linux/fcntl.cpp"],
+    hdrs = ["src/fcntl/fcntl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_osutil_fcntl",
+        ":errno",
     ],
 )
 
@@ -4511,7 +4597,7 @@ libc_function(
     hdrs = ["src/unistd/close.h"],
     deps = [
         ":__support_common",
-        ":__support_osutil_syscall",
+        ":__support_osutil_fcntl",
         ":errno",
     ],
 )

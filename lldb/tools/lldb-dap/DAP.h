@@ -99,7 +99,7 @@ struct DAP {
   lldb::SBBroadcaster broadcaster;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
-  std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
+  std::vector<ExceptionBreakpoint> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
 
   /// Map step in target id to list of function targets that user can choose.
@@ -320,7 +320,7 @@ struct DAP {
     });
   }
 
-  /// The set of capablities supported by this adapter.
+  /// The set of capabilities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
   /// Debuggee will continue from stopped state.

@@ -12,7 +12,7 @@ declare float @llvm.fma.f32(float, float, float)
 ; CHECK:  v_mov_b32_e32 v{{[0-9]+}}, 0
 ; CHECK:  v_mov_b32_e32 v{{[0-9]+}}, 0
 ; It's probably OK if this is slightly higher:
-; CHECK: ; NumVgprs: 5
+; CHECK: ; NumVgprs: 8
 define amdgpu_kernel void @foobar(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, i32 %flag) {
 entry:
   %cmpflag = icmp eq i32 %flag, 1

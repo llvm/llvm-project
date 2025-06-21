@@ -102,7 +102,7 @@ define void @memmove_vector(ptr %a, ptr %b) {
 define void @memmove_agg1(ptr %a, ptr %b) {
 ; CHECK-LABEL: @memmove_agg1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[B:%.*]], ptr align 1 [[A:%.*]], i64 [[TMP2]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -114,7 +114,7 @@ define void @memmove_agg1(ptr %a, ptr %b) {
 define void @memmove_agg2(ptr %a, ptr %b) {
 ; CHECK-LABEL: @memmove_agg2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 16
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[B:%.*]], ptr align 1 [[A:%.*]], i64 [[TMP2]], i1 false)
 ; CHECK-NEXT:    ret void
 ;

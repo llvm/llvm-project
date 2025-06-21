@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-class SystemZTTIImpl : public BasicTTIImplBase<SystemZTTIImpl> {
+class SystemZTTIImpl final : public BasicTTIImplBase<SystemZTTIImpl> {
   typedef BasicTTIImplBase<SystemZTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;

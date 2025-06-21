@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-intrinsics -fptrauth-calls -std=c++2c -verify %s
 
 class Trivial {};
 static_assert(__builtin_is_cpp_trivially_relocatable(Trivial));
@@ -387,4 +388,25 @@ void do_test__builtin_trivially_relocate() {
     test__builtin_trivially_relocate((S*)0, (S*)0, 0);
     // expected-note@-1 {{'test__builtin_trivially_relocate<S *, S *, int>' requested here}}
     // expected-error@#reloc1 {{first argument to '__builtin_trivially_relocate' must be relocatable}}
+}
+
+
+namespace GH143599 {
+struct A { ~A (); };
+A::~A () = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(A));
+static_assert (!__builtin_is_replaceable(A));
+
+struct B { B(const B&); };
+B::B (const B&) = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(B));
+static_assert (!__builtin_is_replaceable(B));
+
+struct C { C& operator=(const C&); };
+C& C::operator=(const C&) = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(C));
+static_assert (!__builtin_is_replaceable(C));
 }

@@ -672,7 +672,7 @@ define <7 x half> @min_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-NOFP16-GI-NEXT:    fcvtn v2.4h, v2.4s
 ; CHECK-NOFP16-GI-NEXT:    mov v4.h[2], v0.h[6]
 ; CHECK-NOFP16-GI-NEXT:    mov v3.h[2], v1.h[6]
-; CHECK-NOFP16-GI-NEXT:    mov h0, v2.h[0]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-NOFP16-GI-NEXT:    fcvtl v1.4s, v4.4h
 ; CHECK-NOFP16-GI-NEXT:    fcvtl v3.4s, v3.4h
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], v2.h[1]
@@ -770,7 +770,7 @@ define <7 x half> @max_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-NOFP16-GI-NEXT:    fcvtn v2.4h, v2.4s
 ; CHECK-NOFP16-GI-NEXT:    mov v4.h[2], v0.h[6]
 ; CHECK-NOFP16-GI-NEXT:    mov v3.h[2], v1.h[6]
-; CHECK-NOFP16-GI-NEXT:    mov h0, v2.h[0]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-NOFP16-GI-NEXT:    fcvtl v1.4s, v4.4h
 ; CHECK-NOFP16-GI-NEXT:    fcvtl v3.4s, v3.4h
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], v2.h[1]

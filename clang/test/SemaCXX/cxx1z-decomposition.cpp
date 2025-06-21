@@ -121,7 +121,8 @@ void for_range() {
 }
 
 int error_recovery() {
-  auto [foobar]; // expected-error {{requires an initializer}}
+  auto [foobar]; // expected-error {{requires an initializer}} \
+                    expected-note {{'foobar' declared here}}
   return foobar_; // expected-error {{undeclared identifier 'foobar_'}}
 }
 
