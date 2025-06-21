@@ -41,8 +41,7 @@ private:
   MCPhysReg getSuperReg(MCPhysReg Reg);
 
 public:
-  UnwindInfoAnalysis(MCContext *Context, MCInstrInfo const &MCII,
-                     MCInstrAnalysis *MCIA, bool IsEH,
+  UnwindInfoAnalysis(MCContext *Context, MCInstrInfo const &MCII, bool IsEH,
                      ArrayRef<MCCFIInstruction> PrologueCFIDirectives);
 
   void update(const MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives);
