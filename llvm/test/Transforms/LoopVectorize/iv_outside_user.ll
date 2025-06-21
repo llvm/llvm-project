@@ -1294,8 +1294,8 @@ define i32 @iv_ext_used_outside( ptr %dst) {
 ; VEC-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP2]], align 4
 ; VEC-NEXT:    [[TMP5:%.*]] = add nuw nsw <2 x i16> [[VEC_IND]], splat (i16 1)
 ; VEC-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP5]], i32 0
-; VEC-NEXT:    [[TMP4:%.*]] = zext nneg i16 [[TMP3]] to i32
 ; VEC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i16> [[TMP5]], i32 1
+; VEC-NEXT:    [[TMP9:%.*]] = zext nneg i16 [[TMP3]] to i32
 ; VEC-NEXT:    [[TMP7:%.*]] = zext nneg i16 [[TMP8]] to i32
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; VEC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)

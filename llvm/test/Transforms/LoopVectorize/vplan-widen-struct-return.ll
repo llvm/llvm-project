@@ -78,7 +78,8 @@ define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly 
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<[[STEPS]]>
 ; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:      WIDEN ir<%in_val> = load vp<[[IN_VEC_PTR]]>
-; CHECK-NEXT:      REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-NEXT:      EMIT vp<[[UNPACK:%.+]]> = unpack-into-scalars ir<%in_val>
+; CHECK-NEXT:      REPLICATE ir<%call> = call @foo(vp<[[UNPACK]]>)
 ; CHECK-NEXT:      EMIT vp<[[PACK:%.+]]> = pack-into-vector ir<%call>
 ; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue vp<[[PACK]]>, ir<0>
 ; CHECK-NEXT:      WIDEN ir<%extract_b> = extractvalue vp<[[PACK]]>, ir<1>

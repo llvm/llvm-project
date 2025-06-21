@@ -29,12 +29,12 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <2 x ptr> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <2 x ptr> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP10]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP9]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP10]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP12]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
@@ -62,8 +62,8 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x ptr> [[TMP19]], ptr [[NEXT_GEP8]], i32 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp ne <2 x ptr> [[TMP20]], zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i1> [[TMP21]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP22]])
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP21]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP22]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP23]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[NEXT_GEP7]], i32 0
 ; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP24]], align 1
