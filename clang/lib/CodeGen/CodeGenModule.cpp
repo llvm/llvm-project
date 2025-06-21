@@ -47,6 +47,7 @@
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/ABI/TargetCodegenInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -72,6 +73,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include <memory>
 #include <optional>
 #include <set>
 
@@ -102,6 +104,17 @@ static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
   }
 
   llvm_unreachable("invalid C++ ABI kind");
+}
+
+static std::unique_ptr<llvm::abi::TargetCodeGenInfo>
+makeTargetCodeGenInfo(llvm::abi::TypeBuilder &TB) {
+  return llvm::abi::createBPFTargetCodeGenInfo(TB);
+}
+
+const llvm::abi::ABIInfo &
+CodeGenModule::fetchABIInfo(llvm::abi::TypeBuilder &TB) {
+  newTargetCodeGenInfo = makeTargetCodeGenInfo(TB);
+  return newTargetCodeGenInfo->getABIInfo();
 }
 
 static std::unique_ptr<TargetCodeGenInfo>

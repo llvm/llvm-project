@@ -16,6 +16,10 @@
 #include "CGCall.h"
 #include "clang/Basic/ABI.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGen/QualTypeMapper.h"
+#include "llvm/ABI/ABIFunctionInfo.h"
+#include "llvm/ABI/ABITypeMapper.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Module.h"
 
@@ -91,6 +95,11 @@ class CodeGenTypes {
   static constexpr unsigned FunctionInfosLog2InitSize = 9;
   /// Helper for ConvertType.
   llvm::Type *ConvertFunctionTypeInternal(QualType FT);
+
+  mutable llvm::BumpPtrAllocator Alloc;
+  mutable llvm::abi::TypeBuilder TB;
+  mutable QualTypeMapper Mapper;
+  llvm::ABITypeMapper ReverseMapper;
 
 public:
   CodeGenTypes(CodeGenModule &cgm);
@@ -272,6 +281,9 @@ public:
   const CGFunctionInfo &arrangeCXXMethodType(const CXXRecordDecl *RD,
                                              const FunctionProtoType *FTP,
                                              const CXXMethodDecl *MD);
+
+  ABIArgInfo convertABIArgInfo(const llvm::abi::ABIArgInfo &abiInfo,
+                               QualType type);
 
   /// "Arrange" the LLVM information for a call or type with the given
   /// signature.  This is largely an internal method; other clients

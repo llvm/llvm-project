@@ -76,7 +76,8 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
         llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default));
     return Builder.getPointerType(PointerSize, PointerAlign);
   } else {
-    llvm_unreachable("Unsupported type for ABI lowering");
+    QT.dump();
+    llvm::errs() << "[UNHANDLED TYPE]\n";
   }
   TypeCache[QT] = Result;
   return Result;

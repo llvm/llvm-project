@@ -8,6 +8,7 @@
 
 #include "llvm/ABI/ABIFunctionInfo.h"
 #include "llvm/ABI/ABIInfo.h"
+#include "llvm/ABI/TargetCodegenInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
@@ -90,12 +91,22 @@ public:
     return ABIArgInfo::getDirect();
   }
 
-  void computeInfo(ABIFunctionInfo &FI) {
+  void computeInfo(ABIFunctionInfo &FI) const override {
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
     for (auto &I : FI.arguments()) {
       I.ArgInfo = classifyArgumentType(I.ABIType);
     }
   }
 };
+
+class BPFTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  BPFTargetCodeGenInfo(TypeBuilder &TB)
+      : TargetCodeGenInfo(std::make_unique<BPFABIInfo>(TB)) {}
+};
+
+std::unique_ptr<TargetCodeGenInfo> createBPFTargetCodeGenInfo(TypeBuilder &TB) {
+  return std::make_unique<BPFTargetCodeGenInfo>(TB);
+}
 
 } // namespace llvm::abi

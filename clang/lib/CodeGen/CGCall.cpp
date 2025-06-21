@@ -30,7 +30,11 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGen/QualTypeMapper.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "llvm/ABI/ABIFunctionInfo.h"
+#include "llvm/ABI/ABITypeMapper.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Assumptions.h"
@@ -42,6 +46,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
 using namespace clang;
@@ -825,6 +831,47 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 }
 } // namespace clang
 
+ABIArgInfo CodeGenTypes::convertABIArgInfo(const llvm::abi::ABIArgInfo &abiInfo,
+                                           QualType type) {
+  ABIArgInfo result;
+
+  if (abiInfo.isDirect()) {
+    llvm::Type *CoercedType = nullptr;
+    if (abiInfo.getCoerceToType()) {
+      CoercedType = ReverseMapper.convertType(abiInfo.getCoerceToType());
+    }
+    if (!CoercedType) {
+      CoercedType = ConvertType(type);
+    }
+    result = ABIArgInfo::getDirect(CoercedType);
+  } else if (abiInfo.isExtend()) {
+    llvm::Type *CoercedType = nullptr;
+    if (abiInfo.getCoerceToType()) {
+      CoercedType = ReverseMapper.convertType(abiInfo.getCoerceToType());
+    }
+    if (!CoercedType) {
+      CoercedType = ConvertType(type);
+    }
+
+    if (abiInfo.isSignExt()) {
+      result = ABIArgInfo::getSignExtend(type, CoercedType);
+    } else {
+      result = ABIArgInfo::getZeroExtend(type, CoercedType);
+    }
+  } else if (abiInfo.isIndirect()) {
+    result = ABIArgInfo::getIndirect(
+        CharUnits::fromQuantity(abiInfo.getIndirectAlign()), 0);
+  } else if (abiInfo.isIgnore()) {
+    result = ABIArgInfo::getIgnore();
+  }
+
+  if (abiInfo.isInReg()) {
+    result.setInReg(true);
+  }
+
+  return result;
+}
+
 /// Arrange the argument and result information for an abstract value
 /// of a given function type.  This is the method which all of the
 /// above functions ultimately defer to.
@@ -849,6 +896,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
 
   void *insertPos = nullptr;
   CGFunctionInfo *FI = FunctionInfos.FindNodeOrInsertPos(ID, insertPos);
+  llvm::abi::ABIFunctionInfo *tempFI;
   if (FI)
     return *FI;
 
@@ -857,11 +905,20 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   // Construct the function info.  We co-allocate the ArgInfos.
   FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
                               info, paramInfos, resultType, argTypes, required);
+
+  SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
+  for (CanQualType ArgType : argTypes) {
+    MappedArgTypes.push_back(Mapper.convertType(ArgType));
+  }
+  tempFI = llvm::abi::ABIFunctionInfo::create(
+      CC, Mapper.convertType(resultType), MappedArgTypes);
   FunctionInfos.InsertNode(FI, insertPos);
 
   bool inserted = FunctionsBeingProcessed.insert(FI).second;
   (void)inserted;
   assert(inserted && "Recursively being processed?");
+
+  bool isBPF = CGM.getTriple().isBPF();
 
   // Compute ABI information.
   if (CC == llvm::CallingConv::SPIR_KERNEL) {
@@ -871,20 +928,50 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else {
-    CGM.getABIInfo().computeInfo(*FI);
+    if (isBPF)
+      CGM.fetchABIInfo(TB).computeInfo(*tempFI);
+    else
+      CGM.getABIInfo().computeInfo(*FI);
   }
 
   // Loop over all of the computed argument and return value info.  If any of
   // them are direct or extend without a specified coerce type, specify the
   // default now.
-  ABIArgInfo &retInfo = FI->getReturnInfo();
-  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
-    retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
+  if (isBPF && tempFI) {
 
-  for (auto &I : FI->arguments())
-    if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr)
-      I.info.setCoerceToType(ConvertType(I.type));
+    const auto &abiRetInfo = tempFI->getReturnInfo();
+    ABIArgInfo &cgRetInfo = FI->getReturnInfo();
 
+    cgRetInfo = convertABIArgInfo(abiRetInfo, FI->getReturnType());
+
+    unsigned numArgs = std::min(FI->arg_size(), tempFI->getNumArgs());
+    unsigned argIndex = 0;
+
+    for (auto &cgArg : FI->arguments()) {
+      if (argIndex >= numArgs)
+        break;
+
+      const auto &abiArgInfo = tempFI->getArgInfo(argIndex);
+      cgArg.info = convertABIArgInfo(abiArgInfo.ArgInfo, cgArg.type);
+
+      if (abiArgInfo.ArgInfo.isInReg())
+        cgArg.info.setInReg(true);
+
+      argIndex++;
+    }
+  } else {
+    // Non-BPF path: handle coerce types for direct/extend cases
+    ABIArgInfo &retInfo = FI->getReturnInfo();
+    if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr) {
+      retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
+    }
+
+    for (auto &I : FI->arguments()) {
+      if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr) {
+        I.info.setCoerceToType(ConvertType(I.type));
+      }
+    }
+  }
   bool erased = FunctionsBeingProcessed.erase(FI);
   (void)erased;
   assert(erased && "Not in set?");

@@ -1,5 +1,7 @@
 add_llvm_component_library(LLVMABI
   ABIFunctionInfo.cpp
+  ABITypeMapper.cpp
+  TargetCodeGenInfo.cpp
   Targets/BPF.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -102,14 +102,19 @@ public:
              TypeSize::getFixed(APFloat::getSizeInBits(FloatSemantics)), Align),
         Semantics(&FloatSemantics) {}
 
+  const fltSemantics *getSemantics() { return Semantics; }
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Float; }
 };
 
 class PointerType : public Type {
-public:
-  PointerType(uint64_t Size, Align Align)
-      : Type(TypeKind::Pointer, TypeSize::getFixed(Size), Align) {}
+  unsigned AddrSpace;
 
+public:
+  PointerType(uint64_t Size, Align Align, unsigned AddressSpace = 0)
+      : Type(TypeKind::Pointer, TypeSize::getFixed(Size), Align),
+        AddrSpace(AddressSpace) {}
+
+  unsigned getAddrSpace() const { return AddrSpace; }
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Pointer;
   }
