@@ -501,9 +501,6 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   LPM2.addPass(LoopDeletionPass());
 
-  if (PTO.LoopInterchange)
-    LPM2.addPass(LoopInterchangePass());
-
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
   // inaccurate. The normal unroller doesn't pay attention to forced full unroll
