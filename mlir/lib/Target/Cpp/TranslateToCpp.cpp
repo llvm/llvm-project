@@ -1328,6 +1328,16 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
     }
   };
 
+  auto getDenseElementType = [&](const Type &type) {
+    if (auto arrayType = dyn_cast<ArrayType>(type)) {
+      return arrayType.getElementType();
+    }
+    if (auto tensorType = dyn_cast<TensorType>(type)) {
+      return tensorType.getElementType();
+    }
+    return Type();
+  };
+
   // Print floating point attributes.
   if (auto fAttr = dyn_cast<FloatAttr>(attr)) {
     if (!isa<Float16Type, BFloat16Type, Float32Type, Float64Type>(
@@ -1362,8 +1372,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
     }
   }
   if (auto dense = dyn_cast<DenseIntElementsAttr>(attr)) {
-    if (auto iType = dyn_cast<IntegerType>(
-            cast<TensorType>(dense.getType()).getElementType())) {
+    if (auto iType =
+            dyn_cast<IntegerType>(getDenseElementType(dense.getType()))) {
       os << '{';
       interleaveComma(dense, os, [&](const APInt &val) {
         printInt(val, shouldMapToUnsigned(iType.getSignedness()));
@@ -1371,8 +1381,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
       os << '}';
       return success();
     }
-    if (auto iType = dyn_cast<IndexType>(
-            cast<TensorType>(dense.getType()).getElementType())) {
+    if (auto iType =
+            dyn_cast<IndexType>(getDenseElementType(dense.getType()))) {
       os << '{';
       interleaveComma(dense, os,
                       [&](const APInt &val) { printInt(val, false); });
