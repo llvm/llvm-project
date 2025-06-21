@@ -4218,6 +4218,7 @@ libc_support_library(
         "src/string/memory_utils/aarch64/inline_memcpy.h",
         "src/string/memory_utils/aarch64/inline_memmove.h",
         "src/string/memory_utils/aarch64/inline_memset.h",
+        "src/string/memory_utils/arm/inline_memcpy.h",
         "src/string/memory_utils/generic/aligned_access.h",
         "src/string/memory_utils/generic/byte_per_byte.h",
         "src/string/memory_utils/inline_bcmp.h",
