@@ -7312,9 +7312,8 @@ define amdgpu_kernel void @uniform_or_i8(ptr addrspace(1) %result, ptr addrspace
 ; GFX1164-TRUE16-NEXT:  ; %bb.1:
 ; GFX1164-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-TRUE16-NEXT:    s_and_b32 s7, s2, 3
-; GFX1164-TRUE16-NEXT:    s_mov_b32 s8, s6
+; GFX1164-TRUE16-NEXT:    s_and_b32 s8, s6, 0xff
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s7, s7, 3
-; GFX1164-TRUE16-NEXT:    s_and_b32 s8, s8, 0xff
 ; GFX1164-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s9, s8, s7
 ; GFX1164-TRUE16-NEXT:    s_and_b32 s8, s2, -4
@@ -7392,9 +7391,8 @@ define amdgpu_kernel void @uniform_or_i8(ptr addrspace(1) %result, ptr addrspace
 ; GFX1132-TRUE16-NEXT:  ; %bb.1:
 ; GFX1132-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-TRUE16-NEXT:    s_and_b32 s6, s2, 3
-; GFX1132-TRUE16-NEXT:    s_mov_b32 s7, s4
+; GFX1132-TRUE16-NEXT:    s_and_b32 s7, s4, 0xff
 ; GFX1132-TRUE16-NEXT:    s_lshl_b32 s6, s6, 3
-; GFX1132-TRUE16-NEXT:    s_and_b32 s7, s7, 0xff
 ; GFX1132-TRUE16-NEXT:    s_and_b32 s8, s2, -4
 ; GFX1132-TRUE16-NEXT:    s_lshl_b32 s7, s7, s6
 ; GFX1132-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
@@ -7472,9 +7470,8 @@ define amdgpu_kernel void @uniform_or_i8(ptr addrspace(1) %result, ptr addrspace
 ; GFX1264-TRUE16-NEXT:  ; %bb.1:
 ; GFX1264-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1264-TRUE16-NEXT:    s_and_b32 s7, s2, 3
-; GFX1264-TRUE16-NEXT:    s_mov_b32 s8, s6
+; GFX1264-TRUE16-NEXT:    s_and_b32 s8, s6, 0xff
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s7, s7, 3
-; GFX1264-TRUE16-NEXT:    s_and_b32 s8, s8, 0xff
 ; GFX1264-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s9, s8, s7
 ; GFX1264-TRUE16-NEXT:    s_and_b32 s8, s2, -4
@@ -7552,9 +7549,8 @@ define amdgpu_kernel void @uniform_or_i8(ptr addrspace(1) %result, ptr addrspace
 ; GFX1232-TRUE16-NEXT:  ; %bb.1:
 ; GFX1232-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1232-TRUE16-NEXT:    s_and_b32 s6, s2, 3
-; GFX1232-TRUE16-NEXT:    s_mov_b32 s7, s4
+; GFX1232-TRUE16-NEXT:    s_and_b32 s7, s4, 0xff
 ; GFX1232-TRUE16-NEXT:    s_lshl_b32 s6, s6, 3
-; GFX1232-TRUE16-NEXT:    s_and_b32 s7, s7, 0xff
 ; GFX1232-TRUE16-NEXT:    s_and_b32 s8, s2, -4
 ; GFX1232-TRUE16-NEXT:    s_lshl_b32 s7, s7, s6
 ; GFX1232-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
@@ -7932,14 +7928,13 @@ define amdgpu_kernel void @uniform_add_i8(ptr addrspace(1) %result, ptr addrspac
 ; GFX1164-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-TRUE16-NEXT:    s_and_b32 s4, s2, -4
 ; GFX1164-TRUE16-NEXT:    s_mov_b32 s5, s3
-; GFX1164-TRUE16-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; GFX1164-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GFX1164-TRUE16-NEXT:    s_and_b32 s2, s2, 3
-; GFX1164-TRUE16-NEXT:    s_mov_b32 s7, s10
+; GFX1164-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; GFX1164-TRUE16-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s11, s2, 3
-; GFX1164-TRUE16-NEXT:    s_mul_i32 s7, s7, s6
+; GFX1164-TRUE16-NEXT:    s_mul_i32 s2, s10, s6
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s12, 0xff, s11
-; GFX1164-TRUE16-NEXT:    s_and_b32 s2, s7, 0xff
+; GFX1164-TRUE16-NEXT:    s_and_b32 s2, s2, 0xff
 ; GFX1164-TRUE16-NEXT:    s_not_b32 s13, s12
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s14, s2, s11
 ; GFX1164-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -8066,9 +8061,8 @@ define amdgpu_kernel void @uniform_add_i8(ptr addrspace(1) %result, ptr addrspac
 ; GFX1132-TRUE16-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1132-TRUE16-NEXT:    s_load_b32 s7, s[4:5], 0x0
 ; GFX1132-TRUE16-NEXT:    s_bcnt1_i32_b32 s6, s6
-; GFX1132-TRUE16-NEXT:    s_mov_b32 s11, s8
 ; GFX1132-TRUE16-NEXT:    s_lshl_b32 s2, s2, 3
-; GFX1132-TRUE16-NEXT:    s_mul_i32 s6, s11, s6
+; GFX1132-TRUE16-NEXT:    s_mul_i32 s6, s8, s6
 ; GFX1132-TRUE16-NEXT:    s_lshl_b32 s3, 0xff, s2
 ; GFX1132-TRUE16-NEXT:    s_and_b32 s6, s6, 0xff
 ; GFX1132-TRUE16-NEXT:    s_not_b32 s11, s3
@@ -8188,16 +8182,14 @@ define amdgpu_kernel void @uniform_add_i8(ptr addrspace(1) %result, ptr addrspac
 ; GFX1264-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1264-TRUE16-NEXT:    s_and_b32 s4, s2, -4
 ; GFX1264-TRUE16-NEXT:    s_mov_b32 s5, s3
-; GFX1264-TRUE16-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; GFX1264-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GFX1264-TRUE16-NEXT:    s_and_b32 s2, s2, 3
-; GFX1264-TRUE16-NEXT:    s_mov_b32 s7, s10
+; GFX1264-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; GFX1264-TRUE16-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s11, s2, 3
 ; GFX1264-TRUE16-NEXT:    s_wait_alu 0xfffe
-; GFX1264-TRUE16-NEXT:    s_mul_i32 s7, s7, s6
+; GFX1264-TRUE16-NEXT:    s_mul_i32 s2, s10, s6
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s12, 0xff, s11
-; GFX1264-TRUE16-NEXT:    s_wait_alu 0xfffe
-; GFX1264-TRUE16-NEXT:    s_and_b32 s2, s7, 0xff
+; GFX1264-TRUE16-NEXT:    s_and_b32 s2, s2, 0xff
 ; GFX1264-TRUE16-NEXT:    s_not_b32 s13, s12
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s14, s2, s11
 ; GFX1264-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -8323,10 +8315,9 @@ define amdgpu_kernel void @uniform_add_i8(ptr addrspace(1) %result, ptr addrspac
 ; GFX1232-TRUE16-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1232-TRUE16-NEXT:    s_load_b32 s7, s[4:5], 0x0
 ; GFX1232-TRUE16-NEXT:    s_bcnt1_i32_b32 s6, s6
-; GFX1232-TRUE16-NEXT:    s_mov_b32 s11, s8
 ; GFX1232-TRUE16-NEXT:    s_lshl_b32 s2, s2, 3
 ; GFX1232-TRUE16-NEXT:    s_wait_alu 0xfffe
-; GFX1232-TRUE16-NEXT:    s_mul_i32 s6, s11, s6
+; GFX1232-TRUE16-NEXT:    s_mul_i32 s6, s8, s6
 ; GFX1232-TRUE16-NEXT:    s_lshl_b32 s3, 0xff, s2
 ; GFX1232-TRUE16-NEXT:    s_wait_alu 0xfffe
 ; GFX1232-TRUE16-NEXT:    s_and_b32 s6, s6, 0xff
@@ -8818,7 +8809,7 @@ define amdgpu_kernel void @uniform_or_i16(ptr addrspace(1) %result, ptr addrspac
 ; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
 ; GFX7LESS-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX7LESS-NEXT:                       ; implicit-def: $vgpr0
+; GFX7LESS-NEXT:    ; implicit-def: $vgpr0
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7LESS-NEXT:    s_cbranch_execz .LBB15_2
 ; GFX7LESS-NEXT:  ; %bb.1:
@@ -9010,9 +9001,8 @@ define amdgpu_kernel void @uniform_or_i16(ptr addrspace(1) %result, ptr addrspac
 ; GFX1164-TRUE16-NEXT:  ; %bb.1:
 ; GFX1164-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-TRUE16-NEXT:    s_and_b32 s7, s2, 3
-; GFX1164-TRUE16-NEXT:    s_mov_b32 s8, s6
+; GFX1164-TRUE16-NEXT:    s_and_b32 s8, 0xffff, s6
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s7, s7, 3
-; GFX1164-TRUE16-NEXT:    s_and_b32 s8, 0xffff, s8
 ; GFX1164-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s9, s8, s7
 ; GFX1164-TRUE16-NEXT:    s_and_b32 s8, s2, -4
@@ -9090,9 +9080,8 @@ define amdgpu_kernel void @uniform_or_i16(ptr addrspace(1) %result, ptr addrspac
 ; GFX1132-TRUE16-NEXT:  ; %bb.1:
 ; GFX1132-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-TRUE16-NEXT:    s_and_b32 s6, s2, 3
-; GFX1132-TRUE16-NEXT:    s_mov_b32 s7, s4
+; GFX1132-TRUE16-NEXT:    s_and_b32 s7, 0xffff, s4
 ; GFX1132-TRUE16-NEXT:    s_lshl_b32 s6, s6, 3
-; GFX1132-TRUE16-NEXT:    s_and_b32 s7, 0xffff, s7
 ; GFX1132-TRUE16-NEXT:    s_and_b32 s8, s2, -4
 ; GFX1132-TRUE16-NEXT:    s_lshl_b32 s7, s7, s6
 ; GFX1132-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
@@ -9170,9 +9159,8 @@ define amdgpu_kernel void @uniform_or_i16(ptr addrspace(1) %result, ptr addrspac
 ; GFX1264-TRUE16-NEXT:  ; %bb.1:
 ; GFX1264-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1264-TRUE16-NEXT:    s_and_b32 s7, s2, 3
-; GFX1264-TRUE16-NEXT:    s_mov_b32 s8, s6
+; GFX1264-TRUE16-NEXT:    s_and_b32 s8, 0xffff, s6
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s7, s7, 3
-; GFX1264-TRUE16-NEXT:    s_and_b32 s8, 0xffff, s8
 ; GFX1264-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s9, s8, s7
 ; GFX1264-TRUE16-NEXT:    s_and_b32 s8, s2, -4
@@ -9250,9 +9238,8 @@ define amdgpu_kernel void @uniform_or_i16(ptr addrspace(1) %result, ptr addrspac
 ; GFX1232-TRUE16-NEXT:  ; %bb.1:
 ; GFX1232-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1232-TRUE16-NEXT:    s_and_b32 s6, s2, 3
-; GFX1232-TRUE16-NEXT:    s_mov_b32 s7, s4
+; GFX1232-TRUE16-NEXT:    s_and_b32 s7, 0xffff, s4
 ; GFX1232-TRUE16-NEXT:    s_lshl_b32 s6, s6, 3
-; GFX1232-TRUE16-NEXT:    s_and_b32 s7, 0xffff, s7
 ; GFX1232-TRUE16-NEXT:    s_and_b32 s8, s2, -4
 ; GFX1232-TRUE16-NEXT:    s_lshl_b32 s7, s7, s6
 ; GFX1232-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
@@ -9328,7 +9315,7 @@ define amdgpu_kernel void @uniform_add_i16(ptr addrspace(1) %result, ptr addrspa
 ; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
 ; GFX7LESS-NEXT:    v_mbcnt_hi_u32_b32_e32 v4, s7, v0
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
-; GFX7LESS-NEXT:                               ; implicit-def: $vgpr0
+; GFX7LESS-NEXT:    ; implicit-def: $vgpr0
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GFX7LESS-NEXT:    s_cbranch_execz .LBB16_4
 ; GFX7LESS-NEXT:  ; %bb.1:
@@ -9630,14 +9617,13 @@ define amdgpu_kernel void @uniform_add_i16(ptr addrspace(1) %result, ptr addrspa
 ; GFX1164-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-TRUE16-NEXT:    s_and_b32 s4, s2, -4
 ; GFX1164-TRUE16-NEXT:    s_mov_b32 s5, s3
-; GFX1164-TRUE16-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; GFX1164-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GFX1164-TRUE16-NEXT:    s_and_b32 s2, s2, 3
-; GFX1164-TRUE16-NEXT:    s_mov_b32 s7, s10
+; GFX1164-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; GFX1164-TRUE16-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s11, s2, 3
-; GFX1164-TRUE16-NEXT:    s_mul_i32 s7, s7, s6
+; GFX1164-TRUE16-NEXT:    s_mul_i32 s2, s10, s6
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s12, 0xffff, s11
-; GFX1164-TRUE16-NEXT:    s_and_b32 s2, s7, 0xffff
+; GFX1164-TRUE16-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX1164-TRUE16-NEXT:    s_not_b32 s13, s12
 ; GFX1164-TRUE16-NEXT:    s_lshl_b32 s14, s2, s11
 ; GFX1164-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -9764,9 +9750,8 @@ define amdgpu_kernel void @uniform_add_i16(ptr addrspace(1) %result, ptr addrspa
 ; GFX1132-TRUE16-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1132-TRUE16-NEXT:    s_load_b32 s7, s[4:5], 0x0
 ; GFX1132-TRUE16-NEXT:    s_bcnt1_i32_b32 s6, s6
-; GFX1132-TRUE16-NEXT:    s_mov_b32 s11, s8
 ; GFX1132-TRUE16-NEXT:    s_lshl_b32 s2, s2, 3
-; GFX1132-TRUE16-NEXT:    s_mul_i32 s6, s11, s6
+; GFX1132-TRUE16-NEXT:    s_mul_i32 s6, s8, s6
 ; GFX1132-TRUE16-NEXT:    s_lshl_b32 s3, 0xffff, s2
 ; GFX1132-TRUE16-NEXT:    s_and_b32 s6, s6, 0xffff
 ; GFX1132-TRUE16-NEXT:    s_not_b32 s11, s3
@@ -9886,16 +9871,14 @@ define amdgpu_kernel void @uniform_add_i16(ptr addrspace(1) %result, ptr addrspa
 ; GFX1264-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1264-TRUE16-NEXT:    s_and_b32 s4, s2, -4
 ; GFX1264-TRUE16-NEXT:    s_mov_b32 s5, s3
-; GFX1264-TRUE16-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; GFX1264-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GFX1264-TRUE16-NEXT:    s_and_b32 s2, s2, 3
-; GFX1264-TRUE16-NEXT:    s_mov_b32 s7, s10
+; GFX1264-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; GFX1264-TRUE16-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s11, s2, 3
 ; GFX1264-TRUE16-NEXT:    s_wait_alu 0xfffe
-; GFX1264-TRUE16-NEXT:    s_mul_i32 s7, s7, s6
+; GFX1264-TRUE16-NEXT:    s_mul_i32 s2, s10, s6
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s12, 0xffff, s11
-; GFX1264-TRUE16-NEXT:    s_wait_alu 0xfffe
-; GFX1264-TRUE16-NEXT:    s_and_b32 s2, s7, 0xffff
+; GFX1264-TRUE16-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX1264-TRUE16-NEXT:    s_not_b32 s13, s12
 ; GFX1264-TRUE16-NEXT:    s_lshl_b32 s14, s2, s11
 ; GFX1264-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -10021,10 +10004,9 @@ define amdgpu_kernel void @uniform_add_i16(ptr addrspace(1) %result, ptr addrspa
 ; GFX1232-TRUE16-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1232-TRUE16-NEXT:    s_load_b32 s7, s[4:5], 0x0
 ; GFX1232-TRUE16-NEXT:    s_bcnt1_i32_b32 s6, s6
-; GFX1232-TRUE16-NEXT:    s_mov_b32 s11, s8
 ; GFX1232-TRUE16-NEXT:    s_lshl_b32 s2, s2, 3
 ; GFX1232-TRUE16-NEXT:    s_wait_alu 0xfffe
-; GFX1232-TRUE16-NEXT:    s_mul_i32 s6, s11, s6
+; GFX1232-TRUE16-NEXT:    s_mul_i32 s6, s8, s6
 ; GFX1232-TRUE16-NEXT:    s_lshl_b32 s3, 0xffff, s2
 ; GFX1232-TRUE16-NEXT:    s_wait_alu 0xfffe
 ; GFX1232-TRUE16-NEXT:    s_and_b32 s6, s6, 0xffff
