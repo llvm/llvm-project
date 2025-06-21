@@ -94,7 +94,7 @@ struct __flat_map_utils {
   }
 
   template <class _Map, class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI static typename _Map::size_type
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static typename _Map::size_type
   __append(_Map& __map, _InputIterator __first, _InputIterator __last)
     requires __is_product_iterator_of_size<_InputIterator, 2>::value
   {
