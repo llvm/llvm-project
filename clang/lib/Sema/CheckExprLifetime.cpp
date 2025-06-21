@@ -57,6 +57,31 @@ enum LifetimeKind {
 };
 using LifetimeResult =
     llvm::PointerIntPair<const InitializedEntity *, 3, LifetimeKind>;
+
+/// Returns true if the given entity is part of a range-based for loop and
+/// should trigger lifetime extension under C++23 rules.
+///
+/// This handles both explicit range loop variables and internal compiler-
+/// generated variables like `__range1`.
+static bool
+isRangeBasedForLoopVariable(const Sema &SemaRef,
+                            const InitializedEntity *ExtendingEntity) {
+  if (!SemaRef.getLangOpts().CPlusPlus23)
+    return false;
+
+  const Decl *EntityDecl = ExtendingEntity->getDecl();
+  if (!EntityDecl)
+    return false;
+
+  if (const auto *VD = dyn_cast<VarDecl>(EntityDecl)) {
+    if (VD->isCXXForRangeDecl() || VD->getName().starts_with("__range")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 } // namespace
 
 /// Determine the declaration which an initialized entity ultimately refers to,
@@ -1341,6 +1366,9 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       }
 
       if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
+        if (isRangeBasedForLoopVariable(SemaRef, ExtendingEntity))
+          return true;
+
         SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
             << DiagRange;
         return false;
