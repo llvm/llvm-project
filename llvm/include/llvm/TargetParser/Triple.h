@@ -195,7 +195,8 @@ public:
     SUSE,
     OpenEmbedded,
     Intel,
-    LastVendorType = Intel
+    Amazon,
+    LastVendorType = Amazon
   };
   enum OSType {
     UnknownOS,
