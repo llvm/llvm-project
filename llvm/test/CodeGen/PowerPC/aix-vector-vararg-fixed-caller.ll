@@ -16,13 +16,13 @@ define void @caller() {
   ; 32BIT-NEXT:   [[LWZtoc:%[0-9]+]]:gprc = LWZtoc %const.0, $r2 :: (load (s32) from got)
   ; 32BIT-NEXT:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI:%[0-9]+]]:gprc = LI 64
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X]], $r1, killed [[LI]] :: (store (s128))
+  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X]], $r1, killed [[LI]] :: (store (s128) into stack + 64)
   ; 32BIT-NEXT:   [[LIS:%[0-9]+]]:gprc = LIS 38314
   ; 32BIT-NEXT:   [[ORI:%[0-9]+]]:gprc = ORI killed [[LIS]], 63376
-  ; 32BIT-NEXT:   STW killed [[ORI]], 84, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   STW killed [[ORI]], 84, $r1 :: (store (s32) into stack + 84, basealign 16)
   ; 32BIT-NEXT:   [[LIS1:%[0-9]+]]:gprc = LIS 16389
   ; 32BIT-NEXT:   [[ORI1:%[0-9]+]]:gprc = ORI killed [[LIS1]], 48905
-  ; 32BIT-NEXT:   STW killed [[ORI1]], 80, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   STW killed [[ORI1]], 80, $r1 :: (store (s32) into stack + 80, align 16)
   ; 32BIT-NEXT:   [[LWZtoc1:%[0-9]+]]:gprc = LWZtoc %const.1, $r2 :: (load (s32) from got)
   ; 32BIT-NEXT:   [[LXVW4X1:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc1]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LWZtoc2:%[0-9]+]]:gprc_and_gprc_nor0 = LWZtoc %const.2, $r2 :: (load (s32) from got)
@@ -57,7 +57,7 @@ define void @caller() {
   ; 64BIT-NEXT:   [[RLDIC:%[0-9]+]]:g8rc = RLDIC killed [[ORI8_]], 32, 1
   ; 64BIT-NEXT:   [[ORIS8_:%[0-9]+]]:g8rc = ORIS8 killed [[RLDIC]], 38314
   ; 64BIT-NEXT:   [[ORI8_1:%[0-9]+]]:g8rc = ORI8 killed [[ORIS8_]], 63376
-  ; 64BIT-NEXT:   STD killed [[ORI8_1]], 112, $x1 :: (store (s64))
+  ; 64BIT-NEXT:   STD killed [[ORI8_1]], 112, $x1 :: (store (s64) into stack + 112, align 16)
   ; 64BIT-NEXT:   [[LDtocCPT1:%[0-9]+]]:g8rc = LDtocCPT %const.1, $x2 :: (load (s64) from got)
   ; 64BIT-NEXT:   [[LXVW4X1:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT1]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LD:%[0-9]+]]:g8rc = LD 104, $x1 :: (load (s64))

@@ -72,12 +72,17 @@ void addRootSignature(ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
 
   llvm::hlsl::rootsig::MetadataBuilder Builder(Ctx, Elements);
   MDNode *RootSignature = Builder.BuildRootSignature();
-  MDNode *FnPairing =
-      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature});
+
+  // TODO: We need to wire the root signature version up through the frontend
+  // rather than hardcoding it.
+  ConstantAsMetadata *Version =
+      ConstantAsMetadata::get(ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 2));
+  MDNode *MDVals =
+      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature, Version});
 
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
-  RootSignatureValMD->addOperand(FnPairing);
+  RootSignatureValMD->addOperand(MDVals);
 }
 
 } // namespace
@@ -375,6 +380,7 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
   addSPIRVBuiltinDecoration(GV, BuiltInID);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
 }
 

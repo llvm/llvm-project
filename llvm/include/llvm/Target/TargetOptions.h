@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 
 #include <memory>
@@ -24,14 +25,6 @@ namespace llvm {
 struct fltSemantics;
 class MachineFunction;
 class MemoryBuffer;
-
-namespace FloatABI {
-enum ABIType {
-  Default, // Target-specific (either soft or hard depending on triple, etc).
-  Soft,    // Soft float.
-  Hard     // Hard float.
-};
-}
 
 namespace FPOpFusion {
 enum FPOpFusionMode {
@@ -69,14 +62,6 @@ enum class BasicBlockSection {
           // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
           // This option cannot be set via the command line.
   None    // Do not use Basic Block Sections.
-};
-
-enum class EABI {
-  Unknown,
-  Default, // Default means not specified
-  EABI4,   // Target-specific (either 4, 5 or gnu depending on triple).
-  EABI5,
-  GNU
 };
 
 /// Identify a debugger for "tuning" the debug info.

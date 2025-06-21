@@ -2705,16 +2705,10 @@ define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v9, a0
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v9, v11, a0
-; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v8, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v11, a0
-; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v10, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v10, v11, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0)
@@ -2801,16 +2795,10 @@ define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vs
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v9, a0
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v9, v11, a0
-; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v8, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v11, a0
-; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v10, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v10, v11, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0)
@@ -2897,16 +2885,10 @@ define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscal
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v9, a0
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v9, v11, a0
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v8, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v11, a0
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v11, v10, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v10, v11, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0)

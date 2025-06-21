@@ -6674,69 +6674,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res.getValue(1));
     return;
   }
-  case Intrinsic::dbg_declare: {
-    const auto &DI = cast<DbgDeclareInst>(I);
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    // Some intrinsics are handled right after Argument lowering.
-    if (AssignmentTrackingEnabled ||
-        FuncInfo.PreprocessedDbgDeclares.count(&DI))
-      return;
-    LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DI << "\n");
-    DILocalVariable *Variable = DI.getVariable();
-    DIExpression *Expression = DI.getExpression();
-    dropDanglingDebugInfo(Variable, Expression);
-    // Assume dbg.declare can not currently use DIArgList, i.e.
-    // it is non-variadic.
-    assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
-    handleDebugDeclare(DI.getVariableLocationOp(0), Variable, Expression,
-                       DI.getDebugLoc());
-    return;
-  }
-  case Intrinsic::dbg_label: {
-    const DbgLabelInst &DI = cast<DbgLabelInst>(I);
-    DILabel *Label = DI.getLabel();
-    assert(Label && "Missing label");
-
-    SDDbgLabel *SDV;
-    SDV = DAG.getDbgLabel(Label, dl, SDNodeOrder);
-    DAG.AddDbgLabel(SDV);
-    return;
-  }
-  case Intrinsic::dbg_assign: {
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    if (AssignmentTrackingEnabled)
-      return;
-    // If assignment tracking hasn't been enabled then fall through and treat
-    // the dbg.assign as a dbg.value.
-    [[fallthrough]];
-  }
-  case Intrinsic::dbg_value: {
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    if (AssignmentTrackingEnabled)
-      return;
-    const DbgValueInst &DI = cast<DbgValueInst>(I);
-    assert(DI.getVariable() && "Missing variable");
-
-    DILocalVariable *Variable = DI.getVariable();
-    DIExpression *Expression = DI.getExpression();
-    dropDanglingDebugInfo(Variable, Expression);
-
-    if (DI.isKillLocation()) {
-      handleKillDebugValue(Variable, Expression, DI.getDebugLoc(), SDNodeOrder);
-      return;
-    }
-
-    SmallVector<Value *, 4> Values(DI.getValues());
-    if (Values.empty())
-      return;
-
-    bool IsVariadic = DI.hasArgList();
-    if (!handleDebugValue(Values, Variable, Expression, DI.getDebugLoc(),
-                          SDNodeOrder, IsVariadic))
-      addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
-                           DI.getDebugLoc(), SDNodeOrder);
-    return;
-  }
 
   case Intrinsic::eh_typeid_for: {
     // Find the type id for the given typeinfo.

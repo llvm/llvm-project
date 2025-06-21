@@ -2631,12 +2631,12 @@ namespace {
 
   DecoderTableInfo TableInfo;
   unsigned OpcodeMask = 0;
-  for (const auto &Opc : OpcMap) {
+  for (const auto &[NSAndByteSize, EncodingIDs] : OpcMap) {
+    const std::string &DecoderNamespace = NSAndByteSize.first;
+    const unsigned BitWidth = 8 * NSAndByteSize.second;
     // Emit the decoder for this namespace+width combination.
-    ArrayRef<EncodingAndInst> NumberedEncodingsRef(NumberedEncodings.data(),
-                                                   NumberedEncodings.size());
-    FilterChooser FC(NumberedEncodingsRef, Opc.second, Operands,
-                     IsVarLenInst ? MaxInstLen : 8 * Opc.first.second, this);
+    FilterChooser FC(NumberedEncodings, EncodingIDs, Operands,
+                     IsVarLenInst ? MaxInstLen : BitWidth, this);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
@@ -2657,7 +2657,7 @@ namespace {
 
     // Print the table to the output stream.
     OpcodeMask |= emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(),
-                            Opc.first.first, Opc.second);
+                            DecoderNamespace, EncodingIDs);
   }
 
   // For variable instruction, we emit a instruction length table
