@@ -115,6 +115,21 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
   return DebugLoc();
 }
 
+static bool containRegOrSubReg(SmallSetVector<Register, 32> DefRegs,
+                               Register Reg, const TargetRegisterInfo *TRI) {
+  if (DefRegs.contains(Reg))
+    return true;
+  if (Reg.isPhysical()) {
+    for (const MCPhysReg &SubReg : TRI->subregs(Reg)) {
+      // Applying same logic with MachineVerifier that any of the SubReg is
+      // contained, it counts defined
+      if (DefRegs.contains(SubReg))
+        return true;
+    }
+  }
+  return false;
+}
+
 /// finalizeBundle - Finalize a machine instruction bundle which includes
 /// a sequence of instructions starting from FirstMI to LastMI (exclusive).
 /// This routine adds a BUNDLE instruction to represent the bundle, it adds
@@ -151,7 +166,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (LocalDefs.contains(Reg)) {
+      if (containRegOrSubReg(LocalDefs, Reg, TRI)) {
         MO.setIsInternalRead();
         if (MO.isKill()) {
           // Internal def is now killed.
