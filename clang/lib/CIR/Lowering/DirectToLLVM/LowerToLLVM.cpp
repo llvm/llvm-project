@@ -1886,7 +1886,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecShuffleDynamicOpLowering,
                CIRToLLVMVecTernaryOpLowering,
-               CIRToLLVMComplexCreateOpLowering
+               CIRToLLVMComplexCreateOpLowering,
+               CIRToLLVMComplexImagOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2187,6 +2188,15 @@ mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
       op->getLoc(), realComplex, adaptor.getImag(), 1);
 
   rewriter.replaceOp(op, complex);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
+    cir::ComplexImagOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
+      op, resultLLVMTy, adaptor.getOperand(), llvm::ArrayRef<std::int64_t>{1});
   return mlir::success();
 }
 
