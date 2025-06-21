@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
@@ -181,6 +182,12 @@ public:
   virtual bool
   evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                  uint64_t &Target) const;
+
+  /// Given an instruction that accesses a memory address, try to compute
+  /// the target address. Return true on success, and the address in \p Target.
+  virtual bool evaluateInstruction(const MCInst &Inst, uint64_t Addr,
+                                   uint64_t Size, uint64_t &Target,
+                                   const MCSubtargetInfo &STI) const;
 
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.
