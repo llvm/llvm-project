@@ -2282,6 +2282,17 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   if (!Match0 && !Match1)
     return false;
 
+  // If the outer shuffle is a permute, then create a fake inner all-poison
+  // shuffle. This is easier than accounting for length-changing shuffles below.
+  SmallVector<int, 16> PoisonMask1;
+  if (!Match1 && isa<PoisonValue>(OuterV1)) {
+    X1 = X0;
+    Y1 = Y0;
+    PoisonMask1.append(InnerMask0.size(), PoisonMaskElem);
+    InnerMask1 = PoisonMask1;
+    Match1 = true; // fake match
+  }
+
   X0 = Match0 ? X0 : OuterV0;
   Y0 = Match0 ? Y0 : OuterV0;
   X1 = Match1 ? X1 : OuterV1;
@@ -2356,11 +2367,11 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   // Try to merge the shuffles if the new shuffle is not costly.
   InstructionCost InnerCost0 = 0;
   if (Match0)
-    InnerCost0 = TTI.getInstructionCost(cast<Instruction>(OuterV0), CostKind);
+    InnerCost0 = TTI.getInstructionCost(cast<User>(OuterV0), CostKind);
 
   InstructionCost InnerCost1 = 0;
   if (Match1)
-    InnerCost1 = TTI.getInstructionCost(cast<Instruction>(OuterV1), CostKind);
+    InnerCost1 = TTI.getInstructionCost(cast<User>(OuterV1), CostKind);
 
   InstructionCost OuterCost = TTI.getInstructionCost(&I, CostKind);
 
