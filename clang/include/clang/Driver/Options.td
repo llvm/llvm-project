@@ -2002,7 +2002,7 @@ def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>,
 def fconstexpr_steps_EQ : Joined<["-"], "fconstexpr-steps=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of steps in constexpr function evaluation">,
-  MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "1048576">;
+  MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "20000000">;
 def fexperimental_new_constant_interpreter : Flag<["-"], "fexperimental-new-constant-interpreter">, Group<f_Group>,
   HelpText<"Enable the experimental new constant interpreter">,
   Visibility<[ClangOption, CC1Option]>,
