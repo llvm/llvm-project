@@ -109,8 +109,8 @@ MCPhysReg UnwindInfoAnalysis::getSuperReg(MCPhysReg Reg) {
 }
 
 UnwindInfoAnalysis::UnwindInfoAnalysis(
-    MCContext *Context, MCInstrInfo const &MCII, MCInstrAnalysis *MCIA,
-    bool IsEH, ArrayRef<MCCFIInstruction> PrologueCFIDirectives)
+    MCContext *Context, MCInstrInfo const &MCII, bool IsEH,
+    ArrayRef<MCCFIInstruction> PrologueCFIDirectives)
     : Context(Context), MCII(MCII), MCRI(Context->getRegisterInfo()),
       State(Context), IsEH(IsEH) {
 

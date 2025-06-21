@@ -21,7 +21,6 @@ namespace llvm {
 // TODO receiver.
 class CFIAnalysisMCStreamer : public MCStreamer {
   MCInstrInfo const &MCII;
-  std::unique_ptr<MCInstrAnalysis> MCIA;
 
   struct CFIDirectivesState {
     int DirectiveIndex;

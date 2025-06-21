@@ -71,7 +71,7 @@ void CFIAnalysisMCStreamer::feedCFIA() {
 
     CFIAs.back().update(LastInstruction.value(), CFIDirectives);
   } else {
-    CFIAs.emplace_back(&getContext(), MCII, MCIA.get(),
+    CFIAs.emplace_back(&getContext(), MCII,
                        false /* TODO should put isEH here */, CFIDirectives);
   }
 }
@@ -79,8 +79,8 @@ void CFIAnalysisMCStreamer::feedCFIA() {
 CFIAnalysisMCStreamer::CFIAnalysisMCStreamer(
     MCContext &Context, const MCInstrInfo &MCII,
     std::unique_ptr<MCInstrAnalysis> MCIA)
-    : MCStreamer(Context), MCII(MCII), MCIA(std::move(MCIA)),
-      LastCFIDirectivesState(), LastInstruction(std::nullopt) {
+    : MCStreamer(Context), MCII(MCII), LastCFIDirectivesState(),
+      LastInstruction(std::nullopt) {
   FrameIndices.push_back(-1);
 }
 
