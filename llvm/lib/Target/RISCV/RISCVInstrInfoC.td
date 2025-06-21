@@ -870,7 +870,7 @@ def : CompressPat<(LW_INX GPRF32C:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
 let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : CompressPat<(FLW FPR32C:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_FLW FPR32C:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
-} // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
+} // Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : CompressPat<(LD GPRC:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm),
@@ -894,7 +894,7 @@ def : CompressPat<(SW_INX GPRF32C:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
 let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : CompressPat<(FSW FPR32C:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_FSW FPR32C:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
-} // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
+} // Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : CompressPat<(SD GPRC:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm),
@@ -1001,7 +1001,7 @@ def : CompressPat<(LW_INX GPRF32NoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
 let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : CompressPat<(FLW FPR32:$rd, SPMem:$rs1, uimm8_lsb00:$imm),
                   (C_FLWSP FPR32:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
-} // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
+} // Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : CompressPat<(LD GPRNoX0:$rd, SPMem:$rs1, uimm9_lsb000:$imm),
@@ -1047,7 +1047,7 @@ def : CompressPat<(SW_INX GPRF32:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
 let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : CompressPat<(FSW FPR32:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
                   (C_FSWSP FPR32:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
-} // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
+} // Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : CompressPat<(SD GPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
