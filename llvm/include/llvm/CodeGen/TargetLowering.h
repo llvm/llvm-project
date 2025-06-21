@@ -3572,6 +3572,8 @@ public:
     return Libcalls.getLibcallName(Call);
   }
 
+  const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
+
   /// Override the default CondCode to be used to test the result of the
   /// comparison libcall against zero.
   /// FIXME: This should be removed
