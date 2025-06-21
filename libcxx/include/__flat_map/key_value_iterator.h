@@ -191,7 +191,7 @@ struct __product_iterator_traits<__key_value_iterator<_Owner, _KeyContainer, _Ma
   static constexpr size_t __size = 2;
 
   template <size_t _Nth, class _Iter>
-  _LIBCPP_HIDE_FROM_ABI static decltype(auto) __get_iterator_element(_Iter&& __it)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static decltype(auto) __get_iterator_element(_Iter&& __it)
     requires(_Nth <= 1)
   {
     if constexpr (_Nth == 0) {
@@ -202,7 +202,8 @@ struct __product_iterator_traits<__key_value_iterator<_Owner, _KeyContainer, _Ma
   }
 
   template <class _KeyIter, class _MappedIter>
-  _LIBCPP_HIDE_FROM_ABI static auto __make_product_iterator(_KeyIter&& __key_iter, _MappedIter&& __mapped_iter) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto
+  __make_product_iterator(_KeyIter&& __key_iter, _MappedIter&& __mapped_iter) {
     return __key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const>(
         std::forward<_KeyIter>(__key_iter), std::forward<_MappedIter>(__mapped_iter));
   }
