@@ -15,6 +15,7 @@
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
@@ -449,4 +450,128 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
   }
 
   VPlanTransforms::removeDeadRecipes(Plan);
+}
+
+struct VPReplicateUnroller {
+  VPlan &Plan;
+  Type *IdxTy;
+  DenseMap<VPValue *, SmallVector<VPValue *>> Rep2LaneDefs;
+
+  VPReplicateUnroller(VPlan &Plan, Type *IdxTy) : Plan(Plan), IdxTy(IdxTy) {}
+
+  void addLaneDef(VPValue *Def, VPValue *LaneDef) {
+    const auto &[LaneDefs, _] = Rep2LaneDefs.insert({Def, {}});
+    LaneDefs->second.push_back(LaneDef);
+  }
+
+  VPValue *getLane(VPValue *Op, const VPLane &Lane, VPBuilder &Builder) {
+    const auto &LaneDefs = Rep2LaneDefs.lookup(Op);
+    if (LaneDefs.empty()) {
+      if (Lane.getKind() == VPLane::Kind::ScalableLast) {
+        return Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op});
+      }
+      VPValue *Idx =
+          Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
+      return Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
+    }
+    assert(Lane.getKind() != VPLane::Kind::ScalableLast);
+    return LaneDefs[Lane.getKnownLane()];
+  }
+
+  VPValue *getLane0(VPReplicateRecipe *RepR) {
+    VPBuilder B;
+    return getLane(RepR, VPLane::getFirstLane(), B);
+  }
+};
+
+/// Create a single-scalar clone of \p RepR for lane \p Lane.
+static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
+                                       Type *IdxTy, VPReplicateRecipe *RepR,
+                                       VPLane Lane,
+                                       VPReplicateUnroller &State) {
+  // Collect the operands at Lane, creating extracts as needed.
+  SmallVector<VPValue *> NewOps;
+  for (VPValue *Op : RepR->operands()) {
+    if (vputils::isSingleScalar(Op)) {
+      NewOps.push_back(Op);
+      continue;
+    }
+    NewOps.push_back(State.getLane(Op, Lane, Builder));
+  }
+
+  auto *New =
+      new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
+                            /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
+  New->insertBefore(RepR);
+  return New;
+}
+
+void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
+  Type *IdxTy = IntegerType::get(
+      Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
+  VPReplicateUnroller State(Plan, IdxTy);
+  SmallVector<VPRecipeBase *> ToRemove;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Pack = dyn_cast<VPInstruction>(&R);
+      if (Pack && Pack->getOpcode() == VPInstruction::Pack) {
+        auto LaneDefs = State.Rep2LaneDefs.lookup(Pack->getOperand(0));
+        if (!LaneDefs.empty()) {
+          auto *RepR = cast<VPReplicateRecipe>(Pack->getOperand(0));
+          // If needed, create a Build(Struct)Vector recipe to insert the scalar
+          // lane values into a vector.
+          Type *ResTy = RepR->getUnderlyingInstr()->getType();
+          VPBuilder Builder(Pack);
+          VPValue *VecRes = Builder.createNaryOp(
+              ResTy->isStructTy() ? VPInstruction::BuildStructVector
+                                  : VPInstruction::BuildVector,
+              LaneDefs);
+          Pack->replaceAllUsesWith(VecRes);
+          Pack->eraseFromParent();
+        } else {
+          assert(!isa<VPReplicateRecipe>(Pack->getOperand(0)));
+        }
+        continue;
+      }
+      if (Pack && Pack->getOpcode() == VPInstruction::Unpack) {
+        VPBuilder Builder(Pack);
+
+        auto *Def = Pack->getOperand(0);
+        for (unsigned I = 0; I != VF.getKnownMinValue(); ++I) {
+          VPValue *Idx = Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, I));
+          State.addLaneDef(Pack, Builder.createNaryOp(
+                                     Instruction::ExtractElement, {Def, Idx}));
+        }
+        continue;
+      }
+
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!RepR || RepR->isSingleScalar())
+        continue;
+
+      VPBuilder Builder(RepR);
+      ToRemove.push_back(RepR);
+      // Stores to invariant addresses need to store the last lane only.
+      if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+          vputils::isSingleScalar(RepR->getOperand(1))) {
+        cloneForLane(Plan, Builder, IdxTy, RepR, VPLane::getLastLaneForVF(VF),
+                     State);
+        continue;
+      }
+
+      /// Create single-scalar version of RepR for all lanes.
+      for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
+        State.addLaneDef(
+            RepR, cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), State));
+
+      /// Users that only demand the first lane can use the definition for lane
+      /// 0.
+      RepR->replaceUsesWithIf(
+          State.getLane0(RepR),
+          [RepR](VPUser &U, unsigned) { return U.onlyFirstLaneUsed(RepR); });
+    }
+  }
+  for (auto *R : reverse(ToRemove))
+    R->eraseFromParent();
 }
