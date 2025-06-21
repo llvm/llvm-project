@@ -60,7 +60,7 @@ template <template <class...> class Container,
           class Comp,
           class Alloc,
           class ValueType = std::pair<const K, V>>
-void test_associative_map_with_input(std::vector<ValueType>&& input) {
+TEST_CONSTEXPR_CXX26 void test_associative_map_with_input(std::vector<ValueType>&& input) {
   { // (range)
     auto in = wrap_input<Iter, Sent>(input);
     Container<K, V> c(std::from_range, in);
@@ -103,7 +103,7 @@ void test_associative_map_with_input(std::vector<ValueType>&& input) {
 }
 
 template <template <class...> class Container, class K, class V, class Iter, class Sent, class Comp, class Alloc>
-void test_associative_map() {
+TEST_CONSTEXPR_CXX26 void test_associative_map() {
   auto test_with_input = &test_associative_map_with_input<Container, K, V, Iter, Sent, Comp, Alloc>;
 
   // Normal input.
@@ -115,7 +115,7 @@ void test_associative_map() {
 }
 
 template <template <class...> class Container>
-void test_associative_map_move_only() {
+TEST_CONSTEXPR_CXX26 void test_associative_map_move_only() {
   std::pair<const int, MoveOnly> input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
 
@@ -189,7 +189,7 @@ constexpr bool test_set_constraints() {
 }
 
 template <template <class...> class Container, class T, class Iter, class Sent, class Comp, class Alloc>
-void test_associative_set_with_input(std::vector<T>&& input) {
+TEST_CONSTEXPR_CXX26 void test_associative_set_with_input(std::vector<T>&& input) {
   { // (range)
     std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
     Container<T> c(std::from_range, in);
@@ -232,7 +232,7 @@ void test_associative_set_with_input(std::vector<T>&& input) {
 }
 
 template <template <class...> class Container, class T, class Iter, class Sent, class Comp, class Alloc>
-void test_associative_set() {
+TEST_CONSTEXPR_CXX26 void test_associative_set() {
   auto test_with_input = &test_associative_set_with_input<Container, T, Iter, Sent, Comp, Alloc>;
 
   // Normal input.
