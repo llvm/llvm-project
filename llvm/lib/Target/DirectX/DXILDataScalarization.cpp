@@ -14,11 +14,13 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -137,49 +139,42 @@ bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
 }
 
 bool DataScalarizerVisitor::visitLoadInst(LoadInst &LI) {
-  unsigned NumOperands = LI.getNumOperands();
-  for (unsigned I = 0; I < NumOperands; ++I) {
-    Value *CurrOpperand = LI.getOperand(I);
-    ConstantExpr *CE = dyn_cast<ConstantExpr>(CurrOpperand);
-    if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
-      GetElementPtrInst *OldGEP =
-          cast<GetElementPtrInst>(CE->getAsInstruction());
-      OldGEP->insertBefore(LI.getIterator());
-      IRBuilder<> Builder(&LI);
-      LoadInst *NewLoad =
-          Builder.CreateLoad(LI.getType(), OldGEP, LI.getName());
-      NewLoad->setAlignment(LI.getAlign());
-      LI.replaceAllUsesWith(NewLoad);
-      LI.eraseFromParent();
-      visitGetElementPtrInst(*OldGEP);
-      return true;
-    }
-    if (GlobalVariable *NewGlobal = lookupReplacementGlobal(CurrOpperand))
-      LI.setOperand(I, NewGlobal);
+  Value *PtrOperand = LI.getPointerOperand();
+  ConstantExpr *CE = dyn_cast<ConstantExpr>(PtrOperand);
+  if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
+    GetElementPtrInst *OldGEP = cast<GetElementPtrInst>(CE->getAsInstruction());
+    OldGEP->insertBefore(LI.getIterator());
+    IRBuilder<> Builder(&LI);
+    LoadInst *NewLoad = Builder.CreateLoad(LI.getType(), OldGEP, LI.getName());
+    NewLoad->setAlignment(LI.getAlign());
+    LI.replaceAllUsesWith(NewLoad);
+    LI.eraseFromParent();
+    visitGetElementPtrInst(*OldGEP);
+    return true;
   }
+  if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand))
+    LI.setOperand(LI.getPointerOperandIndex(), NewGlobal);
   return false;
 }
 
 bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
-  unsigned NumOperands = SI.getNumOperands();
-  for (unsigned I = 0; I < NumOperands; ++I) {
-    Value *CurrOpperand = SI.getOperand(I);
-    ConstantExpr *CE = dyn_cast<ConstantExpr>(CurrOpperand);
-    if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
-      GetElementPtrInst *OldGEP =
-          cast<GetElementPtrInst>(CE->getAsInstruction());
-      OldGEP->insertBefore(SI.getIterator());
-      IRBuilder<> Builder(&SI);
-      StoreInst *NewStore = Builder.CreateStore(SI.getValueOperand(), OldGEP);
-      NewStore->setAlignment(SI.getAlign());
-      SI.replaceAllUsesWith(NewStore);
-      SI.eraseFromParent();
-      visitGetElementPtrInst(*OldGEP);
-      return true;
-    }
-    if (GlobalVariable *NewGlobal = lookupReplacementGlobal(CurrOpperand))
-      SI.setOperand(I, NewGlobal);
+
+  Value *PtrOperand = SI.getPointerOperand();
+  ConstantExpr *CE = dyn_cast<ConstantExpr>(PtrOperand);
+  if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
+    GetElementPtrInst *OldGEP = cast<GetElementPtrInst>(CE->getAsInstruction());
+    OldGEP->insertBefore(SI.getIterator());
+    IRBuilder<> Builder(&SI);
+    StoreInst *NewStore = Builder.CreateStore(SI.getValueOperand(), OldGEP);
+    NewStore->setAlignment(SI.getAlign());
+    SI.replaceAllUsesWith(NewStore);
+    SI.eraseFromParent();
+    visitGetElementPtrInst(*OldGEP);
+    return true;
   }
+  if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand))
+    SI.setOperand(SI.getPointerOperandIndex(), NewGlobal);
+
   return false;
 }
 
@@ -302,24 +297,35 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 }
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
+  Value *PtrOperand = GEPI.getPointerOperand();
+  Type *OrigGEPType = GEPI.getPointerOperandType();
+  Type *NewGEPType = OrigGEPType;
+  bool NeedsTransform = false;
 
-  unsigned NumOperands = GEPI.getNumOperands();
-  GlobalVariable *NewGlobal = nullptr;
-  for (unsigned I = 0; I < NumOperands; ++I) {
-    Value *CurrOpperand = GEPI.getOperand(I);
-    NewGlobal = lookupReplacementGlobal(CurrOpperand);
-    if (NewGlobal)
-      break;
+  if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
+    NewGEPType = NewGlobal->getValueType();
+    PtrOperand = NewGlobal;
+    NeedsTransform = true;
+  } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
+    Type *AllocatedType = Alloca->getAllocatedType();
+    // OrigGEPType might just be a pointer lets make sure
+    // to add the allocated type so we have a size
+    if (AllocatedType != OrigGEPType) {
+      NewGEPType = AllocatedType;
+      NeedsTransform = true;
+    }
   }
-  if (!NewGlobal)
+
+  // Note: We bail if this isn't a gep touched via alloca or global
+  // transformations
+  if (!NeedsTransform)
     return false;
 
   IRBuilder<> Builder(&GEPI);
   SmallVector<Value *, MaxVecSize> Indices(GEPI.indices());
 
-  Value *NewGEP =
-      Builder.CreateGEP(NewGlobal->getValueType(), NewGlobal, Indices,
-                        GEPI.getName(), GEPI.getNoWrapFlags());
+  Value *NewGEP = Builder.CreateGEP(NewGEPType, PtrOperand, Indices,
+                                    GEPI.getName(), GEPI.getNoWrapFlags());
   GEPI.replaceAllUsesWith(NewGEP);
   GEPI.eraseFromParent();
   return true;
