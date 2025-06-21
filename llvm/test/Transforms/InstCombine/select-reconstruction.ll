@@ -9,14 +9,14 @@ define i40 @select_reconstruction_i40(i40 %arg0) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i40 0, i40 [[ARG0]]
 ; CHECK-NEXT:    ret i40 [[TMP3]]
 ;
-  %1 = trunc i40 %arg0 to i8
-  %2 = icmp eq i8 %1, 2
-  %3 = and i40 %arg0, -256
-  %4 = select i1 %2, i8 0, i8 %1
-  %5 = select i1 %2, i40 0, i40 %3
-  %6 = zext i8 %4 to i40
-  %7 = or disjoint i40 %5, %6
-  ret i40 %7
+  %low = trunc i40 %arg0 to i8
+  %is_low_two = icmp eq i8 %low, 2
+  %high = and i40 %arg0, -256
+  %select_low = select i1 %is_low_two, i8 0, i8 %low
+  %select_high = select i1 %is_low_two, i40 0, i40 %high
+  %zext_low = zext i8 %select_low to i40
+  %recomb = or disjoint i40 %select_high, %zext_low
+  ret i40 %recomb
 }
 
 define i40 @select_reconstruction_any_cmp_val(i40 %arg0, i8 %arg1) {
@@ -27,14 +27,14 @@ define i40 @select_reconstruction_any_cmp_val(i40 %arg0, i8 %arg1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i40 0, i40 [[ARG0]]
 ; CHECK-NEXT:    ret i40 [[TMP3]]
 ;
-  %1 = trunc i40 %arg0 to i8
-  %2 = icmp eq i8 %1, %arg1
-  %3 = and i40 %arg0, -256
-  %4 = select i1 %2, i8 0, i8 %1
-  %5 = select i1 %2, i40 0, i40 %3
-  %6 = zext i8 %4 to i40
-  %7 = or disjoint i40 %5, %6
-  ret i40 %7
+  %low = trunc i40 %arg0 to i8
+  %is_low_arg1 = icmp eq i8 %low, %arg1
+  %high = and i40 %arg0, -256
+  %select_low = select i1 %is_low_arg1, i8 0, i8 %low
+  %select_high = select i1 %is_low_arg1, i40 0, i40 %high
+  %zext_low = zext i8 %select_low to i40
+  %recomb = or disjoint i40 %select_high, %zext_low
+  ret i40 %recomb
 }
 
 define i40 @select_reconstruction_257_mask(i40 %arg0) {
@@ -46,14 +46,14 @@ define i40 @select_reconstruction_257_mask(i40 %arg0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i40 0, i40 [[TMP3]]
 ; CHECK-NEXT:    ret i40 [[TMP4]]
 ;
-  %1 = trunc i40 %arg0 to i8
-  %2 = icmp eq i8 %1, 2
-  %3 = and i40 %arg0, -257
-  %4 = select i1 %2, i8 0, i8 %1
-  %5 = select i1 %2, i40 0, i40 %3
-  %6 = zext i8 %4 to i40
-  %7 = or disjoint i40 %5, %6
-  ret i40 %7
+  %low = trunc i40 %arg0 to i8
+  %is_low_two = icmp eq i8 %low, 2
+  %high = and i40 %arg0, -257
+  %select_low = select i1 %is_low_two, i8 0, i8 %low
+  %select_high = select i1 %is_low_two, i40 0, i40 %high
+  %zext_low = zext i8 %select_low to i40
+  %recomb = or disjoint i40 %select_high, %zext_low
+  ret i40 %recomb
 }
 
 define i40 @select_reconstruction_i16_mask(i40 %arg0) {
@@ -64,14 +64,14 @@ define i40 @select_reconstruction_i16_mask(i40 %arg0) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i40 0, i40 [[ARG0]]
 ; CHECK-NEXT:    ret i40 [[TMP3]]
 ;
-  %1 = trunc i40 %arg0 to i16
-  %2 = icmp eq i16 %1, 2
-  %3 = and i40 %arg0, -65356
-  %4 = select i1 %2, i16 0, i16 %1
-  %5 = select i1 %2, i40 0, i40 %3
-  %6 = zext i16 %4 to i40
-  %7 = or disjoint i40 %5, %6
-  ret i40 %7
+  %low = trunc i40 %arg0 to i16
+  %is_low_two = icmp eq i16 %low, 2
+  %high = and i40 %arg0, -65536
+  %select_low = select i1 %is_low_two, i16 0, i16 %low
+  %select_high = select i1 %is_low_two, i40 0, i40 %high
+  %zext_low = zext i16 %select_low to i40
+  %recomb = or disjoint i40 %select_high, %zext_low
+  ret i40 %recomb
 }
 
 define <2 x i32> @select_reconstruction_vec_any_cmp_val(<2 x i32> %arg0, <2 x i8> %arg1) {
@@ -82,12 +82,35 @@ define <2 x i32> @select_reconstruction_vec_any_cmp_val(<2 x i32> %arg0, <2 x i8
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> zeroinitializer, <2 x i32> [[ARG0]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP7]]
 ;
-  %1 = trunc <2 x i32> %arg0 to <2 x i8>
-  %2 = icmp eq <2 x i8> %1, %arg1
-  %3 = and <2 x i32> %arg0, <i32 -256, i32 -256>
-  %4 = select <2 x i1> %2, <2 x i8> <i8 0, i8 0>, <2 x i8> %1
-  %5 = select <2 x i1> %2, <2 x i32> <i32 0, i32 0>, <2 x i32> %3
-  %6 = zext <2 x i8> %4 to <2 x i32>
-  %7 = or <2 x i32> %5, %6
-  ret <2 x i32> %7
+  %low = trunc <2 x i32> %arg0 to <2 x i8>
+  %is_low_arg1 = icmp eq <2 x i8> %low, %arg1
+  %high = and <2 x i32> %arg0, <i32 -256, i32 -256>
+  %select_low = select <2 x i1> %is_low_arg1, <2 x i8> <i8 0, i8 0>, <2 x i8> %low
+  %select_high = select <2 x i1> %is_low_arg1, <2 x i32> <i32 0, i32 0>, <2 x i32> %high
+  %zext_low = zext <2 x i8> %select_low to <2 x i32>
+  %recomb = or <2 x i32> %select_high, %zext_low
+  ret <2 x i32> %recomb
+}
+
+; negative test
+define i40 @select_reconstruction_impure_i16_mask_and(i40 %arg0) {
+; CHECK-LABEL: define i40 @select_reconstruction_impure_i16_mask_and(
+; CHECK-SAME: i40 [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i40 [[ARG0]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = and i40 [[ARG0]], 180
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i16 0, i16 [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i40 0, i40 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP4]] to i40
+; CHECK-NEXT:    [[TMP7:%.*]] = and i40 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    ret i40 [[TMP7]]
+;
+  %low = trunc i40 %arg0 to i16
+  %is_low_two = icmp eq i16 %low, 2
+  %high = and i40 %arg0, -65356
+  %select_low = select i1 %is_low_two, i16 0, i16 %low
+  %select_high = select i1 %is_low_two, i40 0, i40 %high
+  %zext_low = zext i16 %select_low to i40
+  %recomb = and i40 %select_high, %zext_low
+  ret i40 %recomb
 }

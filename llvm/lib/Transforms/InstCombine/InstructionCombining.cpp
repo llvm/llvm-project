@@ -1355,6 +1355,9 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   // -> (Cond ? (V1 op zext V2) : ((X & Mask) op zext trunc X))
   auto foldReconstruction = [&](Value *V1, Value *Masked,
                                 Value *ZExtSel) -> Value * {
+    if (Opcode != Instruction::Or)
+      return nullptr;
+
     Value *X;
     if (!match(Masked, m_OneUse(m_And(m_Value(X), m_Constant()))))
       return nullptr;
