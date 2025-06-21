@@ -1,7 +1,7 @@
-.. title:: clang-tidy - performance-bool-bitwise-operation
+.. title:: clang-tidy - misc-bool-bitwise-operation
 
-performance-bool-bitwise-operation
-==================================
+misc-bool-bitwise-operation
+===========================
 
 Finds potentially inefficient use of bitwise operators such as ``&``,  ``|`` 
 and their compound analogues on Boolean values where logical operators like 

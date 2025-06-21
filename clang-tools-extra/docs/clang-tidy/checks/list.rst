@@ -254,6 +254,7 @@ Clang-Tidy Checks
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
    :doc:`llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers>`, "Yes"
+   :doc:`misc-bool-bitwise-operation <misc/bool-bitwise-operation>`, "Yes"
    :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
@@ -333,7 +334,6 @@ Clang-Tidy Checks
    :doc:`openmp-exception-escape <openmp/exception-escape>`,
    :doc:`openmp-use-default-none <openmp/use-default-none>`,
    :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes"
-   :doc:`performance-bool-bitwise-operation <performance/bool-bitwise-operation>`, "Yes"
    :doc:`performance-enum-size <performance/enum-size>`,
    :doc:`performance-faster-string-find <performance/faster-string-find>`, "Yes"
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"

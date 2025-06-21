@@ -136,8 +136,8 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
-- New :doc:`performance-bool-bitwise-operation
-  <clang-tidy/checks/performance/bool-bitwise-operation>` check.
+- New :doc:`misc-bool-bitwise-operation
+  <clang-tidy/checks/misc/bool-bitwise-operation>` check.
 
   Finds potentially inefficient use of bitwise operators such as ``&``,  ``|``
   and their compound analogues on Boolean values where logical operators like

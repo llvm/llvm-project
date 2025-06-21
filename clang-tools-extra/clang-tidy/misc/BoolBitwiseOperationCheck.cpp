@@ -16,7 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::performance {
+namespace clang::tidy::misc {
 
 static const NamedDecl *
 getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
@@ -217,4 +217,4 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
                     << InsertBrace2;
 }
 
-} // namespace clang::tidy::performance
+} // namespace clang::tidy::misc

@@ -10,7 +10,6 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidEndlCheck.h"
-#include "BoolBitwiseOperationCheck.h"
 #include "EnumSizeCheck.h"
 #include "FasterStringFindCheck.h"
 #include "ForRangeCopyCheck.h"
@@ -37,8 +36,6 @@ class PerformanceModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidEndlCheck>("performance-avoid-endl");
-    CheckFactories.registerCheck<BoolBitwiseOperationCheck>(
-        "performance-bool-bitwise-operation");
     CheckFactories.registerCheck<EnumSizeCheck>("performance-enum-size");
     CheckFactories.registerCheck<FasterStringFindCheck>(
         "performance-faster-string-find");

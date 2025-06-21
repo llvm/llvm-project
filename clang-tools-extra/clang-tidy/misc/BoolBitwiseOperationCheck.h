@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_BOOLBITWISEOPERATIONCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_BOOLBITWISEOPERATIONCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_BOOLBITWISEOPERATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_BOOLBITWISEOPERATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::performance {
+namespace clang::tidy::misc {
 
 /// Finds potentially inefficient use of bitwise operators such as ``&``,  ``|``
 /// and their compound analogues on Boolean values where logical operators like
 /// ``&&`` and ``||`` would be more appropriate.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/bool-bitwise-operation.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/bool-bitwise-operation.html
 class BoolBitwiseOperationCheck : public ClangTidyCheck {
 public:
   BoolBitwiseOperationCheck(StringRef Name, ClangTidyContext *Context);
@@ -37,6 +37,6 @@ private:
   bool IgnoreMacros;
 };
 
-} // namespace clang::tidy::performance
+} // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_BOOLBITWISEOPERATIONCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_BOOLBITWISEOPERATIONCHECK_H
