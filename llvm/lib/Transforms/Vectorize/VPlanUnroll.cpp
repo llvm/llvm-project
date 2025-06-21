@@ -463,9 +463,10 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
 }
 
 /// Create a single-scalar clone of \p RepR for lane \p Lane.
-static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
-                                       Type *IdxTy, VPReplicateRecipe *RepR,
-                                       VPLane Lane) {
+static VPReplicateRecipe *
+cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
+             VPReplicateRecipe *RepR, VPLane Lane,
+             DenseMap<VPValue *, SmallVector<VPValue *>> &Value2Lanes) {
   // Collect the operands at Lane, creating extracts as needed.
   SmallVector<VPValue *> NewOps;
   for (VPValue *Op : RepR->operands()) {
@@ -478,6 +479,11 @@ static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
           Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
       continue;
     }
+    if (Value2Lanes.contains(Op)) {
+      NewOps.push_back(Value2Lanes[Op][Lane.getKnownLane()]);
+      continue;
+    }
+
     // Look through buildvector to avoid unnecessary extracts.
     if (match(Op, m_BuildVector())) {
       NewOps.push_back(
@@ -510,6 +516,8 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()));
   auto VPBBsToUnroll =
       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion);
+  DenseMap<VPValue *, SmallVector<VPValue *>> Value2Lanes;
+  SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
@@ -521,12 +529,12 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
         if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
             vputils::isSingleScalar(RepR->getOperand(1))) {
           // Stores to invariant addresses need to store the last lane only.
-          cloneForLane(Plan, Builder, IdxTy, RepR,
-                       VPLane::getLastLaneForVF(VF));
+          cloneForLane(Plan, Builder, IdxTy, RepR, VPLane::getLastLaneForVF(VF),
+                       Value2Lanes);
         } else {
           // Create single-scalar version of RepR for all lanes.
           for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I));
+            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), Value2Lanes);
         }
         RepR->eraseFromParent();
         continue;
@@ -534,23 +542,28 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Create single-scalar version of RepR for all lanes.
       SmallVector<VPValue *> LaneDefs;
       for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-        LaneDefs.push_back(cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I)));
+        LaneDefs.push_back(
+            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), Value2Lanes));
 
+      Value2Lanes[RepR] = LaneDefs;
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       RepR->replaceUsesWithIf(LaneDefs[0], [RepR](VPUser &U, unsigned) {
         return U.onlyFirstLaneUsed(RepR);
       });
 
-      // If needed, create a Build(Struct)Vector recipe to insert the scalar
-      // lane values into a vector.
-      Type *ResTy = RepR->getUnderlyingInstr()->getType();
-      VPValue *VecRes = Builder.createNaryOp(
-          ResTy->isStructTy() ? VPInstruction::BuildStructVector
-                              : VPInstruction::BuildVector,
-          LaneDefs);
-      RepR->replaceAllUsesWith(VecRes);
-      RepR->eraseFromParent();
+      for (VPUser *U : to_vector(RepR->users())) {
+        auto *VPI = dyn_cast<VPInstruction>(U);
+        if (!VPI || (VPI->getOpcode() != VPInstruction::BuildVector &&
+                     VPI->getOpcode() != VPInstruction::BuildStructVector))
+          continue;
+        VPI->setOperand(0, LaneDefs[0]);
+        for (VPValue *Def : drop_begin(LaneDefs))
+          VPI->addOperand(Def);
+      }
+      ToRemove.push_back(RepR);
     }
   }
+  for (auto *R : reverse(ToRemove))
+    R->eraseFromParent();
 }

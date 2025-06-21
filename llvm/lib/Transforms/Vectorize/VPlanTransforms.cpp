@@ -3178,6 +3178,51 @@ void VPlanTransforms::materializeVectorTripCount(
     Plan.getVectorTripCount().setUnderlyingValue(NewC->getValue());
 }
 
+void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  VPTypeAnalysis TypeInfo(Plan);
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getEntry()));
+  auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(LoopRegion->getEntry()));
+  for (VPBasicBlock *VPBB :
+       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!RepR || RepR->isSingleScalar())
+        continue;
+      VPInstruction *BuildVector = nullptr;
+      for (VPUser *U : to_vector(RepR->users())) {
+        VPRegionBlock *ParentRegion =
+            cast<VPRecipeBase>(U)->getParent()->getParent();
+        if (U->usesScalars(RepR) && ParentRegion == LoopRegion)
+          continue;
+
+        if (!BuildVector) {
+          Type *ScalarTy = TypeInfo.inferScalarType(RepR);
+          unsigned Opc = ScalarTy->isStructTy()
+                             ? VPInstruction::BuildStructVector
+                             : VPInstruction::BuildVector;
+          BuildVector = new VPInstruction(Opc, {RepR});
+          BuildVector->insertAfter(RepR);
+        }
+
+        // Only update a single operand per users, as the same user is added
+        // multiple times, once per use.
+        // TODO: Introduce de-duplicating iterator over users.
+        for (unsigned Idx = 0; Idx != U->getNumOperands(); ++Idx)
+          if (U->getOperand(Idx) == RepR) {
+            U->setOperand(Idx, BuildVector);
+            break;
+          }
+      }
+    }
+  }
+}
+
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
 /// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
 /// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
