@@ -5,7 +5,7 @@
 define i1 @cmp(i32 %0) {
 ; CHECK-LABEL: cmp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs w8, w0, #5
+; CHECK-NEXT:    cmp w0, #5
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    // kill: def $w1 killed $w0
 ; CHECK-NEXT:    ret
@@ -16,7 +16,7 @@ define i1 @cmp(i32 %0) {
 define i1 @cmn(i32 %0) {
 ; CHECK-LABEL: cmn:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds w8, w0, #5
+; CHECK-NEXT:    cmn w0, #5
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    // kill: def $w1 killed $w0
 ; CHECK-NEXT:    ret
@@ -28,7 +28,7 @@ define i1 @cmn(i32 %0) {
 define i1 @cmp0(i32 %0) {
 ; CHECK-LABEL: cmp0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs w8, w0, #0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    // kill: def $w1 killed $w0
 ; CHECK-NEXT:    ret

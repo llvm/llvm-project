@@ -803,8 +803,9 @@ bool AArch64PassConfig::addILPOpts() {
 
 void AArch64PassConfig::addPreRegAlloc() {
   // Change dead register definitions to refer to the zero register.
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      EnableDeadRegisterElimination)
+  // This is beneficial even at -O0 as we can show CMP/CMN in the assembler
+  // output.
+  if (EnableDeadRegisterElimination)
     addPass(createAArch64DeadRegisterDefinitions());
 
   // Use AdvSIMD scalar instructions whenever profitable.

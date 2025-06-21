@@ -147,7 +147,7 @@ define target("aarch64.svcount") @test_sel_cc(target("aarch64.svcount") %x, targ
 ; CHECK-O0:       // %bb.0:
 ; CHECK-O0-NEXT:    mov p2.b, p1.b
 ; CHECK-O0-NEXT:    mov p1.b, p0.b
-; CHECK-O0-NEXT:    subs w8, w0, #42
+; CHECK-O0-NEXT:    cmp w0, #42
 ; CHECK-O0-NEXT:    cset w9, gt
 ; CHECK-O0-NEXT:    // implicit-def: $x8
 ; CHECK-O0-NEXT:    mov w8, w9

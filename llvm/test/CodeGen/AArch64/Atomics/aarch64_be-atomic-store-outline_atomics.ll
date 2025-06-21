@@ -118,7 +118,7 @@ define dso_local void @store_atomic_i64_aligned_seq_cst(i64 %value, ptr %ptr) {
 define dso_local void @store_atomic_i128_aligned_unordered(i128 %value, ptr %ptr) {
 ; -O0-LABEL: store_atomic_i128_aligned_unordered:
 ; -O0:    bl __aarch64_cas16_relax
-; -O0:    subs x10, x10, x11
+; -O0:    cmp x10, x11
 ; -O0:    ccmp x8, x9, #0, eq
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_unordered:
@@ -131,7 +131,7 @@ define dso_local void @store_atomic_i128_aligned_unordered(i128 %value, ptr %ptr
 define dso_local void @store_atomic_i128_aligned_monotonic(i128 %value, ptr %ptr) {
 ; -O0-LABEL: store_atomic_i128_aligned_monotonic:
 ; -O0:    bl __aarch64_cas16_relax
-; -O0:    subs x10, x10, x11
+; -O0:    cmp x10, x11
 ; -O0:    ccmp x8, x9, #0, eq
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_monotonic:
@@ -144,7 +144,7 @@ define dso_local void @store_atomic_i128_aligned_monotonic(i128 %value, ptr %ptr
 define dso_local void @store_atomic_i128_aligned_release(i128 %value, ptr %ptr) {
 ; -O0-LABEL: store_atomic_i128_aligned_release:
 ; -O0:    bl __aarch64_cas16_rel
-; -O0:    subs x10, x10, x11
+; -O0:    cmp x10, x11
 ; -O0:    ccmp x8, x9, #0, eq
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_release:
@@ -157,7 +157,7 @@ define dso_local void @store_atomic_i128_aligned_release(i128 %value, ptr %ptr) 
 define dso_local void @store_atomic_i128_aligned_seq_cst(i128 %value, ptr %ptr) {
 ; -O0-LABEL: store_atomic_i128_aligned_seq_cst:
 ; -O0:    bl __aarch64_cas16_acq_rel
-; -O0:    subs x10, x10, x11
+; -O0:    cmp x10, x11
 ; -O0:    ccmp x8, x9, #0, eq
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_seq_cst:

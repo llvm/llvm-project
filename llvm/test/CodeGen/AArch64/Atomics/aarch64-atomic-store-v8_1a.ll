@@ -121,7 +121,7 @@ define dso_local void @store_atomic_i128_aligned_unordered(i128 %value, ptr %ptr
 ; -O0:    eor x8, x10, x8
 ; -O0:    eor x11, x9, x11
 ; -O0:    orr x8, x8, x11
-; -O0:    subs x8, x8, #0
+; -O0:    cmp x8, #0
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_unordered:
 ; -O1:    ldp x4, x5, [x2]
@@ -138,7 +138,7 @@ define dso_local void @store_atomic_i128_aligned_monotonic(i128 %value, ptr %ptr
 ; -O0:    eor x8, x10, x8
 ; -O0:    eor x11, x9, x11
 ; -O0:    orr x8, x8, x11
-; -O0:    subs x8, x8, #0
+; -O0:    cmp x8, #0
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_monotonic:
 ; -O1:    ldp x4, x5, [x2]
@@ -155,7 +155,7 @@ define dso_local void @store_atomic_i128_aligned_release(i128 %value, ptr %ptr) 
 ; -O0:    eor x8, x10, x8
 ; -O0:    eor x11, x9, x11
 ; -O0:    orr x8, x8, x11
-; -O0:    subs x8, x8, #0
+; -O0:    cmp x8, #0
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_release:
 ; -O1:    ldp x4, x5, [x2]
@@ -172,7 +172,7 @@ define dso_local void @store_atomic_i128_aligned_seq_cst(i128 %value, ptr %ptr) 
 ; -O0:    eor x8, x10, x8
 ; -O0:    eor x11, x9, x11
 ; -O0:    orr x8, x8, x11
-; -O0:    subs x8, x8, #0
+; -O0:    cmp x8, #0
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_seq_cst:
 ; -O1:    ldp x4, x5, [x2]

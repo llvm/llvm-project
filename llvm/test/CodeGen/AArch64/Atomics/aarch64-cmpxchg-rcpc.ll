@@ -6,8 +6,8 @@
 define dso_local i8 @cmpxchg_i8_aligned_monotonic_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_monotonic_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_monotonic_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -22,8 +22,8 @@ define dso_local i8 @cmpxchg_i8_aligned_monotonic_monotonic(i8 %expected, i8 %ne
 define dso_local i8 @cmpxchg_i8_aligned_monotonic_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_monotonic_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_monotonic_monotonic_weak:
 ; -O1:    ldxrb w8, [x2]
@@ -37,8 +37,8 @@ define dso_local i8 @cmpxchg_i8_aligned_monotonic_monotonic_weak(i8 %expected, i
 define dso_local i8 @cmpxchg_i8_aligned_monotonic_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_monotonic_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_monotonic_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -53,8 +53,8 @@ define dso_local i8 @cmpxchg_i8_aligned_monotonic_acquire(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_aligned_monotonic_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_monotonic_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_monotonic_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -68,8 +68,8 @@ define dso_local i8 @cmpxchg_i8_aligned_monotonic_acquire_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_aligned_monotonic_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_monotonic_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_monotonic_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -84,8 +84,8 @@ define dso_local i8 @cmpxchg_i8_aligned_monotonic_seq_cst(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_aligned_monotonic_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_monotonic_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_monotonic_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -99,8 +99,8 @@ define dso_local i8 @cmpxchg_i8_aligned_monotonic_seq_cst_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_aligned_acquire_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acquire_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acquire_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -115,8 +115,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acquire_monotonic(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_aligned_acquire_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acquire_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acquire_monotonic_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -130,8 +130,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acquire_monotonic_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_aligned_acquire_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acquire_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acquire_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -146,8 +146,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acquire_acquire(i8 %expected, i8 %new, p
 define dso_local i8 @cmpxchg_i8_aligned_acquire_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acquire_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acquire_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -161,8 +161,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acquire_acquire_weak(i8 %expected, i8 %n
 define dso_local i8 @cmpxchg_i8_aligned_acquire_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acquire_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acquire_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -177,8 +177,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acquire_seq_cst(i8 %expected, i8 %new, p
 define dso_local i8 @cmpxchg_i8_aligned_acquire_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acquire_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acquire_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -192,8 +192,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acquire_seq_cst_weak(i8 %expected, i8 %n
 define dso_local i8 @cmpxchg_i8_aligned_release_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_release_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_release_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -208,8 +208,8 @@ define dso_local i8 @cmpxchg_i8_aligned_release_monotonic(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_aligned_release_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_release_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_release_monotonic_weak:
 ; -O1:    ldxrb w8, [x2]
@@ -223,8 +223,8 @@ define dso_local i8 @cmpxchg_i8_aligned_release_monotonic_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_aligned_release_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_release_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_release_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -239,8 +239,8 @@ define dso_local i8 @cmpxchg_i8_aligned_release_acquire(i8 %expected, i8 %new, p
 define dso_local i8 @cmpxchg_i8_aligned_release_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_release_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_release_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -254,8 +254,8 @@ define dso_local i8 @cmpxchg_i8_aligned_release_acquire_weak(i8 %expected, i8 %n
 define dso_local i8 @cmpxchg_i8_aligned_release_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_release_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_release_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -270,8 +270,8 @@ define dso_local i8 @cmpxchg_i8_aligned_release_seq_cst(i8 %expected, i8 %new, p
 define dso_local i8 @cmpxchg_i8_aligned_release_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_release_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_release_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -285,8 +285,8 @@ define dso_local i8 @cmpxchg_i8_aligned_release_seq_cst_weak(i8 %expected, i8 %n
 define dso_local i8 @cmpxchg_i8_aligned_acq_rel_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acq_rel_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acq_rel_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -301,8 +301,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acq_rel_monotonic(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_aligned_acq_rel_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acq_rel_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acq_rel_monotonic_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -316,8 +316,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acq_rel_monotonic_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_aligned_acq_rel_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acq_rel_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acq_rel_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -332,8 +332,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acq_rel_acquire(i8 %expected, i8 %new, p
 define dso_local i8 @cmpxchg_i8_aligned_acq_rel_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acq_rel_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acq_rel_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -347,8 +347,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acq_rel_acquire_weak(i8 %expected, i8 %n
 define dso_local i8 @cmpxchg_i8_aligned_acq_rel_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acq_rel_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acq_rel_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -363,8 +363,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acq_rel_seq_cst(i8 %expected, i8 %new, p
 define dso_local i8 @cmpxchg_i8_aligned_acq_rel_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_acq_rel_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_acq_rel_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -378,8 +378,8 @@ define dso_local i8 @cmpxchg_i8_aligned_acq_rel_seq_cst_weak(i8 %expected, i8 %n
 define dso_local i8 @cmpxchg_i8_aligned_seq_cst_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_seq_cst_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_seq_cst_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -394,8 +394,8 @@ define dso_local i8 @cmpxchg_i8_aligned_seq_cst_monotonic(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_aligned_seq_cst_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_seq_cst_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_seq_cst_monotonic_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -409,8 +409,8 @@ define dso_local i8 @cmpxchg_i8_aligned_seq_cst_monotonic_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_aligned_seq_cst_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_seq_cst_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_seq_cst_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -425,8 +425,8 @@ define dso_local i8 @cmpxchg_i8_aligned_seq_cst_acquire(i8 %expected, i8 %new, p
 define dso_local i8 @cmpxchg_i8_aligned_seq_cst_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_seq_cst_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_seq_cst_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -440,8 +440,8 @@ define dso_local i8 @cmpxchg_i8_aligned_seq_cst_acquire_weak(i8 %expected, i8 %n
 define dso_local i8 @cmpxchg_i8_aligned_seq_cst_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_seq_cst_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_seq_cst_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -456,8 +456,8 @@ define dso_local i8 @cmpxchg_i8_aligned_seq_cst_seq_cst(i8 %expected, i8 %new, p
 define dso_local i8 @cmpxchg_i8_aligned_seq_cst_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_aligned_seq_cst_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_aligned_seq_cst_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -471,8 +471,8 @@ define dso_local i8 @cmpxchg_i8_aligned_seq_cst_seq_cst_weak(i8 %expected, i8 %n
 define dso_local i16 @cmpxchg_i16_aligned_monotonic_monotonic(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_monotonic_monotonic:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_monotonic_monotonic:
 ; -O1:    and w8, w0, #0xffff
@@ -487,8 +487,8 @@ define dso_local i16 @cmpxchg_i16_aligned_monotonic_monotonic(i16 %expected, i16
 define dso_local i16 @cmpxchg_i16_aligned_monotonic_monotonic_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_monotonic_monotonic_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_monotonic_monotonic_weak:
 ; -O1:    ldxrh w8, [x2]
@@ -502,8 +502,8 @@ define dso_local i16 @cmpxchg_i16_aligned_monotonic_monotonic_weak(i16 %expected
 define dso_local i16 @cmpxchg_i16_aligned_monotonic_acquire(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_monotonic_acquire:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_monotonic_acquire:
 ; -O1:    and w8, w0, #0xffff
@@ -518,8 +518,8 @@ define dso_local i16 @cmpxchg_i16_aligned_monotonic_acquire(i16 %expected, i16 %
 define dso_local i16 @cmpxchg_i16_aligned_monotonic_acquire_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_monotonic_acquire_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_monotonic_acquire_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -533,8 +533,8 @@ define dso_local i16 @cmpxchg_i16_aligned_monotonic_acquire_weak(i16 %expected, 
 define dso_local i16 @cmpxchg_i16_aligned_monotonic_seq_cst(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_monotonic_seq_cst:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_monotonic_seq_cst:
 ; -O1:    and w8, w0, #0xffff
@@ -549,8 +549,8 @@ define dso_local i16 @cmpxchg_i16_aligned_monotonic_seq_cst(i16 %expected, i16 %
 define dso_local i16 @cmpxchg_i16_aligned_monotonic_seq_cst_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_monotonic_seq_cst_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_monotonic_seq_cst_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -564,8 +564,8 @@ define dso_local i16 @cmpxchg_i16_aligned_monotonic_seq_cst_weak(i16 %expected, 
 define dso_local i16 @cmpxchg_i16_aligned_acquire_monotonic(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acquire_monotonic:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acquire_monotonic:
 ; -O1:    and w8, w0, #0xffff
@@ -580,8 +580,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acquire_monotonic(i16 %expected, i16 %
 define dso_local i16 @cmpxchg_i16_aligned_acquire_monotonic_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acquire_monotonic_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acquire_monotonic_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -595,8 +595,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acquire_monotonic_weak(i16 %expected, 
 define dso_local i16 @cmpxchg_i16_aligned_acquire_acquire(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acquire_acquire:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acquire_acquire:
 ; -O1:    and w8, w0, #0xffff
@@ -611,8 +611,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acquire_acquire(i16 %expected, i16 %ne
 define dso_local i16 @cmpxchg_i16_aligned_acquire_acquire_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acquire_acquire_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acquire_acquire_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -626,8 +626,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acquire_acquire_weak(i16 %expected, i1
 define dso_local i16 @cmpxchg_i16_aligned_acquire_seq_cst(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acquire_seq_cst:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acquire_seq_cst:
 ; -O1:    and w8, w0, #0xffff
@@ -642,8 +642,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acquire_seq_cst(i16 %expected, i16 %ne
 define dso_local i16 @cmpxchg_i16_aligned_acquire_seq_cst_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acquire_seq_cst_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acquire_seq_cst_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -657,8 +657,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acquire_seq_cst_weak(i16 %expected, i1
 define dso_local i16 @cmpxchg_i16_aligned_release_monotonic(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_release_monotonic:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_release_monotonic:
 ; -O1:    and w8, w0, #0xffff
@@ -673,8 +673,8 @@ define dso_local i16 @cmpxchg_i16_aligned_release_monotonic(i16 %expected, i16 %
 define dso_local i16 @cmpxchg_i16_aligned_release_monotonic_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_release_monotonic_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_release_monotonic_weak:
 ; -O1:    ldxrh w8, [x2]
@@ -688,8 +688,8 @@ define dso_local i16 @cmpxchg_i16_aligned_release_monotonic_weak(i16 %expected, 
 define dso_local i16 @cmpxchg_i16_aligned_release_acquire(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_release_acquire:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_release_acquire:
 ; -O1:    and w8, w0, #0xffff
@@ -704,8 +704,8 @@ define dso_local i16 @cmpxchg_i16_aligned_release_acquire(i16 %expected, i16 %ne
 define dso_local i16 @cmpxchg_i16_aligned_release_acquire_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_release_acquire_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_release_acquire_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -719,8 +719,8 @@ define dso_local i16 @cmpxchg_i16_aligned_release_acquire_weak(i16 %expected, i1
 define dso_local i16 @cmpxchg_i16_aligned_release_seq_cst(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_release_seq_cst:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_release_seq_cst:
 ; -O1:    and w8, w0, #0xffff
@@ -735,8 +735,8 @@ define dso_local i16 @cmpxchg_i16_aligned_release_seq_cst(i16 %expected, i16 %ne
 define dso_local i16 @cmpxchg_i16_aligned_release_seq_cst_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_release_seq_cst_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_release_seq_cst_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -750,8 +750,8 @@ define dso_local i16 @cmpxchg_i16_aligned_release_seq_cst_weak(i16 %expected, i1
 define dso_local i16 @cmpxchg_i16_aligned_acq_rel_monotonic(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acq_rel_monotonic:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acq_rel_monotonic:
 ; -O1:    and w8, w0, #0xffff
@@ -766,8 +766,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acq_rel_monotonic(i16 %expected, i16 %
 define dso_local i16 @cmpxchg_i16_aligned_acq_rel_monotonic_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acq_rel_monotonic_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acq_rel_monotonic_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -781,8 +781,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acq_rel_monotonic_weak(i16 %expected, 
 define dso_local i16 @cmpxchg_i16_aligned_acq_rel_acquire(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acq_rel_acquire:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acq_rel_acquire:
 ; -O1:    and w8, w0, #0xffff
@@ -797,8 +797,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acq_rel_acquire(i16 %expected, i16 %ne
 define dso_local i16 @cmpxchg_i16_aligned_acq_rel_acquire_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acq_rel_acquire_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acq_rel_acquire_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -812,8 +812,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acq_rel_acquire_weak(i16 %expected, i1
 define dso_local i16 @cmpxchg_i16_aligned_acq_rel_seq_cst(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acq_rel_seq_cst:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acq_rel_seq_cst:
 ; -O1:    and w8, w0, #0xffff
@@ -828,8 +828,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acq_rel_seq_cst(i16 %expected, i16 %ne
 define dso_local i16 @cmpxchg_i16_aligned_acq_rel_seq_cst_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_acq_rel_seq_cst_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_acq_rel_seq_cst_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -843,8 +843,8 @@ define dso_local i16 @cmpxchg_i16_aligned_acq_rel_seq_cst_weak(i16 %expected, i1
 define dso_local i16 @cmpxchg_i16_aligned_seq_cst_monotonic(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_seq_cst_monotonic:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_seq_cst_monotonic:
 ; -O1:    and w8, w0, #0xffff
@@ -859,8 +859,8 @@ define dso_local i16 @cmpxchg_i16_aligned_seq_cst_monotonic(i16 %expected, i16 %
 define dso_local i16 @cmpxchg_i16_aligned_seq_cst_monotonic_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_seq_cst_monotonic_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_seq_cst_monotonic_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -874,8 +874,8 @@ define dso_local i16 @cmpxchg_i16_aligned_seq_cst_monotonic_weak(i16 %expected, 
 define dso_local i16 @cmpxchg_i16_aligned_seq_cst_acquire(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_seq_cst_acquire:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_seq_cst_acquire:
 ; -O1:    and w8, w0, #0xffff
@@ -890,8 +890,8 @@ define dso_local i16 @cmpxchg_i16_aligned_seq_cst_acquire(i16 %expected, i16 %ne
 define dso_local i16 @cmpxchg_i16_aligned_seq_cst_acquire_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_seq_cst_acquire_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_seq_cst_acquire_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -905,8 +905,8 @@ define dso_local i16 @cmpxchg_i16_aligned_seq_cst_acquire_weak(i16 %expected, i1
 define dso_local i16 @cmpxchg_i16_aligned_seq_cst_seq_cst(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_seq_cst_seq_cst:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_seq_cst_seq_cst:
 ; -O1:    and w8, w0, #0xffff
@@ -921,8 +921,8 @@ define dso_local i16 @cmpxchg_i16_aligned_seq_cst_seq_cst(i16 %expected, i16 %ne
 define dso_local i16 @cmpxchg_i16_aligned_seq_cst_seq_cst_weak(i16 %expected, i16 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i16_aligned_seq_cst_seq_cst_weak:
 ; -O0:    ldaxrh w0, [x2]
-; -O0:    cmp w0, w9, uxth
-; -O0:    stlxrh w8, w1, [x2]
+; -O0:    cmp w0, w8, uxth
+; -O0:    stlxrh wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i16_aligned_seq_cst_seq_cst_weak:
 ; -O1:    ldaxrh w8, [x2]
@@ -936,8 +936,8 @@ define dso_local i16 @cmpxchg_i16_aligned_seq_cst_seq_cst_weak(i16 %expected, i1
 define dso_local i32 @cmpxchg_i32_aligned_monotonic_monotonic(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_monotonic_monotonic:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_monotonic_monotonic:
 ; -O1:    ldxr w0, [x2]
@@ -951,8 +951,8 @@ define dso_local i32 @cmpxchg_i32_aligned_monotonic_monotonic(i32 %expected, i32
 define dso_local i32 @cmpxchg_i32_aligned_monotonic_monotonic_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_monotonic_monotonic_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_monotonic_monotonic_weak:
 ; -O1:    ldxr w8, [x2]
@@ -966,8 +966,8 @@ define dso_local i32 @cmpxchg_i32_aligned_monotonic_monotonic_weak(i32 %expected
 define dso_local i32 @cmpxchg_i32_aligned_monotonic_acquire(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_monotonic_acquire:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_monotonic_acquire:
 ; -O1:    ldaxr w0, [x2]
@@ -981,8 +981,8 @@ define dso_local i32 @cmpxchg_i32_aligned_monotonic_acquire(i32 %expected, i32 %
 define dso_local i32 @cmpxchg_i32_aligned_monotonic_acquire_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_monotonic_acquire_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_monotonic_acquire_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -996,8 +996,8 @@ define dso_local i32 @cmpxchg_i32_aligned_monotonic_acquire_weak(i32 %expected, 
 define dso_local i32 @cmpxchg_i32_aligned_monotonic_seq_cst(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_monotonic_seq_cst:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_monotonic_seq_cst:
 ; -O1:    ldaxr w0, [x2]
@@ -1011,8 +1011,8 @@ define dso_local i32 @cmpxchg_i32_aligned_monotonic_seq_cst(i32 %expected, i32 %
 define dso_local i32 @cmpxchg_i32_aligned_monotonic_seq_cst_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_monotonic_seq_cst_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_monotonic_seq_cst_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1026,8 +1026,8 @@ define dso_local i32 @cmpxchg_i32_aligned_monotonic_seq_cst_weak(i32 %expected, 
 define dso_local i32 @cmpxchg_i32_aligned_acquire_monotonic(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acquire_monotonic:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acquire_monotonic:
 ; -O1:    ldaxr w0, [x2]
@@ -1041,8 +1041,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acquire_monotonic(i32 %expected, i32 %
 define dso_local i32 @cmpxchg_i32_aligned_acquire_monotonic_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acquire_monotonic_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acquire_monotonic_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1056,8 +1056,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acquire_monotonic_weak(i32 %expected, 
 define dso_local i32 @cmpxchg_i32_aligned_acquire_acquire(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acquire_acquire:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acquire_acquire:
 ; -O1:    ldaxr w0, [x2]
@@ -1071,8 +1071,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acquire_acquire(i32 %expected, i32 %ne
 define dso_local i32 @cmpxchg_i32_aligned_acquire_acquire_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acquire_acquire_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acquire_acquire_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1086,8 +1086,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acquire_acquire_weak(i32 %expected, i3
 define dso_local i32 @cmpxchg_i32_aligned_acquire_seq_cst(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acquire_seq_cst:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acquire_seq_cst:
 ; -O1:    ldaxr w0, [x2]
@@ -1101,8 +1101,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acquire_seq_cst(i32 %expected, i32 %ne
 define dso_local i32 @cmpxchg_i32_aligned_acquire_seq_cst_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acquire_seq_cst_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acquire_seq_cst_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1116,8 +1116,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acquire_seq_cst_weak(i32 %expected, i3
 define dso_local i32 @cmpxchg_i32_aligned_release_monotonic(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_release_monotonic:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_release_monotonic:
 ; -O1:    ldxr w0, [x2]
@@ -1131,8 +1131,8 @@ define dso_local i32 @cmpxchg_i32_aligned_release_monotonic(i32 %expected, i32 %
 define dso_local i32 @cmpxchg_i32_aligned_release_monotonic_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_release_monotonic_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_release_monotonic_weak:
 ; -O1:    ldxr w8, [x2]
@@ -1146,8 +1146,8 @@ define dso_local i32 @cmpxchg_i32_aligned_release_monotonic_weak(i32 %expected, 
 define dso_local i32 @cmpxchg_i32_aligned_release_acquire(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_release_acquire:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_release_acquire:
 ; -O1:    ldaxr w0, [x2]
@@ -1161,8 +1161,8 @@ define dso_local i32 @cmpxchg_i32_aligned_release_acquire(i32 %expected, i32 %ne
 define dso_local i32 @cmpxchg_i32_aligned_release_acquire_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_release_acquire_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_release_acquire_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1176,8 +1176,8 @@ define dso_local i32 @cmpxchg_i32_aligned_release_acquire_weak(i32 %expected, i3
 define dso_local i32 @cmpxchg_i32_aligned_release_seq_cst(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_release_seq_cst:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_release_seq_cst:
 ; -O1:    ldaxr w0, [x2]
@@ -1191,8 +1191,8 @@ define dso_local i32 @cmpxchg_i32_aligned_release_seq_cst(i32 %expected, i32 %ne
 define dso_local i32 @cmpxchg_i32_aligned_release_seq_cst_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_release_seq_cst_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_release_seq_cst_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1206,8 +1206,8 @@ define dso_local i32 @cmpxchg_i32_aligned_release_seq_cst_weak(i32 %expected, i3
 define dso_local i32 @cmpxchg_i32_aligned_acq_rel_monotonic(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acq_rel_monotonic:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acq_rel_monotonic:
 ; -O1:    ldaxr w0, [x2]
@@ -1221,8 +1221,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acq_rel_monotonic(i32 %expected, i32 %
 define dso_local i32 @cmpxchg_i32_aligned_acq_rel_monotonic_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acq_rel_monotonic_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acq_rel_monotonic_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1236,8 +1236,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acq_rel_monotonic_weak(i32 %expected, 
 define dso_local i32 @cmpxchg_i32_aligned_acq_rel_acquire(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acq_rel_acquire:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acq_rel_acquire:
 ; -O1:    ldaxr w0, [x2]
@@ -1251,8 +1251,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acq_rel_acquire(i32 %expected, i32 %ne
 define dso_local i32 @cmpxchg_i32_aligned_acq_rel_acquire_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acq_rel_acquire_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acq_rel_acquire_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1266,8 +1266,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acq_rel_acquire_weak(i32 %expected, i3
 define dso_local i32 @cmpxchg_i32_aligned_acq_rel_seq_cst(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acq_rel_seq_cst:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acq_rel_seq_cst:
 ; -O1:    ldaxr w0, [x2]
@@ -1281,8 +1281,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acq_rel_seq_cst(i32 %expected, i32 %ne
 define dso_local i32 @cmpxchg_i32_aligned_acq_rel_seq_cst_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_acq_rel_seq_cst_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_acq_rel_seq_cst_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1296,8 +1296,8 @@ define dso_local i32 @cmpxchg_i32_aligned_acq_rel_seq_cst_weak(i32 %expected, i3
 define dso_local i32 @cmpxchg_i32_aligned_seq_cst_monotonic(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_seq_cst_monotonic:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_seq_cst_monotonic:
 ; -O1:    ldaxr w0, [x2]
@@ -1311,8 +1311,8 @@ define dso_local i32 @cmpxchg_i32_aligned_seq_cst_monotonic(i32 %expected, i32 %
 define dso_local i32 @cmpxchg_i32_aligned_seq_cst_monotonic_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_seq_cst_monotonic_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_seq_cst_monotonic_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1326,8 +1326,8 @@ define dso_local i32 @cmpxchg_i32_aligned_seq_cst_monotonic_weak(i32 %expected, 
 define dso_local i32 @cmpxchg_i32_aligned_seq_cst_acquire(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_seq_cst_acquire:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_seq_cst_acquire:
 ; -O1:    ldaxr w0, [x2]
@@ -1341,8 +1341,8 @@ define dso_local i32 @cmpxchg_i32_aligned_seq_cst_acquire(i32 %expected, i32 %ne
 define dso_local i32 @cmpxchg_i32_aligned_seq_cst_acquire_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_seq_cst_acquire_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_seq_cst_acquire_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1356,8 +1356,8 @@ define dso_local i32 @cmpxchg_i32_aligned_seq_cst_acquire_weak(i32 %expected, i3
 define dso_local i32 @cmpxchg_i32_aligned_seq_cst_seq_cst(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_seq_cst_seq_cst:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_seq_cst_seq_cst:
 ; -O1:    ldaxr w0, [x2]
@@ -1371,8 +1371,8 @@ define dso_local i32 @cmpxchg_i32_aligned_seq_cst_seq_cst(i32 %expected, i32 %ne
 define dso_local i32 @cmpxchg_i32_aligned_seq_cst_seq_cst_weak(i32 %expected, i32 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i32_aligned_seq_cst_seq_cst_weak:
 ; -O0:    ldaxr w0, [x2]
-; -O0:    cmp w0, w9
-; -O0:    stlxr w8, w1, [x2]
+; -O0:    cmp w0, w8
+; -O0:    stlxr wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i32_aligned_seq_cst_seq_cst_weak:
 ; -O1:    ldaxr w8, [x2]
@@ -1386,8 +1386,8 @@ define dso_local i32 @cmpxchg_i32_aligned_seq_cst_seq_cst_weak(i32 %expected, i3
 define dso_local i64 @cmpxchg_i64_aligned_monotonic_monotonic(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_monotonic_monotonic:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_monotonic_monotonic:
 ; -O1:    ldxr x0, [x2]
@@ -1401,8 +1401,8 @@ define dso_local i64 @cmpxchg_i64_aligned_monotonic_monotonic(i64 %expected, i64
 define dso_local i64 @cmpxchg_i64_aligned_monotonic_monotonic_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_monotonic_monotonic_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_monotonic_monotonic_weak:
 ; -O1:    ldxr x8, [x2]
@@ -1416,8 +1416,8 @@ define dso_local i64 @cmpxchg_i64_aligned_monotonic_monotonic_weak(i64 %expected
 define dso_local i64 @cmpxchg_i64_aligned_monotonic_acquire(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_monotonic_acquire:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_monotonic_acquire:
 ; -O1:    ldaxr x0, [x2]
@@ -1431,8 +1431,8 @@ define dso_local i64 @cmpxchg_i64_aligned_monotonic_acquire(i64 %expected, i64 %
 define dso_local i64 @cmpxchg_i64_aligned_monotonic_acquire_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_monotonic_acquire_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_monotonic_acquire_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1446,8 +1446,8 @@ define dso_local i64 @cmpxchg_i64_aligned_monotonic_acquire_weak(i64 %expected, 
 define dso_local i64 @cmpxchg_i64_aligned_monotonic_seq_cst(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_monotonic_seq_cst:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_monotonic_seq_cst:
 ; -O1:    ldaxr x0, [x2]
@@ -1461,8 +1461,8 @@ define dso_local i64 @cmpxchg_i64_aligned_monotonic_seq_cst(i64 %expected, i64 %
 define dso_local i64 @cmpxchg_i64_aligned_monotonic_seq_cst_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_monotonic_seq_cst_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_monotonic_seq_cst_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1476,8 +1476,8 @@ define dso_local i64 @cmpxchg_i64_aligned_monotonic_seq_cst_weak(i64 %expected, 
 define dso_local i64 @cmpxchg_i64_aligned_acquire_monotonic(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acquire_monotonic:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acquire_monotonic:
 ; -O1:    ldaxr x0, [x2]
@@ -1491,8 +1491,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acquire_monotonic(i64 %expected, i64 %
 define dso_local i64 @cmpxchg_i64_aligned_acquire_monotonic_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acquire_monotonic_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acquire_monotonic_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1506,8 +1506,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acquire_monotonic_weak(i64 %expected, 
 define dso_local i64 @cmpxchg_i64_aligned_acquire_acquire(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acquire_acquire:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acquire_acquire:
 ; -O1:    ldaxr x0, [x2]
@@ -1521,8 +1521,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acquire_acquire(i64 %expected, i64 %ne
 define dso_local i64 @cmpxchg_i64_aligned_acquire_acquire_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acquire_acquire_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acquire_acquire_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1536,8 +1536,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acquire_acquire_weak(i64 %expected, i6
 define dso_local i64 @cmpxchg_i64_aligned_acquire_seq_cst(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acquire_seq_cst:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acquire_seq_cst:
 ; -O1:    ldaxr x0, [x2]
@@ -1551,8 +1551,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acquire_seq_cst(i64 %expected, i64 %ne
 define dso_local i64 @cmpxchg_i64_aligned_acquire_seq_cst_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acquire_seq_cst_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acquire_seq_cst_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1566,8 +1566,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acquire_seq_cst_weak(i64 %expected, i6
 define dso_local i64 @cmpxchg_i64_aligned_release_monotonic(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_release_monotonic:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_release_monotonic:
 ; -O1:    ldxr x0, [x2]
@@ -1581,8 +1581,8 @@ define dso_local i64 @cmpxchg_i64_aligned_release_monotonic(i64 %expected, i64 %
 define dso_local i64 @cmpxchg_i64_aligned_release_monotonic_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_release_monotonic_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_release_monotonic_weak:
 ; -O1:    ldxr x8, [x2]
@@ -1596,8 +1596,8 @@ define dso_local i64 @cmpxchg_i64_aligned_release_monotonic_weak(i64 %expected, 
 define dso_local i64 @cmpxchg_i64_aligned_release_acquire(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_release_acquire:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_release_acquire:
 ; -O1:    ldaxr x0, [x2]
@@ -1611,8 +1611,8 @@ define dso_local i64 @cmpxchg_i64_aligned_release_acquire(i64 %expected, i64 %ne
 define dso_local i64 @cmpxchg_i64_aligned_release_acquire_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_release_acquire_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_release_acquire_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1626,8 +1626,8 @@ define dso_local i64 @cmpxchg_i64_aligned_release_acquire_weak(i64 %expected, i6
 define dso_local i64 @cmpxchg_i64_aligned_release_seq_cst(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_release_seq_cst:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_release_seq_cst:
 ; -O1:    ldaxr x0, [x2]
@@ -1641,8 +1641,8 @@ define dso_local i64 @cmpxchg_i64_aligned_release_seq_cst(i64 %expected, i64 %ne
 define dso_local i64 @cmpxchg_i64_aligned_release_seq_cst_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_release_seq_cst_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_release_seq_cst_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1656,8 +1656,8 @@ define dso_local i64 @cmpxchg_i64_aligned_release_seq_cst_weak(i64 %expected, i6
 define dso_local i64 @cmpxchg_i64_aligned_acq_rel_monotonic(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acq_rel_monotonic:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acq_rel_monotonic:
 ; -O1:    ldaxr x0, [x2]
@@ -1671,8 +1671,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acq_rel_monotonic(i64 %expected, i64 %
 define dso_local i64 @cmpxchg_i64_aligned_acq_rel_monotonic_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acq_rel_monotonic_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acq_rel_monotonic_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1686,8 +1686,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acq_rel_monotonic_weak(i64 %expected, 
 define dso_local i64 @cmpxchg_i64_aligned_acq_rel_acquire(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acq_rel_acquire:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acq_rel_acquire:
 ; -O1:    ldaxr x0, [x2]
@@ -1701,8 +1701,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acq_rel_acquire(i64 %expected, i64 %ne
 define dso_local i64 @cmpxchg_i64_aligned_acq_rel_acquire_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acq_rel_acquire_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acq_rel_acquire_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1716,8 +1716,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acq_rel_acquire_weak(i64 %expected, i6
 define dso_local i64 @cmpxchg_i64_aligned_acq_rel_seq_cst(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acq_rel_seq_cst:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acq_rel_seq_cst:
 ; -O1:    ldaxr x0, [x2]
@@ -1731,8 +1731,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acq_rel_seq_cst(i64 %expected, i64 %ne
 define dso_local i64 @cmpxchg_i64_aligned_acq_rel_seq_cst_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_acq_rel_seq_cst_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_acq_rel_seq_cst_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1746,8 +1746,8 @@ define dso_local i64 @cmpxchg_i64_aligned_acq_rel_seq_cst_weak(i64 %expected, i6
 define dso_local i64 @cmpxchg_i64_aligned_seq_cst_monotonic(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_seq_cst_monotonic:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_seq_cst_monotonic:
 ; -O1:    ldaxr x0, [x2]
@@ -1761,8 +1761,8 @@ define dso_local i64 @cmpxchg_i64_aligned_seq_cst_monotonic(i64 %expected, i64 %
 define dso_local i64 @cmpxchg_i64_aligned_seq_cst_monotonic_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_seq_cst_monotonic_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_seq_cst_monotonic_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1776,8 +1776,8 @@ define dso_local i64 @cmpxchg_i64_aligned_seq_cst_monotonic_weak(i64 %expected, 
 define dso_local i64 @cmpxchg_i64_aligned_seq_cst_acquire(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_seq_cst_acquire:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_seq_cst_acquire:
 ; -O1:    ldaxr x0, [x2]
@@ -1791,8 +1791,8 @@ define dso_local i64 @cmpxchg_i64_aligned_seq_cst_acquire(i64 %expected, i64 %ne
 define dso_local i64 @cmpxchg_i64_aligned_seq_cst_acquire_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_seq_cst_acquire_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_seq_cst_acquire_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -1806,8 +1806,8 @@ define dso_local i64 @cmpxchg_i64_aligned_seq_cst_acquire_weak(i64 %expected, i6
 define dso_local i64 @cmpxchg_i64_aligned_seq_cst_seq_cst(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_seq_cst_seq_cst:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_seq_cst_seq_cst:
 ; -O1:    ldaxr x0, [x2]
@@ -1821,8 +1821,8 @@ define dso_local i64 @cmpxchg_i64_aligned_seq_cst_seq_cst(i64 %expected, i64 %ne
 define dso_local i64 @cmpxchg_i64_aligned_seq_cst_seq_cst_weak(i64 %expected, i64 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i64_aligned_seq_cst_seq_cst_weak:
 ; -O0:    ldaxr x0, [x2]
-; -O0:    cmp x0, x9
-; -O0:    stlxr w8, x1, [x2]
+; -O0:    cmp x0, x8
+; -O0:    stlxr wzr, x1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i64_aligned_seq_cst_seq_cst_weak:
 ; -O1:    ldaxr x8, [x2]
@@ -2406,8 +2406,8 @@ define dso_local i128 @cmpxchg_i128_aligned_seq_cst_seq_cst_weak(i128 %expected,
 define dso_local i8 @cmpxchg_i8_unaligned_monotonic_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_monotonic_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_monotonic_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -2422,8 +2422,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_monotonic_monotonic(i8 %expected, i8 %
 define dso_local i8 @cmpxchg_i8_unaligned_monotonic_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_monotonic_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_monotonic_monotonic_weak:
 ; -O1:    ldxrb w8, [x2]
@@ -2437,8 +2437,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_monotonic_monotonic_weak(i8 %expected,
 define dso_local i8 @cmpxchg_i8_unaligned_monotonic_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_monotonic_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_monotonic_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -2453,8 +2453,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_monotonic_acquire(i8 %expected, i8 %ne
 define dso_local i8 @cmpxchg_i8_unaligned_monotonic_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_monotonic_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_monotonic_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2468,8 +2468,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_monotonic_acquire_weak(i8 %expected, i
 define dso_local i8 @cmpxchg_i8_unaligned_monotonic_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_monotonic_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_monotonic_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -2484,8 +2484,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_monotonic_seq_cst(i8 %expected, i8 %ne
 define dso_local i8 @cmpxchg_i8_unaligned_monotonic_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_monotonic_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_monotonic_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2499,8 +2499,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_monotonic_seq_cst_weak(i8 %expected, i
 define dso_local i8 @cmpxchg_i8_unaligned_acquire_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acquire_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acquire_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -2515,8 +2515,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acquire_monotonic(i8 %expected, i8 %ne
 define dso_local i8 @cmpxchg_i8_unaligned_acquire_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acquire_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acquire_monotonic_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2530,8 +2530,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acquire_monotonic_weak(i8 %expected, i
 define dso_local i8 @cmpxchg_i8_unaligned_acquire_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acquire_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acquire_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -2546,8 +2546,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acquire_acquire(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_unaligned_acquire_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acquire_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acquire_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2561,8 +2561,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acquire_acquire_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_unaligned_acquire_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acquire_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acquire_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -2577,8 +2577,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acquire_seq_cst(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_unaligned_acquire_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acquire_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acquire_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2592,8 +2592,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acquire_seq_cst_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_unaligned_release_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_release_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_release_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -2608,8 +2608,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_release_monotonic(i8 %expected, i8 %ne
 define dso_local i8 @cmpxchg_i8_unaligned_release_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_release_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_release_monotonic_weak:
 ; -O1:    ldxrb w8, [x2]
@@ -2623,8 +2623,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_release_monotonic_weak(i8 %expected, i
 define dso_local i8 @cmpxchg_i8_unaligned_release_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_release_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_release_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -2639,8 +2639,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_release_acquire(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_unaligned_release_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_release_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_release_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2654,8 +2654,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_release_acquire_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_unaligned_release_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_release_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_release_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -2670,8 +2670,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_release_seq_cst(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_unaligned_release_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_release_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_release_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2685,8 +2685,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_release_seq_cst_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acq_rel_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acq_rel_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -2701,8 +2701,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_monotonic(i8 %expected, i8 %ne
 define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acq_rel_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acq_rel_monotonic_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2716,8 +2716,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_monotonic_weak(i8 %expected, i
 define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acq_rel_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acq_rel_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -2732,8 +2732,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_acquire(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acq_rel_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acq_rel_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2747,8 +2747,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_acquire_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acq_rel_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acq_rel_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -2763,8 +2763,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_seq_cst(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_acq_rel_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_acq_rel_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2778,8 +2778,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_acq_rel_seq_cst_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_monotonic(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_seq_cst_monotonic:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_seq_cst_monotonic:
 ; -O1:    and w8, w0, #0xff
@@ -2794,8 +2794,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_monotonic(i8 %expected, i8 %ne
 define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_monotonic_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_seq_cst_monotonic_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_seq_cst_monotonic_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2809,8 +2809,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_monotonic_weak(i8 %expected, i
 define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_acquire(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_seq_cst_acquire:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_seq_cst_acquire:
 ; -O1:    and w8, w0, #0xff
@@ -2825,8 +2825,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_acquire(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_acquire_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_seq_cst_acquire_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_seq_cst_acquire_weak:
 ; -O1:    ldaxrb w8, [x2]
@@ -2840,8 +2840,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_acquire_weak(i8 %expected, i8 
 define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_seq_cst(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_seq_cst_seq_cst:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_seq_cst_seq_cst:
 ; -O1:    and w8, w0, #0xff
@@ -2856,8 +2856,8 @@ define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_seq_cst(i8 %expected, i8 %new,
 define dso_local i8 @cmpxchg_i8_unaligned_seq_cst_seq_cst_weak(i8 %expected, i8 %new, ptr %ptr) {
 ; -O0-LABEL: cmpxchg_i8_unaligned_seq_cst_seq_cst_weak:
 ; -O0:    ldaxrb w0, [x2]
-; -O0:    cmp w0, w9, uxtb
-; -O0:    stlxrb w8, w1, [x2]
+; -O0:    cmp w0, w8, uxtb
+; -O0:    stlxrb wzr, w1, [x2]
 ;
 ; -O1-LABEL: cmpxchg_i8_unaligned_seq_cst_seq_cst_weak:
 ; -O1:    ldaxrb w8, [x2]

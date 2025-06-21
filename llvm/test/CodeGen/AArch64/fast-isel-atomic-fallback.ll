@@ -24,17 +24,17 @@ define i32 @cmpxchg_cstexpr_addr(i32 %cmp, i32 %new, ptr %ps) #0 {
 ; CHECK-LABEL: cmpxchg_cstexpr_addr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    adrp x10, _g@PAGE
-; CHECK-NEXT:    add x10, x10, _g@PAGEOFF
+; CHECK-NEXT:    adrp x9, _g@PAGE
+; CHECK-NEXT:    add x9, x9, _g@PAGEOFF
 ; CHECK-NEXT:  LBB1_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxr w0, [x10]
+; CHECK-NEXT:    ldaxr w0, [x9]
 ; CHECK-NEXT:    cmp w0, w8
 ; CHECK-NEXT:    b.ne LBB1_3
 ; CHECK-NEXT:  ; %bb.2: ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    stlxr w9, w1, [x10]
-; CHECK-NEXT:    cbnz w9, LBB1_1
+; CHECK-NEXT:    stlxr wzr, w1, [x9]
+; CHECK-NEXT:    cbnz wzr, LBB1_1
 ; CHECK-NEXT:  LBB1_3:
-; CHECK-NEXT:    subs w8, w0, w8
+; CHECK-NEXT:    cmp w0, w8
 ; CHECK-NEXT:    cset w8, eq
 ; CHECK-NEXT:    ; kill: def $w1 killed $w8
 ; CHECK-NEXT:    str w8, [x2]
