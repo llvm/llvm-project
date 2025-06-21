@@ -2865,8 +2865,7 @@ BaseResult Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
     if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
       continue;
     if (AL.getKind() == ParsedAttr::UnknownAttribute)
-      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
-          << AL << AL.getRange();
+      DiagnoseUnknownAttribute(AL);
     else
       Diag(AL.getLoc(), diag::err_base_specifier_attribute)
           << AL << AL.isRegularKeywordAttribute() << AL.getRange();

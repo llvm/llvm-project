@@ -3,14 +3,14 @@
 // CHECK: !dx.rootsignatures = !{![[#EMPTY_ENTRY:]], ![[#DT_ENTRY:]],
 // CHECK-SAME: ![[#RF_ENTRY:]], ![[#RC_ENTRY:]], ![[#RD_ENTRY:]], ![[#SS_ENTRY:]]}
 
-// CHECK: ![[#EMPTY_ENTRY]] = !{ptr @EmptyEntry, ![[#EMPTY:]]}
+// CHECK: ![[#EMPTY_ENTRY]] = !{ptr @EmptyEntry, ![[#EMPTY:]], i32 2}
 // CHECK: ![[#EMPTY]] = !{}
 
 [shader("compute"), RootSignature("")]
 [numthreads(1,1,1)]
 void EmptyEntry() {}
 
-// CHECK: ![[#DT_ENTRY]] = !{ptr @DescriptorTableEntry, ![[#DT_RS:]]}
+// CHECK: ![[#DT_ENTRY]] = !{ptr @DescriptorTableEntry, ![[#DT_RS:]], i32 2}
 // CHECK: ![[#DT_RS]] = !{![[#TABLE:]]}
 // CHECK: ![[#TABLE]] = !{!"DescriptorTable", i32 0, ![[#CBV:]], ![[#SRV:]]}
 // CHECK: ![[#CBV]] = !{!"CBV", i32 1, i32 0, i32 0, i32 -1, i32 4}
@@ -25,7 +25,7 @@ void EmptyEntry() {}
 [numthreads(1,1,1)]
 void DescriptorTableEntry() {}
 
-// CHECK: ![[#RF_ENTRY]] = !{ptr @RootFlagsEntry, ![[#RF_RS:]]}
+// CHECK: ![[#RF_ENTRY]] = !{ptr @RootFlagsEntry, ![[#RF_RS:]], i32 2}
 // CHECK: ![[#RF_RS]] = !{![[#ROOT_FLAGS:]]}
 // CHECK: ![[#ROOT_FLAGS]] = !{!"RootFlags", i32 2114}
 
@@ -38,7 +38,7 @@ void DescriptorTableEntry() {}
 [numthreads(1,1,1)]
 void RootFlagsEntry() {}
 
-// CHECK: ![[#RC_ENTRY]] = !{ptr @RootConstantsEntry, ![[#RC_RS:]]}
+// CHECK: ![[#RC_ENTRY]] = !{ptr @RootConstantsEntry, ![[#RC_RS:]], i32 2}
 // CHECK: ![[#RC_RS]] = !{![[#ROOT_CONSTANTS:]]}
 // CHECK: ![[#ROOT_CONSTANTS]] = !{!"RootConstants", i32 5, i32 1, i32 2, i32 1}
 
@@ -52,7 +52,7 @@ void RootFlagsEntry() {}
 [numthreads(1,1,1)]
 void RootConstantsEntry() {}
 
-// CHECK: ![[#RD_ENTRY]] = !{ptr @RootDescriptorsEntry, ![[#RD_RS:]]}
+// CHECK: ![[#RD_ENTRY]] = !{ptr @RootDescriptorsEntry, ![[#RD_RS:]], i32 2}
 // CHECK: ![[#RD_RS]] = !{![[#ROOT_CBV:]], ![[#ROOT_UAV:]], ![[#ROOT_SRV:]]}
 // CHECK: ![[#ROOT_CBV]] = !{!"RootCBV", i32 0, i32 0, i32 0, i32 4}
 // CHECK: ![[#ROOT_UAV]] = !{!"RootUAV", i32 0, i32 42, i32 3, i32 2}
@@ -66,7 +66,7 @@ void RootConstantsEntry() {}
 [numthreads(1,1,1)]
 void RootDescriptorsEntry() {}
 
-// CHECK: ![[#SS_ENTRY]] = !{ptr @StaticSamplerEntry, ![[#SS_RS:]]}
+// CHECK: ![[#SS_ENTRY]] = !{ptr @StaticSamplerEntry, ![[#SS_RS:]], i32 2}
 // CHECK: ![[#SS_RS]] = !{![[#STATIC_SAMPLER:]]}
 
 // checking filter = 0x4

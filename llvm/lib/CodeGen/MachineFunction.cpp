@@ -259,6 +259,15 @@ MachineFunction::~MachineFunction() {
 
 void MachineFunction::clear() {
   Properties.reset();
+
+  // Clear JumpTableInfo first. Otherwise, every MBB we delete would do a
+  // linear search over the jump table entries to find and erase itself.
+  if (JumpTableInfo) {
+    JumpTableInfo->~MachineJumpTableInfo();
+    Allocator.Deallocate(JumpTableInfo);
+    JumpTableInfo = nullptr;
+  }
+
   // Don't call destructors on MachineInstr and MachineOperand. All of their
   // memory comes from the BumpPtrAllocator which is about to be purged.
   //
@@ -286,11 +295,6 @@ void MachineFunction::clear() {
 
   ConstantPool->~MachineConstantPool();
   Allocator.Deallocate(ConstantPool);
-
-  if (JumpTableInfo) {
-    JumpTableInfo->~MachineJumpTableInfo();
-    Allocator.Deallocate(JumpTableInfo);
-  }
 
   if (WinEHInfo) {
     WinEHInfo->~WinEHFuncInfo();
