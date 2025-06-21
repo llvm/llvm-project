@@ -140,12 +140,12 @@ define void @blend_chain_iv(i1 %c) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP10]], <4 x i64> undef, <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i64> [[PREDPHI]], <4 x i64> undef
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP7]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    store i16 0, ptr [[TMP4]], align 2
@@ -229,6 +229,10 @@ define void @redundant_branch_and_blends_without_mask(ptr %A) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x ptr> [[TMP35]], ptr [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x ptr> [[TMP36]], ptr [[TMP7]], i32 2
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x ptr> [[TMP37]], ptr [[TMP8]], i32 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:

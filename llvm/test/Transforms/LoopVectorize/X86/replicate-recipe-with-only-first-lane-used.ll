@@ -145,20 +145,20 @@ define void @replicate_udiv_with_only_first_lane_used2(i32 %x, ptr %dst, i64 %d)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i64> zeroinitializer, <4 x i64> [[TMP16]]
 ; CHECK-NEXT:    [[PREDPHI15:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i64> zeroinitializer, <4 x i64> [[TMP32]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i64> [[PREDPHI]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x i64> [[PREDPHI]], i32 1
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x i64> [[PREDPHI]], i32 2
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP37]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <4 x i64> [[PREDPHI]], i32 3
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP39]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i64> [[PREDPHI15]], i32 0
-; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP41]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <4 x i64> [[PREDPHI15]], i32 1
-; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i64> [[PREDPHI15]], i32 2
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP45]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i64> [[PREDPHI15]], i32 3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP35]]
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP37]]
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP39]]
+; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP41]]
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP43]]
+; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP45]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP47]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP11]], align 2
 ; CHECK-NEXT:    store i16 0, ptr [[TMP36]], align 2
