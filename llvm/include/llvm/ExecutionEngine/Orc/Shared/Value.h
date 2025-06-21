@@ -59,10 +59,6 @@ public:
   Value() = default;
   explicit Value(ExecutorAddr OpaqueType);
   Value(const Value &RHS);
-  Value(Value &&RHS);
-  Value() = default;
-  Value(ExecutorAddr OpaqueType);
-  Value(const Value &RHS);
   Value(Value &&RHS) noexcept;
   Value &operator=(const Value &RHS);
   Value &operator=(Value &&RHS) noexcept;
