@@ -463,7 +463,7 @@ bool AMDGPURegisterBankInfo::isScalarLoadLegal(const MachineInstr &MI) const {
          (IsConst || !MMO->isVolatile()) &&
          // Memory must be known constant, or not written before this load.
          (IsConst || MMO->isInvariant() || (MMO->getFlags() & MONoClobber)) &&
-         AMDGPUInstrInfo::isUniformMMO(MMO);
+         AMDGPU::isUniformMMO(MMO);
 }
 
 RegisterBankInfo::InstructionMappings

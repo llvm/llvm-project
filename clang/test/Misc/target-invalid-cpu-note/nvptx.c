@@ -84,5 +84,6 @@
 // CHECK-SAME: {{^}}, gfx12-generic
 // CHECK-SAME: {{^}}, gfx1200
 // CHECK-SAME: {{^}}, gfx1201
+// CHECK-SAME: {{^}}, gfx1250
 // CHECK-SAME: {{^}}, amdgcnspirv
 // CHECK-SAME: {{$}}

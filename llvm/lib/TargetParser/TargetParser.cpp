@@ -174,11 +174,13 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1153"},   {"gfx1153"}, GK_GFX1153, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx115E"},   {"gfx115E"}, GK_GFX115E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx115F"},   {"gfx115F"}, GK_GFX115F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
-    {{"gfx1170"},   {"gfx1170"}, GK_GFX1170, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1250"},   {"gfx1250"}, GK_GFX1250, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     {{"gfx120E"},   {"gfx120E"}, GK_GFX120E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx120F"},   {"gfx120F"}, GK_GFX120F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1170"},   {"gfx1170"}, GK_GFX1170, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
     {{"gfx10-3-generic"},   {"gfx10-3-generic"}, GK_GFX10_3_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
@@ -337,6 +339,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1201: return {12, 0, 1};
   case GK_GFX120E: return {12, 0, 0xFFFE};
   case GK_GFX120F: return {12, 0, 0xFFFF};
+  case GK_GFX1250: return {12, 5, 0};
 
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
@@ -434,6 +437,33 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   } else if (T.isAMDGCN()) {
     AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
     switch (Kind) {
+    case GK_GFX1250:
+      Features["ci-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot8-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["gfx11-insts"] = true;
+      Features["gfx12-insts"] = true;
+      Features["gfx1250-insts"] = true;
+      Features["bitop3-insts"] = true;
+      Features["prng-inst"] = true;
+      Features["fp8-conversion-insts"] = true;
+      Features["permlane16-swap"] = true;
+      Features["ashr-pk-insts"] = true;
+      Features["atomic-buffer-pk-add-bf16-inst"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
+      Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-flat-pk-add-16-insts"] = true;
+      Features["atomic-global-pk-add-bf16-inst"] = true;
+      Features["atomic-ds-pk-add-16-insts"] = true;
+      Features["setprio-inc-wg-inst"] = true;
+      break;
     case GK_GFX120F:
     case GK_GFX120E:
     case GK_GFX1201:
@@ -715,6 +745,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1250:
     case GK_GFX120E:
     case GK_GFX120F:
     case GK_GFX1201:

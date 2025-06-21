@@ -493,6 +493,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   SDValue UndefVInt32VT = DAG->getUNDEF(VInt32VT);
   EXPECT_TRUE(sd_match(UndefInt32VT, m_Undef()));
   EXPECT_TRUE(sd_match(UndefVInt32VT, m_Undef()));
+
+  SDValue PoisonInt32VT = DAG->getPOISON(Int32VT);
+  SDValue PoisonVInt32VT = DAG->getPOISON(VInt32VT);
+  EXPECT_TRUE(sd_match(PoisonInt32VT, m_Poison()));
+  EXPECT_TRUE(sd_match(PoisonVInt32VT, m_Poison()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
