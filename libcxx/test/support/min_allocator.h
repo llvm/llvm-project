@@ -47,10 +47,10 @@ class no_default_allocator {
   no_default_allocator();
 #endif
   struct construct_tag {};
-  explicit no_default_allocator(construct_tag) {}
+  TEST_CONSTEXPR_CXX20 explicit no_default_allocator(construct_tag) {}
 
 public:
-  static no_default_allocator create() {
+  TEST_CONSTEXPR_CXX20 static no_default_allocator create() {
     construct_tag tag;
     return no_default_allocator(tag);
   }
@@ -59,14 +59,14 @@ public:
   typedef T value_type;
 
   template <class U>
-  no_default_allocator(no_default_allocator<U>) TEST_NOEXCEPT {}
+  TEST_CONSTEXPR_CXX20 no_default_allocator(no_default_allocator<U>) TEST_NOEXCEPT {}
 
-  T* allocate(std::size_t n) { return static_cast<T*>(::operator new(n * sizeof(T))); }
+  TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return static_cast<T*>(std::allocator<T>().allocate(n)); }
 
-  void deallocate(T* p, std::size_t) { return ::operator delete(static_cast<void*>(p)); }
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
 
-  friend bool operator==(no_default_allocator, no_default_allocator) { return true; }
-  friend bool operator!=(no_default_allocator x, no_default_allocator y) { return !(x == y); }
+  friend TEST_CONSTEXPR bool operator==(no_default_allocator, no_default_allocator) { return true; }
+  friend TEST_CONSTEXPR bool operator!=(no_default_allocator x, no_default_allocator y) { return !(x == y); }
 };
 
 struct malloc_allocator_base {
@@ -219,10 +219,7 @@ class min_pointer {
 public:
   min_pointer() TEST_NOEXCEPT = default;
   TEST_CONSTEXPR_CXX14 min_pointer(std::nullptr_t) TEST_NOEXCEPT : ptr_(nullptr) {}
-  // TEST_CONSTEXPR_CXX14 explicit min_pointer(min_pointer<void, ID> p) TEST_NOEXCEPT : ptr_(static_cast<T*>(p.ptr_)) {}
-
-  // TEST_CONSTEXPR_CXX14 explicit min_pointer(min_pointer<void, ID> p) TEST_NOEXCEPT : ptr_((p.ptr_)) {}
-  TEST_CONSTEXPR_CXX14 explicit min_pointer(min_pointer<void, ID> p) TEST_NOEXCEPT : ptr_((p)) {}
+  TEST_CONSTEXPR_CXX14 explicit min_pointer(min_pointer<void, ID> p) TEST_NOEXCEPT : ptr_(static_cast<T*>(p.ptr_)) {}
 
   TEST_CONSTEXPR_CXX14 explicit operator bool() const { return ptr_ != nullptr; }
 
@@ -388,8 +385,7 @@ template <class T>
 class min_allocator {
 public:
   typedef T value_type;
-  // typedef min_pointer<T> pointer;
-  typedef T* pointer;
+  typedef min_pointer<T> pointer;
 
   min_allocator() = default;
   template <class U>
@@ -397,8 +393,7 @@ public:
 
   TEST_CONSTEXPR_CXX20 pointer allocate(std::size_t n) { return pointer(std::allocator<T>().allocate(n)); }
 
-  // TEST_CONSTEXPR_CXX20 void deallocate(pointer p, std::size_t n) { std::allocator<T>().deallocate(p.ptr_, n); }
-  TEST_CONSTEXPR_CXX20 void deallocate(pointer p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
+  TEST_CONSTEXPR_CXX20 void deallocate(pointer p, std::size_t n) { std::allocator<T>().deallocate(p.ptr_, n); }
 
   TEST_CONSTEXPR_CXX20 friend bool operator==(min_allocator, min_allocator) { return true; }
   TEST_CONSTEXPR_CXX20 friend bool operator!=(min_allocator x, min_allocator y) { return !(x == y); }
