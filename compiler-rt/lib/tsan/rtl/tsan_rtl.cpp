@@ -582,6 +582,16 @@ void UnmapShadow(ThreadState* thr, uptr addr, uptr size) {
 #endif
 
 void MapShadow(uptr addr, uptr size) {
+  // Although named MapShadow, this function's semantic is unrelated to
+  // UnmapShadow. This function currently only used for Go's lazy allocation
+  // of shadow, whose targets are program section (e.g., bss, data, etc.).
+  // Therefore, we can guarantee that the addr and size align to kShadowCell
+  // and kMetaShadowCell by the following assertions.
+  DCHECK_EQ(addr % kShadowCell, 0);
+  DCHECK_EQ(size % kShadowCell, 0);
+  DCHECK_EQ(addr % kMetaShadowCell, 0);
+  DCHECK_EQ(size % kMetaShadowCell, 0);
+
   // Ensure thead registry lock held, so as to synchronize
   // with DoReset, which also access the mapped_shadow_* ctxt fields.
   ThreadRegistryLock lock0(&ctx->thread_registry);
