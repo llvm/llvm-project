@@ -2634,14 +2634,16 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     scalarizeInstruction(UI, this, *State.Lane, State);
     // Insert scalar instance packing it into a vector.
     if (State.VF.isVector() && shouldPack()) {
+      Value *WideValue;
       // If we're constructing lane 0, initialize to start from poison.
       if (State.Lane->isFirstLane()) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-        Value *Poison =
-            PoisonValue::get(VectorType::get(UI->getType(), State.VF));
-        State.set(this, Poison);
+        WideValue = PoisonValue::get(VectorType::get(UI->getType(), State.VF));
+      } else {
+        WideValue = State.get(this);
       }
-      State.packScalarIntoVectorizedValue(this, *State.Lane);
+      State.set(this, State.packScalarIntoVectorizedValue(this, WideValue,
+                                                          *State.Lane));
     }
     return;
   }
