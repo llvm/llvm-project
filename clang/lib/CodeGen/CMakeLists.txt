@@ -167,6 +167,7 @@ add_clang_library(clangCodeGen
 
   LINK_LIBS
   clangAST
+  LLVMABI
   clangAnalysis
   clangBasic
   clangFrontend

@@ -30,6 +30,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ABI/ABIInfo.h"
+#include "llvm/ABI/TargetCodegenInfo.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
@@ -361,6 +364,7 @@ private:
   std::unique_ptr<CodeGenTBAA> TBAA;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
+  mutable std::unique_ptr<llvm::abi::TargetCodeGenInfo> newTargetCodeGenInfo;
 
   // This should not be moved earlier, since its initialization depends on some
   // of the previous reference members being already initialized and also checks
@@ -833,6 +837,7 @@ public:
   void maybeSetTrivialComdat(const Decl &D, llvm::GlobalObject &GO);
 
   const ABIInfo &getABIInfo();
+  const llvm::abi::ABIInfo &fetchABIInfo(llvm::abi::TypeBuilder TB);
   CGCXXABI &getCXXABI() const { return *ABI; }
   llvm::LLVMContext &getLLVMContext() { return VMContext; }
 
