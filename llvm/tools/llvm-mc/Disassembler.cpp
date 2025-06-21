@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -24,6 +25,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -32,24 +34,25 @@ using namespace llvm;
 typedef std::pair<std::vector<unsigned char>, std::vector<const char *>>
     ByteArrayTy;
 
-static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
+static bool printInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
                        SourceMgr &SM, MCStreamer &Streamer, bool InAtomicBlock,
-                       const MCSubtargetInfo &STI) {
+                       const MCSubtargetInfo &STI, unsigned BenchmarkNumRuns) {
   ArrayRef<uint8_t> Data(Bytes.first);
 
   // Disassemble it to strings.
   uint64_t Size;
-  uint64_t Index;
 
-  for (Index = 0; Index < Bytes.first.size(); Index += Size) {
+  for (uint64_t Index = 0; Index < Bytes.first.size(); Index += Size) {
+    auto getInstruction = [&](MCInst &Inst) -> MCDisassembler::DecodeStatus {
+      if (STI.getTargetTriple().getArch() == Triple::hexagon)
+        return DisAsm.getInstructionBundle(Inst, Size, Data.slice(Index), Index,
+                                           nulls());
+      return DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index,
+                                   nulls());
+    };
+
     MCInst Inst;
-
-    MCDisassembler::DecodeStatus S;
-    if (STI.getTargetTriple().getArch() == Triple::hexagon)
-      S = DisAsm.getInstructionBundle(Inst, Size, Data.slice(Index), Index,
-                                      nulls());
-    else
-      S = DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index, nulls());
+    MCDisassembler::DecodeStatus S = getInstruction(Inst);
     switch (S) {
     case MCDisassembler::Fail:
       SM.PrintMessage(SMLoc::getFromPointer(Bytes.second[Index]),
@@ -74,12 +77,24 @@ static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
       Streamer.emitInstruction(Inst, STI);
       break;
     }
+
+    if (S == MCDisassembler::Success && BenchmarkNumRuns != 0) {
+      // Benchmark mode, collect timing for decoding the instruction several
+      // times.
+      MCInst BMInst;
+      TimeTraceScope timeScope("getInstruction");
+      for (unsigned _ : llvm::seq<unsigned>(BenchmarkNumRuns)) {
+        BMInst.clear();
+        BMInst.setOpcode(0);
+        S = getInstruction(BMInst);
+      }
+    }
   }
 
   return false;
 }
 
-static bool SkipToToken(StringRef &Str) {
+static bool skipToToken(StringRef &Str) {
   for (;;) {
     if (Str.empty())
       return false;
@@ -101,7 +116,7 @@ static bool SkipToToken(StringRef &Str) {
 
 static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
                                 SourceMgr &SM, bool HexBytes) {
-  while (SkipToToken(Str)) {
+  while (skipToToken(Str)) {
     // Handled by higher level
     if (Str[0] == '[' || Str[0] == ']')
       return false;
@@ -151,7 +166,7 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
                               MCSubtargetInfo &STI, MCStreamer &Streamer,
                               MemoryBuffer &Buffer, SourceMgr &SM,
                               MCContext &Ctx, const MCTargetOptions &MCOptions,
-                              bool HexBytes) {
+                              bool HexBytes, unsigned BenchmarkNumRuns) {
   std::unique_ptr<const MCRegisterInfo> MRI(T.createMCRegInfo(Triple));
   if (!MRI) {
     errs() << "error: no register info for target " << Triple << "\n";
@@ -179,7 +194,7 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
   StringRef Str = Buffer.getBuffer();
   bool InAtomicBlock = false;
 
-  while (SkipToToken(Str)) {
+  while (skipToToken(Str)) {
     ByteArray.first.clear();
     ByteArray.second.clear();
 
@@ -207,8 +222,8 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
     ErrorOccurred |= byteArrayFromString(ByteArray, Str, SM, HexBytes);
 
     if (!ByteArray.first.empty())
-      ErrorOccurred |=
-          PrintInsts(*DisAsm, ByteArray, SM, Streamer, InAtomicBlock, STI);
+      ErrorOccurred |= printInsts(*DisAsm, ByteArray, SM, Streamer,
+                                  InAtomicBlock, STI, BenchmarkNumRuns);
   }
 
   if (InAtomicBlock) {

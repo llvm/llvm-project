@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
@@ -240,6 +242,24 @@ static cl::opt<ActionType> Action(
                           "Colored disassembly of strings of hex bytes")),
     cl::cat(MCCategory));
 
+static cl::opt<unsigned>
+    BenchmarkNumRuns("benchmark-num-runs",
+                     cl::desc("Number of runs for decoder benchmarking"),
+                     cl::cat(MCCategory));
+
+static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
+
+static cl::opt<unsigned> TimeTraceGranularity(
+    "time-trace-granularity",
+    cl::desc(
+        "Minimum time granularity (in microseconds) traced by time profiler"),
+    cl::init(500), cl::Hidden);
+
+static cl::opt<std::string>
+    TimeTraceFile("time-trace-file",
+                  cl::desc("Specify time trace file destination"),
+                  cl::value_desc("filename"));
+
 static const Target *GetTarget(const char *ProgName) {
   // Figure out the target triple.
   if (TripleName.empty())
@@ -371,6 +391,22 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
+
+  if (TimeTrace)
+    timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
+
+  auto TimeTraceScopeExit = make_scope_exit([]() {
+    if (!TimeTrace)
+      return;
+    if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
+      handleAllErrors(std::move(E), [&](const StringError &SE) {
+        errs() << SE.getMessage() << "\n";
+      });
+      return;
+    }
+    timeTraceProfilerCleanup();
+  });
+
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
@@ -603,7 +639,7 @@ int main(int argc, char **argv) {
   }
 
   int Res = 1;
-  bool disassemble = false;
+  bool Disassemble = false;
   switch (Action) {
   case AC_AsLex:
     Res = AsLexInput(SrcMgr, *MAI, Out->os());
@@ -615,12 +651,13 @@ int main(int argc, char **argv) {
   case AC_MDisassemble:
   case AC_CDisassemble:
   case AC_Disassemble:
-    disassemble = true;
+    Disassemble = true;
     break;
   }
-  if (disassemble)
+  if (Disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, MCOptions, HexBytes);
+                                    SrcMgr, Ctx, MCOptions, HexBytes,
+                                    BenchmarkNumRuns);
 
   // Keep output if no errors.
   if (Res == 0) {
@@ -628,5 +665,6 @@ int main(int argc, char **argv) {
     if (DwoOut)
       DwoOut->keep();
   }
+
   return Res;
 }
