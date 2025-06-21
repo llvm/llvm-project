@@ -7957,11 +7957,10 @@ LoongArchTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   std::pair<StringRef, StringRef> Name = StringRef(RegName).split('$');
   std::string NewRegName = Name.second.str();
   Register Reg = MatchRegisterAltName(NewRegName);
-  if (Reg == LoongArch::NoRegister)
+  if (!Reg)
     Reg = MatchRegisterName(NewRegName);
-  if (Reg == LoongArch::NoRegister)
-    report_fatal_error(
-        Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
+  if (!Reg)
+    return Reg;
   BitVector ReservedRegs = Subtarget.getRegisterInfo()->getReservedRegs(MF);
   if (!ReservedRegs.test(Reg))
     report_fatal_error(Twine("Trying to obtain non-reserved register \"" +

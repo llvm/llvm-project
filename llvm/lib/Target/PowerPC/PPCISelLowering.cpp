@@ -17984,8 +17984,7 @@ Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
 
   Register Reg = MatchRegisterName(RegName);
   if (!Reg)
-    report_fatal_error(
-        Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
+    return Reg;
 
   // FIXME: Unable to generate code for `-O2` but okay for `-O0`.
   // Need followup investigation as to why.

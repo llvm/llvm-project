@@ -329,10 +329,7 @@ Register HexagonTargetLowering::getRegisterByName(
                      .Case("cs0", Hexagon::CS0)
                      .Case("cs1", Hexagon::CS1)
                      .Default(Register());
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 /// LowerCallResult - Lower the result values of an ISD::CALL into the

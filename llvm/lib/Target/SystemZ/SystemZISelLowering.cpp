@@ -1713,11 +1713,9 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                                    : SystemZ::NoRegister)
           .Case("r15",
                 Subtarget.isTargetELF() ? SystemZ::R15D : SystemZ::NoRegister)
-          .Default(SystemZ::NoRegister);
+          .Default(Register());
 
-  if (Reg)
-    return Reg;
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 Register SystemZTargetLowering::getExceptionPointerRegister(
