@@ -303,7 +303,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       //   1. indices, vector type and permutation map are the same (i.e., the
       //      transfer_read/transfer_write ops are matching),
       //   2. source operands for transfer.{read|write} do not originate from
-      //      Ops implementing ViewLikeOpInterface.
+      //      nor have users that are Ops implementing ViewLikeOpInterface.
       //   3. no other operations in the loop access the same memref except
       //      for transfer_read/transfer_write accessing statically disjoint
       //      slices.
@@ -312,14 +312,27 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();
 
+      // Check 2. for xfer_read
       auto *source = transferRead.getBase().getDefiningOp();
       if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
         return WalkResult::advance();
 
+      auto base = transferRead.getBase();
+      for (auto *user : base.getUsers())
+        if (isa_and_nonnull<ViewLikeOpInterface>(user))
+          return WalkResult::advance();
+
+      // Check 2. for xfer_wrire
       source = transferWrite.getBase().getDefiningOp();
       if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
         return WalkResult::advance();
 
+      base = transferWrite.getBase();
+      for (auto *user : base.getUsers())
+        if (isa_and_nonnull<ViewLikeOpInterface>(user))
+          return WalkResult::advance();
+
+      // Check 1. + 3.
       // TODO: may want to memoize this information for performance but it
       // likely gets invalidated often.
       DominanceInfo dom(loop);
