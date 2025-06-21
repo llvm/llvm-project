@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -74,6 +75,7 @@
 #define DEBUG_TYPE "nvptx-lower"
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 static cl::opt<bool> sched4reg(
     "nvptx-sched4reg",
@@ -668,6 +670,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
 
+  setOperationAction({ISD::TRUNCATE_SSAT_S, ISD::TRUNCATE_SSAT_U}, MVT::i16,
+                     Legal);
+  setOperationAction({ISD::TRUNCATE_SSAT_S, ISD::TRUNCATE_SSAT_U}, MVT::i8,
+                     Custom);
+
   // Some SIGN_EXTEND_INREG can be done using cvt instruction.
   // For others we will expand to a SHL/SRA pair.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i64, Legal);
@@ -845,7 +852,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST});
+                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::SMIN,
+                       ISD::SMAX});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -1090,6 +1098,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::PseudoUseParam)
     MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
     MAKE_CASE(NVPTXISD::BUILD_VECTOR)
+    MAKE_CASE(NVPTXISD::TRUNCATE_SSAT_U_I8)
+    MAKE_CASE(NVPTXISD::TRUNCATE_SSAT_S_I8)
     MAKE_CASE(NVPTXISD::RETURN)
     MAKE_CASE(NVPTXISD::CallSeqBegin)
     MAKE_CASE(NVPTXISD::CallSeqEnd)
@@ -5677,6 +5687,52 @@ static SDValue combineADDRSPACECAST(SDNode *N,
   return SDValue();
 }
 
+static SDValue combineMINMAX(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+
+  EVT VT = N->getValueType(0);
+  if (!(VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i16))
+    return SDValue();
+
+  SDValue Val;
+  APInt Ceil, Floor;
+  if (!(sd_match(N, m_SMin(m_SMax(m_Value(Val), m_ConstInt(Floor)),
+                           m_ConstInt(Ceil))) ||
+        sd_match(N, m_SMax(m_SMin(m_Value(Val), m_ConstInt(Ceil)),
+                           m_ConstInt(Floor)))))
+    return SDValue();
+
+  const unsigned BitWidth = VT.getSizeInBits();
+  SDLoc DL(N);
+  const auto TryToLowerAsSaturatedConversion = [&](MVT DestVT) {
+    const unsigned DestBitWidth = DestVT.getSizeInBits();
+
+    // If the destination is greater than or equal to the source, the min/max
+    // comparisons are meaningless/impossible.
+    if (DestBitWidth >= BitWidth)
+      return SDValue();
+
+    bool IsSigned;
+    if (Ceil == APInt::getSignedMaxValue(DestBitWidth).sext(BitWidth) &&
+        Floor == APInt::getSignedMinValue(DestBitWidth).sext(BitWidth))
+      IsSigned = true;
+    else if (Ceil == APInt::getMaxValue(DestBitWidth).zext(BitWidth) &&
+             Floor == APInt::getMinValue(BitWidth))
+      IsSigned = false;
+    else
+      return SDValue();
+
+    unsigned Opcode = IsSigned ? ISD::TRUNCATE_SSAT_S : ISD::TRUNCATE_SSAT_U;
+    SDValue Trunc = DCI.DAG.getNode(Opcode, DL, DestVT, Val);
+    return DCI.DAG.getExtOrTrunc(IsSigned, Trunc, DL, VT);
+  };
+
+  for (const auto DestVT : {MVT::i16, MVT::i8})
+    if (auto Res = TryToLowerAsSaturatedConversion(DestVT))
+      return Res;
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5695,6 +5751,9 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case ISD::UREM:
     case ISD::SREM:
       return PerformREMCombine(N, DCI, OptLevel);
+    case ISD::SMIN:
+    case ISD::SMAX:
+      return combineMINMAX(N, DCI);
     case ISD::SETCC:
       return PerformSETCCCombine(N, DCI, STI.getSmVersion());
     case NVPTXISD::StoreRetval:
@@ -6055,6 +6114,20 @@ static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
   Results.push_back(NewValue.getValue(3));
 }
 
+static void replaceTruncateSSat(SDNode *N, SelectionDAG &DAG,
+                                SmallVectorImpl<SDValue> &Results) {
+  SDLoc DL(N);
+
+  const bool IsSigned = N->getOpcode() == ISD::TRUNCATE_SSAT_S;
+  const unsigned Opcode =
+      IsSigned ? NVPTXISD::TRUNCATE_SSAT_S_I8 : NVPTXISD::TRUNCATE_SSAT_U_I8;
+  SDValue NewTrunc = DAG.getNode(Opcode, DL, MVT::i16, N->getOperand(0));
+  SDValue Assert = DAG.getNode(IsSigned ? ISD::AssertSext : ISD::AssertZext, DL,
+                               MVT::i16, NewTrunc, DAG.getValueType(MVT::i8));
+
+  Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Assert));
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -6071,6 +6144,10 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case ISD::CopyFromReg:
     ReplaceCopyFromReg_128(N, DAG, Results);
+    return;
+  case ISD::TRUNCATE_SSAT_U:
+  case ISD::TRUNCATE_SSAT_S:
+    replaceTruncateSSat(N, DAG, Results);
     return;
   }
 }
