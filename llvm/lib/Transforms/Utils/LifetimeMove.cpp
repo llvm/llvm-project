@@ -34,8 +34,8 @@ class LifetimeMover : public PtrUseVisitor<LifetimeMover> {
 
   SmallVector<AllocaInst *, 4> Allocas;
   // Critical points are instructions where the crossing of a variable's
-  // lifetime makes a difference. We attempt to move lifetime.end
-  // before critical points and lifetime.start after them.
+  // lifetime makes a difference. We attempt to rise lifetime.end
+  // before critical points and sink lifetime.start after them.
   SmallVector<Instruction *, 4> CriticalPoints;
 
   SmallVector<Instruction *, 2> LifetimeStarts;
@@ -47,7 +47,7 @@ public:
   LifetimeMover(Function &F, const DominatorTree &DT,
                 const PostDominatorTree &PDT, const LoopInfo &LI);
 
-  void run();
+  bool run();
 
   void visitInstruction(Instruction &I);
   void visitPHINode(PHINode &I);
@@ -57,8 +57,8 @@ public:
   void visitCallBase(CallBase &CB);
 
 private:
-  void sinkLifetimeStartMarkers(AllocaInst *AI);
-  void riseLifetimeEndMarkers();
+  bool sinkLifetimeStartMarkers(AllocaInst *AI);
+  bool riseLifetimeEndMarkers();
   void reset();
 };
 } // namespace
@@ -74,18 +74,20 @@ LifetimeMover::LifetimeMover(Function &F, const DominatorTree &DT,
   }
 }
 
-void LifetimeMover::run() {
+bool LifetimeMover::run() {
+  bool Changed = false;
   for (auto *AI : Allocas) {
     reset();
     Base::visitPtr(*AI);
 
     if (!LifetimeStarts.empty())
-      sinkLifetimeStartMarkers(AI);
+      Changed |= sinkLifetimeStartMarkers(AI);
 
     // Do not move lifetime.end if alloca escapes
     if (!LifetimeEnds.empty() && !PI.isEscaped())
-      riseLifetimeEndMarkers();
+      Changed |= riseLifetimeEndMarkers();
   }
+  return Changed;
 }
 
 void LifetimeMover::visitInstruction(Instruction &I) {
@@ -183,7 +185,7 @@ void LifetimeMover::visitCallBase(CallBase &CB) {
 /// For each local variable that all of its user are dominated by one of the
 /// critical point, we sink their lifetime.start markers to the place where
 /// after the critical point. Doing so minimizes the lifetime of each variable.
-void LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
+bool LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
   auto Update = [this](Instruction *Old, Instruction *New) {
     // Reject the new proposal if it lengthens lifetime
     if (DT.dominates(New, Old))
@@ -218,7 +220,7 @@ void LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
     for (auto *P : LifetimeStarts) {
       bool Reachable = isPotentiallyReachable(DomPoint, P, nullptr, &DT, &LI);
       if (Reachable && (P == Update(DomPoint, P)))
-        return;
+        return false;
     }
 
     auto *NewStart = LifetimeStarts[0]->clone();
@@ -229,11 +231,13 @@ void LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
     for (auto *I : LifetimeStarts)
       if (PDT.dominates(DomPoint, I))
         I->eraseFromParent();
+    return true;
   }
+  return false;
 }
 // Find the critical point that is dominated by all users of alloca,
 // we will rise lifetime.end markers before the critical point.
-void LifetimeMover::riseLifetimeEndMarkers() {
+bool LifetimeMover::riseLifetimeEndMarkers() {
   auto Update = [this](Instruction *Old, Instruction *New) {
     if (Old != nullptr && DT.dominates(Old, New))
       return Old;
@@ -270,7 +274,7 @@ void LifetimeMover::riseLifetimeEndMarkers() {
     for (auto *P : LifetimeEnds) {
       bool Reachable = isPotentiallyReachable(P, DomPoint, nullptr, &DT, &LI);
       if (Reachable && (P == Update(DomPoint, P)))
-        return;
+        return false;
     }
 
     auto *NewEnd = LifetimeEnds[0]->clone();
@@ -279,7 +283,9 @@ void LifetimeMover::riseLifetimeEndMarkers() {
     for (auto *I : LifetimeEnds)
       if (DT.dominates(DomPoint, I))
         I->eraseFromParent();
+    return true;
   }
+  return false;
 }
 
 void LifetimeMover::reset() {
@@ -303,7 +309,8 @@ PreservedAnalyses LifetimeMovePass::run(Function &F,
   const PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   const LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   LifetimeMover Mover(F, DT, PDT, LI);
-  Mover.run();
+  if (!Mover.run())
+    return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
