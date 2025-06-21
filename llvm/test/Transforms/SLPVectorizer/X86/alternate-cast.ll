@@ -132,19 +132,19 @@ define <8 x i32> @fptosi_fptoui(<8 x float> %a) {
 
 define <8 x float> @fneg_fabs(<8 x float> %a) {
 ; SSE2-LABEL: @fneg_fabs(
-; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; SSE2-NEXT:    [[TMP3:%.*]] = fneg <4 x float> [[TMP1]]
-; SSE2-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP2]])
-; SSE2-NEXT:    [[DOTUNCASTED:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SSE2-NEXT:    [[A:%.*]] = fneg <8 x float> [[A1:%.*]]
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE2-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.fabs.v8f32(<8 x float> [[A1]])
+; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; SSE2-NEXT:    [[DOTUNCASTED:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; SSE2-NEXT:    ret <8 x float> [[DOTUNCASTED]]
 ;
 ; SLM-LABEL: @fneg_fabs(
-; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SLM-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; SLM-NEXT:    [[TMP3:%.*]] = fneg <4 x float> [[TMP1]]
-; SLM-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP2]])
-; SLM-NEXT:    [[DOTUNCASTED:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SLM-NEXT:    [[A:%.*]] = fneg <8 x float> [[A1:%.*]]
+; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SLM-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.fabs.v8f32(<8 x float> [[A1]])
+; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; SLM-NEXT:    [[DOTUNCASTED:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; SLM-NEXT:    ret <8 x float> [[DOTUNCASTED]]
 ;
 ; AVX-LABEL: @fneg_fabs(

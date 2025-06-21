@@ -1404,11 +1404,6 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
       !II->getCalledFunction()->isSpeculatable())
     return nullptr;
 
-  // fabs is canonicalized to fabs (shuffle ...) in foldShuffleOfUnaryOps, so
-  // avoid undoing it.
-  if (match(II, m_FAbs(m_Value())))
-    return nullptr;
-
   Value *X;
   Constant *C;
   ArrayRef<int> Mask;
