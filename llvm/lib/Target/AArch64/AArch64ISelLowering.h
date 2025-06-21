@@ -207,7 +207,7 @@ public:
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
 
-  bool hasPairedLoad(EVT LoadedType, Align &RequiredAligment) const override;
+  bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
@@ -538,6 +538,10 @@ public:
 
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
+
+  /// In AArch64, true if FEAT_CPA is present. Allows pointer arithmetic
+  /// semantics to be preserved for instruction selection.
+  bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can

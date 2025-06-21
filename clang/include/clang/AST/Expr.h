@@ -240,8 +240,7 @@ public:
     return static_cast<bool>(getDependence() & ExprDependence::UnexpandedPack);
   }
 
-  /// Whether this expression contains subexpressions which had errors, e.g. a
-  /// TypoExpr.
+  /// Whether this expression contains subexpressions which had errors.
   bool containsErrors() const {
     return static_cast<bool>(getDependence() & ExprDependence::Error);
   }
@@ -6965,36 +6964,6 @@ public:
   }
 };
 
-/// TypoExpr - Internal placeholder for expressions where typo correction
-/// still needs to be performed and/or an error diagnostic emitted.
-class TypoExpr : public Expr {
-  // The location for the typo name.
-  SourceLocation TypoLoc;
-
-public:
-  TypoExpr(QualType T, SourceLocation TypoLoc)
-      : Expr(TypoExprClass, T, VK_LValue, OK_Ordinary), TypoLoc(TypoLoc) {
-    assert(T->isDependentType() && "TypoExpr given a non-dependent type");
-    setDependence(ExprDependence::TypeValueInstantiation |
-                  ExprDependence::Error);
-  }
-
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-
-  SourceLocation getBeginLoc() const LLVM_READONLY { return TypoLoc; }
-  SourceLocation getEndLoc() const LLVM_READONLY { return TypoLoc; }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == TypoExprClass;
-  }
-
-};
-
 /// This class represents BOTH the OpenMP Array Section and OpenACC 'subarray',
 /// with a boolean differentiator.
 /// OpenMP 5.0 [2.1.5, Array Sections].
@@ -7395,17 +7364,14 @@ public:
                               ArrayRef<Expr *> SubExprs);
   static RecoveryExpr *CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs);
 
-  ArrayRef<Expr *> subExpressions() {
-    auto *B = getTrailingObjects<Expr *>();
-    return llvm::ArrayRef(B, B + NumExprs);
-  }
+  ArrayRef<Expr *> subExpressions() { return getTrailingObjects(NumExprs); }
 
   ArrayRef<const Expr *> subExpressions() const {
     return const_cast<RecoveryExpr *>(this)->subExpressions();
   }
 
   child_range children() {
-    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects());
     return child_range(B, B + NumExprs);
   }
 

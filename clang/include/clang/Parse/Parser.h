@@ -290,9 +290,7 @@ public:
     return ConsumeToken();
   }
 
-  SourceLocation getEndOfPreviousToken() {
-    return PP.getLocForEndOfToken(PrevTokLocation);
-  }
+  SourceLocation getEndOfPreviousToken() const;
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)
@@ -3602,7 +3600,7 @@ private:
   /// keyword.
   bool isClassCompatibleKeyword(Token Tok) const;
 
-  void ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs);
+  void ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs);
 
   ///@}
 
@@ -4173,8 +4171,7 @@ private:
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
-                           bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false);
+                           bool FailImmediatelyOnInvalidExpr = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.

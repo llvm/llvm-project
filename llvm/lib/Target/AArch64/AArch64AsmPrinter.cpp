@@ -58,6 +58,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -467,7 +468,7 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
   PAuthABIVersion = (uint64_t(-1) == PAuthABIVersion) ? 0 : PAuthABIVersion;
 
   if (PAuthABIPlatform || PAuthABIVersion) {
-    TS->emitAtributesSubsection(
+    TS->emitAttributesSubsection(
         AArch64BuildAttributes::getVendorName(
             AArch64BuildAttributes::AEABI_PAUTHABI),
         AArch64BuildAttributes::SubsectionOptional::REQUIRED,
@@ -490,7 +491,7 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
       (Flags & AArch64BuildAttributes::Feature_GCS_Flag) ? 1 : 0;
 
   if (BTIValue || PACValue || GCSValue) {
-    TS->emitAtributesSubsection(
+    TS->emitAttributesSubsection(
         AArch64BuildAttributes::getVendorName(
             AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
         AArch64BuildAttributes::SubsectionOptional::OPTIONAL,
@@ -909,13 +910,13 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // have a chance to save them.
       EmitToStreamer(MCInstBuilder(AArch64::ADRP)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
+                         .addExpr(MCSpecifierExpr::create(
                              HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
                              OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
                          .addReg(AArch64::X16)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
+                         .addExpr(MCSpecifierExpr::create(
                              HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
                              OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
@@ -3531,10 +3532,11 @@ const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV,
 char AArch64AsmPrinter::ID = 0;
 
 INITIALIZE_PASS(AArch64AsmPrinter, "aarch64-asm-printer",
-                "AArch64 Assmebly Printer", false, false)
+                "AArch64 Assembly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64AsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAArch64AsmPrinter() {
   RegisterAsmPrinter<AArch64AsmPrinter> X(getTheAArch64leTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Y(getTheAArch64beTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Z(getTheARM64Target());

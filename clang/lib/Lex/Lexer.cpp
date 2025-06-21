@@ -3757,6 +3757,10 @@ bool Lexer::Lex(Token &Result) {
 
   // (After the LexTokenInternal call, the lexer might be destroyed.)
   assert((returnedToken || !isRawLex) && "Raw lex must succeed");
+
+  if (returnedToken && Result.isFirstPPToken() && PP &&
+      !PP->hasSeenMainFileFirstPPToken())
+    PP->HandleMainFileFirstPPToken(Result);
   return returnedToken;
 }
 
@@ -4570,6 +4574,8 @@ const char *Lexer::convertDependencyDirectiveToken(
   else if (Result.isLiteral())
     Result.setLiteralData(TokPtr);
   BufferPtr = TokPtr + DDTok.Length;
+  if (PP && !PP->hasSeenMainFileFirstPPToken() && Result.isFirstPPToken())
+    PP->HandleMainFileFirstPPToken(Result);
   return TokPtr;
 }
 

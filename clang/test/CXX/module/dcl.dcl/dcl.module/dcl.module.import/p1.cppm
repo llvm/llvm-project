@@ -41,7 +41,25 @@ import x;
 import x [[]];
 import x [[foo]]; // expected-warning {{unknown attribute 'foo' ignored}}
 import x [[noreturn]]; // expected-error {{'noreturn' attribute cannot be applied to a module import}}
-import x [[blarg::noreturn]]; // expected-warning {{unknown attribute 'noreturn' ignored}}
+import x [[blarg::noreturn]]; // expected-warning-re {{unknown attribute 'blarg::noreturn' ignored{{.*}}}}
+
+import x.y;
+import x.; // expected-error {{expected a module name after 'import'}}
+import .x; // expected-error {{expected a module name after 'import'}}
+
+import blarg; // expected-error {{module 'blarg' not found}}
+
+int use_4 = c; // ok
+
+//--- test.implementation.cpp
+module a.b;
+
+import x;
+
+import x [[]];
+import x [[foo]]; // expected-warning {{unknown attribute 'foo' ignored}}
+import x [[noreturn]]; // expected-error {{'noreturn' attribute cannot be applied to a module import}}
+import x [[blarg::noreturn]]; // expected-warning-re {{unknown attribute 'blarg::noreturn' ignored{{.*}}}}
 
 import x.y;
 import x.; // expected-error {{expected identifier after '.' in module name}}

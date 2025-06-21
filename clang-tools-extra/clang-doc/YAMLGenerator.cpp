@@ -408,6 +408,8 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   case InfoType::IT_typedef:
     InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
     break;
+  case InfoType::IT_concept:
+    break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected InfoType");

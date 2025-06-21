@@ -381,7 +381,7 @@ private:
   ExportContextualKeywordInfo LastTokenWasExportKeyword;
 
   /// First pp-token in current translation unit.
-  Token FirstPPToken;
+  std::optional<Token> FirstPPToken;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
@@ -1801,6 +1801,20 @@ public:
   bool HandleModuleContextualKeyword(Token &Result,
                                      bool TokAtPhysicalStartOfLine);
 
+  /// Whether the preprocessor already seen the first pp-token in main file.
+  bool hasSeenMainFileFirstPPToken() const { return FirstPPToken.has_value(); }
+
+  /// Record first pp-token and check if it has a Token::FirstPPToken flag.
+  void HandleMainFileFirstPPToken(const Token &Tok) {
+    if (!hasSeenMainFileFirstPPToken() && Tok.isFirstPPToken() &&
+        SourceMgr.isWrittenInMainFile(Tok.getLocation()))
+      FirstPPToken = Tok;
+  }
+
+  Token getMainFileFirstPPToken() const {
+    assert(FirstPPToken && "First main file pp-token doesn't exists");
+    return *FirstPPToken;
+  }
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 

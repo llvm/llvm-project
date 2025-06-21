@@ -882,11 +882,40 @@ protected:
   unsigned getUnrollPart(VPUser &U) const;
 };
 
+/// Helper to manage IR metadata for recipes. It filters out metadata that
+/// cannot be propagated.
+class VPIRMetadata {
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+
+public:
+  VPIRMetadata() {}
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I.
+  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
+  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
+
+  /// Copy constructor for cloning.
+  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+
+  /// Add all metadata to \p I.
+  void applyMetadata(Instruction &I) const;
+
+  /// Add metadata with kind \p Kind and \p Node.
+  void addMetadata(unsigned Kind, MDNode *Node) {
+    Metadata.emplace_back(Kind, Node);
+  }
+};
+
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
 class VPInstruction : public VPRecipeWithIRFlags,
+                      public VPIRMetadata,
                       public VPUnrollPartAccessor<1> {
   friend class VPlanSlp;
 
@@ -934,6 +963,10 @@ public:
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
+    /// Start vector for reductions with 3 operands: the original start value,
+    /// the identity value for the reduction and an integer indicating the
+    /// scaling factor.
+    ReductionStartVector,
     // Creates a step vector starting from 0 to VF with a step of 1.
     StepVector,
 
@@ -972,7 +1005,7 @@ public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL = {},
                 const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        Opcode(Opcode), Name(Name.str()) {}
+        VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags, DebugLoc DL = {},
@@ -1264,29 +1297,6 @@ protected:
   const VPRecipeBase *getAsRecipe() const override { return this; }
 };
 
-/// Helper to manage IR metadata for recipes. It filters out metadata that
-/// cannot be propagated.
-class VPIRMetadata {
-  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-
-public:
-  VPIRMetadata() {}
-
-  /// Adds metatadata that can be preserved from the original instruction
-  /// \p I.
-  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
-
-  /// Adds metatadata that can be preserved from the original instruction
-  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
-  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
-
-  /// Copy constructor for cloning.
-  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
-
-  /// Add all metadata to \p I.
-  void applyMetadata(Instruction &I) const;
-};
-
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
 /// opcode and operands of the recipe. This recipe covers most of the
 /// traditional vectorization cases where each recipe transforms into a
@@ -1294,24 +1304,15 @@ public:
 class VPWidenRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   unsigned Opcode;
 
-protected:
-  VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
-                ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(I),
-        Opcode(I.getOpcode()) {}
-
-  VPWidenRecipe(unsigned VPDefOpcode, unsigned Opcode,
-                ArrayRef<VPValue *> Operands, bool NUW, bool NSW, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, WrapFlagsTy(NUW, NSW), DL),
+public:
+  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
         Opcode(Opcode) {}
 
-public:
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
-      : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
-
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands, bool NUW,
-                bool NSW, DebugLoc DL)
-      : VPWidenRecipe(VPDef::VPWidenSC, Opcode, Operands, NUW, NSW, DL) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPIRMetadata(I),
+        Opcode(I.getOpcode()) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -1812,9 +1813,9 @@ public:
 class VPHeaderPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
-  }
+                    VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
+      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}),
+                          UnderlyingInstr, DL) {}
 
   const VPRecipeBase *getAsRecipe() const override { return this; }
 
@@ -1941,12 +1942,13 @@ public:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their vector values.
+/// producing their vector values. This is an abstract recipe and must be
+/// converted to concrete recipes before executing.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
-  bool isUnrolled() const { return getNumOperands() == 6; }
+  bool isUnrolled() const { return getNumOperands() == 5; }
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -1982,9 +1984,10 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
 
-  /// Generate the vectorized and scalarized versions of the phi node as
-  /// needed by their users.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("cannot execute this recipe, should be expanded via "
+                     "expandVPWidenIntOrFpInductionRecipe");
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1994,16 +1997,6 @@ public:
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
-
-  // TODO: Remove once VPWidenIntOrFpInduction is fully expanded in
-  // convertToConcreteRecipes.
-  VPInstructionWithType *getStepVector() {
-    auto *StepVector =
-        cast<VPInstructionWithType>(getOperand(3)->getDefiningRecipe());
-    assert(StepVector->getOpcode() == VPInstruction::StepVector &&
-           "step vector operand must be a VPInstruction::StepVector");
-    return StepVector;
-  }
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
@@ -2041,25 +2034,30 @@ public:
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
-                                      public VPUnrollPartAccessor<3> {
+                                      public VPUnrollPartAccessor<4> {
   bool IsScalarAfterVectorization;
 
 public:
   /// Create a new VPWidenPointerInductionRecipe for \p Phi with start value \p
-  /// Start.
+  /// Start and the number of elements unrolled \p NumUnrolledElems, typically
+  /// VF*UF.
   VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
+                                VPValue *NumUnrolledElems,
                                 const InductionDescriptor &IndDesc,
                                 bool IsScalarAfterVectorization, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenPointerInductionSC, Phi, Start,
                                Step, IndDesc, DL),
-        IsScalarAfterVectorization(IsScalarAfterVectorization) {}
+        IsScalarAfterVectorization(IsScalarAfterVectorization) {
+    addOperand(NumUnrolledElems);
+  }
 
   ~VPWidenPointerInductionRecipe() override = default;
 
   VPWidenPointerInductionRecipe *clone() override {
     return new VPWidenPointerInductionRecipe(
         cast<PHINode>(getUnderlyingInstr()), getOperand(0), getOperand(1),
-        getInductionDescriptor(), IsScalarAfterVectorization, getDebugLoc());
+        getOperand(2), getInductionDescriptor(), IsScalarAfterVectorization,
+        getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenPointerInductionSC)
@@ -2074,7 +2072,7 @@ public:
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getFirstUnrolledPartOperand() {
-    return getUnrollPart(*this) == 0 ? this : getOperand(2);
+    return getUnrollPart(*this) == 0 ? this : getOperand(3);
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2110,7 +2108,7 @@ public:
   VPWidenPHIRecipe *clone() override {
     auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
                                    getOperand(0), getDebugLoc(), Name);
-    for (VPValue *Op : make_range(std::next(op_begin()), op_end()))
+    for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
   }
@@ -2231,7 +2229,7 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getStartValue();
+    return isOrdered() || isInLoop();
   }
 };
 

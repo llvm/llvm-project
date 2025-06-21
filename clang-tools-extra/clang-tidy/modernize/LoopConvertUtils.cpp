@@ -688,9 +688,8 @@ bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr *E) {
   if (!isIndexInSubscriptExpr(E->getIdx(), IndexVar))
     return VisitorBase::TraverseArraySubscriptExpr(E);
 
-  if ((ContainerExpr &&
-       !areSameExpr(Context, Arr->IgnoreParenImpCasts(),
-                    ContainerExpr->IgnoreParenImpCasts())) ||
+  if ((ContainerExpr && !areSameExpr(Context, Arr->IgnoreParenImpCasts(),
+                                     ContainerExpr->IgnoreParenImpCasts())) ||
       !arrayMatchesBoundExpr(Context, Arr->IgnoreImpCasts()->getType(),
                              ArrayBoundExpr)) {
     // If we have already discovered the array being indexed and this isn't it

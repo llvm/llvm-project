@@ -64,58 +64,114 @@ test:
 .L6:
    ret
 
-# CHECK-INST:         qc.e.beqi    a0, 0x1, 0x7a26
+# CHECK-INST:         qc.e.beqi    a0, 0x51, 0x7a26
 # CHECK-INST-NEXT:    jal     zero, 0x8e76
-# CHECK-INST-RELAX:         qc.e.beqi    a0, 0x1, 0x7a26
+# CHECK-INST-RELAX:         qc.e.beqi    a0, 0x51, 0x7a26
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-   qc.e.bnei a0, 1, .L7
+   qc.e.bnei a0, 81, .L7
 .fill 1300, 4, 0
 .L7:
    ret
 
-# CHECK-INST:         qc.e.bnei    a0, 0x2, 0x8e82
+# CHECK-INST:         qc.e.bnei    a0, 0x3e, 0x8e82
 # CHECK-INST-NEXT:    jal     zero, 0xa2d2
-# CHECK-INST-RELAX:         qc.e.bnei    a0, 0x2, 0x8e82
+# CHECK-INST-RELAX:         qc.e.bnei    a0, 0x3e, 0x8e82
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-   qc.e.beqi a0, 2, .L8
+   qc.e.beqi a0, 62, .L8
 .fill 1300, 4, 0
 .L8:
    ret
 
-# CHECK-INST:         qc.e.bgei    a0, 0x3, 0xa2de
+# CHECK-INST:         qc.e.bgei    a0, 0x5d, 0xa2de
 # CHECK-INST-NEXT:    jal     zero, 0xb72e
-# CHECK-INST-RELAX:         qc.e.bgei    a0, 0x3, 0xa2de
+# CHECK-INST-RELAX:         qc.e.bgei    a0, 0x5d, 0xa2de
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-   qc.e.blti a0, 3, .L9
+   qc.e.blti a0, 93, .L9
 .fill 1300, 4, 0
 .L9:
    ret
 
-# CHECK-INST:         qc.e.blti    a0, 0x4, 0xb73a
+# CHECK-INST:         qc.e.blti    a0, 0x2c, 0xb73a
 # CHECK-INST-NEXT:    jal     zero, 0xcb8a
-# CHECK-INST-RELAX:         qc.e.blti    a0, 0x4, 0xb73a
+# CHECK-INST-RELAX:         qc.e.blti    a0, 0x2c, 0xb73a
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-   qc.e.bgei a0, 4, .L10
+   qc.e.bgei a0, 44, .L10
 .fill 1300, 4, 0
 .L10:
    ret
 
-# CHECK-INST:         qc.e.bgeui    a0, 0x5, 0xcb96
+# CHECK-INST:         qc.e.bgeui    a0, 0x37, 0xcb96
 # CHECK-INST-NEXT:    jal     zero, 0xdfe6
-# CHECK-INST-RELAX:         qc.e.bgeui    a0, 0x5, 0xcb96
+# CHECK-INST-RELAX:         qc.e.bgeui    a0, 0x37, 0xcb96
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-   qc.e.bltui a0, 5, .L11
+   qc.e.bltui a0, 55, .L11
 .fill 1300, 4, 0
 .L11:
    ret
 
-# CHECK-INST:         qc.e.bltui    a0, 0x6, 0xdff2
+# CHECK-INST:         qc.e.bltui    a0, 0x24, 0xdff2
 # CHECK-INST-NEXT:    jal     zero, 0xf442
-# CHECK-INST-RELAX:         qc.e.bltui    a0, 0x6, 0xdff2
+# CHECK-INST-RELAX:         qc.e.bltui    a0, 0x24, 0xdff2
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-   qc.e.bgeui a0, 6, .L12
+   qc.e.bgeui a0, 36, .L12
 .fill 1300, 4, 0
 .L12:
+   ret
+
+# Check that instructions are first compressed and then relaxed
+
+# CHECK-INST:         qc.beqi    a0, 0xa, 0xf44c
+# CHECK-INST-NEXT:    jal     zero, 0x1089c
+# CHECK-INST-RELAX:         qc.beqi    a0, 0xa, 0xf44c
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.bnei a0, 10, .L13
+.fill 1300, 4, 0
+.L13:
+   ret
+
+# CHECK-INST:         qc.bnei    a0, 0xa, 0x108a6
+# CHECK-INST-NEXT:    jal     zero, 0x11cf6
+# CHECK-INST-RELAX:         qc.bnei    a0, 0xa, 0x108a6
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.beqi a0, 10, .L14
+.fill 1300, 4, 0
+.L14:
+   ret
+
+# CHECK-INST:         qc.bgei    a0, 0xa, 0x11d00
+# CHECK-INST-NEXT:    jal     zero, 0x13150
+# CHECK-INST-RELAX:         qc.bgei    a0, 0xa, 0x11d00
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.blti a0, 10, .L15
+.fill 1300, 4, 0
+.L15:
+   ret
+
+# CHECK-INST:         qc.blti    a0, 0xa, 0x1315a
+# CHECK-INST-NEXT:    jal     zero, 0x145aa
+# CHECK-INST-RELAX:         qc.blti    a0, 0xa, 0x1315a
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.bgei a0, 10, .L16
+.fill 1300, 4, 0
+.L16:
+   ret
+
+# CHECK-INST:         qc.bgeui    a0, 0xa, 0x145b4
+# CHECK-INST-NEXT:    jal     zero, 0x15a04
+# CHECK-INST-RELAX:         qc.bgeui    a0, 0xa, 0x145b4
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.bltui a0, 10, .L17
+.fill 1300, 4, 0
+.L17:
+   ret
+
+# CHECK-INST:         qc.bltui    a0, 0xa, 0x15a0e
+# CHECK-INST-NEXT:    jal     zero, 0x16e5e
+# CHECK-INST-RELAX:         qc.bltui    a0, 0xa, 0x15a0e
+# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
+   qc.e.bgeui a0, 10, .L18
+.fill 1300, 4, 0
+.L18:
    ret
 
 .Lfunc_end0:

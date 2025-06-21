@@ -29,10 +29,8 @@ module :private; // expected-error {{private module fragment redefined}}
 //--- NoGlobalFrag.cppm
 
 extern int a; // #a1
-export module Foo;
-
-// expected-error@-2 {{module declaration must occur at the start of the translation unit}}
-// expected-note@1 {{add 'module;' to the start of the file to introduce a global module fragment}}
+export module Foo; // expected-error {{module declaration must occur at the start of the translation unit}}
+                   // expected-note@-2 {{add 'module;' to the start of the file to introduce a global module fragment}}
 
 // expected-error@#a2 {{declaration of 'a' in module Foo follows declaration in the global module}}
 // expected-note@#a1 {{previous decl}}
