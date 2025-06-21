@@ -136,6 +136,12 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
+
+  Finds unscoped (non-class) ``enum`` declarations and suggests using
+  ``enum class`` instead.
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
@@ -147,6 +153,12 @@ New checks
 
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
+
+- New :doc:`readability-use-numeric-limits
+  <clang-tidy/checks/readability/use-numeric-limits>` check.
+
+  Finds certain integer literals and suggests replacing them with equivalent
+  ``std::numeric_limits`` calls.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -271,6 +283,11 @@ Changes in existing checks
 - Improved :doc:`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing false positives on member functions with an explicit object parameter.
+
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check by adding new option
+  `CountMemberInitAsStmt` that allows counting class member initializers in
+  constructors as statements.
 
 - Improved :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing

@@ -70,14 +70,15 @@ template <> inline std::string printArg<Floating>(Program &P, CodePtr &OpPC) {
 template <>
 inline std::string printArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
   using T = IntegralAP<false>;
-  unsigned BitWidth = T::deserializeSize(*OpPC);
+  uint32_t BitWidth = T::deserializeSize(*OpPC);
   auto Memory =
       std::make_unique<uint64_t[]>(llvm::APInt::getNumWords(BitWidth));
 
   T Result(Memory.get(), BitWidth);
   T::deserialize(*OpPC, &Result);
 
-  OpPC += Result.bytesToSerialize();
+  OpPC += align(Result.bytesToSerialize());
+
   std::string Str;
   llvm::raw_string_ostream SS(Str);
   SS << Result;
@@ -87,18 +88,18 @@ inline std::string printArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
 template <>
 inline std::string printArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
   using T = IntegralAP<true>;
-  unsigned BitWidth = T::deserializeSize(*OpPC);
+  uint32_t BitWidth = T::deserializeSize(*OpPC);
   auto Memory =
       std::make_unique<uint64_t[]>(llvm::APInt::getNumWords(BitWidth));
 
   T Result(Memory.get(), BitWidth);
   T::deserialize(*OpPC, &Result);
 
+  OpPC += align(Result.bytesToSerialize());
+
   std::string Str;
   llvm::raw_string_ostream SS(Str);
   SS << Result;
-
-  OpPC += Result.bytesToSerialize();
   return Str;
 }
 

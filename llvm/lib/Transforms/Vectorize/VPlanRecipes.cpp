@@ -336,9 +336,9 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     return TargetTransformInfo::PR_None;
   };
 
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
-                                         PhiType, VF, GetExtendKind(ExtAR),
-                                         GetExtendKind(ExtBR), Opcode);
+  return Ctx.TTI.getPartialReductionCost(
+      getOpcode(), InputTypeA, InputTypeB, PhiType, VF, GetExtendKind(ExtAR),
+      GetExtendKind(ExtBR), Opcode, Ctx.CostKind);
 }
 
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
@@ -851,6 +851,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
 
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                  cast<VectorType>(VectorTy),
                                   cast<VectorType>(VectorTy), Mask,
                                   Ctx.CostKind, VF.getKnownMinValue() - 1);
   }
@@ -894,7 +895,7 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == Instruction::PHI;
+  return getOpcode() == Instruction::PHI || isScalarCast();
 }
 
 void VPInstruction::execute(VPTransformState &State) {
@@ -1138,7 +1139,7 @@ void VPInstructionWithType::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
+  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
   printAsOperand(O, SlotTracker);
   O << " = ";
 
@@ -2674,19 +2675,19 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 
   assert((State.VF.isScalar() || !isSingleScalar()) &&
          "uniform recipe shouldn't be predicated");
-  assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
   scalarizeInstruction(UI, this, *State.Lane, State);
   // Insert scalar instance packing it into a vector.
   if (State.VF.isVector() && shouldPack()) {
+    Value *WideValue;
     // If we're constructing lane 0, initialize to start from poison.
     if (State.Lane->isFirstLane()) {
       assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-      Value *Poison =
-          PoisonValue::get(VectorType::get(UI->getType(), State.VF));
-      State.set(this, Poison);
+      WideValue = PoisonValue::get(VectorType::get(UI->getType(), State.VF));
+    } else {
+      WideValue = State.get(this);
     }
-    State.packScalarIntoVectorizedValue(this, *State.Lane);
-  }
+    State.set(this, State.packScalarIntoVectorizedValue(this, WideValue,
+                                                        *State.Lane));
 }
 
 bool VPReplicateRecipe::shouldPack() const {
@@ -2893,9 +2894,9 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost +=
-         Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
+  return Cost += Ctx.TTI.getShuffleCost(
+             TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+             cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
@@ -3009,9 +3010,9 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       cast<VectorType>(Ty), {}, Ctx.CostKind,
-                                       0);
+  return Cost + Ctx.TTI.getShuffleCost(
+                    TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+                    cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3122,9 +3123,9 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       cast<VectorType>(Ty), {}, Ctx.CostKind,
-                                       0);
+  return Cost + Ctx.TTI.getShuffleCost(
+                    TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+                    cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3502,7 +3503,7 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
 
   return Cost + IG->getNumMembers() *
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                           VectorTy, std::nullopt, Ctx.CostKind,
+                                           VectorTy, VectorTy, {}, Ctx.CostKind,
                                            0);
 }
 
@@ -3569,8 +3570,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   if (CurrentPart == 0) {
     // The recipe represents the first part of the pointer induction. Create the
     // GEP to increment the phi across all unrolled parts.
-    Value *NumUnrolledElems =
-        State.get(&getParent()->getPlan()->getVFxUF(), true);
+    Value *NumUnrolledElems = State.get(getOperand(2), true);
 
     Value *InductionGEP = GetElementPtrInst::Create(
         State.Builder.getInt8Ty(), NewPointerPhi,
@@ -3606,7 +3606,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  assert((getNumOperands() == 2 || getNumOperands() == 4) &&
+  assert((getNumOperands() == 3 || getNumOperands() == 5) &&
          "unexpected number of operands");
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
@@ -3614,11 +3614,13 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   getStartValue()->printAsOperand(O, SlotTracker);
   O << ", ";
   getStepValue()->printAsOperand(O, SlotTracker);
-  if (getNumOperands() == 4) {
-    O << ", ";
-    getOperand(2)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(2)->printAsOperand(O, SlotTracker);
+  if (getNumOperands() == 5) {
     O << ", ";
     getOperand(3)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    getOperand(4)->printAsOperand(O, SlotTracker);
   }
 }
 #endif
@@ -3703,9 +3705,6 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
                                              VPCostContext &Ctx) const {
   if (VF.isScalar())
     return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
-
-  if (VF == ElementCount::getScalable(1))
-    return InstructionCost::getInvalid();
 
   return 0;
 }

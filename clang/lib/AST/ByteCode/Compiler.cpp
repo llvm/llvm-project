@@ -4194,7 +4194,6 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
     return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
   }
-    llvm_unreachable("Implement");
   }
   llvm_unreachable("unknown primitive type");
 }

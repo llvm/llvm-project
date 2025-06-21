@@ -39,7 +39,7 @@ public:
     uint64_t *Memory = nullptr;
     uint64_t Val;
   };
-  unsigned BitWidth = 0;
+  uint32_t BitWidth = 0;
   friend IntegralAP<!Signed>;
 
   template <typename T, bool InputSigned>
@@ -90,19 +90,22 @@ public:
     std::memcpy(Memory, V.getRawData(), V.getNumWords() * sizeof(uint64_t));
   }
 
-  // Constructors.
   IntegralAP() = default;
-  IntegralAP(unsigned BitWidth) : BitWidth(BitWidth) {}
+  /// Zeroed, single-word IntegralAP of the given bitwidth.
+  IntegralAP(unsigned BitWidth) : Val(0), BitWidth(BitWidth) {
+    assert(singleWord());
+  }
   IntegralAP(uint64_t *Memory, unsigned BitWidth)
       : Memory(Memory), BitWidth(BitWidth) {}
-  IntegralAP(const APInt &V)
-      : IntegralAP(const_cast<uint64_t *>((const uint64_t *)V.getRawData()),
-                   V.getBitWidth()) {}
+  IntegralAP(const APInt &V) : BitWidth(V.getBitWidth()) {
+    if (V.isSingleWord()) {
+      Val = Signed ? V.getSExtValue() : V.getZExtValue();
+    } else {
+      Memory = const_cast<uint64_t *>(V.getRawData());
+    }
+  }
 
   IntegralAP operator-() const { return IntegralAP(-getValue()); }
-  IntegralAP operator-(const IntegralAP &Other) const {
-    return IntegralAP(getValue() - Other.getValue());
-  }
   bool operator>(const IntegralAP &RHS) const {
     if constexpr (Signed)
       return getValue().sgt(RHS.getValue());
@@ -133,21 +136,7 @@ public:
     return IntegralAP<Signed>(Copy);
   }
 
-  static IntegralAP from(const APInt &Value) {
-    return IntegralAP<Signed>(Value);
-  }
-
-  template <bool InputSigned>
-  static IntegralAP from(IntegralAP<InputSigned> V, unsigned NumBits = 0) {
-    if (NumBits == 0)
-      NumBits = V.bitWidth();
-
-    if constexpr (InputSigned)
-      return IntegralAP<Signed>(V.getValue().sextOrTrunc(NumBits));
-    return IntegralAP<Signed>(V.getValue().zextOrTrunc(NumBits));
-  }
-
-  constexpr unsigned bitWidth() const { return BitWidth; }
+  constexpr uint32_t bitWidth() const { return BitWidth; }
   constexpr unsigned numWords() const { return APInt::getNumWords(BitWidth); }
   constexpr bool singleWord() const { return numWords() == 1; }
 
@@ -204,13 +193,6 @@ public:
 
   void bitcastToMemory(std::byte *Dest) const {
     llvm::StoreIntToMemory(getValue(), (uint8_t *)Dest, bitWidth() / 8);
-  }
-
-  static IntegralAP bitcastFromMemory(const std::byte *Src, unsigned BitWidth) {
-    // FIXME: Remove this.
-    APInt V(BitWidth, static_cast<uint64_t>(0), Signed);
-    llvm::LoadIntFromMemory(V, (const uint8_t *)Src, BitWidth / 8);
-    return IntegralAP(V);
   }
 
   static void bitcastFromMemory(const std::byte *Src, unsigned BitWidth,
@@ -326,34 +308,35 @@ public:
   // === Serialization support ===
   size_t bytesToSerialize() const {
     assert(BitWidth != 0);
-    uint32_t NumWords = llvm::APInt::getNumWords(bitWidth());
-    return sizeof(uint64_t) + (NumWords * sizeof(uint64_t));
+    return sizeof(uint32_t) + (numWords() * sizeof(uint64_t));
   }
 
   void serialize(std::byte *Buff) const {
-    uint64_t NumWords = llvm::APInt::getNumWords(bitWidth());
-    std::memcpy(Buff, &BitWidth, sizeof(uint64_t));
+    std::memcpy(Buff, &BitWidth, sizeof(uint32_t));
     if (singleWord())
-      std::memcpy(Buff + sizeof(uint64_t), &Val, NumWords * sizeof(uint64_t));
-    else
-      std::memcpy(Buff + sizeof(uint64_t), Memory, NumWords * sizeof(uint64_t));
+      std::memcpy(Buff + sizeof(uint32_t), &Val, sizeof(uint64_t));
+    else {
+      std::memcpy(Buff + sizeof(uint32_t), Memory,
+                  numWords() * sizeof(uint64_t));
+    }
   }
 
   static uint32_t deserializeSize(const std::byte *Buff) {
-    return *reinterpret_cast<const uint64_t *>(Buff);
+    return *reinterpret_cast<const uint32_t *>(Buff);
   }
 
   static void deserialize(const std::byte *Buff, IntegralAP<Signed> *Result) {
     uint32_t BitWidth = Result->BitWidth;
-    uint32_t NumWords = llvm::APInt::getNumWords(BitWidth);
-    assert(BitWidth == Result->BitWidth);
-    assert(Result->Memory);
+    assert(BitWidth != 0);
+    unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
 
     if (NumWords == 1)
-      std::memcpy(&Result->Val, Buff + sizeof(uint64_t), sizeof(uint64_t));
-    else
-      std::memcpy(Result->Memory, Buff + sizeof(uint64_t),
+      std::memcpy(&Result->Val, Buff + sizeof(uint32_t), sizeof(uint64_t));
+    else {
+      assert(Result->Memory);
+      std::memcpy(Result->Memory, Buff + sizeof(uint32_t),
                   NumWords * sizeof(uint64_t));
+    }
   }
 
 private:
