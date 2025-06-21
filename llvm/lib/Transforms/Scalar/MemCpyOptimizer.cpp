@@ -1593,11 +1593,14 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
             // since both llvm.lifetime.start and llvm.lifetime.end intrinsics
             // practically fill all the bytes of the alloca with an undefined
             // value, although conceptually marked as alive/dead.
-            int64_t Size = cast<ConstantInt>(UI->getOperand(0))->getSExtValue();
-            if (Size < 0 || Size == DestSize) {
-              LifetimeMarkers.push_back(UI);
-              continue;
-            }
+            // We don't currently track GEP offsets and sizes, so we don't have
+            // a way to check whether this lifetime marker affects the relevant
+            // memory regions.
+            // While we only really need to delete lifetime.end from Src and
+            // lifetime.begin from Dst, those are often implied by the memcpy
+            // anyways so hopefully not much is lost by removing all of them.
+            LifetimeMarkers.push_back(UI);
+            continue;
           }
           AAMetadataInstrs.insert(UI);
 
@@ -1614,9 +1617,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  // Check that dest has no Mod/Ref, from the alloca to the Store, except full
-  // size lifetime intrinsics. And collect modref inst for the reachability
-  // check.
+  // Check that dest has no Mod/Ref, from the alloca to the Store. And collect
+  // modref inst for the reachability check.
   ModRefInfo DestModRef = ModRefInfo::NoModRef;
   MemoryLocation DestLoc(DestAlloca, LocationSize::precise(Size));
   SmallVector<BasicBlock *, 8> ReachabilityWorklist;
