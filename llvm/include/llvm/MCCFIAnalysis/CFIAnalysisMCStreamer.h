@@ -1,8 +1,7 @@
 #ifndef LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_MC_STREAMER_H
 #define LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_MC_STREAMER_H
 
-#include "CFIAnalysis.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "UnwindInfoAnalysis.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -32,7 +31,7 @@ class CFIAnalysisMCStreamer : public MCStreamer {
     CFIDirectivesState(int FrameIndex, int InstructionIndex);
   } LastCFIDirectivesState;
   std::vector<int> FrameIndices;
-  std::vector<CFIAnalysis> CFIAs;
+  std::vector<UnwindInfoAnalysis> CFIAs;
 
   struct ICFI {
     MCInst Instruction;

@@ -1,4 +1,4 @@
-#include "llvm/MCCFIAnalysis/CFIAnalysis.h"
+#include "llvm/MCCFIAnalysis/UnwindInfoAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -75,12 +75,12 @@ void printUntilNextLine(const char *Str) {
     dbgs() << Str[I];
 }
 
-bool CFIAnalysis::isSuperReg(MCPhysReg Reg) {
+bool UnwindInfoAnalysis::isSuperReg(MCPhysReg Reg) {
   return MCRI->superregs(Reg).empty();
 }
 
 SmallVector<std::pair<MCPhysReg, MCRegisterClass const *>>
-CFIAnalysis::getAllSuperRegs() {
+UnwindInfoAnalysis::getAllSuperRegs() {
   std::map<MCPhysReg, MCRegisterClass const *> SuperRegs;
   for (auto &&RegClass : MCRI->regclasses()) {
     for (unsigned I = 0; I < RegClass.getNumRegs(); I++) {
@@ -97,7 +97,7 @@ CFIAnalysis::getAllSuperRegs() {
   return SuperRegWithClass;
 }
 
-MCPhysReg CFIAnalysis::getSuperReg(MCPhysReg Reg) {
+MCPhysReg UnwindInfoAnalysis::getSuperReg(MCPhysReg Reg) {
   if (isSuperReg(Reg))
     return Reg;
   for (auto SuperReg : MCRI->superregs(Reg)) {
@@ -108,9 +108,9 @@ MCPhysReg CFIAnalysis::getSuperReg(MCPhysReg Reg) {
   llvm_unreachable("Should either be a super reg, or have a super reg");
 }
 
-CFIAnalysis::CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
-                         MCInstrAnalysis *MCIA, bool IsEH,
-                         ArrayRef<MCCFIInstruction> PrologueCFIDirectives)
+UnwindInfoAnalysis::UnwindInfoAnalysis(
+    MCContext *Context, MCInstrInfo const &MCII, MCInstrAnalysis *MCIA,
+    bool IsEH, ArrayRef<MCCFIInstruction> PrologueCFIDirectives)
     : Context(Context), MCII(MCII), MCRI(Context->getRegisterInfo()),
       State(Context), IsEH(IsEH) {
 
@@ -152,8 +152,8 @@ CFIAnalysis::CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
   }
 }
 
-void CFIAnalysis::update(const MCInst &Inst,
-                         ArrayRef<MCCFIInstruction> CFIDirectives) {
+void UnwindInfoAnalysis::update(const MCInst &Inst,
+                                ArrayRef<MCCFIInstruction> CFIDirectives) {
   const MCInstrDesc &MCInstInfo = MCII.get(Inst.getOpcode());
 
   auto MaybePrevUnwindRow = State.getCurrentUnwindRow();
@@ -215,7 +215,7 @@ void CFIAnalysis::update(const MCInst &Inst,
   }
 }
 
-void CFIAnalysis::checkRegDiff(
+void UnwindInfoAnalysis::checkRegDiff(
     const MCInst &Inst, DWARFRegType Reg,
     const dwarf::UnwindTable::const_iterator &PrevRow,
     const dwarf::UnwindTable::const_iterator &NextRow,
@@ -285,7 +285,7 @@ void CFIAnalysis::checkRegDiff(
   return;
 }
 
-void CFIAnalysis::checkCFADiff(
+void UnwindInfoAnalysis::checkCFADiff(
     const MCInst &Inst, const dwarf::UnwindTable::const_iterator &PrevRow,
     const dwarf::UnwindTable::const_iterator &NextRow,
     const std::set<DWARFRegType> &Reads, const std::set<DWARFRegType> &Writes) {
