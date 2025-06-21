@@ -4123,7 +4123,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         return std::move(Err);
       auto **Memory =
           new (Importer.getToContext()) CXXCtorInitializer *[NumInitializers];
-      std::copy(CtorInitializers.begin(), CtorInitializers.end(), Memory);
+      llvm::copy(CtorInitializers, Memory);
       auto *ToCtor = cast<CXXConstructorDecl>(ToFunction);
       ToCtor->setCtorInitializers(Memory);
       ToCtor->setNumCtorInitializers(NumInitializers);
