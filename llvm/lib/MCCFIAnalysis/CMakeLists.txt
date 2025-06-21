@@ -1,6 +1,6 @@
 add_llvm_component_library(LLVMMCCFIAnalysis
+  FunctionUnitStreamer.cpp
   UnwindInfoHistory.cpp
-  CFIAnalysisMCStreamer.cpp
   UnwindInfoAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -11,12 +11,13 @@
 
 namespace llvm {
 
-// TODO Now the design is that the streamer, make instances of the analysis and
-// TODO run the analysis on the instruction, but instead the streamer should
-// TODO divide the program into function units, and then emit the function units
-// TODO one by one. Also in each function unit, an instruction with associated
-// TODO directives should be emitted. The analysis should be run by the
-// TODO receiver.
+// ? Now the design is that the streamer, make instances of the analysis and
+// ? run the analysis on the instruction, I suspect that instead the streamer
+// ? should divide the program into function units, and then emit the function
+// ? units one by one. Also in each function unit, an instruction with
+// ? associated directives should be emitted. Furthermore, there should be a
+// ? receiver of these function units, that receive them and run a new analysis
+// ? on them.
 class FunctionUnitStreamer : public MCStreamer {
   MCInstrInfo const &MCII;
 
