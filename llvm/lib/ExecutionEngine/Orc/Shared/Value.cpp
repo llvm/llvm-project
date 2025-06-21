@@ -16,36 +16,36 @@ template <typename T> Value Value::from(ExecutorAddr Ty, T result) {
   return Val;
 }
 
-template <typename T> void setValue(T Val) {
+template <typename T> void Value::setValue(T Val) {
   using DecayedT = std::decay_t<T>;
   if constexpr (std::is_void_v<DecayedT>) {
-    ValueKind = K_Void;
+    ValueKind = Value::K_Void;
   }
 #define X(type, name)                                                          \
   else if constexpr (std::is_same_v<DecayedT, type>) {                         \
     set##name(Val);                                                            \
-    ValueKind = K_##name;                                                      \
+    ValueKind = Value::K_##name;                                               \
   }
+
   BUILTIN_TYPES
 #undef X
   else {
     // static_assert(std::is_trivially_copyable_v<T> || std::is_pointer_v<T>,
     //               "Unsupported type for setValue");
-    static_assert(std::is_pointer_v<T>,
-                  "Unsupported type for setValue");
+    static_assert(std::is_pointer_v<T>, "Unsupported type for setValue");
 
     // if constexpr (std::is_function_v<T>) {
     //   setPtrOrObj(ExecutorSymbolDef::fromPtr(&Val));
     // } else if constexpr (std::is_pointer_v<T> || std::is_array_v<T>) {
     //   setPtrOrObj(ExecutorSymbolDef::fromPtr(Val));
     // } else if constexpr (std::is_class_v<T> || std::is_union_v<T>) {
-      //   setPtrOrObj(ExecutorSymbolDef::fromPtr(&Val));
+    //   setPtrOrObj(ExecutorSymbolDef::fromPtr(&Val));
     if constexpr (std::is_pointer_v<T>) {
-        setPtrOrObj(ExecutorSymbolDef::fromPtr(Val));
+      setPtrOrObj(ExecutorSymbolDef::fromPtr(Val));
     } else {
       static_assert(!std::is_same_v<T, T>, "Unsupported non-builtin type");
     }
-    ValueKind = K_PtrOrObj;
+    ValueKind = Value::K_PtrOrObj;
   }
 }
 

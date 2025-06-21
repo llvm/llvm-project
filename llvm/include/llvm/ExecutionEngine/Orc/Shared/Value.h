@@ -56,7 +56,7 @@ public:
     K_Unspecified
   };
 
-  Value() = default;
+  Value() = delete;
   explicit Value(ExecutorAddr OpaqueType);
   Value(const Value &RHS);
   Value(Value &&RHS) noexcept;
@@ -65,6 +65,7 @@ public:
   ~Value();
 
   template <typename T> static Value from(ExecutorAddr Ty, T result);
+  template <typename T> void setValue(T Val);
 
   ExecutorAddr getOpaqueType() const { return OpaqueType; }
 
