@@ -3296,9 +3296,6 @@ bool isValidInsnFormat(StringRef Format, const MCSubtargetInfo &STI) {
 bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
-  bool AllowC = getSTI().hasFeature(RISCV::FeatureStdExtC) ||
-                getSTI().hasFeature(RISCV::FeatureStdExtZca);
-
   // Expect instruction format as identifier.
   StringRef Format;
   SMLoc ErrorLoc = Parser.getTok().getLoc();
@@ -3342,7 +3339,8 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
         return Error(ErrorLoc, "encoding value does not fit into instruction");
     }
 
-    if (!AllowC && (EncodingDerivedLength == 2))
+    if (!getSTI().hasFeature(RISCV::FeatureStdExtZca) &&
+        (EncodingDerivedLength == 2))
       return Error(ErrorLoc, "compressed instructions are not allowed");
 
     if (getParser().parseEOL("invalid operand for instruction")) {
