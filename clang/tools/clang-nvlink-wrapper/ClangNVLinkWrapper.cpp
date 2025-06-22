@@ -341,20 +341,9 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.CPU = Args.getLastArgValue(OPT_arch);
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
 
-  if (auto *Arg = Args.getLastArg(OPT_opt_remarks_filename))
-    Conf.RemarksFilename = Arg->getValue();
-  else
-    Conf.RemarksFilename = RemarksFilename;
-  
-  if (auto *Arg = Args.getLastArg(OPT_opt_remarks_filter))
-    Conf.RemarksPasses = Arg->getValue();
-  else
-    Conf.RemarksPasses = RemarksPasses;
-  
-  if (auto *Arg = Args.getLastArg(OPT_opt_remarks_format))
-    Conf.RemarksFormat = Arg->getValue();
-  else
-    Conf.RemarksFormat = RemarksFormat;
+  Conf.RemarksFilename = Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
+  Conf.RemarksPasses = Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+  Conf.RemarksFormat = Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
   
   Conf.RemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
