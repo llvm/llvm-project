@@ -293,7 +293,7 @@ An overview of all the command-line options:
     Checks                       - Same as '--checks'. Additionally, the list of
                                    globs can be specified as a list instead of a
                                    string.
-    CustomChecks                 - Array of user defined checks based on
+    CustomChecks                 - List of user defined checks based on
                                    Clang-Query syntax.
     ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
     ExtraArgs                    - Same as '--extra-arg'.

@@ -15,16 +15,16 @@ enabled or disabled by the checks option like the built-in checks.
 Custom checks support inheritance from parent configurations like other
 configuration items.
 
-Goal: easy to write, cross platform, multiple versions supported toolkit for
+Goals: easy to write, cross platform, multiple versions supported toolkit for
 custom clang-tidy rules.
-Non-Goal: complex checks, performance, fix-its, etc.
+Non-Goals: complex checks, performance, fix-its, etc.
 
 Configuration
 =============
 
 `CustomChecks` is a list of custom checks. Each check must contain
-  - Name: check name can been used in `-checks` option.
-  - Query: query string
+  - Name: check name can be used in `-checks` option.
+  - Query: `clang-query` string
   - Diagnostic: list of diagnostics to be reported.
     - BindName: name of the node to be bound in `Query`.
     - Message: message to be reported.
