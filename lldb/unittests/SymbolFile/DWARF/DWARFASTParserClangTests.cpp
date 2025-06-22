@@ -1424,8 +1424,8 @@ DWARF:
   EXPECT_EQ(func->getParamDecl(1)->getName(), "namedParam");
 }
 
-TEST_F(DWARFASTParserClangTests, TestParseDWARFAttributes_ObjectPointerIndex) {
-  // This tests the behaviour of ParsedDWARFTypeAttributes
+TEST_F(DWARFASTParserClangTests, TestObjectPointer_IndexEncoding) {
+  // This tests the behaviour of DWARFASTParserClang
   // for DW_TAG_subprogram definitions which have a DW_AT_object_pointer
   // that encodes a constant index (instead of a DIE reference).
 
