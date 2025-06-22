@@ -4481,6 +4481,8 @@ SDValue SITargetLowering::lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const {
 
 Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                              const MachineFunction &MF) const {
+  const Function &Fn = MF.getFunction();
+
   Register Reg = StringSwitch<Register>(RegName)
                      .Case("m0", AMDGPU::M0)
                      .Case("exec", AMDGPU::EXEC)
@@ -4498,8 +4500,8 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
 
   if (!Subtarget->hasFlatScrRegister() &&
       Subtarget->getRegisterInfo()->regsOverlap(Reg, AMDGPU::FLAT_SCR)) {
-    report_fatal_error(Twine("invalid register \"" + StringRef(RegName) +
-                             "\" for subtarget."));
+    Fn.getContext().emitError(Twine("invalid register \"" + StringRef(RegName) +
+                                    "\" for subtarget."));
   }
 
   switch (Reg) {
@@ -5421,6 +5423,14 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
             AMDGPU::M0)
         .add(M0Init);
     MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM: {
+    // Set SCC to true, in case the barrier instruction gets converted to a NOP.
+    BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
+            TII->get(AMDGPU::S_CMP_EQ_U32))
+        .addImm(0)
+        .addImm(0);
     return BB;
   }
   case AMDGPU::GET_GROUPSTATICSIZE: {
@@ -10858,7 +10868,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       (AS == AMDGPUAS::GLOBAL_ADDRESS &&
        Subtarget->getScalarizeGlobalBehavior() && Load->isSimple() &&
        isMemOpHasNoClobberedMemOperand(Load))) {
-    if ((!Op->isDivergent() || AMDGPUInstrInfo::isUniformMMO(MMO)) &&
+    if ((!Op->isDivergent() || AMDGPU::isUniformMMO(MMO)) &&
         Alignment >= Align(4) && NumElements < 32) {
       if (MemVT.isPow2VectorType() ||
           (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
@@ -15180,6 +15190,12 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   EVT ScalarVT = VT.getScalarType();
   EVT IntVT = VT.changeElementType(MVT::i32);
+
+  if (!N->isDivergent() && getSubtarget()->hasSALUFloatInsts() &&
+      (ScalarVT == MVT::f32 || ScalarVT == MVT::f16)) {
+    // Prefer to use s_mul_f16/f32 instead of v_ldexp_f16/f32.
+    return SDValue();
+  }
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);

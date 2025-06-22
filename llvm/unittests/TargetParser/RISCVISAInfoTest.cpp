@@ -1130,6 +1130,7 @@ R"(All available -march extensions for RISC-V
     svpbmt               1.0
     svvptc               1.0
     xandesperf           5.0
+    xandesvbfhcvt        5.0
     xandesvdot           5.0
     xandesvpackfph       5.0
     xcvalu               1.0

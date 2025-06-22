@@ -549,8 +549,8 @@ TypedValue<BaseMemRefType>
 sparse_tensor::genToMemref(OpBuilder &builder, Location loc, Value tensor) {
   auto tTp = llvm::cast<TensorType>(tensor.getType());
   auto mTp = MemRefType::get(tTp.getShape(), tTp.getElementType());
-  return builder.create<bufferization::ToBufferOp>(loc, mTp, tensor)
-      .getResult();
+  return cast<TypedValue<BaseMemRefType>>(
+      builder.create<bufferization::ToBufferOp>(loc, mTp, tensor).getResult());
 }
 
 Value sparse_tensor::createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc,

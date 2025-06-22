@@ -790,40 +790,91 @@ def Vector_FMAOp :
   }];
 }
 
+def Vector_ToElementsOp : Vector_Op<"to_elements", [
+    Pure,
+    ShapedTypeMatchesElementCountAndTypes<"source", "elements">]> {
+  let summary = "operation that decomposes a vector into all its scalar elements";
+  let description = [{
+    This operation decomposes all the scalar elements from a vector. The
+    decomposed scalar elements are returned in row-major order. The number of
+    scalar results must match the number of elements in the input vector type.
+    All the result elements have the same result type, which must match the
+    element type of the input vector. Scalable vectors are not supported.
+
+    Examples:
+
+    ```mlir
+    // Decompose a 0-D vector.
+    %0 = vector.to_elements %v0 : vector<f32>
+    // %0 = %v0[0]
+
+    // Decompose a 1-D vector.
+    %0:2 = vector.to_elements %v1 : vector<2xf32>
+    // %0#0 = %v1[0]
+    // %0#1 = %v1[1]
+
+    // Decompose a 2-D.
+    %0:6 = vector.to_elements %v2 : vector<2x3xf32>
+    // %0#0 = %v2[0, 0]
+    // %0#1 = %v2[0, 1]
+    // %0#2 = %v2[0, 2]
+    // %0#3 = %v2[1, 0]
+    // %0#4 = %v2[1, 1]
+    // %0#5 = %v2[1, 2]
+
+    // Decompose a 3-D vector.
+    %0:6 = vector.to_elements %v3 : vector<3x1x2xf32>
+    // %0#0 = %v3[0, 0, 0]
+    // %0#1 = %v3[0, 0, 1]
+    // %0#2 = %v3[1, 0, 0]
+    // %0#3 = %v3[1, 0, 1]
+    // %0#4 = %v3[2, 0, 0]
+    // %0#5 = %v3[2, 0, 1]
+    ```
+  }];
+
+  let arguments = (ins AnyVectorOfAnyRank:$source);
+  let results = (outs Variadic<AnyType>:$elements);
+  let assemblyFormat = "$source attr-dict `:` type($source)";
+  let hasFolder = 1;
+}
+
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
     Pure,
-    TypesMatchWith<"operand types match result element type",
-                   "result", "elements", "SmallVector<Type>("
-                   "::llvm::cast<VectorType>($_self).getNumElements(), "
-                   "::llvm::cast<VectorType>($_self).getElementType())">]> {
+    ShapedTypeMatchesElementCountAndTypes<"dest", "elements">]> {
   let summary = "operation that defines a vector from scalar elements";
   let description = [{
     This operation defines a vector from one or multiple scalar elements. The
-    number of elements must match the number of elements in the result type.
-    All elements must have the same type, which must match the element type of
-    the result vector type.
+    scalar elements are arranged in row-major within the vector. The number of
+    elements must match the number of elements in the result type. All elements
+    must have the same type, which must match the element type of the result
+    vector type. Scalable vectors are not supported.
 
-    `elements` are a flattened version of the result vector in row-major order.
-
-    Example:
+    Examples:
 
     ```mlir
-    // %f1
+    // Define a 0-D vector.
     %0 = vector.from_elements %f1 : vector<f32>
-    // [%f1, %f2]
-    %1 = vector.from_elements %f1, %f2 : vector<2xf32>
-    // [[%f1, %f2, %f3], [%f4, %f5, %f6]]
-    %2 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<2x3xf32>
-    // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
-    %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
-    ```
+    // [%f1]
 
-    Note, scalable vectors are not supported.
+    // Define a 1-D vector.
+    %1 = vector.from_elements %f1, %f2 : vector<2xf32>
+    // [%f1, %f2]
+
+    // Define a 2-D vector.
+    %2 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<2x3xf32>
+    // [[%f1, %f2, %f3], [%f4, %f5, %f6]]
+
+    // Define a 3-D vector.
+    %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
+    // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
+    ```
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyFixedVectorOfAnyRank:$result);
-  let assemblyFormat = "$elements attr-dict `:` type($result)";
+  let results = (outs AnyFixedVectorOfAnyRank:$dest);
+  let assemblyFormat = "$elements attr-dict `:` type($dest)";
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
@@ -959,7 +1010,7 @@ def Vector_InsertOp :
 def Vector_ScalableInsertOp :
   Vector_Op<"scalable.insert", [Pure,
        AllElementTypesMatch<["valueToStore", "dest"]>,
-       AllTypesMatch<["dest", "res"]>,
+       AllTypesMatch<["dest", "result"]>,
        PredOpTrait<"position is a multiple of the source length.",
         CPred<
           "(getPos() % getSourceVectorType().getNumElements()) == 0"
@@ -967,7 +1018,7 @@ def Vector_ScalableInsertOp :
      Arguments<(ins VectorOfRank<[1]>:$valueToStore,
                     ScalableVectorOfRank<[1]>:$dest,
                     I64Attr:$pos)>,
-     Results<(outs ScalableVectorOfRank<[1]>:$res)> {
+     Results<(outs ScalableVectorOfRank<[1]>:$result)> {
   let summary = "insert subvector into scalable vector operation";
   // NOTE: This operation is designed to map to `llvm.vector.insert`, and its
   //       documentation should be kept aligned with LLVM IR:
@@ -1010,19 +1061,23 @@ def Vector_ScalableInsertOp :
     VectorType getDestVectorType() {
       return ::llvm::cast<VectorType>(getDest().getType());
     }
+    /// Wrapper for getResult, which replaced getRes.
+    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
+      return getResult();
+    }
   }];
 }
 
 def Vector_ScalableExtractOp :
   Vector_Op<"scalable.extract", [Pure,
-       AllElementTypesMatch<["source", "res"]>,
+       AllElementTypesMatch<["source", "result"]>,
        PredOpTrait<"position is a multiple of the result length.",
         CPred<
           "(getPos() % getResultVectorType().getNumElements()) == 0"
         >>]>,
      Arguments<(ins ScalableVectorOfRank<[1]>:$source,
                     I64Attr:$pos)>,
-     Results<(outs VectorOfRank<[1]>:$res)> {
+     Results<(outs VectorOfRank<[1]>:$result)> {
   let summary = "extract subvector from scalable vector operation";
   // NOTE: This operation is designed to map to `llvm.vector.extract`, and its
   //       documentation should be kept aligned with LLVM IR:
@@ -1051,7 +1106,7 @@ def Vector_ScalableExtractOp :
   }];
 
   let assemblyFormat = [{
-    $source `[` $pos `]` attr-dict `:` type($res) `from` type($source)
+    $source `[` $pos `]` attr-dict `:` type($result) `from` type($source)
   }];
 
   let extraClassDeclaration = extraPoisonClassDeclaration # [{
@@ -1059,7 +1114,11 @@ def Vector_ScalableExtractOp :
       return ::llvm::cast<VectorType>(getSource().getType());
     }
     VectorType getResultVectorType() {
-      return ::llvm::cast<VectorType>(getRes().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
+    }
+    /// Wrapper for getResult, which replaced getRes.
+    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
+      return getResult();
     }
   }];
 }
@@ -1068,10 +1127,10 @@ def Vector_InsertStridedSliceOp :
   Vector_Op<"insert_strided_slice", [Pure,
     PredOpTrait<"operand #0 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-    AllTypesMatch<["dest", "res"]>]>,
+    AllTypesMatch<["dest", "result"]>]>,
     Arguments<(ins AnyVectorOfNonZeroRank:$valueToStore, AnyVectorOfNonZeroRank:$dest, I64ArrayAttr:$offsets,
                I64ArrayAttr:$strides)>,
-    Results<(outs AnyVectorOfNonZeroRank:$res)> {
+    Results<(outs AnyVectorOfNonZeroRank:$result)> {
   let summary = "strided_slice operation";
   let description = [{
     Takes a k-D valueToStore vector, an n-D destination vector (n >= k), n-sized
@@ -1114,6 +1173,10 @@ def Vector_InsertStridedSliceOp :
       return llvm::any_of(getStrides(), [](Attribute attr) {
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
+    }
+    /// Wrapper for getResult, which replaced getRes.
+    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
+      return getResult();
     }
   }];
 
@@ -1673,7 +1736,9 @@ def Vector_TransferWriteOp :
   let hasVerifier = 1;
 }
 
-def Vector_LoadOp : Vector_Op<"load"> {
+def Vector_LoadOp : Vector_Op<"load", [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+  ]> {
   let summary = "reads an n-D slice of memory into an n-D vector";
   let description = [{
     The 'vector.load' operation reads an n-D slice of memory into an n-D
@@ -1759,7 +1824,9 @@ def Vector_LoadOp : Vector_Op<"load"> {
       "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
 }
 
-def Vector_StoreOp : Vector_Op<"store"> {
+def Vector_StoreOp : Vector_Op<"store", [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+  ]> {
   let summary = "writes an n-D vector to an n-D slice of memory";
   let description = [{
     The 'vector.store' operation writes an n-D vector to an n-D slice of memory.
