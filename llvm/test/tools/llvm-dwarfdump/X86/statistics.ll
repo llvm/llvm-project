@@ -1,4 +1,4 @@
-; RUN: llc -O0 %s -o - -filetype=obj \
+; RUN: llc -O0 %s -o - -filetype=obj -debugger-tune=gdb -accel-tables=Apple \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 ; CHECK: "version": 9,
 
@@ -55,8 +55,8 @@
 ; CHECK:      "#bytes within functions": [[FUNCSIZE:[0-9]+]]
 ; CHECK:      "#bytes within inlined functions": [[INLINESIZE:[0-9]+]]
 ; CHECK:      "#bytes in __debug_loc": 35,
-; CHECK-NEXT: "#bytes in __debug_abbrev": 386,
-; CHECK-NEXT: "#bytes in __debug_info": 463,
+; CHECK-NEXT: "#bytes in __debug_abbrev": 375,
+; CHECK-NEXT: "#bytes in __debug_info": 459,
 ; CHECK-NEXT: "#bytes in __debug_str": 231,
 ; CHECK-NEXT: "#bytes in __apple_names": 348,
 ; CHECK-NEXT: "#bytes in __apple_objc": 36,

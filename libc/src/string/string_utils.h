@@ -14,19 +14,19 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 #define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
+#include "hdr/limits_macros.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/string/memory_utils/inline_bzero.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
-  constexpr size_t BITS_IN_BYTE = 8;
+  static_assert(CHAR_BIT == 8, "repeat_byte assumes a byte is 8 bits.");
+  constexpr size_t BITS_IN_BYTE = CHAR_BIT;
   constexpr size_t BYTE_MASK = 0xff;
   Word result = 0;
   byte = byte & BYTE_MASK;
@@ -66,7 +66,7 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
        ++char_ptr) {
     if (*char_ptr == '\0')
-      return char_ptr - src;
+      return static_cast<size_t>(char_ptr - src);
   }
   // Step 2: read blocks
   for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
@@ -77,7 +77,7 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   for (; *char_ptr != '\0'; ++char_ptr) {
     ;
   }
-  return char_ptr - src;
+  return static_cast<size_t>(char_ptr - src);
 }
 
 // Returns the length of a string, denoted by the first occurrence
@@ -90,12 +90,11 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
   // string a block at a time.
   if constexpr (cpp::is_same_v<T, char>)
     return string_length_wide_read<unsigned int>(src);
-#else
+#endif
   size_t length;
   for (length = 0; *src; ++src, ++length)
     ;
   return length;
-#endif
 }
 
 template <typename Word>
@@ -169,7 +168,7 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
   for (; *src && !bitset.test(*reinterpret_cast<const unsigned char *>(src));
        ++src)
     ;
-  return src - initial;
+  return static_cast<size_t>(src - initial);
 }
 
 // Given the similarities between strtok and strtok_r, we can implement both
@@ -189,12 +188,13 @@ LIBC_INLINE char *string_token(char *__restrict src,
   if (LIBC_UNLIKELY(src == nullptr && ((src = *saveptr) == nullptr)))
     return nullptr;
 
+  static_assert(CHAR_BIT == 8, "bitset of 256 assumes char is 8 bits");
   cpp::bitset<256> delimiter_set;
   for (; *delimiter_string != '\0'; ++delimiter_string)
-    delimiter_set.set(*delimiter_string);
+    delimiter_set.set(static_cast<size_t>(*delimiter_string));
 
   if constexpr (SkipDelim)
-    for (; *src != '\0' && delimiter_set.test(*src); ++src)
+    for (; *src != '\0' && delimiter_set.test(static_cast<size_t>(*src)); ++src)
       ;
   if (*src == '\0') {
     *saveptr = src;
@@ -202,7 +202,7 @@ LIBC_INLINE char *string_token(char *__restrict src,
   }
   char *token = src;
   for (; *src != '\0'; ++src) {
-    if (delimiter_set.test(*src)) {
+    if (delimiter_set.test(static_cast<size_t>(*src))) {
       *src = '\0';
       ++src;
       break;
@@ -218,7 +218,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   if (!size)
     return len;
   size_t n = len < size - 1 ? len : size - 1;
-  inline_memcpy(dst, src, n);
+  __builtin_memcpy(dst, src, n);
   dst[n] = '\0';
   return len;
 }

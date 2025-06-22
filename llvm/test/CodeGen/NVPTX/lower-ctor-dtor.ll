@@ -8,7 +8,7 @@
 
 ; Make sure we get the same result if we run multiple times
 ; RUN: opt -S -mtriple=nvptx64-- -passes=nvptx-lower-ctor-dtor,nvptx-lower-ctor-dtor < %s | FileCheck %s
-; RUN: llc -nvptx-lower-global-ctor-dtor -mtriple=nvptx64-amd-amdhsa -mcpu=sm_70 -filetype=asm -o - < %s | FileCheck %s -check-prefix=VISIBILITY
+; RUN: llc -mtriple=nvptx64-amd-amdhsa -mcpu=sm_70 -filetype=asm -o - < %s | FileCheck %s -check-prefix=VISIBILITY
 
 @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo, ptr null }]
 @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @bar, ptr null }]
@@ -43,7 +43,8 @@ define internal void @bar() {
   ret void
 }
 
-; CHECK-LABEL: define weak_odr ptx_kernel void @"nvptx$device$init"() {
+; CHECK-LABEL: define weak_odr ptx_kernel void @"nvptx$device$init"
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BEGIN:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__init_array_start, align 8
 ; CHECK-NEXT:    [[STOP:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__init_array_end, align 8
@@ -60,7 +61,8 @@ define internal void @bar() {
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define weak_odr ptx_kernel void @"nvptx$device$fini"() {
+; CHECK-LABEL: define weak_odr ptx_kernel void @"nvptx$device$fini"
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BEGIN:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__fini_array_start, align 8
 ; CHECK-NEXT:    [[STOP:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__fini_array_end, align 8
@@ -82,11 +84,4 @@ define internal void @bar() {
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 
-; CHECK: [[META1:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidx", i32 1}
-; CHECK: [[META2:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidy", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidz", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxclusterrank", i32 1}
-; CHECK: [[META6:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidx", i32 1}
-; CHECK: [[META7:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidy", i32 1}
-; CHECK: [[META8:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidz", i32 1}
-; CHECK: [[META9:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxclusterrank", i32 1}
+; CHECK: attributes #[[ATTR0]] = { "nvvm.maxclusterrank"="1" "nvvm.maxntid"="1" }

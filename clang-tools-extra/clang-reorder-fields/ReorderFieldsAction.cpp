@@ -70,11 +70,12 @@ getNewFieldsOrder(const RecordDecl *Definition,
   }
   SmallVector<unsigned, 4> NewFieldsOrder;
   for (const auto &Name : DesiredFieldsOrder) {
-    if (!NameToIndex.count(Name)) {
+    auto It = NameToIndex.find(Name);
+    if (It == NameToIndex.end()) {
       llvm::errs() << "Field " << Name << " not found in definition.\n";
       return {};
     }
-    NewFieldsOrder.push_back(NameToIndex[Name]);
+    NewFieldsOrder.push_back(It->second);
   }
   assert(NewFieldsOrder.size() == NameToIndex.size());
   return NewFieldsOrder;
@@ -85,6 +86,10 @@ getNewFieldsOrder(const RecordDecl *Definition,
 static void
 addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
                std::map<std::string, tooling::Replacements> &Replacements) {
+  if (Old.getBegin().isMacroID())
+    Old = Context.getSourceManager().getExpansionRange(Old).getAsRange();
+  if (New.getBegin().isMacroID())
+    New = Context.getSourceManager().getExpansionRange(New).getAsRange();
   StringRef NewText =
       Lexer::getSourceText(CharSourceRange::getTokenRange(New),
                            Context.getSourceManager(), Context.getLangOpts());

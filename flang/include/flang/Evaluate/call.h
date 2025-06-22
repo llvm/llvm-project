@@ -13,11 +13,11 @@
 #include "constant.h"
 #include "formatting.h"
 #include "type.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/attr.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 #include <vector>
 

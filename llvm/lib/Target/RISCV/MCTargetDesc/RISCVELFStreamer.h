@@ -56,23 +56,25 @@ public:
   RISCVELFStreamer &getStreamer();
   RISCVTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
-  void emitDirectiveOptionPush() override;
-  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionExact() override;
+  void emitDirectiveOptionNoExact() override;
   void emitDirectiveOptionPIC() override;
   void emitDirectiveOptionNoPIC() override;
-  void emitDirectiveOptionRVC() override;
-  void emitDirectiveOptionNoRVC() override;
+  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionPush() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
+  void emitDirectiveOptionRVC() override;
+  void emitDirectiveOptionNoRVC() override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 
   void finish() override;
 };
 
-MCELFStreamer *createRISCVELFStreamer(MCContext &C,
-                                      std::unique_ptr<MCAsmBackend> MAB,
-                                      std::unique_ptr<MCObjectWriter> MOW,
-                                      std::unique_ptr<MCCodeEmitter> MCE);
+MCStreamer *createRISCVELFStreamer(const Triple &, MCContext &C,
+                                   std::unique_ptr<MCAsmBackend> &&MAB,
+                                   std::unique_ptr<MCObjectWriter> &&MOW,
+                                   std::unique_ptr<MCCodeEmitter> &&MCE);
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVELFSTREAMER_H

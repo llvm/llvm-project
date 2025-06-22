@@ -3,7 +3,7 @@
 
 define i32 @reduction_smin(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_smin
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -50,7 +50,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define i32 @reduction_smin_select_ops_flipped(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_smin_select_ops_flipped
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -97,7 +97,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define i32 @reduction_smin_intrinsic(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_smin_intrinsic
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -145,7 +145,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 
 define i32 @reduction_umax(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_umax
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -192,7 +192,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define i32 @reduction_umax_select_ops_flipped(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_umax_select_ops_flipped
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -239,7 +239,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define i32 @reduction_umax_intrinsic(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_umax_intrinsic
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

@@ -28,11 +28,15 @@ def MyTarget : Target;
 // CHECK-NEXT:  #pragma GCC diagnostic push
 // CHECK-NEXT:  #pragma GCC diagnostic ignored "-Woverlength-strings"
 // CHECK-NEXT:  #endif
-// CHECK-NEXT:  static const char MyTargetSDNodeNames[] =
-// CHECK-NEXT:    "\0";
+// CHECK-NEXT:  static constexpr char MyTargetSDNodeNamesStorage[] =
+// CHECK-NEXT:    "\0"
+// CHECK-NEXT:    ;
 // CHECK-NEXT:  #ifdef __GNUC__
 // CHECK-NEXT:  #pragma GCC diagnostic pop
 // CHECK-NEXT:  #endif
+// CHECK-EMPTY:
+// CHECK-NEXT:  static constexpr llvm::StringTable MyTargetSDNodeNames =
+// CHECK-NEXT:      MyTargetSDNodeNamesStorage;
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
@@ -70,16 +74,17 @@ def my_noop : SDNode<"MyTargetISD::NOOP", SDTypeProfile<0, 0, []>>;
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyTargetISD
 
-// CHECK:       static const char MyTargetSDNodeNames[] =
+// CHECK:       static constexpr char MyTargetSDNodeNamesStorage[] =
+// CHECK-NEXT:    "\0"
 // CHECK-NEXT:    "MyTargetISD::NOOP\0"
-// CHECK-NEXT:    "\0";
+// CHECK-NEXT:    ;
 
 // CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// CHECK-NEXT:      {0, 0, 0, 0, 0, 0, 0, 0}, // NOOP
+// CHECK-NEXT:      {0, 0, 0, 0, 0, 1, 0, 0}, // NOOP
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
@@ -148,11 +153,12 @@ def my_node_3 : SDNode<
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyTargetISD
 
-// CHECK:       static const char MyTargetSDNodeNames[] =
+// CHECK:       static constexpr char MyTargetSDNodeNamesStorage[] =
+// CHECK-NEXT:    "\0"
 // CHECK-NEXT:    "MyTargetISD::NODE_1\0"
 // CHECK-NEXT:    "MyTargetISD::NODE_2\0"
 // CHECK-NEXT:    "MyTargetISD::NODE_3\0"
-// CHECK-NEXT:    "\0";
+// CHECK-NEXT:    ;
 
 // CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // CHECK-NEXT:    /* 0 */ {SDTCisVT, 1, 0, MVT::i2},
@@ -173,9 +179,9 @@ def my_node_3 : SDNode<
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// CHECK-NEXT:          {1, 1, 0|1<<SDNPHasChain, 0, 0, 0, 0, 2}, // NODE_1
-// CHECK-NEXT:          {3, 1, 0|1<<SDNPVariadic|1<<SDNPMemOperand, 0, 42, 20, 11, 4}, // NODE_2
-// CHECK-NEXT:          {2, -1, 0|1<<SDNPHasChain|1<<SDNPOutGlue|1<<SDNPInGlue|1<<SDNPOptInGlue, 0|1<<SDNFIsStrictFP, 24, 40, 2, 13}, // NODE_3
+// CHECK-NEXT:          {1, 1, 0|1<<SDNPHasChain, 0, 0, 1, 0, 2}, // NODE_1
+// CHECK-NEXT:          {3, 1, 0|1<<SDNPVariadic|1<<SDNPMemOperand, 0, 42, 21, 11, 4}, // NODE_2
+// CHECK-NEXT:          {2, -1, 0|1<<SDNPHasChain|1<<SDNPOutGlue|1<<SDNPInGlue|1<<SDNPOptInGlue, 0|1<<SDNFIsStrictFP, 24, 41, 2, 13}, // NODE_3
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: static const SDNodeInfo MyTargetGenSDNodeInfo(

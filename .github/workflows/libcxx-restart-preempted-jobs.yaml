@@ -26,14 +26,14 @@ jobs:
       statuses: read
       checks: write
       actions: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "Restart Job"
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
         with:
           script: |
             const failure_regex = /Process completed with exit code 1./
-            const preemption_regex = /The runner has received a shutdown signal/
+            const preemption_regex = /(The runner has received a shutdown signal)|(The operation was canceled)/
 
             const wf_run = context.payload.workflow_run
             core.notice(`Running on "${wf_run.display_title}" by @${wf_run.actor.login} (event: ${wf_run.event})\nWorkflow run URL: ${wf_run.html_url}`)
@@ -161,7 +161,7 @@ jobs:
       statuses: read
       checks: write
       actions: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "Restart Job (test)"
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1

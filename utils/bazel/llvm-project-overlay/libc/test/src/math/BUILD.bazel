@@ -24,6 +24,8 @@ math_mpfr_test(name = "atan2")
 
 math_mpfr_test(name = "atan2f")
 
+math_mpfr_test(name = "atan")
+
 math_mpfr_test(name = "atanf")
 
 math_mpfr_test(name = "atanhf")
@@ -44,6 +46,11 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "ceill",
+    hdrs = ["CeilTest.h"],
+)
+
+math_mpfr_test(
+    name = "ceilf16",
     hdrs = ["CeilTest.h"],
 )
 
@@ -145,12 +152,42 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "f16add",
+    hdrs = ["AddTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16addf",
+    hdrs = ["AddTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16addl",
+    hdrs = ["AddTest.h"],
+)
+
+math_mpfr_test(
     name = "fdiv",
     hdrs = ["DivTest.h"],
 )
 
 math_mpfr_test(
     name = "fdivl",
+    hdrs = ["DivTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16div",
+    hdrs = ["DivTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16divf",
+    hdrs = ["DivTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16divl",
     hdrs = ["DivTest.h"],
 )
 
@@ -171,7 +208,20 @@ math_mpfr_test(
     hdrs = ["FloorTest.h"],
 )
 
+math_mpfr_test(
+    name = "floorf16",
+    hdrs = ["FloorTest.h"],
+)
+
 # TODO: Add fma, fmaf, fmal, fmul, fmull tests.  Missing stdlib/rand dependency.
+
+# math_mpfr_test(name = "f16mul")
+# math_mpfr_test(name = "f16mulf")
+# math_mpfr_test(name = "f16mull")
+
+# math_mpfr_test(name = "f16fma")
+# math_mpfr_test(name = "f16fmaf")
+# math_mpfr_test(name = "f16fmal")
 
 math_mpfr_test(
     name = "frexp",
@@ -209,6 +259,21 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "f16sub",
+    hdrs = ["SubTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16subf",
+    hdrs = ["SubTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16subl",
+    hdrs = ["SubTest.h"],
+)
+
+math_mpfr_test(
     name = "hypot",
     hdrs = ["HypotTest.h"],
 )
@@ -237,6 +302,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "llrintf16",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
     name = "llround",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -248,6 +318,16 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "llroundl",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "lroundf16",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "llroundf16",
     hdrs = ["RoundToIntegerTest.h"],
 )
 
@@ -279,6 +359,11 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "lrintl",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "lrintf16",
     hdrs = ["RoundToIntegerTest.h"],
 )
 
@@ -323,6 +408,14 @@ math_mpfr_test(
     ],
 )
 
+math_mpfr_test(
+    name = "nearbyintf16",
+    hdrs = ["NearbyIntTest.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
+)
+
 math_mpfr_test(name = "pow")
 
 math_mpfr_test(name = "powf")
@@ -358,6 +451,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "rintf16",
+    hdrs = ["RIntTest.h"],
+)
+
+math_mpfr_test(
     name = "roundeven",
     hdrs = ["RoundEvenTest.h"],
 )
@@ -373,6 +471,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "roundevenf16",
+    hdrs = ["RoundEvenTest.h"],
+)
+
+math_mpfr_test(
     name = "round",
     hdrs = ["RoundTest.h"],
 )
@@ -384,6 +487,11 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "roundl",
+    hdrs = ["RoundTest.h"],
+)
+
+math_mpfr_test(
+    name = "roundf16",
     hdrs = ["RoundTest.h"],
 )
 
@@ -437,6 +545,21 @@ math_mpfr_test(
     hdrs = ["SqrtTest.h"],
 )
 
+math_mpfr_test(
+    name = "f16sqrt",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16sqrtf",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_mpfr_test(
+    name = "f16sqrtl",
+    hdrs = ["SqrtTest.h"],
+)
+
 math_mpfr_test(name = "tan")
 
 math_mpfr_test(
@@ -463,3 +586,46 @@ math_mpfr_test(
     name = "truncl",
     hdrs = ["TruncTest.h"],
 )
+
+math_mpfr_test(
+    name = "truncf16",
+    hdrs = ["TruncTest.h"],
+)
+
+math_mpfr_test(name = "cosf16")
+
+math_mpfr_test(name = "cospif16")
+
+math_mpfr_test(name = "sinf16")
+
+math_mpfr_test(name = "sinpif16")
+
+math_mpfr_test(name = "tanf16")
+
+math_mpfr_test(name = "tanpif16")
+
+math_mpfr_test(name = "expf16")
+
+math_mpfr_test(name = "exp2f16")
+
+math_mpfr_test(name = "exp2m1f16")
+
+math_mpfr_test(name = "exp10f16")
+
+math_mpfr_test(name = "exp10m1f16")
+
+math_mpfr_test(name = "asinf16")
+
+math_mpfr_test(name = "acosf16")
+
+math_mpfr_test(name = "coshf16")
+
+math_mpfr_test(name = "sinhf16")
+
+math_mpfr_test(name = "tanhf16")
+
+math_mpfr_test(name = "logf16")
+
+math_mpfr_test(name = "log2f16")
+
+math_mpfr_test(name = "log10f16")

@@ -140,7 +140,7 @@ Error Builder::addModule(Module *M) {
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/false);
   collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/true);
-  SmallPtrSet<GlobalValue *, 4> Used(UsedV.begin(), UsedV.end());
+  SmallPtrSet<GlobalValue *, 4> Used(llvm::from_range, UsedV);
 
   ModuleSymbolTable Msymtab;
   Msymtab.addModule(M);
@@ -216,7 +216,7 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
 static DenseSet<StringRef> buildPreservedSymbolsSet(const Triple &TT) {
   DenseSet<StringRef> PreservedSymbolSet(std::begin(PreservedSymbols),
                                          std::end(PreservedSymbols));
-
+  // FIXME: Do we need to pass in ABI fields from TargetOptions?
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   for (const char *Name : Libcalls.getLibcallNames()) {
     if (Name)
@@ -281,8 +281,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
   setStr(Sym.IRName, GV->getName());
 
   static const DenseSet<StringRef> PreservedSymbolsSet =
-      buildPreservedSymbolsSet(
-          llvm::Triple(GV->getParent()->getTargetTriple()));
+      buildPreservedSymbolsSet(GV->getParent()->getTargetTriple());
   bool IsPreservedSymbol = PreservedSymbolsSet.contains(GV->getName());
 
   if (Used.count(GV) || IsPreservedSymbol)
@@ -350,9 +349,9 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
   assert(!IRMods.empty());
   Hdr.Version = storage::Header::kCurrentVersion;
   setStr(Hdr.Producer, kExpectedProducerName);
-  setStr(Hdr.TargetTriple, IRMods[0]->getTargetTriple());
+  setStr(Hdr.TargetTriple, IRMods[0]->getTargetTriple().str());
   setStr(Hdr.SourceFileName, IRMods[0]->getSourceFileName());
-  TT = Triple(IRMods[0]->getTargetTriple());
+  TT = IRMods[0]->getTargetTriple();
 
   for (auto *M : IRMods)
     if (Error Err = addModule(M))

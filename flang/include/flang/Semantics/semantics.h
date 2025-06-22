@@ -13,12 +13,12 @@
 #include "program-tree.h"
 #include "scope.h"
 #include "symbol.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/LangOptions.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -110,6 +110,12 @@ public:
   }
   Scope &globalScope() { return globalScope_; }
   Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
+  Scope *currentHermeticModuleFileScope() {
+    return currentHermeticModuleFileScope_;
+  }
+  void set_currentHermeticModuleFileScope(Scope *scope) {
+    currentHermeticModuleFileScope_ = scope;
+  }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
@@ -313,6 +319,7 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  Scope *currentHermeticModuleFileScope_{nullptr};
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;

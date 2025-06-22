@@ -1752,10 +1752,7 @@ define <4 x i32> @select_vector_cmp_with_bitcasts(<2 x i64> %x, <4 x i32> %y) {
 
 define i8 @bittest_trunc_or(i8 %x) {
 ; CHECK-LABEL: @bittest_trunc_or(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X1:%.*]] to i1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X1]], 1
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[X1]]
-; CHECK-NEXT:    ret i8 [[X]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %trunc = trunc i8 %x to i1
   %or = or i8 %x, 1
@@ -1765,11 +1762,8 @@ define i8 @bittest_trunc_or(i8 %x) {
 
 define i8 @bittest_trunc_not_or(i8 %x) {
 ; CHECK-LABEL: @bittest_trunc_not_or(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], 1
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[NOT]], i8 [[OR]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[COND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %trunc = trunc i8 %x to i1
   %not = xor i1 %trunc, true

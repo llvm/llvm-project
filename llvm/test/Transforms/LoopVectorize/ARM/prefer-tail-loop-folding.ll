@@ -56,8 +56,7 @@ define void @prefer_folding(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-LABEL:    prefer_folding(
 ; PREFER-FOLDING: vector.body:
 ; PREFER-FOLDING: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; PREFER-FOLDING: %[[VIVELEM0:.*]] = add i32 %index, 0
-; PREFER-FOLDING: %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[VIVELEM0]], i32 431)
+; PREFER-FOLDING: %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 431)
 ; PREFER-FOLDING: call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask,
 ; PREFER-FOLDING: call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask,
 ; PREFER-FOLDING: call void @llvm.masked.store.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask
@@ -340,8 +339,7 @@ define void @float(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, 
 ; CHECK-LABEL:    float(
 ; PREFER-FOLDING: vector.body:
 ; PREFER-FOLDING: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; PREFER-FOLDING: %[[VIVELEM0:.*]] = add i32 %index, 0
-; PREFER-FOLDING: %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[VIVELEM0]], i32 431)
+; PREFER-FOLDING: %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 431)
 ; PREFER-FOLDING: call <4 x float> @llvm.masked.load.v4f32.p0({{.*}}%active.lane.mask
 ; PREFER-FOLDING: call <4 x float> @llvm.masked.load.v4f32.p0({{.*}}%active.lane.mask
 ; PREFER-FOLDING: call void @llvm.masked.store.v4f32.p0({{.*}}%active.lane.mask

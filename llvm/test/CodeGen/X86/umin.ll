@@ -652,11 +652,11 @@ define i16 @test_signbits_i16(i16 %a, i16 %b) nounwind {
 ;
 ; X86-LABEL: test_signbits_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $15, %eax
-; X86-NEXT:    cmpw %cx, %ax
-; X86-NEXT:    cmovael %ecx, %eax
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shrl $15, %ecx
+; X86-NEXT:    cmpw %ax, %cx
+; X86-NEXT:    cmovbl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %ax = ashr i16 %a, 15

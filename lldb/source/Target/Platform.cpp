@@ -492,7 +492,6 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
       // the platform's working directory
       if (!fixed_dst.GetDirectory()) {
         FileSpec relative_spec;
-        std::string path;
         if (working_dir) {
           relative_spec = working_dir;
           relative_spec.AppendPathComponent(dst.GetPath());

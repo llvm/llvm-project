@@ -104,6 +104,18 @@ protected:
 
 private:
   bool CreateBinary();
+  template <typename T>
+  void
+  CreateSectionsWithBitness(lldb_private::SectionList &unified_section_list);
+
+  struct XCOFF32 {
+    using SectionHeader = llvm::object::XCOFFSectionHeader32;
+    static constexpr bool Is64Bit = false;
+  };
+  struct XCOFF64 {
+    using SectionHeader = llvm::object::XCOFFSectionHeader64;
+    static constexpr bool Is64Bit = true;
+  };
 
   std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
 };

@@ -746,8 +746,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
       ModRMDecision.push_back(decision.instructionIDs[index]);
     break;
   case MODRM_FULL:
-    for (unsigned short InstructionID : decision.instructionIDs)
-      ModRMDecision.push_back(InstructionID);
+    llvm::append_range(ModRMDecision, decision.instructionIDs);
     break;
   }
 
@@ -883,9 +882,9 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     N = ++OperandSetNum;
 
     o << "  { /* " << (OperandSetNum - 1) << " */\n";
-    for (unsigned i = 0, e = OperandList.size(); i != e; ++i) {
-      const char *Encoding = stringForOperandEncoding(OperandList[i].first);
-      const char *Type = stringForOperandType(OperandList[i].second);
+    for (const auto &[Enc, Ty] : OperandList) {
+      const char *Encoding = stringForOperandEncoding(Enc);
+      const char *Type = stringForOperandType(Ty);
       o << "    { " << Encoding << ", " << Type << " },\n";
     }
     o << "  },\n";

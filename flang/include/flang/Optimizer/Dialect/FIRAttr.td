@@ -156,4 +156,67 @@ def fir_LocationKindAttr : EnumAttr<FIROpsDialect, fir_LocationKind, "loc_kind">
 def LocationKindArrayAttr : ArrayOfAttr<FIROpsDialect, "LocationKindArray",
     "loc_kind_array", "LocationKindAttr">;
 
+/// Optimization heuristics for fir.pack_array operation.
+def fir_PackArrayHeuristics
+    : I32BitEnumAttr<"PackArrayHeuristics", "",
+                     [
+                         /// fir.pack_array cannot be optimized based on the
+                         /// array usage pattern.
+                         I32BitEnumAttrCaseNone<"None", "none">,
+                         /// fir.pack_array can be optimized away, if the array
+                         /// is not used in a loop.
+                         I32BitEnumAttrCaseBit<"LoopOnly", 0, "loop_only">,
+]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+}
+
+def fir_PackArrayHeuristicsAttr
+    : EnumAttr<FIROpsDialect, fir_PackArrayHeuristics,
+               "pack_array_heuristics"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def fir_OpenACCSafeTempArrayCopyAttr : fir_Attr<"OpenACCSafeTempArrayCopy"> {
+  let mnemonic = "acc_safe_temp_array_copy";
+  let description = [{
+    An attribute implementing SafeTempArrayCopyAttrInterface.
+    It specifies whether it is possible to dynamically check
+    if creating a temporary copy of a Fortran array is safe
+    in the context of OpenACC.
+    It also provides the methods to generate those dynamic checks.
+  }];
+}
+
+def fir_OpenMPSafeTempArrayCopyAttr : fir_Attr<"OpenMPSafeTempArrayCopy"> {
+  let mnemonic = "omp_safe_temp_array_copy";
+  let description = [{
+    An attribute implementing SafeTempArrayCopyAttrInterface.
+    It specifies whether it is possible to dynamically check
+    if creating a temporary copy of a Fortran array is safe
+    in the context of OpenMP.
+    It also provides the methods to generate those dynamic checks.
+  }];
+}
+
+def LocalitySpecTypeLocal : I32EnumAttrCase<"Local", 0, "local">;
+def LocalitySpecTypeLocalInit
+    : I32EnumAttrCase<"LocalInit", 1, "local_init">;
+
+def LocalitySpecifierType : I32EnumAttr<
+    "LocalitySpecifierType",
+    "Type of a locality specifier", [
+      LocalitySpecTypeLocal,
+      LocalitySpecTypeLocalInit
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def LocalitySpecifierTypeAttr : EnumAttr<FIROpsDialect, LocalitySpecifierType,
+                                                "locality_specifier_type"> {
+  let assemblyFormat = "`{` `type` `=` $value `}`";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS

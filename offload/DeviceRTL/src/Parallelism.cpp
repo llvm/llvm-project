@@ -43,8 +43,6 @@
 
 using namespace ompx;
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace {
 
 uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
@@ -311,5 +309,3 @@ void __kmpc_push_num_teams(IdentTy *loc, int32_t tid, int32_t num_teams,
 
 void __kmpc_push_proc_bind(IdentTy *loc, uint32_t tid, int proc_bind) {}
 }
-
-#pragma omp end declare target

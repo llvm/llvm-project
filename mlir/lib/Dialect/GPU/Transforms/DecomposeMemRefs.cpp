@@ -55,7 +55,7 @@ static bool isInsideLaunch(Operation *op) {
 static std::tuple<Value, OpFoldResult, SmallVector<OpFoldResult>>
 getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
                         ArrayRef<OpFoldResult> subOffsets,
-                        ArrayRef<OpFoldResult> subStrides = std::nullopt) {
+                        ArrayRef<OpFoldResult> subStrides = {}) {
   auto sourceType = cast<MemRefType>(source.getType());
   auto sourceRank = static_cast<unsigned>(sourceType.getRank());
 
@@ -237,8 +237,4 @@ struct GpuDecomposeMemrefsPass
 void mlir::populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns) {
   patterns.insert<FlattenLoad, FlattenStore, FlattenSubview>(
       patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createGpuDecomposeMemrefsPass() {
-  return std::make_unique<GpuDecomposeMemrefsPass>();
 }

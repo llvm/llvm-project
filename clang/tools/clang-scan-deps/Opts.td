@@ -22,12 +22,15 @@ defm module_files_dir : Eq<"module-files-dir",
 
 def optimize_args_EQ : CommaJoined<["-", "--"], "optimize-args=">, HelpText<"Which command-line arguments of modules to optimize">;
 def eager_load_pcm : F<"eager-load-pcm", "Load PCM files eagerly (instead of lazily on import)">;
+def no_cache_negative_stats : F<"no-cache-negative-stats", "Don't cache stat failures">;
 
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
 
 defm compilation_database : Eq<"compilation-database", "Compilation database">;
 defm module_name : Eq<"module-name", "the module of which the dependencies are to be computed">;
 defm dependency_target : Eq<"dependency-target", "The names of dependency targets for the dependency file">;
+
+defm tu_buffer_path: Eq<"tu-buffer-path", "The path to the translation unit for depscan. Not compatible with -module-name">;
 
 def deprecated_driver_command : F<"deprecated-driver-command", "use a single driver command to build the tu (deprecated)">;
 

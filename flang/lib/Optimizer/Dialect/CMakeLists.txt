@@ -1,5 +1,6 @@
 add_subdirectory(Support)
 add_subdirectory(CUF)
+add_subdirectory(FIRCG)
 
 add_flang_library(FIRDialect
   FIRAttr.cpp
@@ -9,11 +10,12 @@ add_flang_library(FIRDialect
   FirAliasTagOpInterface.cpp
   FortranVariableInterface.cpp
   Inliner.cpp
+  SafeTempArrayCopyAttrInterface.cpp
 
   DEPENDS
   CanonicalizationPatternsIncGen
-  MLIRIR
   FIROpsIncGen
+  FIRSafeTempArrayCopyAttrInterfaceIncGen
   CUFAttrsIncGen
   intrinsics_gen
 
@@ -25,6 +27,9 @@ add_flang_library(FIRDialect
   AsmParser
   AsmPrinter
   Remarks
+
+  MLIR_DEPS
+  MLIRIR
 
   MLIR_LIBS
   MLIRArithDialect

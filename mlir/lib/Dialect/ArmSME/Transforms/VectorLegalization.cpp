@@ -304,7 +304,7 @@ struct LegalizeTransferReadOpsByDecomposition
                                          kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
-    // tranpose [1, 0].
+    // transpose [1, 0].
     bool transposed = !permutationMap.isIdentity();
 
     auto loc = readOp.getLoc();
@@ -315,7 +315,7 @@ struct LegalizeTransferReadOpsByDecomposition
          decomposeToSMETiles(rewriter, vectorType, smeTileType, transposed)) {
       auto smeMask = extractSMEMask(rewriter, loc, mask, smeTile);
       auto smeRead = rewriter.create<vector::TransferReadOp>(
-          loc, smeTileType, readOp.getSource(),
+          loc, smeTileType, readOp.getBase(),
           getSMESubTileIndices(rewriter, loc, readOp.getIndices(), smeTile),
           readOp.getPermutationMapAttr(), readOp.getPadding(), smeMask,
           readOp.getInBoundsAttr());
@@ -352,14 +352,14 @@ struct LegalizeTransferWriteOpsByDecomposition
                                          kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
-    // tranpose [1, 0].
+    // transpose [1, 0].
     bool transposed = !permutationMap.isIdentity();
 
     auto loc = writeOp.getLoc();
     auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
-    auto inputSMETiles = adaptor.getVector();
+    auto inputSMETiles = adaptor.getValueToStore();
 
-    Value destTensorOrMemref = writeOp.getSource();
+    Value destTensorOrMemref = writeOp.getBase();
     for (auto [index, smeTile] : llvm::enumerate(decomposeToSMETiles(
              rewriter, vectorType, smeTileType, transposed))) {
       auto smeMask = extractSMEMask(rewriter, loc, mask, smeTile);
@@ -464,7 +464,7 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
     rewriter.setInsertionPointToStart(storeLoop.getBody());
 
     // For each sub-tile of the multi-tile `vectorType`.
-    auto inputSMETiles = adaptor.getVector();
+    auto inputSMETiles = adaptor.getValueToStore();
     auto tileSliceIndex = storeLoop.getInductionVar();
     for (auto [index, smeTile] : llvm::enumerate(
              decomposeToSMETiles(rewriter, vectorType, smeTileType))) {
@@ -497,7 +497,7 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
       auto slice =
           rewriter.create<vector::ExtractOp>(loc, tile, tileSliceIndex);
       rewriter.create<vector::TransferWriteOp>(
-          loc, slice, writeOp.getSource(), ValueRange{storeRow, storeCol},
+          loc, slice, writeOp.getBase(), ValueRange{storeRow, storeCol},
           AffineMapAttr::get(writeOp.getPermutationMap().dropResult(0)),
           sliceMask,
           rewriter.getBoolArrayAttr(
@@ -677,7 +677,7 @@ struct LiftIllegalVectorTransposeToMemory
         });
     SmallVector<Value> strides(readType.getRank(), Value(one));
     auto readSubview = rewriter.create<memref::SubViewOp>(
-        loc, illegalRead.getSource(), illegalRead.getIndices(), readSizes,
+        loc, illegalRead.getBase(), illegalRead.getIndices(), readSizes,
         strides);
 
     // Apply the transpose to all values/attributes of the transfer_read:
@@ -851,7 +851,7 @@ struct LowerIllegalTransposeStoreViaZA
 
     // Note: We need to use `get_tile` as there's no vector-level `undef`.
     Value undefTile = rewriter.create<arm_sme::GetTileOp>(loc, smeTileType);
-    Value destTensorOrMemref = writeOp.getSource();
+    Value destTensorOrMemref = writeOp.getBase();
     auto numSlicesPerTile =
         std::min(sourceType.getDimSize(0), smeTileType.getDimSize(0));
     auto numSlices =

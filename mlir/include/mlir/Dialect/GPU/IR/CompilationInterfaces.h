@@ -79,6 +79,12 @@ public:
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
   tokenizeCmdOptions() const;
 
+  /// Returns a tokenization of the substr of the command line options that
+  /// starts with `startsWith` and ends with end of the command line options and
+  /// consumes it.
+  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+  tokenizeAndRemoveSuffixCmdOptions(llvm::StringRef startsWith);
+
   /// Returns the compilation target.
   CompilationTarget getCompilationTarget() const;
 
@@ -107,6 +113,10 @@ public:
 
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
+
+  /// Returns a tokenization of the command line options.
+  static std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+  tokenizeCmdOptions(const std::string &cmdOptions);
 
 protected:
   /// Derived classes must use this constructor to initialize `typeID` to the

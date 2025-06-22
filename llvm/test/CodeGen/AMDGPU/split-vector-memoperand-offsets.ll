@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=hawaii -enable-amdgpu-aa=0 -verify-machineinstrs -mattr=-promote-alloca,-load-store-opt,-enable-ds128 < %s | FileCheck -check-prefix=GCN %s
 
-@sPrivateStorage = internal addrspace(3) global [256 x [8 x <4 x i64>]] undef
+@sPrivateStorage = internal addrspace(3) global [256 x [8 x <4 x i64>]] poison
 
 ; GCN-LABEL: {{^}}ds_reorder_vector_split:
 

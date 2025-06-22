@@ -19,15 +19,15 @@ real function m1use()
 end function
 
 ! TODO: test equivalences once front-end fix in module file is pushed.
-!! CHECK-LABEL func @_QPmodeq1use()
+! COM: CHECK-LABEL: func @_QPmodeq1use()
 !real function modEq1use()
 !  use modEq1
-!  ! CHECK-DAG fir.address_of(@_QMmodeq1Ex1) : !fir.ref<tuple<!fir.array<36xi8>, !fir.array<40xi8>>>
-!  ! CHECK-DAG fir.address_of(@_QMmodeq1Ey1) : !fir.ref<tuple<!fir.array<16xi8>, !fir.array<24xi8>>>
+!  COM: CHECK-DAG: fir.address_of(@_QMmodeq1Ex1) : !fir.ref<tuple<!fir.array<36xi8>, !fir.array<40xi8>>>
+!  COM: CHECK-DAG: fir.address_of(@_QMmodeq1Ey1) : !fir.ref<tuple<!fir.array<16xi8>, !fir.array<24xi8>>>
 !  modEq1use = x2(1) + y1
 !end function
-! CHECK-DAG fir.global @_QMmodeq1Ex1 : tuple<!fir.array<36xi8>, !fir.array<40xi8>>
-! CHECK-DAG fir.global @_QMmodeq1Ey1 : tuple<!fir.array<16xi8>, !fir.array<24xi8>>
+! COM: CHECK-DAG: fir.global @_QMmodeq1Ex1 : tuple<!fir.array<36xi8>, !fir.array<40xi8>>
+! COM: CHECK-DAG: fir.global @_QMmodeq1Ey1 : tuple<!fir.array<16xi8>, !fir.array<24xi8>>
 
 ! CHECK-LABEL: func @_QPmodcommon1use()
 real function modCommon1Use()

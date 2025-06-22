@@ -309,9 +309,7 @@ public:
       : FunctionPass(ID),
         MergeInit(ClMergeInit.getNumOccurrences() ? ClMergeInit : !IsOptNone),
         UseStackSafety(ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
-                                                            : !IsOptNone) {
-    initializeAArch64StackTaggingPass(*PassRegistry::getPassRegistry());
-  }
+                                                            : !IsOptNone) {}
 
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
@@ -371,8 +369,7 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
 
   unsigned Count = 0;
   for (; Count < ClScanLimit && !BI->isTerminator(); ++BI) {
-    if (!isa<DbgInfoIntrinsic>(*BI))
-      ++Count;
+    ++Count;
 
     if (isNoModRef(AA->getModRefInfo(&*BI, AllocaLoc)))
       continue;
@@ -430,8 +427,7 @@ void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                                     Intrinsic::aarch64_stgp);
 
   InitializerBuilder IB(Size, DL, Ptr, SetTagFunc, SetTagZeroFunc, StgpFunc);
-  bool LittleEndian =
-      Triple(AI->getModule()->getTargetTriple()).isLittleEndian();
+  bool LittleEndian = AI->getModule()->getTargetTriple().isLittleEndian();
   // Current implementation of initializer merging assumes little endianness.
   if (MergeInit && !F->hasOptNone() && LittleEndian &&
       Size < ClMergeInitSizeLimit) {
@@ -473,7 +469,7 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
       IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
                           {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
-  auto TargetTriple = Triple(M.getTargetTriple());
+  const Triple &TargetTriple = M.getTargetTriple();
   // This ABI will make it into Android API level 35.
   // The ThreadLong format is the same as with HWASan, but the entries for
   // stack MTE take two slots (16 bytes).
@@ -575,7 +571,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.
     Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-      return !memtag::isLifetimeIntrinsic(U.getUser());
+      return !isa<LifetimeIntrinsic>(U.getUser());
     });
     TagPCall->setOperand(0, Info.AI);
 

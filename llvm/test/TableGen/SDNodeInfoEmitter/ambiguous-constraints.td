@@ -14,16 +14,17 @@ def my_node_b : SDNode<"MyTargetISD::NODE", SDTypeProfile<1, 0, [SDTCisVT<0, f32
 // CHECK-NEXT:    NODE = ISD::BUILTIN_OP_END,
 // CHECK-NEXT:  };
 
-// CHECK:       static const char MyTargetSDNodeNames[] =
+// CHECK:       static constexpr char MyTargetSDNodeNamesStorage[] =
+// CHECK-NEXT:    "\0"
 // CHECK-NEXT:    "MyTargetISD::NODE\0"
-// CHECK-NEXT:    "\0";
+// CHECK-NEXT:    ;
 
 // CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// CHECK-NEXT:      {1, 0, 0, 0, 0, 0, 0, 0}, // NODE
+// CHECK-NEXT:      {1, 0, 0, 0, 0, 1, 0, 0}, // NODE
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
@@ -54,18 +55,19 @@ def my_node_2b : SDNode<"MyTargetISD::NODE_2", SDTypeProfile<1, 0, [SDTCisVT<0, 
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyTargetISD
 
-// CHECK:       static const char MyTargetSDNodeNames[] =
+// CHECK:       static constexpr char MyTargetSDNodeNamesStorage[] =
+// CHECK-NEXT:    "\0"
 // CHECK-NEXT:    "MyTargetISD::NODE_1\0"
 // CHECK-NEXT:    "MyTargetISD::NODE_2\0"
-// CHECK-NEXT:    "\0";
+// CHECK-NEXT:    ;
 
 // CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // CHECK-NEXT:    /* 0 */ {SDTCisVT, 0, 0, MVT::i32},
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// CHECK-NEXT:      {1, 0, 0, 0, 0, 0, 0, 1}, // NODE_1
-// CHECK-NEXT:      {1, 0, 0, 0, 0, 20, 0, 0}, // NODE_2
+// CHECK-NEXT:      {1, 0, 0, 0, 0, 1, 0, 1}, // NODE_1
+// CHECK-NEXT:      {1, 0, 0, 0, 0, 21, 0, 0}, // NODE_2
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(

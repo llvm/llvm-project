@@ -7,14 +7,13 @@ template<template<typename T> class X> struct A; // #A
 template<template<typename T, int I> class X> struct B; // expected-note{{previous template template parameter is here}}
 
 template<template<int I> class X> struct C;
-// precxx17-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('int' vs 'const int &')}}
-// cxx17-error@-2 {{conversion from 'int' to 'const int &' in converted constant expression would bind reference to a temporary}}
-// expected-note@-3 {{previous template template parameter is here}}
+// expected-error@-1 {{conversion from 'int' to 'const int &' in converted constant expression would bind reference to a temporary}}
+// expected-note@-2 {{previous template template parameter is here}}
 
 template<class> struct X; // expected-note {{template is declared here}}
 template<int N> struct Y; // expected-note {{template parameter is declared here}}
 template<long N> struct Ylong;
-template<const int &N> struct Yref; // precxx17-note {{template parameter is declared here}}
+template<const int &N> struct Yref; // expected-note {{template parameter is declared here}}
 
 namespace N {
   template<class> struct Z;

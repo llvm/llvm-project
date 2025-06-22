@@ -15,6 +15,7 @@
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -84,21 +85,20 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     printRegName(O, Reg);
   } else if (Op.isImm()) {
     markup(O, Markup::Immediate) << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
-    Op.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
 void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
-                                    const char *M) {
+                                    StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
-  llvm::StringRef Modifier(M);
 
   if (Modifier == "ftz") {
     // FTZ flag
@@ -155,10 +155,9 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
-                                    const char *M) {
+                                    StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
-  llvm::StringRef Modifier(M);
 
   if (Modifier == "ftz") {
     // FTZ flag
@@ -229,8 +228,7 @@ void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O, const char *M) {
-  llvm::StringRef Modifier(M);
+                                     raw_ostream &O, StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
   if (Modifier == "sem") {
@@ -288,6 +286,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     case NVPTX::AddressSpace::Global:
     case NVPTX::AddressSpace::Const:
     case NVPTX::AddressSpace::Shared:
+    case NVPTX::AddressSpace::SharedCluster:
     case NVPTX::AddressSpace::Param:
     case NVPTX::AddressSpace::Local:
       O << "." << A;
@@ -313,26 +312,14 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     default:
       llvm_unreachable("Unknown register type");
     }
-  } else if (Modifier == "vec") {
-    switch (Imm) {
-    case NVPTX::PTXLdStInstCode::V2:
-      O << ".v2";
-      return;
-    case NVPTX::PTXLdStInstCode::V4:
-      O << ".v4";
-      return;
-    }
-    // TODO: evaluate whether cases not covered by this switch are bugs
-    return;
   }
   llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
 void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
-                                    const char *M) {
+                                    StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
-  llvm::StringRef Modifier(M);
   if (Modifier.empty() || Modifier == "version") {
     O << Imm; // Just print out PTX version
     return;
@@ -346,9 +333,8 @@ void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
-                                       raw_ostream &O, const char *M) {
+                                       raw_ostream &O, StringRef Modifier) {
   printOperand(MI, OpNum, O);
-  llvm::StringRef Modifier(M);
 
   if (Modifier == "add") {
     O << ", ";
@@ -363,7 +349,7 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O) {
   auto &Op = MI->getOperand(OpNum);
   assert(Op.isImm() && "Invalid operand");
   if (Op.getImm() != 0) {
@@ -373,13 +359,13 @@ void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
-                                      raw_ostream &O, const char *Modifier) {
+                                      raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNum).getImm();
   O << formatHex(Imm) << "U";
 }
 
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
-                                       raw_ostream &O, const char *Modifier) {
+                                       raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
   assert(Op.isExpr() && "Call prototype is not an MCExpr?");
   const MCExpr *Expr = Op.getExpr();
@@ -388,7 +374,7 @@ void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O, const char *Modifier) {
+                                     raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
 
@@ -419,10 +405,9 @@ void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
-                                             raw_ostream &O,
-                                             const char *Modifier) {
+                                             raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
-  using RedTy = llvm::nvvm::TMAReductionOp;
+  using RedTy = nvvm::TMAReductionOp;
 
   switch (static_cast<RedTy>(MO.getImm())) {
   case RedTy::ADD:
@@ -452,4 +437,23 @@ void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
   }
   llvm_unreachable(
       "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
+}
+
+void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
+                                     raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  using CGTy = nvvm::CTAGroupKind;
+
+  switch (static_cast<CGTy>(MO.getImm())) {
+  case CGTy::CG_NONE:
+    O << "";
+    return;
+  case CGTy::CG_1:
+    O << ".cta_group::1";
+    return;
+  case CGTy::CG_2:
+    O << ".cta_group::2";
+    return;
+  }
+  llvm_unreachable("Invalid cta_group in printCTAGroup");
 }

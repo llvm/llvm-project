@@ -51,11 +51,11 @@ class TestObjCBuiltinTypes(TestBase):
         frame = thread_list[0].GetFrameAtIndex(0)
         self.assertTrue(frame, "Got a valid frame 0 frame.")
 
-        self.expect("expr (foo)", patterns=["\(ns::id\) \$.* = 0"])
+        self.expect("expr (foo)", patterns=[r"\(ns::id\) \$.* = 0"])
 
         self.expect(
             "expr --language Objective-C++ -- id my_id = 0; my_id",
-            patterns=["\(id\) \$.* = nil"],
+            patterns=[r"\(id\) \$.* = nil"],
         )
         self.expect("expr --language C++ -- id my_id = 0; my_id", error=True)
 

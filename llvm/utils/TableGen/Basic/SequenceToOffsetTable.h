@@ -15,15 +15,14 @@
 #define LLVM_UTILS_TABLEGEN_BASIC_SEQUENCETOOFFSETTABLE_H
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Main.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <map>
 
 namespace llvm {
-extern cl::opt<bool> EmitLongStrLiterals;
 
 inline void printChar(raw_ostream &OS, char C) {
   unsigned char UC(C);

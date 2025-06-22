@@ -21,6 +21,7 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -31,7 +32,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
 // See PassManagers.h for Pass Manager infrastructure overview.
 
 //===----------------------------------------------------------------------===//
@@ -526,11 +526,6 @@ bool PassManagerImpl::run(Module &M) {
   dumpArguments();
   dumpPasses();
 
-  // RemoveDIs: if a command line flag is given, convert to the
-  // DbgVariableRecord representation of debug-info for the duration of these
-  // passes.
-  ScopedDbgInfoFormatSetter FormatSetter(M, UseNewDbgInfoFormat);
-
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doInitialization(M);
 
@@ -606,7 +601,7 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
     auto &LastUsedByAP = InversedLastUser[AP];
     for (Pass *L : LastUsedByAP)
       LastUser[L] = P;
-    InversedLastUser[P].insert(LastUsedByAP.begin(), LastUsedByAP.end());
+    InversedLastUser[P].insert_range(LastUsedByAP);
     LastUsedByAP.clear();
   }
 }

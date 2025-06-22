@@ -66,6 +66,10 @@ public:
     return TLOF.get();
   }
 
+  bool isAPCS_ABI() const;
+  bool isAAPCS_ABI() const;
+  bool isAAPCS16_ABI() const;
+
   bool isTargetHardFloat() const {
     return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
            TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
@@ -96,6 +100,10 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 /// ARM/Thumb little endian target machine.

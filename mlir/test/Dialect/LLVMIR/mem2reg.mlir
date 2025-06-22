@@ -1011,7 +1011,7 @@ llvm.func @load_first_vector_elem() -> i16 {
 llvm.func @load_first_llvm_vector_elem() -> i16 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: llvm.alloca
-  %1 = llvm.alloca %0 x !llvm.vec<4 x ptr> : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %0 x vector<4x!llvm.ptr> : (i32) -> !llvm.ptr
   %2 = llvm.load %1 : !llvm.ptr -> i16
   llvm.return %2 : i16
 }
@@ -1033,7 +1033,7 @@ llvm.func @scalable_vector() -> i16 {
 llvm.func @scalable_llvm_vector() -> i16 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: llvm.alloca
-  %1 = llvm.alloca %0 x !llvm.vec<? x 4 x ppc_fp128> : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %0 x vector<[4] x !llvm.ppc_fp128> : (i32) -> !llvm.ptr
   %2 = llvm.load %1 : !llvm.ptr -> i16
   llvm.return %2 : i16
 }

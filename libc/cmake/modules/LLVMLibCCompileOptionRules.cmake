@@ -106,6 +106,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
   endif()
 
+  if(LIBC_CONF_ERRNO_MODE)
+    list(APPEND config_options "-DLIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 
@@ -179,8 +183,9 @@ function(_get_common_compile_options output_var flags)
     endif()
     list(APPEND compile_options "-Wconversion")
     list(APPEND compile_options "-Wno-sign-conversion")
-    # Silence this warning because _Complex is a part of C99.
+    list(APPEND compile_options "-Wdeprecated")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      # Silence this warning because _Complex is a part of C99.
       list(APPEND compile_options "-fext-numeric-literals")
     else()
       list(APPEND compile_options "-Wno-c99-extensions")

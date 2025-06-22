@@ -8,12 +8,13 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-LABEL: sink_with_sideeffects
 ; CHECK:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<1024> + vp<[[VEC_TC]]> * ir<-1>
@@ -22,7 +23,7 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   CLONE ir<%tmp2> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:   CLONE ir<%tmp3> = load ir<%tmp2>
 ; CHECK-NEXT:   CLONE store ir<0>, ir<%tmp2>
@@ -53,18 +54,18 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.end>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<1024>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME1:%.+]]> = phi [ vp<[[VEC_TC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = phi [ vp<[[END]]>, middle.block ], [ ir<1024>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
 ; CHECK-NEXT:    IR   %tmp0 = phi i64 [ %tmp6, %for.inc ], [ 0, %entry ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %tmp1 = phi i64 [ %tmp7, %for.inc ], [ 1024, %entry ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:         IR   %tmp5 = trunc i32 %tmp4 to i8
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.end>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;

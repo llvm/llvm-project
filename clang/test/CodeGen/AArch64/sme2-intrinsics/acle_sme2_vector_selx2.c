@@ -45,6 +45,19 @@ svuint8x2_t test_svsel_u8_x2(svcount_t pn, svuint8x2_t zn, svuint8x2_t zm) __arm
   return SVE_ACLE_FUNC(svsel,_u8_x2)(pn, zn, zm);
 }
 
+// CHECK-LABEL: @test_svsel_mf8_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.sel.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM_COERCE0:%.*]], <vscale x 16 x i8> [[ZM_COERCE1:%.*]])
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z17test_svsel_mf8_x2u11__SVCount_t13svmfloat8x2_tS0_(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.sel.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM_COERCE0:%.*]], <vscale x 16 x i8> [[ZM_COERCE1:%.*]])
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+svmfloat8x2_t test_svsel_mf8_x2(svcount_t pn, svmfloat8x2_t zn, svmfloat8x2_t zm) __arm_streaming {
+  return SVE_ACLE_FUNC(svsel,_mf8_x2)(pn, zn, zm);
+}
 // 16-bit SELs
 
 // CHECK-LABEL: @test_svsel_s16_x2(

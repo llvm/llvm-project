@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A
-; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,GFX940
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,GFX942
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11
 
 ; GCN-LABEL: {{^}}dpp64_ceil:
 ; GCN:           global_load_{{dwordx2|b64}} [[V:v\[[0-9:]+\]]],
@@ -74,10 +74,11 @@ define amdgpu_kernel void @dpp64_div(ptr addrspace(1) %arg, i64 %in1) {
 ; DPP64: v_mov_b32_dpp
 ; GFX90A: v_add_co_u32_e32
 ; GFX90A: v_addc_co_u32_e32
-; GFX940: v_lshl_add_u64
+; GFX942: v_lshl_add_u64
 ; GFX10PLUS: v_mov_b32_dpp
 ; GFX10PLUS: v_add_co_u32
-; GFX10PLUS: v_add_co_ci_u32_e32
+; GFX10: v_add_co_ci_u32_e32
+; GFX11: v_add_co_ci_u32_e64
 define amdgpu_cs void @dpp64_loop(i64 %arg, i64 %val) {
 bb:
   br label %bb1

@@ -9,6 +9,7 @@
 #include "Basic/SequenceToOffsetTable.h"
 #include "Common/CodeGenDAGPatterns.h" // For SDNodeInfo.
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -167,9 +168,7 @@ std::vector<unsigned> SDNodeInfoEmitter::emitNodeNames(raw_ostream &OS) const {
     NameOffsets.push_back(NameTable.GetOrAddStringOffset(DebugName));
   }
 
-  NameTable.EmitStringLiteralDef(
-      OS, "static const char " + Target.getName() + "SDNodeNames[]",
-      /*Indent=*/"");
+  NameTable.EmitStringTableDef(OS, Target.getName() + "SDNodeNames");
   OS << '\n';
 
   return NameOffsets;

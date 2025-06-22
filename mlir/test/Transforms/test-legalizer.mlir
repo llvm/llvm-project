@@ -461,22 +461,57 @@ func.func @convert_detached_signature() {
 
 // -----
 
+// CHECK: notifyOperationReplaced: test.erase_op
+// CHECK: notifyOperationErased: test.dummy_op_lvl_2
+// CHECK: notifyBlockErased
+// CHECK: notifyOperationErased: test.dummy_op_lvl_1
+// CHECK: notifyBlockErased
+// CHECK: notifyOperationErased: test.erase_op
+// CHECK: notifyOperationInserted: test.valid, was unlinked
+// CHECK: notifyOperationReplaced: test.drop_operands_and_replace_with_valid
+// CHECK: notifyOperationErased: test.drop_operands_and_replace_with_valid
+
 // CHECK-LABEL: func @circular_mapping()
 //  CHECK-NEXT:   "test.valid"() : () -> ()
 func.func @circular_mapping() {
   // Regression test that used to crash due to circular
-  // unrealized_conversion_cast ops.
-  %0 = "test.erase_op"() : () -> (i64)
+  // unrealized_conversion_cast ops. 
+  %0 = "test.erase_op"() ({
+    "test.dummy_op_lvl_1"() ({
+      "test.dummy_op_lvl_2"() : () -> ()
+    }) : () -> ()
+  }): () -> (i64)
   "test.drop_operands_and_replace_with_valid"(%0) : (i64) -> ()
 }
 
 // -----
 
-func.func @test_1_to_n_block_signature_conversion() {
-  "test.duplicate_block_args"() ({
+// CHECK-LABEL: func @test_duplicate_block_arg()
+//       CHECK:   test.convert_block_args  is_legal duplicate {
+//       CHECK:   ^{{.*}}(%[[arg0:.*]]: i64, %[[arg1:.*]]: i64):
+//       CHECK:     "test.valid"(%[[arg0]], %[[arg1]])
+//       CHECK:   }
+func.func @test_duplicate_block_arg() {
+  test.convert_block_args duplicate {
   ^bb0(%arg0: i64):
     "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
-  }) {} : () -> ()
+  } : () -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: func @test_remap_block_arg()
+//       CHECK:      %[[repl:.*]] = "test.legal_op"() : () -> i32
+//       CHECK:      test.convert_block_args %[[repl]]  is_legal replace_with_operand {
+//       CHECK-NEXT:   "test.valid"(%[[repl]], %[[repl]])
+//       CHECK:      }
+func.func @test_remap_block_arg() {
+  %0 = "test.legal_op"() : () -> (i32)
+  test.convert_block_args %0 replace_with_operand {
+  ^bb0(%arg0: i32):
+    "test.repetitive_1_to_n_consumer"(%arg0) : (i32) -> ()
+  } : (i32) -> ()
   "test.return"() : () -> ()
 }
 

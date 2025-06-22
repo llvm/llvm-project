@@ -191,20 +191,6 @@ ThreadSP ThreadList::GetThreadSPForThreadPtr(Thread *thread_ptr) {
   return thread_sp;
 }
 
-ThreadSP ThreadList::GetBackingThread(const ThreadSP &real_thread) {
-  std::lock_guard<std::recursive_mutex> guard(GetMutex());
-
-  ThreadSP thread_sp;
-  const uint32_t num_threads = m_threads.size();
-  for (uint32_t idx = 0; idx < num_threads; ++idx) {
-    if (m_threads[idx]->GetBackingThread() == real_thread) {
-      thread_sp = m_threads[idx];
-      break;
-    }
-  }
-  return thread_sp;
-}
-
 ThreadSP ThreadList::FindThreadByIndexID(uint32_t index_id, bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
@@ -508,7 +494,7 @@ void ThreadList::DiscardThreadPlans() {
     (*pos)->DiscardThreadPlans(true);
 }
 
-bool ThreadList::WillResume() {
+bool ThreadList::WillResume(RunDirection &direction) {
   // Run through the threads and perform their momentary actions. But we only
   // do this for threads that are running, user suspended threads stay where
   // they are.
@@ -566,6 +552,12 @@ bool ThreadList::WillResume() {
     }
   }
 
+  if (thread_to_run != nullptr) {
+    direction = thread_to_run->GetCurrentPlan()->GetDirection();
+  } else {
+    direction = m_process.GetBaseDirection();
+  }
+
   // Give all the threads that are likely to run a last chance to set up their
   // state before we negotiate who is actually going to get a chance to run...
   // Don't set to resume suspended threads, and if any thread wanted to stop
@@ -577,7 +569,12 @@ bool ThreadList::WillResume() {
     // "StopOthers" plans which would then get to be part of the who-gets-to-run
     // negotiation, but they're coming in after the fact, and the threads that
     // are already set up should take priority.
-    thread_to_run->SetupForResume();
+    if (thread_to_run->SetupToStepOverBreakpointIfNeeded(direction)) {
+      // We only need to step over breakpoints when running forward, and the
+      // step-over-breakpoint plan itself wants to run forward, so this
+      // keeps our desired direction.
+      assert(thread_to_run->GetCurrentPlan()->GetDirection() == direction);
+    }
   } else {
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
@@ -585,7 +582,11 @@ bool ThreadList::WillResume() {
         if (thread_sp->IsOperatingSystemPluginThread() &&
             !thread_sp->GetBackingThread())
           continue;
-        if (thread_sp->SetupForResume()) {
+        if (thread_sp->SetupToStepOverBreakpointIfNeeded(direction)) {
+          // We only need to step over breakpoints when running forward, and the
+          // step-over-breakpoint plan itself wants to run forward, so this
+          // keeps our desired direction.
+          assert(thread_sp->GetCurrentPlan()->GetDirection() == direction);
           // You can't say "stop others" and also want yourself to be suspended.
           assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
           thread_to_run = thread_sp;
@@ -625,6 +626,17 @@ bool ThreadList::WillResume() {
         run_state = eStateSuspended;
       if (!thread_sp->ShouldResume(run_state))
         need_to_resume = false;
+    }
+    if (need_to_resume) {
+      // Ensure all threads are running in the right direction
+      for (pos = m_threads.begin(); pos != end; ++pos) {
+        ThreadSP thread_sp(*pos);
+        while (thread_sp->GetCurrentPlan()->GetDirection() != direction) {
+          // This can't discard the base plan because its direction is
+          // m_process.GetBaseDirection() i.e. `direction`.
+          thread_sp->DiscardPlan();
+        }
+      }
     }
   } else {
     for (pos = m_threads.begin(); pos != end; ++pos) {

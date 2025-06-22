@@ -493,8 +493,7 @@ struct FunctionCallLattice {
     if (Other.CalledFunctions.empty())
       return LatticeJoinEffect::Unchanged;
     const size_t size_before = CalledFunctions.size();
-    CalledFunctions.insert(Other.CalledFunctions.begin(),
-                           Other.CalledFunctions.end());
+    CalledFunctions.insert_range(Other.CalledFunctions);
     return CalledFunctions.size() == size_before ? LatticeJoinEffect::Unchanged
                                                  : LatticeJoinEffect::Changed;
   }

@@ -40,7 +40,10 @@ void g() {
 
   template_param_kinds_1<0>(); // ok, from cxx-templates-a.h
   template_param_kinds_1<int>(); // ok, from cxx-templates-b.h
-  template_param_kinds_2<Tmpl_T_C>(); // ok, from cxx-templates-b.h
+
+  template_param_kinds_2<Tmpl_T_C>(); // expected-error {{no matching function for call}}
+  // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
+  // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 
   template_param_kinds_2<Tmpl_T_I_I>(); // expected-error {{ambiguous}}
   // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}

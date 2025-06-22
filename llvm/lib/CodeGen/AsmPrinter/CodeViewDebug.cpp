@@ -125,6 +125,8 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
     return CPUType::ARM64;
   case Triple::ArchType::mipsel:
     return CPUType::MIPS;
+  case Triple::ArchType::UnknownArch:
+    return CPUType::Unknown;
   default:
     report_fatal_error("target architecture doesn't map to a CodeView CPUType");
   }
@@ -164,7 +166,7 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   // Canonicalize the path.  We have to do it textually because we may no longer
   // have access the file in the filesystem.
   // First, replace all slashes with backslashes.
-  std::replace(Filepath.begin(), Filepath.end(), '/', '\\');
+  llvm::replace(Filepath, '/', '\\');
 
   // Remove all "\.\" with "\".
   size_t Cursor = 0;
@@ -234,7 +236,7 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
 CodeViewDebug::InlineSite &
 CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
                              const DISubprogram *Inlinee) {
-  auto SiteInsertion = CurFn->InlineSites.insert({InlinedAt, InlineSite()});
+  auto SiteInsertion = CurFn->InlineSites.try_emplace(InlinedAt);
   InlineSite *Site = &SiteInsertion.first->second;
   if (SiteInsertion.second) {
     unsigned ParentFuncId = CurFn->FuncId;
@@ -611,21 +613,33 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
 }
 
 void CodeViewDebug::beginModule(Module *M) {
-  // If module doesn't have named metadata anchors or COFF debug section
-  // is not available, skip any debug info related stuff.
-  if (!Asm->hasDebugInfo() ||
-      !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+  // If COFF debug section is not available, skip any debug info related stuff.
+  if (!Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
     return;
   }
 
-  TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
+  CompilerInfoAsm = Asm;
+  TheCPU = mapArchToCVCPUType(M->getTargetTriple().getArch());
 
   // Get the current source language.
-  const MDNode *Node = *M->debug_compile_units_begin();
+  const MDNode *Node;
+  if (Asm->hasDebugInfo()) {
+    Node = *M->debug_compile_units_begin();
+  } else {
+    // When emitting only compiler information, we may have only NoDebug CUs,
+    // which would be skipped by debug_compile_units_begin.
+    NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+    Node = *CUs->operands().begin();
+  }
   const auto *CU = cast<DICompileUnit>(Node);
 
   CurrentSourceLanguage = MapDWLangToCVLang(CU->getSourceLanguage());
+  if (!M->getCodeViewFlag() ||
+      CU->getEmissionKind() == DICompileUnit::NoDebug) {
+    Asm = nullptr;
+    return;
+  }
 
   collectGlobalVariableInfo();
 
@@ -636,7 +650,7 @@ void CodeViewDebug::beginModule(Module *M) {
 }
 
 void CodeViewDebug::endModule() {
-  if (!Asm || !Asm->hasDebugInfo())
+  if (!CompilerInfoAsm)
     return;
 
   // The COFF .debug$S section consists of several subsections, each starting
@@ -652,6 +666,8 @@ void CodeViewDebug::endModule() {
   emitObjName();
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
+  if (!Asm)
+    return;
 
   emitInlineeLinesSubsection();
 
@@ -788,7 +804,7 @@ void CodeViewDebug::emitTypeGlobalHashes() {
 void CodeViewDebug::emitObjName() {
   MCSymbol *CompilerEnd = beginSymbolRecord(SymbolKind::S_OBJNAME);
 
-  StringRef PathRef(Asm->TM.Options.ObjectFilenameForDebug);
+  StringRef PathRef(CompilerInfoAsm->TM.Options.ObjectFilenameForDebug);
   llvm::SmallString<256> PathStore(PathRef);
 
   if (PathRef.empty() || PathRef == "-") {
@@ -845,8 +861,8 @@ void CodeViewDebug::emitCompilerInformation() {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
   }
   using ArchType = llvm::Triple::ArchType;
-  ArchType Arch = Triple(MMI->getModule()->getTargetTriple()).getArch();
-  if (Asm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
+  ArchType Arch = MMI->getModule()->getTargetTriple().getArch();
+  if (CompilerInfoAsm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
       Arch == ArchType::aarch64) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
   }
@@ -1015,7 +1031,7 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
   const MCSymbol *KeySym = GVSec ? GVSec->getCOMDATSymbol() : nullptr;
 
   MCSectionCOFF *DebugSec = cast<MCSectionCOFF>(
-      Asm->getObjFileLowering().getCOFFDebugSymbolsSection());
+      CompilerInfoAsm->getObjFileLowering().getCOFFDebugSymbolsSection());
   DebugSec = OS.getContext().getAssociativeCOFFSection(DebugSec, KeySym);
 
   OS.switchSection(DebugSec);
@@ -1098,7 +1114,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     FuncName = std::string(GlobalValue::dropLLVMManglingEscape(GV->getName()));
 
   // Emit FPO data, but only on 32-bit x86. No other platforms use it.
-  if (Triple(MMI->getModule()->getTargetTriple()).getArch() == Triple::x86)
+  if (MMI->getModule()->getTargetTriple().getArch() == Triple::x86)
     OS.emitCVFPOData(Fn);
 
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
@@ -1361,7 +1377,7 @@ void CodeViewDebug::calculateRanges(
     }
 
     // We can only handle a register or an offseted load of a register.
-    if (Location->Register == 0 || Location->LoadChain.size() > 1)
+    if (!Location->Register || Location->LoadChain.size() > 1)
       continue;
 
     // Codeview can only express byte-aligned offsets, ensure that we have a
@@ -1560,7 +1576,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
 
   // Mark branches that may potentially be using jump tables with labels.
-  bool isThumb = Triple(MMI->getModule()->getTargetTriple()).getArch() ==
+  bool isThumb = MMI->getModule()->getTargetTriple().getArch() ==
                  llvm::Triple::ArchType::thumb;
   discoverJumpTableBranches(MF, isThumb);
 }
@@ -2743,7 +2759,7 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(const DIType *Ty) {
   // Check if we've already translated the complete record type.
   // Insert the type with a null TypeIndex to signify that the type is currently
   // being lowered.
-  auto InsertResult = CompleteTypeIndices.insert({CTy, TypeIndex()});
+  auto InsertResult = CompleteTypeIndices.try_emplace(CTy);
   if (!InsertResult.second)
     return InsertResult.first->second;
 
@@ -3005,7 +3021,7 @@ void CodeViewDebug::collectLexicalBlockInfo(
   // Create a new CodeView lexical block for this lexical scope.  If we've
   // seen this DILexicalBlock before then the scope tree is malformed and
   // we can handle this gracefully by not processing it a second time.
-  auto BlockInsertion = CurFn->LexicalBlocks.insert({DILB, LexicalBlock()});
+  auto BlockInsertion = CurFn->LexicalBlocks.try_emplace(DILB);
   if (!BlockInsertion.second)
     return;
 
@@ -3068,7 +3084,7 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
     }
   }
 
-  bool isThumb = Triple(MMI->getModule()->getTargetTriple()).getArch() ==
+  bool isThumb = MMI->getModule()->getTargetTriple().getArch() ==
                  llvm::Triple::ArchType::thumb;
   collectDebugInfoForJumpTables(MF, isThumb);
 

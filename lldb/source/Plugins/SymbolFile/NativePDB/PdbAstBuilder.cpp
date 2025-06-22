@@ -562,7 +562,7 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
           m_clang.getASTContext(), spelling));
     }
     return m_clang.getASTContext().getMemberPointerType(
-        pointee_type, class_type.getTypePtr());
+        pointee_type, /*Qualifier=*/nullptr, class_type->getAsCXXRecordDecl());
   }
 
   clang::QualType pointer_type;
@@ -1137,7 +1137,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
   }
 
   if (!params.empty() && params.size() == param_count)
-    m_clang.SetFunctionParameters(&function_decl, params);
+    function_decl.setParams(params);
 }
 
 clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
@@ -1216,8 +1216,8 @@ clang::QualType PdbAstBuilder::CreateFunctionType(
     return {};
 
   CompilerType return_ct = ToCompilerType(return_type);
-  CompilerType func_sig_ast_type = m_clang.CreateFunctionType(
-      return_ct, arg_types.data(), arg_types.size(), is_variadic, 0, *cc);
+  CompilerType func_sig_ast_type =
+      m_clang.CreateFunctionType(return_ct, arg_types, is_variadic, 0, *cc);
 
   return clang::QualType::getFromOpaquePtr(
       func_sig_ast_type.GetOpaqueQualType());
@@ -1449,6 +1449,6 @@ PdbAstBuilder::FromCompilerDeclContext(CompilerDeclContext context) {
   return static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
 }
 
-void PdbAstBuilder::Dump(Stream &stream) {
-  m_clang.Dump(stream.AsRawOstream());
+void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter) {
+  m_clang.Dump(stream.AsRawOstream(), filter);
 }

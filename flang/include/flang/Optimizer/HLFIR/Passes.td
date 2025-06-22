@@ -19,6 +19,11 @@ def ConvertHLFIRtoFIR : Pass<"convert-hlfir-to-fir", "::mlir::ModuleOp"> {
 
 def BufferizeHLFIR : Pass<"bufferize-hlfir", "::mlir::ModuleOp"> {
   let summary = "Convert HLFIR operations operating on hlfir.expr into operations on memory";
+  let options = [Option<"optimizeEmptyElementals", "opt-empty-elementals",
+                        "bool", /*default=*/"false",
+                        "When converting hlfir.elemental into a loop nest, "
+                        "check if the resulting expression is an empty array, "
+                        "and make sure none of the loops is executed.">];
 }
 
 def OptimizedBufferization : Pass<"opt-bufferization"> {
@@ -62,6 +67,14 @@ def InlineElementals : Pass<"inline-elementals"> {
 
 def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
+}
+
+def InlineHLFIRCopyIn : Pass<"inline-hlfir-copy-in"> {
+  let summary = "Inline hlfir.copy_in operations";
+}
+
+def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
+  let summary = "Propagate FortranVariableFlagsAttr attributes through HLFIR";
 }
 
 #endif //FORTRAN_DIALECT_HLFIR_PASSES

@@ -71,6 +71,9 @@ template <typename A>
 std::optional<Shape> GetShape(
     FoldingContext &, const A &, bool invariantOnly = true);
 template <typename A>
+std::optional<Shape> GetShape(
+    FoldingContext *, const A &, bool invariantOnly = true);
+template <typename A>
 std::optional<Shape> GetShape(const A &, bool invariantOnly = true);
 
 // The dimension argument to these inquiries is zero-based,
@@ -148,6 +151,8 @@ inline MaybeExtentExpr GetSize(const std::optional<Shape> &maybeShape) {
 
 // Utility predicate: does an expression reference any implied DO index?
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
+
+// GetShape()
 
 class GetShapeHelper
     : public AnyTraverse<GetShapeHelper, std::optional<Shape>> {
@@ -261,23 +266,27 @@ private:
 
 template <typename A>
 std::optional<Shape> GetShape(
-    FoldingContext &context, const A &x, bool invariantOnly) {
-  if (auto shape{GetShapeHelper{&context, invariantOnly}(x)}) {
-    return Fold(context, std::move(shape));
+    FoldingContext *context, const A &x, bool invariantOnly) {
+  if (auto shape{GetShapeHelper{context, invariantOnly}(x)}) {
+    if (context) {
+      return Fold(*context, std::move(shape));
+    } else {
+      return shape;
+    }
   } else {
     return std::nullopt;
   }
 }
 
 template <typename A>
-std::optional<Shape> GetShape(const A &x, bool invariantOnly) {
-  return GetShapeHelper{/*context=*/nullptr, invariantOnly}(x);
+std::optional<Shape> GetShape(
+    FoldingContext &context, const A &x, bool invariantOnly) {
+  return GetShape(&context, x, invariantOnly);
 }
 
 template <typename A>
-std::optional<Shape> GetShape(
-    FoldingContext *context, const A &x, bool invariantOnly = true) {
-  return GetShapeHelper{context, invariantOnly}(x);
+std::optional<Shape> GetShape(const A &x, bool invariantOnly) {
+  return GetShape(/*context=*/nullptr, x, invariantOnly);
 }
 
 template <typename A>

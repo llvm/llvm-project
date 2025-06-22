@@ -107,8 +107,7 @@ public:
   /// \param TL The TypeLoc that describes the type preceding the '::'.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
-  void Extend(ASTContext &Context, SourceLocation TemplateKWLoc, TypeLoc TL,
-              SourceLocation ColonColonLoc);
+  void Extend(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
 
   /// Extend the current nested-name-specifier by another
   /// nested-name-specifier component of the form 'identifier::'.
@@ -1795,6 +1794,7 @@ public:
     IdentifierInfo *Name;
     SourceLocation NameLoc;
     std::optional<ParsedAttributes> Attrs;
+    SourceLocation EllipsisLoc;
   };
 
 private:

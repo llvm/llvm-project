@@ -11,9 +11,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -72,7 +70,8 @@ struct NOptionMap {
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
     Options.reserve(OptionMap.size());
     for (const auto &KeyValue : OptionMap)
-      Options.emplace_back(std::string(KeyValue.getKey()), KeyValue.getValue().Value);
+      Options.emplace_back(std::string(KeyValue.getKey()),
+                           KeyValue.getValue().Value);
   }
   ClangTidyOptions::OptionMap denormalize(IO &) {
     ClangTidyOptions::OptionMap Map;
@@ -194,8 +193,8 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.WarningsAsErrors = "";
   Options.HeaderFileExtensions = {"", "h", "hh", "hpp", "hxx"};
   Options.ImplementationFileExtensions = {"c", "cc", "cpp", "cxx"};
-  Options.HeaderFilterRegex = std::nullopt;
-  Options.ExcludeHeaderFilterRegex = std::nullopt;
+  Options.HeaderFilterRegex = "";
+  Options.ExcludeHeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = std::nullopt;

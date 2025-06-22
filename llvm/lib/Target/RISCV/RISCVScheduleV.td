@@ -9,10 +9,6 @@
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with def operands.
 
-// This predicate is true when the rs2 operand of vlse or vsse is x0, false
-// otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
-
 defvar SchedMxList = ["MF8", "MF4", "MF2", "M1", "M2", "M4", "M8"];
 // Used for widening and narrowing instructions as it doesn't contain M8.
 defvar SchedMxListW = !listremove(SchedMxList, ["M8"]);
@@ -70,7 +66,7 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
 // behavior is aliased to a Variant. The Variant has Latency predLad and
 // ReleaseAtCycles predCycles if the SchedPredicate Pred is true, otherwise has
 // Latency noPredLat and ReleaseAtCycles noPredCycles. The WorstCase SchedWrite
-// is created similiarly if IsWorstCase is true.
+// is created similarly if IsWorstCase is true.
 multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
                                  list<ProcResourceKind> resources,
                                  int predLat, list<int> predAcquireCycles,

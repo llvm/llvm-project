@@ -206,16 +206,14 @@ public:
                << "\n";
       Source<DeclContext *> FromDC(
           cast<DeclContext>(From)->getPrimaryContext());
-      if (FromOrigins.count(FromDC) &&
-          Parent.HasImporterForOrigin(*FromOrigins.at(FromDC).AST)) {
+      if (auto It = FromOrigins.find(FromDC);
+          It != FromOrigins.end() &&
+          Parent.HasImporterForOrigin(*It->second.AST)) {
         if (LoggingEnabled)
-          logs() << "(ExternalASTMerger*)" << (void*)&Parent
-                 << " forced origin (DeclContext*)"
-                 << (void*)FromOrigins.at(FromDC).DC
-                 << ", (ASTContext*)"
-                 << (void*)FromOrigins.at(FromDC).AST
-                 << "\n";
-        Parent.ForceRecordOrigin(ToDC, FromOrigins.at(FromDC));
+          logs() << "(ExternalASTMerger*)" << (void *)&Parent
+                 << " forced origin (DeclContext*)" << (void *)It->second.DC
+                 << ", (ASTContext*)" << (void *)It->second.AST << "\n";
+        Parent.ForceRecordOrigin(ToDC, It->second);
       } else {
         if (LoggingEnabled)
           logs() << "(ExternalASTMerger*)" << (void*)&Parent

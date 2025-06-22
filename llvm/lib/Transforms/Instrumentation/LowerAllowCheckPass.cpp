@@ -20,6 +20,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <memory>
 #include <random>
@@ -71,7 +72,8 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
 
 static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
-                             OptimizationRemarkEmitter &ORE) {
+                             OptimizationRemarkEmitter &ORE,
+                             const std::vector<unsigned int> &cutoffs) {
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
@@ -81,10 +83,22 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     return *Rng;
   };
 
-  auto ShouldRemoveHot = [&](const BasicBlock &BB) {
-    return HotPercentileCutoff.getNumOccurrences() && PSI &&
-           PSI->isHotCountNthPercentile(
-               HotPercentileCutoff, BFI.getBlockProfileCount(&BB).value_or(0));
+  auto GetCutoff = [&](const IntrinsicInst *II) -> unsigned {
+    if (HotPercentileCutoff.getNumOccurrences())
+      return HotPercentileCutoff;
+    else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
+      auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
+      if (Kind->getZExtValue() < cutoffs.size())
+        return cutoffs[Kind->getZExtValue()];
+    }
+
+    return 0;
+  };
+
+  auto ShouldRemoveHot = [&](const BasicBlock &BB, unsigned int cutoff) {
+    return (cutoff == 1000000) ||
+           (PSI && PSI->isHotCountNthPercentile(
+                       cutoff, BFI.getBlockProfileCount(&BB).value_or(0)));
   };
 
   auto ShouldRemoveRandom = [&]() {
@@ -92,8 +106,9 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
            !std::bernoulli_distribution(RandomRate)(GetRng());
   };
 
-  auto ShouldRemove = [&](const BasicBlock &BB) {
-    return ShouldRemoveRandom() || ShouldRemoveHot(BB);
+  auto ShouldRemove = [&](const IntrinsicInst *II) {
+    unsigned int cutoff = GetCutoff(II);
+    return ShouldRemoveRandom() || ShouldRemoveHot(*(II->getParent()), cutoff);
   };
 
   for (BasicBlock &BB : F) {
@@ -107,7 +122,8 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
       case Intrinsic::allow_runtime_check: {
         ++NumChecksTotal;
 
-        bool ToRemove = ShouldRemove(BB);
+        bool ToRemove = ShouldRemove(II);
+
         ReplaceWithValue.push_back({
             II,
             ToRemove,
@@ -142,11 +158,37 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
   OptimizationRemarkEmitter &ORE =
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI, ORE) ? PreservedAnalyses::none()
-                                            : PreservedAnalyses::all();
+  return removeUbsanTraps(F, BFI, PSI, ORE, Opts.cutoffs)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }
 
 bool LowerAllowCheckPass::IsRequested() {
   return RandomRate.getNumOccurrences() ||
          HotPercentileCutoff.getNumOccurrences();
+}
+
+void LowerAllowCheckPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LowerAllowCheckPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+
+  // Format is <cutoffs[0,1,2]=70000;cutoffs[5,6,8]=90000>
+  // but it's equally valid to specify
+  //   cutoffs[0]=70000;cutoffs[1]=70000;cutoffs[2]=70000;cutoffs[5]=90000;...
+  // and that's what we do here. It is verbose but valid and easy to verify
+  // correctness.
+  // TODO: print shorter output by combining adjacent runs, etc.
+  int i = 0;
+  for (unsigned int cutoff : Opts.cutoffs) {
+    if (cutoff > 0) {
+      if (i > 0)
+        OS << ";";
+      OS << "cutoffs[" << i << "]=" << cutoff;
+    }
+
+    i++;
+  }
+  OS << '>';
 }

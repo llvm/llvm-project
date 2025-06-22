@@ -1,7 +1,7 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func private @_QFPff()  {
     %c1 = arith.constant 1 : index
     %c0 = arith.constant 0 : index

@@ -95,20 +95,12 @@ MemoryLocation MemoryLocation::getForSource(const MemTransferInst *MTI) {
   return getForSource(cast<AnyMemTransferInst>(MTI));
 }
 
-MemoryLocation MemoryLocation::getForSource(const AtomicMemTransferInst *MTI) {
-  return getForSource(cast<AnyMemTransferInst>(MTI));
-}
-
 MemoryLocation MemoryLocation::getForSource(const AnyMemTransferInst *MTI) {
   assert(MTI->getRawSource() == MTI->getArgOperand(1));
   return getForArgument(MTI, 1, nullptr);
 }
 
 MemoryLocation MemoryLocation::getForDest(const MemIntrinsic *MI) {
-  return getForDest(cast<AnyMemIntrinsic>(MI));
-}
-
-MemoryLocation MemoryLocation::getForDest(const AtomicMemIntrinsic *MI) {
   return getForDest(cast<AnyMemIntrinsic>(MI));
 }
 
@@ -119,7 +111,9 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
 
 std::optional<MemoryLocation>
 MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
-  if (!CB->onlyAccessesArgMemory())
+  // Check that the only possible writes are to arguments.
+  MemoryEffects WriteME = CB->getMemoryEffects() & MemoryEffects::writeOnly();
+  if (!WriteME.onlyAccessesArgPointees())
     return std::nullopt;
 
   if (CB->hasOperandBundles())

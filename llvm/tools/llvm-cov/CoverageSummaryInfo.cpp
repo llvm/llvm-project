@@ -53,10 +53,11 @@ auto sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
   for (const auto &Record : Records) {
     const auto NumConditions = Record.getNumConditions();
     for (unsigned C = 0; C < NumConditions; C++) {
-      if (!Record.isCondFolded(C))
+      if (!Record.isCondFolded(C)) {
         ++NumPairs;
-      if (Record.isConditionIndependencePairCovered(C))
-        ++CoveredPairs;
+        if (Record.isConditionIndependencePairCovered(C))
+          ++CoveredPairs;
+      }
     }
   }
   return MCDCCoverageInfo(CoveredPairs, NumPairs);

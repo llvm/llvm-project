@@ -19,12 +19,12 @@ define void @callee_with_stack_and_call() #0 {
 ; SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
 ; SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
-; SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s31, 1
-; SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
 ; SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; SPILL-TO-VGPR-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
+; SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s31, 1
+; SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; SPILL-TO-VGPR-NEXT:    v_readlane_b32 s31, v40, 1
 ; SPILL-TO-VGPR-NEXT:    v_readlane_b32 s30, v40, 0
@@ -62,11 +62,11 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
 ; NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
-; NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
 ; NO-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; NO-SPILL-TO-VGPR-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
+; NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[4:5], exec
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, 1

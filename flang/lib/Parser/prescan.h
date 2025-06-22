@@ -16,11 +16,11 @@
 // fixed form character literals on truncated card images, file
 // inclusion, and driving the Fortran source preprocessor.
 
-#include "flang/Common/Fortran-features.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/token-sequence.h"
+#include "flang/Support/Fortran-features.h"
 #include <bitset>
 #include <optional>
 #include <string>
@@ -159,6 +159,11 @@ private:
   }
 
   bool InCompilerDirective() const { return directiveSentinel_ != nullptr; }
+  bool InOpenMPConditionalLine() const {
+    return directiveSentinel_ && directiveSentinel_[0] == '$' &&
+        !directiveSentinel_[1];
+    ;
+  }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
   }
@@ -182,10 +187,13 @@ private:
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
+  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *) const;
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
   bool NextToken(TokenSequence &);
-  bool ExponentAndKind(TokenSequence &);
+  bool HandleExponent(TokenSequence &);
+  bool HandleKindSuffix(TokenSequence &);
+  bool HandleExponentAndOrKindSuffix(TokenSequence &);
   void QuotedCharacterLiteral(TokenSequence &, const char *start);
   void Hollerith(TokenSequence &, int count, const char *start);
   bool PadOutCharacterLiteral(TokenSequence &);

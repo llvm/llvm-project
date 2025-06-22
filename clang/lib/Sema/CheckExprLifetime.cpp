@@ -665,7 +665,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
                  CanonCallee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
              CaptureAttr && isa<CXXConstructorDecl>(CanonCallee) &&
              llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
-               return ArgIdx == LifetimeCaptureByAttr::THIS;
+               return ArgIdx == LifetimeCaptureByAttr::This;
              }))
       // `lifetime_capture_by(this)` in a class constructor has the same
       // semantics as `lifetimebound`:
@@ -1239,11 +1239,12 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
     }
     // Check the return type, e.g.
     //   const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
+    //   GSLOwner* func(cosnt Foo& foo [[clang::lifetimebound]])
     //   GSLPointer func(const Foo& foo [[clang::lifetimebound]])
     if (FD &&
-        ((FD->getReturnType()->isReferenceType() &&
+        ((FD->getReturnType()->isPointerOrReferenceType() &&
           isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
-         isPointerLikeType(FD->getReturnType())))
+         isGLSPointerType(FD->getReturnType())))
       return Report;
 
     return Abandon;

@@ -797,22 +797,14 @@ private:
   const ToolChain &getToolChain(const llvm::opt::ArgList &Args,
                                 const llvm::Triple &Target) const;
 
-  /// @}
-
-  /// Retrieves a ToolChain for a particular device \p Target triple
-  ///
-  /// \param[in] HostTC is the host ToolChain paired with the device
-  ///
-  /// \param[in] TargetDeviceOffloadKind (e.g. OFK_Cuda/OFK_OpenMP/OFK_SYCL) is
-  /// an Offloading action that is optionally passed to a ToolChain (used by
-  /// CUDA, to specify if it's used in conjunction with OpenMP)
+  /// Retrieves a ToolChain for a particular \p Target triple for offloading.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
   /// on-demand.
-  const ToolChain &getOffloadingDeviceToolChain(
-      const llvm::opt::ArgList &Args, const llvm::Triple &Target,
-      const ToolChain &HostTC,
-      const Action::OffloadKind &TargetDeviceOffloadKind) const;
+  const ToolChain &getOffloadToolChain(const llvm::opt::ArgList &Args,
+                                       const Action::OffloadKind Kind,
+                                       const llvm::Triple &Target,
+                                       const llvm::Triple &AuxTarget) const;
 
   /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
@@ -887,7 +879,7 @@ llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
 /// See applyOneOverrideOption.
 void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           const char *OverrideOpts,
-                          llvm::StringSet<> &SavedStrings,
+                          llvm::StringSet<> &SavedStrings, StringRef EnvVar,
                           raw_ostream *OS = nullptr);
 
 } // end namespace driver

@@ -47,11 +47,12 @@ static_assert(std::is_same<my_derived<int, min_allocator<int>>::base, my_base>::
 static_assert(std::is_same<my_derived<my_base, min_allocator<my_base>>::base, my_base>::value, "");
 #endif
 
-struct A { std::list<A> v; }; // incomplete type support
+struct A {
+  std::list<A> v;
+}; // incomplete type support
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::list<int> C;
     static_assert((std::is_same<C::value_type, int>::value), "");
     static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), "");
@@ -65,13 +66,15 @@ int main(int, char**)
     static_assert((std::is_signed<typename C::difference_type>::value), "");
     static_assert((std::is_unsigned<typename C::size_type>::value), "");
     static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+                                typename std::iterator_traits<typename C::iterator>::difference_type>::value),
+                  "");
     static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
-    }
+                                typename std::iterator_traits<typename C::const_iterator>::difference_type>::value),
+                  "");
+  }
 
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::list<int, min_allocator<int>> C;
     static_assert((std::is_same<C::value_type, int>::value), "");
     static_assert((std::is_same<C::allocator_type, min_allocator<int> >::value), "");
@@ -83,10 +86,12 @@ int main(int, char**)
     static_assert((std::is_signed<typename C::difference_type>::value), "");
     static_assert((std::is_unsigned<typename C::size_type>::value), "");
     static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+                                typename std::iterator_traits<typename C::iterator>::difference_type>::value),
+                  "");
     static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
-    }
+                                typename std::iterator_traits<typename C::const_iterator>::difference_type>::value),
+                  "");
+  }
 #endif
 
   return 0;

@@ -112,7 +112,7 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[DEF]], implicit $exec
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[DEF]], implicit $exec
   ; GCN-NEXT:   $exec = S_OR_B64 $exec, 1, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
@@ -124,7 +124,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    %1:sgpr_32 = V_READFIRSTLANE_B32 %0:vgpr_32, implicit $exec
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0:vgpr_32, implicit $exec
     $exec = S_OR_B64 $exec, 1, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2

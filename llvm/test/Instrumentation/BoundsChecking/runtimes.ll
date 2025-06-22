@@ -9,7 +9,8 @@
 ; RUN: opt < %s -passes='bounds-checking<min-rt>'       -S | FileCheck %s --check-prefixes=MINRT-NOMERGE
 ; RUN: opt < %s -passes='bounds-checking<min-rt-abort>' -S | FileCheck %s --check-prefixes=MINRTABORT-NOMERGE
 ;
-; RUN: opt < %s -passes='bounds-checking<trap;guard=3>'   -S | FileCheck %s --check-prefixes=TR-GUARD
+; RUN: opt < %s -passes='bounds-checking<trap;guard=3>'   -S | FileCheck %s --check-prefixes=TR-GUARD-COMMON,TR-GUARD-THREE
+; RUN: opt < %s -passes='bounds-checking<trap;guard=13>'   -S | FileCheck %s --check-prefixes=TR-GUARD-COMMON,TR-GUARD-THIRTEEN
 ; RUN: opt < %s -passes='bounds-checking<rt;guard=-5>'     -S | FileCheck %s --check-prefixes=RT-GUARD
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -126,23 +127,29 @@ define void @f1(i64 %x) nounwind {
 ; MINRTABORT-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal_abort() #[[ATTR2:[0-9]+]], !nosanitize [[META0]]
 ; MINRTABORT-NOMERGE-NEXT:    unreachable, !nosanitize [[META0]]
 ;
-; TR-GUARD-LABEL: define void @f1(
-; TR-GUARD-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; TR-GUARD-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
-; TR-GUARD-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
-; TR-GUARD-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
-; TR-GUARD-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
-; TR-GUARD-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
-; TR-GUARD-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
-; TR-GUARD-NEXT:    [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 3), !nosanitize [[META0]]
-; TR-GUARD-NEXT:    [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]], !nosanitize [[META0]]
-; TR-GUARD-NEXT:    br i1 [[TMP8]], label %[[TRAP:.*]], label %[[BB9:.*]]
-; TR-GUARD:       [[BB9]]:
-; TR-GUARD-NEXT:    [[TMP10:%.*]] = load i128, ptr [[TMP2]], align 4
-; TR-GUARD-NEXT:    ret void
-; TR-GUARD:       [[TRAP]]:
-; TR-GUARD-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR3:[0-9]+]], !nosanitize [[META0]]
-; TR-GUARD-NEXT:    unreachable, !nosanitize [[META0]]
+; TR-GUARD-COMMON-LABEL: define void @f1(
+; TR-GUARD-COMMON-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; TR-GUARD-COMMON-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; TR-GUARD-COMMON-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; TR-GUARD-COMMON-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
+; TR-GUARD-COMMON-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
+; TR-GUARD-COMMON-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
+; TR-GUARD-COMMON-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
+;
+; TR-GUARD-THREE:          [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 3), !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN:       [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 13), !nosanitize [[META0]]
+;
+; TR-GUARD-COMMON:         [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]], !nosanitize [[META0]]
+; TR-GUARD-COMMON-NEXT:    br i1 [[TMP8]], label %[[TRAP:.*]], label %[[BB9:.*]]
+; TR-GUARD-COMMON:       [[BB9]]:
+; TR-GUARD-COMMON-NEXT:    [[TMP10:%.*]] = load i128, ptr [[TMP2]], align 4
+; TR-GUARD-COMMON-NEXT:    ret void
+; TR-GUARD-COMMON:       [[TRAP]]:
+;
+; TR-GUARD-THREE:       call void @llvm.ubsantrap(i8 3) #[[ATTR3:[0-9]+]], !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN:    call void @llvm.ubsantrap(i8 13) #[[ATTR3:[0-9]+]], !nosanitize [[META0]]
+;
+; TR-GUARD-COMMON:      unreachable, !nosanitize [[META0]]
 ;
 ; RT-GUARD-LABEL: define void @f1(
 ; RT-GUARD-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
