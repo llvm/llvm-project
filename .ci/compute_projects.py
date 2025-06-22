@@ -62,6 +62,8 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
+        "libclc",
+        "openmp",
     },
 }
 
