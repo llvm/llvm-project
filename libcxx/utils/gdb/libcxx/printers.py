@@ -14,6 +14,7 @@ from __future__ import print_function
 
 import re
 import gdb
+import gdb.printing
 
 # One under-documented feature of the gdb pretty-printer API
 # is that clients can call any other member of the API

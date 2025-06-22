@@ -4423,6 +4423,62 @@ static SDValue performSRLCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Helper to peek through bitops/trunc/setcc to determine size of source vector.
+// Allows BITCASTCombine to determine what size vector generated a <X x i1>.
+static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
+                                      unsigned Depth) {
+  // Limit recursion.
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
+  switch (Src.getOpcode()) {
+  case ISD::SETCC:
+  case ISD::TRUNCATE:
+    return Src.getOperand(0).getValueSizeInBits() == Size;
+  case ISD::FREEZE:
+    return checkBitcastSrcVectorSize(Src.getOperand(0), Size, Depth + 1);
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
+    return checkBitcastSrcVectorSize(Src.getOperand(0), Size, Depth + 1) &&
+           checkBitcastSrcVectorSize(Src.getOperand(1), Size, Depth + 1);
+  case ISD::SELECT:
+  case ISD::VSELECT:
+    return Src.getOperand(0).getScalarValueSizeInBits() == 1 &&
+           checkBitcastSrcVectorSize(Src.getOperand(1), Size, Depth + 1) &&
+           checkBitcastSrcVectorSize(Src.getOperand(2), Size, Depth + 1);
+  case ISD::BUILD_VECTOR:
+    return ISD::isBuildVectorAllZeros(Src.getNode()) ||
+           ISD::isBuildVectorAllOnes(Src.getNode());
+  }
+  return false;
+}
+
+// Helper to push sign extension of vXi1 SETCC result through bitops.
+static SDValue signExtendBitcastSrcVector(SelectionDAG &DAG, EVT SExtVT,
+                                          SDValue Src, const SDLoc &DL) {
+  switch (Src.getOpcode()) {
+  case ISD::SETCC:
+  case ISD::FREEZE:
+  case ISD::TRUNCATE:
+  case ISD::BUILD_VECTOR:
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
+    return DAG.getNode(
+        Src.getOpcode(), DL, SExtVT,
+        signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(0), DL),
+        signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(1), DL));
+  case ISD::SELECT:
+  case ISD::VSELECT:
+    return DAG.getSelect(
+        DL, SExtVT, Src.getOperand(0),
+        signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(1), DL),
+        signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(2), DL));
+  }
+  llvm_unreachable("Unexpected node type for vXi1 sign extension");
+}
+
 static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const LoongArchSubtarget &Subtarget) {
@@ -4493,10 +4549,56 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (Opc == ISD::DELETED_NODE)
-    return SDValue();
+  // Generate vXi1 using [X]VMSKLTZ
+  if (Opc == ISD::DELETED_NODE) {
+    MVT SExtVT;
+    bool UseLASX = false;
+    bool PropagateSExt = false;
+    switch (SrcVT.getSimpleVT().SimpleTy) {
+    default:
+      return SDValue();
+    case MVT::v2i1:
+      SExtVT = MVT::v2i64;
+      break;
+    case MVT::v4i1:
+      SExtVT = MVT::v4i32;
+      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+        SExtVT = MVT::v4i64;
+        UseLASX = true;
+        PropagateSExt = true;
+      }
+      break;
+    case MVT::v8i1:
+      SExtVT = MVT::v8i16;
+      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+        SExtVT = MVT::v8i32;
+        UseLASX = true;
+        PropagateSExt = true;
+      }
+      break;
+    case MVT::v16i1:
+      SExtVT = MVT::v16i8;
+      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+        SExtVT = MVT::v16i16;
+        UseLASX = true;
+        PropagateSExt = true;
+      }
+      break;
+    case MVT::v32i1:
+      SExtVT = MVT::v32i8;
+      UseLASX = true;
+      break;
+    };
+    if (UseLASX && !Subtarget.has32S() && !Subtarget.hasExtLASX())
+      return SDValue();
+    Src = PropagateSExt ? signExtendBitcastSrcVector(DAG, SExtVT, Src, DL)
+                        : DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
+    Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
+  } else {
+    Src = Src.getOperand(0);
+  }
 
-  SDValue V = DAG.getNode(Opc, DL, MVT::i64, Src.getOperand(0));
+  SDValue V = DAG.getNode(Opc, DL, MVT::i64, Src);
   EVT T = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
   V = DAG.getZExtOrTrunc(V, DL, T);
   return DAG.getBitcast(VT, V);
@@ -5532,6 +5634,21 @@ static SDValue performMOVFR2GR_SCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performVMSKLTZCombine(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const LoongArchSubtarget &Subtarget) {
+  MVT VT = N->getSimpleValueType(0);
+  unsigned NumBits = VT.getScalarSizeInBits();
+
+  // Simplify the inputs.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  APInt DemandedMask(APInt::getAllOnes(NumBits));
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0), DemandedMask, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5556,6 +5673,9 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performMOVGR2FR_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::MOVFR2GR_S_LA64:
     return performMOVFR2GR_SCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::VMSKLTZ:
+  case LoongArchISD::XVMSKLTZ:
+    return performVMSKLTZCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
@@ -8089,4 +8209,59 @@ unsigned LoongArchTargetLowering::getNumRegistersForCallingConv(
     return 1;
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
+}
+
+bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  unsigned BitWidth = OriginalDemandedBits.getBitWidth();
+  unsigned Opc = Op.getOpcode();
+  switch (Opc) {
+  default:
+    break;
+  case LoongArchISD::VMSKLTZ:
+  case LoongArchISD::XVMSKLTZ: {
+    SDValue Src = Op.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+    unsigned SrcBits = SrcVT.getScalarSizeInBits();
+    unsigned NumElts = SrcVT.getVectorNumElements();
+
+    // If we don't need the sign bits at all just return zero.
+    if (OriginalDemandedBits.countr_zero() >= NumElts)
+      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
+
+    // Only demand the vector elements of the sign bits we need.
+    APInt KnownUndef, KnownZero;
+    APInt DemandedElts = OriginalDemandedBits.zextOrTrunc(NumElts);
+    if (SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
+                                   TLO, Depth + 1))
+      return true;
+
+    Known.Zero = KnownZero.zext(BitWidth);
+    Known.Zero.setHighBits(BitWidth - NumElts);
+
+    // [X]VMSKLTZ only uses the MSB from each vector element.
+    KnownBits KnownSrc;
+    APInt DemandedSrcBits = APInt::getSignMask(SrcBits);
+    if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, KnownSrc, TLO,
+                             Depth + 1))
+      return true;
+
+    if (KnownSrc.One[SrcBits - 1])
+      Known.One.setLowBits(NumElts);
+    else if (KnownSrc.Zero[SrcBits - 1])
+      Known.Zero.setLowBits(NumElts);
+
+    // Attempt to avoid multi-use ops if we don't need anything from it.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, DemandedSrcBits, DemandedElts, TLO.DAG, Depth + 1))
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
+    return false;
+  }
+  }
+
+  return TargetLowering::SimplifyDemandedBitsForTargetNode(
+      Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
 }
