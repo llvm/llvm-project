@@ -2571,83 +2571,22 @@ public:
     Word(ToUpperCaseLetters(common::EnumToString(x)));
   }
 
-  void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }
+  void Unparse(const OpenMPAtomicConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(std::get<OmpDirectiveSpecification>(x.t));
+    Put("\n");
+    EndOpenMP();
+    Walk(std::get<Block>(x.t), "");
+    if (auto &end{std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
+      BeginOpenMP();
+      Word("!$OMP END ");
+      Walk(*end);
+      Put("\n");
+      EndOpenMP();
+    }
+  }
 
-  void Unparse(const OmpAtomic &x) {
-    BeginOpenMP();
-    Word("!$OMP ATOMIC");
-    Walk(std::get<OmpAtomicClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AssignmentStmt>>(x.t));
-    BeginOpenMP();
-    Walk(std::get<std::optional<OmpEndAtomic>>(x.t), "!$OMP END ATOMIC\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpAtomicCapture &x) {
-    BeginOpenMP();
-    Word("!$OMP ATOMIC");
-    Walk(std::get<0>(x.t));
-    Word(" CAPTURE");
-    Walk(std::get<2>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<OmpAtomicCapture::Stmt1>(x.t));
-    Put("\n");
-    Walk(std::get<OmpAtomicCapture::Stmt2>(x.t));
-    BeginOpenMP();
-    Word("!$OMP END ATOMIC\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpAtomicCompare &x) {
-    BeginOpenMP();
-    Word("!$OMP ATOMIC");
-    Walk(std::get<0>(x.t));
-    Word(" COMPARE");
-    Walk(std::get<2>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<OmpAtomicCompareIfStmt>(x.t));
-  }
-  void Unparse(const OmpAtomicRead &x) {
-    BeginOpenMP();
-    Word("!$OMP ATOMIC");
-    Walk(std::get<0>(x.t));
-    Word(" READ");
-    Walk(std::get<2>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AssignmentStmt>>(x.t));
-    BeginOpenMP();
-    Walk(std::get<std::optional<OmpEndAtomic>>(x.t), "!$OMP END ATOMIC\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpAtomicUpdate &x) {
-    BeginOpenMP();
-    Word("!$OMP ATOMIC");
-    Walk(std::get<0>(x.t));
-    Word(" UPDATE");
-    Walk(std::get<2>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AssignmentStmt>>(x.t));
-    BeginOpenMP();
-    Walk(std::get<std::optional<OmpEndAtomic>>(x.t), "!$OMP END ATOMIC\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpAtomicWrite &x) {
-    BeginOpenMP();
-    Word("!$OMP ATOMIC");
-    Walk(std::get<0>(x.t));
-    Word(" WRITE");
-    Walk(std::get<2>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AssignmentStmt>>(x.t));
-    BeginOpenMP();
-    Walk(std::get<std::optional<OmpEndAtomic>>(x.t), "!$OMP END ATOMIC\n");
-    EndOpenMP();
-  }
   void Unparse(const OpenMPExecutableAllocate &x) {
     const auto &fields =
         std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
@@ -2920,23 +2859,8 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OmpFailClause &x) { Walk(x.v); }
   void Unparse(const OmpMemoryOrderClause &x) { Walk(x.v); }
-  void Unparse(const OmpAtomicClause &x) {
-    common::visit(common::visitors{
-                      [&](const OmpMemoryOrderClause &y) { Walk(y); },
-                      [&](const OmpFailClause &y) {
-                        Word("FAIL(");
-                        Walk(y.v);
-                        Put(")");
-                      },
-                      [&](const OmpHintClause &y) {
-                        Word("HINT(");
-                        Walk(y.v);
-                        Put(")");
-                      },
-                  },
-        x.u);
-  }
   void Unparse(const OmpMetadirectiveDirective &x) {
     BeginOpenMP();
     Word("!$OMP METADIRECTIVE ");

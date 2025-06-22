@@ -54,7 +54,6 @@ llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
   if (llvm::Error err = dap.RunPreInitCommands())
     return err;
 
-  dap.PopulateExceptionBreakpoints();
   auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (arguments.supportedFeatures.contains(

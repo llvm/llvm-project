@@ -47,7 +47,7 @@ struct RVVIntrinsicDef {
   std::string BuiltinName;
 
   /// Mapping to RequiredFeatures in riscv_vector.td
-  std::string RequiredExtensions;
+  StringRef RequiredExtensions;
 
   /// Function signature, first element is return type.
   RVVTypes Signature;

@@ -195,6 +195,7 @@
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       RISC-V Late Branch Optimisation Pass
+; CHECK-NEXT:       RISC-V Indirect Branch Tracking
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       RISC-V Make Compressible
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
@@ -210,7 +211,6 @@
 ; CHECK-NEXT:       Stack Frame Layout Analysis
 ; CHECK-NEXT:       RISC-V Zcmp move merging pass
 ; CHECK-NEXT:       RISC-V Zcmp Push/Pop optimization pass
-; CHECK-NEXT:       RISC-V Indirect Branch Tracking
 ; CHECK-NEXT:       RISC-V pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V atomic pseudo instruction expansion pass
 ; CHECK-NEXT:       Unpack machine instruction bundles
