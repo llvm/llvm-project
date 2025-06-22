@@ -412,7 +412,8 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, DebugLoc DL,
                              const Twine &Name, bool IsSingleScalar)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, Flags, DL),
-      VPIRMetadata(), IsSingleScalar(IsSingleScalar), Opcode(Opcode), Name(Name.str()) {
+      VPIRMetadata(), IsSingleScalar(IsSingleScalar), Opcode(Opcode),
+      Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
 }
