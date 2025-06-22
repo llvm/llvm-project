@@ -636,5 +636,37 @@ TARGET_BUILTIN(__builtin_amdgcn_bitop3_b16, "ssssIUi", "nc", "bitop3-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_bf16_f32, "V2yV2yfUiIb", "nc", "f32-to-f16bf16-cvt-sr-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_f16_f32, "V2hV2hfUiIb", "nc", "f32-to-f16bf16-cvt-sr-insts")
 
+//===----------------------------------------------------------------------===//
+// Image load builtins
+//===----------------------------------------------------------------------===//
+TARGET_BUILTIN(__builtin_amdgcn_image_load_1d_v4f32_i32, "V4fiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_1d_v4f16_i32, "V4hiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_1darray_v4f32_i32, "V4fiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_1darray_v4f16_i32, "V4hiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_2d_f32_i32, "fiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_2d_v4f32_i32, "V4fiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_2d_v4f16_i32, "V4hiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_2darray_f32_i32, "fiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_2darray_v4f32_i32, "V4fiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_2darray_v4f16_i32, "V4hiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_3d_v4f32_i32, "V4fiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_3d_v4f16_i32, "V4hiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_cube_v4f32_i32, "V4fiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_cube_v4f16_i32, "V4hiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_1d_v4f32_i32, "V4fiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_1d_v4f16_i32, "V4hiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_1darray_v4f32_i32, "V4fiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_1darray_v4f16_i32, "V4hiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_2d_f32_i32, "fiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_2d_v4f32_i32, "V4fiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_2d_v4f16_i32, "V4hiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_2darray_f32_i32, "fiiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_2darray_v4f32_i32, "V4fiiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_2darray_v4f16_i32, "V4hiiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_3d_v4f32_i32, "V4fiiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_3d_v4f16_i32, "V4hiiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_cube_v4f32_i32, "V4fiiiiiV8iii", "nc", "")
+TARGET_BUILTIN(__builtin_amdgcn_image_load_mip_cube_v4f16_i32, "V4hiiiiiV8iii", "nc", "")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
