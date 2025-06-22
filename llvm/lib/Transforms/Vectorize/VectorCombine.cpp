@@ -135,6 +135,7 @@ private:
   bool foldShuffleOfIntrinsics(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
+  bool foldShuffleChainsToReduce(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
@@ -3129,6 +3130,179 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   return MadeChanges;
 }
 
+bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
+  auto *EEI = dyn_cast<ExtractElementInst>(&I);
+  if (!EEI)
+    return false;
+
+  std::queue<Value *> InstWorklist;
+  Value *InitEEV = nullptr;
+  Intrinsic::ID CommonOp = 0;
+
+  bool IsFirstCallInst = true;
+  bool ShouldBeCallInst = true;
+
+  SmallVector<Value *, 3> PrevVecV(3, nullptr);
+  int64_t ShuffleMaskHalf = -1, ExpectedShuffleMaskHalf = 1;
+  int64_t VecSize = -1;
+
+  Value *VecOp;
+  if (!match(&I, m_ExtractElt(m_Value(VecOp), m_Zero())))
+    return false;
+
+  auto *FVT = dyn_cast<FixedVectorType>(VecOp->getType());
+  if (!FVT)
+    return false;
+
+  VecSize = FVT->getNumElements();
+  if (VecSize < 2 || (VecSize % 2) != 0)
+    return false;
+
+  ShuffleMaskHalf = 1;
+  PrevVecV[2] = VecOp;
+  InitEEV = EEI;
+
+  InstWorklist.push(PrevVecV[2]);
+
+  while (!InstWorklist.empty()) {
+    Value *V = InstWorklist.front();
+    InstWorklist.pop();
+
+    auto *CI = dyn_cast<Instruction>(V);
+    if (!CI)
+      return false;
+
+    if (auto *CallI = dyn_cast<CallInst>(CI)) {
+      if (!ShouldBeCallInst || !PrevVecV[2])
+        return false;
+
+      if (!IsFirstCallInst &&
+          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+        return false;
+
+      if (CallI != (IsFirstCallInst ? PrevVecV[2] : PrevVecV[0]))
+        return false;
+      IsFirstCallInst = false;
+
+      auto *II = dyn_cast<IntrinsicInst>(CallI);
+      if (!II)
+        return false;
+
+      if (!CommonOp)
+        CommonOp = II->getIntrinsicID();
+      if (II->getIntrinsicID() != CommonOp)
+        return false;
+
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umin:
+      case Intrinsic::umax:
+      case Intrinsic::smin:
+      case Intrinsic::smax: {
+        auto *Op0 = CallI->getOperand(0);
+        auto *Op1 = CallI->getOperand(1);
+        PrevVecV[0] = Op0;
+        PrevVecV[1] = Op1;
+        break;
+      }
+      default:
+        return false;
+      }
+      ShouldBeCallInst ^= 1;
+
+      if (!isa<ShuffleVectorInst>(PrevVecV[1]))
+        std::swap(PrevVecV[0], PrevVecV[1]);
+      InstWorklist.push(PrevVecV[1]);
+      InstWorklist.push(PrevVecV[0]);
+    } else if (auto *SVInst = dyn_cast<ShuffleVectorInst>(CI)) {
+      if (ShouldBeCallInst ||
+          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+        return false;
+
+      if (SVInst != PrevVecV[1])
+        return false;
+
+      auto *ShuffleVec = SVInst->getOperand(0);
+      if (!ShuffleVec || ShuffleVec != PrevVecV[0])
+        return false;
+
+      SmallVector<int> CurMask;
+      SVInst->getShuffleMask(CurMask);
+
+      if (ShuffleMaskHalf != ExpectedShuffleMaskHalf)
+        return false;
+      ExpectedShuffleMaskHalf *= 2;
+
+      for (int Mask = 0, MaskSize = CurMask.size(); Mask != MaskSize; ++Mask) {
+        if (Mask < ShuffleMaskHalf && CurMask[Mask] != ShuffleMaskHalf + Mask)
+          return false;
+        if (Mask >= ShuffleMaskHalf && CurMask[Mask] != -1)
+          return false;
+      }
+      ShuffleMaskHalf *= 2;
+      if (ExpectedShuffleMaskHalf == VecSize)
+        break;
+      ShouldBeCallInst ^= 1;
+    } else {
+      return false;
+    }
+  }
+
+  if (ShouldBeCallInst)
+    return false;
+
+  assert(VecSize != -1 && ExpectedShuffleMaskHalf == VecSize &&
+         "Expected Match for Vector Size and Mask Half");
+
+  Value *FinalVecV = PrevVecV[0];
+  auto *FinalVecVTy = dyn_cast<FixedVectorType>(FinalVecV->getType());
+
+  if (!InitEEV || !FinalVecV)
+    return false;
+
+  assert(FinalVecVTy && "Expected non-null value for Vector Type");
+
+  Intrinsic::ID ReducedOp = 0;
+  switch (CommonOp) {
+  case Intrinsic::umin:
+    ReducedOp = Intrinsic::vector_reduce_umin;
+    break;
+  case Intrinsic::umax:
+    ReducedOp = Intrinsic::vector_reduce_umax;
+    break;
+  case Intrinsic::smin:
+    ReducedOp = Intrinsic::vector_reduce_smin;
+    break;
+  case Intrinsic::smax:
+    ReducedOp = Intrinsic::vector_reduce_smax;
+    break;
+  default:
+    return false;
+  }
+
+  InstructionCost OrigCost = 0;
+  unsigned int NumLevels = Log2_64(VecSize);
+
+  for (unsigned int Level = 0; Level < NumLevels; ++Level) {
+    OrigCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                   FinalVecVTy, FinalVecVTy);
+    OrigCost += TTI.getArithmeticInstrCost(Instruction::ICmp, FinalVecVTy);
+  }
+  OrigCost += TTI.getVectorInstrCost(Instruction::ExtractElement, FinalVecVTy,
+                                     CostKind, 0);
+
+  IntrinsicCostAttributes ICA(ReducedOp, FinalVecVTy, {FinalVecV});
+  InstructionCost NewCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+
+  if (NewCost >= OrigCost)
+    return false;
+
+  auto *ReducedResult =
+      Builder.CreateIntrinsic(ReducedOp, {FinalVecV->getType()}, {FinalVecV});
+  replaceValue(*InitEEV, *ReducedResult);
+
+  return true;
+}
+
 /// Determine if its more efficient to fold:
 ///   reduce(trunc(x)) -> trunc(reduce(x)).
 ///   reduce(sext(x))  -> sext(reduce(x)).
@@ -4215,6 +4389,9 @@ bool VectorCombine::run() {
           return true;
         if (foldCastFromReductions(I))
           return true;
+        break;
+      case Instruction::ExtractElement:
+        MadeChange |= foldShuffleChainsToReduce(I);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:
