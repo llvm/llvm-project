@@ -227,6 +227,9 @@ void HIPAMDToolChain::addClangTargetOptions(
 
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
+  const StringRef GpuArch = getGPUArch(DriverArgs);
+  auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
+  (void)isWave64(getDriver(), DriverArgs, Kind, /*DiagInvalid=*/true);
 
   CC1Args.append({"-fcuda-is-device", "-fno-threadsafe-statics"});
 

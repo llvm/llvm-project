@@ -5281,6 +5281,8 @@ defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
+defm force_unsafe_wavefrontsize64 : SimpleMFlag<"force-unsafe-wavefrontsize64",
+  "Force", "Do not force", " wavefront size 64 for gfx10+ GPUs (AMDGPU only)">;
 defm amdgpu_precise_memory_op
     : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
                   " precise memory mode (AMDGPU only)">;
