@@ -136,18 +136,18 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
+
+  Finds unscoped (non-class) ``enum`` declarations and suggests using
+  ``enum class`` instead.
+
 - New :doc:`misc-bool-bitwise-operation
   <clang-tidy/checks/misc/bool-bitwise-operation>` check.
 
   Finds potentially inefficient use of bitwise operators such as ``&``,  ``|``
   and their compound analogues on Boolean values where logical operators like
   ``&&`` and ``||`` would be more appropriate.
-
-- New :doc:`cppcoreguidelines-use-enum-class
-  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
-
-  Finds unscoped (non-class) ``enum`` declarations and suggests using
-  ``enum class`` instead.
 
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
