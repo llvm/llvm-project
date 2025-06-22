@@ -1193,9 +1193,8 @@ static std::pair<Relocation *, uint64_t>
 getBranchInfoAtTarget(InputSection &is, uint64_t offset) {
   auto content = is.contentMaybeDecompress();
   if (content.size() > offset && content[offset] == 0xe9) { // JMP immediate
-    auto *i = std::partition_point(
-        is.relocations.begin(), is.relocations.end(),
-        [&](Relocation &r) { return r.offset < offset + 1; });
+    auto *i = llvm::partition_point(
+        is.relocations, [&](Relocation &r) { return r.offset < offset + 1; });
     // Unlike with getControlTransferAddend() it is valid to accept a PC32
     // relocation here because we know that this is actually a JMP and not some
     // other reference, so the interpretation is that we add 4 to the addend and

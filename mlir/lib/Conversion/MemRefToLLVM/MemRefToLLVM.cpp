@@ -1616,8 +1616,8 @@ private:
 
     // Hook up the cond exit to the remainder.
     rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<LLVM::CondBrOp>(loc, pred, bodyBlock, std::nullopt,
-                                    remainder, std::nullopt);
+    rewriter.create<LLVM::CondBrOp>(loc, pred, bodyBlock, ValueRange(),
+                                    remainder, ValueRange());
 
     // Reset position to beginning of new remainder block.
     rewriter.setInsertionPointToStart(remainder);
