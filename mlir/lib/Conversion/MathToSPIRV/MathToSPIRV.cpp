@@ -509,7 +509,15 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
            CheckedElementwiseOpPattern<math::RsqrtOp, spirv::GLInverseSqrtOp>,
            CheckedElementwiseOpPattern<math::SinOp, spirv::GLSinOp>,
            CheckedElementwiseOpPattern<math::SqrtOp, spirv::GLSqrtOp>,
-           CheckedElementwiseOpPattern<math::TanhOp, spirv::GLTanhOp>>(
+           CheckedElementwiseOpPattern<math::TanhOp, spirv::GLTanhOp>,
+           CheckedElementwiseOpPattern<math::TanOp, spirv::GLTanOp>,
+           CheckedElementwiseOpPattern<math::AsinOp, spirv::GLAsinOp>,
+           CheckedElementwiseOpPattern<math::AcosOp, spirv::GLAcosOp>,
+           CheckedElementwiseOpPattern<math::SinhOp, spirv::GLSinhOp>,
+           CheckedElementwiseOpPattern<math::CoshOp, spirv::GLCoshOp>,
+           CheckedElementwiseOpPattern<math::AsinhOp, spirv::GLAsinhOp>,
+           CheckedElementwiseOpPattern<math::AcoshOp, spirv::GLAcoshOp>,
+           CheckedElementwiseOpPattern<math::AtanhOp, spirv::GLAtanhOp>>(
           typeConverter, patterns.getContext());
 
   // OpenCL patterns
@@ -533,7 +541,15 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                CheckedElementwiseOpPattern<math::RsqrtOp, spirv::CLRsqrtOp>,
                CheckedElementwiseOpPattern<math::SinOp, spirv::CLSinOp>,
                CheckedElementwiseOpPattern<math::SqrtOp, spirv::CLSqrtOp>,
-               CheckedElementwiseOpPattern<math::TanhOp, spirv::CLTanhOp>>(
+               CheckedElementwiseOpPattern<math::TanhOp, spirv::CLTanhOp>,
+               CheckedElementwiseOpPattern<math::TanOp, spirv::CLTanOp>,
+               CheckedElementwiseOpPattern<math::AsinOp, spirv::CLAsinOp>,
+               CheckedElementwiseOpPattern<math::AcosOp, spirv::CLAcosOp>,
+               CheckedElementwiseOpPattern<math::SinhOp, spirv::CLSinhOp>,
+               CheckedElementwiseOpPattern<math::CoshOp, spirv::CLCoshOp>,
+               CheckedElementwiseOpPattern<math::AsinhOp, spirv::CLAsinhOp>,
+               CheckedElementwiseOpPattern<math::AcoshOp, spirv::CLAcoshOp>,
+               CheckedElementwiseOpPattern<math::AtanhOp, spirv::CLAtanhOp>>(
       typeConverter, patterns.getContext());
 }
 

@@ -12,7 +12,7 @@ define <2 x double> @mul_subadd_pd128(<2 x double> %A, <2 x double> %B, <2 x dou
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
 ; NOFMA-NEXT:    vsubpd %xmm2, %xmm0, %xmm1
 ; NOFMA-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
-; NOFMA-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; NOFMA-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; NOFMA-NEXT:    retq
 ;
 ; FMA3-LABEL: mul_subadd_pd128:
@@ -191,7 +191,7 @@ define <2 x double> @mul_subadd_bad_commute(<2 x double> %A, <2 x double> %B, <2
 ; CHECK-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubpd %xmm0, %xmm2, %xmm1
 ; CHECK-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; CHECK-NEXT:    retq
 entry:
   %AB = fmul <2 x double> %A, %B

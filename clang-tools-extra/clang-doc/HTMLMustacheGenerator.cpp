@@ -585,6 +585,8 @@ Error MustacheHTMLGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_typedef:
     OS << "IT_typedef\n";
     break;
+  case InfoType::IT_concept:
+    break;
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected InfoType");
   }

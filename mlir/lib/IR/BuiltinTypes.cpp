@@ -376,6 +376,20 @@ BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
   return builder;
 }
 
+FailureOr<PtrLikeTypeInterface>
+BaseMemRefType::clonePtrWith(Attribute memorySpace,
+                             std::optional<Type> elementType) const {
+  Type eTy = elementType ? *elementType : getElementType();
+  if (llvm::dyn_cast<UnrankedMemRefType>(*this))
+    return cast<PtrLikeTypeInterface>(
+        UnrankedMemRefType::get(eTy, memorySpace));
+
+  MemRefType::Builder builder(llvm::cast<MemRefType>(*this));
+  builder.setElementType(eTy);
+  builder.setMemorySpace(memorySpace);
+  return cast<PtrLikeTypeInterface>(static_cast<MemRefType>(builder));
+}
+
 MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape,
                                  Type elementType) const {
   return ::llvm::cast<MemRefType>(cloneWith(shape, elementType));
@@ -716,11 +730,12 @@ MemRefType MemRefType::canonicalizeStridedLayout() {
 }
 
 LogicalResult MemRefType::getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                              int64_t &offset) {
+                                              int64_t &offset) const {
   return getLayout().getStridesAndOffset(getShape(), strides, offset);
 }
 
-std::pair<SmallVector<int64_t>, int64_t> MemRefType::getStridesAndOffset() {
+std::pair<SmallVector<int64_t>, int64_t>
+MemRefType::getStridesAndOffset() const {
   SmallVector<int64_t> strides;
   int64_t offset;
   LogicalResult status = getStridesAndOffset(strides, offset);

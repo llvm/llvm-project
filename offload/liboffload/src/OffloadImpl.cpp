@@ -93,22 +93,37 @@ struct AllocInfo {
   ol_alloc_type_t Type;
 };
 
-using AllocInfoMapT = DenseMap<void *, AllocInfo>;
-AllocInfoMapT &allocInfoMap() {
-  static AllocInfoMapT AllocInfoMap{};
-  return AllocInfoMap;
-}
+// Global shared state for liboffload
+struct OffloadContext;
+static OffloadContext *OffloadContextVal;
+struct OffloadContext {
+  OffloadContext(OffloadContext &) = delete;
+  OffloadContext(OffloadContext &&) = delete;
+  OffloadContext &operator=(OffloadContext &) = delete;
+  OffloadContext &operator=(OffloadContext &&) = delete;
 
-using PlatformVecT = SmallVector<ol_platform_impl_t, 4>;
-PlatformVecT &Platforms() {
-  static PlatformVecT Platforms;
-  return Platforms;
-}
+  bool TracingEnabled = false;
+  bool ValidationEnabled = true;
+  DenseMap<void *, AllocInfo> AllocInfoMap{};
+  SmallVector<ol_platform_impl_t, 4> Platforms{};
 
-ol_device_handle_t HostDevice() {
-  // The host platform is always inserted last
-  return &Platforms().back().Devices[0];
+  ol_device_handle_t HostDevice() {
+    // The host platform is always inserted last
+    return &Platforms.back().Devices[0];
+  }
+
+  static OffloadContext &get() {
+    assert(OffloadContextVal);
+    return *OffloadContextVal;
+  }
+};
+
+// If the context is uninited, then we assume tracing is disabled
+bool isTracingEnabled() {
+  return isOffloadInitialized() && OffloadContext::get().TracingEnabled;
 }
+bool isValidationEnabled() { return OffloadContext::get().ValidationEnabled; }
+bool isOffloadInitialized() { return OffloadContextVal != nullptr; }
 
 template <typename HandleT> Error olDestroy(HandleT Handle) {
   delete Handle;
@@ -130,10 +145,12 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #include "Shared/Targets.def"
 
 void initPlugins() {
+  auto *Context = new OffloadContext{};
+
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Platforms().emplace_back(ol_platform_impl_t{                               \
+    Context->Platforms.emplace_back(ol_platform_impl_t{                        \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),               \
         {},                                                                    \
         pluginNameToBackend(#Name)});                                          \
@@ -141,7 +158,7 @@ void initPlugins() {
 #include "Shared/Targets.def"
 
   // Preemptively initialize all devices in the plugin
-  for (auto &Platform : Platforms()) {
+  for (auto &Platform : Context->Platforms) {
     // Do not use the host plugin - it isn't supported.
     if (Platform.BackendType == OL_PLATFORM_BACKEND_UNKNOWN)
       continue;
@@ -157,15 +174,16 @@ void initPlugins() {
   }
 
   // Add the special host device
-  auto &HostPlatform = Platforms().emplace_back(
+  auto &HostPlatform = Context->Platforms.emplace_back(
       ol_platform_impl_t{nullptr,
                          {ol_device_impl_t{-1, nullptr, nullptr}},
                          OL_PLATFORM_BACKEND_HOST});
-  HostDevice()->Platform = &HostPlatform;
+  Context->HostDevice()->Platform = &HostPlatform;
 
-  offloadConfig().TracingEnabled = std::getenv("OFFLOAD_TRACE");
-  offloadConfig().ValidationEnabled =
-      !std::getenv("OFFLOAD_DISABLE_VALIDATION");
+  Context->TracingEnabled = std::getenv("OFFLOAD_TRACE");
+  Context->ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
+
+  OffloadContextVal = Context;
 }
 
 // TODO: We can properly reference count here and manage the resources in a more
@@ -228,45 +246,39 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   // Find the info if it exists under any of the given names
-  auto GetInfo = [&](std::vector<std::string> Names) {
-    InfoQueueTy DevInfo;
-    if (Device == HostDevice())
-      return std::string("Host");
+  auto GetInfoString = [&](std::vector<std::string> Names) {
+    if (Device == OffloadContext::get().HostDevice())
+      return "Host";
 
     if (!Device->Device)
-      return std::string("");
+      return "";
 
-    if (auto Err = Device->Device->obtainInfoImpl(DevInfo))
-      return std::string("");
+    auto Info = Device->Device->obtainInfoImpl();
+    if (auto Err = Info.takeError())
+      return "";
 
     for (auto Name : Names) {
-      auto InfoKeyMatches = [&](const InfoQueueTy::InfoQueueEntryTy &Info) {
-        return Info.Key == Name;
-      };
-      auto Item = std::find_if(DevInfo.getQueue().begin(),
-                               DevInfo.getQueue().end(), InfoKeyMatches);
-
-      if (Item != std::end(DevInfo.getQueue())) {
-        return Item->Value;
-      }
+      if (auto Entry = Info->get(Name))
+        return std::get<std::string>((*Entry)->Value).c_str();
     }
 
-    return std::string("");
+    return "";
   };
 
   switch (PropName) {
   case OL_DEVICE_INFO_PLATFORM:
     return ReturnValue(Device->Platform);
   case OL_DEVICE_INFO_TYPE:
-    return Device == HostDevice() ? ReturnValue(OL_DEVICE_TYPE_HOST)
-                                  : ReturnValue(OL_DEVICE_TYPE_GPU);
+    return Device == OffloadContext::get().HostDevice()
+               ? ReturnValue(OL_DEVICE_TYPE_HOST)
+               : ReturnValue(OL_DEVICE_TYPE_GPU);
   case OL_DEVICE_INFO_NAME:
-    return ReturnValue(GetInfo({"Device Name"}).c_str());
+    return ReturnValue(GetInfoString({"Device Name"}));
   case OL_DEVICE_INFO_VENDOR:
-    return ReturnValue(GetInfo({"Vendor Name"}).c_str());
+    return ReturnValue(GetInfoString({"Vendor Name"}));
   case OL_DEVICE_INFO_DRIVER_VERSION:
     return ReturnValue(
-        GetInfo({"CUDA Driver Version", "HSA Runtime Version"}).c_str());
+        GetInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -287,7 +299,7 @@ Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
 }
 
 Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
-  for (auto &Platform : Platforms()) {
+  for (auto &Platform : OffloadContext::get().Platforms) {
     for (auto &Device : Platform.Devices) {
       if (!Callback(&Device, UserData)) {
         break;
@@ -318,16 +330,17 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
     return Alloc.takeError();
 
   *AllocationOut = *Alloc;
-  allocInfoMap().insert_or_assign(*Alloc, AllocInfo{Device, Type});
+  OffloadContext::get().AllocInfoMap.insert_or_assign(*Alloc,
+                                                      AllocInfo{Device, Type});
   return Error::success();
 }
 
 Error olMemFree_impl(void *Address) {
-  if (!allocInfoMap().contains(Address))
+  if (!OffloadContext::get().AllocInfoMap.contains(Address))
     return createOffloadError(ErrorCode::INVALID_ARGUMENT,
                               "address is not a known allocation");
 
-  auto AllocInfo = allocInfoMap().at(Address);
+  auto AllocInfo = OffloadContext::get().AllocInfoMap.at(Address);
   auto Device = AllocInfo.Device;
   auto Type = AllocInfo.Type;
 
@@ -335,7 +348,7 @@ Error olMemFree_impl(void *Address) {
           Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type)))
     return Res;
 
-  allocInfoMap().erase(Address);
+  OffloadContext::get().AllocInfoMap.erase(Address);
 
   return Error::success();
 }
@@ -402,7 +415,8 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size,
                     ol_event_handle_t *EventOut) {
-  if (DstDevice == HostDevice() && SrcDevice == HostDevice()) {
+  auto Host = OffloadContext::get().HostDevice();
+  if (DstDevice == Host && SrcDevice == Host) {
     if (!Queue) {
       std::memcpy(DstPtr, SrcPtr, Size);
       return Error::success();
@@ -417,11 +431,11 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   // If no queue is given the memcpy will be synchronous
   auto QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
 
-  if (DstDevice == HostDevice()) {
+  if (DstDevice == Host) {
     if (auto Res =
             SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
-  } else if (SrcDevice == HostDevice()) {
+  } else if (SrcDevice == Host) {
     if (auto Res =
             DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
@@ -499,12 +513,12 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
   KernelArgsTy LaunchArgs{};
-  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroupsX;
-  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroupsY;
-  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroupsZ;
-  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSizeX;
-  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSizeY;
-  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSizeZ;
+  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroups.x;
+  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroups.y;
+  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroups.z;
+  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
+  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
+  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
 
   KernelLaunchParamsTy Params;
