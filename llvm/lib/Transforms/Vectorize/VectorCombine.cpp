@@ -3082,10 +3082,10 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       auto *SSV = cast<ShuffleVectorInst>(SVOp0);
       SVOp0 = SSV->getOperand(0);
       SVOp1 = SSV->getOperand(1);
-      for (unsigned I = 0, E = Mask.size(); I != E; I++) {
-        if (Mask[I] >= static_cast<int>(SSV->getShuffleMask().size()))
+      for (int &Elem : Mask) {
+        if (Elem >= static_cast<int>(SSV->getShuffleMask().size()))
           return false;
-        Mask[I] = Mask[I] < 0 ? Mask[I] : SSV->getMaskValue(Mask[I]);
+        Elem = Elem < 0 ? Elem : SSV->getMaskValue(Elem);
       }
     }
     if (SVOp0 == Op1 && SVOp1 == Op0) {

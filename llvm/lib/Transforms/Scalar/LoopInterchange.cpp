@@ -235,8 +235,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 // matrix by exchanging the two columns.
 static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
                                     unsigned ToIndx) {
-  for (unsigned I = 0, E = DepMatrix.size(); I < E; ++I)
-    std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
+  for (auto &Row : DepMatrix)
+    std::swap(Row[ToIndx], Row[FromIndx]);
 }
 
 // Check if a direction vector is lexicographically positive. Return true if it
