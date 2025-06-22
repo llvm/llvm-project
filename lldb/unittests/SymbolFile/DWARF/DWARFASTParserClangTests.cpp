@@ -1546,7 +1546,6 @@ DWARF:
           - Value: 0x1
 
         - AbbrCode: 0x0
-        - AbbrCode: 0x0
 
 #     DW_TAG_subprogram
 #       DW_AT_object_pointer [DW_FORM_implicit_const] (0)
