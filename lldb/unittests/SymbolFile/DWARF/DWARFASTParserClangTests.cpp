@@ -1026,10 +1026,9 @@ DWARF:
 
 #     DW_TAG_subprogram
 #       DW_AT_object_pointer [DW_FORM_ref4] ("this")
-#       DW_AT_specification [DW_FORM_ref4] ("func")
         - AbbrCode:        0x5
           Values:
-            - Value:           0x29
+            - Value:           0x25
 
 #       DW_TAG_formal_parameter
 #         DW_AT_name [DW_FORM_strp] ("this")
