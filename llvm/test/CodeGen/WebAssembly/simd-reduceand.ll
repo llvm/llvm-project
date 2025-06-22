@@ -6,18 +6,8 @@ define i1 @reduce_and_to_all_true_16i8(<16 x i8> %0) {
 ; CHECK-LABEL: reduce_and_to_all_true_16i8:
 ; CHECK:         .functype reduce_and_to_all_true_16i8 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i8x16.ne $push10=, $0, $pop0
-; CHECK-NEXT:    local.tee $push9=, $0=, $pop10
-; CHECK-NEXT:    i8x16.shuffle $push1=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    v128.and $push8=, $pop9, $pop1
-; CHECK-NEXT:    local.tee $push7=, $0=, $pop8
-; CHECK-NEXT:    i8x16.shuffle $push2=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    v128.and $push3=, $pop7, $pop2
-; CHECK-NEXT:    i32x4.extract_lane $push4=, $pop3, 0
-; CHECK-NEXT:    i32.const $push5=, 0
-; CHECK-NEXT:    i32.ne $push6=, $pop4, $pop5
-; CHECK-NEXT:    return $pop6
+; CHECK-NEXT:    i8x16.all_true $push0=, $0
+; CHECK-NEXT:    return $pop0
   %2 = icmp ne <16 x i8> %0, zeroinitializer
   %3 = sext <16 x i1> %2 to <16 x i8>
   %4 = bitcast <16 x i8> %3 to <4 x i32>
@@ -31,18 +21,8 @@ define i1 @reduce_and_to_all_true_4i32(<4 x i32> %0) {
 ; CHECK-LABEL: reduce_and_to_all_true_4i32:
 ; CHECK:         .functype reduce_and_to_all_true_4i32 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0
-; CHECK-NEXT:    i32x4.ne $push10=, $0, $pop0
-; CHECK-NEXT:    local.tee $push9=, $0=, $pop10
-; CHECK-NEXT:    i8x16.shuffle $push1=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    v128.and $push8=, $pop9, $pop1
-; CHECK-NEXT:    local.tee $push7=, $0=, $pop8
-; CHECK-NEXT:    i8x16.shuffle $push2=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    v128.and $push3=, $pop7, $pop2
-; CHECK-NEXT:    i32x4.extract_lane $push4=, $pop3, 0
-; CHECK-NEXT:    i32.const $push5=, 0
-; CHECK-NEXT:    i32.ne $push6=, $pop4, $pop5
-; CHECK-NEXT:    return $pop6
+; CHECK-NEXT:    i32x4.all_true $push0=, $0
+; CHECK-NEXT:    return $pop0
   %2 = icmp ne <4 x i32> %0, zeroinitializer
   %3 = sext <4 x i1> %2 to <4 x i32>
   %4 = tail call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %3)
@@ -56,18 +36,8 @@ define i1 @reduce_and_to_all_true_2i64(<2 x i64> %0) {
 ; CHECK-LABEL: reduce_and_to_all_true_2i64:
 ; CHECK:         .functype reduce_and_to_all_true_2i64 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0
-; CHECK-NEXT:    i32x4.ne $push10=, $0, $pop0
-; CHECK-NEXT:    local.tee $push9=, $0=, $pop10
-; CHECK-NEXT:    i8x16.shuffle $push1=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    v128.and $push8=, $pop9, $pop1
-; CHECK-NEXT:    local.tee $push7=, $0=, $pop8
-; CHECK-NEXT:    i8x16.shuffle $push2=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    v128.and $push3=, $pop7, $pop2
-; CHECK-NEXT:    i32x4.extract_lane $push4=, $pop3, 0
-; CHECK-NEXT:    i32.const $push5=, 0
-; CHECK-NEXT:    i32.ne $push6=, $pop4, $pop5
-; CHECK-NEXT:    return $pop6
+; CHECK-NEXT:    i32x4.all_true $push0=, $0
+; CHECK-NEXT:    return $pop0
   %2 = bitcast <2 x i64> %0 to <4 x i32>
   %3 = icmp ne <4 x i32> %2, zeroinitializer
   %4 = sext <4 x i1> %3 to <4 x i32>
