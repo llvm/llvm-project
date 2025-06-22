@@ -730,11 +730,12 @@ MemRefType MemRefType::canonicalizeStridedLayout() {
 }
 
 LogicalResult MemRefType::getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                              int64_t &offset) {
+                                              int64_t &offset) const {
   return getLayout().getStridesAndOffset(getShape(), strides, offset);
 }
 
-std::pair<SmallVector<int64_t>, int64_t> MemRefType::getStridesAndOffset() {
+std::pair<SmallVector<int64_t>, int64_t>
+MemRefType::getStridesAndOffset() const {
   SmallVector<int64_t> strides;
   int64_t offset;
   LogicalResult status = getStridesAndOffset(strides, offset);
