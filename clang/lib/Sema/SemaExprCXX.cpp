@@ -2756,13 +2756,15 @@ static bool resolveAllocationOverloadInterior(
       if (!R.isClassLookup() && Args.size() == 2 &&
           (Args[1]->getType()->isObjectPointerType() ||
            Args[1]->getType()->isArrayType())) {
-        if (Args[1]->getType()->isPointerType()) {
-          if (Args[1]->getType()->getPointeeType().isConstQualified()) {
-            S.Diag(Args[1]->getExprLoc(),
-                   diag::err_placement_new_into_const_qualified_storage)
-                << Args[1]->getType() << Args[1]->getSourceRange();
-            return true;
-          }
+        const QualType Arg1Type = Args[1]->getType();
+        QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
+        if (UnderlyingType->isPointerType())
+          UnderlyingType = UnderlyingType->getPointeeType();
+        if (UnderlyingType.isConstQualified()) {
+          S.Diag(Args[1]->getExprLoc(),
+                 diag::err_placement_new_into_const_qualified_storage)
+              << Arg1Type << Args[1]->getSourceRange();
+          return true;
         }
         S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
             << R.getLookupName() << Range;
