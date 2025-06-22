@@ -1,4 +1,4 @@
-//===-- Implementation of remove for baremetal ------------------*- C++ -*-===//
+//===-- Implementation of fputc for baremetal -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/remove.h"
+#include "src/stdio/fputc.h"
 
-#include "src/__support/common.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/baremetal/write_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-// TODO: This is a temporary workaround for issue #85335.
+LLVM_LIBC_FUNCTION(int, fputc, (int c, ::FILE *stream)) {
+  char uc = static_cast<char>(c);
 
-LLVM_LIBC_FUNCTION(int, remove, (const char *)) { return -1; }
+  write_utils::write(stream, cpp::string_view(&uc, 1));
+
+  return 0;
+}
 
 } // namespace LIBC_NAMESPACE_DECL
