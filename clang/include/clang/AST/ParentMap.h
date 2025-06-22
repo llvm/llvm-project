@@ -13,6 +13,8 @@
 #ifndef LLVM_CLANG_AST_PARENTMAP_H
 #define LLVM_CLANG_AST_PARENTMAP_H
 
+#include <utility>
+
 namespace clang {
 class Stmt;
 class Expr;
@@ -23,17 +25,21 @@ public:
   ParentMap(Stmt* ASTRoot);
   ~ParentMap();
 
+  using ValueT = std::pair<Stmt *, unsigned>;
+
   /// Adds and/or updates the parent/child-relations of the complete
   /// stmt tree of S. All children of S including indirect descendants are
   /// visited and updated or inserted but not the parents of S.
-  void addStmt(Stmt* S);
+  void addStmt(Stmt *S, unsigned Depth);
 
   /// Manually sets the parent of \p S to \p Parent.
   ///
   /// If \p S is already in the map, this method will update the mapping.
   void setParent(const Stmt *S, const Stmt *Parent);
 
+  ValueT lookup(Stmt *) const;
   Stmt *getParent(Stmt*) const;
+  unsigned getParentDepth(Stmt *) const;
   Stmt *getParentIgnoreParens(Stmt *) const;
   Stmt *getParentIgnoreParenCasts(Stmt *) const;
   Stmt *getParentIgnoreParenImpCasts(Stmt *) const;
@@ -41,6 +47,10 @@ public:
 
   const Stmt *getParent(const Stmt* S) const {
     return getParent(const_cast<Stmt*>(S));
+  }
+
+  unsigned getParentDepth(const Stmt *S) const {
+    return getParentDepth(const_cast<Stmt *>(S));
   }
 
   const Stmt *getParentIgnoreParens(const Stmt *S) const {
@@ -60,5 +70,5 @@ public:
   }
 };
 
-} // end clang namespace
+} // end namespace clang
 #endif
