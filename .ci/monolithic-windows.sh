@@ -46,7 +46,7 @@ trap at-exit EXIT
 projects="${1}"
 targets="${2}"
 
-echo "--- cmake"
+echo "::group::cmake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 export CC=cl
@@ -78,6 +78,10 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_PARALLEL_COMPILE_JOBS=${MAX_PARALLEL_COMPILE_JOBS} \
       -D LLVM_PARALLEL_LINK_JOBS=${MAX_PARALLEL_LINK_JOBS}
 
-echo "--- ninja"
+echo "::endgroup::"
+echo "::group::ninja"
+
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
+
+echo "::endgroup"
