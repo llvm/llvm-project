@@ -231,14 +231,19 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
       if (auto *VPI = dyn_cast<VPInstruction>(RdxPhi->getStartValue())) {
         assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
                "unexpected start VPInstruction");
+        if (Part != 1)
+          continue;
+        VPValue *StartV;
         if (match(VPI->getOperand(2), m_SpecificInt(1))) {
-          Copy->setOperand(0, VPI->getOperand(1));
-        } else if (Part == 1) {
+          StartV = VPI->getOperand(1);
+        } else {
           auto *C = VPI->clone();
           C->setOperand(0, C->getOperand(1));
           C->insertAfter(VPI);
-          addUniformForAllParts(C);
+          StartV = C;
         }
+        for (unsigned Part = 1; Part != UF; ++Part)
+          VPV2Parts[VPI][Part - 1] = StartV;
       }
       Copy->addOperand(getConstantVPV(Part));
     } else {
@@ -347,7 +352,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
                       m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
-                      m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
+                      m_VPValue(), m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));

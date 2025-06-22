@@ -1343,7 +1343,7 @@ define <2 x double> @test_fminimumnum_vector_nan(<2 x double> %x) {
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vmovhpd {{.*#+}} xmm2 = xmm1[0],mem[0]
 ; AVX-NEXT:    vminpd %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX10_2-LABEL: test_fminimumnum_vector_nan:

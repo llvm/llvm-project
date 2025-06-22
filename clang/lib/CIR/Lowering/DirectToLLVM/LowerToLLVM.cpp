@@ -220,6 +220,39 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
+void convertSideEffectForCall(mlir::Operation *callOp,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn) {
+  using mlir::LLVM::ModRefInfo;
+
+  switch (sideEffect) {
+  case cir::SideEffect::All:
+    memoryEffect = {};
+    noUnwind = false;
+    willReturn = false;
+    break;
+
+  case cir::SideEffect::Pure:
+    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
+        callOp->getContext(), /*other=*/ModRefInfo::Ref,
+        /*argMem=*/ModRefInfo::Ref,
+        /*inaccessibleMem=*/ModRefInfo::Ref);
+    noUnwind = true;
+    willReturn = true;
+    break;
+
+  case cir::SideEffect::Const:
+    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
+        callOp->getContext(), /*other=*/ModRefInfo::NoModRef,
+        /*argMem=*/ModRefInfo::NoModRef,
+        /*inaccessibleMem=*/ModRefInfo::NoModRef);
+    noUnwind = true;
+    willReturn = true;
+    break;
+  }
+}
+
 /// IntAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
   mlir::Location loc = parentOp->getLoc();
@@ -406,6 +439,14 @@ struct ConvertCIRToLLVMPass
 
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
+
+mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
+    cir::AssumeOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto cond = adaptor.getPredicate();
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
+  return mlir::success();
+}
 
 mlir::LogicalResult CIRToLLVMBrCondOpLowering::matchAndRewrite(
     cir::BrCondOp brOp, OpAdaptor adaptor,
@@ -737,12 +778,18 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::FlatSymbolRefAttr calleeAttr) {
   llvm::SmallVector<mlir::Type, 8> llvmResults;
   mlir::ValueTypeRange<mlir::ResultRange> cirResults = op->getResultTypes();
+  auto call = cast<cir::CIRCallOpInterface>(op);
 
   if (converter->convertTypes(cirResults, llvmResults).failed())
     return mlir::failure();
 
   assert(!cir::MissingFeatures::opCallCallConv());
-  assert(!cir::MissingFeatures::opCallSideEffect());
+
+  mlir::LLVM::MemoryEffectsAttr memoryEffects;
+  bool noUnwind = false;
+  bool willReturn = false;
+  convertSideEffectForCall(op, call.getSideEffect(), memoryEffects, noUnwind,
+                           willReturn);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
   if (calleeAttr) { // direct call
@@ -767,10 +814,14 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   assert(!cir::MissingFeatures::opCallLandingPad());
   assert(!cir::MissingFeatures::opCallContinueBlock());
   assert(!cir::MissingFeatures::opCallCallConv());
-  assert(!cir::MissingFeatures::opCallSideEffect());
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(op, llvmFnTy, calleeAttr,
-                                                  callOperands);
+  auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+      op, llvmFnTy, calleeAttr, callOperands);
+  if (memoryEffects)
+    newOp.setMemoryEffectsAttr(memoryEffects);
+  newOp.setNoUnwind(noUnwind);
+  newOp.setWillReturn(willReturn);
+
   return mlir::success();
 }
 
@@ -901,6 +952,33 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
       rewriter.eraseOp(op);
       return mlir::success();
     }
+  } else if (const auto vecTy = mlir::dyn_cast<cir::VectorType>(op.getType())) {
+    rewriter.replaceOp(op, lowerCirAttrAsValue(op, op.getValue(), rewriter,
+                                               getTypeConverter()));
+    return mlir::success();
+  } else if (auto complexTy = mlir::dyn_cast<cir::ComplexType>(op.getType())) {
+    auto complexAttr = mlir::cast<cir::ConstComplexAttr>(op.getValue());
+    mlir::Type complexElemTy = complexTy.getElementType();
+    mlir::Type complexElemLLVMTy = typeConverter->convertType(complexElemTy);
+
+    mlir::Attribute components[2];
+    if (mlir::isa<cir::IntType>(complexElemTy)) {
+      components[0] = rewriter.getIntegerAttr(
+          complexElemLLVMTy,
+          mlir::cast<cir::IntAttr>(complexAttr.getReal()).getValue());
+      components[1] = rewriter.getIntegerAttr(
+          complexElemLLVMTy,
+          mlir::cast<cir::IntAttr>(complexAttr.getImag()).getValue());
+    } else {
+      components[0] = rewriter.getFloatAttr(
+          complexElemLLVMTy,
+          mlir::cast<cir::FPAttr>(complexAttr.getReal()).getValue());
+      components[1] = rewriter.getFloatAttr(
+          complexElemLLVMTy,
+          mlir::cast<cir::FPAttr>(complexAttr.getImag()).getValue());
+    }
+
+    attr = rewriter.getArrayAttr(components);
   } else {
     return op.emitError() << "unsupported constant type " << op.getType();
   }
@@ -1782,6 +1860,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                              dl);
   patterns.add<
       // clang-format off
+               CIRToLLVMAssumeOpLowering,
                CIRToLLVMBaseClassAddrOpLowering,
                CIRToLLVMBinOpLowering,
                CIRToLLVMBrCondOpLowering,
@@ -1803,9 +1882,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
                CIRToLLVMVecCmpOpLowering,
+               CIRToLLVMVecSplatOpLowering,
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecShuffleDynamicOpLowering,
-               CIRToLLVMVecTernaryOpLowering
+               CIRToLLVMVecTernaryOpLowering,
+               CIRToLLVMComplexCreateOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1956,6 +2037,56 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
+    cir::VecSplatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Vector splat can be implemented with an `insertelement` and a
+  // `shufflevector`, which is better than an `insertelement` for each
+  // element in the vector. Start with an undef vector. Insert the value into
+  // the first element. Then use a `shufflevector` with a mask of all 0 to
+  // fill out the entire vector with that value.
+  cir::VectorType vecTy = op.getType();
+  mlir::Type llvmTy = typeConverter->convertType(vecTy);
+  mlir::Location loc = op.getLoc();
+  mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
+
+  mlir::Value elementValue = adaptor.getValue();
+  if (mlir::isa<mlir::LLVM::PoisonOp>(elementValue.getDefiningOp())) {
+    // If the splat value is poison, then we can just use poison value
+    // for the entire vector.
+    rewriter.replaceOp(op, poison);
+    return mlir::success();
+  }
+
+  if (auto constValue =
+          dyn_cast<mlir::LLVM::ConstantOp>(elementValue.getDefiningOp())) {
+    if (auto intAttr = dyn_cast<mlir::IntegerAttr>(constValue.getValue())) {
+      mlir::DenseIntElementsAttr denseVec = mlir::DenseIntElementsAttr::get(
+          mlir::cast<mlir::ShapedType>(llvmTy), intAttr.getValue());
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+          op, denseVec.getType(), denseVec);
+      return mlir::success();
+    }
+
+    if (auto fpAttr = dyn_cast<mlir::FloatAttr>(constValue.getValue())) {
+      mlir::DenseFPElementsAttr denseVec = mlir::DenseFPElementsAttr::get(
+          mlir::cast<mlir::ShapedType>(llvmTy), fpAttr.getValue());
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+          op, denseVec.getType(), denseVec);
+      return mlir::success();
+    }
+  }
+
+  mlir::Value indexValue =
+      rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
+  mlir::Value oneElement = rewriter.create<mlir::LLVM::InsertElementOp>(
+      loc, poison, elementValue, indexValue);
+  SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ShuffleVectorOp>(op, oneElement,
+                                                           poison, zeroValues);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVecShuffleOpLowering::matchAndRewrite(
     cir::VecShuffleOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2038,6 +2169,24 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
           typeConverter->convertType(op.getCond().getType())));
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
       op, bitVec, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
+    cir::ComplexCreateOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type complexLLVMTy =
+      getTypeConverter()->convertType(op.getResult().getType());
+  auto initialComplex =
+      rewriter.create<mlir::LLVM::UndefOp>(op->getLoc(), complexLLVMTy);
+
+  auto realComplex = rewriter.create<mlir::LLVM::InsertValueOp>(
+      op->getLoc(), initialComplex, adaptor.getReal(), 0);
+
+  auto complex = rewriter.create<mlir::LLVM::InsertValueOp>(
+      op->getLoc(), realComplex, adaptor.getImag(), 1);
+
+  rewriter.replaceOp(op, complex);
   return mlir::success();
 }
 

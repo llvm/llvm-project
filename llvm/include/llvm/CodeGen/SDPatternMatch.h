@@ -142,6 +142,8 @@ inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
 inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
 
+inline Opcode_match m_Poison() { return Opcode_match(ISD::POISON); }
+
 template <unsigned NumUses, typename Pattern> struct NUses_match {
   Pattern P;
 
@@ -936,6 +938,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_AnyExt(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::TRUNCATE, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::ABS, Op);
 }
 
 /// Match a zext or identity

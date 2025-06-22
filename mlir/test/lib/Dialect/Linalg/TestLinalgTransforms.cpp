@@ -65,11 +65,6 @@ struct TestLinalgTransforms
       llvm::cl::desc(
           "Test a fused pass that forwards memref.copy to vector.transfer"),
       llvm::cl::init(false)};
-  Option<bool> testGenericToVectorPattern{
-      *this, "test-linalg-to-vector-patterns",
-      llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
-                     "in vector.contract form"),
-      llvm::cl::init(false)};
   Option<bool> testDecomposePadTensor{
       *this, "test-decompose-pad-tensor",
       llvm::cl::desc("Test transform pad tensor by copying with generic ops"),
@@ -166,15 +161,6 @@ static void applyVectorTransferForwardingPatterns(func::FuncOp funcOp) {
   (void)applyPatternsGreedily(funcOp, std::move(forwardPattern));
 }
 
-static void applyLinalgToVectorPatterns(func::FuncOp funcOp) {
-  RewritePatternSet patterns(funcOp.getContext());
-  auto *ctx = funcOp.getContext();
-  patterns.add<CopyVectorizationPattern>(ctx);
-  populatePadOpVectorizationPatterns(patterns);
-  populateConvolutionVectorizationPatterns(patterns);
-  (void)applyPatternsGreedily(funcOp, std::move(patterns));
-}
-
 static void applyDecomposePadPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<DecomposePadOpPattern>(funcOp.getContext());
@@ -254,8 +240,6 @@ void TestLinalgTransforms::runOnOperation() {
     return applyPatterns(getOperation());
   if (testVectorTransferForwardingPatterns)
     return applyVectorTransferForwardingPatterns(getOperation());
-  if (testGenericToVectorPattern)
-    return applyLinalgToVectorPatterns(getOperation());
   if (testDecomposePadTensor)
     return applyDecomposePadPatterns(getOperation());
   if (testDecomposeTensorPackOp)
