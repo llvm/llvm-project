@@ -1303,7 +1303,8 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   // where f(X) == 0 if and only if X == 0
   if (ICmpInst::isEquality(Pred))
     if (Value *Stripped = stripNullTest(Cmp.getOperand(0)))
-      return new ICmpInst(Pred, Stripped, Cmp.getOperand(1));
+      return new ICmpInst(Pred, Stripped,
+                          Constant::getNullValue(Stripped->getType()));
 
   return nullptr;
 }
