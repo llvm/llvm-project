@@ -45,6 +45,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
   bool HasPOPCNT = Subtarget.hasPOPCNT();
   bool HasLZCNT = Subtarget.hasLZCNT();
+  bool HasBMI = Subtarget.hasBMI();
 
   const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
@@ -264,12 +265,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarSameSizeAs(0, 1);
 
   // count trailing zeros
-  getActionDefinitionsBuilder({G_CTTZ_ZERO_UNDEF, G_CTTZ})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return (Query.Opcode == G_CTTZ_ZERO_UNDEF || Subtarget.hasBMI()) &&
-               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
-                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
-      })
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+      .legalFor({{s16, s16}, {s32, s32}})
+      .legalFor(Is64Bit, {{s64, s64}})
+      .widenScalarToNextPow2(1, /*Min=*/16)
+      .clampScalar(1, s16, sMaxScalar)
+      .scalarSameSizeAs(0, 1);
+
+  getActionDefinitionsBuilder(G_CTTZ)
+      .legalFor(HasBMI, {{s16, s16}, {s32, s32}})
+      .legalFor(HasBMI && Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
@@ -379,12 +384,18 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   }
 
   // sext, zext, and anyext
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
-      .legalIf([=](const LegalityQuery &Query) {
-        return typeInSet(0, {s8, s16, s32})(Query) ||
-               (Query.Opcode == G_ANYEXT && Query.Types[0] == s128) ||
-               (Is64Bit && Query.Types[0] == s64);
-      })
+  getActionDefinitionsBuilder(G_ANYEXT)
+      .legalFor({s8, s16, s32, s128})
+      .legalFor(Is64Bit, {s64})
+      .widenScalarToNextPow2(0, /*Min=*/8)
+      .clampScalar(0, s8, sMaxScalar)
+      .widenScalarToNextPow2(1, /*Min=*/8)
+      .clampScalar(1, s8, sMaxScalar)
+      .scalarize(0);
+
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT})
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar)
       .widenScalarToNextPow2(1, /*Min=*/8)
