@@ -1112,6 +1112,12 @@ def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
   "Has point sample acceleration feature"
 >;
 
+def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
+  "HasWaitXcnt",
+  "true",
+  "Has s_wait_xcnt instruction"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1927,6 +1933,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
+   FeatureWaitXcnt,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
@@ -2237,9 +2244,29 @@ def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
+def isGFX12Not12_50 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+
+def isGFX12PlusNot12_50 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+
+def isGFX125xOnly :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def isGFX1250Plus :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def isNotGFX1250Plus :
+  Predicate<"!Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def HasMinimum3Maximum3F32 :
   Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
@@ -2590,6 +2617,9 @@ def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
 
 def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
   AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
+
+def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
+  AssemblerPredicate<(all_of FeatureWaitXcnt)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;

@@ -103,5 +103,23 @@ typedef int MyTypedef;
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "USR": "0000000000000000000000000000000000000000"
-// CHECK-NOT:     "Variables": [
+// CHECK-NOT:    "Variables": [
+// CHECK-NOT:      {
+// CHECK-NOT:        "IsStatic": true,
+// CHECK-NOT:        "Location": {
+// CHECK-NOT:          "Filename": "{{.*}}namespace.cpp",
+// CHECK-NOT:          "LineNumber": 13
+// CHECK-NOT:        },
+// CHECK-NOT:        "Name": "Global",
+// CHECK-NOT:        "Type": {
+// COM:                FIXME: IsBuiltIn emits as its default value
+// CHECK-NOT:          "IsBuiltIn": false,
+// CHECK-NOT:          "IsTemplate": false,
+// CHECK-NOT:          "Name": "int",
+// CHECK-NOT:          "QualName": "int",
+// CHECK-NOT:          "USR": "0000000000000000000000000000000000000000"
+// CHECK-NOT:        },
+// CHECK-NOT:        "USR": "{{[0-9A-F]*}}"
+// CHECK-NOT:      }
+// CHECK-NOT:    ]
 // CHECK-NEXT:  }

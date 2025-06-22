@@ -10,10 +10,9 @@
 #include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
-#include "llvm/Support/Debug.h"
-#include <mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h>
-#include <mlir/Analysis/DataFlow/DeadCodeAnalysis.h>
+#include <llvm/Support/Debug.h>
 #include <mlir/Analysis/DataFlow/SparseAnalysis.h>
+#include <mlir/Analysis/DataFlow/Utils.h>
 #include <mlir/Analysis/DataFlowFramework.h>
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/Value.h>
@@ -294,8 +293,7 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
   LDBG("Constructing RunLivenessAnalysis for op: " << op->getName());
   SymbolTableCollection symbolTable;
 
-  solver.load<DeadCodeAnalysis>();
-  solver.load<SparseConstantPropagation>();
+  loadBaselineAnalyses(solver);
   solver.load<LivenessAnalysis>(symbolTable);
   LDBG("Initializing and running solver");
   (void)solver.initializeAndRun(op);

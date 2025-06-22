@@ -710,9 +710,9 @@ public:
   }
 
   virtual InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const {
     return 1;
   }
@@ -1541,13 +1541,14 @@ public:
           return 0;
 
         if (Shuffle->isExtractSubvectorMask(SubIndex))
-          return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
-                                           Mask, CostKind, SubIndex, VecTy,
-                                           Operands, Shuffle);
+          return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecTy,
+                                           VecSrcTy, Mask, CostKind, SubIndex,
+                                           VecTy, Operands, Shuffle);
 
         if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
           return TargetTTI->getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, Mask, CostKind, SubIndex,
+              TTI::SK_InsertSubvector, VecTy, VecSrcTy, Mask, CostKind,
+              SubIndex,
               FixedVectorType::get(VecTy->getScalarType(), NumSubElts),
               Operands, Shuffle);
 
@@ -1576,21 +1577,24 @@ public:
 
           return TargetTTI->getShuffleCost(
               IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc, VecTy,
-              AdjustMask, CostKind, 0, nullptr, Operands, Shuffle);
+              VecTy, AdjustMask, CostKind, 0, nullptr, Operands, Shuffle);
         }
 
         // Narrowing shuffle - perform shuffle at original wider width and
         // then extract the lower elements.
+        // FIXME: This can assume widening, which is not true of all vector
+        // architectures (and is not even the default).
         AdjustMask.append(NumSubElts - Mask.size(), PoisonMaskElem);
 
         InstructionCost ShuffleCost = TargetTTI->getShuffleCost(
             IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc,
-            VecSrcTy, AdjustMask, CostKind, 0, nullptr, Operands, Shuffle);
+            VecSrcTy, VecSrcTy, AdjustMask, CostKind, 0, nullptr, Operands,
+            Shuffle);
 
         SmallVector<int, 16> ExtractMask(Mask.size());
         std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
         return ShuffleCost + TargetTTI->getShuffleCost(
-                                 TTI::SK_ExtractSubvector, VecSrcTy,
+                                 TTI::SK_ExtractSubvector, VecTy, VecSrcTy,
                                  ExtractMask, CostKind, 0, VecTy, {}, Shuffle);
       }
 
@@ -1598,40 +1602,44 @@ public:
         return 0;
 
       if (Shuffle->isReverse())
-        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, Mask, CostKind,
-                                         0, nullptr, Operands, Shuffle);
+        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, VecSrcTy, Mask,
+                                         CostKind, 0, nullptr, Operands,
+                                         Shuffle);
 
       if (Shuffle->isSelect())
-        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, Mask, CostKind,
-                                         0, nullptr, Operands, Shuffle);
+        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, VecSrcTy, Mask,
+                                         CostKind, 0, nullptr, Operands,
+                                         Shuffle);
 
       if (Shuffle->isTranspose())
-        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy, Mask,
-                                         CostKind, 0, nullptr, Operands,
+        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy, VecSrcTy,
+                                         Mask, CostKind, 0, nullptr, Operands,
                                          Shuffle);
 
       if (Shuffle->isZeroEltSplat())
-        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy, Mask,
-                                         CostKind, 0, nullptr, Operands,
+        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy, VecSrcTy,
+                                         Mask, CostKind, 0, nullptr, Operands,
                                          Shuffle);
 
       if (Shuffle->isSingleSource())
-        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, Mask,
-                                         CostKind, 0, nullptr, Operands,
-                                         Shuffle);
+        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
+                                         VecSrcTy, Mask, CostKind, 0, nullptr,
+                                         Operands, Shuffle);
 
       if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
         return TargetTTI->getShuffleCost(
-            TTI::SK_InsertSubvector, VecTy, Mask, CostKind, SubIndex,
+            TTI::SK_InsertSubvector, VecTy, VecSrcTy, Mask, CostKind, SubIndex,
             FixedVectorType::get(VecTy->getScalarType(), NumSubElts), Operands,
             Shuffle);
 
       if (Shuffle->isSplice(SubIndex))
-        return TargetTTI->getShuffleCost(TTI::SK_Splice, VecTy, Mask, CostKind,
-                                         SubIndex, nullptr, Operands, Shuffle);
+        return TargetTTI->getShuffleCost(TTI::SK_Splice, VecTy, VecSrcTy, Mask,
+                                         CostKind, SubIndex, nullptr, Operands,
+                                         Shuffle);
 
-      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, Mask,
-                                       CostKind, 0, nullptr, Operands, Shuffle);
+      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, VecSrcTy,
+                                       Mask, CostKind, 0, nullptr, Operands,
+                                       Shuffle);
     }
     case Instruction::ExtractElement: {
       auto *EEI = dyn_cast<ExtractElementInst>(U);
