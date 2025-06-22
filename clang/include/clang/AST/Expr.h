@@ -3106,9 +3106,9 @@ public:
   /// Compute and set dependence bits.
   void computeDependence() {
     setDependence(clang::computeDependence(
-        this, llvm::ArrayRef(
-                  reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
-                  getNumPreArgs())));
+        this,
+        ArrayRef(reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
+                 getNumPreArgs())));
   }
 
   /// Reduce the number of arguments in this call expression. This is used for
@@ -3153,8 +3153,7 @@ public:
   /// interface.  This provides efficient reverse iteration of the
   /// subexpressions.  This is currently used for CFG construction.
   ArrayRef<Stmt *> getRawSubExprs() {
-    return llvm::ArrayRef(getTrailingStmts(),
-                          PREARGS_START + getNumPreArgs() + getNumArgs());
+    return {getTrailingStmts(), PREARGS_START + getNumPreArgs() + getNumArgs()};
   }
 
   /// Get FPOptionsOverride from trailing storage.
@@ -5276,11 +5275,9 @@ public:
     return reinterpret_cast<Expr * const *>(InitExprs.data());
   }
 
-  ArrayRef<Expr *> inits() { return llvm::ArrayRef(getInits(), getNumInits()); }
+  ArrayRef<Expr *> inits() { return {getInits(), getNumInits()}; }
 
-  ArrayRef<Expr *> inits() const {
-    return llvm::ArrayRef(getInits(), getNumInits());
-  }
+  ArrayRef<Expr *> inits() const { return {getInits(), getNumInits()}; }
 
   const Expr *getInit(unsigned Init) const {
     assert(Init < getNumInits() && "Initializer access out of range!");
@@ -5508,7 +5505,7 @@ private:
   Designator *Designators;
 
   DesignatedInitExpr(const ASTContext &C, QualType Ty,
-                     llvm::ArrayRef<Designator> Designators,
+                     ArrayRef<Designator> Designators,
                      SourceLocation EqualOrColonLoc, bool GNUSyntax,
                      ArrayRef<Expr *> IndexExprs, Expr *Init);
 
@@ -5701,8 +5698,8 @@ public:
   };
 
   static DesignatedInitExpr *Create(const ASTContext &C,
-                                    llvm::ArrayRef<Designator> Designators,
-                                    ArrayRef<Expr*> IndexExprs,
+                                    ArrayRef<Designator> Designators,
+                                    ArrayRef<Expr *> IndexExprs,
                                     SourceLocation EqualOrColonLoc,
                                     bool GNUSyntax, Expr *Init);
 
@@ -5713,11 +5710,11 @@ public:
   unsigned size() const { return NumDesignators; }
 
   // Iterator access to the designators.
-  llvm::MutableArrayRef<Designator> designators() {
+  MutableArrayRef<Designator> designators() {
     return {Designators, NumDesignators};
   }
 
-  llvm::ArrayRef<Designator> designators() const {
+  ArrayRef<Designator> designators() const {
     return {Designators, NumDesignators};
   }
 
@@ -6052,7 +6049,7 @@ public:
 
   Expr **getExprs() { return reinterpret_cast<Expr **>(getTrailingObjects()); }
 
-  ArrayRef<Expr *> exprs() { return llvm::ArrayRef(getExprs(), getNumExprs()); }
+  ArrayRef<Expr *> exprs() { return {getExprs(), getNumExprs()}; }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
