@@ -1114,8 +1114,22 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
       if (AVR::isProgramMemoryAccess(LD))
         return false;
 
+    SDValue Ptr;
+    if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
+      Ptr = LD->getBasePtr();
+    } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
+      Ptr = ST->getBasePtr();
+    } else
+      return false;
+
     Base = Op->getOperand(0);
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);
+
+    // Post-indexing updates the base, so it's not a valid transform
+    // if that's not the same as the load's pointer.
+    if (Ptr != Base)
+      return false;
+
     AM = ISD::POST_INC;
 
     return true;
