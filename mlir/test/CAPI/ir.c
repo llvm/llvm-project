@@ -2440,6 +2440,52 @@ void testDiagnostics(void) {
   mlirContextDestroy(ctx);
 }
 
+int testBlockPredecessorsSuccessors(MlirContext ctx) {
+  // CHECK-LABEL: @testBlockPredecessorsSuccessors
+  fprintf(stderr, "@testBlockPredecessorsSuccessors\n");
+
+  const char *moduleString = "module {\n"
+                             "  func.func @test(%arg0: i32, %arg1: i16) {\n"
+                             "    cf.br ^bb1(%arg1 : i16)\n"
+                             "  ^bb1(%0: i16):  // pred: ^bb0\n"
+                             "    cf.br ^bb2(%arg0 : i32)\n"
+                             "  ^bb2(%1: i32):  // pred: ^bb1\n"
+                             "    return\n"
+                             "  }\n"
+                             "}\n";
+
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+  MlirRegion moduleRegion = mlirOperationGetRegion(moduleOp, 0);
+  MlirBlock moduleBlock = mlirRegionGetFirstBlock(moduleRegion);
+  MlirOperation function = mlirBlockGetFirstOperation(moduleBlock);
+  MlirRegion funcRegion = mlirOperationGetRegion(function, 0);
+  MlirBlock entryBlock = mlirRegionGetFirstBlock(funcRegion);
+  MlirBlock middleBlock = mlirBlockGetNextInRegion(entryBlock);
+  MlirBlock successorBlock = mlirBlockGetNextInRegion(middleBlock);
+
+  assert(mlirBlockGetNumPredecessors(entryBlock) == 0);
+
+  assert(mlirBlockGetNumSuccessors(entryBlock) == 1);
+  assert(mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)));
+  assert(mlirBlockGetNumPredecessors(middleBlock) == 1);
+  assert(mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0)));
+
+  assert(mlirBlockGetNumSuccessors(middleBlock) == 1);
+  assert(mlirBlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)));
+  assert(mlirBlockGetNumPredecessors(successorBlock) == 1);
+  assert(
+      mlirBlockEqual(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)));
+
+  assert(mlirBlockGetNumSuccessors(successorBlock) == 0);
+
+  mlirModuleDestroy(module);
+
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2485,6 +2531,9 @@ int main(void) {
 
   testExplicitThreadPools();
   testDiagnostics();
+
+  if (testBlockPredecessorsSuccessors(ctx))
+    return 17;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
