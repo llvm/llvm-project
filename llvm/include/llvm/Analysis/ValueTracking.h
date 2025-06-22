@@ -999,6 +999,11 @@ LLVM_ABI void
 findValuesAffectedByCondition(Value *Cond, bool IsAssume,
                               function_ref<void(Value *)> InsertAffected);
 
+/// Returns the inner value X if the expression has the form f(X)
+/// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
+LLVM_ABI Value *stripNullTest(Value *V);
+LLVM_ABI const Value *stripNullTest(const Value *V);
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

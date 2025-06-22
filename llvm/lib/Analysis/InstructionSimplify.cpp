@@ -2981,7 +2981,7 @@ static Value *simplifyICmpWithZero(CmpPredicate Pred, Value *LHS, Value *RHS,
 }
 
 static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
-                                       Value *RHS, const InstrInfoQuery &IIQ) {
+                                       Value *RHS, const SimplifyQuery &Q) {
   Type *ITy = getCompareTy(RHS); // The return type.
 
   Value *X;
@@ -3007,7 +3007,7 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
     return ConstantInt::getTrue(ITy);
 
   ConstantRange LHS_CR =
-      computeConstantRange(LHS, CmpInst::isSigned(Pred), IIQ.UseInstrInfo);
+      computeConstantRange(LHS, CmpInst::isSigned(Pred), Q.IIQ.UseInstrInfo);
   if (!LHS_CR.isFullSet()) {
     if (RHS_CR.contains(LHS_CR))
       return ConstantInt::getTrue(ITy);
@@ -3018,12 +3018,15 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
   // (mul nuw/nsw X, MulC) != C --> true  (if C is not a multiple of MulC)
   // (mul nuw/nsw X, MulC) == C --> false (if C is not a multiple of MulC)
   const APInt *MulC;
-  if (IIQ.UseInstrInfo && ICmpInst::isEquality(Pred) &&
+  if (Q.IIQ.UseInstrInfo && ICmpInst::isEquality(Pred) &&
       ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowPoison(MulC))) &&
         *MulC != 0 && C->urem(*MulC) != 0) ||
        (match(LHS, m_NSWMul(m_Value(), m_APIntAllowPoison(MulC))) &&
         *MulC != 0 && C->srem(*MulC) != 0)))
     return ConstantInt::get(ITy, Pred == ICmpInst::ICMP_NE);
+
+  if (Pred == ICmpInst::ICMP_UGE && C->isOne() && isKnownNonZero(LHS, Q))
+    return ConstantInt::getTrue(ITy);
 
   return nullptr;
 }
@@ -3776,7 +3779,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (Value *V = simplifyICmpWithZero(Pred, LHS, RHS, Q))
     return V;
 
-  if (Value *V = simplifyICmpWithConstant(Pred, LHS, RHS, Q.IIQ))
+  if (Value *V = simplifyICmpWithConstant(Pred, LHS, RHS, Q))
     return V;
 
   // If both operands have range metadata, use the metadata
