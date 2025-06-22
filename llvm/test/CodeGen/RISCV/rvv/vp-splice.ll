@@ -286,3 +286,144 @@ define <vscale x 2 x float> @test_vp_splice_nxv2f32_masked(<vscale x 2 x float> 
   %v = call <vscale x 2 x float> @llvm.experimental.vp.splice.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb, i32 5, <vscale x 2 x i1> %mask, i32 %evla, i32 %evlb)
   ret <vscale x 2 x float> %v
 }
+
+define <vscale x 16 x i64> @test_vp_splice_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i64> %vb, i32 zeroext %evla, i32 zeroext %evlb) nounwind {
+; CHECK-LABEL: test_vp_splice_nxv16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    slli a5, a4, 1
+; CHECK-NEXT:    addi a5, a5, -1
+; CHECK-NEXT:    slli a1, a4, 3
+; CHECK-NEXT:    mv a7, a2
+; CHECK-NEXT:    bltu a2, a5, .LBB21_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a7, a5
+; CHECK-NEXT:  .LBB21_2:
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    csrr a5, vlenb
+; CHECK-NEXT:    slli a5, a5, 5
+; CHECK-NEXT:    sub sp, sp, a5
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    add a5, a0, a1
+; CHECK-NEXT:    slli a7, a7, 3
+; CHECK-NEXT:    addi a6, sp, 64
+; CHECK-NEXT:    mv t0, a2
+; CHECK-NEXT:    bltu a2, a4, .LBB21_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    mv t0, a4
+; CHECK-NEXT:  .LBB21_4:
+; CHECK-NEXT:    vl8re64.v v24, (a5)
+; CHECK-NEXT:    add a5, a6, a7
+; CHECK-NEXT:    vl8re64.v v0, (a0)
+; CHECK-NEXT:    vsetvli zero, t0, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v8, (a6)
+; CHECK-NEXT:    sub a0, a2, a4
+; CHECK-NEXT:    sltu a2, a2, a0
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a0, a2, a0
+; CHECK-NEXT:    add a6, a6, a1
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v16, (a6)
+; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    bltu a3, a4, .LBB21_6
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    mv a0, a4
+; CHECK-NEXT:  .LBB21_6:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v0, (a5)
+; CHECK-NEXT:    sub a2, a3, a4
+; CHECK-NEXT:    add a5, a5, a1
+; CHECK-NEXT:    sltu a3, a3, a2
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    addi a3, sp, 104
+; CHECK-NEXT:    add a1, a3, a1
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v24, (a5)
+; CHECK-NEXT:    vle64.v v16, (a1)
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a3)
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    ret
+  %v = call <vscale x 16 x i64> @llvm.experimental.vp.splice.nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i64> %vb, i32 5, <vscale x 16 x i1> splat (i1 1), i32 %evla, i32 %evlb)
+  ret <vscale x 16 x i64> %v
+}
+
+define <vscale x 16 x i64> @test_vp_splice_nxv16i64_negative_offset(<vscale x 16 x i64> %va, <vscale x 16 x i64> %vb, i32 zeroext %evla, i32 zeroext %evlb) nounwind {
+; CHECK-LABEL: test_vp_splice_nxv16i64_negative_offset:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a5, vlenb
+; CHECK-NEXT:    slli a6, a5, 1
+; CHECK-NEXT:    addi a6, a6, -1
+; CHECK-NEXT:    slli a1, a5, 3
+; CHECK-NEXT:    mv a4, a2
+; CHECK-NEXT:    bltu a2, a6, .LBB22_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a4, a6
+; CHECK-NEXT:  .LBB22_2:
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    csrr a6, vlenb
+; CHECK-NEXT:    slli a6, a6, 5
+; CHECK-NEXT:    sub sp, sp, a6
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    add a6, a0, a1
+; CHECK-NEXT:    slli a4, a4, 3
+; CHECK-NEXT:    addi a7, sp, 64
+; CHECK-NEXT:    mv t0, a2
+; CHECK-NEXT:    bltu a2, a5, .LBB22_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    mv t0, a5
+; CHECK-NEXT:  .LBB22_4:
+; CHECK-NEXT:    vl8re64.v v24, (a6)
+; CHECK-NEXT:    add a6, a7, a4
+; CHECK-NEXT:    vl8re64.v v0, (a0)
+; CHECK-NEXT:    vsetvli zero, t0, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v8, (a7)
+; CHECK-NEXT:    sub a0, a2, a5
+; CHECK-NEXT:    sltu a2, a2, a0
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a0, a2, a0
+; CHECK-NEXT:    add a7, a7, a1
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v16, (a7)
+; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    bltu a3, a5, .LBB22_6
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    mv a0, a5
+; CHECK-NEXT:  .LBB22_6:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v0, (a6)
+; CHECK-NEXT:    sub a2, a3, a5
+; CHECK-NEXT:    add a5, a6, a1
+; CHECK-NEXT:    sltu a3, a3, a2
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    li a3, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v24, (a5)
+; CHECK-NEXT:    bltu a4, a3, .LBB22_8
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    li a4, 8
+; CHECK-NEXT:  .LBB22_8:
+; CHECK-NEXT:    sub a2, a6, a4
+; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    vle64.v v16, (a1)
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    ret
+  %v = call <vscale x 16 x i64> @llvm.experimental.vp.splice.nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i64> %vb, i32 -1, <vscale x 16 x i1> splat (i1 1), i32 %evla, i32 %evlb)
+  ret <vscale x 16 x i64> %v
+}
