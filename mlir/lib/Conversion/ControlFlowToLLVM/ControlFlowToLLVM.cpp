@@ -44,9 +44,10 @@ namespace {
 /// lowering.
 struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
   explicit AssertOpLowering(const LLVMTypeConverter &typeConverter,
-                            bool abortOnFailedAssert = true)
+                            bool abortOnFailedAssert = true,
+                            SymbolTableCollection *symbolTables = nullptr)
       : ConvertOpToLLVMPattern<cf::AssertOp>(typeConverter, /*benefit=*/1),
-        abortOnFailedAssert(abortOnFailedAssert) {}
+        abortOnFailedAssert(abortOnFailedAssert), symbolTables(symbolTables) {}
 
   LogicalResult
   matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
@@ -64,7 +65,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
     auto createResult = LLVM::createPrintStrCall(
         rewriter, loc, module, "assert_msg", op.getMsg(), *getTypeConverter(),
         /*addNewLine=*/false,
-        /*runtimeFunctionName=*/"puts");
+        /*runtimeFunctionName=*/"puts", symbolTables);
     if (createResult.failed())
       return failure();
 
@@ -96,6 +97,8 @@ private:
   /// If set to `false`, messages are printed but program execution continues.
   /// This is useful for testing asserts.
   bool abortOnFailedAssert = true;
+
+  SymbolTableCollection *symbolTables = nullptr;
 };
 
 /// Helper function for converting branch ops. This function converts the
@@ -232,8 +235,8 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
 
 void mlir::cf::populateAssertToLLVMConversionPattern(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool abortOnFailure) {
-  patterns.add<AssertOpLowering>(converter, abortOnFailure);
+    bool abortOnFailure, SymbolTableCollection *symbolTables) {
+  patterns.add<AssertOpLowering>(converter, abortOnFailure, symbolTables);
 }
 
 //===----------------------------------------------------------------------===//
