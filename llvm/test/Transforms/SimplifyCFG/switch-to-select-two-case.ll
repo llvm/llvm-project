@@ -309,3 +309,91 @@ end:
   %t0 = phi i8 [ 42, %case1 ], [ 42, %case2 ], [ 44, %case3 ], [ 44, %case4 ]
   ret i8 %t0
 }
+
+define i1 @range0to4odd(i8 range(i8 0, 4) %f) {
+; CHECK-LABEL: @range0to4odd(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %f, label %bb1 [
+  i8 1, label %bb2
+  i8 3, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @range1to4odd(i8 range(i8 1, 4) %f) {
+; CHECK-LABEL: @range1to4odd(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %f, label %bb1 [
+  i8 1, label %bb2
+  i8 3, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @range0to8odd(i8 range(i8 0, 8) %f) {
+; CHECK-LABEL: @range0to8odd(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %f, label %bb1 [
+  i8 1, label %bb2
+  i8 3, label %bb2
+  i8 5, label %bb2
+  i8 7, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @negative_range0to5even(i8 range(i8 0, 5) %f) {
+; CHECK-LABEL: @negative_range0to5even(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[F:%.*]], 2
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i8 [[TMP0]], -3
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i8 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  switch i8 %f, label %bb1 [
+  i8 2, label %bb2
+  i8 4, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+

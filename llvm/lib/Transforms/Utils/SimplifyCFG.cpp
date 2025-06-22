@@ -6198,7 +6198,7 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
 // TODO: Handle switches with more than 2 cases that map to the same result.
 static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
                                  Constant *DefaultResult, Value *Condition,
-                                 IRBuilder<> &Builder) {
+                                 IRBuilder<> &Builder, const DataLayout &DL) {
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
   // Example:
@@ -6234,10 +6234,34 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     // case 0,2,8,10 -> Cond & 0b1..0101 == 0 ? result : default
     if (isPowerOf2_32(CaseCount)) {
       ConstantInt *MinCaseVal = CaseValues[0];
-      // Find mininal value.
-      for (auto *Case : CaseValues)
+      // In case, there are bits, that can only be present in the CaseValues we
+      // can transform the switch into a select if the conjunction of
+      // all the values uniquely identify the CaseValues.
+      APInt AndMask = APInt::getAllOnes(MinCaseVal->getBitWidth());
+
+      for (auto *Case : CaseValues) {
         if (Case->getValue().slt(MinCaseVal->getValue()))
           MinCaseVal = Case;
+        AndMask &= Case->getValue();
+      }
+
+      KnownBits Known = computeKnownBits(Condition, DL);
+      unsigned int ConditionWidth = Condition->getType()->getIntegerBitWidth();
+      APInt ActiveBits = APInt(ConditionWidth, Known.countMaxActiveBits(),
+                               Condition->getType()->isSingleValueType());
+
+      APInt One(ConditionWidth, 1, false);
+      // To make sure, that the representation of the accepted values is
+      // actually unique we check, wheter the conjucted bits and the another
+      // conjuction with the input value will only be true for exactly CaseCount
+      // number times.
+      if ((One << ActiveBits) - (One << (ActiveBits - AndMask.popcount())) ==
+          CaseCount) {
+        Value *And = Builder.CreateAnd(Condition, AndMask);
+        Value *Cmp =
+            Builder.CreateICmpNE(And, Constant::getNullValue(And->getType()));
+        return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+      }
 
       // Mark the bits case number touched.
       APInt BitMask = APInt::getZero(MinCaseVal->getBitWidth());
@@ -6325,7 +6349,7 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   assert(PHI != nullptr && "PHI for value select not found");
   Builder.SetInsertPoint(SI);
   Value *SelectValue =
-      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder);
+      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder, DL);
   if (!SelectValue)
     return false;
 
