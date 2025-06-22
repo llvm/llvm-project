@@ -87,10 +87,10 @@ private:
   // Emits C++ statements for matching the DAG structure.
   void emitMatch(DagNode tree, StringRef name, int depth);
 
-  // Emit C++ function call to static DAG matcher.
+  // Emits C++ function call to static DAG matcher.
   void emitStaticMatchCall(DagNode tree, StringRef name);
 
-  // Emit C++ function call to static type/attribute constraint function.
+  // Emits C++ function call to static type/attribute constraint function.
   void emitStaticVerifierCall(StringRef funcName, StringRef opName,
                               StringRef arg, StringRef failureStr);
 
