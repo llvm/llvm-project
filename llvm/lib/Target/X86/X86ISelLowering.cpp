@@ -53392,36 +53392,32 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
                                  const SDLoc &Dl,
                                  const X86Subtarget &Subtarget) {
+  using namespace llvm::SDPatternMatch;
+
   if (!Subtarget.hasAVX() && !Subtarget.hasAVX2() && !Subtarget.hasAVX512())
     return SDValue();
 
-  if (!Store->isSimple())
+  if (!Store->isSimple() || Store->isTruncatingStore())
     return SDValue();
 
   SDValue StoredVal = Store->getValue();
   SDValue StorePtr = Store->getBasePtr();
   SDValue StoreOffset = Store->getOffset();
-  EVT VT = StoredVal.getValueType();
+  EVT VT = Store->getMemoryVT();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (!TLI.isTypeLegal(VT) || !TLI.isOperationLegalOrCustom(ISD::MSTORE, VT))
     return SDValue();
 
-  if (StoredVal.getOpcode() != ISD::VSELECT)
+  SDValue Mask, TrueVec, LoadCh;
+  if (!sd_match(StoredVal,
+                m_VSelect(m_Value(Mask), m_Value(TrueVec),
+                          m_Load(m_Value(LoadCh), m_Specific(StorePtr),
+                                 m_Specific(StoreOffset)))))
     return SDValue();
 
-  SDValue Mask = StoredVal.getOperand(0);
-  SDValue TrueVec = StoredVal.getOperand(1);
-  SDValue FalseVec = StoredVal.getOperand(2);
-
-  LoadSDNode *Load = cast<LoadSDNode>(FalseVec.getNode());
+  LoadSDNode *Load = cast<LoadSDNode>(StoredVal.getOperand(2));
   if (!Load || !Load->isSimple())
-    return SDValue();
-
-  SDValue LoadPtr = Load->getBasePtr();
-  SDValue LoadOffset = Load->getOffset();
-
-  if (StorePtr != LoadPtr || StoreOffset != LoadOffset)
     return SDValue();
 
   auto IsSafeToFold = [](StoreSDNode *Store, LoadSDNode *Load) {
@@ -53437,12 +53433,12 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
       if (!Node)
         return false;
 
+      if (Node == Load)
+        return true;
+
       if (const auto *MemNode = dyn_cast<MemSDNode>(Node))
         if (!MemNode->isSimple() || MemNode->writeMem())
           return false;
-
-      if (Node == Load)
-        return true;
 
       if (Node->getOpcode() == ISD::TokenFactor) {
         for (unsigned i = 0; i < Node->getNumOperands(); ++i)
@@ -53459,8 +53455,8 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
     return SDValue();
 
   return DAG.getMaskedStore(Store->getChain(), Dl, TrueVec, StorePtr,
-                            StoreOffset, Mask, Store->getMemoryVT(),
-                            Store->getMemOperand(), Store->getAddressingMode());
+                            StoreOffset, Mask, VT, Store->getMemOperand(),
+                            Store->getAddressingMode());
 }
 
 static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
@@ -53727,6 +53723,9 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                                    St->getMemOperand());
   }
 
+  if (SDValue MaskedStore = foldToMaskedStore(St, DAG, dl, Subtarget))
+    return MaskedStore;
+
   // Turn load->store of MMX types into GPR load/stores.  This avoids clobbering
   // the FP state in cases where an emms may be missing.
   // A preferable solution to the general problem is to figure out the right
@@ -53787,9 +53786,6 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                         St->getPointerInfo(), St->getBaseAlign(),
                         St->getMemOperand()->getFlags());
   }
-
-  if (SDValue MaskedStore = foldToMaskedStore(St, DAG, dl, Subtarget))
-    return MaskedStore;
 
   return SDValue();
 }
