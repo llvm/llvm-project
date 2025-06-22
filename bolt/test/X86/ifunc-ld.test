@@ -1,0 +1,13 @@
+// This test checks R_X86_64_IRELATIVE in .rela.plt can be properly
+// placed after R_X86_64_JUMP_SLOT entries by BOLT
+
+RUN: yaml2obj %p/Inputs/ifunc-ld.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.bolt
+RUN: llvm-readelf -aW %t.bolt | FileCheck %s
+
+# CHECK: Relocation section '.rela.plt'
+# CHECK-NEXT: Offset
+# CHECK-NEXT: R_X86_64_JUMP_SLOT
+# CHECK-NEXT: R_X86_64_JUMP_SLOT
+# CHECK-NEXT: R_X86_64_IRELATIVE
+# CHECK-NEXT: R_X86_64_IRELATIVE
