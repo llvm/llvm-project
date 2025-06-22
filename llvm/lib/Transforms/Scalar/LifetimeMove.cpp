@@ -93,13 +93,9 @@ void LifetimeMover::visitInstruction(Instruction &I) {
   UserBBs.insert(I.getParent());
 }
 
-void LifetimeMover::visitPHINode(PHINode &I) {
-  enqueueUsers(I);
-}
+void LifetimeMover::visitPHINode(PHINode &I) { enqueueUsers(I); }
 
-void LifetimeMover::visitSelectInst(SelectInst &I) {
-  enqueueUsers(I);
-}
+void LifetimeMover::visitSelectInst(SelectInst &I) { enqueueUsers(I); }
 
 void LifetimeMover::visitStoreInst(StoreInst &SI) {
   if (SI.getPointerOperand() == U->get())
@@ -189,8 +185,11 @@ void LifetimeMover::visitCallBase(CallBase &CB) {
 /// after the critical point. Doing so minimizes the lifetime of each variable.
 void LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
   auto Update = [this](Instruction *Old, Instruction *New) {
-    // Reject if the new proposal lengthens the lifetime
+    // Reject the new proposal if it lengthens lifetime
     if (DT.dominates(New, Old))
+      return Old;
+
+    if (LI.getLoopFor(New->getParent()))
       return Old;
 
     bool DomAll = llvm::all_of(UserBBs, [this, New](BasicBlock *UserBB) {
@@ -237,6 +236,9 @@ void LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
 void LifetimeMover::riseLifetimeEndMarkers() {
   auto Update = [this](Instruction *Old, Instruction *New) {
     if (Old != nullptr && DT.dominates(Old, New))
+      return Old;
+
+    if (LI.getLoopFor(New->getParent()))
       return Old;
 
     bool DomAll = llvm::all_of(UserBBs, [this, New](BasicBlock *UserBB) {
