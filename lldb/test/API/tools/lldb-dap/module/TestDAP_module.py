@@ -45,16 +45,20 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
             context="repl",
         )
 
-        def checkSymbolsLoadedWithSize():
+        def check_symbols_loaded_with_size():
             active_modules = self.dap_server.get_modules()
             program_module = active_modules[program_basename]
             self.assertIn("symbolFilePath", program_module)
             self.assertIn(symbols_path, program_module["symbolFilePath"])
-            symbol_regex = re.compile(r"[0-9]+(\.[0-9]*)?[KMG]?B")
-            return symbol_regex.match(program_module["symbolStatus"])
+            size_regex = re.compile(r"[0-9]+(\.[0-9]*)?[KMG]?B")
+            return size_regex.match(program_module["debugInfoSize"])
 
         if expect_debug_info_size:
-            self.waitUntil(checkSymbolsLoadedWithSize)
+            self.assertTrue(
+                self.waitUntil(check_symbols_loaded_with_size),
+                "expect has debug info size",
+            )
+
         active_modules = self.dap_server.get_modules()
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module["name"])
@@ -83,6 +87,19 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         # symbols got added.
         self.assertNotEqual(len(module_changed_names), 0)
         self.assertIn(program_module["name"], module_changed_names)
+        self.continue_to_exit()
+
+        # fetch modules from offset
+        if len(active_modules.keys()) > 2:
+            resp = self.dap_server.request_modules(startModule=1, moduleCount=1)
+            self.assertTrue(resp["success"], f"expects a successful response {resp!r}")
+            resp_total_modules = resp["body"]["totalModules"]
+            self.assertEqual(resp_total_modules, len(active_modules))
+            resp_modules = resp["body"]["modules"]
+            self.assertEqual(len(resp_modules), 1, "expects only one module")
+
+            module_name = resp_modules[0]["name"]
+            self.assertIn(module_name, active_modules.keys())
 
     @skipIfWindows
     def test_modules(self):
@@ -119,8 +136,10 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         lines = [breakpoint1_line]
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.continue_to_breakpoints(breakpoint_ids)
-        moduleId = self.dap_server.get_modules()["a.out"]["id"]
-        response = self.dap_server.request_compileUnits(moduleId)
+        module_id = self.dap_server.get_modules()["a.out"]["id"]
+        response = self.dap_server.request_compileUnits(module_id)
         self.assertTrue(response["body"])
         cu_paths = [cu["compileUnitPath"] for cu in response["body"]["compileUnits"]]
         self.assertIn(main_source_path, cu_paths, "Real path to main.cpp matches")
+
+        self.continue_to_exit()
