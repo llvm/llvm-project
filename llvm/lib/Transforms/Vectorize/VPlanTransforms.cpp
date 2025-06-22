@@ -683,7 +683,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     // scalars.
     auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
-          return U->usesScalars(WideIV);
+          return U->usesScalars(WideIV) ||
+                 match(U, m_ExtractLastElement(m_VPValue()));
         }))
       continue;
 
@@ -694,12 +695,19 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
         WideIV->getDebugLoc(), Builder);
 
+    bool HasWideOps = any_of(WideIV->users(), [WideIV](VPUser *U) {
+      return !U->usesScalars(WideIV) &&
+             !match(U, m_ExtractLastElement(m_VPValue()));
+    });
+
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs)
       WideIV->replaceAllUsesWith(Steps);
     else
-      WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
-        return U.usesScalars(WideIV);
+      WideIV->replaceUsesWithIf(Steps, [WideIV, HasWideOps](VPUser &U,
+                                                            unsigned) {
+        return U.usesScalars(WideIV) ||
+               (!HasWideOps && match(&U, m_ExtractLastElement(m_VPValue())));
       });
   }
 }
@@ -1140,6 +1148,24 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Look through ExtractLastElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                    m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(
+        BuildVector->getOperand(BuildVector->getNumOperands() - 1));
+    return;
+  }
+
+  // Look through ExtractPenultimateElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                    m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(
+        BuildVector->getOperand(BuildVector->getNumOperands() - 2));
+    return;
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
@@ -1209,6 +1235,20 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+
+      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+          vputils::isSingleScalar(RepR->getOperand(1))) {
+        auto *Clone = new VPReplicateRecipe(
+            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+            true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Metadata*/);
+        Clone->insertBefore(RepOrWidenR);
+        auto *Ext = new VPInstruction(VPInstruction::ExtractLastElement,
+                                      {Clone->getOperand(0)});
+        Ext->insertBefore(Clone);
+        Clone->setOperand(0, Ext);
+        RepR->eraseFromParent();
+        continue;
+      }
       // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
@@ -1895,6 +1935,62 @@ static void removeBranchOnConst(VPlan &Plan) {
   }
 }
 
+static void materializePack(VPlan &Plan) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!(RepR && !RepR->isSingleScalar()) &&
+          !(isa<VPInstruction>(&R) &&
+            cast<VPInstruction>(&R)->doesGeneratePerAllLanes()))
+        continue;
+      auto *Def = cast<VPSingleDefRecipe>(&R);
+      for (auto *Op : to_vector(Def->operands())) {
+        VPRecipeBase *OpDef = Op->getDefiningRecipe();
+        if (!OpDef || isa<VPReplicateRecipe>(OpDef) ||
+            vputils::isSingleScalar(Op) ||
+            (isa<VPInstruction>(OpDef) &&
+             cast<VPInstruction>(OpDef)->doesGeneratePerAllLanes()) ||
+            isa<VPScalarIVStepsRecipe>(OpDef))
+          continue;
+
+        auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Op});
+        if (OpDef->isPhi())
+          Unpack->insertBefore(*OpDef->getParent(),
+                               OpDef->getParent()->getFirstNonPhi());
+        else
+          Unpack->insertAfter(OpDef);
+        Op->replaceUsesWithIf(Unpack, [](VPUser &U, unsigned) {
+          auto *RepR = dyn_cast<VPReplicateRecipe>(&U);
+          return RepR && (!isa<StoreInst>(RepR->getUnderlyingInstr()) ||
+                          !vputils::isSingleScalar(RepR->getOperand(1)));
+        });
+      }
+      if (all_of(Def->users(), [Def](VPUser *U) {
+            auto *R = cast<VPRecipeBase>(U);
+            return U->usesScalars(Def) &&
+                   (!R->getParent()->getParent() ||
+                    !R->getParent()->getParent()->getParent());
+          }))
+        continue;
+
+      auto *Pack = new VPInstruction(VPInstruction::Pack, {Def});
+      Pack->insertAfter(Def);
+      Def->replaceUsesWithIf(Pack, [Pack, Def](VPUser &U, unsigned) {
+        auto *R = cast<VPRecipeBase>(&U);
+        return &U != Pack &&
+               (!U.usesScalars(Def) ||
+                (R->getParent()->getParent() && R->getParent()->getParent())) &&
+               (!isa<VPInstruction>(&U) ||
+                (cast<VPInstruction>(&U)->getOpcode() !=
+                     VPInstruction::ExtractLastElement &&
+                 cast<VPInstruction>(&U)->getOpcode() !=
+                     VPInstruction::ExtractPenultimateElement));
+      });
+    }
+  }
+}
+
 void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantCanonicalIVs, Plan);
   runPass(removeRedundantInductionCasts, Plan);
@@ -1912,6 +2008,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(createAndOptimizeReplicateRegions, Plan);
   runPass(mergeBlocksIntoPredecessors, Plan);
   runPass(licm, Plan);
+  runPass(materializePack, Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
