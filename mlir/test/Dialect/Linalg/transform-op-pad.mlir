@@ -464,8 +464,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK: %[[LHS:.*]] = tensor.pad
 // CHECK: %[[RHS:.*]] = tensor.pad
 // CHECK: scf.for
-// CHECK: tensor.extract_slice %[[LHS]][0, %{{.*}}] [%{{.*}}, 32]
-// CHECK: tensor.extract_slice %[[RHS]][0, %{{.*}}] [%{{.*}}, 32]
+// CHECK-DAG: tensor.extract_slice %[[LHS]][0, %{{.*}}] [%{{.*}}, 32]
+// CHECK-DAG: tensor.extract_slice %[[RHS]][0, %{{.*}}] [%{{.*}}, 32]
 func.func @dyn_pad_tiling(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.matmul_transpose_b ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -480,9 +480,9 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %2 {
       transform.apply_patterns.canonicalization
     } {apply_cse} : !transform.any_op
-    transform.affine.simplify_min_max_affine_ops %2 : !transform.any_op
-    %3 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    transform.apply_patterns to %3 {
+    %3 = transform.structured.match ops{["affine.min", "affine.max"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.affine.simplify_min_max_affine_ops %3 : !transform.any_op
+    transform.apply_patterns to %2 {
       transform.apply_patterns.canonicalization
     } {apply_cse} : !transform.any_op
     transform.yield 

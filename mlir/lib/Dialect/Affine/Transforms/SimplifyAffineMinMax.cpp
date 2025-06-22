@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/Support/Debug.h"
 
@@ -69,6 +70,10 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
     // Check against the other variables.
     for (size_t j = i + 1; j < variables.size(); ++j) {
       unsigned jEqClass = boundedClasses.findLeader(j);
+      // Skip if the class is the same.
+      if (jEqClass == eqClass)
+        continue;
+
       // Get the bound of the equivalence class or itself.
       Variable *nv = bounds.lookup_or(jEqClass, &variables[j]);
 
@@ -93,7 +98,7 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
       // Join the equivalent classes and update the bound if necessary.
       LLVM_DEBUG({
         DBGS() << "-- merging classes: #" << i << ", #" << jEqClass
-               << ", is lhs <= rhs: " << *cmpResult << "`\n";
+               << ", is cmp(lhs, rhs): " << *cmpResult << "`\n";
       });
       if (*cmpResult) {
         boundedClasses.join(eqClass, jEqClass);
@@ -137,17 +142,33 @@ bool mlir::affine::simplifyAffineMaxOp(RewriterBase &rewriter, AffineMaxOp op) {
   return simplifyAffineMinMaxOp(rewriter, op);
 }
 
-void mlir::affine::simplifyAffineMinMaxOps(
-    RewriterBase &rewriter, Operation *topOp,
-    SmallVectorImpl<Operation *> &modifiedOps) {
-  assert(topOp && "null-op");
-  topOp->walk([&](Operation *op) {
-    if (auto affineOp = dyn_cast<AffineMinOp>(op)) {
-      if (simplifyAffineMinMaxOp(rewriter, affineOp))
-        modifiedOps.push_back(op);
-    } else if (auto affineOp = dyn_cast<AffineMaxOp>(op)) {
-      if (simplifyAffineMinMaxOp(rewriter, affineOp))
-        modifiedOps.push_back(op);
-    }
-  });
+LogicalResult mlir::affine::simplifyAffineMinMaxOps(RewriterBase &rewriter,
+                                                    ArrayRef<Operation *> ops,
+                                                    bool *modified) {
+  bool changed = false;
+  for (Operation *op : ops) {
+    if (auto minOp = dyn_cast<AffineMinOp>(op))
+      changed = simplifyAffineMinOp(rewriter, minOp) || changed;
+    else if (auto maxOp = cast<AffineMaxOp>(op))
+      changed = simplifyAffineMaxOp(rewriter, maxOp) || changed;
+  }
+  RewritePatternSet patterns(rewriter.getContext());
+  AffineMaxOp::getCanonicalizationPatterns(patterns, rewriter.getContext());
+  AffineMinOp::getCanonicalizationPatterns(patterns, rewriter.getContext());
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+  if (modified)
+    *modified = changed;
+  // Canonicalize to a fixpoint.
+  if (failed(applyOpPatternsGreedily(
+          ops, frozenPatterns,
+          GreedyRewriteConfig()
+              .setListener(
+                  static_cast<RewriterBase::Listener *>(rewriter.getListener()))
+              .setStrictness(GreedyRewriteStrictness::ExistingAndNewOps),
+          &changed))) {
+    return failure();
+  }
+  if (modified)
+    *modified = changed;
+  return success();
 }

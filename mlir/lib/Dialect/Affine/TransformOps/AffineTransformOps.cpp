@@ -113,7 +113,7 @@ SimplifyBoundedAffineOpsOp::apply(transform::TransformRewriter &rewriter,
     }
     if (boundedOps.contains(target)) {
       auto diag = emitDefiniteFailure()
-                  << "target op result must not be constrainted";
+                  << "target op result must not be constrained";
       diag.attachNote(target->getLoc()) << "target/constrained op";
       return diag;
     }
@@ -152,12 +152,30 @@ void SimplifyBoundedAffineOpsOp::getEffects(
 //===----------------------------------------------------------------------===//
 // SimplifyMinMaxAffineOpsOp
 //===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure SimplifyMinMaxAffineOpsOp::applyToOne(
-    TransformRewriter &rewriter, Operation *target,
-    ApplyToEachResultList &results, TransformState &state) {
-  SmallVector<Operation *> modifiedOps;
-  simplifyAffineMinMaxOps(rewriter, target, modifiedOps);
+DiagnosedSilenceableFailure
+SimplifyMinMaxAffineOpsOp::apply(transform::TransformRewriter &rewriter,
+                                 TransformResults &results,
+                                 TransformState &state) {
+  SmallVector<Operation *> targets;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    if (!isa<AffineMinOp, AffineMaxOp>(target)) {
+      auto diag = emitDefiniteFailure()
+                  << "target must be affine.min or affine.max";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    targets.push_back(target);
+  }
+  bool modified = false;
+  if (failed(mlir::affine::simplifyAffineMinMaxOps(rewriter, targets,
+                                                   &modified))) {
+    return emitDefiniteFailure()
+           << "affine.min/max simplification did not converge";
+  }
+  if (!modified) {
+    return emitSilenceableError()
+           << "the transform failed to simplify any of the target operations";
+  }
   return DiagnosedSilenceableFailure::success();
 }
 

@@ -65,37 +65,32 @@ def SimplifyBoundedAffineOpsOp
 
 def SimplifyMinMaxAffineOpsOp :
   Op<Transform_Dialect, "affine.simplify_min_max_affine_ops", [
-    TransformOpInterface,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-    TransformEachOpTrait
+    DeclareOpInterfaceMethods<TransformOpInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
   ]> {
   let description = [{
-    Simplify all the affine.min / affine.max ops being targeted or nested in the
-    target operation, using the `mlir::affine::simplifyAffineMinMaxOps`
-    transform.
+    Simplify the targeted `affine.min` / `affine.max` ops using the
+    `mlir::affine::simplifyAffineMinMaxOps` transform.
 
     Example:
     ```
-    %0 = transform.structured.match ops{["gpu.launch", "affine.max"]} in %arg1
+    %0 = transform.structured.match ops{["affine.max"]} in %arg1
     transform.affine.simplify_min_max_affine_ops %0 : !transform.any_op
     ```
 
     #### Return modes
 
     This transform consumes the target handle and does not produce any results.
-    This transforms never produces errors.
+    This transforms definitely fails if any of the targeted operations is not an
+    `affine.min` or `affine.max` operation, or if the canonicalization patterns
+    failed to converge.
+    This transform silently fails if none of the operations were simplified.
+    Otherwise, it succeeds.
   }];
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs);
   let assemblyFormat = [{
       $target attr-dict `:` type($target)
-  }];
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::Operation *target,
-        ::mlir::transform::ApplyToEachResultList &results,
-        ::mlir::transform::TransformState &state);
   }];
 }
 
