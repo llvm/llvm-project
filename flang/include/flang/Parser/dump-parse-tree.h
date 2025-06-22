@@ -600,6 +600,7 @@ public:
   NODE(OmpLinearClause, Modifier)
   NODE(parser, OmpLinearModifier)
   NODE_ENUM(OmpLinearModifier, Value)
+  NODE(parser, OmpLoopRangeClause)
   NODE(parser, OmpStepComplexModifier)
   NODE(parser, OmpStepSimpleModifier)
   NODE(parser, OmpLoopDirective)

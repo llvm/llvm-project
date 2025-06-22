@@ -11612,6 +11612,18 @@ def note_omp_implicit_dsa : Note<
   "implicitly determined as %0">;
 def err_omp_loop_var_dsa : Error<
   "loop iteration variable in the associated loop of 'omp %1' directive may not be %0, predetermined as %2">;
+def err_omp_not_canonical_loop : Error<
+  "loop after '#pragma omp %0' is not in canonical form">;
+def err_omp_not_a_loop_sequence : Error< 
+  "statement after '#pragma omp %0' must be a loop sequence containing canonical loops or loop-generating constructs">;
+def err_omp_empty_loop_sequence : Error<
+  "loop sequence after '#pragma omp %0' must contain at least 1 canonical loop or loop-generating construct">;
+def err_omp_invalid_looprange : Error<
+  "loop range in '#pragma omp %0' exceeds the number of available loops: "
+  "range end '%1' is greater than the total number of loops '%2'">;
+def warn_omp_redundant_fusion : Warning<
+  "loop range in '#pragma omp %0' contains only a single loop, resulting in redundant fusion">,
+  InGroup<OpenMPClauses>;
 def err_omp_not_for : Error<
   "%select{statement after '#pragma omp %1' must be a for loop|"
   "expected %2 for loops after '#pragma omp %1'%select{|, but found only %4}3}0">;
