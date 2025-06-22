@@ -2008,6 +2008,15 @@ multiclass SOP1_IMM_Real_gfx12<bits<8> op> {
 multiclass SOP1_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)> :
   SOP1_Real_gfx11<op, name>, SOP1_Real_gfx12<op, name>;
 
+multiclass SOP1_Real_gfx1250<bits<8> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx1250 : SOP1_Real<op, ps, name>,
+                 Select<GFX1250Gen, ps.PseudoInstr>;
+  if !ne(ps.Mnemonic, name) then
+    let AssemblerPredicate = isGFX1250Plus in
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+}
+
 defm S_MOV_B32                    : SOP1_Real_gfx11_gfx12<0x000>;
 defm S_MOV_B64                    : SOP1_Real_gfx11_gfx12<0x001>;
 defm S_CMOV_B32                   : SOP1_Real_gfx11_gfx12<0x002>;
@@ -2066,10 +2075,16 @@ defm S_MOVRELS_B64                : SOP1_Real_gfx11_gfx12<0x041>;
 defm S_MOVRELD_B32                : SOP1_Real_gfx11_gfx12<0x042>;
 defm S_MOVRELD_B64                : SOP1_Real_gfx11_gfx12<0x043>;
 defm S_MOVRELSD_2_B32             : SOP1_Real_gfx11_gfx12<0x044>;
+let OtherPredicates = [isNotGFX1250Plus] in {
 defm S_GETPC_B64                  : SOP1_Real_gfx11_gfx12<0x047>;
 defm S_SETPC_B64                  : SOP1_Real_gfx11_gfx12<0x048>;
 defm S_SWAPPC_B64                 : SOP1_Real_gfx11_gfx12<0x049>;
 defm S_RFE_B64                    : SOP1_Real_gfx11_gfx12<0x04a>;
+}
+defm S_GETPC_B64                  : SOP1_Real_gfx1250<0x047, "s_get_pc_i64">;
+defm S_SETPC_B64                  : SOP1_Real_gfx1250<0x048, "s_set_pc_i64">;
+defm S_SWAPPC_B64                 : SOP1_Real_gfx1250<0x049, "s_swap_pc_i64">;
+defm S_RFE_B64                    : SOP1_Real_gfx1250<0x04a, "s_rfe_i64">;
 defm S_SENDMSG_RTN_B32            : SOP1_Real_gfx11_gfx12<0x04c>;
 defm S_SENDMSG_RTN_B64            : SOP1_Real_gfx11_gfx12<0x04d>;
 defm S_BARRIER_SIGNAL_M0          : SOP1_M0_Real_gfx12<0x04e>;
@@ -2444,10 +2459,21 @@ multiclass SOPK_Real32_gfx11_gfx12<bits<5> op> :
 multiclass SOPK_Real64_gfx11_gfx12<bits<5> op> :
   SOPK_Real64_gfx11<op>, SOPK_Real64_gfx12<op>;
 
+multiclass SOPK_Real32_gfx1250<bits<5> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOPK_Pseudo>(NAME);
+  def _gfx1250 : SOPK_Real32<op, ps, name>,
+                 Select<GFX1250Gen, ps.PseudoInstr>;
+  if !ne(ps.Mnemonic, name) then
+    let AssemblerPredicate = isGFX1250Plus in
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+}
+
 defm S_GETREG_B32           : SOPK_Real32_gfx11_gfx12<0x011>;
 defm S_SETREG_B32           : SOPK_Real32_gfx11_gfx12<0x012>;
 defm S_SETREG_IMM32_B32     : SOPK_Real64_gfx11_gfx12<0x013>;
+let OtherPredicates = [isNotGFX1250Plus] in
 defm S_CALL_B64             : SOPK_Real32_gfx11_gfx12<0x014>;
+defm S_CALL_B64             : SOPK_Real32_gfx1250<0x014, "s_call_i64">;
 defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx11<0x016>;
 defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx11<0x017>;
 defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11<0x018>;
