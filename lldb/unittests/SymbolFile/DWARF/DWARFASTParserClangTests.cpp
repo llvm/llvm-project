@@ -1607,7 +1607,7 @@ DWARF:
     auto param_die = sub1.GetFirstChild().GetSibling();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetCXXObjectParameter(sub1, context_die));
+    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(sub1, context_die));
   }
 
   // Object parameter is at constant index 0
@@ -1615,7 +1615,6 @@ DWARF:
     auto param_die = sub2.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die,
-              ast_parser.GetCXXObjectParameter(param_die, context_die));
+    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(param_die, context_die));
   }
 }
