@@ -1034,8 +1034,8 @@ struct TestDropAndReplaceInvalidOp : public ConversionPattern {
 };
 /// This pattern handles the case of a split return value.
 struct TestSplitReturnType : public ConversionPattern {
-  TestSplitReturnType(MLIRContext *ctx)
-      : ConversionPattern("test.return", 1, ctx) {}
+  TestSplitReturnType(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.return", 1, ctx) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
@@ -1277,6 +1277,7 @@ public:
 
     // Replace test.multiple_1_to_n_replacement with test.step_1.
     Operation *repl1 = replaceWithDoubleResults(op, "test.step_1");
+    rewriter.setInsertionPoint(repl1);
     // Now replace test.step_1 with test.legal_op.
     replaceWithDoubleResults(repl1, "test.legal_op");
     return success();
@@ -1377,22 +1378,28 @@ struct TestLegalizePatternDriver
   }
 
   void runOnOperation() override {
+    // Skip tests that require pattern rollback in "no rollback" mode.
+    if (getOperation()->hasAttr("test.requires_rollback") &&
+        !allowPatternRollback)
+      return;
+
     TestTypeConverter converter;
     mlir::RewritePatternSet patterns(&getContext());
     populateWithGenerated(patterns);
-    patterns.add<
-        TestRegionRewriteBlockMovement, TestDetachedSignatureConversion,
-        TestRegionRewriteUndo, TestCreateBlock, TestCreateIllegalBlock,
-        TestUndoBlockErase, TestSplitReturnType, TestChangeProducerTypeI32ToF32,
-        TestChangeProducerTypeF32ToF64, TestChangeProducerTypeF32ToInvalid,
-        TestUpdateConsumerType, TestNonRootReplacement,
-        TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
-        TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-        TestUndoPropertiesModification, TestEraseOp,
-        TestRepetitive1ToNConsumer>(&getContext());
+    patterns
+        .add<TestRegionRewriteBlockMovement, TestDetachedSignatureConversion,
+             TestRegionRewriteUndo, TestCreateBlock, TestCreateIllegalBlock,
+             TestUndoBlockErase, TestChangeProducerTypeI32ToF32,
+             TestChangeProducerTypeF32ToF64, TestChangeProducerTypeF32ToInvalid,
+             TestUpdateConsumerType, TestNonRootReplacement,
+             TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
+             TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
+             TestUndoPropertiesModification, TestEraseOp,
+             TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace>(&getContext(), converter);
+                 TestBlockArgReplace, TestSplitReturnType>(&getContext(),
+                                                           converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1454,6 +1461,7 @@ struct TestLegalizePatternDriver
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
       ConversionConfig config;
+      config.allowPatternRollback = allowPatternRollback;
       DumpNotifications dumpNotifications;
       config.listener = &dumpNotifications;
       config.unlegalizedOps = &unlegalizedOps;
@@ -1475,6 +1483,7 @@ struct TestLegalizePatternDriver
       });
 
       ConversionConfig config;
+      config.allowPatternRollback = allowPatternRollback;
       DumpNotifications dumpNotifications;
       config.listener = &dumpNotifications;
       if (failed(applyFullConversion(getOperation(), target,
@@ -1490,6 +1499,7 @@ struct TestLegalizePatternDriver
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
     ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
     config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
                                        std::move(patterns), config)))
@@ -1510,6 +1520,10 @@ struct TestLegalizePatternDriver
           clEnumValN(ConversionMode::Full, "full", "Perform a full conversion"),
           clEnumValN(ConversionMode::Partial, "partial",
                      "Perform a partial conversion"))};
+
+  Option<bool> allowPatternRollback{*this, "allow-pattern-rollback",
+                                    llvm::cl::desc("Allow pattern rollback"),
+                                    llvm::cl::init(true)};
 };
 } // namespace
 
