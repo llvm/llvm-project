@@ -1,5 +1,4 @@
-// RUN: grep -Ev "// *[A-Z-]+:" %s \
-// RUN:   | clang-format -style='{BasedOnStyle: LLVM, AlignEscapedNewlines: DontAlign}' \
+// RUN: clang-format -style='{BasedOnStyle: LLVM, AlignEscapedNewlines: DontAlign}' %s \
 // RUN:   | FileCheck -strict-whitespace %s
 
 // CHECK: {{^#define TAG\(\.\.\.\) \\}}
