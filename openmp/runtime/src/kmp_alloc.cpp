@@ -73,7 +73,7 @@ static void bectl(kmp_info_t *th, bget_compact_t compact,
 /* On IA-32 architecture with  Linux* OS, malloc() does not
    ensure 16 byte alignment */
 
-#if KMP_ARCH_X86 || !KMP_HAVE_QUAD
+#if KMP_ARCH_X86 || KMP_ARCH_SPARC || !KMP_HAVE_QUAD
 
 #define SizeQuant 8
 #define AlignType double
@@ -1861,7 +1861,7 @@ typedef struct kmp_mem_desc { // Memory block descriptor
   void *ptr_align; // Pointer to aligned memory, returned
   kmp_allocator_t *allocator; // allocator
 } kmp_mem_desc_t;
-static int alignment = sizeof(void *); // align to pointer size by default
+static int alignment = SizeQuant;
 
 // external interfaces are wrappers over internal implementation
 void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
