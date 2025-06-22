@@ -1239,7 +1239,7 @@ struct ConversionConfig {
   /// modifications from the conversion driver. Use this flag to ensure that
   /// your patterns do not trigger any IR rollbacks. For details, see
   /// https://discourse.llvm.org/t/rfc-a-new-one-shot-dialect-conversion-driver/79083.
-  bool allowPatternRollback = true;
+  bool allowPatternRollback = false;//true;
 };
 
 //===----------------------------------------------------------------------===//

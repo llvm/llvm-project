@@ -808,6 +808,7 @@ public:
         dilationAttr);
 
     rewriter.setInsertionPointAfter(op);
+    auto nanMode = op.getNanMode();
     rewriter.replaceOp(op, resultOp);
 
     // NaN propagation has no meaning for non floating point types.
@@ -821,9 +822,9 @@ public:
     // we've already produced a named op we will just take its body and modify
     // it to include the appropriate checks. If the current value is NaN the
     // old value of pool will be taken otherwise we use the result.
-    if (const auto nanMode = op.getNanMode(); nanMode == "IGNORE") {
+    if (nanMode == "IGNORE") {
       auto genericOp = rewriter.create<linalg::GenericOp>(
-          op->getLoc(), resultOp.getType(0), resultOp.getInputs(),
+          loc, resultOp.getType(0), resultOp.getInputs(),
           resultOp.getOutputs(), resultOp.getIndexingMapsArray(),
           resultOp.getIteratorTypesArray(),
           [&](OpBuilder &opBuilder, Location loc, ValueRange blockArgs) {
@@ -834,10 +835,10 @@ public:
             map.map(oldArgs, blockArgs);
             auto *newOp = opBuilder.clone(oldMaxOp, map);
             Value isNaN = opBuilder.create<arith::CmpFOp>(
-                op->getLoc(), arith::CmpFPredicate::UNO, blockArgs.front(),
+                loc, arith::CmpFPredicate::UNO, blockArgs.front(),
                 blockArgs.front());
             auto selectOp = opBuilder.create<arith::SelectOp>(
-                op->getLoc(), isNaN, blockArgs.back(), newOp->getResult(0));
+                loc, isNaN, blockArgs.back(), newOp->getResult(0));
             opBuilder.create<linalg::YieldOp>(loc, selectOp.getResult());
           });
       rewriter.replaceOp(resultOp, genericOp);

@@ -2,7 +2,7 @@
 // RUN:     -one-shot-bufferize \
 // RUN:     -buffer-deallocation-pipeline \
 // RUN:     -test-cf-assert \
-// RUN:     -convert-to-llvm | \
+// RUN:     -convert-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
