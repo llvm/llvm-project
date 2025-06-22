@@ -601,8 +601,3 @@ define i32 @fptoui(float %f) {
   ret i32 %conv
 }
 
-;define float @copysign_f32(float %a, float %b) {
-;entry:
-;  %c = call float @llvm.copysign.f32(float %a, float %b)
-;  ret float %c
-;}
