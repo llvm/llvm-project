@@ -565,8 +565,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView &&
-        (TM.getTargetTriple().isOSWindows() || TM.getTargetTriple().isUEFI()))
+    // On Windows targets, emit minimal CodeView compiler info even when debug
+    // info is disabled.
+    if ((TM.getTargetTriple().isOSWindows() &&
+         M.getNamedMetadata("llvm.dbg.cu")) ||
+        (TM.getTargetTriple().isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -2380,6 +2383,15 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   if (!RS.needsSection())
     return;
 
+  MCSection *RemarksSection =
+      OutContext.getObjectFileInfo()->getRemarksSection();
+  if (!RemarksSection) {
+    OutContext.reportWarning(SMLoc(), "Current object file format does not "
+                                      "support remarks sections. Use the yaml "
+                                      "remark format instead.");
+    return;
+  }
+
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
   std::optional<SmallString<128>> Filename;
@@ -2397,10 +2409,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   MetaSerializer->emit();
 
   // Switch to the remarks section.
-  MCSection *RemarksSection =
-      OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->switchSection(RemarksSection);
-
   OutStreamer->emitBinaryData(Buf);
 }
 

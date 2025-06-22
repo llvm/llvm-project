@@ -47,7 +47,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {
 ! CHECK:        acc.loop private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -59,7 +59,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels combined(loop) {
 ! CHECK:        acc.loop combined(kernels) private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -490,7 +490,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -503,7 +503,7 @@ subroutine acc_kernels_loop
 ! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
 ! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -516,7 +516,7 @@ subroutine acc_kernels_loop
 ! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -528,7 +528,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang({num=%{{.*}} : i32, static=%{{.*}} : i32})
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -540,7 +540,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} vector {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -553,7 +553,7 @@ subroutine acc_kernels_loop
 ! CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
 ! CHECK:        acc.loop {{.*}} vector([[CONSTANT128]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -566,7 +566,7 @@ subroutine acc_kernels_loop
 ! CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.loop {{.*}} vector([[VECTORLENGTH]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -578,7 +578,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} worker {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -591,7 +591,7 @@ subroutine acc_kernels_loop
 ! CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
 ! CHECK:        acc.loop {{.*}} worker([[WORKER128]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -605,7 +605,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true>}
+! CHECK-NEXT:   } attributes {{{.*}}collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -621,9 +621,9 @@ subroutine acc_kernels_loop
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:            acc.loop {{.*}} {
 ! CHECK:              acc.yield
-! CHECK-NEXT:     }{{$}}
+! CHECK-NEXT:     } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
