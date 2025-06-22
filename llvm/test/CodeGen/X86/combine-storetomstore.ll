@@ -218,7 +218,7 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp
 
 
 define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, ptr %ptr2, <8 x i1> %cmp, <8 x i1> %cmp2) {
-; AVX-LABEL: foo:
+; AVX-LABEL: test_masked_store_multiple:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX-NEXT:    vpslld $31, %xmm4, %xmm4
@@ -237,7 +237,7 @@ define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, p
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX2-LABEL: foo:
+; AVX2-LABEL: test_masked_store_multiple:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
 ; AVX2-NEXT:    vpslld $31, %ymm2, %ymm2
@@ -250,7 +250,7 @@ define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, p
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: foo:
+; AVX512-LABEL: test_masked_store_multiple:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
