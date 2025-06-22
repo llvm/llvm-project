@@ -80,8 +80,8 @@ enum LocalNum {
   LN_Last
 };
 
-// Associate global and local DFS info with defs and uses, so we can sort them
-// into a global domination ordering.
+// Associate global and local DFS info with defs (PInfo set) and uses (U set),
+// so we can sort them into a global domination ordering.
 struct ValueDFS {
   int DFSIn = 0;
   int DFSOut = 0;
@@ -234,7 +234,7 @@ class PredicateInfoBuilder {
     StackEntry(const ValueDFS *V) : V(V) {}
   };
 
-  typedef SmallVectorImpl<StackEntry> ValueDFSStack;
+  using ValueDFSStack = SmallVectorImpl<StackEntry>;
   void convertUsesToDFSOrdered(Value *, SmallVectorImpl<ValueDFS> &);
   Value *materializeStack(unsigned int &, ValueDFSStack &, Value *);
   bool stackIsInScope(const ValueDFSStack &, const ValueDFS &) const;
