@@ -431,9 +431,6 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
   // to disable the optimization in this case.
   if (CurPPLexer) CurPPLexer->MIOpt.ExpandedMacro();
 
-  if (!hasSeenMainFileFirstPPToken())
-    HandleMainFileFirstPPToken(Identifier);
-
   // If this is a builtin macro, like __LINE__ or _Pragma, handle it specially.
   if (MI->isBuiltinMacro()) {
     if (Callbacks)

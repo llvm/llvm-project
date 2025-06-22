@@ -3228,6 +3228,7 @@ std::optional<Token> Lexer::peekNextPPToken() {
   bool atStartOfLine = IsAtStartOfLine;
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
   bool leadingSpace = HasLeadingSpace;
+  bool isFirstPPToken = IsFirstPPToken;
 
   Token Tok;
   Lex(Tok);
@@ -3238,7 +3239,7 @@ std::optional<Token> Lexer::peekNextPPToken() {
   HasLeadingSpace = leadingSpace;
   IsAtStartOfLine = atStartOfLine;
   IsAtPhysicalStartOfLine = atPhysicalStartOfLine;
-
+  IsFirstPPToken = isFirstPPToken;
   // Restore the lexer back to non-skipping mode.
   LexingRawMode = false;
 
@@ -3740,10 +3741,6 @@ bool Lexer::Lex(Token &Result) {
   bool returnedToken = LexTokenInternal(Result, atPhysicalStartOfLine);
   // (After the LexTokenInternal call, the lexer might be destroyed.)
   assert((returnedToken || !isRawLex) && "Raw lex must succeed");
-
-  if (returnedToken && Result.isFirstPPToken() && PP &&
-      !PP->hasSeenMainFileFirstPPToken())
-    PP->HandleMainFileFirstPPToken(Result);
   return returnedToken;
 }
 
@@ -4547,8 +4544,6 @@ const char *Lexer::convertDependencyDirectiveToken(
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
   Result.setLength(DDTok.Length);
   BufferPtr = TokPtr + DDTok.Length;
-  if (PP && !PP->hasSeenMainFileFirstPPToken() && Result.isFirstPPToken())
-    PP->HandleMainFileFirstPPToken(Result);
   return TokPtr;
 }
 
