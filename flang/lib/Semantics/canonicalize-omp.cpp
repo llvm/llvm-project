@@ -8,7 +8,6 @@
 
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
-
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
 // structural checks and semantic analysis.
@@ -112,15 +111,19 @@ private:
     // in the same iteration
     //
     // Original:
-    //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-    //     OmpBeginLoopDirective
+    //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct t->
+    //     OmpBeginLoopDirective t-> OmpLoopDirective
+    //   [ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct u->
+    //     OmpBeginLoopDirective t-> OmpLoopDirective t-> Tile v-> OMP_tile]
     //   ExecutableConstruct -> DoConstruct
+    //   [ExecutableConstruct -> OmpEndLoopDirective] (note: tile)
     //   ExecutableConstruct -> OmpEndLoopDirective (if available)
     //
     // After rewriting:
-    //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-    //     OmpBeginLoopDirective
-    //     DoConstruct
+    //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct t->
+    //     [OpenMPLoopConstruct t -> OmpBeginLoopDirective -> OmpLoopDirective
+    //                               OmpEndLoopDirective] (note: tile)
+    //     OmpBeginLoopDirective t -> OmpLoopDirective -> DoConstruct
     //     OmpEndLoopDirective (if available)
     parser::Block::iterator nextIt;
     auto &beginDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
@@ -131,20 +134,59 @@ private:
       // Ignore compiler directives.
       if (GetConstructIf<parser::CompilerDirective>(*nextIt))
         continue;
+      // Keep track of the loops to handle the end loop directives
+      llvm::SmallVector<parser::OpenMPLoopConstruct *> loops;
+      loops.push_back(&x);
+      if (auto *innerConstruct{
+              GetConstructIf<parser::OpenMPConstruct>(*nextIt)}) {
+        if (auto *innerOmpLoop{
+                std::get_if<parser::OpenMPLoopConstruct>(&innerConstruct->u)}) {
+          auto &innerBeginDir{
+              std::get<parser::OmpBeginLoopDirective>(innerOmpLoop->t)};
+          auto &innerDir{std::get<parser::OmpLoopDirective>(innerBeginDir.t)};
+          if (innerDir.v == llvm::omp::Directive::OMPD_tile) {
+            auto &innerLoop = std::get<std::optional<
+                common::Indirection<parser::OpenMPLoopConstruct>>>(
+                loops.back()->t);
+            innerLoop = std::move(*innerOmpLoop);
+            // Retrieveing the address so that DoConstruct or inner loop can be
+            // set later.
+            loops.push_back(&(innerLoop.value().value()));
+            nextIt = block.erase(nextIt);
+          }
+        }
+      }
 
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
-          // move DoConstruct
-          std::get<std::optional<parser::DoConstruct>>(x.t) =
+          std::get<std::optional<parser::DoConstruct>>(loops.back()->t) =
               std::move(*doCons);
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
-          if (nextIt != block.end()) {
+          while (nextIt != block.end() && !loops.empty()) {
             if (auto *endDir{
                     GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
-              std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
-                  std::move(*endDir);
-              block.erase(nextIt);
+              auto &endOmpDirective{
+                  std::get<parser::OmpLoopDirective>(endDir->t)};
+              auto &loopBegin{
+                  std::get<parser::OmpBeginLoopDirective>(loops.back()->t)};
+              auto &loopDir{std::get<parser::OmpLoopDirective>(loopBegin.t)};
+
+              // If the directive is a tile we try to match the corresponding
+              // end tile if it exsists. If it is not a tile directive we
+              // always assign the end loop directive and fall back on the
+              // existing directive structure checks.
+              if (loopDir.v != llvm::omp::Directive::OMPD_tile ||
+                  loopDir.v == endOmpDirective.v) {
+                std::get<std::optional<parser::OmpEndLoopDirective>>(
+                    loops.back()->t) = std::move(*endDir);
+                nextIt = block.erase(nextIt);
+              }
+
+              loops.pop_back();
+            } else {
+              // If there is a mismatch bail out.
+              break;
             }
           }
         } else {
