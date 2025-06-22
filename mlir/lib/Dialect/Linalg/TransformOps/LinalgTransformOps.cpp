@@ -2163,7 +2163,6 @@ LogicalResult transform::PadOp::verify() {
 void transform::PadTilingInterfaceOp::build(OpBuilder &b,
                                             OperationState &result,
                                             Value target,
-                                            ArrayRef<int64_t> paddingDimensions,
                                             ArrayRef<int64_t> paddingSizes,
                                             bool padToMultipleOf) {
   auto resultType = transform::AnyOpType::get(b.getContext());
@@ -2172,7 +2171,6 @@ void transform::PadTilingInterfaceOp::build(OpBuilder &b,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
                /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
                /*paddingSizes=*/ValueRange{},
                /*paddingSizes=*/
                (paddingSizes.empty() ? DenseI64ArrayAttr()
@@ -2183,7 +2181,6 @@ void transform::PadTilingInterfaceOp::build(OpBuilder &b,
 
 void transform::PadTilingInterfaceOp::build(
     OpBuilder &b, OperationState &result, Value target,
-    ArrayRef<int64_t> paddingDimensions,
     ArrayRef<OpFoldResult> mixedPaddingSizes, bool padToMultipleOf) {
   auto resultType = transform::AnyOpType::get(b.getContext());
   SmallVector<int64_t> staticPaddingSizes;
@@ -2195,7 +2192,6 @@ void transform::PadTilingInterfaceOp::build(
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
                /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
                /*paddingSizes=*/dynamicPaddingSizes,
                /*paddingSizes=*/staticPaddingSizes,
                /*usePrescribedTensorShapes=*/padToMultipleOf);
@@ -2277,8 +2273,6 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
     TilingInterface paddedOp;
     PadTilingInterfaceOptions options;
     options.setPaddingValues(paddingValues)
-        .setPaddingDimensions(
-            extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions()))
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
@@ -2303,20 +2297,7 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
-LogicalResult transform::PadTilingInterfaceOp::verify() {
-  SmallVector<int64_t> paddingDimensions =
-      extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
-  if (any_of(paddingDimensions,
-             [](int64_t paddingDimension) { return paddingDimension < 0; })) {
-    return emitOpError() << "expects padding_dimensions to contain positive "
-                            "integers, found "
-                         << getPaddingDimensions();
-  }
-  if (getMixedPaddingSizes().size() != paddingDimensions.size()) {
-    return emitOpError() << "expects as many multiples as padding_dimensions";
-  }
-  return success();
-}
+LogicalResult transform::PadTilingInterfaceOp::verify() { return success(); }
 
 //===---------------------------------------------------------------------===//
 // HoistPadOp
