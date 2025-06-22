@@ -8,8 +8,7 @@ define i32 @known_non_zero_by_or(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[VAL:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[VAL]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[VAL]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -32,8 +31,7 @@ define i32 @known_non_zero_by_mul(i32 %x) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[NONZERO1:%.*]] = mul nuw i32 [[X]], 3
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[NONZERO1]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[NONZERO1]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -56,8 +54,7 @@ define i32 @known_non_zero_commute(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[VAL:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 1, i32 [[VAL]])
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[VAL]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i32 0
 ;
