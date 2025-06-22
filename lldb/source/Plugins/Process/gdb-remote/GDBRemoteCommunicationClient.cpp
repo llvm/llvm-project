@@ -406,7 +406,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_qXfer_memory_map_read = eLazyBoolYes;
       else if (x == "qXfer:siginfo:read+")
         m_supports_qXfer_siginfo_read = eLazyBoolYes;
-      else if (x == "qEcho")
+      else if (x == "qEcho+")
         m_supports_qEcho = eLazyBoolYes;
       else if (x == "QPassSignals+")
         m_supports_QPassSignals = eLazyBoolYes;
