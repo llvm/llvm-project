@@ -26,7 +26,6 @@ constexpr std::size_t N{1};
 static_assert(std::three_way_comparable<std::array<int, N>>);
 
 // Thanks to SFINAE, the following is not a compiler error but returns `false`
-struct NonComparable {};
 static_assert(!std::three_way_comparable<std::array<NonComparable, N>>);
 
 // Implementation detail of `test_sequence_container_array_spaceship`

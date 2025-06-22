@@ -203,7 +203,7 @@ define <7 x half> @sqrt_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    fsqrt v2.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v1.h[2]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v2.4h, v2.4s

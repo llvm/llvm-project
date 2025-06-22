@@ -399,26 +399,6 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     MI.getOperand(1).setReg(ConstReg);
     return applyDefaultMapping(OpdMapper);
   }
-  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
-    // SDAG will promote a 64bit G_EXTRACT_VECTOR_ELT to 128 to reduce the
-    // number of duplicate lane-extract patterns needed. Do the same here so
-    // that selection will operate on the larger vectors.
-    Register Src = MI.getOperand(1).getReg();
-    LLT SrcTy = MRI.getType(Src);
-    assert(SrcTy.getSizeInBits() == 64 && "Expected 64-bit source vector");
-    LLT DstTy = SrcTy.multiplyElements(2);
-    Builder.setInsertPt(*MI.getParent(), MI.getIterator());
-    auto Undef = Builder.buildUndef(SrcTy);
-    auto Concat = Builder.buildConcatVectors(DstTy, {Src, Undef.getReg(0)});
-    MRI.setRegBank(Undef.getReg(0), getRegBank(AArch64::FPRRegBankID));
-    MRI.setRegBank(Concat.getReg(0), getRegBank(AArch64::FPRRegBankID));
-    for (MachineInstr &Ext :
-         make_early_inc_range(MRI.use_nodbg_instructions(Src))) {
-      if (Ext.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT)
-        Ext.getOperand(1).setReg(Concat.getReg(0));
-    }
-    return applyDefaultMapping(OpdMapper);
-  }
   default:
     llvm_unreachable("Don't know how to handle that operation");
   }
@@ -1034,20 +1014,14 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
-  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     // Destination and source need to be FPRs.
     OpRegBankIdx[0] = PMI_FirstFPR;
     OpRegBankIdx[1] = PMI_FirstFPR;
-    // Index needs to be a GPR constant.
+
+    // Index needs to be a GPR.
     OpRegBankIdx[2] = PMI_FirstGPR;
-    // SDAG will promote a 64bit G_EXTRACT_VECTOR_ELT to 128 to reduce the
-    // number of duplicate lane-extract patterns needed. Do the same here so
-    // that selection will operate on the larger vectors.
-    LLT Ty = MRI.getType(MI.getOperand(1).getReg());
-    if (!Ty.isScalable() && Ty.getSizeInBits() == 64)
-      MappingID = CustomMappingID;
     break;
-  }
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     OpRegBankIdx[0] = PMI_FirstFPR;
     OpRegBankIdx[1] = PMI_FirstFPR;

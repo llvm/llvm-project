@@ -112,7 +112,6 @@ following options:
       Supported formats:
 
       * :ref:`yaml <yamlremarks>` (default)
-      * :ref:`yaml-strtab <yamlstrtabremarks>`
       * :ref:`bitstream <bitstreamremarks>`
 
 ``Content configuration``
@@ -213,30 +212,6 @@ fields are required:
 * ``<arg-line>``
 * ``<arg-column>``
 
-.. _yamlstrtabremarks:
-
-YAML with a string table
-------------------------
-
-The YAML serialization supports the usage of a string table by using the
-``yaml-strtab`` format.
-
-This format replaces strings in the YAML output with integers representing the
-index in the string table that can be provided separately through metadata.
-
-The following entries can take advantage of the string table while respecting
-YAML rules:
-
-* ``<pass>``
-* ``<name>``
-* ``<function>``
-* ``<file>``
-* ``<value>``
-* ``<arg-file>``
-
-Currently, none of the tools in :ref:`the opt-viewer directory <optviewer>`
-support this format.
-
 .. _optviewer:
 
 YAML metadata
@@ -246,9 +221,9 @@ The metadata used together with the YAML format is:
 
 * a magic number: "REMARKS\\0"
 * the version number: a little-endian uint64_t
-* the total size of the string table (the size itself excluded):
-  little-endian uint64_t
-* a list of null-terminated strings
+* 8 zero bytes. This space was previously used to encode the size of a string
+  table. String table support for YAML remarks has been removed, use the
+  bitstream format instead.
 
 Optional:
 
@@ -584,7 +559,6 @@ Emitting remark diagnostics in the object file
 A section containing metadata on remark diagnostics will be emitted for the
 following formats:
 
-* ``yaml-strtab``
 * ``bitstream``
 
 This can be overridden by using the flag ``-remarks-section=<bool>``.

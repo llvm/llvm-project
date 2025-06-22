@@ -2063,6 +2063,7 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   if (opChange) {
     op.setStaticPosition(staticPosition);
     op.getOperation()->setOperands(operands);
+    // Return the original result to indicate an in-place folding happened.
     return op.getResult();
   }
   return {};
@@ -2146,11 +2147,12 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     return getVector();
   if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
     return res;
-  // Fold `arith.constant` indices into the `vector.extract` operation. Make
-  // sure that patterns requiring constant indices are added after this fold.
+  // Fold `arith.constant` indices into the `vector.extract` operation.
+  // Do not stop here as this fold may enable subsequent folds that require
+  // constant indices.
   SmallVector<Value> operands = {getVector()};
-  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
-    return val;
+  auto inplaceFolded = extractInsertFoldConstantOp(*this, adaptor, operands);
+
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
@@ -2172,7 +2174,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
     return val;
-  return OpFoldResult();
+
+  return inplaceFolded;
 }
 
 namespace {
@@ -2371,8 +2374,93 @@ std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
 }
 
 //===----------------------------------------------------------------------===//
+// ToElementsOp
+//===----------------------------------------------------------------------===//
+
+/// Returns true if all the `operands` are defined by `defOp`.
+/// Otherwise, returns false.
+static bool haveSameDefiningOp(OperandRange operands, Operation *defOp) {
+  if (operands.empty())
+    return false;
+
+  return llvm::all_of(operands, [&](Value operand) {
+    Operation *currentDef = operand.getDefiningOp();
+    return currentDef == defOp;
+  });
+}
+
+/// Folds vector.to_elements(vector.from_elements(%e0, %e1, ...)) into
+/// (%e0, %e1, ...). For example:
+///
+///   %0 = vector.from_elements %a, %b, %c : vector<3xf32>
+///   %1:3 = vector.to_elements %0 : vector<3xf32>
+///   user_op %1#0, %1#1, %1#2
+///
+/// becomes:
+///
+///   user_op %a, %b, %c
+///
+static LogicalResult
+foldToElementsFromElements(ToElementsOp toElementsOp,
+                           SmallVectorImpl<OpFoldResult> &results) {
+  auto fromElementsOp =
+      toElementsOp.getSource().getDefiningOp<FromElementsOp>();
+  if (!fromElementsOp)
+    return failure();
+
+  llvm::append_range(results, fromElementsOp.getElements());
+  return success();
+}
+
+LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  return foldToElementsFromElements(*this, results);
+}
+
+//===----------------------------------------------------------------------===//
 // FromElementsOp
 //===----------------------------------------------------------------------===//
+
+/// Folds vector.from_elements(vector.to_elements(%vector)) into %vector.
+///
+/// Case #1: Input and output vectors are the same.
+///
+///   %0:3 = vector.to_elements %a : vector<3xf32>
+///   %1 = vector.from_elements %0#0, %0#1, %0#2 : vector<3xf32>
+///   user_op %1
+///
+/// becomes:
+///
+///   user_op %a
+///
+static OpFoldResult foldFromElementsToElements(FromElementsOp fromElementsOp) {
+  OperandRange fromElemsOperands = fromElementsOp.getElements();
+  if (fromElemsOperands.empty())
+    return {};
+
+  auto toElementsOp = fromElemsOperands[0].getDefiningOp<ToElementsOp>();
+  if (!toElementsOp)
+    return {};
+
+  if (!haveSameDefiningOp(fromElemsOperands, toElementsOp))
+    return {};
+
+  // Case #1: Input and output vectors are the same. Forward the input vector.
+  Value toElementsInput = toElementsOp.getSource();
+  if (fromElementsOp.getType() == toElementsInput.getType() &&
+      llvm::equal(fromElemsOperands, toElementsOp.getResults())) {
+    return toElementsInput;
+  }
+
+  // TODO: Support cases with different input and output shapes and different
+  // number of elements.
+
+  return {};
+}
+
+OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
+  return foldFromElementsToElements(*this);
+}
 
 /// Rewrite a vector.from_elements into a vector.splat if all elements are the
 /// same SSA value. E.g.:
@@ -3272,11 +3360,12 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getValueToStoreType() == getType())
     return getValueToStore();
-  // Fold `arith.constant` indices into the `vector.insert` operation. Make
-  // sure that patterns requiring constant indices are added after this fold.
+  // Fold `arith.constant` indices into the `vector.insert` operation.
+  // Do not stop here as this fold may enable subsequent folds that require
+  // constant indices.
   SmallVector<Value> operands = {getValueToStore(), getDest()};
-  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
-    return val;
+  auto inplaceFolded = extractInsertFoldConstantOp(*this, adaptor, operands);
+
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
@@ -3286,7 +3375,7 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
     return res;
   }
 
-  return {};
+  return inplaceFolded;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4668,11 +4757,14 @@ struct TransferReadAfterWriteToBroadcast
 
   LogicalResult matchAndRewrite(TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
-    if (readOp.hasOutOfBoundsDim() ||
-        !llvm::isa<RankedTensorType>(readOp.getShapedType()))
-      return failure();
     auto defWrite = readOp.getBase().getDefiningOp<vector::TransferWriteOp>();
     if (!defWrite)
+      return failure();
+    // Bail if we need an alias analysis.
+    if (!readOp.hasPureTensorSemantics() || !defWrite.hasPureTensorSemantics())
+      return failure();
+    // Bail if we need a bounds analysis.
+    if (readOp.hasOutOfBoundsDim() || defWrite.hasOutOfBoundsDim())
       return failure();
     // TODO: If the written transfer chunk is a superset of the read transfer
     // chunk we could do an extract_strided_slice.
@@ -4684,15 +4776,28 @@ struct TransferReadAfterWriteToBroadcast
     if (getUnusedDimsBitVector({readOp.getPermutationMap()}) !=
         getUnusedDimsBitVector({defWrite.getPermutationMap()}))
       return failure();
-    if (readOp.getIndices() != defWrite.getIndices() ||
-        readOp.getMask() != defWrite.getMask())
+    // This pattern should only catch the broadcast case, the non-broadcast case
+    // should be done separately to keep application conditions clean and
+    // separate.
+    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
+    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
+    bool bcast = !readMap.getBroadcastDims().empty() ||
+                 !writeMap.getBroadcastDims().empty();
+    if (!bcast)
       return failure();
+    // At this point, we know we have a bcast.
+    // Bail in the masked case (too complex atm and needed to properly account
+    // for padding).
+    if (readOp.getMask() || defWrite.getMask())
+      return failure();
+    // If indices are not the same a shift may be required, bail.
+    if (readOp.getIndices() != defWrite.getIndices())
+      return failure();
+
     Value vec = defWrite.getVector();
     // TODO: loop through the chain of transfer_write if we can prove that they
     // don't overlap with the transfer_read. This requires improving
     // `isDisjointTransferIndices` helper.
-    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
-    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
     AffineMap map = readMap.compose(writeMap);
     if (map.getNumResults() == 0)
       return failure();
@@ -5038,7 +5143,7 @@ void TransferWriteOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Write::get(), &getValueToStoreMutable(),
+    effects.emplace_back(MemoryEffects::Write::get(), &getBaseMutable(),
                          SideEffects::DefaultResource::get());
 }
 
@@ -5266,6 +5371,10 @@ OpFoldResult LoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
+std::optional<SmallVector<int64_t, 4>> LoadOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
+}
+
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
@@ -5299,6 +5408,10 @@ LogicalResult vector::StoreOp::verify() {
 LogicalResult StoreOp::fold(FoldAdaptor adaptor,
                             SmallVectorImpl<OpFoldResult> &results) {
   return memref::foldMemRefCast(*this);
+}
+
+std::optional<SmallVector<int64_t, 4>> StoreOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
 }
 
 //===----------------------------------------------------------------------===//

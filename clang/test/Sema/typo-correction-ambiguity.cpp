@@ -18,12 +18,12 @@ void testAmbiguousNoSuggestions()
 
 namespace MultipleCorrectionsButNotAmbiguous
 {
-  int PrefixType_Name(int value);  // expected-note {{'PrefixType_Name' declared here}}
+  int PrefixType_Name(int value);
   int PrefixType_MIN();
   int PrefixType_MAX();
 };
 
 int testMultipleCorrectionsButNotAmbiguous() {
-  int val = MultipleCorrectionsButNotAmbiguous::PrefixType_Enum(0);  // expected-error {{no member named 'PrefixType_Enum' in namespace 'MultipleCorrectionsButNotAmbiguous'; did you mean 'PrefixType_Name'?}}
+  int val = MultipleCorrectionsButNotAmbiguous::PrefixType_Enum(0);  // expected-error {{no member named 'PrefixType_Enum' in namespace 'MultipleCorrectionsButNotAmbiguous'}}
   return val;
 }

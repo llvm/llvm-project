@@ -2295,7 +2295,7 @@ define <32 x i8> @splatconstant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vpsrlw $3, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX512DQVL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (ymm0 & mem)
+; AVX512DQVL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (ymm0 & m32bcst)
 ; AVX512DQVL-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    retq
 ;
@@ -2303,7 +2303,7 @@ define <32 x i8> @splatconstant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpsrlw $3, %ymm0, %ymm0
 ; AVX512BWVL-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX512BWVL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (ymm0 & mem)
+; AVX512BWVL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (ymm0 & m32bcst)
 ; AVX512BWVL-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; AVX512BWVL-NEXT:    retq
 ;

@@ -447,7 +447,7 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
       std::move(OverrideOptions), std::move(FS));
 }
 
-llvm::IntrusiveRefCntPtr<vfs::FileSystem>
+static llvm::IntrusiveRefCntPtr<vfs::FileSystem>
 getVfsFromFile(const std::string &OverlayFile,
                llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =

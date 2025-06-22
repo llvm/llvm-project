@@ -25,6 +25,23 @@ class TensorDescType;
 } // namespace xegpu
 
 namespace xegpu {
+/// HW dependent constants.
+/// TODO: These constants should be queried from the target information.
+namespace targetinfo {
+constexpr unsigned subgroupSize = 16; // How many lanes in a subgroup.
+/// If DPAS A or B operands have low precision element types they must be packed
+/// according to the following sizes.
+constexpr unsigned packedSizeInBitsForDefault =
+    16; // Minimum packing size per register for DPAS A.
+constexpr unsigned packedSizeInBitsForDpasB =
+    32; // Minimum packing size per register for DPAS B.
+} // namespace targetinfo
+} // namespace xegpu
+
+namespace xegpu {
+
+/// Flatten a set of ValueRange into a single SmallVector<Value>
+SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
 
 /// If tensor descriptor has a layout attribute it is used in SIMT mode.
 /// In this mode, the distributed vector shape is determined as follows:

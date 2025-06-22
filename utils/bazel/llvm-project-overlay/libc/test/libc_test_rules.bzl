@@ -31,6 +31,7 @@ def libc_test(name, copts = [], deps = [], local_defines = [], **kwargs):
         deps = [
             "//libc/test/UnitTest:LibcUnitTest",
             "//libc:__support_macros_config",
+            "//libc:__support_libc_errno",
             "//libc:errno",
             "//libc:func_aligned_alloc",
             "//libc:func_free",
