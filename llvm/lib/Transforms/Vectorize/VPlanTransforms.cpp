@@ -683,7 +683,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     // scalars.
     auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
-          return U->usesScalars(WideIV);
+          return U->usesScalars(WideIV) ||
+                 match(U, m_ExtractLastElement(m_VPValue()));
         }))
       continue;
 
@@ -694,12 +695,19 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
         WideIV->getDebugLoc(), Builder);
 
+    bool HasWideOps = any_of(WideIV->users(), [WideIV](VPUser *U) {
+      return !U->usesScalars(WideIV) &&
+             !match(U, m_ExtractLastElement(m_VPValue()));
+    });
+
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs)
       WideIV->replaceAllUsesWith(Steps);
     else
-      WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
-        return U.usesScalars(WideIV);
+      WideIV->replaceUsesWithIf(Steps, [WideIV, HasWideOps](VPUser &U,
+                                                            unsigned) {
+        return U.usesScalars(WideIV) ||
+               (!HasWideOps && match(&U, m_ExtractLastElement(m_VPValue())));
       });
   }
 }
@@ -1209,6 +1217,20 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+
+      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+          vputils::isSingleScalar(RepR->getOperand(1))) {
+        auto *Clone = new VPReplicateRecipe(
+            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+            true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Metadata*/);
+        Clone->insertBefore(RepOrWidenR);
+        auto *Ext = new VPInstruction(VPInstruction::ExtractLastElement,
+                                      {Clone->getOperand(0)});
+        Ext->insertBefore(Clone);
+        Clone->setOperand(0, Ext);
+        RepR->eraseFromParent();
+        continue;
+      }
       // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.

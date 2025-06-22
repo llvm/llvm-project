@@ -2654,14 +2654,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     return;
   }
 
-  // A store of a loop varying value to a uniform address only needs the last
-  // copy of the store.
-  if (isa<StoreInst>(UI) && vputils::isSingleScalar(getOperand(1))) {
-    auto Lane = VPLane::getLastLaneForVF(State.VF);
-    scalarizeInstruction(UI, this, VPLane(Lane), State);
-    return;
-  }
-
   // Generate scalar instances for all VF lanes.
   const unsigned EndLane = State.VF.getFixedValue();
   for (unsigned Lane = 0; Lane < EndLane; ++Lane)
