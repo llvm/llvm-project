@@ -21,6 +21,9 @@ template <class To, class From>
 constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From));
   return __builtin_bit_cast(To, from);
+#if __x86_64
+  // both-note@-2 {{indeterminate value can only initialize an object of type}}
+#endif
 }
 
 template <class Intermediate, class Init>
@@ -38,11 +41,8 @@ constexpr Init round_trip(const Init &init) {
 
 namespace test_long_double {
 #if __x86_64
-/// FIXME: We could enable this, but since it aborts, it causes the usual mempory leak.
-#if 0
-constexpr __int128_t test_cast_to_int128 = bit_cast<__int128_t>((long double)0); // expected-error{{must be initialized by a constant expression}}\
-                                                                                 // expected-note{{in call}}
-#endif
+constexpr __int128_t test_cast_to_int128 = bit_cast<__int128_t>((long double)0); // both-error{{must be initialized by a constant expression}}\
+                                                                                 // both-note{{in call}}
 constexpr long double ld = 3.1425926539;
 
 struct bytes {

@@ -23,16 +23,16 @@ makeOptionalIndices(std::initializer_list<ReassociationIndices> list) {
 
 TEST(ReassociationIndicesForCollapse, ScalarTest) {
   EXPECT_EQ(getReassociationIndicesForCollapse({1}, {}),
-            makeOptionalIndices({{0}}));
+            makeOptionalIndices({}));
   EXPECT_EQ(getReassociationIndicesForCollapse({1, 1}, {}),
-            makeOptionalIndices({{0, 1}}));
+            makeOptionalIndices({}));
   EXPECT_EQ(getReassociationIndicesForCollapse({ShapedType::kDynamic}, {}),
-            makeOptionalIndices({{0}}));
+            makeOptionalIndices({}));
   EXPECT_EQ(getReassociationIndicesForCollapse({1, ShapedType::kDynamic,
                                                 ShapedType::kDynamic, 1,
                                                 ShapedType::kDynamic},
                                                {}),
-            makeOptionalIndices({{0, 1, 2, 3, 4}}));
+            makeOptionalIndices({}));
 }
 
 TEST(ReassociationIndicesForCollapse, ScalarTestFailure) {

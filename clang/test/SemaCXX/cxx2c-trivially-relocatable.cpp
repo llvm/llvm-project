@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-intrinsics -fptrauth-calls -std=c++2c -verify %s
 
 class Trivial {};
 static_assert(__builtin_is_cpp_trivially_relocatable(Trivial));

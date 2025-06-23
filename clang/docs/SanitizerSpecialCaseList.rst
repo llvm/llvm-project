@@ -109,13 +109,13 @@ precedence. Here are a few examples.
 .. code-block:: bash
 
   $ cat ignorelist1.txt
-  # test.cc will be instrumented.
+  # test.cc will not be instrumented.
   src:*
   src:*/mylib/*=sanitize
   src:*/mylib/test.cc
 
   $ cat ignorelist2.txt
-  # test.cc will not be instrumented.
+  # test.cc will be instrumented.
   src:*
   src:*/mylib/test.cc
   src:*/mylib/*=sanitize

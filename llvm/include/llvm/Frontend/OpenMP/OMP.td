@@ -246,6 +246,7 @@ def OMPC_Inclusive : Clause<[Spelling<"inclusive">]> {
   let flangClass = "OmpObjectList";
 }
 def OMPC_Indirect : Clause<[Spelling<"indirect">]> {
+  let flangClass = "OmpIndirectClause";
 }
 def OMPC_Init : Clause<[Spelling<"init">]> {
   let clangClass = "OMPInitClause";
@@ -647,7 +648,7 @@ def OMP_BeginDeclareTarget : Directive<[Spelling<"begin declare target", 1, 52>,
                                         Spelling<"begin declare_target", 60>]> {
   let allowedClauses = [
     VersionedClause<OMPC_DeviceType>,
-    VersionedClause<OMPC_Indirect>,
+    VersionedClause<OMPC_Indirect, 51>,
     VersionedClause<OMPC_Link>,
     VersionedClause<OMPC_To>,
   ];
@@ -734,7 +735,7 @@ def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
                                    Spelling<"declare_target", 60>]> {
   let allowedClauses = [
     VersionedClause<OMPC_Enter, 52>,
-    VersionedClause<OMPC_Indirect>,
+    VersionedClause<OMPC_Indirect, 51>,
     VersionedClause<OMPC_Link>,
     VersionedClause<OMPC_To>,
   ];

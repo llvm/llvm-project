@@ -28,13 +28,8 @@ using lldb_private::File;
 using lldb_private::NativeFile;
 using lldb_private::Pipe;
 
-void PipeBase::SetUp() {
-  ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), Succeeded());
-  ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), Succeeded());
-}
-
 void TransportBase::SetUp() {
-  PipeBase::SetUp();
+  PipeTest::SetUp();
   to_dap = std::make_unique<Transport>(
       "to_dap", nullptr,
       std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
