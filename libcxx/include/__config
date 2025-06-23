@@ -640,10 +640,6 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    define _LIBCPP_HAS_DEFAULTRUNELOCALE
-#  endif
-
-#  if defined(__APPLE__) || defined(__FreeBSD__)
 #    define _LIBCPP_WCTYPE_IS_MASK
 #  endif
 
