@@ -1667,7 +1667,8 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (!TC.getTriple().isOSAIX())
       CmdArgs.push_back("--export-dynamic");
     else
-      TC.getDriver().Diag(diag::err_drv_missing_sanitizer_file) << RTNeedsExport << "export";
+      TC.getDriver().Diag(diag::err_drv_missing_sanitizer_file)
+          << RTNeedsExport << "export";
   }
 
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)

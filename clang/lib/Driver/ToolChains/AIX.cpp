@@ -300,7 +300,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (llvm::sys::fs::exists(SanRTSymbolList))
       CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") + SanRTSymbolList));
     else
-      ToolChain.getDriver().Diag(diag::err_drv_missing_sanitizer_file) << sanitizer << "import";
+      ToolChain.getDriver().Diag(diag::err_drv_missing_sanitizer_file)
+          << sanitizer << "import";
     if (ToolChain.getSanitizerArgs(Args).linkCXXRuntimes()) {
       SanRTSymbolList.clear();
       (Twine(ToolChain.getRuntimePath().value_or(".")) +
@@ -309,7 +310,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (llvm::sys::fs::exists(SanRTSymbolList))
         CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") + SanRTSymbolList));
       else
-        ToolChain.getDriver().Diag(diag::err_drv_missing_sanitizer_file) << sanitizer << "c++ import";
+        ToolChain.getDriver().Diag(diag::err_drv_missing_sanitizer_file)
+            << sanitizer << "c++ import";
     }
   }
 
