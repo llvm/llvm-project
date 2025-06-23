@@ -537,7 +537,7 @@ LogicalResult TransposeLoadOp::verify() {
   size_t transferSize =
       transferType.getNumElements() * transferType.getElementTypeBitWidth();
   if (transferSize != 64)
-    return emitOpError("Transfering type size must be 64 bits");
+    return emitOpError("Transferring type size must be 64 bits");
 
   return success();
 }
