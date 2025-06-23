@@ -1141,14 +1141,14 @@ void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
 llvm::Error
 GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
                                        GDBRemoteCommunication &server) {
-  auto expected_socket_pair = Socket::CreatePair();
-  if (!expected_socket_pair)
-    return expected_socket_pair.takeError();
+  llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+  if (!pair)
+    return pair.takeError();
 
-  client.SetConnection(std::make_unique<ConnectionFileDescriptor>(
-      expected_socket_pair->first.release()));
-  server.SetConnection(std::make_unique<ConnectionFileDescriptor>(
-      expected_socket_pair->second.release()));
+  client.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(pair->first.release()));
+  server.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(pair->second.release()));
   return llvm::Error::success();
 }
 

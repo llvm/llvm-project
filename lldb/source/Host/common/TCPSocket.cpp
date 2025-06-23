@@ -52,9 +52,7 @@ TCPSocket::TCPSocket(NativeSocket socket, bool should_close)
 
 TCPSocket::~TCPSocket() { CloseListenSockets(); }
 
-llvm::Expected<
-    std::pair<std::unique_ptr<TCPSocket>, std::unique_ptr<TCPSocket>>>
-TCPSocket::CreatePair() {
+llvm::Expected<TCPSocket::Pair> TCPSocket::CreatePair() {
   auto listen_socket_up = std::make_unique<TCPSocket>(true);
   if (Status error = listen_socket_up->Listen("localhost:0", 5); error.Fail())
     return error.takeError();
@@ -75,7 +73,7 @@ TCPSocket::CreatePair() {
       error.Fail())
     return error.takeError();
 
-  return std::make_pair(
+  return Pair(
       std::move(connect_socket_up),
       std::unique_ptr<TCPSocket>(static_cast<TCPSocket *>(accept_socket)));
 }

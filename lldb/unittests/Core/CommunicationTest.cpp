@@ -31,17 +31,17 @@ private:
 };
 
 static void CommunicationReadTest(bool use_read_thread) {
-  auto maybe_socket_pair = Socket::CreatePair();
-  ASSERT_THAT_EXPECTED(maybe_socket_pair, llvm::Succeeded());
-  Socket &a = *maybe_socket_pair->first;
+  llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+  ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+  Socket &a = *pair->first;
 
   size_t num_bytes = 4;
   ASSERT_THAT_ERROR(a.Write("test", num_bytes).ToError(), llvm::Succeeded());
   ASSERT_EQ(num_bytes, 4U);
 
   ThreadedCommunication comm("test");
-  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(
-      maybe_socket_pair->second.release()));
+  comm.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(pair->second.release()));
   comm.SetCloseOnEOF(true);
 
   if (use_read_thread) {
@@ -120,13 +120,13 @@ TEST_F(CommunicationTest, ReadThread) {
 }
 
 TEST_F(CommunicationTest, SynchronizeWhileClosing) {
-  auto maybe_socket_pair = Socket::CreatePair();
-  ASSERT_THAT_EXPECTED(maybe_socket_pair, llvm::Succeeded());
-  Socket &a = *maybe_socket_pair->first;
+  llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+  ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+  Socket &a = *pair->first;
 
   ThreadedCommunication comm("test");
-  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(
-      maybe_socket_pair->second.release()));
+  comm.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(pair->second.release()));
   comm.SetCloseOnEOF(true);
   ASSERT_TRUE(comm.StartReadThread());
 

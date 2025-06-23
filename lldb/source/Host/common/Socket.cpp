@@ -234,7 +234,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   return socket_up;
 }
 
-llvm::Expected<std::pair<std::unique_ptr<Socket>, std::unique_ptr<Socket>>>
+llvm::Expected<Socket::Pair>
 Socket::CreatePair(std::optional<SocketProtocol> protocol) {
   constexpr SocketProtocol kBestProtocol =
       LLDB_ENABLE_POSIX ? ProtocolUnixDomain : ProtocolTcp;

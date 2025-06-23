@@ -19,9 +19,9 @@ public:
   DomainSocket(NativeSocket socket, bool should_close);
   explicit DomainSocket(bool should_close);
 
-  static llvm::Expected<
-      std::pair<std::unique_ptr<DomainSocket>, std::unique_ptr<DomainSocket>>>
-  CreatePair();
+  using Pair =
+      std::pair<std::unique_ptr<DomainSocket>, std::unique_ptr<DomainSocket>>;
+  static llvm::Expected<Pair> CreatePair();
 
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;

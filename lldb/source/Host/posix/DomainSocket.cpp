@@ -78,9 +78,7 @@ DomainSocket::DomainSocket(SocketProtocol protocol, NativeSocket socket,
   m_socket = socket;
 }
 
-llvm::Expected<
-    std::pair<std::unique_ptr<DomainSocket>, std::unique_ptr<DomainSocket>>>
-DomainSocket::CreatePair() {
+llvm::Expected<DomainSocket::Pair> DomainSocket::CreatePair() {
   int sockets[2];
   int type = SOCK_STREAM;
 #ifdef SOCK_CLOEXEC
@@ -97,12 +95,12 @@ DomainSocket::CreatePair() {
   }
 #endif
 
-  return std::make_pair(std::unique_ptr<DomainSocket>(
-                            new DomainSocket(ProtocolUnixDomain, sockets[0],
-                                             /*should_close=*/true)),
-                        std::unique_ptr<DomainSocket>(
-                            new DomainSocket(ProtocolUnixDomain, sockets[1],
-                                             /*should_close=*/true)));
+  return Pair(std::unique_ptr<DomainSocket>(
+                  new DomainSocket(ProtocolUnixDomain, sockets[0],
+                                   /*should_close=*/true)),
+              std::unique_ptr<DomainSocket>(
+                  new DomainSocket(ProtocolUnixDomain, sockets[1],
+                                   /*should_close=*/true)));
 }
 
 Status DomainSocket::Connect(llvm::StringRef name) {
