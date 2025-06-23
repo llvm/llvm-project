@@ -2661,12 +2661,6 @@ public:
 /// and needs to be lowered to concrete recipes before codegen. The operands are
 /// {ChainOp, VecOp1, VecOp2, [Condition]}.
 class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
-  /// Opcode of the extend for VecOp1 and VecOp2.
-  Instruction::CastOps ExtOp;
-
-  /// Non-neg flag of the extend recipe.
-  bool IsNonNeg = false;
-
   /// The scalar type after extending.
   Type *ResultTy = nullptr;
 
@@ -2679,8 +2673,8 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
             MulAcc->getVFScaleFactor(),
             WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
             MulAcc->getDebugLoc()),
-        ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()),
-        ResultTy(MulAcc->getResultType()) {
+        ResultTy(MulAcc->getResultType()),
+        VecOpInfo{MulAcc->getVecOp0Info(), MulAcc->getVecOp1Info()} {
     transferFlags(*MulAcc);
     setUnderlyingValue(MulAcc->getUnderlyingValue());
   }
@@ -2695,18 +2689,22 @@ public:
             R->getCondOp(), R->isOrdered(), R->getVFScaleFactor(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
-        ExtOp(Ext0->getOpcode()), ResultTy(ResultTy) {
+        ResultTy(ResultTy),
+        VecOpInfo{
+            {Ext0->getOpcode(), Ext0->hasNonNegFlag() && Ext0->isNonNeg()},
+            {Ext1->getOpcode(), Ext1->hasNonNegFlag() && Ext1->isNonNeg()}} {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
-    assert((ExtOp == Instruction::CastOps::ZExt ||
-            ExtOp == Instruction::CastOps::SExt) &&
+    unsigned ExtOp0 = getVecOp0Info().ExtOp;
+    unsigned ExtOp1 = getVecOp1Info().ExtOp;
+    assert((ExtOp0 == Instruction::CastOps::ZExt ||
+            ExtOp0 == Instruction::CastOps::SExt) &&
+           (ExtOp1 == Instruction::CastOps::ZExt ||
+            ExtOp1 == Instruction::CastOps::SExt) &&
            "VPMulAccumulateReductionRecipe only supports zext and sext.");
     setUnderlyingValue(R->getUnderlyingValue());
-    // Only set the non-negative flag if the original recipe contains.
-    if (Ext0->hasNonNegFlag())
-      IsNonNeg = Ext0->isNonNeg();
   }
 
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
@@ -2717,13 +2715,25 @@ public:
             R->getCondOp(), R->isOrdered(), R->getVFScaleFactor(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
-        ExtOp(Instruction::CastOps::CastOpsEnd), ResultTy(ResultTy) {
+        ResultTy(ResultTy) {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateReductionRecipe must be "
            "Add");
     setUnderlyingValue(R->getUnderlyingValue());
   }
+
+  struct VecOperandInfo {
+    /// The operand's extend opcode.
+    Instruction::CastOps ExtOp{Instruction::CastOps::CastOpsEnd};
+    /// Non-neg portion of the operand's flags.
+    bool IsNonNeg = false;
+
+    bool isExtended() const {
+      return ExtOp != Instruction::CastOps::CastOpsEnd;
+    }
+    bool isZExt() const { return ExtOp == Instruction::CastOps::ZExt; }
+  };
 
   ~VPMulAccumulateReductionRecipe() override = default;
 
@@ -2758,16 +2768,15 @@ public:
   VPValue *getVecOp1() const { return getOperand(2); }
 
   /// Return true if this recipe contains extended operands.
-  bool isExtended() const { return ExtOp != Instruction::CastOps::CastOpsEnd; }
+  bool isExtended() const {
+    return getVecOp0Info().isExtended() || getVecOp1Info().isExtended();
+  }
 
-  /// Return the opcode of the extends for the operands.
-  Instruction::CastOps getExtOpcode() const { return ExtOp; }
+  const VecOperandInfo &getVecOp0Info() const { return VecOpInfo[0]; }
+  const VecOperandInfo &getVecOp1Info() const { return VecOpInfo[1]; }
 
-  /// Return if the operands are zero-extended.
-  bool isZExt() const { return ExtOp == Instruction::CastOps::ZExt; }
-
-  /// Return true if the operand extends have the non-negative flag.
-  bool isNonNeg() const { return IsNonNeg; }
+protected:
+  VecOperandInfo VecOpInfo[2];
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar

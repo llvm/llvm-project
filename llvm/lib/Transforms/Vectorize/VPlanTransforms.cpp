@@ -2563,28 +2563,31 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
   VPValue *Op0, *Op1;
   if (MulAcc->isExtended()) {
+    VPMulAccumulateReductionRecipe::VecOperandInfo Ext0Info =
+        MulAcc->getVecOp0Info();
+    VPMulAccumulateReductionRecipe::VecOperandInfo Ext1Info =
+        MulAcc->getVecOp1Info();
     Type *RedTy = MulAcc->getResultType();
-    if (MulAcc->isZExt())
-      Op0 = new VPWidenCastRecipe(
-          MulAcc->getExtOpcode(), MulAcc->getVecOp0(), RedTy,
-          VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg()), MulAcc->getDebugLoc());
+    if (Ext0Info.isZExt())
+      Op0 = new VPWidenCastRecipe(Ext0Info.ExtOp, MulAcc->getVecOp0(), RedTy,
+                                  VPIRFlags::NonNegFlagsTy(Ext0Info.IsNonNeg),
+                                  MulAcc->getDebugLoc());
     else
-      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-                                  RedTy, {}, MulAcc->getDebugLoc());
+      Op0 = new VPWidenCastRecipe(Ext0Info.ExtOp, MulAcc->getVecOp0(), RedTy,
+                                  {}, MulAcc->getDebugLoc());
     Op0->getDefiningRecipe()->insertBefore(MulAcc);
     // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
     // VPWidenCastRecipe.
     if (MulAcc->getVecOp0() == MulAcc->getVecOp1()) {
       Op1 = Op0;
     } else {
-      if (MulAcc->isZExt())
-        Op1 = new VPWidenCastRecipe(
-            MulAcc->getExtOpcode(), MulAcc->getVecOp1(), RedTy,
-            VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg()),
-            MulAcc->getDebugLoc());
+      if (Ext1Info.isZExt())
+        Op1 = new VPWidenCastRecipe(Ext1Info.ExtOp, MulAcc->getVecOp1(), RedTy,
+                                    VPIRFlags::NonNegFlagsTy(Ext1Info.IsNonNeg),
+                                    MulAcc->getDebugLoc());
       else
-        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                                    RedTy, {}, MulAcc->getDebugLoc());
+        Op1 = new VPWidenCastRecipe(Ext1Info.ExtOp, MulAcc->getVecOp1(), RedTy,
+                                    {}, MulAcc->getDebugLoc());
       Op1->getDefiningRecipe()->insertBefore(MulAcc);
     }
   } else {
@@ -2835,16 +2838,36 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Clamp the range if using multiply-accumulate-reduction is profitable.
   auto IsMulAccValidAndClampRange =
-      [&](bool isZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
+      [&](bool IsZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
           VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-          Type *SrcTy =
+          Type *SrcTy0 =
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
-          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
-          InstructionCost MulAccCost =
-              Ctx.TTI.getMulAccReductionCost(isZExt, RedTy, SrcVecTy, CostKind);
+          Type *SrcTy1 =
+              Ext1 ? Ctx.Types.inferScalarType(Ext1->getOperand(0)) : RedTy;
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy0, VF));
+          InstructionCost MulAccCost;
+          if (Red->isPartialReduction()) {
+            TargetTransformInfo::PartialReductionExtendKind Ext0Kind =
+                Ext0 ? TargetTransformInfo::getPartialReductionExtendKind(
+                           Ext0->getOpcode())
+                     : TargetTransformInfo::PR_None;
+            TargetTransformInfo::PartialReductionExtendKind Ext1Kind =
+                Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
+                           Ext1->getOpcode())
+                     : TargetTransformInfo::PR_None;
+            MulAccCost = Ctx.TTI.getPartialReductionCost(
+                Opcode, SrcTy0, SrcTy1, RedTy, VF, Ext0Kind, Ext1Kind,
+                Mul->getOpcode());
+          } else {
+            // Currently only partial reductions support mixed extension types
+            if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
+              return false;
+            MulAccCost = Ctx.TTI.getMulAccReductionCost(IsZExt, RedTy, SrcVecTy,
+                                                        CostKind);
+          }
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
           InstructionCost ExtCost = 0;
@@ -2863,6 +2886,12 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   VPValue *VecOp = Red->getVecOp();
   VPValue *A, *B;
+  // Some chained partial reductions used for complex numbers will have a
+  // negation between the mul and reduction. This extracts the mul from that
+  // pattern to use it for further checking.
+  if (Red->isPartialReduction())
+    match(VecOp,
+          m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(VecOp)));
   // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
@@ -2872,8 +2901,10 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
     // Match reduce.add(mul(ext, ext)).
+    // Mixed extensions are valid for partial reductions
     if (RecipeA && RecipeB &&
-        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B) &&
+        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B ||
+         Red->isPartialReduction()) &&
         match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==

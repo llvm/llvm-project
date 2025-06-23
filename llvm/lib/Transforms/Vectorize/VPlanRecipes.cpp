@@ -2495,29 +2495,10 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   std::optional<FastMathFlags> OptionalFMF =
       ElementTy->isFloatingPointTy() ? std::make_optional(FMFs) : std::nullopt;
 
-  if (isPartialReduction()) {
-    using namespace llvm::VPlanPatternMatch;
-    VPValue *Mul = getVecOp();
-    // Some chained partial reductions used for complex numbers will have a
-    // negation between the mul and reduction. This extracts the mul from that
-    // pattern to use it for further checking.
-    match(Mul, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Mul)));
-    if (match(Mul,
-              m_Mul(m_ZExtOrSExt(m_VPValue()), m_ZExtOrSExt(m_VPValue())))) {
-      auto *MulR = cast<VPWidenRecipe>(Mul);
-      auto *Ext0R = cast<VPWidenCastRecipe>(MulR->getOperand(0));
-      auto *Ext1R = cast<VPWidenCastRecipe>(MulR->getOperand(1));
-      return Ctx.TTI.getPartialReductionCost(
-          Opcode, Ctx.Types.inferScalarType(Ext0R->getOperand(0)),
-          Ctx.Types.inferScalarType(Ext1R->getOperand(0)),
-          Ctx.Types.inferScalarType(getChainOp()), VF,
-          TargetTransformInfo::getPartialReductionExtendKind(
-              Ext0R->getOpcode()),
-          TargetTransformInfo::getPartialReductionExtendKind(
-              Ext1R->getOpcode()),
-          Instruction::Mul);
-    }
-  }
+  if (isPartialReduction())
+    return Ctx.TTI.getPartialReductionCost(
+        Opcode, ElementTy, ElementTy, ElementTy, VF,
+        TargetTransformInfo::PR_None, TargetTransformInfo::PR_None);
 
   // TODO: Support any-of reductions.
   assert(
@@ -2547,6 +2528,10 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
   assert(RedTy->isIntegerTy() &&
          "ExtendedReduction only support integer type currently.");
+  if (isPartialReduction())
+    return Ctx.TTI.getPartialReductionCost(Opcode, RedTy, SrcVecTy, SrcVecTy,
+                                           VF, TargetTransformInfo::PR_None,
+                                           TargetTransformInfo::PR_None);
   return Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), RedTy, SrcVecTy,
                                           std::nullopt, Ctx.CostKind);
 }
@@ -2554,20 +2539,25 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
 InstructionCost
 VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
+  VecOperandInfo Ext0Info = getVecOp0Info();
+  VecOperandInfo Ext1Info = getVecOp1Info();
   if (isPartialReduction())
     return Ctx.TTI.getPartialReductionCost(
         RecurrenceDescriptor::getOpcode(getRecurrenceKind()),
         Ctx.Types.inferScalarType(getVecOp0()),
         Ctx.Types.inferScalarType(getVecOp1()),
         Ctx.Types.inferScalarType(getChainOp()), VF,
-        TargetTransformInfo::getPartialReductionExtendKind(getExtOpcode()),
-        TargetTransformInfo::getPartialReductionExtendKind(getExtOpcode()),
+        TargetTransformInfo::getPartialReductionExtendKind(Ext0Info.ExtOp),
+        TargetTransformInfo::getPartialReductionExtendKind(Ext1Info.ExtOp),
         Instruction::Mul);
+  // Only partial reductions support mixed extends
+  if (Ext0Info.ExtOp != Ext1Info.ExtOp)
+    return InstructionCost::getInvalid(Ctx.CostKind);
 
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  return Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy,
+  return Ctx.TTI.getMulAccReductionCost(Ext0Info.isZExt(), RedTy, SrcVecTy,
                                         Ctx.CostKind);
 }
 
@@ -2653,18 +2643,20 @@ void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
     << " (";
   O << "mul";
   printFlags(O);
+  VecOperandInfo Ext0Info = getVecOp0Info();
+  VecOperandInfo Ext1Info = getVecOp1Info();
   if (isExtended())
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);
-  if (isExtended())
-    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
-      << "), (";
+  if (Ext0Info.isExtended())
+    O << " " << Instruction::getOpcodeName(Ext0Info.ExtOp) << " to "
+      << *getResultType() << "), (";
   else
     O << ", ";
   getVecOp1()->printAsOperand(O, SlotTracker);
-  if (isExtended())
-    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
-      << ")";
+  if (Ext1Info.isExtended())
+    O << " " << Instruction::getOpcodeName(Ext1Info.ExtOp) << " to "
+      << *getResultType() << ")";
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
