@@ -2200,17 +2200,17 @@ foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
       (VGPRImm<(i16 imm)>:$imm),
       (V_MOV_B32_e32 imm:$imm)
     >;
-  }
 
-  // FIXME: Workaround for ordering issue with peephole optimizer where
-  // a register class copy interferes with immediate folding.  Should
-  // use s_mov_b32, which can be shrunk to s_movk_i32
+    // FIXME: Workaround for ordering issue with peephole optimizer where
+    // a register class copy interferes with immediate folding.  Should
+    // use s_mov_b32, which can be shrunk to s_movk_i32
 
-  foreach vt = [f16, bf16] in {
-    def : GCNPat <
-      (VGPRImm<(vt fpimm)>:$imm),
-      (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
-    >;
+    foreach vt = [f16, bf16] in {
+      def : GCNPat <
+        (VGPRImm<(vt fpimm)>:$imm),
+        (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
+      >;
+    }
   }
 }
 
