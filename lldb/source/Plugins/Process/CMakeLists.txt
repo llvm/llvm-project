@@ -1,8 +1,3 @@
-set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND Process)
-set_property(DIRECTORY PROPERTY LLDB_ACCEPTABLE_PLUGIN_DEPENDENCIES ObjectFile)
-# This dependency is part of a loop (Process<->DynamicLoader).
-set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES DynamicLoader)
-
 if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
   add_subdirectory(Linux)
   add_subdirectory(POSIX)
