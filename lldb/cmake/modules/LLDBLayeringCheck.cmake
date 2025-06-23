@@ -1,12 +1,12 @@
 foreach (scope DIRECTORY TARGET)
   define_property(${scope} PROPERTY LLDB_PLUGIN_KIND INHERITED
     BRIEF_DOCS "LLDB plugin kind (Process, SymbolFile, etc.)"
-    FULL_DOCS  "see lldb/docs/resources/contributing.rst"
+    FULL_DOCS  "See lldb/docs/resources/contributing.rst"
   )
 
   define_property(${scope} PROPERTY LLDB_ACCEPTABLE_PLUGIN_DEPENDENCIES INHERITED
     BRIEF_DOCS "LLDB plugin kinds which the plugin can depend on"
-    FULL_DOCS  "see lldb/docs/resources/contributing.rst"
+    FULL_DOCS  "See lldb/docs/resources/contributing.rst"
   )
 
   define_property(${scope} PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES INHERITED
