@@ -1614,6 +1614,6 @@ DWARF:
     auto param_die = sub2.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(param_die, context_die));
+    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(sub2, context_die));
   }
 }
