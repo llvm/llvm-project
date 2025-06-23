@@ -1,4 +1,4 @@
-// This check that clang-scan-deps properly outputs named module dependencies 
+// This checks that clang-scan-deps properly outputs named module dependencies 
 // when using the the scanning output format 'experimental-full'.
 //
 // See commit 72304.
@@ -81,7 +81,7 @@ export void Hello();
 // CHECK-NEXT:      {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M"
+// CHECK:                 "named-module": "M"
 // CHECK-NEXT:            "named-module-deps": [
 // CHECK-NEXT:              "M:interface_part",
 // CHECK-NEXT:              "M:impl_part"
@@ -118,7 +118,7 @@ void Hello() {
 // CHECK-NEXT:      {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
-// CHECK-NOT:             "module-name":
+// CHECK-NOT:             "named-module":
 // CHECK:                 "named-module-deps": [
 // CHECK-NEXT:              "M"
 // CHECK-NEXT:             ]
@@ -150,7 +150,7 @@ void World() {
 // CHECK-NEXT:      {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M:impl_part"
+// CHECK:                 "named-module": "M:impl_part"
 // CHECK-NEXT:            "named-module-deps": [
 // CHECK-NEXT:              "M:interface_part"
 // CHECK-NEXT:             ]
@@ -161,7 +161,7 @@ void World() {
 // CHECK:                 "input-file": "[[PREFIX]]/impl_part.cppm"
 // CHECK:               },
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M:impl_part"
+// CHECK:                 "named-module": "M:impl_part"
 // CHECK-NEXT:            "named-module-deps": [
 // CHECK-NEXT:              "M:interface_part"
 // CHECK-NEXT:             ]
@@ -186,7 +186,7 @@ export void World();
 // CHECK-NEXT:      {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M:interface_part"
+// CHECK:                 "named-module": "M:interface_part"
 // CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
@@ -195,7 +195,7 @@ export void World();
 // CHECK:                 "input-file": "[[PREFIX]]/interface_part.cppm"
 // CHECK:               },
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M:interface_part"
+// CHECK:                 "named-module": "M:interface_part"
 // CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
@@ -223,7 +223,7 @@ int main() {
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "commands": [
 // CHECK-NEXT:          {
-// CHECK-NOT:             "module-name":
+// CHECK-NOT:             "named-module":
 // CHECK:                 "named-module-deps": [
 // CHECK-NEXT:              "M"
 // CHECK-NEXT:              "third_party_module"
@@ -248,7 +248,7 @@ int main() {
 // CHECK-NEXT:      {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M"
+// CHECK:                 "named-module": "M"
 // CHECK-NEXT:            "named-module-deps": [
 // CHECK-NEXT:              "M:interface_part",
 // CHECK-NEXT:              "M:impl_part"
@@ -267,7 +267,7 @@ int main() {
 // CHECK:                 "input-file": "[[PREFIX]]/M.cppm"
 // CHECK:               },
 // CHECK:               {
-// CHECK-NOT:             "module-name":
+// CHECK-NOT:             "named-module":
 // CHECK:                 "named-module-deps": [
 // CHECK-NEXT:              "M"
 // CHECK-NEXT:             ]
@@ -282,7 +282,7 @@ int main() {
 // CHECK-NEXT:      {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M:impl_part"
+// CHECK:                 "named-module": "M:impl_part"
 // CHECK-NEXT:            "named-module-deps": [
 // CHECK-NEXT:              "M:interface_part"
 // CHECK-NEXT:             ]
@@ -293,7 +293,7 @@ int main() {
 // CHECK:                 "input-file": "[[PREFIX]]/impl_part.cppm"
 // CHECK:               },
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M:impl_part"
+// CHECK:                 "named-module": "M:impl_part"
 // CHECK-NEXT:            "named-module-deps": [
 // CHECK-NEXT:              "M:interface_part"
 // CHECK-NEXT:             ]
@@ -308,7 +308,7 @@ int main() {
 // CHECK-NEXT:      {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M:interface_part"
+// CHECK:                 "named-module": "M:interface_part"
 // CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
@@ -317,7 +317,7 @@ int main() {
 // CHECK:                 "input-file": "[[PREFIX]]/interface_part.cppm"
 // CHECK:               },
 // CHECK-NEXT:          {
-// CHECK:                 "module-name": "M:interface_part"
+// CHECK:                 "named-module": "M:interface_part"
 // CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
@@ -330,7 +330,7 @@ int main() {
 // CHECK-NEXT:      {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
-// CHECK-NOT:             "module-name":
+// CHECK-NOT:             "named-module":
 // CHECK:                 "named-module-deps": [
 // CHECK-NEXT:              "M"
 // CHECK-NEXT:              "third_party_module"

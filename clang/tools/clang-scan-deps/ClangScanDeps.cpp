@@ -393,7 +393,7 @@ public:
     ID.FileName = std::string(Input);
     ID.ContextHash = std::move(TUDeps.ID.ContextHash);
     ID.FileDeps = std::move(TUDeps.FileDeps);
-    ID.ModuleName = std::move(TUDeps.ID.ModuleName);
+    ID.NamedModule = std::move(TUDeps.ID.ModuleName);
     ID.NamedModuleDeps = std::move(TUDeps.NamedModuleDeps);
     ID.ClangModuleDeps = std::move(TUDeps.ClangModuleDeps);
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
@@ -510,8 +510,8 @@ public:
                   JOS.object([&] {
                     JOS.attribute("clang-context-hash",
                                   StringRef(I.ContextHash));
-                    if (!I.ModuleName.empty())
-                      JOS.attribute("module-name", (I.ModuleName));
+                    if (!I.NamedModule.empty())
+                      JOS.attribute("named-module", (I.NamedModule));
                     if (!I.NamedModuleDeps.empty())
                       JOS.attributeArray("named-module-deps", [&] {
                         for (const auto &Dep : I.NamedModuleDeps)
@@ -530,8 +530,8 @@ public:
               } else {
                 JOS.object([&] {
                   JOS.attribute("clang-context-hash", StringRef(I.ContextHash));
-                  if (!I.ModuleName.empty())
-                    JOS.attribute("module-name", (I.ModuleName));
+                  if (!I.NamedModule.empty())
+                    JOS.attribute("named-module", (I.NamedModule));
                   if (!I.NamedModuleDeps.empty())
                     JOS.attributeArray("named-module-deps", [&] {
                       for (const auto &Dep : I.NamedModuleDeps)
@@ -593,7 +593,7 @@ private:
     std::string FileName;
     std::string ContextHash;
     std::vector<std::string> FileDeps;
-    std::string ModuleName;
+    std::string NamedModule;
     std::vector<std::string> NamedModuleDeps;
     std::vector<ModuleID> ClangModuleDeps;
     std::vector<std::string> DriverCommandLine;
