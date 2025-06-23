@@ -109,6 +109,11 @@ static cl::opt<bool> DisableThinLTOPropagation(
     "disable-thinlto-funcattrs", cl::init(true), cl::Hidden,
     cl::desc("Don't propagate function-attrs in thinLTO"));
 
+static cl::opt<bool> ForceLTOFuncAttrs(
+    "force-lto-funcattrs", cl::init(false), cl::Hidden,
+    cl::desc("Force LTO behaviour for function-attrs pass. Intended for testing"
+             "purposes only"));
+
 static void addCapturesStat(CaptureInfo CI) {
   if (capturesNothing(CI))
     ++NumCapturesNone;
@@ -2334,7 +2339,7 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   // We use this information when inferring norecurse attribute: If there is
   // no function whose address is taken and all functions have internal
   // linkage, there is no path for a callback to any user function.
-  if (IsLTOPostLink) {
+  if (IsLTOPostLink || ForceLTOFuncAttrs) {
     bool AnyFunctionsAddressIsTaken = false;
     // Get the parent Module of the Function
     Module &M = *C.begin()->getFunction().getParent();
