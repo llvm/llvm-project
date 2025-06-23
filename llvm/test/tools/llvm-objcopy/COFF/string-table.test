@@ -5,8 +5,8 @@
 
 # CHECK:      StringTable {
 # CHECK-NEXT:   Length: 26
-# CHECK-NEXT:   [     4] symbol_zzz
-# CHECK-NEXT:   [     f] .debug_str
+# CHECK-NEXT:   [     4] .debug_str
+# CHECK-NEXT:   [     f] symbol_zzz
 # CHECK-NEXT: }
 
 --- !COFF
