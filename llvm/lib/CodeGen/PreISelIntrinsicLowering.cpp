@@ -231,6 +231,14 @@ static bool canEmitLibcall(const TargetMachine *TM, Function *F,
   return TLI->getLibcallName(LC) != nullptr;
 }
 
+static bool canEmitMemcpy(const TargetMachine *TM, Function *F) {
+  // TODO: Should this consider the address space of the memcpy?
+  if (!TM)
+    return true;
+  const TargetLowering *TLI = TM->getSubtargetImpl(*F)->getTargetLowering();
+  return TLI->getMemcpyName() != nullptr;
+}
+
 // Return a value appropriate for use with the memset_pattern16 libcall, if
 // possible and if we know how. (Adapted from equivalent helper in
 // LoopIdiomRecognize).
@@ -300,8 +308,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       Function *ParentFunc = Memcpy->getFunction();
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
       if (shouldExpandMemIntrinsicWithSize(Memcpy->getLength(), TTI)) {
-        if (UseMemIntrinsicLibFunc &&
-            canEmitLibcall(TM, ParentFunc, RTLIB::MEMCPY))
+        if (UseMemIntrinsicLibFunc && canEmitMemcpy(TM, ParentFunc))
           break;
 
         // TODO: For optsize, emit the loop into a separate function
