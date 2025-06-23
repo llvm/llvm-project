@@ -150,7 +150,7 @@ main()
     test_by_type<MemoryChecker>(
         [](std::size_t idx){ return MemoryChecker{std::int32_t(idx * 2)}; },
         [](std::size_t idx){ return MemoryChecker{std::int32_t(idx * 2 + 1)}; },
-        [](const MemoryChecker& val1, const MemoryChecker& val2){ return val1.value() == val2.value(); });
+        [](const MemoryChecker& val1, const MemoryChecker& val2){ return val1.value() < val2.value(); });
     EXPECT_FALSE(MemoryChecker::alive_objects() < 0, "wrong effect from inplace_merge: number of ctors calls < num of dtors calls");
     EXPECT_FALSE(MemoryChecker::alive_objects() > 0, "wrong effect from inplace_merge: number of ctors calls > num of dtors calls");
 
