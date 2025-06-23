@@ -190,7 +190,8 @@ def XeVM_BlockLoad2dOp
         - 8 for int8
       $v_blocks - number of consecutive tiles in innermost dimension direction to load
       $transpose - transpose the tile in registers (useful for 32 bit element type)
-      $pack_register - pack element types narrower than register bit width. [M, N] => [M/factor, N, factor] where factor is register_size_in_bits / elem_size_in_bits
+      $pack_register - pack element types narrower than register bit width.
+        [M, N] => [M/factor, N, factor] where factor is register_size_in_bits / elem_size_in_bits
       $cache_control - an enumerator that sets the cache behaviour
 
     Notes:
@@ -206,7 +207,11 @@ def XeVM_BlockLoad2dOp
       %base_pitch_a = arith.constant 32 : i32
       %x = arith.constant 0 : i32
       %y = arith.constant 0 : i32
-      %loaded_a = xevm.blockload2d %src, %base_width_a, %base_height_a, %base_pitch_a, %x, %y <{elem_size_in_bits=16 : i32, tile_width=16 : i32, tile_height=8 : i32, v_blocks=1 : i32, transpose=false : i32, pack_register=false, cache_control=#xevm.load_cache_control<Default>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
+      %loaded_a = xevm.blockload2d %src, %base_width_a, %base_height_a, %base_pitch_a, %x, %y
+                    <{elem_size_in_bits=16 : i32, tile_width=16 : i32, tile_height=8 : i32,
+                      v_blocks=1 : i32, transpose=false : i32, pack_register=false,
+                      cache_control=#xevm.load_cache_control<Default>}>
+                    : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
     ```
   }];
 
@@ -259,7 +264,10 @@ def XeVM_BlockStore2dOp
       %base_pitch_c = arith.constant 64 : i32
       %x = arith.constant 0 : i32
       %y = arith.constant 0 : i32
-      xevm.blockstore2d %dst, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %src <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32, cache_control=#xevm.load_cache_control<Default>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+      xevm.blockstore2d %dst, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %src
+        <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32,
+          cache_control=#xevm.load_cache_control<Default>}>
+        : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
     ```
   }];
 
@@ -398,7 +406,10 @@ def XeVM_BlockPrefetch2dOp
 
     Example:
     ```mlir
-      xevm.blockprefetch2d %ptr, %base_width, %base_height, %base_pitch, %x, %y <{elem_size_in_bits=8 : i32, tile_width=32 : i32, tile_height=8 : i32, v_blocks=1 : i32, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32)
+      xevm.blockprefetch2d %ptr, %base_width, %base_height, %base_pitch, %x, %y
+        <{elem_size_in_bits=8 : i32, tile_width=32 : i32, tile_height=8 : i32,
+          v_blocks=1 : i32, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}>
+        : (!llvm.ptr<1>, i32, i32, i32, i32, i32)
     ```
   }];
 
@@ -488,7 +499,8 @@ def XeVM_MMAOp
 
     Example:
     ```mlir
-      %d = xevm.mma %a, %b, %c { shape=<m=8, n=16, k=16>, types=<d=f32, a=f16, b=f16, c=f32> } : (vector<8xi16>, vector<8xi32>, vector<8xf32>) -> vector<8xf32>
+      %d = xevm.mma %a, %b, %c { shape=<m=8, n=16, k=16>, types=<d=f32, a=f16, b=f16, c=f32> }
+             : (vector<8xi16>, vector<8xi32>, vector<8xf32>) -> vector<8xf32>
     ```
   }];
 
