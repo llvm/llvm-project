@@ -379,8 +379,7 @@ struct VisibleLookupBlockOffsets {
   uint64_t TULocalOffset = 0;
 
   operator bool() const {
-    return VisibleOffset || ModuleLocalOffset || // ModuleUnitLocalOffset ||
-           TULocalOffset;
+    return VisibleOffset || ModuleLocalOffset || TULocalOffset;
   }
 };
 

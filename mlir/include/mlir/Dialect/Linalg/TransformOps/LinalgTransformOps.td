@@ -1187,6 +1187,85 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
 }
 
 //===----------------------------------------------------------------------===//
+// PadTilingInterfaceOp
+//===----------------------------------------------------------------------===//
+
+def PadTilingInterfaceOp : Op<Transform_Dialect, "structured.pad_tiling_interface",
+    [FunctionalStyleTransformOpTrait, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformOpInterface,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Pads the operations pointed to by the target handle using the options
+    provided as operation attributes. The operation returns a handle to the
+    padded operation and to the padding operation ("tensor.pad").
+
+    TODO: in the future this should be moved out of a specific Linalg
+    implementation file and into a more general "Structured" file.
+
+    #### Return modes
+
+    This operation ignores non-Linalg ops and drops them in the return.
+    In the future, this operation will support all TilingInterfaceOps.
+
+    This operation may produce a definite failure if the padding fails for any
+    reason.
+
+    If all the operations referred to by the `target` handle pad properly, the
+    transform succeeds. Otherwise the transform produces a silenceable failure.
+    The return handle points to only the subset of successfully produced
+    padded operations, which can be empty.
+  }];
+
+  let arguments =
+    (ins TransformHandleTypeInterface:$target,
+         DefaultValuedAttr<ArrayAttr, "{}">:$padding_values,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$padding_dimensions,
+         Variadic<TransformAnyParamTypeOrAnyHandle>:$padding_sizes,
+         DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
+            $static_padding_sizes,
+         DefaultValuedAttr<UnitAttr, "false">:$pad_to_multiple_of);
+  let results = (outs TransformHandleTypeInterface:$padded,
+                      TransformHandleTypeInterface:$pad);
+
+  let assemblyFormat = [{
+    $target
+    `to`
+    (`padding_sizes` custom<DynamicIndexList>($padding_sizes, $static_padding_sizes)^)?
+    (`pad_to_multiple_of` $pad_to_multiple_of^)?
+    attr-dict
+    `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+
+  let builders = [
+    // Builder for a transform::PadOp with automatic inference of padding
+    // value. Warning: this will set the value 0 for the inferred elemental
+    // type without taking the op into account and thus only work for the
+    // add/mul ring at the moment.
+    // TODO: support other operations (e.g. min, max etc).
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$paddingDimensions,
+                   CArg<"ArrayRef<int64_t>", "{}">:$staticPaddingSizes,
+                   CArg<"bool", "false">:$padToMultipleOf)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$paddingDimensions,
+                   "ArrayRef<OpFoldResult>":$mixedPadPaddingSizes,
+                   CArg<"bool", "false">:$usePrescribedTensorShapes)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns a mix of dynamic `padding_sizes` and static `static_padding_sizes`.
+    SmallVector<OpFoldResult> getMixedPaddingSizes();
+
+    ::mlir::DiagnosedSilenceableFailure apply(
+      ::mlir::transform::TransformRewriter &rewriter,
+      ::mlir::transform::TransformResults &results,
+      ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // HoistPadOp
 //===----------------------------------------------------------------------===//
 
