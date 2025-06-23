@@ -10,15 +10,41 @@
 
 namespace llvm::orc {
 
+Value::Value(ExecutorAddr OpaqueType) : OpaqueType(OpaqueType) {}
+
+Value::Value(const Value &RHS)
+    : OpaqueType(RHS.OpaqueType), Data(RHS.Data), ValueKind(RHS.ValueKind) {}
+
+Value::Value(Value &&RHS) noexcept {
+  OpaqueType = std::exchange(RHS.OpaqueType, ExecutorAddr());
+  Data = RHS.Data;
+  ValueKind = std::exchange(RHS.ValueKind, K_Unspecified);
+}
+
+Value &Value::operator=(const Value &RHS) {
+  OpaqueType = RHS.OpaqueType;
+  Data = RHS.Data;
+  ValueKind = RHS.ValueKind;
+  return *this;
+}
+
+Value &Value::operator=(Value &&RHS) noexcept {
+  OpaqueType = std::exchange(RHS.OpaqueType, ExecutorAddr());
+  ValueKind = std::exchange(RHS.ValueKind, K_Unspecified);
+  Data = RHS.Data;
+  return *this;
+}
+
 template <typename T> Value Value::from(ExecutorAddr Ty, T result) {
-  Value Val(Ty);
+  Value Val(Ty, result);
   Val.setValue<T>(result);
   return Val;
 }
 
-template <typename T>
-struct LongEquivalentType {
-  static_assert(sizeof(T) == 0, "LongEquivalentType is only defined for long and unsigned long");
+template <typename T> struct LongEquivalentType {
+  static_assert(
+      sizeof(T) == 0,
+      "LongEquivalentType is only defined for long and unsigned long");
 };
 
 template <> struct LongEquivalentType<long> {
@@ -42,7 +68,8 @@ using NormalizedIntType = typename LongEquivalentType<T>::type;
 template <typename T> void Value::setValue(T Val) {
   using DecayedT = std::decay_t<T>;
 
-  if constexpr (std::is_same_v<DecayedT, long> || std::is_same_v<DecayedT, unsigned long>) {
+  if constexpr (std::is_same_v<DecayedT, long> ||
+                std::is_same_v<DecayedT, unsigned long>) {
     using CanonicalType = typename LongEquivalentType<DecayedT>::type;
     setValue(static_cast<CanonicalType>(Val));
     return;

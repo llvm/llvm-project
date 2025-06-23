@@ -39,10 +39,12 @@ namespace orc {
 
 class Value {
 public:
-  union Storage {
+  struct Storage {
+    union {
 #define X(type, name) type m_##name;
-    BUILTIN_TYPES
+      BUILTIN_TYPES
 #undef X
+    };
     ExecutorSymbolDef m_Ptr;
   };
 
@@ -56,7 +58,7 @@ public:
     K_Unspecified
   };
 
-  Value() = delete;
+  Value() = default;
   explicit Value(ExecutorAddr OpaqueType);
   Value(const Value &RHS);
   Value(Value &&RHS) noexcept;
