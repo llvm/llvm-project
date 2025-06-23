@@ -332,12 +332,20 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
 
   // We have a pointer to a pointer to the buffer, and a pointer to the size.
   // We want what they point at.
-  auto LinePtrSVal = getPointeeVal(LinePtrPtrSVal, State)->getAs<DefinedSVal>();
+  auto LinePtrValOpt = getPointeeVal(LinePtrPtrSVal, State);
+  if (!LinePtrValOpt)
+    return nullptr;
+
+  auto LinePtrSVal = LinePtrValOpt->getAs<DefinedSVal>();
   auto NSVal = getPointeeVal(SizePtrSVal, State);
   if (!LinePtrSVal || !NSVal || NSVal->isUnknown())
     return nullptr;
 
   assert(LinePtrPtrExpr && SizePtrExpr);
+
+  // Add defensive check to ensure we can handle the assume operation
+  if (!LinePtrSVal->getAs<DefinedSVal>())
+    return nullptr;
 
   const auto [LinePtrNotNull, LinePtrNull] = State->assume(*LinePtrSVal);
   if (LinePtrNotNull && !LinePtrNull) {
@@ -350,9 +358,16 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
     // If it is defined, and known, its size must be less than or equal to
     // the buffer size.
     auto NDefSVal = NSVal->getAs<DefinedSVal>();
+    if (!NDefSVal)
+      return LinePtrNotNull;
+
     auto &SVB = C.getSValBuilder();
-    auto LineBufSize =
-        getDynamicExtent(LinePtrNotNull, LinePtrSVal->getAsRegion(), SVB);
+
+    const MemRegion *LinePtrRegion = LinePtrSVal->getAsRegion();
+    if (!LinePtrRegion)
+      return LinePtrNotNull;
+
+    auto LineBufSize = getDynamicExtent(LinePtrNotNull, LinePtrRegion, SVB);
     auto LineBufSizeGtN = SVB.evalBinOp(LinePtrNotNull, BO_GE, LineBufSize,
                                         *NDefSVal, SVB.getConditionType())
                               .getAs<DefinedOrUnknownSVal>();
@@ -370,23 +385,29 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
 void UnixAPIMisuseChecker::CheckGetDelim(CheckerContext &C,
                                          const CallEvent &Call) const {
   ProgramStateRef State = C.getState();
+  if (Call.getNumArgs() < 2)
+    return;
+
+  const Expr *Arg0 = Call.getArgExpr(0);
+  const Expr *Arg1 = Call.getArgExpr(1);
+
+  if (!Arg0->getType()->isPointerType() || !Arg1->getType()->isPointerType())
+    return;
 
   // The parameter `n` must not be NULL.
   SVal SizePtrSval = Call.getArgSVal(1);
-  State = EnsurePtrNotNull(SizePtrSval, Call.getArgExpr(1), C, State, "Size");
+  State = EnsurePtrNotNull(SizePtrSval, Arg1, C, State, "Size");
   if (!State)
     return;
 
   // The parameter `lineptr` must not be NULL.
   SVal LinePtrPtrSVal = Call.getArgSVal(0);
-  State =
-      EnsurePtrNotNull(LinePtrPtrSVal, Call.getArgExpr(0), C, State, "Line");
+  State = EnsurePtrNotNull(LinePtrPtrSVal, Arg0, C, State, "Line");
   if (!State)
     return;
 
-  State = EnsureGetdelimBufferAndSizeCorrect(LinePtrPtrSVal, SizePtrSval,
-                                             Call.getArgExpr(0),
-                                             Call.getArgExpr(1), C, State);
+  State = EnsureGetdelimBufferAndSizeCorrect(LinePtrPtrSVal, SizePtrSval, Arg0,
+                                             Arg1, C, State);
   if (!State)
     return;
 

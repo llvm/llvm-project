@@ -1060,6 +1060,9 @@ impact the linker behaviour like the other `-static-*` flags.
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash in ``UnixAPIMisuseChecker`` and ``MallocChecker`` when analyzing
+  code with non-standard ``getline`` or ``getdelim`` function signatures.
+
 Improvements
 ^^^^^^^^^^^^
 

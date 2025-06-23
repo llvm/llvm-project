@@ -1518,10 +1518,15 @@ void MallocChecker::checkGetdelim(ProgramStateRef State, const CallEvent &Call,
   if (!CE)
     return;
 
-  const auto LinePtr =
-      getPointeeVal(Call.getArgSVal(0), State)->getAs<DefinedSVal>();
-  const auto Size =
-      getPointeeVal(Call.getArgSVal(1), State)->getAs<DefinedSVal>();
+  auto LinePtrOpt = getPointeeVal(Call.getArgSVal(0), State);
+  if (!LinePtrOpt)
+    return;
+  const auto LinePtr = LinePtrOpt->getAs<DefinedSVal>();
+
+  auto SizeOpt = getPointeeVal(Call.getArgSVal(1), State);
+  if (!SizeOpt)
+    return;
+  const auto Size = SizeOpt->getAs<DefinedSVal>();
   if (!LinePtr || !Size || !LinePtr->getAsRegion())
     return;
 
