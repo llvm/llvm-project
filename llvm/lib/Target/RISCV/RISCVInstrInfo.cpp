@@ -88,7 +88,7 @@ RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
 #include "RISCVGenInstrInfo.inc"
 
 MCInst RISCVInstrInfo::getNop() const {
-  if (STI.hasStdExtCOrZca())
+  if (STI.hasStdExtZca())
     return MCInstBuilder(RISCV::C_NOP);
   return MCInstBuilder(RISCV::ADDI)
       .addReg(RISCV::X0)
@@ -1717,7 +1717,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (!MI.memoperands_empty()) {
     MachineMemOperand *MMO = *(MI.memoperands_begin());
     if (STI.hasStdExtZihintntl() && MMO->isNonTemporal()) {
-      if (STI.hasStdExtCOrZca() && STI.enableRVCHintInstrs()) {
+      if (STI.hasStdExtZca() && STI.enableRVCHintInstrs()) {
         if (isCompressibleInst(MI, STI))
           return 4; // c.ntl.all + c.load/c.store
         return 6;   // c.ntl.all + load/store
@@ -1738,7 +1738,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case RISCV::PseudoMV_FPR16INX:
   case RISCV::PseudoMV_FPR32INX:
     // MV is always compressible to either c.mv or c.li rd, 0.
-    return STI.hasStdExtCOrZca() ? 2 : 4;
+    return STI.hasStdExtZca() ? 2 : 4;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow
     return StackMapOpers(&MI).getNumPatchBytes();
@@ -1765,7 +1765,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
         return get(Opcode).getSize();
 
       // Number of C.NOP or NOP
-      return (STI.hasStdExtCOrZca() ? 2 : 4) * Num;
+      return (STI.hasStdExtZca() ? 2 : 4) * Num;
     }
     // XRay uses C.JAL + 21 or 33 C.NOP for each sled in RV32 and RV64,
     // respectively.
@@ -3341,14 +3341,14 @@ RISCVInstrInfo::getOutliningCandidateInfo(
   // Each RepeatedSequenceLoc is identical.
   outliner::Candidate &Candidate = RepeatedSequenceLocs[0];
   unsigned InstrSizeCExt =
-      Candidate.getMF()->getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() ? 2
-                                                                          : 4;
+      Candidate.getMF()->getSubtarget<RISCVSubtarget>().hasStdExtZca() ? 2 : 4;
   unsigned CallOverhead = 0, FrameOverhead = 0;
 
   MachineOutlinerConstructionID MOCI = MachineOutlinerDefault;
   if (Candidate.back().isReturn()) {
     MOCI = MachineOutlinerTailCall;
     // tail call = auipc + jalr in the worst case without linker relaxation.
+    // FIXME: This code suggests the JALR can be compressed - how?
     CallOverhead = 4 + InstrSizeCExt;
     // Using tail call we move ret instruction from caller to callee.
     FrameOverhead = 0;
