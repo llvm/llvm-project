@@ -591,7 +591,7 @@ rather than C-style casts. There are two exceptions to this:
 
 * When casting to ``void`` to suppress warnings about unused variables (as an
   alternative to ``[[maybe_unused]]``). Prefer C-style casts in this instance.
-  Note that if the variable is unused because its used only in ``assert``, use
+  Note that if the variable is unused because it's used only in ``assert``, use
   ``[[maybe_unused]]`` instead of a C-style void cast.
 
 * When casting between integral types (including enums that are not strongly-
