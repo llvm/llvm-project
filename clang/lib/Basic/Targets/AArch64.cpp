@@ -825,7 +825,8 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
   if (IsArmStreamingFunction == ArmStreamingKind::NotStreaming &&
       (LangOpts.VScaleMin || LangOpts.VScaleMax))
     return std::pair<unsigned, unsigned>(
-        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax ? LangOpts.VScaleMax : 16);
+        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1,
+        LangOpts.VScaleMax ? LangOpts.VScaleMax : 16);
 
   if (IsArmStreamingFunction == ArmStreamingKind::Streaming &&
       (LangOpts.VScaleStreamingMin || LangOpts.VScaleStreamingMax))
@@ -836,10 +837,12 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
   if (IsArmStreamingFunction == ArmStreamingKind::StreamingCompatible &&
       ((LangOpts.VScaleMin && LangOpts.VScaleStreamingMin) ||
        (LangOpts.VScaleMax && LangOpts.VScaleStreamingMax))) {
-    unsigned Min = std::min(LangOpts.VScaleMin ? LangOpts.VScaleMin : 1,
-                            LangOpts.VScaleStreamingMin ? LangOpts.VScaleStreamingMin : 1);
-    unsigned Max = std::max(LangOpts.VScaleMax ? LangOpts.VScaleMax : 16,
-                            LangOpts.VScaleStreamingMax ? LangOpts.VScaleStreamingMax : 16);
+    unsigned Min =
+        std::min(LangOpts.VScaleMin ? LangOpts.VScaleMin : 1,
+                 LangOpts.VScaleStreamingMin ? LangOpts.VScaleStreamingMin : 1);
+    unsigned Max = std::max(
+        LangOpts.VScaleMax ? LangOpts.VScaleMax : 16,
+        LangOpts.VScaleStreamingMax ? LangOpts.VScaleStreamingMax : 16);
     return std::pair(Min, Max);
   }
 
