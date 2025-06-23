@@ -3058,6 +3058,31 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return replaceInstUsesWith(GEP, NewGEP);
   }
 
+  // Scalarize vector operands; prefer splat-of-gep.as canonical form.
+  if (GEPType->isVectorTy() && llvm::any_of(GEP.operands(), [](Value *Op) {
+        return Op->getType()->isVectorTy() && getSplatValue(Op);
+      })) {
+    SmallVector<Value *> NewOps;
+    for (auto &Op : GEP.operands()) {
+      if (Op->getType()->isVectorTy())
+        if (Value *Scalar = getSplatValue(Op)) {
+          NewOps.push_back(Scalar);
+          continue;
+        }
+      NewOps.push_back(Op);
+    }
+
+    Value *Res = Builder.CreateGEP(GEP.getSourceElementType(), NewOps[0],
+                                   ArrayRef(NewOps).drop_front(), GEP.getName(),
+                                   GEP.getNoWrapFlags());
+    if (llvm::all_of(NewOps,
+                     [](Value *Op) { return !Op->getType()->isVectorTy(); })) {
+      ElementCount EC = cast<VectorType>(GEPType)->getElementCount();
+      Res = Builder.CreateVectorSplat(EC, Res);
+    }
+    return replaceInstUsesWith(GEP, Res);
+  }
+
   // Check to see if the inputs to the PHI node are getelementptr instructions.
   if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
     if (Value *NewPtrOp = foldGEPOfPhi(GEP, PN, Builder))
