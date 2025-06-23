@@ -1155,6 +1155,7 @@ def skipIfBuildType(types: list[str]):
     """
     types = [name.lower() for name in types]
     return unittest.skipIf(
+        configuration.cmake_build_type != None &&
         configuration.cmake_build_type.lower() in types,
         "skip on {} build type(s)".format(", ".join(types)),
     )
