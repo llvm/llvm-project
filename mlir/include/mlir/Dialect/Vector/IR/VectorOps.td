@@ -214,9 +214,10 @@ def Vector_ContractionOp :
     // IndexingMapOpInterface interface methods implementation.
     //===------------------------------------------------------------------===//
     ArrayRef<int64_t> getShape(OpOperand * opOperand) {
-      assert(opOperand->getOwner() == this->getOperation());
       Type t = opOperand->get().getType();
-      return cast<VectorType>(t).getShape();
+      if (auto vt = dyn_cast<VectorType>(t))
+        return vt.getShape();
+      return {};
     }
   }];
 

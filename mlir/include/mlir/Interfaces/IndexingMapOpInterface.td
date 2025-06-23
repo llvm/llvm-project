@@ -85,23 +85,6 @@ def IndexingMapOpInterface : OpInterface<"IndexingMapOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Like `getShape`, but only returns statically-known information, without
-        generating any new IR. For each shape dimension, returns >=0 if that
-        dimension is statically known, or ShapedType::kDynamic otherwise.
-      }],
-      /*retTy=*/"SmallVector<int64_t>",
-      /*methodName=*/"getStaticShape",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        SmallVector<int64_t> res;
-        for (OpOperand &opOperand : this->getOperation()->getOpOperands())
-          llvm::append_range(res, $_op.getShape(&opOperand));
-        return res;
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
         Hook to provide a custom AffineMap used to construct the
         hyperrectangular loop iteration space given all the operand subshapes.
         This is used to answer the question:
@@ -126,23 +109,46 @@ def IndexingMapOpInterface : OpInterface<"IndexingMapOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Returns the statically-known loop ranges. Composes
-        `getShapesToLoopsMap()` with the result of `getStaticShape`.
+        Returns the static shape of the underlying operand (note this is
+        op-specific behavior).
         Returns ShapedType::kDynamic for non-statically-known loop ranges.
-        This is expected to be called by a valid Linalg op
       }],
-      /*retTy=*/"SmallVector<int64_t, 4>",
+      /*retTy=*/"SmallVector<int64_t>",
+      /*methodName=*/"getStaticOperandShape",
+      /*args=*/(ins "OpOperand*":$opOperand),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        SmallVector<int64_t> res;
+        llvm::append_range(res, $_op.getShape(opOperand));
+        return res;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns loop ranges by composing `getShapesToLoopsMap()` with the
+        flattened list of operand shapes.
+        Returns ShapedType::kDynamic for non-statically-known loop ranges.
+      }],
+      /*retTy=*/"SmallVector<int64_t>",
       /*methodName=*/"getStaticLoopRanges",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        SmallVector<int64_t> viewSizes = $_op.getStaticShape();
+        SmallVector<int64_t> allShapesSizes;
+        for (OpOperand &opOperand : this->getOperation()->getOpOperands())
+          llvm::append_range(allShapesSizes, $_op.getShape(&opOperand));
         AffineMap invertedMap = $_op.getShapesToLoopsMap();
-        assert(invertedMap && "expected a valid Linalg op to call the method");
-        return invertedMap.compose(viewSizes);
+        assert(invertedMap && "expected a valid op");
+        return invertedMap.compose(allShapesSizes);
       }]
-    >,
+    >
   ];
+  let extraClassDeclaration = [{
+    // Verifier implementation for IndexingMapOpInterface.
+    // This must be called manually as part of other verifiers so that the
+    // verification order, and meaningful error messages, are not preempted.
+    LogicalResult verifyImpl();
+  }];
 }
 
 #endif // MLIR_INTERFACES_INDEXING_MAP_OP_INTERFACE
