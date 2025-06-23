@@ -384,7 +384,7 @@ def PartialReductionOpInterface :
             "::mlir::OpBuilder &":$b,
             "Location":$loc,
             "::mlir::ArrayRef<::mlir::OpFoldResult>":$sizes,
-            "::mlir::ArrayRef<int>":$reductionDim),
+            "const ::mlir::SetVector<unsigned> &":$reductionDims),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -402,10 +402,11 @@ def PartialReductionOpInterface :
         /*args=*/(ins
             "::mlir::OpBuilder &":$b,
             "Location ":$loc,
+            "::mlir::ReductionTilingStrategy":$tilingStrategy,
             "ValueRange":$init,
             "::mlir::ArrayRef<::mlir::OpFoldResult>":$offsets,
             "::mlir::ArrayRef<::mlir::OpFoldResult>":$sizes,
-            "::mlir::ArrayRef<int>":$reductionDims),
+            "const ::llvm::SetVector<unsigned> &":$reductionDims),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -423,7 +424,7 @@ def PartialReductionOpInterface :
             "::mlir::OpBuilder &":$b,
             "Location ":$loc,
             "ValueRange":$partialReduce,
-            "::mlir::ArrayRef<int>":$reductionDim),
+            "const ::mlir::SetVector<unsigned> &":$reductionDims),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -443,9 +444,9 @@ def PartialReductionOpInterface :
             "unsigned":$resultNumber,
             "::mlir::ArrayRef<::mlir::OpFoldResult> ":$offsets,
             "::mlir::ArrayRef<::mlir::OpFoldResult> ":$sizes,
+            "const ::mlir::SetVector<unsigned> &":$reductionDims,
             "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultOffsets,
-            "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultSizes,
-            "::mlir::ArrayRef<int>":$reductionDims),
+            "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultSizes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
