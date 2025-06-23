@@ -263,11 +263,11 @@ static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
 Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
-                      ModuleIdPath Partition, ModuleImportState &ImportState) {
+                      ModuleIdPath Partition, ModuleImportState &ImportState,
+                      bool IntroducerIsFirstPPToken) {
   assert(getLangOpts().CPlusPlusModules &&
          "should only have module decl in standard C++ modules");
 
-  bool IsFirstDecl = ImportState == ModuleImportState::FirstDecl;
   bool SeenGMF = ImportState == ModuleImportState::GlobalFragment;
   // If any of the steps here fail, we count that as invalidating C++20
   // module state;
@@ -333,14 +333,11 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
           SeenGMF == (bool)this->TheGlobalModuleFragment) &&
          "mismatched global module state");
 
-  // In C++20, the module-declaration must be the first declaration if there
-  // is no global module fragment.
-  if (getLangOpts().CPlusPlusModules && !IsFirstDecl && !SeenGMF) {
+  // In C++20, A module directive may only appear as the first preprocessing
+  // tokens in a file (excluding the global module fragment.).
+  if (getLangOpts().CPlusPlusModules && !IntroducerIsFirstPPToken && !SeenGMF) {
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
-    SourceLocation BeginLoc =
-        ModuleScopes.empty()
-            ? SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
-            : ModuleScopes.back().BeginLoc;
+    SourceLocation BeginLoc = PP.getMainFileFirstPPToken().getLocation();
     if (BeginLoc.isValid()) {
       Diag(BeginLoc, diag::note_global_module_introducer_missing)
           << FixItHint::CreateInsertion(BeginLoc, "module;\n");
