@@ -1311,6 +1311,7 @@ namespace llvm {
     SDValue LowerSRL_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerVSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVPERM(SDValue Op, SelectionDAG &DAG, ArrayRef<int> PermMask,

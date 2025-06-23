@@ -2384,12 +2384,13 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
 
     // Utilize xxeval instruction for ternary vector expressions.
     defm : XXEvalVSelectWithXAnd<v4i32, 22>;
-
     defm : XXEvalVSelectWithXB<v4i32, 49>;
-
     defm : XXEvalVSelectWithXC<v4i32, 81>;
-    
     defm : XXEvalVSelectWithXXor<v4i32, 97>;
+    defm : XXEvalVSelectWithXAnd<v2i64, 22>;
+    defm : XXEvalVSelectWithXB<v2i64, 49>;
+    defm : XXEvalVSelectWithXC<v2i64, 81>;
+    defm : XXEvalVSelectWithXXor<v2i64, 97>;
 
     // Anonymous patterns to select prefixed VSX loads and stores.
     // Load / Store f128

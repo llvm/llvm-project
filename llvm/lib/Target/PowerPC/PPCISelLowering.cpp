@@ -844,7 +844,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       AddPromotedToType (ISD::LOAD  , VT, MVT::v4i32);
       setOperationAction(ISD::SELECT, VT, Promote);
       AddPromotedToType (ISD::SELECT, VT, MVT::v4i32);
-      setOperationAction(ISD::VSELECT, VT, Legal);
+      setOperationAction(ISD::VSELECT, VT, Legal);      
       setOperationAction(ISD::SELECT_CC, VT, Promote);
       AddPromotedToType (ISD::SELECT_CC, VT, MVT::v4i32);
       setOperationAction(ISD::STORE, VT, Promote);
@@ -9579,6 +9579,119 @@ static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
   return false;
 }
 
+// Lower the vector operands of the VSELECT Node 
+// The operands of the VSELECT nodes needs to modifed back if:
+// - the operands of the VSELECT are bitcast (op (bitcast x), (bitcast y)) 
+// - the outer bitcast is VT and inner bitcast is v4i32
+// - VSELECT Node type is not v4i32 and is of type v2i64
+// Then operands needs to put back to their original types.
+SDValue PPCTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const{
+  LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT \n" );
+  LLVM_DEBUG(DAG.dump(););
+  // Return early if the VT of the Op is v4i32
+  EVT VT = Op.getValueType();
+  if (VT == MVT::v4i32) {
+    LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: VT is v4i32 \n");
+    return SDValue(); // No need to lower, return original Op
+  }
+  LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: VT is not v4i32 \n");
+  // If the VT is v2i64, we need to check the conditions:
+  // - the operands of the VSELECT are bitcast (op (bitcast x), (bitcast y)) 
+  // - the outer bitcast is VT and inner bitcast is v4i32
+  // - VSELECT Node type is not v4i32 and is of type v2i64
+  SDValue Cond = Op.getOperand(0);
+  SDValue TrueOp = Op.getOperand(1);
+  SDValue FalseOp = Op.getOperand(2);
+
+  auto checkIfValidPattern = [](SDValue V) -> bool {
+    // Check if the operand is a bitcast
+    if (V.getOpcode() != ISD::BITCAST) {
+      return false; // Return false if not a bitcast
+    }
+    // Check if the inner node is a valid ADD, XOR or OR operation
+    SDValue InnerOp = V.getOperand(0);
+    // Check if the inner node is an ADD, XOR or OR operation
+    bool isValidInnerNode =
+        InnerOp.getOpcode() == ISD::AND || InnerOp.getOpcode() == ISD::XOR ||
+        InnerOp.getOpcode() == ISD::OR;
+    if (!isValidInnerNode) {
+      return false; // Return false if the inner node is not valid
+    }
+    // Get the Bit Op node's Operands
+    SDValue InnerBitOpOperand0 = InnerOp.getOperand(0);
+    SDValue InnerBitOpOperand1 = InnerOp.getOperand(1);
+    bool isValidInnerBitcasts =
+        (InnerBitOpOperand0.getOpcode() == ISD::BITCAST &&
+         InnerBitOpOperand0.getValueType() == MVT::v4i32) &&
+        (InnerBitOpOperand1.getOpcode() == ISD::BITCAST &&
+         InnerBitOpOperand1.getValueType() == MVT::v4i32);
+    if (!isValidInnerBitcasts) {
+      return false; // Return false if the inner bitcasts are not valid
+    }
+    // If all checks passed, return true
+    return true;
+  };
+
+  auto getOriginalNode = [&DAG](SDValue V) -> SDValue {   
+      SDValue InnerOp = V.getOperand(0);
+      // Get the Bit Op node's Operands
+      SDValue InnerBitOpOperand0 = InnerOp.getOperand(0);
+      SDValue InnerBitOpOperand1 = InnerOp.getOperand(1);
+      // Get the operands of the inner bit operation
+      SDValue X = InnerBitOpOperand0.getOperand(0);
+      SDValue Y = InnerBitOpOperand1.getOperand(0);
+      return DAG.getNode(
+          InnerOp.getOpcode(), SDLoc(V), V.getValueType(),
+          X, Y);
+  };
+
+  if(checkIfValidPattern(TrueOp) && checkIfValidPattern(FalseOp)) {
+    // If the TrueOp and FalseOp are valid patterns, get the original nodes
+    // and return the VSELECT node with the original nodes.
+    LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: Valid pattern \n");
+  } else {
+    // If the TrueOp and FalseOp are not valid patterns, return the original Op
+    // without modification.
+    LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: Invalid pattern \n");
+    return SDValue();
+  }
+
+  // Get the original nodes from the TrueOp and FalseOp
+  SDValue NTrueOp = getOriginalNode(TrueOp);
+  SDValue NFalseOp = getOriginalNode(FalseOp);
+  // LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: NTrueOp: " << NTrueOp.getNode()->print(dbgs()) << "\n");
+  // LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: NFalseOp: " << NFalseOp.getNode()->dump() << "\n");
+
+  // Ensure both NTrueOp and NFalseOp are valid before using them.
+  if (!NTrueOp.getNode() || !NFalseOp.getNode()) {
+    LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: One or both original nodes are invalid, returning original Op\n");
+    return SDValue();
+  }
+  EVT MaskVT = Cond.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT LegalMaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MaskVT);
+
+  LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: cond mask VT: " << MaskVT);
+  LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: cond Legal VT: " << LegalMaskVT << "\n");
+  if (MaskVT != LegalMaskVT) {
+    LLVM_DEBUG(llvm::dbgs() << "LowerVECTOR_SELECT: cond LEGALIZATION\n");
+    // Bitcast or extend/truncate as needed
+    Cond = DAG.getZExtOrTrunc(Cond, SDLoc(Op), LegalMaskVT);
+  }
+
+  SDValue NewVselectNode = DAG.getNode(
+      ISD::VSELECT, SDLoc(Op), VT, Cond, NTrueOp, NFalseOp);
+  DAG.ReplaceAllUsesWith(Op, NewVselectNode);
+  // if (Op.getNode()->use_empty()) {
+  //   DAG.RemoveDeadNode(Op.getNode());
+  // }
+
+  LLVM_DEBUG(NewVselectNode.dump());
+  LLVM_DEBUG(llvm::dbgs() << "New DAG \n");
+  LLVM_DEBUG(DAG.dump());
+  return  SDValue();
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.  If we CAN select this case, and if it
 // selects to a single instruction, return Op.  Otherwise, if we can codegen
@@ -12532,6 +12645,7 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FSHR:               return LowerFunnelShift(Op, DAG);
 
   // Vector-related lowering.
+  case ISD::VSELECT:            return LowerVSELECT(Op, DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);

@@ -83,6 +83,11 @@ add_llvm_target(PowerPCCodeGen
   PowerPC
   )
 
+set_source_files_properties(
+    PPCISelLowering.cpp
+    PROPERTIES COMPILE_FLAGS "-g -O0"
+)
+
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
