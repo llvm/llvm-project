@@ -2426,8 +2426,8 @@ class VPReductionRecipe : public VPRecipeWithIRFlags {
   /// divided by.
   /// For outer-loop reductions this is equal to 1.
   /// For in-loop reductions this is equal to 0, to specify that this is equal
-  /// to the VF (which may not be known yet). For partial-reductions this is
-  /// equal to another scalar value.
+  /// to the VF (which may not be known yet).
+  /// For partial-reductions this is equal to another scalar value.
   unsigned VFScaleFactor;
 
 protected:
