@@ -94,6 +94,8 @@ write_cmake_config("config") {
     "HAVE_FFI_CALL=",
     "HAVE_FFI_FFI_H=",
     "HAVE_FFI_H=",
+    "HAVE_ICONV=",
+    "HAVE_ICU=",
     "HAVE_LIBPFM=",
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",

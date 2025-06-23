@@ -1,12 +1,19 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,DXIL
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV
 
-// CHECK: %"__cblayout_$Globals" = type <{ float, float, target("dx.Layout", %__cblayout_S, 4, 0) }>
+// DXIL: %"__cblayout_$Globals" = type <{ float, float, target("dx.Layout", %__cblayout_S, 4, 0) }>
+// SPIRV: %"__cblayout_$Globals" = type <{ float, float, target("spirv.Layout", %__cblayout_S, 4, 0) }>
 // CHECK: %__cblayout_S = type <{ float }>
 
-// CHECK-DAG: @"$Globals.cb" = global target("dx.CBuffer", target("dx.Layout", %"__cblayout_$Globals", 20, 0, 4, 16))
-// CHECK-DAG: @a = external addrspace(2) global float
-// CHECK-DAG: @g = external addrspace(2) global float
-// CHECK-DAG: @h = external addrspace(2) global target("dx.Layout", %__cblayout_S, 4, 0), align 4
+// DXIL-DAG: @"$Globals.cb" = global target("dx.CBuffer", target("dx.Layout", %"__cblayout_$Globals", 20, 0, 4, 16))
+// DXIL-DAG: @a = external addrspace(2) global float
+// DXIL-DAG: @g = external addrspace(2) global float
+// DXIL-DAG: @h = external addrspace(2) global target("dx.Layout", %__cblayout_S, 4, 0), align 4
+
+// SPIRV-DAG: @"$Globals.cb" = global target("spirv.VulkanBuffer", target("spirv.Layout", %"__cblayout_$Globals", 20, 0, 4, 16), 2, 0)
+// SPIRV-DAG: @a = external addrspace(12) global float
+// SPIRV-DAG: @g = external addrspace(12) global float
+// SPIRV-DAG: @h = external addrspace(12) global target("spirv.Layout", %__cblayout_S, 4, 0), align 8
 
 struct EmptyStruct {
 };
@@ -35,4 +42,5 @@ void main() {
 }
 
 // CHECK: !hlsl.cbs = !{![[CB:.*]]}
-// CHECK: ![[CB]] = !{ptr @"$Globals.cb", ptr addrspace(2) @a, ptr addrspace(2) @g, ptr addrspace(2) @h}
+// DXIL: ![[CB]] = !{ptr @"$Globals.cb", ptr addrspace(2) @a, ptr addrspace(2) @g, ptr addrspace(2) @h}
+// SPIRV: ![[CB]] = !{ptr @"$Globals.cb", ptr addrspace(12) @a, ptr addrspace(12) @g, ptr addrspace(12) @h}

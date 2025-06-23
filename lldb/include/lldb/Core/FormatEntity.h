@@ -88,6 +88,7 @@ struct Entry {
     FunctionNameWithArgs,
     FunctionNameNoArgs,
     FunctionMangledName,
+    FunctionPrefix,
     FunctionScope,
     FunctionBasename,
     FunctionTemplateArguments,

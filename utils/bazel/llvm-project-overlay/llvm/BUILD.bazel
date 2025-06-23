@@ -2108,6 +2108,7 @@ llvm_target_lib_list = [lib for lib in [
                 "-combiners=AArch64PostLegalizerLowering",
             ],
             "lib/Target/AArch64/AArch64GenCallingConv.inc": ["-gen-callingconv"],
+            "lib/Target/AArch64/AArch64GenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",

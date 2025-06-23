@@ -265,15 +265,10 @@ define <16 x i32> @interleave2x8i32(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; AVX1-LABEL: interleave2x8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vunpckhps {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vunpckhps {{.*#+}} xmm3 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm2, %ymm0
+; AVX1-NEXT:    vunpckhps {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; AVX1-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm2[2,3]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleave2x8i32:

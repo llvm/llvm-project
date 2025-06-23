@@ -8,7 +8,6 @@
 
 #include "AArch64ExternalSymbolizer.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
-#include "Utils/AArch64BaseInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"

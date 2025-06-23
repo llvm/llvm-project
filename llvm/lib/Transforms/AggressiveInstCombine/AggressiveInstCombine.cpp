@@ -530,7 +530,7 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     return false;
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->isInBounds() || GEP->getNumIndices() != 2)
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap() || GEP->getNumIndices() != 2)
     return false;
 
   if (!GEP->getSourceElementType()->isArrayTy())
@@ -899,7 +899,7 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
 
     for (auto [V, Scale] : VarOffsets) {
       // Only keep a power of two factor for non-inbounds
-      if (!GEP->isInBounds())
+      if (!GEP->hasNoUnsignedSignedWrap())
         Scale = APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
 
       if (!Stride)

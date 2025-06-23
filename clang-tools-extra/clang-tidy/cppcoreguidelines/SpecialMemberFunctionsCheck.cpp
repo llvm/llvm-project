@@ -10,7 +10,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringExtras.h"
 
 #define DEBUG_TYPE "clang-tidy"

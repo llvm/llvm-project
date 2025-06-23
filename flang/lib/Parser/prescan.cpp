@@ -1473,7 +1473,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
             GetProvenanceRange(p, p + 1),
             "Character literal continuation line should have been preceded by '&'"_port_en_US);
       }
-    } else if (p > lineStart) {
+    } else if (p > lineStart && IsSpaceOrTab(p - 1)) {
       --p;
     } else {
       insertASpace_ = true;

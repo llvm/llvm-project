@@ -424,9 +424,6 @@ endfunction(add_libclc_builtin_set)
 # LIB_FILE_LIST may be pre-populated and is appended to.
 #
 # Arguments:
-# * CLC_INTERNAL
-#     Pass if compiling the internal CLC builtin libraries, which have a
-#     different directory structure.
 # * LIB_ROOT_DIR <string>
 #     Root directory containing target's lib files, relative to libclc root
 #     directory. If not provided, is set to '.'.
@@ -436,7 +433,7 @@ endfunction(add_libclc_builtin_set)
 #     subsequent ones.
 function(libclc_configure_lib_source LIB_FILE_LIST)
   cmake_parse_arguments(ARG
-    "CLC_INTERNAL"
+    ""
     "LIB_ROOT_DIR"
     "DIRS"
     ${ARGN}
@@ -450,11 +447,7 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
   set( source_list )
   foreach( l IN LISTS ARG_DIRS )
     foreach( s "SOURCES" "SOURCES_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}" )
-      if( ARG_CLC_INTERNAL )
-        file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/lib/${l}/${s} file_loc )
-      else()
-        file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/${l}/lib/${s} file_loc )
-      endif()
+      file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/lib/${l}/${s} file_loc )
       file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${file_loc} loc )
       # Prepend the location to give higher priority to the specialized
       # implementation

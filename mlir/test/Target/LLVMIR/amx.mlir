@@ -1,13 +1,90 @@
-// RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-opt %s --convert-vector-to-llvm="enable-amx" --convert-to-llvm -reconcile-unrealized-casts \
+// RUN: | mlir-translate --mlir-to-llvmir \
+// RUN: | FileCheck %s
 
-// CHECK-LABEL: define void @target(ptr %0)
-// CHECK: %[[c:.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 16)
-// CHECK: call void @llvm.x86.tilestored64.internal(i16 16, i16 16, ptr %0, i64 32, x86_amx %[[c]]
-llvm.func @target(%ptr: !llvm.ptr) {
-  %c = llvm.mlir.constant(16 : i16) : i16
-  %s = llvm.mlir.constant(32 : i64) : i64
-  %0 = "amx.tilezero"(%c, %c) : (i16, i16) -> !llvm.array<16 x vector<16xbf16>>
-  "amx.tilestored64"(%c, %c, %ptr, %s, %0) : (i16, i16, !llvm.ptr, i64, !llvm.array<16 x vector<16xbf16>>) -> ()
-  llvm.return
+// CHECK-LABEL: define void @amx_tile_zero
+func.func @amx_tile_zero(%out: memref<?x?xf32>, %idx: index)
+{
+  // CHECK: call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  // CHECK: call void @llvm.x86.tilestored64.internal
+  %zero = amx.tile_zero : !amx.tile<16x16xf32>
+  amx.tile_store %out[%idx, %idx], %zero : memref<?x?xf32>, !amx.tile<16x16xf32>
+  return
 }
 
+// CHECK-LABEL: define void @amx_tile_load_store
+func.func @amx_tile_load_store(%base: memref<?x?xi8>, %out: memref<?x?xi8>,
+    %idx: index)
+{
+  // CHECK: call x86_amx @llvm.x86.tileloadd64.internal
+  // CHECK: call void @llvm.x86.tilestored64.internal
+  %val = amx.tile_load %base[%idx, %idx] : memref<?x?xi8> into !amx.tile<16x64xi8>
+  amx.tile_store %out[%idx, %idx], %val : memref<?x?xi8>, !amx.tile<16x64xi8>
+  return
+}
+
+// CHECK-LABEL: define void @amx_tile_mulf_bf16
+func.func @amx_tile_mulf_bf16(
+    %matA: memref<?x?xbf16>, %matB: memref<?x?xbf16>, %idx: index,
+    %out: memref<?x?xf32>)
+{
+  // CHECK: call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %acc = amx.tile_zero : !amx.tile<16x16xf32>
+  // CHECK-COUNT-2: call x86_amx @llvm.x86.tileloadd64.internal
+  %tA = amx.tile_load %matA[%idx, %idx] : memref<?x?xbf16> into !amx.tile<16x32xbf16>
+  %tB = amx.tile_load %matB[%idx, %idx] : memref<?x?xbf16> into !amx.tile<16x32xbf16>
+  // CHECK: call x86_amx @llvm.x86.tdpbf16ps.internal
+  %tRes = amx.tile_mulf %tA, %tB, %acc
+    : !amx.tile<16x32xbf16>, !amx.tile<16x32xbf16>, !amx.tile<16x16xf32>
+  // CHECK: call void @llvm.x86.tilestored64.internal
+  amx.tile_store %out[%idx, %idx], %tRes : memref<?x?xf32>, !amx.tile<16x16xf32>
+  return
+}
+
+// CHECK-LABEL: define void @amx_tile_mulf_f16
+func.func @amx_tile_mulf_f16(
+    %matA: memref<?x?xf16>, %matB: memref<?x?xf16>, %idx: index,
+    %out: memref<?x?xf32>)
+{
+  // CHECK: call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %acc = amx.tile_zero : !amx.tile<16x16xf32>
+  // CHECK-COUNT-2: call x86_amx @llvm.x86.tileloadd64.internal
+  %tA = amx.tile_load %matA[%idx, %idx] : memref<?x?xf16> into !amx.tile<16x32xf16>
+  %tB = amx.tile_load %matB[%idx, %idx] : memref<?x?xf16> into !amx.tile<16x32xf16>
+  // CHECK: call x86_amx @llvm.x86.tdpfp16ps.internal
+  %tRes = amx.tile_mulf %tA, %tB, %acc
+    : !amx.tile<16x32xf16>, !amx.tile<16x32xf16>, !amx.tile<16x16xf32>
+    // CHECK: call void @llvm.x86.tilestored64.internal
+  amx.tile_store %out[%idx, %idx], %tRes : memref<?x?xf32>, !amx.tile<16x16xf32>
+  return
+}
+
+// CHECK-LABEL: define void @amx_tile_muli
+func.func @amx_tile_muli(%matA: memref<?x?xi8>, %matB: memref<?x?xi8>,
+    %matC: memref<?x?xi32>, %idx: index, %out: memref<?x?xi8>)
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  // CHECK-COUNT-3: call x86_amx @llvm.x86.tileloadd64.internal
+  %tA = amx.tile_load %matA[%idx, %idx] : memref<?x?xi8> into !amx.tile<16x64xi8>
+  %tB = amx.tile_load %matB[%idx, %idx] : memref<?x?xi8> into !amx.tile<16x64xi8>
+  %acc = amx.tile_load %matC[%idx, %idx] : memref<?x?xi32> into !amx.tile<16x16xi32>
+  // CHECK: call x86_amx @llvm.x86.tdpbuud.internal
+  // CHECK: call x86_amx @llvm.x86.tdpbssd.internal
+  // CHECK: call x86_amx @llvm.x86.tdpbusd.internal
+  // CHECK: call x86_amx @llvm.x86.tdpbsud.internal
+  %res = amx.tile_muli %tA zext, %tB zext, %acc
+    : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
+  %res1 = amx.tile_muli %tA, %tB, %acc
+    : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
+  %res2 = amx.tile_muli %tA zext, %tB, %acc
+    : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
+  %res3 = amx.tile_muli %tA, %tB zext, %acc
+    : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
+  // CHECK-COUNT-4: call void @llvm.x86.tilestored64.internal
+  amx.tile_store %out[%c0, %c0], %res : memref<?x?xi8>, !amx.tile<16x16xi32>
+  amx.tile_store %out[%c0, %c16], %res1 : memref<?x?xi8>, !amx.tile<16x16xi32>
+  amx.tile_store %out[%c16, %c0], %res2 : memref<?x?xi8>, !amx.tile<16x16xi32>
+  amx.tile_store %out[%c16, %c16], %res3 : memref<?x?xi8>, !amx.tile<16x16xi32>
+  return
+}

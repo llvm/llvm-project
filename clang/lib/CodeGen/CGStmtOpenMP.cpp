@@ -4783,7 +4783,7 @@ class CheckVarsEscapingUntiedTaskDeclContext final
 
 public:
   explicit CheckVarsEscapingUntiedTaskDeclContext() = default;
-  virtual ~CheckVarsEscapingUntiedTaskDeclContext() = default;
+  ~CheckVarsEscapingUntiedTaskDeclContext() = default;
   void VisitDeclStmt(const DeclStmt *S) {
     if (!S)
       return;

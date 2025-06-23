@@ -135,9 +135,9 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   SmallVector<OpFoldResult> newStrides(rank, b.getIndexAttr(1));
   for (unsigned dim = 0; dim < rank; ++dim) {
     auto low = padOp.getMixedLowPad()[dim];
-    bool hasLowPad = !isConstantIntValue(low, 0);
+    bool hasLowPad = !isZeroInteger(low);
     auto high = padOp.getMixedHighPad()[dim];
-    bool hasHighPad = !isConstantIntValue(high, 0);
+    bool hasHighPad = !isZeroInteger(high);
     auto offset = offsets[dim];
     auto length = sizes[dim];
     // If the dim has no padding, we dont need to calculate new values for that
@@ -208,7 +208,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
 
     // Check if newLength is zero. In that case, no SubTensorOp should be
     // executed.
-    if (isConstantIntValue(newLength, 0)) {
+    if (isZeroInteger(newLength)) {
       hasZeroLen = true;
     } else if (!hasZeroLen) {
       Value check = b.create<arith::CmpIOp>(

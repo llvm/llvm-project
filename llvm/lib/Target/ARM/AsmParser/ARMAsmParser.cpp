@@ -31,7 +31,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
@@ -55,7 +55,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/TargetParser.h"
-#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -5524,7 +5523,7 @@ ParseStatus ARMAsmParser::parseRotImm(OperandVector &Operands) {
 
 ParseStatus ARMAsmParser::parseModImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   int64_t Imm1, Imm2;
 
   SMLoc S = Parser.getTok().getLoc();
@@ -11788,9 +11787,8 @@ bool ARMAsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   Parser.Lex(); // Eat the '.req' token.
   MCRegister Reg;
   SMLoc SRegLoc, ERegLoc;
-  if (check(parseRegister(Reg, SRegLoc, ERegLoc), SRegLoc,
-            "register name expected") ||
-      parseEOL())
+  const bool parseResult = parseRegister(Reg, SRegLoc, ERegLoc);
+  if (check(parseResult, SRegLoc, "register name expected") || parseEOL())
     return true;
 
   if (RegisterReqs.insert(std::make_pair(Name, Reg)).first->second != Reg)

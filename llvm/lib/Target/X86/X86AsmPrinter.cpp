@@ -464,7 +464,8 @@ static bool isIndirectBranchOrTailCall(const MachineInstr &MI) {
          Opc == X86::TAILJMPr64 || Opc == X86::TAILJMPm64 ||
          Opc == X86::TCRETURNri || Opc == X86::TCRETURNmi ||
          Opc == X86::TCRETURNri64 || Opc == X86::TCRETURNmi64 ||
-         Opc == X86::TAILJMPr64_REX || Opc == X86::TAILJMPm64_REX;
+         Opc == X86::TCRETURNri64_ImpCall || Opc == X86::TAILJMPr64_REX ||
+         Opc == X86::TAILJMPm64_REX;
 }
 
 void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
@@ -912,6 +913,9 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TT.isOSBinFormatCOFF()) {
     emitCOFFFeatureSymbol(M);
     emitCOFFReplaceableFunctionData(M);
+
+    if (M.getModuleFlag("import-call-optimization"))
+      EnableImportCallOptimization = true;
   }
   OutStreamer->emitSyntaxDirective();
 
@@ -1016,6 +1020,35 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     // safe to set.
     OutStreamer->emitSubsectionsViaSymbols();
   } else if (TT.isOSBinFormatCOFF()) {
+    // If import call optimization is enabled, emit the appropriate section.
+    // We do this whether or not we recorded any items.
+    if (EnableImportCallOptimization) {
+      OutStreamer->switchSection(getObjFileLowering().getImportCallSection());
+
+      // Section always starts with some magic.
+      constexpr char ImpCallMagic[12] = "RetpolineV1";
+      OutStreamer->emitBytes(StringRef{ImpCallMagic, sizeof(ImpCallMagic)});
+
+      // Layout of this section is:
+      // Per section that contains an item to record:
+      //  uint32_t SectionSize: Size in bytes for information in this section.
+      //  uint32_t Section Number
+      //  Per call to imported function in section:
+      //    uint32_t Kind: the kind of item.
+      //    uint32_t InstOffset: the offset of the instr in its parent section.
+      for (auto &[Section, CallsToImportedFuncs] :
+           SectionToImportedFunctionCalls) {
+        unsigned SectionSize =
+            sizeof(uint32_t) * (2 + 2 * CallsToImportedFuncs.size());
+        OutStreamer->emitInt32(SectionSize);
+        OutStreamer->emitCOFFSecNumber(Section->getBeginSymbol());
+        for (auto &[CallsiteSymbol, Kind] : CallsToImportedFuncs) {
+          OutStreamer->emitInt32(Kind);
+          OutStreamer->emitCOFFSecOffset(CallsiteSymbol);
+        }
+      }
+    }
+
     if (usesMSVCFloatingPoint(TT, M)) {
       // In Windows' libcmt.lib, there is a file which is linked in only if the
       // symbol _fltused is referenced. Linking this in causes some

@@ -57,6 +57,11 @@ namespace MemoryModel {
 #include "SPIRVGenTables.inc"
 } // namespace MemoryModel
 
+namespace MatrixMultiplyAccumulateOperands {
+#define GET_MatrixMultiplyAccumulateOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace MatrixMultiplyAccumulateOperands
+
 namespace ExecutionMode {
 #define GET_ExecutionMode_DECL
 #include "SPIRVGenTables.inc"

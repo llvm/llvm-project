@@ -8,10 +8,8 @@
 
 #include "StringviewNullptrCheck.h"
 #include "../utils/TransformerClangTidyCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"

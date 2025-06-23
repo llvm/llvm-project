@@ -164,6 +164,9 @@ struct TypeInfo {
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
 
   Reference Type; // Referenced type in this info.
+
+  bool IsTemplate = false;
+  bool IsBuiltIn = false;
 };
 
 // Represents one template parameter.
@@ -362,6 +365,9 @@ struct FunctionInfo : public SymbolInfo {
   // Full qualified name of this function, including namespaces and template
   // specializations.
   SmallString<16> FullName;
+
+  // Function Prototype
+  SmallString<256> Prototype;
 
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;

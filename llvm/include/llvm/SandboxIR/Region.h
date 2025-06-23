@@ -114,8 +114,18 @@ class Region {
   /// ID (for later deregistration) of the "erase instruction" callback.
   Context::CallbackID EraseInstCB;
 
-  /// Adds I to the set.
-  void add(Instruction *I);
+  /// Adds \p I to the set but also don't track the instruction's score if \p
+  /// IgnoreCost is true. Only to be used when adding an instruction to the
+  /// auxiliary vector.
+  /// NOTE: When an instruction is added to the region we track it cost in the
+  /// scoreboard, which currently resides in the region class. However, when we
+  /// add an instruction to the auxiliary vector it does get tagged as being a
+  /// member of the region (for ownership reasons), but its cost does not get
+  /// counted because the instruction hasn't been added in the "normal" way.
+  void addImpl(Instruction *I, bool IgnoreCost);
+  /// Adds I to the set. This is the main API for adding an instruction to the
+  /// region.
+  void add(Instruction *I) { addImpl(I, /*IgnoreCost=*/false); }
   /// Removes I from the set.
   void remove(Instruction *I);
   friend class Context; // The callbacks need to call add() and remove().

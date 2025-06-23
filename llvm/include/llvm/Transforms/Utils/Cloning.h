@@ -42,6 +42,7 @@ class Instruction;
 class Loop;
 class LoopInfo;
 class Module;
+class OptimizationRemarkEmitter;
 class PGOContextualProfile;
 class ProfileSummaryInfo;
 class ReturnInst;
@@ -314,7 +315,8 @@ InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                             bool MergeAttributes = false,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true,
-                            Function *ForwardVarArgsTo = nullptr);
+                            Function *ForwardVarArgsTo = nullptr,
+                            OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Same as above, but it will update the contextual profile. If the contextual
 /// profile is invalid (i.e. not loaded because it is not present), it defaults

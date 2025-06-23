@@ -111,6 +111,8 @@ public:
   /// Handling globals
   /// -------
 
+  mlir::Operation *lastGlobalOp = nullptr;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
 
   /// If the specified mangled name is not in the module, create and return an
@@ -126,6 +128,9 @@ public:
                                       llvm::StringRef name, mlir::Type t,
                                       mlir::Operation *insertPoint = nullptr);
 
+  llvm::StringMap<unsigned> cgGlobalNames;
+  std::string getUniqueGlobalName(const std::string &baseName);
+
   /// Return the mlir::Value for the address of the given global variable.
   /// If Ty is non-null and if the global doesn't exist, then it will be created
   /// with the specified type instead of whatever the normal requested type
@@ -135,6 +140,14 @@ public:
   mlir::Value
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
+
+  /// Return a constant array for the given string.
+  mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
+
+  /// Return a global symbol reference to a constant array for the given string
+  /// literal.
+  cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
+                                          llvm::StringRef name = ".str");
 
   const TargetCIRGenInfo &getTargetCIRGenInfo();
 
@@ -166,6 +179,16 @@ public:
 
   mlir::Type convertType(clang::QualType type);
 
+  /// Set the visibility for the given global.
+  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
+  void setDSOLocal(mlir::Operation *op) const;
+  void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
+
+  /// Set visibility, dllimport/dllexport and dso_local.
+  /// This must be called after dllimport/dllexport is set.
+  void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
+  void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
@@ -183,6 +206,10 @@ public:
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
+  void emitTentativeDefinition(const VarDecl *d);
+
+  bool supportsCOMDAT() const;
+
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
   cir::FuncOp
@@ -197,10 +224,21 @@ public:
                                 const clang::FunctionDecl *funcDecl);
 
   mlir::IntegerAttr getSize(CharUnits size) {
-    return builder.getSizeFromCharUnits(&getMLIRContext(), size);
+    return builder.getSizeFromCharUnits(size);
   }
 
   const llvm::Triple &getTriple() const { return target.getTriple(); }
+
+  /// -------
+  /// Visibility and Linkage
+  /// -------
+
+  static mlir::SymbolTable::Visibility
+  getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind GLK);
+  static cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
+      clang::VisibilityAttr::VisibilityType visibility);
+  cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
+  static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
 
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                                     GVALinkage linkage,
@@ -228,7 +266,7 @@ public:
     return diags.Report(diagID) << feature;
   }
 
-  DiagnosticBuilder errorNYI(llvm::StringRef feature) {
+  DiagnosticBuilder errorNYI(llvm::StringRef feature) const {
     // TODO: Make a default location? currSrcLoc?
     unsigned diagID = diags.getCustomDiagID(
         DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");

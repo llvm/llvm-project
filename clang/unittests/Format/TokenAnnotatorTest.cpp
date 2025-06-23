@@ -2257,6 +2257,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
 
+  Tokens = annotate("#define FUNC(foo, bar) \\\n"
+                    "  auto foo##bar() -> Type {}");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[12], tok::l_paren, TT_FunctionDeclarationLParen);
+  EXPECT_TOKEN(Tokens[14], tok::arrow, TT_TrailingReturnArrow);
+
   Tokens = annotate("int iso_time(time_t);");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
@@ -4074,6 +4081,14 @@ TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
   auto Tokens = annotate("typedef enum : int {} foo;");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
+}
+
+TEST_F(TokenAnnotatorTest, BitFieldColon) {
+  auto Tokens = annotate("class C {\n"
+                         "  int f : SIZE;\n"
+                         "};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_BitFieldColon);
 }
 
 } // namespace

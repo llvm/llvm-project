@@ -8,7 +8,6 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include <optional>
 

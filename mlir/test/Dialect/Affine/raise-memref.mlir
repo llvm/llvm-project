@@ -112,7 +112,7 @@ func.func @symbols(%N : index) {
 // CHECK:                  %[[lhs5:.*]] = arith.addf %[[lhs]], %[[lhs4]]
 // CHECK:                  %[[lhs6:.*]] = arith.addi %[[a4]], %[[cst1]]
 // CHECK:                  affine.store %[[lhs5]], %{{.*}}[%[[a1]], symbol(%arg0) + 1] :
-// CHECK:                  affine.store %[[lhs5]], %{{.*}}[%[[a1]], %arg4 + 1] :
+// CHECK:                  memref.store %[[lhs5]], %{{.*}}[%[[a1]], %[[lhs6]]] :
 // CHECK:                  %[[lhs7:.*]] = "ab.v"
 // CHECK:                  memref.store %[[lhs5]], %{{.*}}[%[[a1]], %[[lhs7]]] :
 // CHECK:                  affine.yield %[[lhs6]]

@@ -15,7 +15,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -30,7 +29,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 using namespace clang;
 
 namespace {

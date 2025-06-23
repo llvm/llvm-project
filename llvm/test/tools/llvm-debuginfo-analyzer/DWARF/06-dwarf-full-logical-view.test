@@ -32,9 +32,9 @@
 ; ONE-NEXT:                                    {File} 'test.cpp'
 ; ONE-NEXT:                                    {Public} 'foo' [0x0000000000:0x000000003a]
 ; ONE-NEXT: [0x000000000b][002]                {Range} Lines 2:9 [0x0000000000:0x000000003a]
-; ONE-NEXT: [0x00000000bc][002]                {BaseType} 'bool'
-; ONE-NEXT: [0x0000000099][002]                {BaseType} 'int'
-; ONE-NEXT: [0x00000000b5][002]                {BaseType} 'unsigned int'
+; ONE-NEXT: [0x00000000bc][002]                {BaseType} 'bool' [Size = 1]
+; ONE-NEXT: [0x0000000099][002]                {BaseType} 'int' [Size = 4]
+; ONE-NEXT: [0x00000000b5][002]                {BaseType} 'unsigned int' [Size = 4]
 ; ONE-EMPTY:
 ; ONE-NEXT: [0x00000000a0][002]   {Source} '/data/projects/tests/input/general/test.cpp'
 ; ONE-NEXT: [0x00000000a0][002]      1         {TypeAlias} 'INTPTR' -> [0x00000000ab]'* const int'

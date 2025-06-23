@@ -141,10 +141,11 @@ public:
                   "Expected LoadInst or StoreInst!");
     assert(all_of(Seeds, [](auto *S) { return isa<LoadOrStoreT>(S); }) &&
            "Expected Load or Store instructions!");
-    llvm::sort(Seeds, [&SE](Instruction *I0, Instruction *I1) {
+    auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
       return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
                                    cast<LoadOrStoreT>(I1), SE);
-    });
+    };
+    std::sort(Seeds.begin(), Seeds.end(), Cmp);
   }
   explicit MemSeedBundle(LoadOrStoreT *MemI) : SeedBundle(MemI) {
     static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||

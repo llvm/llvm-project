@@ -2088,6 +2088,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
     break;
+  case ISD::GET_ACTIVE_LANE_MASK:
+    Res = PromoteIntOp_GET_ACTIVE_LANE_MASK(N);
+    break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
@@ -2871,6 +2874,13 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
                                                                unsigned OpNo) {
   SmallVector<SDValue, 1> NewOps(N->ops());
   NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N) {
+  SmallVector<SDValue, 1> NewOps(N->ops());
+  NewOps[0] = ZExtPromotedInteger(N->getOperand(0));
+  NewOps[1] = ZExtPromotedInteger(N->getOperand(1));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 

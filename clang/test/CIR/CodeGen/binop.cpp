@@ -200,18 +200,18 @@ void signed_shift(int a, int b) {
 // CIR: %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1]] : !s32i) -> !s32i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2]] : !s32i) -> !s32i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: cir.return
 
@@ -266,18 +266,18 @@ void unsigned_shift(unsigned a, unsigned b) {
 // CIR: %[[B_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !u32i, !cir.ptr<!u32i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !u32i, !cir.ptr<!u32i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!u32i>, !u32i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u32i>, !u32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !u32i, %[[B1]] : !u32i) -> !u32i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !u32i, !cir.ptr<!u32i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!u32i>, !u32i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u32i>, !u32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !u32i, %[[B2]] : !u32i) -> !u32i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !u32i, !cir.ptr<!u32i>
 
 // CIR: cir.return
 
@@ -332,20 +332,20 @@ void zext_shift_example(int a, unsigned char b) {
 // CIR: %[[B_PTR:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !u8i, !cir.ptr<!u8i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !u8i, !cir.ptr<!u8i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
 // CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !u8i), !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1_EXT]] : !s32i) -> !s32i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
 // CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !u8i), !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2_EXT]] : !s32i) -> !s32i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: cir.return
 
@@ -404,20 +404,20 @@ void sext_shift_example(int a, signed char b) {
 // CIR: %[[B_PTR:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
 // CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !s8i), !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1_EXT]] : !s32i) -> !s32i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
 // CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !s8i), !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2_EXT]] : !s32i) -> !s32i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: cir.return
 
@@ -476,20 +476,20 @@ void long_shift_example(long long a, short b) {
 // CIR: %[[B_PTR:.*]] = cir.alloca !s16i, !cir.ptr<!s16i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s64i, !cir.ptr<!s64i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !s16i, !cir.ptr<!s16i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s64i, !cir.ptr<!s64i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s16i, !cir.ptr<!s16i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
 // CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !s16i), !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s64i, %[[B1_EXT]] : !s32i) -> !s64i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
 // CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !s16i), !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s64i, %[[B2_EXT]] : !s32i) -> !s64i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
 
 // CIR: cir.return
 

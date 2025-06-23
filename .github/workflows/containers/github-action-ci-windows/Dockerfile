@@ -39,32 +39,14 @@ RUN regsvr32 /S "C:\BuildTools\DIA SDK\bin\amd64\msdia140.dll" & \
 
 # install tools as described in https://llvm.org/docs/GettingStartedVS.html
 # and a few more that were not documented...
-RUN choco install -y ninja git
+RUN choco install -y ninja git sccache
 # Pin an older version of Python; the current Python 3.10 fails when
 # doing "pip install" for the other dependencies, as it fails to find libxml
 # while compiling some package.
 RUN choco install -y python3 --version 3.9.7
 
-# ActivePerl is currently not installable via Chocolatey, see
-# http://disq.us/p/2ipditb. Install StrawberryPerl instead. Unfortunately,
-# StrawberryPerl not only installs Perl, but also a redundant C/C++ compiler
-# toolchain, and a copy of pkg-config which can cause misdetections for other
-# built products, see
-# https://github.com/StrawberryPerl/Perl-Dist-Strawberry/issues/11 for further
-# details. Remove the redundant and unnecessary parts of the StrawberryPerl
-# install.
-RUN choco install -y strawberryperl && \
-    rmdir /q /s c:\strawberry\c && \
-    del /q c:\strawberry\perl\bin\pkg-config*
-
-# libcxx requires clang(-cl) to be available
-RUN choco install -y sccache llvm
+# Testing requires psutil
 RUN pip install psutil
-
-RUN curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20230320/llvm-mingw-20230320-ucrt-x86_64.zip && \
-    powershell Expand-Archive llvm-mingw-*-ucrt-x86_64.zip -DestinationPath . && \
-    del llvm-mingw-*-ucrt-x86_64.zip && \
-    ren llvm-mingw-20230320-ucrt-x86_64 llvm-mingw
 
 # configure Python encoding
 ENV PYTHONIOENCODING=UTF-8
@@ -102,11 +84,6 @@ RUN powershell -Command \
 # support long file names during git checkout
 RUN git config --system core.longpaths true & \
     git config --global core.autocrlf false
-
-# handle for debugging of files beeing locked by some processes.
-RUN choco install -y handle
-
-RUN pip3 install pywin32 buildbot-worker==2.8.4
 
 ARG RUNNER_VERSION=2.324.0
 ENV RUNNER_VERSION=$RUNNER_VERSION

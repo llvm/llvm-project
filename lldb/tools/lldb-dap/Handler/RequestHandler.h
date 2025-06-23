@@ -22,6 +22,7 @@
 #include <optional>
 #include <type_traits>
 #include <variant>
+#include <vector>
 
 template <typename T> struct is_optional : std::false_type {};
 
@@ -232,6 +233,14 @@ public:
   }
   llvm::Expected<protocol::BreakpointLocationsResponseBody>
   Run(const protocol::BreakpointLocationsArguments &args) const override;
+
+  std::vector<std::pair<uint32_t, uint32_t>>
+  GetSourceBreakpointLocations(std::string path, uint32_t start_line,
+                               uint32_t start_column, uint32_t end_line,
+                               uint32_t end_column) const;
+  std::vector<std::pair<uint32_t, uint32_t>>
+  GetAssemblyBreakpointLocations(int64_t source_reference, uint32_t start_line,
+                                 uint32_t end_line) const;
 };
 
 class CompletionsRequestHandler : public LegacyRequestHandler {
@@ -534,14 +543,17 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class DisassembleRequestHandler : public LegacyRequestHandler {
+class DisassembleRequestHandler final
+    : public RequestHandler<protocol::DisassembleArguments,
+                            llvm::Expected<protocol::DisassembleResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "disassemble"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureDisassembleRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::DisassembleResponseBody>
+  Run(const protocol::DisassembleArguments &args) const override;
 };
 
 class ReadMemoryRequestHandler : public LegacyRequestHandler {

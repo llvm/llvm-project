@@ -209,9 +209,9 @@ define i32 @va1(ptr %fmt, ...) {
 ; LP64E-FPELIM:       # %bb.0:
 ; LP64E-FPELIM-NEXT:    addi sp, sp, -56
 ; LP64E-FPELIM-NEXT:    .cfi_def_cfa_offset 56
+; LP64E-FPELIM-NEXT:    sd a1, 16(sp)
 ; LP64E-FPELIM-NEXT:    addi a0, sp, 20
 ; LP64E-FPELIM-NEXT:    sd a0, 0(sp)
-; LP64E-FPELIM-NEXT:    sd a1, 16(sp)
 ; LP64E-FPELIM-NEXT:    lw a0, 16(sp)
 ; LP64E-FPELIM-NEXT:    sd a5, 48(sp)
 ; LP64E-FPELIM-NEXT:    sd a2, 24(sp)
@@ -231,9 +231,9 @@ define i32 @va1(ptr %fmt, ...) {
 ; LP64E-WITHFP-NEXT:    .cfi_offset s0, -64
 ; LP64E-WITHFP-NEXT:    addi s0, sp, 24
 ; LP64E-WITHFP-NEXT:    .cfi_def_cfa s0, 48
+; LP64E-WITHFP-NEXT:    sd a1, 8(s0)
 ; LP64E-WITHFP-NEXT:    addi a0, s0, 12
 ; LP64E-WITHFP-NEXT:    sd a0, -24(s0)
-; LP64E-WITHFP-NEXT:    sd a1, 8(s0)
 ; LP64E-WITHFP-NEXT:    lw a0, 8(s0)
 ; LP64E-WITHFP-NEXT:    sd a5, 40(s0)
 ; LP64E-WITHFP-NEXT:    sd a2, 16(s0)
@@ -3070,12 +3070,12 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; LP64E-FPELIM-NEXT:    sub sp, sp, a0
 ; LP64E-FPELIM-NEXT:    .cfi_def_cfa_offset 100000064
 ; LP64E-FPELIM-NEXT:    lui a0, 24414
+; LP64E-FPELIM-NEXT:    add a0, sp, a0
+; LP64E-FPELIM-NEXT:    sd a1, 280(a0)
+; LP64E-FPELIM-NEXT:    lui a0, 24414
 ; LP64E-FPELIM-NEXT:    addiw a0, a0, 284
 ; LP64E-FPELIM-NEXT:    add a0, sp, a0
 ; LP64E-FPELIM-NEXT:    sd a0, 8(sp)
-; LP64E-FPELIM-NEXT:    lui a0, 24414
-; LP64E-FPELIM-NEXT:    add a0, sp, a0
-; LP64E-FPELIM-NEXT:    sd a1, 280(a0)
 ; LP64E-FPELIM-NEXT:    lui a0, 24414
 ; LP64E-FPELIM-NEXT:    add a0, sp, a0
 ; LP64E-FPELIM-NEXT:    lw a0, 280(a0)
@@ -3110,11 +3110,11 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; LP64E-WITHFP-NEXT:    lui a0, 24414
 ; LP64E-WITHFP-NEXT:    addiw a0, a0, -1704
 ; LP64E-WITHFP-NEXT:    sub sp, sp, a0
-; LP64E-WITHFP-NEXT:    addi a0, s0, 12
-; LP64E-WITHFP-NEXT:    lui a6, 24414
-; LP64E-WITHFP-NEXT:    sub a6, s0, a6
-; LP64E-WITHFP-NEXT:    sd a0, -288(a6)
 ; LP64E-WITHFP-NEXT:    sd a1, 8(s0)
+; LP64E-WITHFP-NEXT:    addi a0, s0, 12
+; LP64E-WITHFP-NEXT:    lui a1, 24414
+; LP64E-WITHFP-NEXT:    sub a1, s0, a1
+; LP64E-WITHFP-NEXT:    sd a0, -288(a1)
 ; LP64E-WITHFP-NEXT:    lw a0, 8(s0)
 ; LP64E-WITHFP-NEXT:    sd a5, 40(s0)
 ; LP64E-WITHFP-NEXT:    sd a2, 16(s0)

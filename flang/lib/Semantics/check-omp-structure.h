@@ -174,6 +174,7 @@ private:
   bool IsExtendedListItem(const Symbol &sym);
   bool IsCommonBlock(const Symbol &sym);
   std::optional<bool> IsContiguous(const parser::OmpObject &object);
+  void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);

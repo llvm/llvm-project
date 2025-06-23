@@ -309,7 +309,6 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
 
-  std::vector<ModuleStats> modules;
   std::lock_guard<std::recursive_mutex> guard(
       Module::GetAllocationModuleCollectionMutex());
   const uint64_t num_modules = target != nullptr

@@ -12,18 +12,20 @@
 #include "src/sys/stat/mkdirat.h"
 #include "src/sys/statvfs/statvfs.h"
 #include "src/unistd/rmdir.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcSysStatvfsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcSysStatvfsTest, StatvfsBasic) {
+TEST_F(LlvmLibcSysStatvfsTest, StatvfsBasic) {
   struct statvfs buf;
   // The root of the file directory must always exist
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("/", &buf), Succeeds());
 }
 
-TEST(LlvmLibcSysStatvfsTest, StatvfsInvalidPath) {
+TEST_F(LlvmLibcSysStatvfsTest, StatvfsInvalidPath) {
   struct statvfs buf;
 
   ASSERT_THAT(LIBC_NAMESPACE::statvfs("", &buf), Fails(ENOENT));

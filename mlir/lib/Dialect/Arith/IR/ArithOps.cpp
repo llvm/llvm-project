@@ -1552,6 +1552,11 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+void arith::TruncFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP>(context);
+}
+
 bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::less, FloatType>(inputs, outputs);
 }

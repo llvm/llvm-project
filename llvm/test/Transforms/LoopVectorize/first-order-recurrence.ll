@@ -1254,11 +1254,10 @@ define i64 @constant_folded_previous_value() {
 ; UNROLL-NO-VF-NEXT:  entry:
 ; UNROLL-NO-VF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-VF:       vector.ph:
-; UNROLL-NO-VF-NEXT:    [[TMP0:%.*]] = add i64 0, 1
 ; UNROLL-NO-VF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-VF:       vector.body:
 ; UNROLL-NO-VF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP0]], [[VECTOR_BODY]] ]
+; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ 1, [[VECTOR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -1266,7 +1265,7 @@ define i64 @constant_folded_previous_value() {
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 1, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-VF:       scalar.body:
 ; UNROLL-NO-VF-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
@@ -1276,7 +1275,7 @@ define i64 @constant_folded_previous_value() {
 ; UNROLL-NO-VF-NEXT:    [[COND:%.*]] = icmp eq i64 [[I_NEXT]], 1000
 ; UNROLL-NO-VF-NEXT:    br i1 [[COND]], label [[FOR_END]], label [[SCALAR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; UNROLL-NO-VF:       for.end:
-; UNROLL-NO-VF-NEXT:    [[VAR2_LCSSA:%.*]] = phi i64 [ [[VAR2]], [[SCALAR_BODY]] ], [ [[TMP0]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NO-VF-NEXT:    [[VAR2_LCSSA:%.*]] = phi i64 [ [[VAR2]], [[SCALAR_BODY]] ], [ 1, [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-VF-NEXT:    ret i64 [[VAR2_LCSSA]]
 ;
 ; SINK-AFTER-LABEL: @constant_folded_previous_value(

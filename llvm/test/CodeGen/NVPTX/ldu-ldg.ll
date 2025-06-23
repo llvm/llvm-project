@@ -104,13 +104,13 @@ define ptr @test_ldu_p(ptr addrspace(1) %ptr) {
 define float @test_ldu_f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_f32_param_0];
-; CHECK-NEXT:    ldu.global.b32 %f1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f1;
+; CHECK-NEXT:    ldu.global.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call float @llvm.nvvm.ldu.global.f.f32.p1(ptr addrspace(1) %ptr, i32 4)
   ret float %val
@@ -119,13 +119,12 @@ define float @test_ldu_f32(ptr addrspace(1) %ptr) {
 define double @test_ldu_f64(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_f64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_f64_param_0];
-; CHECK-NEXT:    ldu.global.b64 %fd1, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %fd1;
+; CHECK-NEXT:    ldu.global.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.nvvm.ldu.global.f.f64.p1(ptr addrspace(1) %ptr, i32 8)
   ret double %val
@@ -241,13 +240,13 @@ define ptr @test_ldg_p(ptr addrspace(1) %ptr) {
 define float @test_ldg_f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_f32_param_0];
-; CHECK-NEXT:    ld.global.nc.b32 %f1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f1;
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1) %ptr, i32 4)
   ret float %val
@@ -256,13 +255,12 @@ define float @test_ldg_f32(ptr addrspace(1) %ptr) {
 define double @test_ldg_f64(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_f64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_f64_param_0];
-; CHECK-NEXT:    ld.global.nc.b64 %fd1, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %fd1;
+; CHECK-NEXT:    ld.global.nc.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.nvvm.ldg.global.f.f64.p1(ptr addrspace(1) %ptr, i32 8)
   ret double %val

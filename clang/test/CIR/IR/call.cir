@@ -43,4 +43,18 @@ cir.func @f6() -> !s32i {
 // CHECK-NEXT:   cir.return %[[#c]] : !s32i
 // CHECK-NEXT: }
 
+cir.func @f7(%arg0: !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>) -> !s32i {
+  %0 = cir.const #cir.int<1> : !s32i
+  %1 = cir.const #cir.int<2> : !s32i
+  %2 = cir.call %arg0(%0, %1) : (!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>, !s32i, !s32i) -> !s32i
+  cir.return %2 : !s32i
+}
+
+// CHECK:      cir.func @f7(%[[ptr:.+]]: !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>) -> !s32i {
+// CHECK-NEXT:   %[[#a:]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:   %[[#b:]] = cir.const #cir.int<2> : !s32i
+// CHECK-NEXT:   %[[#ret:]] = cir.call %[[ptr]](%[[#a]], %[[#b]]) : (!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>, !s32i, !s32i) -> !s32i
+// CHECK-NEXT:   cir.return %[[#ret]] : !s32i
+// CHECK-NEXT: }
+
 }

@@ -538,7 +538,7 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
       indices.begin(), indices.begin() + firstDimToCollapse);
   SmallVector<Value> indicesToCollapse(indices.begin() + firstDimToCollapse,
                                        indices.end());
-  if (llvm::all_of(indicesToCollapse, isZeroIndex)) {
+  if (llvm::all_of(indicesToCollapse, isZeroInteger)) {
     indicesAfterCollapsing.push_back(indicesToCollapse[0]);
     return indicesAfterCollapsing;
   }

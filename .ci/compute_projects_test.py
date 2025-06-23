@@ -147,7 +147,7 @@ class TestComputeProjects(unittest.TestCase):
 
     def test_invalid_subproject(self):
         env_variables = compute_projects.get_env_variables(
-            [".ci/compute_projects.py"], "Linux"
+            ["third-party/benchmark/CMakeLists.txt"], "Linux"
         )
         self.assertEqual(env_variables["projects_to_build"], "")
         self.assertEqual(env_variables["project_check_targets"], "")
@@ -163,7 +163,7 @@ class TestComputeProjects(unittest.TestCase):
 
     def test_exclude_runtiems_in_projects(self):
         env_variables = compute_projects.get_env_variables(
-            [".ci/compute_projects.py", "libcxx/CMakeLists.txt"], "Linux"
+            ["libcxx/CMakeLists.txt"], "Linux"
         )
         self.assertEqual(env_variables["projects_to_build"], "")
         self.assertEqual(env_variables["project_check_targets"], "")
@@ -192,10 +192,10 @@ class TestComputeProjects(unittest.TestCase):
         env_variables = compute_projects.get_env_variables(
             [".ci/compute_projects.py"], "Linux"
         )
-        self.assertEqual(env_variables["projects_to_build"], "clang;lld;llvm;lldb")
+        self.assertEqual(env_variables["projects_to_build"], "clang;lld;lldb;llvm")
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-lld check-llvm check-lldb",
+            "check-clang check-lld check-lldb check-llvm",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind"

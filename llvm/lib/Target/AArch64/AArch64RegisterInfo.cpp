@@ -544,8 +544,7 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     // the pipeline since it prevents other infrastructure from reasoning about
     // it's liveness. We use the NoVRegs property instead of IsSSA because
     // IsSSA is removed before VirtRegRewriter runs.
-    if (!MF.getProperties().hasProperty(
-            MachineFunctionProperties::Property::NoVRegs))
+    if (!MF.getProperties().hasNoVRegs())
       markSuperRegs(Reserved, AArch64::LR);
   }
 

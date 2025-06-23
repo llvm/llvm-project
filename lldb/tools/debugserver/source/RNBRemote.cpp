@@ -38,7 +38,6 @@
 #include "DNBThreadResumeActions.h"
 #include "JSON.h"
 #include "JSONGenerator.h"
-#include "JSONGenerator.h"
 #include "MacOSX/Genealogy.h"
 #include "OsLogger.h"
 #include "RNBContext.h"

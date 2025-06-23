@@ -2216,6 +2216,11 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
                                                  llvm::AttrBuilder &FuncAttrs) {
   getTrivialDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite,
                                       FuncAttrs);
+
+  if (!AttrOnCallSite)
+    TargetCodeGenInfo::initPointerAuthFnAttributes(CodeGenOpts.PointerAuth,
+                                                   FuncAttrs);
+
   // If we're just getting the default, get the default values for mergeable
   // attributes.
   if (!AttrOnCallSite)

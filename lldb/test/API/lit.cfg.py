@@ -271,6 +271,9 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
+if is_configured("cmake_build_type"):
+    dotest_cmd += ["--cmake-build-type", config.cmake_build_type]
+
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]
 elif "lldb-simulator-watchos" in config.available_features:

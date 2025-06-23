@@ -2062,6 +2062,16 @@ def : GCNPat <
 >;
 } // End foreach fp16vt = [f16, bf16]
 
+
+foreach fp16vt = [v2f16, v2bf16] in {
+
+def : GCNPat <
+  (fcopysign fp16vt:$src0, fp16vt:$src1),
+  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fff7fff)), $src0, $src1)
+>;
+
+}
+
 /********** ================== **********/
 /********** Immediate Patterns **********/
 /********** ================== **********/

@@ -48,6 +48,7 @@ enum class LVScopeKind {
   IsLabel,
   IsLexicalBlock,
   IsMember,
+  IsModule,
   IsNamespace,
   IsRoot,
   IsStructure,
@@ -92,6 +93,9 @@ class LVScope : public LVElement {
   LVProperties<LVScopeKind> Kinds;
   LVProperties<Property> Properties;
   static LVScopeDispatch Dispatch;
+
+  // Size in bits if this scope represents also a compound type.
+  uint32_t BitSize = 0;
 
   // Coverage factor in units (bytes).
   unsigned CoverageFactor = 0;
@@ -181,6 +185,7 @@ public:
   KIND(LVScopeKind, IsTemplatePack);
   KIND_1(LVScopeKind, IsTryBlock, IsBlock);
   KIND_1(LVScopeKind, IsUnion, IsAggregate);
+  KIND_2(LVScopeKind, IsModule, CanHaveRanges, CanHaveLines);
 
   PROPERTY(Property, HasDiscriminator);
   PROPERTY(Property, CanHaveRanges);
@@ -268,6 +273,9 @@ public:
 
   bool removeElement(LVElement *Element) override;
   void updateLevel(LVScope *Parent, bool Moved) override;
+
+  uint32_t getBitSize() const override { return BitSize; }
+  void setBitSize(uint32_t Size) override { BitSize = Size; }
 
   void resolve() override;
   void resolveName() override;
@@ -746,6 +754,23 @@ public:
   ~LVScopeFunctionType() = default;
 
   void resolveExtra() override;
+};
+
+// Class to represent a DWARF Module.
+class LVScopeModule final : public LVScope {
+public:
+  LVScopeModule() : LVScope() {
+    setIsModule();
+    setIsLexicalBlock();
+  }
+  LVScopeModule(const LVScopeModule &) = delete;
+  LVScopeModule &operator=(const LVScopeModule &) = delete;
+  ~LVScopeModule() = default;
+
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
+  void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
 
 // Class to represent a DWARF Namespace.

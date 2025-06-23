@@ -3221,6 +3221,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINIMUM:
   case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUMNUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FDIV:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FCEIL:
@@ -4591,6 +4593,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFCopySign(MI);
   case G_FMINNUM:
   case G_FMAXNUM:
+  case G_FMINIMUMNUM:
+  case G_FMAXIMUMNUM:
     return lowerFMinNumMaxNum(MI);
   case G_MERGE_VALUES:
     return lowerMergeValues(MI);
@@ -5379,6 +5383,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FMAXNUM_IEEE:
   case G_FMINIMUM:
   case G_FMAXIMUM:
+  case G_FMINIMUMNUM:
+  case G_FMAXIMUMNUM:
   case G_FSHL:
   case G_FSHR:
   case G_ROTL:
@@ -6090,6 +6096,8 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINIMUM:
   case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUMNUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_STRICT_FADD:
   case TargetOpcode::G_STRICT_FSUB:
   case TargetOpcode::G_STRICT_FMUL:
@@ -8139,8 +8147,27 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
-  unsigned NewOp = MI.getOpcode() == TargetOpcode::G_FMINNUM ?
-    TargetOpcode::G_FMINNUM_IEEE : TargetOpcode::G_FMAXNUM_IEEE;
+  // FIXME: fminnum/fmaxnum and fminimumnum/fmaximumnum should not have
+  // identical handling. fminimumnum/fmaximumnum also need a path that do not
+  // depend on fminnum/fmaxnum.
+
+  unsigned NewOp;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FMINNUM:
+    NewOp = TargetOpcode::G_FMINNUM_IEEE;
+    break;
+  case TargetOpcode::G_FMINIMUMNUM:
+    NewOp = TargetOpcode::G_FMINNUM;
+    break;
+  case TargetOpcode::G_FMAXNUM:
+    NewOp = TargetOpcode::G_FMAXNUM_IEEE;
+    break;
+  case TargetOpcode::G_FMAXIMUMNUM:
+    NewOp = TargetOpcode::G_FMAXNUM;
+    break;
+  default:
+    llvm_unreachable("unexpected min/max opcode");
+  }
 
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);

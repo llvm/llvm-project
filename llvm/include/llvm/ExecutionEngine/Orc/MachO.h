@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_MACHO_H
 
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Triple.h"
@@ -22,6 +23,7 @@ namespace llvm {
 
 namespace object {
 
+class Archive;
 class MachOUniversalBinary;
 
 } // namespace object
@@ -81,7 +83,8 @@ public:
   ForceLoadMachOArchiveMembers(ObjectLayer &L, JITDylib &JD, bool ObjCOnly)
       : L(L), JD(JD), ObjCOnly(ObjCOnly) {}
 
-  Error operator()(MemoryBufferRef MemberBuf);
+  Expected<bool> operator()(object::Archive &A, MemoryBufferRef MemberBuf,
+                            size_t Index);
 
 private:
   ObjectLayer &L;

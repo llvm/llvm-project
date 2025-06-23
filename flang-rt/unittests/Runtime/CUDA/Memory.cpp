@@ -50,8 +50,8 @@ TEST(MemoryCUFTest, CUFDataTransferDescDesc) {
   EXPECT_EQ((int)kDeviceAllocatorPos, dev->GetAllocIdx());
   RTNAME(AllocatableSetBounds)(*dev, 0, 1, 10);
   RTNAME(AllocatableAllocate)
-  (*dev, /*asyncId=*/-1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
-      __LINE__);
+  (*dev, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr,
+      __FILE__, __LINE__);
   EXPECT_TRUE(dev->IsAllocated());
 
   // Create temp array to transfer to device.

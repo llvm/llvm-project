@@ -12,9 +12,7 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
-#include "CIRGenOpenACCClause.h"
 
-#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -89,15 +87,8 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   //
 
   // Emit all clauses.
-  {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    // Sets insertion point before the 'op', since every new expression needs to
-    // be before the operation.
-    builder.setInsertionPoint(op);
-    makeClauseEmitter(op, *this, builder, s.getDirectiveKind(),
-                      s.getDirectiveLoc())
-        .VisitClauseList(s.clauses());
-  }
+  emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
+                     s.clauses());
 
   mlir::LogicalResult stmtRes = mlir::success();
   // Emit body.

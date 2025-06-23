@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // CHECK: %"__cblayout_$Globals" = type <{ i32, float, [4 x double], <4 x i32>, <4 x float>,
 // CHECK-SAME: target("dx.Layout", %S, 8, 0) }>

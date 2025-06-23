@@ -19,6 +19,26 @@ define <2 x i64> @xar(<2 x i64> %x, <2 x i64> %y) {
     ret <2 x i64> %b
 }
 
+define <1 x i64> @xar_v1i64(<1 x i64> %a, <1 x i64> %b) {
+; SHA3-LABEL: xar_v1i64:
+; SHA3:       // %bb.0:
+; SHA3-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-NEXT:    xar v0.2d, v0.2d, v1.2d, #63
+; SHA3-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: xar_v1i64:
+; NOSHA3:       // %bb.0:
+; NOSHA3-NEXT:    eor v1.8b, v0.8b, v1.8b
+; NOSHA3-NEXT:    shl d0, d1, #1
+; NOSHA3-NEXT:    usra d0, d1, #63
+; NOSHA3-NEXT:    ret
+  %v.val = xor <1 x i64> %a, %b
+  %fshl = tail call <1 x i64> @llvm.fshl.v1i64(<1 x i64> %v.val, <1 x i64> %v.val, <1 x i64> splat (i64 1))
+  ret <1 x i64> %fshl
+}
+
 define <2 x i64> @xar_instead_of_or1(<2 x i64> %r) {
 ; SHA3-LABEL: xar_instead_of_or1:
 ; SHA3:       // %bb.0: // %entry
@@ -35,6 +55,25 @@ define <2 x i64> @xar_instead_of_or1(<2 x i64> %r) {
 entry:
   %or = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %r, <2 x i64> %r, <2 x i64> splat (i64 25))
   ret <2 x i64> %or
+}
+
+define <1 x i64> @xar_instead_of_or_v1i64(<1 x i64> %v.val) {
+; SHA3-LABEL: xar_instead_of_or_v1i64:
+; SHA3:       // %bb.0:
+; SHA3-NEXT:    movi v1.2d, #0000000000000000
+; SHA3-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-NEXT:    xar v0.2d, v0.2d, v1.2d, #63
+; SHA3-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: xar_instead_of_or_v1i64:
+; NOSHA3:       // %bb.0:
+; NOSHA3-NEXT:    shl d1, d0, #1
+; NOSHA3-NEXT:    usra d1, d0, #63
+; NOSHA3-NEXT:    fmov d0, d1
+; NOSHA3-NEXT:    ret
+  %fshl = tail call <1 x i64> @llvm.fshl.v1i64(<1 x i64> %v.val, <1 x i64> %v.val, <1 x i64> splat (i64 1))
+  ret <1 x i64> %fshl
 }
 
 define <4 x i32> @xar_instead_of_or2(<4 x i32> %r) {

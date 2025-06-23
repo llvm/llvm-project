@@ -32,17 +32,15 @@ namespace {
     ~SparcELFObjectWriter() override = default;
 
   protected:
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
+    unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                          bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                                 unsigned Type) const override;
+    bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
   };
 }
 
-unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
-                                            const MCFixup &Fixup,
                                             bool IsPCRel) const {
   switch (Target.getSpecifier()) {
   case ELF::R_SPARC_TLS_GD_HI22:
@@ -88,7 +86,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_4:                  return ELF::R_SPARC_DISP32;
     case FK_Data_8:                  return ELF::R_SPARC_DISP64;
     case Sparc::fixup_sparc_call30:
-      if (Ctx.getObjectFileInfo()->isPositionIndependent())
+      if (getContext().getObjectFileInfo()->isPositionIndependent())
         return ELF::R_SPARC_WPLT30;
       return ELF::R_SPARC_WDISP30;
     }
@@ -110,7 +108,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
                                          ? ELF::R_SPARC_UA64
                                          : ELF::R_SPARC_64);
   case Sparc::fixup_sparc_13:
-    if (Ctx.getObjectFileInfo()->isPositionIndependent())
+    if (getContext().getObjectFileInfo()->isPositionIndependent())
       return ELF::R_SPARC_GOT13;
     return ELF::R_SPARC_13;
   }
@@ -120,7 +118,6 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
-                                                   const MCSymbol &,
                                                    unsigned Type) const {
   switch (Type) {
     default:

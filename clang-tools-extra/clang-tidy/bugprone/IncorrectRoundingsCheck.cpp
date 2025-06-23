@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncorrectRoundingsCheck.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 

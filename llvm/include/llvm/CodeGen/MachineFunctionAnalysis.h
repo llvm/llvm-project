@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MACHINEFUNCTIONANALYSIS
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -26,7 +27,7 @@ class MachineFunctionAnalysis
     : public AnalysisInfoMixin<MachineFunctionAnalysis> {
   friend AnalysisInfoMixin<MachineFunctionAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   const TargetMachine *TM;
 
@@ -37,12 +38,12 @@ public:
   public:
     Result(std::unique_ptr<MachineFunction> MF) : MF(std::move(MF)) {}
     MachineFunction &getMF() { return *MF; };
-    bool invalidate(Function &, const PreservedAnalyses &PA,
-                    FunctionAnalysisManager::Invalidator &);
+    LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
+                             FunctionAnalysisManager::Invalidator &);
   };
 
   MachineFunctionAnalysis(const TargetMachine *TM) : TM(TM) {};
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

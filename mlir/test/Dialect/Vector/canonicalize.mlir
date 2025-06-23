@@ -719,7 +719,7 @@ func.func @fold_extract_transpose(
 // CHECK-LABEL: fold_extract_broadcast_same_input_output_scalar
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
-func.func @fold_extract_broadcast_same_input_output_scalar(%a : f32, 
+func.func @fold_extract_broadcast_same_input_output_scalar(%a : f32,
   %idx0 : index, %idx1 : index, %idx2 : index) -> f32 {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
   %r = vector.extract %b[%idx0, %idx1, %idx2] : f32 from vector<1x2x4xf32>
@@ -731,7 +731,7 @@ func.func @fold_extract_broadcast_same_input_output_scalar(%a : f32,
 // CHECK-LABEL: fold_extract_broadcast_same_input_output_vec
 //  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
 //       CHECK:   return %[[A]] : vector<4xf32>
-func.func @fold_extract_broadcast_same_input_output_vec(%a : vector<4xf32>, 
+func.func @fold_extract_broadcast_same_input_output_vec(%a : vector<4xf32>,
   %idx0 : index, %idx1 : index) -> vector<4xf32> {
   %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
   %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
@@ -744,7 +744,7 @@ func.func @fold_extract_broadcast_same_input_output_vec(%a : vector<4xf32>,
 //  CHECK-SAME:   %[[A:.*]]: vector<f32>
 //       CHECK:   %[[B:.+]] = vector.extract %[[A]][] : f32 from vector<f32>
 //       CHECK:   return %[[B]] : f32
-func.func @fold_extract_broadcast_0dvec_input_scalar_output(%a : vector<f32>, 
+func.func @fold_extract_broadcast_0dvec_input_scalar_output(%a : vector<f32>,
   %idx0 : index, %idx1 : index, %idx2: index) -> f32 {
   %b = vector.broadcast %a : vector<f32> to vector<1x2x4xf32>
   %r = vector.extract %b[%idx0, %idx1, %idx2] : f32 from vector<1x2x4xf32>
@@ -780,7 +780,7 @@ func.func @fold_extract_splat(%a : f32, %idx0 : index, %idx1 : index, %idx2 : in
 //  CHECK-SAME:   %[[IDX:.*]]: index, %[[IDX1:.*]]: index, %[[IDX2:.*]]: index
 //       CHECK:   %[[R:.*]] = vector.extract %[[A]][%[[IDX1]], 0] : f32 from vector<2x1xf32>
 //       CHECK:   return %[[R]] : f32
-func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<2x1xf32>, 
+func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<2x1xf32>,
   %idx : index, %idx1 : index, %idx2 : index) -> f32 {
   %b = vector.broadcast %a : vector<2x1xf32> to vector<1x2x4xf32>
   %r = vector.extract %b[%idx, %idx1, %idx2] : f32 from vector<1x2x4xf32>
@@ -795,7 +795,7 @@ func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<2x1xf32>,
 //       CHECK:   %[[B:.+]] = vector.extract %[[A]][%[[IDX1]]] : vector<4xf32> from vector<2x4xf32>
 //       CHECK:   return %[[B]] : vector<4xf32>
 // rank(extract_output) < rank(broadcast_input)
-func.func @fold_extract_broadcast_to_lower_rank(%a : vector<2x4xf32>, 
+func.func @fold_extract_broadcast_to_lower_rank(%a : vector<2x4xf32>,
   %idx0 : index, %idx1 : index) -> vector<4xf32> {
   %b = vector.broadcast %a : vector<2x4xf32> to vector<1x2x4xf32>
   %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
@@ -808,7 +808,7 @@ func.func @fold_extract_broadcast_to_lower_rank(%a : vector<2x4xf32>,
 //       CHECK:   %[[B:.*]] = vector.broadcast %{{.*}} : f32 to vector<4xf32>
 //       CHECK:   return %[[B]] : vector<4xf32>
 // rank(extract_output) > rank(broadcast_input)
-func.func @fold_extract_broadcast_to_higher_rank(%a : f32, %idx0 : index, %idx1 : index) 
+func.func @fold_extract_broadcast_to_higher_rank(%a : f32, %idx0 : index, %idx1 : index)
   -> vector<4xf32> {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
   %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
@@ -822,7 +822,7 @@ func.func @fold_extract_broadcast_to_higher_rank(%a : f32, %idx0 : index, %idx1 
 //       CHECK:   %[[R:.*]] = vector.broadcast %[[A]] : vector<1xf32> to vector<8xf32>
 //       CHECK:   return %[[R]] : vector<8xf32>
 // rank(extract_output) == rank(broadcast_input)
-func.func @fold_extract_broadcast_to_equal_rank(%a : vector<1xf32>, %idx0 : index) 
+func.func @fold_extract_broadcast_to_equal_rank(%a : vector<1xf32>, %idx0 : index)
   -> vector<8xf32> {
   %b = vector.broadcast %a : vector<1xf32> to vector<1x8xf32>
   %r = vector.extract %b[%idx0] : vector<8xf32> from vector<1x8xf32>
@@ -1169,7 +1169,7 @@ func.func @broadcast_poison() -> vector<4x6xi8> {
   return %broadcast : vector<4x6xi8>
 }
 
-// ----- 
+// -----
 
 // CHECK-LABEL:  broadcast_splat_constant
 //       CHECK:  %[[CONST:.*]] = arith.constant dense<1> : vector<4x6xi8>
@@ -2751,6 +2751,19 @@ func.func @empty_vector_mask_with_return(%a : vector<8xf32>, %mask : vector<8xi1
 //   CHECK-NOT:   vector.mask
 //       CHECK:   return %[[IN]] : vector<8xf32>
   %0 = vector.mask %mask { vector.yield %a : vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @empty_vector_mask_with_passthru
+//  CHECK-SAME:     %[[IN:.*]]: vector<8xf32>, %[[MASK:.*]]: vector<8xi1>, %[[PASSTHRU:.*]]: vector<8xf32>
+func.func @empty_vector_mask_with_passthru(%a : vector<8xf32>, %mask : vector<8xi1>,
+                                           %passthru : vector<8xf32>) -> vector<8xf32> {
+//   CHECK-NOT:   vector.mask
+//       CHECK:   %[[SEL:.*]] = arith.select %[[MASK]], %[[IN]], %[[PASSTHRU]] : vector<8xi1>, vector<8xf32>
+//       CHECK:   return %[[SEL]] : vector<8xf32>
+  %0 = vector.mask %mask, %passthru { vector.yield %a : vector<8xf32> } : vector<8xi1> -> vector<8xf32>
   return %0 : vector<8xf32>
 }
 

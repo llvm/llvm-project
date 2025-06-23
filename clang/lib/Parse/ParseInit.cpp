@@ -20,8 +20,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 using namespace clang;
 
 bool Parser::MayBeDesignationStart() {

@@ -13,7 +13,6 @@
 
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
-#include "SPIRVMetadata.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -673,10 +672,16 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array
         Ty = HandleType->getTypeParameter(0);
-        assert(Ty->isArrayTy() &&
-               "spv_resource_getpointer indexes into an array, so the type of "
-               "the buffer should be an array.");
-        Ty = Ty->getArrayElementType();
+        if (Ty->isArrayTy())
+          Ty = Ty->getArrayElementType();
+        else {
+          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
+          assert(BufferTy->getTargetExtName() == "spirv.Layout");
+          Ty = BufferTy->getTypeParameter(0);
+          assert(Ty && Ty->isStructTy());
+          uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+          Ty = cast<StructType>(Ty)->getElementType(Index);
+        }
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
@@ -1956,10 +1961,16 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           GR->buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op, true),
                              Op);
         } else {
+          Value *OpTyVal = Op;
+          if (OpTy->isTargetExtTy()) {
+            // We need to do this in order to be consistent with how target ext
+            // types are handled in `processInstrAfterVisit`
+            OpTyVal = getNormalizedPoisonValue(OpTy);
+          }
           CallInst *AssignCI =
               buildIntrWithMD(Intrinsic::spv_assign_type, {OpTy},
-                              getNormalizedPoisonValue(OpTy), Op, {}, B);
-          GR->addAssignPtrTypeInstr(Op, AssignCI);
+                              getNormalizedPoisonValue(OpTy), OpTyVal, {}, B);
+          GR->addAssignPtrTypeInstr(OpTyVal, AssignCI);
         }
       }
     }
@@ -2070,22 +2081,14 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       BPrepared = true;
     }
     Type *OpTy = Op->getType();
-    Value *OpTyVal = Op;
-    if (OpTy->isTargetExtTy())
-      OpTyVal = getNormalizedPoisonValue(OpTy);
     Type *OpElemTy = GR->findDeducedElementType(Op);
     Value *NewOp = Op;
     if (OpTy->isTargetExtTy()) {
+      // Since this value is replaced by poison, we need to do the same in
+      // `insertAssignTypeIntrs`.
+      Value *OpTyVal = getNormalizedPoisonValue(OpTy);
       NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                               {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
-      if (isPointerTy(OpTy)) {
-        if (OpElemTy) {
-          GR->buildAssignPtr(B, OpElemTy, NewOp);
-        } else {
-          insertTodoType(NewOp);
-          GR->buildAssignPtr(B, OpTy, NewOp);
-        }
-      }
     }
     if (!IsConstComposite && isPointerTy(OpTy) && OpElemTy != nullptr &&
         OpElemTy != IntegerType::getInt8Ty(I->getContext())) {

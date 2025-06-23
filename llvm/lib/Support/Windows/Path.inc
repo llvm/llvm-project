@@ -118,8 +118,9 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   if (RootName[1] != ':') { // Check if UNC.
     FullPath.append("UNC\\");
     FullPath.append(Path8Str.begin() + 2, Path8Str.end());
-  } else
+  } else {
     FullPath.append(Path8Str);
+  }
 
   return UTF8ToUTF16(FullPath, Path16);
 }
@@ -1057,8 +1058,9 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &IT,
       if (LastError == ERROR_NO_MORE_FILES)
         return detail::directory_iterator_destruct(IT);
       return mapWindowsError(LastError);
-    } else
+    } else {
       FilenameLen = ::wcslen(FirstFind.cFileName);
+    }
 
   // Construct the current directory entry.
   SmallString<128> DirectoryEntryNameUTF8;

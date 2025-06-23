@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalNamesInHeadersCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"

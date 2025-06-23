@@ -33,7 +33,7 @@ define i32 @bswap32(i32 %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [bswap32_param_0];
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 291;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x123U;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %b = tail call i32 @llvm.bswap.i32(i32 %a)
@@ -48,7 +48,7 @@ define <2 x i16> @bswapv2i16(<2 x i16> %a) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [bswapv2i16_param_0];
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 8961;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x2301U;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %b = tail call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)
@@ -56,25 +56,35 @@ define <2 x i16> @bswapv2i16(<2 x i16> %a) #0 {
 }
 
 define i64 @bswap64(i64 %a) {
-; CHECK-LABEL: bswap64(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [bswap64_param_0];
+; PTX70-LABEL: bswap64(
+; PTX70:       {
+; PTX70-NEXT:    .reg .b32 %r<5>;
+; PTX70-NEXT:    .reg .b64 %rd<3>;
+; PTX70-EMPTY:
+; PTX70-NEXT:  // %bb.0:
+; PTX70-NEXT:    ld.param.b64 %rd1, [bswap64_param_0];
 ; PTX70-NEXT:    { .reg .b32 tmp; mov.b64 {%r1, tmp}, %rd1; }
-; PTX70-NEXT:    prmt.b32 %r2, %r1, 0, 291;
+; PTX70-NEXT:    prmt.b32 %r2, %r1, 0, 0x123U;
 ; PTX70-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r3}, %rd1; }
-; PTX70-NEXT:    prmt.b32 %r4, %r3, 0, 291;
+; PTX70-NEXT:    prmt.b32 %r4, %r3, 0, 0x123U;
 ; PTX70-NEXT:    mov.b64 %rd2, {%r4, %r2};
-; PTX71-NEXT:    mov.b64         {%r1, _}, %rd1;
-; PTX71-NEXT:    prmt.b32        %r2, %r1, 0, 291;
-; PTX71-NEXT:    mov.b64         {_, %r3}, %rd1;
-; PTX71-NEXT:    prmt.b32        %r4, %r3, 0, 291;
-; PTX71-NEXT:    mov.b64         %rd2, {%r4, %r2};
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
-; CHECK-NEXT:    ret;
+; PTX70-NEXT:    st.param.b64 [func_retval0], %rd2;
+; PTX70-NEXT:    ret;
+;
+; PTX71-LABEL: bswap64(
+; PTX71:       {
+; PTX71-NEXT:    .reg .b32 %r<5>;
+; PTX71-NEXT:    .reg .b64 %rd<3>;
+; PTX71-EMPTY:
+; PTX71-NEXT:  // %bb.0:
+; PTX71-NEXT:    ld.param.b64 %rd1, [bswap64_param_0];
+; PTX71-NEXT:    mov.b64 {%r1, _}, %rd1;
+; PTX71-NEXT:    prmt.b32 %r2, %r1, 0, 0x123U;
+; PTX71-NEXT:    mov.b64 {_, %r3}, %rd1;
+; PTX71-NEXT:    prmt.b32 %r4, %r3, 0, 0x123U;
+; PTX71-NEXT:    mov.b64 %rd2, {%r4, %r2};
+; PTX71-NEXT:    st.param.b64 [func_retval0], %rd2;
+; PTX71-NEXT:    ret;
   %b = tail call i64 @llvm.bswap.i64(i64 %a)
   ret i64 %b
 }

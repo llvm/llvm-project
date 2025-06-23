@@ -75,7 +75,7 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (RootConstantNode->getNumOperands() != 5)
     return reportError(Ctx, "Invalid format for RootConstants Element");
 
-  dxbc::RootParameterHeader Header;
+  dxbc::RTS0::v1::RootParameterHeader Header;
   // The parameter offset doesn't matter here - we recalculate it during
   // serialization  Header.ParameterOffset = 0;
   Header.ParameterType =
@@ -86,7 +86,7 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   else
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
-  dxbc::RootConstants Constants;
+  dxbc::RTS0::v1::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
     Constants.ShaderRegister = *Val;
   else
@@ -247,7 +247,7 @@ analyzeModule(Module &M) {
     // Clang emits the root signature data in dxcontainer following a specific
     // sequence. First the header, then the root parameters. So the header
     // offset will always equal to the header size.
-    RSD.RootParameterOffset = sizeof(dxbc::RootSignatureHeader);
+    RSD.RootParameterOffset = sizeof(dxbc::RTS0::v1::RootSignatureHeader);
 
     if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
       return RSDMap;
@@ -296,7 +296,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
       const auto &[Type, Loc] =
           RS.ParametersContainer.getTypeAndLocForParameter(I);
-      const dxbc::RootParameterHeader Header =
+      const dxbc::RTS0::v1::RootParameterHeader Header =
           RS.ParametersContainer.getHeader(I);
 
       OS << indent(Space) << "- Parameter Type: " << Type << "\n";
@@ -305,7 +305,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
       switch (Type) {
       case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
-        const dxbc::RootConstants &Constants =
+        const dxbc::RTS0::v1::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Loc);
         OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
            << "\n";

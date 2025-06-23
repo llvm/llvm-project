@@ -24,9 +24,11 @@
 
 namespace mlir {
 
-/// Return true if `v` is an IntegerAttr with value `0` of a ConstantIndexOp
-/// with attribute with value `0`.
-bool isZeroIndex(OpFoldResult v);
+/// Return true if `v` is an IntegerAttr with value `0`.
+bool isZeroInteger(OpFoldResult v);
+
+/// Return true if `v` is an IntegerAttr with value `1`.
+bool isOneInteger(OpFoldResult v);
 
 /// Represents a range (offset, size, and stride) where each element of the
 /// triple may be dynamic or static.

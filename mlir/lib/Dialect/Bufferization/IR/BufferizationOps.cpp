@@ -149,7 +149,8 @@ void mlir::bufferization::populateDynamicDimSizes(
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
-                                       const BufferizationOptions &options) {
+                                       const BufferizationOptions &options,
+                                       BufferizationState &state) {
   OpBuilder::InsertionGuard g(rewriter);
   Location loc = getLoc();
 
@@ -162,14 +163,15 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   // Get "copy" buffer.
   Value copyBuffer;
   if (getCopy()) {
-    FailureOr<Value> maybeCopyBuffer = getBuffer(rewriter, getCopy(), options);
+    FailureOr<Value> maybeCopyBuffer =
+        getBuffer(rewriter, getCopy(), options, state);
     if (failed(maybeCopyBuffer))
       return failure();
     copyBuffer = *maybeCopyBuffer;
   }
 
   // Create memory allocation.
-  auto allocType = bufferization::getBufferType(getResult(), options);
+  auto allocType = bufferization::getBufferType(getResult(), options, state);
   if (failed(allocType))
     return failure();
   SmallVector<Value> dynamicDims = getDynamicSizes();
@@ -222,6 +224,7 @@ AliasingValueList AllocTensorOp::getAliasingValues(OpOperand &opOperand,
 
 FailureOr<BaseMemRefType>
 AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
+                             const BufferizationState &state,
                              SmallVector<Value> &invocationStack) {
   assert(value == getResult() && "invalid value");
 
@@ -230,8 +233,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
   if (getMemorySpace().has_value()) {
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
-    auto copyBufferType =
-        bufferization::getBufferType(getCopy(), options, invocationStack);
+    auto copyBufferType = bufferization::getBufferType(getCopy(), options,
+                                                       state, invocationStack);
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
@@ -529,8 +532,9 @@ void CloneOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
-                                         const BufferizationOptions &options) {
-  FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options);
+                                         const BufferizationOptions &options,
+                                         BufferizationState &state) {
+  FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options, state);
   if (failed(buffer))
     return failure();
   rewriter.create<memref::DeallocOp>(getLoc(), *buffer);
@@ -576,11 +580,13 @@ MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
 
 LogicalResult
 MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
-                                      const BufferizationOptions &options) {
+                                      const BufferizationOptions &options,
+                                      BufferizationState &state) {
   bool tensorDest = isa<TensorType>(getDest().getType());
   Value buffer;
   if (tensorDest) {
-    FailureOr<Value> maybeBuffer = getBuffer(rewriter, getDest(), options);
+    FailureOr<Value> maybeBuffer =
+        getBuffer(rewriter, getDest(), options, state);
     if (failed(maybeBuffer))
       return failure();
     buffer = *maybeBuffer;
@@ -588,7 +594,7 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
     assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
     buffer = getDest();
   }
-  auto srcBuffer = getBuffer(rewriter, getSource(), options);
+  auto srcBuffer = getBuffer(rewriter, getSource(), options, state);
   if (failed(srcBuffer))
     return failure();
   if (failed(options.createMemCpy(rewriter, getLoc(), *srcBuffer, buffer)))
@@ -861,7 +867,8 @@ void ToBufferOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 LogicalResult ToBufferOp::bufferize(RewriterBase &rewriter,
-                                    const BufferizationOptions &options) {
+                                    const BufferizationOptions &options,
+                                    BufferizationState &state) {
   // Fold to_buffer(to_tensor(x)) to x. Insert a cast if necessary.
   (void)foldToBufferToTensorPair(rewriter, *this, options);
   // Note: The return value of `bufferize` indicates whether there was an error

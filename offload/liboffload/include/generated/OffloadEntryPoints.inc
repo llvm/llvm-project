@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olInit_val() {
+llvm::Error olInit_val() {
   if (offloadConfig().ValidationEnabled) {
   }
 
@@ -18,7 +18,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olInit() {
     llvm::errs() << "---> olInit";
   }
 
-  ol_result_t Result = olInit_val();
+  ol_result_t Result = llvmErrorToOffloadError(olInit_val());
 
   if (offloadConfig().TracingEnabled) {
     llvm::errs() << "()";
@@ -38,7 +38,7 @@ ol_result_t olInitWithCodeLoc(ol_code_location_t *CodeLocation) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olShutDown_val() {
+llvm::Error olShutDown_val() {
   if (offloadConfig().ValidationEnabled) {
   }
 
@@ -49,7 +49,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olShutDown() {
     llvm::errs() << "---> olShutDown";
   }
 
-  ol_result_t Result = olShutDown_val();
+  ol_result_t Result = llvmErrorToOffloadError(olShutDown_val());
 
   if (offloadConfig().TracingEnabled) {
     llvm::errs() << "()";
@@ -69,20 +69,23 @@ ol_result_t olShutDownWithCodeLoc(ol_code_location_t *CodeLocation) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetPlatformInfo_val(ol_platform_handle_t Platform,
-                                       ol_platform_info_t PropName,
-                                       size_t PropSize, void *PropValue) {
+llvm::Error olGetPlatformInfo_val(ol_platform_handle_t Platform,
+                                  ol_platform_info_t PropName, size_t PropSize,
+                                  void *PropValue) {
   if (offloadConfig().ValidationEnabled) {
     if (PropSize == 0) {
-      return OL_ERRC_INVALID_SIZE;
+      return createOffloadError(error::ErrorCode::INVALID_SIZE,
+                                "validation failure: PropSize == 0");
     }
 
     if (NULL == Platform) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Platform");
     }
 
     if (NULL == PropValue) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == PropValue");
     }
   }
 
@@ -96,8 +99,8 @@ olGetPlatformInfo(ol_platform_handle_t Platform, ol_platform_info_t PropName,
     llvm::errs() << "---> olGetPlatformInfo";
   }
 
-  ol_result_t Result =
-      olGetPlatformInfo_val(Platform, PropName, PropSize, PropValue);
+  ol_result_t Result = llvmErrorToOffloadError(
+      olGetPlatformInfo_val(Platform, PropName, PropSize, PropValue));
 
   if (offloadConfig().TracingEnabled) {
     ol_get_platform_info_params_t Params = {&Platform, &PropName, &PropSize,
@@ -123,16 +126,18 @@ ol_result_t olGetPlatformInfoWithCodeLoc(ol_platform_handle_t Platform,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetPlatformInfoSize_val(ol_platform_handle_t Platform,
-                                           ol_platform_info_t PropName,
-                                           size_t *PropSizeRet) {
+llvm::Error olGetPlatformInfoSize_val(ol_platform_handle_t Platform,
+                                      ol_platform_info_t PropName,
+                                      size_t *PropSizeRet) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Platform) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Platform");
     }
 
     if (NULL == PropSizeRet) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == PropSizeRet");
     }
   }
 
@@ -146,8 +151,8 @@ olGetPlatformInfoSize(ol_platform_handle_t Platform,
     llvm::errs() << "---> olGetPlatformInfoSize";
   }
 
-  ol_result_t Result =
-      olGetPlatformInfoSize_val(Platform, PropName, PropSizeRet);
+  ol_result_t Result = llvmErrorToOffloadError(
+      olGetPlatformInfoSize_val(Platform, PropName, PropSizeRet));
 
   if (offloadConfig().TracingEnabled) {
     ol_get_platform_info_size_params_t Params = {&Platform, &PropName,
@@ -172,8 +177,8 @@ ol_result_t olGetPlatformInfoSizeWithCodeLoc(ol_platform_handle_t Platform,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olIterateDevices_val(ol_device_iterate_cb_t Callback,
-                                      void *UserData) {
+llvm::Error olIterateDevices_val(ol_device_iterate_cb_t Callback,
+                                 void *UserData) {
   if (offloadConfig().ValidationEnabled) {
   }
 
@@ -185,7 +190,8 @@ olIterateDevices(ol_device_iterate_cb_t Callback, void *UserData) {
     llvm::errs() << "---> olIterateDevices";
   }
 
-  ol_result_t Result = olIterateDevices_val(Callback, UserData);
+  ol_result_t Result =
+      llvmErrorToOffloadError(olIterateDevices_val(Callback, UserData));
 
   if (offloadConfig().TracingEnabled) {
     ol_iterate_devices_params_t Params = {&Callback, &UserData};
@@ -208,20 +214,23 @@ ol_result_t olIterateDevicesWithCodeLoc(ol_device_iterate_cb_t Callback,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetDeviceInfo_val(ol_device_handle_t Device,
-                                     ol_device_info_t PropName, size_t PropSize,
-                                     void *PropValue) {
+llvm::Error olGetDeviceInfo_val(ol_device_handle_t Device,
+                                ol_device_info_t PropName, size_t PropSize,
+                                void *PropValue) {
   if (offloadConfig().ValidationEnabled) {
     if (PropSize == 0) {
-      return OL_ERRC_INVALID_SIZE;
+      return createOffloadError(error::ErrorCode::INVALID_SIZE,
+                                "validation failure: PropSize == 0");
     }
 
     if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Device");
     }
 
     if (NULL == PropValue) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == PropValue");
     }
   }
 
@@ -236,8 +245,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfo(ol_device_handle_t Device,
     llvm::errs() << "---> olGetDeviceInfo";
   }
 
-  ol_result_t Result =
-      olGetDeviceInfo_val(Device, PropName, PropSize, PropValue);
+  ol_result_t Result = llvmErrorToOffloadError(
+      olGetDeviceInfo_val(Device, PropName, PropSize, PropValue));
 
   if (offloadConfig().TracingEnabled) {
     ol_get_device_info_params_t Params = {&Device, &PropName, &PropSize,
@@ -262,16 +271,18 @@ ol_result_t olGetDeviceInfoWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetDeviceInfoSize_val(ol_device_handle_t Device,
-                                         ol_device_info_t PropName,
-                                         size_t *PropSizeRet) {
+llvm::Error olGetDeviceInfoSize_val(ol_device_handle_t Device,
+                                    ol_device_info_t PropName,
+                                    size_t *PropSizeRet) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Device");
     }
 
     if (NULL == PropSizeRet) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == PropSizeRet");
     }
   }
 
@@ -283,7 +294,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSize(
     llvm::errs() << "---> olGetDeviceInfoSize";
   }
 
-  ol_result_t Result = olGetDeviceInfoSize_val(Device, PropName, PropSizeRet);
+  ol_result_t Result = llvmErrorToOffloadError(
+      olGetDeviceInfoSize_val(Device, PropName, PropSizeRet));
 
   if (offloadConfig().TracingEnabled) {
     ol_get_device_info_size_params_t Params = {&Device, &PropName,
@@ -308,19 +320,22 @@ ol_result_t olGetDeviceInfoSizeWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olMemAlloc_val(ol_device_handle_t Device, ol_alloc_type_t Type,
-                                size_t Size, void **AllocationOut) {
+llvm::Error olMemAlloc_val(ol_device_handle_t Device, ol_alloc_type_t Type,
+                           size_t Size, void **AllocationOut) {
   if (offloadConfig().ValidationEnabled) {
     if (Size == 0) {
-      return OL_ERRC_INVALID_SIZE;
+      return createOffloadError(error::ErrorCode::INVALID_SIZE,
+                                "validation failure: Size == 0");
     }
 
     if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Device");
     }
 
     if (NULL == AllocationOut) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == AllocationOut");
     }
   }
 
@@ -334,7 +349,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(ol_device_handle_t Device,
     llvm::errs() << "---> olMemAlloc";
   }
 
-  ol_result_t Result = olMemAlloc_val(Device, Type, Size, AllocationOut);
+  ol_result_t Result = llvmErrorToOffloadError(
+      olMemAlloc_val(Device, Type, Size, AllocationOut));
 
   if (offloadConfig().TracingEnabled) {
     ol_mem_alloc_params_t Params = {&Device, &Type, &Size, &AllocationOut};
@@ -358,10 +374,11 @@ ol_result_t olMemAllocWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olMemFree_val(void *Address) {
+llvm::Error olMemFree_val(void *Address) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Address) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == Address");
     }
   }
 
@@ -372,7 +389,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemFree(void *Address) {
     llvm::errs() << "---> olMemFree";
   }
 
-  ol_result_t Result = olMemFree_val(Address);
+  ol_result_t Result = llvmErrorToOffloadError(olMemFree_val(Address));
 
   if (offloadConfig().TracingEnabled) {
     ol_mem_free_params_t Params = {&Address};
@@ -394,29 +411,35 @@ ol_result_t olMemFreeWithCodeLoc(void *Address,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olMemcpy_val(ol_queue_handle_t Queue, void *DstPtr,
-                              ol_device_handle_t DstDevice, void *SrcPtr,
-                              ol_device_handle_t SrcDevice, size_t Size,
-                              ol_event_handle_t *EventOut) {
+llvm::Error olMemcpy_val(ol_queue_handle_t Queue, void *DstPtr,
+                         ol_device_handle_t DstDevice, void *SrcPtr,
+                         ol_device_handle_t SrcDevice, size_t Size,
+                         ol_event_handle_t *EventOut) {
   if (offloadConfig().ValidationEnabled) {
     if (Queue == NULL && EventOut != NULL) {
-      return OL_ERRC_INVALID_ARGUMENT;
+      return createOffloadError(
+          error::ErrorCode::INVALID_ARGUMENT,
+          "validation failure: Queue == NULL && EventOut != NULL");
     }
 
     if (NULL == DstDevice) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == DstDevice");
     }
 
     if (NULL == SrcDevice) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == SrcDevice");
     }
 
     if (NULL == DstPtr) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == DstPtr");
     }
 
     if (NULL == SrcPtr) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == SrcPtr");
     }
   }
 
@@ -431,8 +454,8 @@ olMemcpy(ol_queue_handle_t Queue, void *DstPtr, ol_device_handle_t DstDevice,
     llvm::errs() << "---> olMemcpy";
   }
 
-  ol_result_t Result =
-      olMemcpy_val(Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size, EventOut);
+  ol_result_t Result = llvmErrorToOffloadError(olMemcpy_val(
+      Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size, EventOut));
 
   if (offloadConfig().TracingEnabled) {
     ol_memcpy_params_t Params = {&Queue,     &DstPtr, &DstDevice, &SrcPtr,
@@ -459,15 +482,17 @@ ol_result_t olMemcpyWithCodeLoc(ol_queue_handle_t Queue, void *DstPtr,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olCreateQueue_val(ol_device_handle_t Device,
-                                   ol_queue_handle_t *Queue) {
+llvm::Error olCreateQueue_val(ol_device_handle_t Device,
+                              ol_queue_handle_t *Queue) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Device");
     }
 
     if (NULL == Queue) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == Queue");
     }
   }
 
@@ -479,7 +504,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateQueue(ol_device_handle_t Device,
     llvm::errs() << "---> olCreateQueue";
   }
 
-  ol_result_t Result = olCreateQueue_val(Device, Queue);
+  ol_result_t Result =
+      llvmErrorToOffloadError(olCreateQueue_val(Device, Queue));
 
   if (offloadConfig().TracingEnabled) {
     ol_create_queue_params_t Params = {&Device, &Queue};
@@ -502,10 +528,11 @@ ol_result_t olCreateQueueWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olDestroyQueue_val(ol_queue_handle_t Queue) {
+llvm::Error olDestroyQueue_val(ol_queue_handle_t Queue) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Queue) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Queue");
     }
   }
 
@@ -516,7 +543,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olDestroyQueue(ol_queue_handle_t Queue) {
     llvm::errs() << "---> olDestroyQueue";
   }
 
-  ol_result_t Result = olDestroyQueue_val(Queue);
+  ol_result_t Result = llvmErrorToOffloadError(olDestroyQueue_val(Queue));
 
   if (offloadConfig().TracingEnabled) {
     ol_destroy_queue_params_t Params = {&Queue};
@@ -538,10 +565,11 @@ ol_result_t olDestroyQueueWithCodeLoc(ol_queue_handle_t Queue,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olWaitQueue_val(ol_queue_handle_t Queue) {
+llvm::Error olWaitQueue_val(ol_queue_handle_t Queue) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Queue) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Queue");
     }
   }
 
@@ -552,7 +580,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitQueue(ol_queue_handle_t Queue) {
     llvm::errs() << "---> olWaitQueue";
   }
 
-  ol_result_t Result = olWaitQueue_val(Queue);
+  ol_result_t Result = llvmErrorToOffloadError(olWaitQueue_val(Queue));
 
   if (offloadConfig().TracingEnabled) {
     ol_wait_queue_params_t Params = {&Queue};
@@ -574,10 +602,11 @@ ol_result_t olWaitQueueWithCodeLoc(ol_queue_handle_t Queue,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olDestroyEvent_val(ol_event_handle_t Event) {
+llvm::Error olDestroyEvent_val(ol_event_handle_t Event) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Event) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Event");
     }
   }
 
@@ -588,7 +617,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olDestroyEvent(ol_event_handle_t Event) {
     llvm::errs() << "---> olDestroyEvent";
   }
 
-  ol_result_t Result = olDestroyEvent_val(Event);
+  ol_result_t Result = llvmErrorToOffloadError(olDestroyEvent_val(Event));
 
   if (offloadConfig().TracingEnabled) {
     ol_destroy_event_params_t Params = {&Event};
@@ -610,10 +639,11 @@ ol_result_t olDestroyEventWithCodeLoc(ol_event_handle_t Event,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olWaitEvent_val(ol_event_handle_t Event) {
+llvm::Error olWaitEvent_val(ol_event_handle_t Event) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Event) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Event");
     }
   }
 
@@ -624,7 +654,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(ol_event_handle_t Event) {
     llvm::errs() << "---> olWaitEvent";
   }
 
-  ol_result_t Result = olWaitEvent_val(Event);
+  ol_result_t Result = llvmErrorToOffloadError(olWaitEvent_val(Event));
 
   if (offloadConfig().TracingEnabled) {
     ol_wait_event_params_t Params = {&Event};
@@ -646,20 +676,23 @@ ol_result_t olWaitEventWithCodeLoc(ol_event_handle_t Event,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olCreateProgram_val(ol_device_handle_t Device,
-                                     const void *ProgData, size_t ProgDataSize,
-                                     ol_program_handle_t *Program) {
+llvm::Error olCreateProgram_val(ol_device_handle_t Device, const void *ProgData,
+                                size_t ProgDataSize,
+                                ol_program_handle_t *Program) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Device");
     }
 
     if (NULL == ProgData) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == ProgData");
     }
 
     if (NULL == Program) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == Program");
     }
   }
 
@@ -673,8 +706,8 @@ olCreateProgram(ol_device_handle_t Device, const void *ProgData,
     llvm::errs() << "---> olCreateProgram";
   }
 
-  ol_result_t Result =
-      olCreateProgram_val(Device, ProgData, ProgDataSize, Program);
+  ol_result_t Result = llvmErrorToOffloadError(
+      olCreateProgram_val(Device, ProgData, ProgDataSize, Program));
 
   if (offloadConfig().TracingEnabled) {
     ol_create_program_params_t Params = {&Device, &ProgData, &ProgDataSize,
@@ -701,10 +734,11 @@ ol_result_t olCreateProgramWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olDestroyProgram_val(ol_program_handle_t Program) {
+llvm::Error olDestroyProgram_val(ol_program_handle_t Program) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Program) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Program");
     }
   }
 
@@ -716,7 +750,7 @@ olDestroyProgram(ol_program_handle_t Program) {
     llvm::errs() << "---> olDestroyProgram";
   }
 
-  ol_result_t Result = olDestroyProgram_val(Program);
+  ol_result_t Result = llvmErrorToOffloadError(olDestroyProgram_val(Program));
 
   if (offloadConfig().TracingEnabled) {
     ol_destroy_program_params_t Params = {&Program};
@@ -738,20 +772,22 @@ ol_result_t olDestroyProgramWithCodeLoc(ol_program_handle_t Program,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetKernel_val(ol_program_handle_t Program,
-                                 const char *KernelName,
-                                 ol_kernel_handle_t *Kernel) {
+llvm::Error olGetKernel_val(ol_program_handle_t Program, const char *KernelName,
+                            ol_kernel_handle_t *Kernel) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Program) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Program");
     }
 
     if (NULL == KernelName) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == KernelName");
     }
 
     if (NULL == Kernel) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == Kernel");
     }
   }
 
@@ -764,7 +800,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetKernel(ol_program_handle_t Program,
     llvm::errs() << "---> olGetKernel";
   }
 
-  ol_result_t Result = olGetKernel_val(Program, KernelName, Kernel);
+  ol_result_t Result =
+      llvmErrorToOffloadError(olGetKernel_val(Program, KernelName, Kernel));
 
   if (offloadConfig().TracingEnabled) {
     ol_get_kernel_params_t Params = {&Program, &KernelName, &Kernel};
@@ -788,7 +825,7 @@ ol_result_t olGetKernelWithCodeLoc(ol_program_handle_t Program,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t
+llvm::Error
 olLaunchKernel_val(ol_queue_handle_t Queue, ol_device_handle_t Device,
                    ol_kernel_handle_t Kernel, const void *ArgumentsData,
                    size_t ArgumentsSize,
@@ -796,23 +833,29 @@ olLaunchKernel_val(ol_queue_handle_t Queue, ol_device_handle_t Device,
                    ol_event_handle_t *EventOut) {
   if (offloadConfig().ValidationEnabled) {
     if (Queue == NULL && EventOut != NULL) {
-      return OL_ERRC_INVALID_ARGUMENT;
+      return createOffloadError(
+          error::ErrorCode::INVALID_ARGUMENT,
+          "validation failure: Queue == NULL && EventOut != NULL");
     }
 
     if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Device");
     }
 
     if (NULL == Kernel) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Kernel");
     }
 
     if (NULL == ArgumentsData) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == ArgumentsData");
     }
 
     if (NULL == LaunchSizeArgs) {
-      return OL_ERRC_INVALID_NULL_POINTER;
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == LaunchSizeArgs");
     }
   }
 
@@ -829,9 +872,9 @@ OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
     llvm::errs() << "---> olLaunchKernel";
   }
 
-  ol_result_t Result =
+  ol_result_t Result = llvmErrorToOffloadError(
       olLaunchKernel_val(Queue, Device, Kernel, ArgumentsData, ArgumentsSize,
-                         LaunchSizeArgs, EventOut);
+                         LaunchSizeArgs, EventOut));
 
   if (offloadConfig().TracingEnabled) {
     ol_launch_kernel_params_t Params = {

@@ -101,7 +101,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return inferScalarType(R->getOperand(0));
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
-  case VPInstruction::ResumePhi:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::AnyOf:

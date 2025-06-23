@@ -21,7 +21,7 @@ TEST(HLSLRootSignatureTest, DescriptorCBVClauseDump) {
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
-  Clause.dump(OS);
+  OS << Clause;
   OS.flush();
 
   std::string Expected = "CBV(b0, numDescriptors = 1, space = 0, "
@@ -41,7 +41,7 @@ TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
-  Clause.dump(OS);
+  OS << Clause;
   OS.flush();
 
   std::string Expected =
@@ -60,7 +60,7 @@ TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
-  Clause.dump(OS);
+  OS << Clause;
   OS.flush();
 
   std::string Expected =
@@ -84,7 +84,7 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
-  Clause.dump(OS);
+  OS << Clause;
   OS.flush();
 
   std::string Expected = "Sampler(s0, numDescriptors = 2, space = 42, offset = "
@@ -100,7 +100,7 @@ TEST(HLSLRootSignatureTest, DescriptorTableDump) {
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
-  Table.dump(OS);
+  OS << Table;
   OS.flush();
 
   std::string Expected =

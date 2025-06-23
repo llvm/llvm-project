@@ -965,7 +965,8 @@ def MakeDouble : DXILOp<101, makeDouble> {
   let Doc = "creates a double value";
   let intrinsics = [IntrinSelect<int_dx_asdouble>];
   let arguments = [Int32Ty, Int32Ty];
-  let result = DoubleTy;
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }

@@ -179,8 +179,8 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; SSSE3-SLOW-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSSE3-SLOW-NEXT:    haddps %xmm7, %xmm6
 ; SSSE3-SLOW-NEXT:    haddps %xmm6, %xmm6
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,3],xmm6[0,1]
-; SSSE3-SLOW-NEXT:    movaps %xmm2, %xmm1
+; SSSE3-SLOW-NEXT:    movhlps {{.*#+}} xmm6 = xmm2[1],xmm6[1]
+; SSSE3-SLOW-NEXT:    movaps %xmm6, %xmm1
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: pair_sum_v8f32_v4f32:
@@ -345,8 +345,7 @@ define <8 x i32> @pair_sum_v8i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2,
 ; SSSE3-SLOW-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSSE3-SLOW-NEXT:    phaddd %xmm7, %xmm6
 ; SSSE3-SLOW-NEXT:    phaddd %xmm6, %xmm6
-; SSSE3-SLOW-NEXT:    palignr {{.*#+}} xmm6 = xmm1[8,9,10,11,12,13,14,15],xmm6[0,1,2,3,4,5,6,7]
-; SSSE3-SLOW-NEXT:    movdqa %xmm6, %xmm1
+; SSSE3-SLOW-NEXT:    punpckhqdq {{.*#+}} xmm1 = xmm1[1],xmm6[1]
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: pair_sum_v8i32_v4i32:
@@ -374,7 +373,7 @@ define <8 x i32> @pair_sum_v8i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2,
 ; AVX1-SLOW-NEXT:    vphaddd %xmm5, %xmm5, %xmm4
 ; AVX1-SLOW-NEXT:    vphaddd %xmm3, %xmm2, %xmm2
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[0,2,2,3]
-; AVX1-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm1[0]
+; AVX1-SLOW-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm4[0,0,0,0]
 ; AVX1-SLOW-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5],xmm5[6,7]
 ; AVX1-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,3]
@@ -397,7 +396,7 @@ define <8 x i32> @pair_sum_v8i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2,
 ; AVX1-FAST-NEXT:    vphaddd %xmm5, %xmm5, %xmm4
 ; AVX1-FAST-NEXT:    vphaddd %xmm3, %xmm2, %xmm2
 ; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[0,2,2,3]
-; AVX1-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm1[0]
+; AVX1-FAST-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm5 = xmm4[0,0,0,0]
 ; AVX1-FAST-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5],xmm5[6,7]
 ; AVX1-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,3]
@@ -422,7 +421,7 @@ define <8 x i32> @pair_sum_v8i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2,
 ; AVX2-SLOW-NEXT:    vphaddd %xmm5, %xmm5, %xmm4
 ; AVX2-SLOW-NEXT:    vphaddd %xmm3, %xmm2, %xmm2
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[0,2,2,3]
-; AVX2-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm1[0]
+; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1],xmm1[2,3]
 ; AVX2-SLOW-NEXT:    vpbroadcastd %xmm4, %xmm5
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1,2],xmm5[3]
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,1]
@@ -445,7 +444,7 @@ define <8 x i32> @pair_sum_v8i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2,
 ; AVX2-FAST-NEXT:    vphaddd %xmm5, %xmm5, %xmm4
 ; AVX2-FAST-NEXT:    vphaddd %xmm3, %xmm2, %xmm2
 ; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[0,2,2,3]
-; AVX2-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm1[0]
+; AVX2-FAST-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1],xmm1[2,3]
 ; AVX2-FAST-NEXT:    vpbroadcastd %xmm4, %xmm5
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1,2],xmm5[3]
 ; AVX2-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,1]

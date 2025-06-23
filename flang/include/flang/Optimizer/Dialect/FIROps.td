@@ -2129,6 +2129,11 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoMemoryEffect]> {
     $seq `,` $val custom<CustomRangeSubscript>($coor) attr-dict `:` functional-type(operands, results)
   }];
 
+  let extraClassDeclaration = [{
+    /// Is this insert_on_range inserting on all the values of the result type?
+    bool isFullRange();
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -3600,6 +3605,21 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
   ];
 
   let extraClassDeclaration = [{
+    mlir::BlockArgument getInitMoldArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+    mlir::BlockArgument getInitPrivateArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(1);
+    }
+
+    /// Returns true if the init region might read from the mold argument
+    bool initReadsFromMold() {
+      mlir::BlockArgument moldArg = getInitMoldArg();
+      return moldArg && !moldArg.use_empty();
+    }
+
     /// Get the type for arguments to nested regions. This should
     /// generally be either the same as getType() or some pointer
     /// type (pointing to the type allocated by this op).

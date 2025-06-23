@@ -8,15 +8,15 @@ define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_kno
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: (2000 + %B)<nuw>)
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (2000 + %A)<nuw>)
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
@@ -66,15 +66,15 @@ define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_not
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: (2000 + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (2000 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
@@ -124,15 +124,15 @@ define i32 @all_exits_dominate_latch_countable_exits_at_most_1000_iterations_kno
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: (4004 + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (4004 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
@@ -182,15 +182,15 @@ define i32 @all_exits_dominate_latch_countable_exits_at_most_1000_iterations_not
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: (4004 + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (4004 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
@@ -284,15 +284,15 @@ define i32 @b3_does_not_dominate_latch_known_deref(ptr dereferenceable(4000) %A,
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: (4004 + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (4004 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
@@ -339,15 +339,15 @@ define i32 @b3_does_not_dominate_latch_not_known_deref(ptr %A, ptr %B) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP11:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: (4004 + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
-; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (4004 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:

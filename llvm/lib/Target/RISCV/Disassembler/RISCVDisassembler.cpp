@@ -344,6 +344,39 @@ static DecodeStatus DecodeVMV0RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeTRRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder) {
+  if (RegNo > 15)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTRM2RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo > 15 || RegNo % 2)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo > 15 || RegNo % 4)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
@@ -722,9 +755,9 @@ static constexpr FeatureBitset XqciFeatureGroup = {
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
-    RISCV::FeatureVendorXSfvcp, RISCV::FeatureVendorXSfvqmaccdod,
-    RISCV::FeatureVendorXSfvqmaccqoq, RISCV::FeatureVendorXSfvfwmaccqqq,
-    RISCV::FeatureVendorXSfvfnrclipxfqf};
+    RISCV::FeatureVendorXSfvcp,          RISCV::FeatureVendorXSfvqmaccdod,
+    RISCV::FeatureVendorXSfvqmaccqoq,    RISCV::FeatureVendorXSfvfwmaccqqq,
+    RISCV::FeatureVendorXSfvfnrclipxfqf, RISCV::FeatureVendorXSfmmbase};
 static constexpr FeatureBitset XSfSystemGroup = {
     RISCV::FeatureVendorXSiFivecdiscarddlone,
     RISCV::FeatureVendorXSiFivecflushdlone,

@@ -1531,8 +1531,7 @@ void DWARFASTParserClang::ParseInheritance(
     const lldb::ModuleSP &module_sp,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     ClangASTImporter::LayoutInfo &layout_info) {
-  auto ast =
-      class_clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ast = class_clang_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
     return;
 
@@ -2823,7 +2822,7 @@ llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(
     const CompilerType &int_type, const DWARFFormValue &form_value) const {
   clang::QualType qt = ClangUtil::GetQualType(int_type);
   assert(qt->isIntegralOrEnumerationType());
-  auto ts_ptr = int_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ts_ptr = int_type.GetTypeSystem<TypeSystemClang>();
   if (!ts_ptr)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "TypeSystem not clang");
@@ -3131,8 +3130,7 @@ bool DWARFASTParserClang::ParseChildMembers(
   FieldInfo last_field_info;
 
   ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
-  auto ts = class_clang_type.GetTypeSystem();
-  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast = class_clang_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
     return false;
 

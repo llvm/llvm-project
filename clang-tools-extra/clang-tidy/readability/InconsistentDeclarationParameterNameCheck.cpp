@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InconsistentDeclarationParameterNameCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
-
-#include <functional>
 
 using namespace clang::ast_matchers;
 

@@ -97,6 +97,26 @@ static cl::opt<bool>
                                 "specified with -thinlto-emit-indexes or "
                                 "-thinlto-distributed-indexes"));
 
+static cl::opt<std::string> DTLTODistributor(
+    "dtlto-distributor",
+    cl::desc("Distributor to use for ThinLTO backend compilations. Specifying "
+             "this enables DTLTO."));
+
+static cl::list<std::string> DTLTODistributorArgs(
+    "dtlto-distributor-arg", cl::CommaSeparated,
+    cl::desc("Arguments to pass to the DTLTO distributor process."),
+    cl::value_desc("arg"));
+
+static cl::opt<std::string> DTLTOCompiler(
+    "dtlto-compiler",
+    cl::desc("Compiler to use for DTLTO ThinLTO backend compilations."));
+
+static cl::list<std::string> DTLTOCompilerArgs(
+    "dtlto-compiler-arg", cl::CommaSeparated,
+    cl::desc("Arguments to pass to the remote compiler for backend "
+             "compilations."),
+    cl::value_desc("arg"));
+
 // Default to using all available threads in the system, but using only one
 // thread per core (no SMT).
 // Use -thinlto-threads=all to use hardware_concurrency() instead, which means
@@ -339,6 +359,14 @@ static int run(int argc, char **argv) {
   if (AllVtablesHaveTypeInfos.getNumOccurrences() > 0)
     Conf.AllVtablesHaveTypeInfos = AllVtablesHaveTypeInfos;
 
+  if (ThinLTODistributedIndexes && !DTLTODistributor.empty())
+    llvm::errs() << "-thinlto-distributed-indexes cannot be specfied together "
+                    "with -dtlto-distributor\n";
+  auto DTLTODistributorArgsSV = llvm::to_vector<0>(llvm::map_range(
+      DTLTODistributorArgs, [](const std::string &S) { return StringRef(S); }));
+  auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
+      DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -348,7 +376,13 @@ static int run(int argc, char **argv) {
                                             ThinLTOEmitImports,
                                             /*LinkedObjectsFile=*/nullptr,
                                             /*OnWrite=*/{});
-  else
+  else if (!DTLTODistributor.empty()) {
+    Backend = createOutOfProcessThinBackend(
+        llvm::heavyweight_hardware_concurrency(Threads),
+        /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
+        DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
+        DTLTOCompilerArgsSV, SaveTemps);
+  } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
         /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);

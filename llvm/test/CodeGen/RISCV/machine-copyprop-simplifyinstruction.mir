@@ -742,3 +742,75 @@ body: |
     renamable $x10 = MAXU renamable $x11, renamable $x11
     PseudoRET implicit $x10
 ...
+---
+name: beq
+body: |
+  ; CHECK-LABEL: name: beq
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $x11 = COPY $x12
+  ; CHECK-NEXT:   BEQ $x12, $x0, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    renamable $x11 = COPY $x12
+    BEQ $x0, renamable $x11, %bb.1
+  bb.1:
+    PseudoRET
+...
+---
+name: bne
+body: |
+  ; CHECK-LABEL: name: bne
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $x11 = COPY $x12
+  ; CHECK-NEXT:   BNE $x12, $x0, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    renamable $x11 = COPY $x12
+    BNE $x0, renamable $x11, %bb.1
+  bb.1:
+    PseudoRET
+...
+---
+name: bltu
+body: |
+  ; CHECK-LABEL: name: bltu
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $x11 = COPY $x12
+  ; CHECK-NEXT:   BNE $x12, $x0, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    renamable $x11 = COPY $x12
+    BLTU $x0, renamable $x11, %bb.1
+  bb.1:
+    PseudoRET
+...
+---
+name: bgeu
+body: |
+  ; CHECK-LABEL: name: bgeu
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $x11 = COPY $x12
+  ; CHECK-NEXT:   BEQ $x12, $x0, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    renamable $x11 = COPY $x12
+    BGEU $x0, renamable $x11, %bb.1
+  bb.1:
+    PseudoRET
+...

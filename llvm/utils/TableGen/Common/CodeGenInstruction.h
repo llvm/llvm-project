@@ -77,18 +77,18 @@ public:
 
     /// Name - If this operand was assigned a symbolic name, this is it,
     /// otherwise, it's empty.
-    std::string Name;
+    StringRef Name;
 
     /// The names of sub-operands, if given, otherwise empty.
-    std::vector<std::string> SubOpNames;
+    std::vector<StringRef> SubOpNames;
 
     /// PrinterMethodName - The method used to print operands of this type in
     /// the asmprinter.
-    std::string PrinterMethodName;
+    StringRef PrinterMethodName;
 
     /// The method used to get the machine operand value for binary
     /// encoding, per sub-operand. If empty, uses "getMachineOpValue".
-    std::vector<std::string> EncoderMethodNames;
+    std::vector<StringRef> EncoderMethodNames;
 
     /// OperandType - A value from MCOI::OperandType representing the type of
     /// the operand.
@@ -116,13 +116,13 @@ public:
     /// track constraint info for each.
     std::vector<ConstraintInfo> Constraints;
 
-    OperandInfo(const Record *R, const std::string &N, const std::string &PMN,
+    OperandInfo(const Record *R, StringRef Name, StringRef PrinterMethodName,
                 const std::string &OT, unsigned MION, unsigned MINO,
                 const DagInit *MIOI)
-        : Rec(R), Name(N), SubOpNames(MINO), PrinterMethodName(PMN),
-          EncoderMethodNames(MINO), OperandType(OT), MIOperandNo(MION),
-          MINumOperands(MINO), DoNotEncode(MINO), MIOperandInfo(MIOI),
-          Constraints(MINO) {}
+        : Rec(R), Name(Name), SubOpNames(MINO),
+          PrinterMethodName(PrinterMethodName), EncoderMethodNames(MINO),
+          OperandType(OT), MIOperandNo(MION), MINumOperands(MINO),
+          DoNotEncode(MINO), MIOperandInfo(MIOI), Constraints(MINO) {}
 
     /// getTiedOperand - If this operand is tied to another one, return the
     /// other operand number.  Otherwise, return -1.

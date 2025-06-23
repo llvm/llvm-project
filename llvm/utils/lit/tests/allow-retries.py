@@ -70,3 +70,51 @@
 #     CHECK-TEST7: # executed command: export LLVM_PROFILE_FILE=
 # CHECK-TEST7-NOT: # executed command: export LLVM_PROFILE_FILE=
 #     CHECK-TEST7: Passed With Retry: 1
+
+# This test only passes on the 4th try. Here we check that a test can be re-run when:
+#  * The "--max-retries-per-test" is specified high enough (3).
+#  * No ALLOW_RETRIES keyword is used in the test script.
+#  * No config.test_retry_attempts is adjusted in the test suite config file.
+# RUN: rm -f %t.counter
+# RUN: %{lit} %{inputs}/max-retries-per-test/no-allow-retries-no-test_retry_attempts/test.py \
+# RUN:   --max-retries-per-test=3 \
+# RUN:   -Dcounter=%t.counter \
+# RUN:   -Dpython=%{python} \
+# RUN: | FileCheck --check-prefix=CHECK-TEST8 %s
+# CHECK-TEST8: Passed With Retry: 1
+
+# This test only passes on the 4th try. Here we check that a test can be re-run when:
+#  * The "--max-retries-per-test" is specified too low (2).
+#  * ALLOW_RETRIES is specified high enough (3)
+#  * No config.test_retry_attempts is adjusted in the test suite config file.
+# RUN: rm -f %t.counter
+# RUN: %{lit} %{inputs}/max-retries-per-test/allow-retries-no-test_retry_attempts/test.py \
+# RUN:   --max-retries-per-test=2 \
+# RUN:   -Dcounter=%t.counter \
+# RUN:   -Dpython=%{python} \
+# RUN: | FileCheck --check-prefix=CHECK-TEST9 %s
+# CHECK-TEST9: Passed With Retry: 1
+
+# This test only passes on the 4th try. Here we check that a test can be re-run when:
+#  * The "--max-retries-per-test" is specified too low (2).
+#  * No ALLOW_RETRIES keyword is used in the test script.
+#  * config.test_retry_attempts is set high enough (3).
+# RUN: rm -f %t.counter
+# RUN: %{lit} %{inputs}/max-retries-per-test/no-allow-retries-test_retry_attempts/test.py \
+# RUN:   --max-retries-per-test=2 \
+# RUN:   -Dcounter=%t.counter \
+# RUN:   -Dpython=%{python} \
+# RUN: | FileCheck --check-prefix=CHECK-TEST10 %s
+# CHECK-TEST10: Passed With Retry: 1
+
+# This test only passes on the 4th try. Here we check that a test can be re-run when:
+#  * The "--max-retries-per-test" is specified too low (1).
+#  * ALLOW_RETRIES keyword set high enough (3).
+#  * config.test_retry_attempts is set too low enough (2).
+# RUN: rm -f %t.counter
+# RUN: %{lit} %{inputs}/max-retries-per-test/no-allow-retries-test_retry_attempts/test.py \
+# RUN:   --max-retries-per-test=1 \
+# RUN:   -Dcounter=%t.counter \
+# RUN:   -Dpython=%{python} \
+# RUN: | FileCheck --check-prefix=CHECK-TEST11 %s
+# CHECK-TEST11: Passed With Retry: 1

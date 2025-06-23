@@ -209,6 +209,7 @@ protected:
   virtual MapVector<FunctionId, uint32_t> &getNameTable() { return NameTable; }
   virtual std::error_code writeMagicIdent(SampleProfileFormat Format);
   virtual std::error_code writeNameTable();
+
   std::error_code writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code writeSummary();
   virtual std::error_code writeContextIdx(const SampleContext &Context);
@@ -218,10 +219,22 @@ protected:
                                 std::set<FunctionId> &V);
   
   MapVector<FunctionId, uint32_t> NameTable;
-  
+
   void addName(FunctionId FName);
+  /// void addTypeName(FunctionId TypeName);
   virtual void addContext(const SampleContext &Context);
   void addNames(const FunctionSamples &S);
+
+  /// Add the type names to NameTable.
+  void addTypeNames(const TypeCountMap &M);
+
+  /// Write \p CallsiteTypeMap to the output stream \p OS.
+  std::error_code
+  writeCallsiteVTableProf(const CallsiteTypeMap &CallsiteTypeMap,
+                          raw_ostream &OS);
+
+  // TODO:This should be configurable by flag.
+  bool WriteVTableProf = false;
 
 private:
   friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
@@ -409,8 +422,7 @@ private:
 
 class SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
 public:
-  SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS)
-      : SampleProfileWriterExtBinaryBase(OS) {}
+  SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS);
 
 private:
   std::error_code writeDefaultLayout(const SampleProfileMap &ProfileMap);

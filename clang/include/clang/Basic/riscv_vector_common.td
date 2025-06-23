@@ -266,6 +266,11 @@ class RVVOp0Builtin<string suffix, string prototype, string type_range>
   let IntrinsicTypes = [0];
 }
 
+class RVVOutOp0Builtin<string suffix, string prototype, string type_range>
+    : RVVBuiltin<suffix, prototype, type_range> {
+  let IntrinsicTypes = [-1, 0];
+}
+
 class RVVOutOp1Builtin<string suffix, string prototype, string type_range>
     : RVVBuiltin<suffix, prototype, type_range> {
   let IntrinsicTypes = [-1, 1];

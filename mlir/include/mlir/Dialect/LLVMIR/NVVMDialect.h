@@ -15,8 +15,10 @@
 #define MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
@@ -48,6 +50,11 @@ enum NVVMMemorySpace {
   /// Distributed shared memory is available only in sm90+.
   kSharedClusterMemorySpace = 7,
 };
+
+/// A pair type of LLVM's Intrinsic ID and args (which are llvm values).
+/// This type is returned by the getIntrinsicIDAndArgs() methods.
+using IDArgPair =
+    std::pair<llvm::Intrinsic::ID, llvm::SmallVector<llvm::Value *>>;
 
 /// Return the element type and number of elements associated with a wmma matrix
 /// of given chracteristics. This matches the logic in IntrinsicsNVVM.td

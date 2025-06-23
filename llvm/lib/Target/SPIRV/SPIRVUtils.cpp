@@ -262,6 +262,8 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
     return SPIRV::StorageClass::Private;
   case 11:
     return SPIRV::StorageClass::StorageBuffer;
+  case 12:
+    return SPIRV::StorageClass::Uniform;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -662,7 +664,7 @@ PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
   for (auto &[BB, Info] : BlockToOrder)
     Order.emplace_back(BB);
 
-  llvm::sort(Order, [&](const auto &LHS, const auto &RHS) {
+  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
     return compare(LHS, RHS);
   });
 }

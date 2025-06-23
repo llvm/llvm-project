@@ -1139,8 +1139,6 @@ entry:
   br i1 %cmp4, label %for.body.lr.ph, label %for.cond.cleanup
 
 for.body.lr.ph:                                   ; preds = %entry
-  ; TODO: when this GEP is expanded, the resulting `addi` should be folded
-  ; into the load in the loop body.
   %y = getelementptr inbounds %struct.S, ptr %a, i64 %k, i32 1
   br label %for.body
 

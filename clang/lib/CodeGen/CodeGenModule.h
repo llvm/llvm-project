@@ -1810,6 +1810,15 @@ public:
     return !getLangOpts().CPlusPlus;
   }
 
+  // Helper to get the alignment for a variable.
+  unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
+    LangAS AS = GetGlobalVarAddressSpace(D);
+    unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
+                          ? 32
+                          : getTarget().getPointerAlign(AS);
+    return PAlign;
+  }
+
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 

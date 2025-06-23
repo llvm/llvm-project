@@ -23,7 +23,6 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"

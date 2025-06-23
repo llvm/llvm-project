@@ -141,8 +141,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   if (frame_ptr_addr == 0 || frame_ptr_addr == LLDB_INVALID_ADDRESS)
     return lldb::ChildCacheState::eRefetch;
 
-  auto ts = valobj_sp->GetCompilerType().GetTypeSystem();
-  auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast_ctx = valobj_sp->GetCompilerType().GetTypeSystem<TypeSystemClang>();
   if (!ast_ctx)
     return lldb::ChildCacheState::eRefetch;
 

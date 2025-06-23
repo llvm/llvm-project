@@ -359,13 +359,12 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
                                      unsigned Col,
                                      const CompilerInstance *ParentCI,
                                      std::vector<std::string> &CCResults) {
-  auto DiagOpts = DiagnosticOptions();
   auto consumer = ReplCompletionConsumer(CCResults, *this);
 
   auto diag = InterpCI->getDiagnosticsPtr();
   std::unique_ptr<ASTUnit> AU(ASTUnit::LoadFromCompilerInvocationAction(
       InterpCI->getInvocationPtr(), std::make_shared<PCHContainerOperations>(),
-      diag));
+      nullptr, diag));
   llvm::SmallVector<clang::StoredDiagnostic, 8> sd = {};
   llvm::SmallVector<const llvm::MemoryBuffer *, 1> tb = {};
   InterpCI->getFrontendOpts().Inputs[0] = FrontendInputFile(

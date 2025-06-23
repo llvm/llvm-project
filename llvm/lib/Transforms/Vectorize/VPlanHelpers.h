@@ -364,6 +364,11 @@ struct VPCostContext {
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
+
+  /// Return true if \p I is considered uniform-after-vectorization in the
+  /// legacy cost model for \p VF. Only used to check for additional VPlan
+  /// simplifications.
+  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

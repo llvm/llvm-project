@@ -13,7 +13,6 @@
 
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
-#include "GCNSubtarget.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
