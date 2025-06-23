@@ -213,10 +213,12 @@ static char previousChar(const char *First, const char *&Current) {
   while (Current > First && isVerticalWhitespace(*Current)) {
     // Check if the previous character is a backslash
     if (Current > First && *(Current - 1) == '\\') {
-      // Use Lexer's getEscapedNewLineSize to get the size of the escaped newline
+      // Use Lexer's getEscapedNewLineSize to get the size of the escaped
+      // newline
       unsigned EscapeSize = Lexer::getEscapedNewLineSize(Current);
       if (EscapeSize > 0) {
-        // Skip back over the entire escaped newline sequence (backslash + newline)
+        // Skip back over the entire escaped newline sequence (backslash +
+        // newline)
         Current -= (1 + EscapeSize);
       } else {
         break;
