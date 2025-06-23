@@ -623,9 +623,9 @@ struct LinearizeVectorCreateMask final
   }
 };
 
-/// This pattern linearizes vector.load from vector<1xN> to vector<N>.
-/// It currently supports only lineariztion of <1XN> to <N>
-/// Following,
+/// This pattern linearizes vector.load from vector<1x1x...xN> to vector<N>
+/// It currently supports linearization where all but the last dimension are 1
+/// The following,
 ///   vector.load %arg0[%c0, %c0] : memref<1x4xf32>, vector<1x4xf32>
 /// is converted to:
 ///   vector.load %arg0[%c0, %c0] : memref<1x4xf32>, vector<4xf32>
@@ -640,27 +640,27 @@ struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
   matchAndRewrite(vector::LoadOp loadOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     VectorType vecTy = loadOp.getType();
-    if (!vecTy || vecTy.getRank() != 2 || vecTy.getShape()[0] != 1)
-      return rewriter.notifyMatchFailure(loadOp, "only vector<1xN> supported");
-    auto linearTy = VectorType::get(vecTy.getShape()[1], vecTy.getElementType(),
-                                    vecTy.isScalable());
+    if (!vecTy || !llvm::all_of(vecTy.getShape().drop_back(1),
+                                [](auto d) { return d == 1; }))
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "only vector<1x1x...xN> supported");
+    auto linearTy = VectorType::get(vecTy.getShape().back(),
+                                    vecTy.getElementType(), vecTy.isScalable());
     auto newLoad = rewriter.create<vector::LoadOp>(
         loadOp.getLoc(), linearTy, adaptor.getBase(), adaptor.getIndices());
-    auto shapeCast = rewriter.create<vector::ShapeCastOp>(
-        loadOp.getLoc(), vecTy, newLoad.getResult());
-    rewriter.replaceOp(loadOp, shapeCast.getResult());
+    rewriter.replaceOp(loadOp, newLoad.getResult());
     return success();
   }
 };
 
-/// This pattern linearizes vector.store from vector<1xN> to vector<N>.
-/// It currently supports only lineariztion of <1XN> to <N>
-/// Following,
-///   vector.store %arg0, %arg1[%c0, %c0]
+/// This pattern linearizes vector.store from vector<1x1x...xN> to vector<N>
+/// It currently supports linearization where all but the last dimension are 1
+/// The following,
+///   vector.store %arg0, %arg1[%c0, %c0]s
 ///     : vector<1x4xf32>, memref<1x4xf32>
 /// is converted to:
 ///   vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
-///   vector.store %arg0, %arg1[%c0, %%c0]
+///   vector.store %arg0, %arg1[%c0, %c0]
 ///     : vector<4xf32>, memref<1x4xf32>
 struct LinearizeVectorStore final
     : public OpConversionPattern<vector::StoreOp> {
@@ -673,19 +673,13 @@ struct LinearizeVectorStore final
   matchAndRewrite(vector::StoreOp storeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     VectorType vecTy = storeOp.getValueToStore().getType();
-    if (!vecTy || vecTy.getRank() != 2 || vecTy.getShape()[0] != 1)
-      return rewriter.notifyMatchFailure(storeOp, "only vector<1xN> supported");
-    auto linearTy = VectorType::get(vecTy.getShape()[1], vecTy.getElementType(),
-                                    vecTy.isScalable());
-
-    Value valueToStore = adaptor.getValueToStore();
-    if (valueToStore.getType() != linearTy) {
-      valueToStore = rewriter.create<vector::ShapeCastOp>(
-          storeOp.getLoc(), linearTy, valueToStore);
-    }
-
+    if (!vecTy || !llvm::all_of(vecTy.getShape().drop_back(1),
+                                [](auto d) { return d == 1; }))
+      return rewriter.notifyMatchFailure(storeOp,
+                                         "only vector<1x1x...xN> supported");
     rewriter.replaceOpWithNewOp<vector::StoreOp>(
-        storeOp, valueToStore, adaptor.getBase(), adaptor.getIndices());
+        storeOp, adaptor.getValueToStore(), adaptor.getBase(),
+        adaptor.getIndices());
     return success();
   }
 };
