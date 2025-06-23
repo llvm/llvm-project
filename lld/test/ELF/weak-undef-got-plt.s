@@ -6,11 +6,17 @@
 
 # RUN: ld.lld a.o -o a
 # RUN: llvm-readelf -r a | FileCheck %s --check-prefix=NORELOC
+# RUN: ld.lld a.o -o a -z dynamic-undefined-weak
+# RUN: llvm-readelf -r a | FileCheck %s --check-prefix=NORELOC
 # RUN: ld.lld a.o s.so -o as
 # RUN: llvm-objdump -dR as | FileCheck %s
+# RUN: ld.lld a.o s.so -o as -z nodynamic-undefined-weak
+# RUN: llvm-readelf -r a | FileCheck %s --check-prefix=NORELOC
 
 # RUN: ld.lld -pie a.o s.so -o as.pie
 # RUN: llvm-objdump -dR as.pie | FileCheck %s
+# RUN: ld.lld -pie a.o s.so -o as.pie -z nodynamic-undefined-weak
+# RUN: llvm-readelf -r as.pie | FileCheck --check-prefix=NORELOC %s
 
 # RUN: ld.lld -shared a.o -o a.so
 # RUN: llvm-objdump -dR a.so | FileCheck %s

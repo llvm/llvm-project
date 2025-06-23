@@ -50,34 +50,57 @@ inline static std::string printArg(Program &P, CodePtr &OpPC) {
 }
 
 template <> inline std::string printArg<Floating>(Program &P, CodePtr &OpPC) {
-  auto F = Floating::deserialize(*OpPC);
-  OpPC += align(F.bytesToSerialize());
+  auto Sem = Floating::deserializeSemantics(*OpPC);
 
-  std::string Result;
-  llvm::raw_string_ostream SS(Result);
-  SS << F;
-  return Result;
+  unsigned BitWidth = llvm::APFloatBase::semanticsSizeInBits(
+      llvm::APFloatBase::EnumToSemantics(Sem));
+  auto Memory =
+      std::make_unique<uint64_t[]>(llvm::APInt::getNumWords(BitWidth));
+  Floating Result(Memory.get(), Sem);
+  Floating::deserialize(*OpPC, &Result);
+
+  OpPC += align(Result.bytesToSerialize());
+
+  std::string S;
+  llvm::raw_string_ostream SS(S);
+  SS << Result;
+  return S;
 }
 
 template <>
 inline std::string printArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
-  auto F = IntegralAP<false>::deserialize(*OpPC);
-  OpPC += align(F.bytesToSerialize());
+  using T = IntegralAP<false>;
+  uint32_t BitWidth = T::deserializeSize(*OpPC);
+  auto Memory =
+      std::make_unique<uint64_t[]>(llvm::APInt::getNumWords(BitWidth));
 
-  std::string Result;
-  llvm::raw_string_ostream SS(Result);
-  SS << F;
-  return Result;
+  T Result(Memory.get(), BitWidth);
+  T::deserialize(*OpPC, &Result);
+
+  OpPC += align(Result.bytesToSerialize());
+
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+  SS << Result;
+  return Str;
 }
+
 template <>
 inline std::string printArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
-  auto F = IntegralAP<true>::deserialize(*OpPC);
-  OpPC += align(F.bytesToSerialize());
+  using T = IntegralAP<true>;
+  uint32_t BitWidth = T::deserializeSize(*OpPC);
+  auto Memory =
+      std::make_unique<uint64_t[]>(llvm::APInt::getNumWords(BitWidth));
 
-  std::string Result;
-  llvm::raw_string_ostream SS(Result);
-  SS << F;
-  return Result;
+  T Result(Memory.get(), BitWidth);
+  T::deserialize(*OpPC, &Result);
+
+  OpPC += align(Result.bytesToSerialize());
+
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+  SS << Result;
+  return Str;
 }
 
 template <> inline std::string printArg<FixedPoint>(Program &P, CodePtr &OpPC) {

@@ -53,7 +53,7 @@ define <16 x i8> @test_fixed_v16i8(<16 x i8> %a0, <16 x i8> %a1) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (xmm0 & m32bcst)
 ; AVX512-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -108,7 +108,7 @@ define <16 x i8> @test_ext_v16i8(<16 x i8> %a0, <16 x i8> %a1) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (xmm0 & m32bcst)
 ; AVX512-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -405,7 +405,7 @@ define <32 x i8> @test_fixed_v32i8(<32 x i8> %a0, <32 x i8> %a1) nounwind {
 ; AVX512-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpsrlw $1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (ymm0 & mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (ymm0 & m32bcst)
 ; AVX512-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
@@ -478,7 +478,7 @@ define <32 x i8> @test_ext_v32i8(<32 x i8> %a0, <32 x i8> %a1) nounwind {
 ; AVX512-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpsrlw $1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (ymm0 & mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (ymm0 & m32bcst)
 ; AVX512-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
@@ -966,7 +966,7 @@ define <64 x i8> @test_fixed_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 ; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpsrlw $1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (zmm0 & mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (zmm0 & m32bcst)
 ; AVX512-NEXT:    vpaddb %zmm2, %zmm0, %zmm0
 ; AVX512-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
@@ -1078,7 +1078,7 @@ define <64 x i8> @test_ext_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 ; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpsrlw $1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (zmm0 & mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (zmm0 & m32bcst)
 ; AVX512-NEXT:    vpaddb %zmm2, %zmm0, %zmm0
 ; AVX512-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq

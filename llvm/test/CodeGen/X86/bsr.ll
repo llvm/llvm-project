@@ -162,9 +162,8 @@ define i32 @cmov_bsr32(i32 %x, i32 %y) nounwind {
 ;
 ; X64-LABEL: cmov_bsr32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $63, %eax
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    bsrl %edi, %eax
-; X64-NEXT:    cmovel %esi, %eax
 ; X64-NEXT:    retq
   %1 = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
   %2 = xor i32 %1, 31
@@ -188,8 +187,8 @@ define i32 @cmov_bsr32_undef(i32 %x, i32 %y) nounwind {
 ;
 ; X64-LABEL: cmov_bsr32_undef:
 ; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    bsrl %edi, %eax
-; X64-NEXT:    cmovel %esi, %eax
 ; X64-NEXT:    retq
   %1 = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   %2 = xor i32 %1, 31
@@ -239,9 +238,8 @@ define i64 @cmov_bsr64(i64 %x, i64 %y) nounwind {
 ;
 ; X64-LABEL: cmov_bsr64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $127, %eax
+; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    bsrq %rdi, %rax
-; X64-NEXT:    cmoveq %rsi, %rax
 ; X64-NEXT:    retq
   %1 = tail call i64 @llvm.ctlz.i64(i64 %x, i1 false)
   %2 = xor i64 %1, 63
@@ -279,8 +277,8 @@ define i64 @cmov_bsr64_undef(i64 %x, i64 %y) nounwind {
 ;
 ; X64-LABEL: cmov_bsr64_undef:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    bsrq %rdi, %rax
-; X64-NEXT:    cmoveq %rsi, %rax
 ; X64-NEXT:    retq
   %1 = tail call i64 @llvm.ctlz.i64(i64 %x, i1 true)
   %2 = xor i64 %1, 63

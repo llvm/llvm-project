@@ -487,6 +487,12 @@ def FeatureGFX12Insts : SubtargetFeature<"gfx12-insts",
   "Additional instructions for GFX12+"
 >;
 
+def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
+  "GFX1250Insts",
+  "true",
+  "Additional instructions for GFX1250+"
+>;
+
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
   "GFX10_3Insts",
   "true",
@@ -1104,6 +1110,18 @@ def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
   "HasPointSampleAccel",
   "true",
   "Has point sample acceleration feature"
+>;
+
+def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
+  "HasWaitXcnt",
+  "true",
+  "Has s_wait_xcnt instruction"
+>;
+
+def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
+  "HasSetPrioIncWgInst",
+  "true",
+  "Has s_setprio_inc_wg instruction."
 >;
 
 //===------------------------------------------------------------===//
@@ -1882,6 +1900,55 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureBVHDualAndBVH8Insts
    ]>;
 
+def FeatureISAVersion12_50 : FeatureSet<
+  [FeatureGFX12,
+   FeatureGFX1250Insts,
+   FeatureCuMode,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureFmacF64Inst,
+   FeaturePackedFP32Ops,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesHiLoRegisters,
+   FeatureArchitectedFlatScratch,
+   FeatureArchitectedSGPRs,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
+   FeatureFlatAtomicFaddF32Inst,
+   FeatureFP8ConversionInsts,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans,
+   FeatureHasRestrictedSOffset,
+   FeatureScalarDwordx3Loads,
+   FeatureDPPSrc1SGPR,
+   FeatureBitOp3Insts,
+   FeatureBF16ConversionInsts,
+   FeatureCvtPkF16F32Inst,
+   FeatureMinimum3Maximum3PKF16,
+   FeaturePrngInst,
+   FeaturePermlane16Swap,
+   FeatureAshrPkInsts,
+   FeatureSupportsSRAMECC,
+   FeatureMaxHardClauseLength63,
+   FeatureWaitXcnt,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureFlatBufferGlobalAtomicFaddF64Inst,
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureKernargPreload,
+   FeatureLshlAddU64Inst,
+   FeatureSetPrioIncWgInst,
+]>;
+
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
     [FeatureRequiresCOV6])>;
@@ -2184,9 +2251,29 @@ def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
+def isGFX12Not12_50 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+
+def isGFX12PlusNot12_50 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+
+def isGFX125xOnly :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def isGFX1250Plus :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def isNotGFX1250Plus :
+  Predicate<"!Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def HasMinimum3Maximum3F32 :
   Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
@@ -2538,6 +2625,9 @@ def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
 def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
   AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
 
+def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
+  AssemblerPredicate<(all_of FeatureWaitXcnt)>;
+
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;
 
@@ -2578,6 +2668,9 @@ def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
 
 def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
                         AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
+
+def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
+ AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

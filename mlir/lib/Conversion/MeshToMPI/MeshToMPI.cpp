@@ -12,9 +12,9 @@
 
 #include "mlir/Conversion/MeshToMPI/MeshToMPI.h"
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -22,6 +22,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
+#include "mlir/Dialect/Mesh/Transforms/Simplifications.h"
+#include "mlir/Dialect/Mesh/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -289,27 +291,15 @@ struct ConvertProcessMultiIndexOp
 
 class ConvertProcessLinearIndexOp
     : public OpConversionPattern<ProcessLinearIndexOp> {
-  int64_t worldRank; // rank in MPI_COMM_WORLD if available, else < 0
 
 public:
   using OpConversionPattern::OpConversionPattern;
 
-  // Constructor accepting worldRank
-  ConvertProcessLinearIndexOp(const TypeConverter &typeConverter,
-                              MLIRContext *context, int64_t worldRank = -1)
-      : OpConversionPattern(typeConverter, context), worldRank(worldRank) {}
-
   LogicalResult
   matchAndRewrite(ProcessLinearIndexOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
+    // Create mpi::CommRankOp
     Location loc = op.getLoc();
-    if (worldRank >= 0) { // if rank in MPI_COMM_WORLD is known -> use it
-      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, worldRank);
-      return success();
-    }
-
-    // Otherwise call create mpi::CommRankOp
     auto ctx = op.getContext();
     Value commWorld =
         rewriter.create<mpi::CommWorldOp>(loc, mpi::CommType::get(ctx));
@@ -529,6 +519,129 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
   }
 };
 
+static mpi::MPI_ReductionOpEnumAttr getMPIReductionOp(ReductionKindAttr kind) {
+  auto ctx = kind.getContext();
+  auto getReductionOp = [ctx](mpi::MPI_ReductionOpEnum redOp) {
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, redOp);
+  };
+
+  switch (kind.getValue()) {
+  case ReductionKind::Sum:
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_SUM);
+  case ReductionKind::Product:
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_PROD);
+  case ReductionKind::Min:
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_MIN);
+  case ReductionKind::Max:
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_MAX);
+  case ReductionKind::BitwiseAnd:
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_BAND);
+  case ReductionKind::BitwiseOr:
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_BOR);
+  case ReductionKind::BitwiseXor:
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_BXOR);
+  default:
+    assert(false && "Unknown/unsupported reduction kind");
+  }
+}
+
+struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(AllReduceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SymbolTableCollection symbolTableCollection;
+    auto mesh = adaptor.getMesh();
+    mlir::mesh::MeshOp meshOp = getMesh(op, symbolTableCollection);
+    if (!meshOp)
+      return op->emitError() << "No mesh found for AllReduceOp";
+    if (ShapedType::isDynamicShape(meshOp.getShape()))
+      return op->emitError()
+             << "Dynamic mesh shape not supported in AllReduceOp";
+
+    ImplicitLocOpBuilder iBuilder(op.getLoc(), rewriter);
+    Value input = adaptor.getInput();
+    auto inputShape = cast<ShapedType>(input.getType()).getShape();
+
+    // If the source is a memref, cast it to a tensor.
+    if (isa<RankedTensorType>(input.getType())) {
+      auto memrefType = MemRefType::get(
+          inputShape, cast<ShapedType>(input.getType()).getElementType());
+      input = iBuilder.create<bufferization::ToBufferOp>(memrefType, input);
+    }
+    MemRefType inType = cast<MemRefType>(input.getType());
+
+    // Get the actual shape to allocate the buffer.
+    SmallVector<OpFoldResult> shape(inType.getRank());
+    for (auto i = 0; i < inType.getRank(); ++i) {
+      auto s = inputShape[i];
+      if (ShapedType::isDynamic(s))
+        shape[i] = iBuilder.create<memref::DimOp>(input, s).getResult();
+      else
+        shape[i] = iBuilder.getIndexAttr(s);
+    }
+
+    // Allocate buffer and copy input to buffer.
+    Value buffer = iBuilder.create<memref::AllocOp>(
+        shape, cast<ShapedType>(op.getType()).getElementType());
+    iBuilder.create<linalg::CopyOp>(input, buffer);
+
+    // Get an MPI_Comm_split for the AllReduce operation.
+    // The color is the linear index of the process in the mesh along the
+    // non-reduced axes. The key is the linear index of the process in the mesh
+    // along the reduced axes.
+    SmallVector<Type> indexResultTypes(meshOp.getShape().size(),
+                                       iBuilder.getIndexType());
+    SmallVector<Value> myMultiIndex =
+        iBuilder.create<ProcessMultiIndexOp>(indexResultTypes, mesh)
+            .getResult();
+    Value zero = iBuilder.create<arith::ConstantIndexOp>(0);
+    SmallVector<Value> multiKey(myMultiIndex.size(), zero);
+
+    auto redAxes = adaptor.getMeshAxes();
+    for (auto axis : redAxes) {
+      multiKey[axis] = myMultiIndex[axis];
+      myMultiIndex[axis] = zero;
+    }
+
+    Value color =
+        createProcessLinearIndex(mesh, myMultiIndex, redAxes, iBuilder);
+    color = iBuilder.create<arith::IndexCastOp>(iBuilder.getI32Type(), color);
+    Value key = createProcessLinearIndex(mesh, multiKey, redAxes, iBuilder);
+    key = iBuilder.create<arith::IndexCastOp>(iBuilder.getI32Type(), key);
+
+    // Finally split the communicator
+    auto commType = mpi::CommType::get(op->getContext());
+    Value commWorld = iBuilder.create<mpi::CommWorldOp>(commType);
+    auto comm =
+        iBuilder.create<mpi::CommSplitOp>(commType, commWorld, color, key)
+            .getNewcomm();
+
+    Value buffer1d = buffer;
+    // Collapse shape to 1d if needed
+    if (inType.getRank() > 1) {
+      ReassociationIndices reassociation(inType.getRank());
+      std::iota(reassociation.begin(), reassociation.end(), 0);
+      buffer1d = iBuilder.create<memref::CollapseShapeOp>(
+          buffer, ArrayRef<ReassociationIndices>(reassociation));
+    }
+
+    // Create the MPI AllReduce operation.
+    iBuilder.create<mpi::AllReduceOp>(
+        TypeRange(), buffer1d, buffer1d,
+        getMPIReductionOp(adaptor.getReductionAttr()), comm);
+
+    // If the destination is a memref, cast it to a tensor
+    if (isa<RankedTensorType>(op.getType()))
+      buffer = iBuilder.create<bufferization::ToTensorOp>(op.getType(), buffer,
+                                                          true);
+
+    rewriter.replaceOp(op, buffer);
+    return success();
+  }
+};
+
 struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -573,10 +686,10 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
     Value array = dest;
     if (isa<RankedTensorType>(array.getType())) {
       // If the destination is a memref, we need to cast it to a tensor
-      auto tensorType = MemRefType::get(
+      auto mmemrefType = MemRefType::get(
           dstShape, cast<ShapedType>(array.getType()).getElementType());
       array =
-          rewriter.create<bufferization::ToBufferOp>(loc, tensorType, array);
+          rewriter.create<bufferization::ToBufferOp>(loc, mmemrefType, array);
     }
     auto rank = cast<ShapedType>(array.getType()).getRank();
     auto opSplitAxes = adaptor.getSplitAxes().getAxes();
@@ -753,22 +866,6 @@ struct ConvertMeshToMPIPass
 
   /// Run the dialect converter on the module.
   void runOnOperation() override {
-    uint64_t worldRank = -1;
-    // Try to get DLTI attribute for MPI:comm_world_rank
-    // If found, set worldRank to the value of the attribute.
-    {
-      auto dltiAttr =
-          dlti::query(getOperation(), {"MPI:comm_world_rank"}, false);
-      if (succeeded(dltiAttr)) {
-        if (!isa<IntegerAttr>(dltiAttr.value())) {
-          getOperation()->emitError()
-              << "Expected an integer attribute for MPI:comm_world_rank";
-          return signalPassFailure();
-        }
-        worldRank = cast<IntegerAttr>(dltiAttr.value()).getInt();
-      }
-    }
-
     auto *ctxt = &getContext();
     RewritePatternSet patterns(ctxt);
     ConversionTarget target(getContext());
@@ -816,13 +913,13 @@ struct ConvertMeshToMPIPass
 
     // No mesh dialect should left after conversion...
     target.addIllegalDialect<mesh::MeshDialect>();
-    // ...except the global MeshOp
-    target.addLegalOp<mesh::MeshOp>();
+    // ...except the global MeshOp. MeshShapeOp which will get folded later.
+    target.addLegalOp<mesh::MeshOp, mesh::MeshShapeOp>();
     // Allow all the stuff that our patterns will convert to
-    target.addLegalDialect<BuiltinDialect, mpi::MPIDialect, scf::SCFDialect,
-                           arith::ArithDialect, tensor::TensorDialect,
-                           bufferization::BufferizationDialect,
-                           linalg::LinalgDialect, memref::MemRefDialect>();
+    target.addLegalDialect<
+        BuiltinDialect, mpi::MPIDialect, scf::SCFDialect, arith::ArithDialect,
+        tensor::TensorDialect, bufferization::BufferizationDialect,
+        linalg::LinalgDialect, memref::MemRefDialect, affine::AffineDialect>();
     // Make sure the function signature, calls etc. are legal
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return typeConverter.isSignatureLegal(op.getFunctionType());
@@ -832,9 +929,8 @@ struct ConvertMeshToMPIPass
 
     patterns.add<ConvertUpdateHaloOp, ConvertNeighborsLinearIndicesOp,
                  ConvertProcessMultiIndexOp, ConvertGetShardingOp,
-                 ConvertShardingOp, ConvertShardShapeOp>(typeConverter, ctxt);
-    // ConvertProcessLinearIndexOp accepts an optional worldRank
-    patterns.add<ConvertProcessLinearIndexOp>(typeConverter, ctxt, worldRank);
+                 ConvertShardingOp, ConvertShardShapeOp, ConvertAllReduceOp,
+                 ConvertProcessLinearIndexOp>(typeConverter, ctxt);
 
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
         patterns, typeConverter);
@@ -842,6 +938,12 @@ struct ConvertMeshToMPIPass
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
 
     (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+
+    // Folding patterns cannot be mixed with conversion patterns -> extra pass.
+    patterns.clear();
+    SymbolTableCollection symbolTableCollection;
+    mlir::mesh::populateFoldingPatterns(patterns, symbolTableCollection);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
