@@ -344,7 +344,8 @@ llvm::BitVector llvm::get_thread_affinity_mask() {
 
 unsigned llvm::get_cpus() { return 1; }
 
-#if (defined(__linux__) || defined(__CYGWIN__)) && (defined(__i386__) || defined(__x86_64__))
+#if (defined(__linux__) || defined(__CYGWIN__)) &&                             \
+    (defined(__i386__) || defined(__x86_64__))
 // On Linux, the number of physical cores can be computed from /proc/cpuinfo,
 // using the number of unique physical/core id pairs. The following
 // implementation reads the /proc/cpuinfo format on an x86_64 system.
