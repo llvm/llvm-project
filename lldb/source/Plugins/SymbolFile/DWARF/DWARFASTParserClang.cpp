@@ -167,9 +167,6 @@ DWARFASTParserClang::GetObjectParameter(const DWARFDIE &subprogram,
          subprogram.Tag() == DW_TAG_inlined_subroutine ||
          subprogram.Tag() == DW_TAG_subroutine_type);
 
-  if (!decl_ctx_die.IsStructUnionOrClass())
-    return {};
-
   if (DWARFDIE object_parameter =
           subprogram.GetAttributeValueAsReferenceDIE(DW_AT_object_pointer))
     return object_parameter;
@@ -177,6 +174,10 @@ DWARFASTParserClang::GetObjectParameter(const DWARFDIE &subprogram,
   // If no DW_AT_object_pointer was specified, assume the implicit object
   // parameter is the first parameter to the function, is called "this" and is
   // artificial (which is what most compilers would generate).
+
+  if (!decl_ctx_die.IsStructUnionOrClass())
+    return {};
+
   auto children = subprogram.children();
   auto it = llvm::find_if(children, [](const DWARFDIE &child) {
     return child.Tag() == DW_TAG_formal_parameter;
@@ -439,15 +440,6 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
 
     case DW_AT_name:
       name.SetCString(form_value.AsCString());
-      break;
-
-    case DW_AT_object_pointer:
-      // GetAttributes follows DW_AT_specification.
-      // DW_TAG_subprogram definitions and declarations may both
-      // have a DW_AT_object_pointer. Don't overwrite the one
-      // we parsed for the definition with the one from the declaration.
-      if (!object_pointer.IsValid())
-        object_pointer = form_value.Reference();
       break;
 
     case DW_AT_signature:
@@ -1112,7 +1104,7 @@ bool DWARFASTParserClang::ParseObjCMethod(
 std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     const DWARFDIE &die, CompilerType clang_type,
     const ParsedDWARFTypeAttributes &attrs, const DWARFDIE &decl_ctx_die,
-    bool is_static, bool &ignore_containing_context) {
+    const DWARFDIE &object_parameter, bool &ignore_containing_context) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   SymbolFileDWARF *dwarf = die.GetDWARF();
   assert(dwarf);
@@ -1196,6 +1188,9 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
       TypeSystemClang::GetDeclContextForType(class_opaque_type), die,
       attrs.name.GetCString());
 
+  // In DWARF, a C++ method is static if it has no object parameter child.
+  const bool is_static = !object_parameter.IsValid();
+
   // We have a C++ member function with no children (this pointer!) and clang
   // will get mad if we try and make a function that isn't well formed in the
   // DWARF, so we will just skip it...
@@ -1221,9 +1216,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     ClangASTMetadata metadata;
     metadata.SetUserID(die.GetID());
 
-    char const *object_pointer_name =
-        attrs.object_pointer ? attrs.object_pointer.GetName() : nullptr;
-    if (object_pointer_name) {
+    if (char const *object_pointer_name = object_parameter.GetName()) {
       metadata.SetObjectPtrName(object_pointer_name);
       LLDB_LOGF(log, "Setting object pointer name: %s on method object %p.\n",
                 object_pointer_name, static_cast<void *>(cxx_method_decl));
@@ -1319,11 +1312,9 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         type_handled =
             ParseObjCMethod(*objc_method, die, clang_type, attrs, is_variadic);
       } else if (is_cxx_method) {
-        // In DWARF, a C++ method is static if it has no object parameter child.
-        const bool is_static = !object_parameter.IsValid();
         auto [handled, type_sp] =
-            ParseCXXMethod(die, clang_type, attrs, decl_ctx_die, is_static,
-                           ignore_containing_context);
+            ParseCXXMethod(die, clang_type, attrs, decl_ctx_die,
+                           object_parameter, ignore_containing_context);
         if (type_sp)
           return type_sp;
 
@@ -1418,9 +1409,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           ClangASTMetadata metadata;
           metadata.SetUserID(die.GetID());
 
-          char const *object_pointer_name =
-              attrs.object_pointer ? attrs.object_pointer.GetName() : nullptr;
-          if (object_pointer_name) {
+          if (char const *object_pointer_name = object_parameter.GetName()) {
             metadata.SetObjectPtrName(object_pointer_name);
             LLDB_LOGF(log,
                       "Setting object pointer name: %s on function "
