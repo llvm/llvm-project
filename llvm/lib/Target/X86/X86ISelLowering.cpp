@@ -41266,7 +41266,7 @@ static SDValue combineX86ShufflesRecursively(
     resolveTargetShuffleFromZeroables(OpMask, OpUndef, OpZero,
                                       ResolveKnownZeros);
 
-    Mask = std::move(OpMask);
+    Mask = OpMask;
     Ops.append(OpInputs.begin(), OpInputs.end());
   } else {
     resolveTargetShuffleFromZeroables(OpMask, OpUndef, OpZero);
