@@ -1449,7 +1449,7 @@
 // RUN:     | FileCheck --check-prefixes=CHECK-MISSING-IMPORT-AIX %s
 // CHECK-MISSING-IMPORT-AIX: {{.*}}error: cannot link 'AddressSanitizer': import file missing from resource directories
 
-// RUN: not %clang++ -fsanitize=address -### %s 2>&1 \
+// RUN: not %clang -fsanitize=address --driver-mode=g++ -### %s 2>&1 \
 // RUN:     -shared --target=powerpc-ibm-aix \
 // RUN:     -resource-dir=/missing_resource_dir \
 // RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
