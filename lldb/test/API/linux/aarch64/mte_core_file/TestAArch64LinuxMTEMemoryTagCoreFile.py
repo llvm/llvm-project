@@ -256,17 +256,16 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         with a restrictive limit or filter."""
         self.runCmd("target create --core core.mte.notags")
 
-        # TODO: regenerate all the core files once MTE4 support has landed.
-        MTE_BUF_ADDR = 0xFFFFA4AF3000
+        mte_buf_addr = 0xFFFFA4AF3000
 
         # We can see which memory was tagged.
         self.expect(
-            f"memory region {MTE_BUF_ADDR}", substrs=["memory tagging: enabled"]
+            f"memory region {mte_buf_addr}", substrs=["memory tagging: enabled"]
         )
 
         # We cannot read those tags.
         self.expect(
-            f"memory tag read {MTE_BUF_ADDR}",
+            f"memory tag read {mte_buf_addr}",
             substrs=[
                 "Could not read tags from core file segment. Segment is missing some or all tag data."
             ],
