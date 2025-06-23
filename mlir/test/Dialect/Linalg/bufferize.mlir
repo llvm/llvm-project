@@ -216,11 +216,11 @@ func.func @gen_grouped_3D_channel_first_tensor(%arg0: tensor<64x2x16x26x26x26xf3
 // CHECK-SAME:                                   %[[ARG0_TENSOR:.*]]: tensor<64x2x16x26x26x26xf32>,
 // CHECK-SAME:                                   %[[ARG1_TENSOR:.*]]: tensor<2x20x16x3x3x3xf32>,
 // CHECK-SAME:                                   %[[ARG2_TENSOR:.*]]: tensor<64x2x20x8x8x8xf32>) -> tensor<64x2x20x8x8x8xf32> {
-// CHECK-DAG:       %[[ARG0_MEMREF:.*]] = bufferization.to_memref %[[ARG0_TENSOR]] : memref<64x2x16x26x26x26xf32>
-// CHECK-DAG:       %[[ARG1_MEMREF:.*]] = bufferization.to_memref %[[ARG1_TENSOR]] : memref<2x20x16x3x3x3xf32>
-// CHECK-DAG:       %[[ARG2_MEMREF:.*]] = bufferization.to_memref %[[ARG2_TENSOR]] : memref<64x2x20x8x8x8xf32>
+// CHECK-DAG:       %[[ARG0_MEMREF:.*]] = bufferization.to_buffer %[[ARG0_TENSOR]]
+// CHECK-DAG:       %[[ARG1_MEMREF:.*]] = bufferization.to_buffer %[[ARG1_TENSOR]]
+// CHECK-DAG:       %[[ARG2_MEMREF:.*]] = bufferization.to_buffer %[[ARG2_TENSOR]]
 // CHECK-DAG:       %[[INIT_BUFFER:.*]] = memref.alloc() {{.*}} : memref<64x2x20x8x8x8xf32>
-// CHECK:           memref.copy %[[ARG2_MEMREF]], %[[INIT_BUFFER]] : memref<64x2x20x8x8x8xf32> to memref<64x2x20x8x8x8xf32>
+// CHECK:           memref.copy %[[ARG2_MEMREF]], %[[INIT_BUFFER]]
 // CHECK:           linalg.grouped_conv_nd
 // CHECK-SAME:      dilations = dense<2> : tensor<3xi64>
 // CHECK-SAME:      strides = dense<3> : tensor<3xi64>}

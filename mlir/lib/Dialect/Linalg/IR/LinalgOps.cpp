@@ -1890,8 +1890,9 @@ ParseResult mlir::linalg::detail::convolution_impl::parse(
 
 void mlir::linalg::detail::convolution_impl::print(LinalgOp op,
                                                    OpAsmPrinter &p) {
-  printNamedStructuredOp(p, op.getOperation(), op.getDpsInputs(),
-                         op.getDpsInits());
+  printNamedStructuredOp(
+      p, op.getOperation(), op.getDpsInputs(), op.getDpsInits(),
+      /*elidedAttrs=*/{"operandSegmentSizes", "linalg.memoized_indexing_maps"});
 }
 
 // Build {mul, add} region for convolution
@@ -1940,19 +1941,6 @@ void mlir::linalg::detail::convolution_impl::quantizedRegionBuilder(
   helper.yieldOutputs({value8});
 }
 
-void mlir::linalg::detail::convolution_impl::getEffects(
-    Operation *op,
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  if (!isa<ConvolutionOpInterface>(op))
-    return;
-  if (LinalgOp linalgOp = dyn_cast<LinalgOp>(op)) {
-    if (linalgOp.hasPureTensorSemantics())
-      return;
-    getGenericEffectsImpl(effects, linalgOp);
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // GroupedConvNDOp
 //===----------------------------------------------------------------------===//
@@ -1960,7 +1948,13 @@ void mlir::linalg::detail::convolution_impl::getEffects(
 void GroupedConvNDOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  return detail::convolution_impl::getEffects(*this, effects);
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability GroupedConvNDOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
 //===----------------------------------------------------------------------===//

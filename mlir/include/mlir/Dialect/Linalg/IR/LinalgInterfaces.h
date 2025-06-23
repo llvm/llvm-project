@@ -161,10 +161,6 @@ void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
 // Region builder for basic quantized convolution
 void quantizedRegionBuilder(ImplicitLocOpBuilder &b, Block &block,
                             ArrayRef<NamedAttribute> attrs);
-void getEffects(
-    Operation *op,
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects);
 ParseResult parse(OpAsmParser &parser, OperationState &result,
                   bool isQuantized = false);
 void print(LinalgOp op, OpAsmPrinter &p);
