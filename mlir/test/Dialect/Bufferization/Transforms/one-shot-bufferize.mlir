@@ -269,3 +269,22 @@ func.func @materialize_in_dest_raw(%f: f32, %f2: f32, %idx: index) -> (tensor<5x
 
   return %0, %r : tensor<5xf32>, f32
 }
+
+// -----
+
+// CHECK-LABEL: func.func @test_dialect_op(
+// CHECK-SAME:    %[[ARG:.*]]: !test.test_tensor<[32, 64], f64>
+// CHECK-SAME:  ) -> !test.test_tensor<[32, 128], f64> {
+func.func @test_dialect_op(%arg: !test.test_tensor<[32, 64], f64>)
+    -> !test.test_tensor<[32, 128], f64> {
+  // CHECK: %[[MEMREF:.*]] = bufferization.to_buffer %[[ARG]]
+  // CHECK: %[[DUMMY:.*]] = "test.dummy_memref_op"(%[[MEMREF]])
+  // CHECK-SAME: : (!test.test_memref<[32, 64], f64>)
+  // CHECK-SAME: -> !test.test_memref<[32, 128], f64>
+  // CHECK: %[[OUT:.*]] = bufferization.to_tensor %[[DUMMY]]
+  %out = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[32, 64], f64>)
+    -> !test.test_tensor<[32, 128], f64>
+
+  // CHECK: return %[[OUT]]
+  return %out : !test.test_tensor<[32, 128], f64>
+}

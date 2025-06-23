@@ -364,13 +364,12 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     VectorValue = GetBroadcastInstrs(ScalarValue);
     set(Def, VectorValue);
   } else {
-    // Initialize packing with insertelements to start from undef.
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    Value *Undef = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
-    set(Def, Undef);
+    // Initialize packing with insertelements to start from poison.
+    VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
-      packScalarIntoVectorizedValue(Def, Lane);
-    VectorValue = get(Def);
+      VectorValue = packScalarIntoVectorizedValue(Def, VectorValue, Lane);
+    set(Def, VectorValue);
   }
   Builder.restoreIP(OldIP);
   return VectorValue;
@@ -398,10 +397,10 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
     Builder.SetCurrentDebugLocation(DL);
 }
 
-void VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
-                                                     const VPLane &Lane) {
+Value *VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
+                                                       Value *WideValue,
+                                                       const VPLane &Lane) {
   Value *ScalarInst = get(Def, Lane);
-  Value *WideValue = get(Def);
   Value *LaneExpr = Lane.getAsRuntimeExpr(Builder, VF);
   if (auto *StructTy = dyn_cast<StructType>(WideValue->getType())) {
     // We must handle each element of a vectorized struct type.
@@ -415,7 +414,7 @@ void VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
   } else {
     WideValue = Builder.CreateInsertElement(WideValue, ScalarInst, LaneExpr);
   }
-  set(Def, WideValue);
+  return WideValue;
 }
 
 BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState &State) {
@@ -1015,6 +1014,8 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
+  State->CFG.DTU.flush();
+
   VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
   if (!Header)
     return;
@@ -1029,17 +1030,11 @@ void VPlan::execute(VPTransformState *State) {
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    if (isa<VPWidenInductionRecipe>(&R)) {
-      PHINode *Phi = nullptr;
-      if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-        Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
-      } else {
-        auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-               "recipe generating only scalars should have been replaced");
-        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-        Phi = cast<PHINode>(GEP->getPointerOperand());
-      }
+    if (auto *WidenPhi = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
+      assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+             "recipe generating only scalars should have been replaced");
+      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
+      PHINode *Phi = cast<PHINode>(GEP->getPointerOperand());
 
       Phi->setIncomingBlock(1, VectorLatchBB);
 
@@ -1047,10 +1042,6 @@ void VPlan::execute(VPTransformState *State) {
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
       Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
-
-      // Use the steps for the last part as backedge value for the induction.
-      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
       continue;
     }
 

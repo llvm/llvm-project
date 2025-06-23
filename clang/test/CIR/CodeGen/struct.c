@@ -19,6 +19,7 @@
 // CIR-DAG: !rec_CycleEnd = !cir.record<struct "CycleEnd" {!cir.ptr<!cir.record<struct "CycleStart" {!cir.ptr<!cir.record<struct "CycleMiddle" {!cir.ptr<!cir.record<struct "CycleEnd">>}>>}>>}>
 // CIR-DAG: !rec_CycleMiddle = !cir.record<struct "CycleMiddle" {!cir.ptr<!rec_CycleEnd>}>
 // CIR-DAG: !rec_CycleStart = !cir.record<struct "CycleStart" {!cir.ptr<!rec_CycleMiddle>}>
+// CIR-DAG: !rec_IncompleteArray = !cir.record<struct "IncompleteArray" {!cir.array<!s32i x 0>}>
 // LLVM-DAG: %struct.CompleteS = type { i32, i8 }
 // LLVM-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // LLVM-DAG: %struct.InnerS = type { i32, i8 }
@@ -30,6 +31,7 @@
 // LLVM-DAG: %struct.CycleStart = type { ptr }
 // LLVM-DAG: %struct.CycleMiddle = type { ptr }
 // LLVM-DAG: %struct.CycleEnd = type { ptr }
+// LLVM-DAG: %struct.IncompleteArray = type { [0 x i32] }
 // OGCG-DAG: %struct.CompleteS = type { i32, i8 }
 // OGCG-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // OGCG-DAG: %struct.InnerS = type { i32, i8 }
@@ -41,6 +43,7 @@
 // OGCG-DAG: %struct.CycleStart = type { ptr }
 // OGCG-DAG: %struct.CycleMiddle = type { ptr }
 // OGCG-DAG: %struct.CycleEnd = type { ptr }
+// OGCG-DAG: %struct.IncompleteArray = type { [0 x i32] }
 
 struct CompleteS {
   int a;
@@ -148,6 +151,16 @@ struct CycleEnd {
 // CIR:      cir.global{{.*}} @end = #cir.zero : !rec_CycleEnd
 // LLVM-DAG:  @end = global %struct.CycleEnd zeroinitializer
 // OGCG-DAG:  @end = global %struct.CycleEnd zeroinitializer
+
+struct IncompleteArray {
+  int array[];
+} incomplete;
+
+// CIR: cir.global external @incomplete = #cir.zero : !rec_IncompleteArray
+
+// LLVM-DAG: global %struct.IncompleteArray zeroinitializer
+
+// OGCG-DAG: global %struct.IncompleteArray zeroinitializer
 
 void f(void) {
   struct IncompleteS *p;
@@ -313,3 +326,4 @@ void f6(struct CycleStart *start) {
 // OGCG:   %[[MIDDLE:.*]] = getelementptr inbounds nuw %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
 // OGCG:   %[[END:.*]] = getelementptr inbounds nuw %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
 // OGCG:   %[[START2:.*]] = getelementptr inbounds nuw %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0
+
