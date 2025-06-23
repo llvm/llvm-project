@@ -210,13 +210,17 @@ static void skipOverSpaces(const char *&First, const char *const End) {
 static char previousChar(const char *First, const char *&Current) {
   assert(Current > First);
   --Current;
-  while (Current > First + 1 && isVerticalWhitespace(*Current)) {
-    const char PrevChar = *(Current - 1);
-    if (PrevChar == '\\') {
-      Current -= 2; // backslash + (\n or \r)
-    } else if (Current > First + 2 && isVerticalWhitespace(PrevChar) &&
-               PrevChar != *Current && *(Current - 2) == '\\') {
-      Current -= 3; // backslash + (\n\r or \r\n)
+  while (Current > First && isVerticalWhitespace(*Current)) {
+    // Check if the previous character is a backslash
+    if (Current > First && *(Current - 1) == '\\') {
+      // Use Lexer's getEscapedNewLineSize to get the size of the escaped newline
+      unsigned EscapeSize = Lexer::getEscapedNewLineSize(Current);
+      if (EscapeSize > 0) {
+        // Skip back over the entire escaped newline sequence (backslash + newline)
+        Current -= (1 + EscapeSize);
+      } else {
+        break;
+      }
     } else {
       break;
     }
