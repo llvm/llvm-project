@@ -10,21 +10,22 @@
 # CHECK-NEXT:     1010: 00c53523     	sd	a2, 0xa(a0) <target>
 # CHECK-NEXT:     1014: 0000         	unimp
 
-# the structure of this test file is similar to that of riscv64-ar-coverage
+# The structure of this test file is similar to that of riscv64-ar-coverage
 # with the major difference being that these tests are focused on instructions
-# for 32 bit architecture
+# for 32 bit architecture.
 
 .global _start
 .text
 _start:
   auipc a0, 0x0
-  addi a0, a0, 0x16   # addi -- behavior changes with different architectures
+  addi a0, a0, 0x16   # addi -- behavior changes with different architectures.
+
+  # Test Zclsd and Zilsd instructions respectively
+  auipc a0, 0x0
+  c.ld a2, 0x10(a0)
 
   auipc a0, 0x0
-  c.ld a2, 0x10(a0)   # zclsd instruction
-
-  auipc a0, 0x0
-  sd a2, 0xa(a0)      # zilsd instruction
+  sd a2, 0xa(a0)
 
 .skip 0x2
 target:
