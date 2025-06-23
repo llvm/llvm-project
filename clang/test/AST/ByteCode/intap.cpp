@@ -48,6 +48,13 @@ static_assert(DivA / DivB == 2, "");
 constexpr _BitInt(4) DivC = DivA / 0; // both-error {{must be initialized by a constant expression}} \
                                       // both-note {{division by zero}}
 
+constexpr __int128 isMinDiv() {
+  return __int128{0} / __int128{-1};
+}
+static_assert(isMinDiv() == 0, "");
+
+
+
 constexpr _BitInt(7) RemA = 47;
 constexpr _BitInt(6) RemB = 9;
 static_assert(RemA % RemB == 2, "");
