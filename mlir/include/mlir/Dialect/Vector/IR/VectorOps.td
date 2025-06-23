@@ -21,6 +21,7 @@ include "mlir/Dialect/Vector/IR/Vector.td"
 include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/IndexingMapOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -33,6 +34,7 @@ include "mlir/IR/EnumAttr.td"
 // than the current set: {*, +}.
 def Vector_ContractionOp :
   Vector_Op<"contract", [
+      IndexingMapOpInterface,
       Pure,
       PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
       PredOpTrait<"third operand acc and result have same element type",
@@ -209,36 +211,12 @@ def Vector_ContractionOp :
     }
 
     //===------------------------------------------------------------------===//
-    // The code below is shared with LinalgStructuredInterface.
-    // vector.contract is really a linalg.generic on vectors without region.
-    // TODO: factor out in a common interface to inherit from ince identified.
+    // IndexingMapOpInterface interface methods implementation.
     //===------------------------------------------------------------------===//
     ArrayRef<int64_t> getShape(OpOperand * opOperand) {
       assert(opOperand->getOwner() == this->getOperation());
       Type t = opOperand->get().getType();
       return cast<VectorType>(t).getShape();
-    }
-
-    AffineMap getLoopsToShapesMap() {
-      auto maps = getIndexingMapsArray();
-      return concatAffineMaps(maps, getContext());
-    }
-
-    AffineMap getShapesToLoopsMap() {
-      return inversePermutation(getLoopsToShapesMap());
-    }
-
-    SmallVector<int64_t> getStaticShape(){
-      SmallVector<int64_t> res;
-      for (OpOperand &opOperand : this->getOperation()->getOpOperands())
-        llvm::append_range(res, getShape(&opOperand));
-      return res;
-    }
-
-    SmallVector<int64_t> getStaticLoopRanges() {
-      SmallVector<int64_t> viewSizes = getStaticShape();
-      AffineMap invertedMap = getShapesToLoopsMap();
-      return invertedMap.compose(viewSizes);
     }
   }];
 
