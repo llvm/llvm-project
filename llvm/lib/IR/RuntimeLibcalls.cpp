@@ -416,7 +416,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
     if (TT.isOSAIX()) {
       bool isPPC64 = TT.isPPC64();
-      setLibcallName(RTLIB::MEMCPY, isPPC64 ? "___memmove64" : "___memmove");
+      setLibcallName(RTLIB::MEMCPY, nullptr);
       setLibcallName(RTLIB::MEMMOVE, isPPC64 ? "___memmove64" : "___memmove");
       setLibcallName(RTLIB::MEMSET, isPPC64 ? "___memset64" : "___memset");
       setLibcallName(RTLIB::BZERO, isPPC64 ? "___bzero64" : "___bzero");
