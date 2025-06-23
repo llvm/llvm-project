@@ -34,6 +34,8 @@ namespace affine {
 class AffineApplyOp;
 class AffineDelinearizeIndexOp;
 class AffineLinearizeIndexOp;
+class AffineMaxOp;
+class AffineMinOp;
 
 /// Lowers `affine.delinearize_index` into a sequence of division and remainder
 /// operations.
@@ -127,6 +129,37 @@ OpFoldResult materializeComputedBound(
     OpBuilder &b, Location loc, AffineMap boundMap,
     ArrayRef<std::pair<Value, std::optional<int64_t>>> mapOperands);
 
+/// This transform tries to simplify the affine min operation `op`, by finding a
+/// common lower bound for a set of expressions in the affine map results. It
+/// returns whether the transform updated `op`'s affine map.
+///
+/// In concrete terms, given an operation like:
+/// `affine.min affine_map<(d0)[s0, s1] -> (d0, s1, s0, 128)>(%i)[%s0, %s1]`
+/// If `d0 < 128` and `128 < s1 < s0`, the transform will update `op` to:
+/// `affine.min affine_map<(d0)[s0, s1] -> (d0, 128)>(%i)[%s0, %s1]`.
+bool simplifyAffineMinOp(RewriterBase &rewriter, AffineMinOp op);
+
+/// This transform tries to simplify the affine max operation `op`, by finding a
+/// common upper bound for a set of expressions in the affine map results. It
+/// returns whether the transform updated `op`'s affine map.
+///
+/// In concrete terms, given an operation like:
+/// `affine.max affine_map<(d0)[s0, s1] -> (d0, s1, s0, 128)>(%i)[%s0, %s1]`
+/// If `d0 > 128` and `s0 > s1 > 128`, the transform will update `op` to:
+/// `affine.max affine_map<(d0)[s0, s1] -> (d0, s0)>(%i)[%s0, %s1]`.
+bool simplifyAffineMaxOp(RewriterBase &rewriter, AffineMaxOp op);
+
+/// This transform applies `simplifyAffineMinOp` and `simplifyAffineMaxOp` to
+/// all the `affine.min` or `affine.max` operations in `ops`. After
+/// simplification, it invokes the `affine.min/max` canonicalization patterns on
+/// `ops`.
+///
+/// This transform returns failure if the greedy pattern rewriter failed to
+/// converge during canonicalization, otherwise it returns success. If provided,
+/// `modified` is set to `true` if the IR was modified in any way.
+LogicalResult simplifyAffineMinMaxOps(RewriterBase &rewriter,
+                                      ArrayRef<Operation *> ops,
+                                      bool *modified = nullptr);
 } // namespace affine
 } // namespace mlir
 
