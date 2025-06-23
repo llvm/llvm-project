@@ -453,17 +453,19 @@ void PredicateInfoBuilder::buildPredicateInfo() {
   // Collect operands to rename from all conditional branch terminators, as well
   // as assume statements.
   SmallVector<Value *, 8> OpsToRename;
-  for (auto *DTN : depth_first(DT.getRootNode())) {
-    BasicBlock *BranchBB = DTN->getBlock();
-    if (auto *BI = dyn_cast<BranchInst>(BranchBB->getTerminator())) {
+  for (BasicBlock &BB : F) {
+    if (!DT.isReachableFromEntry(&BB))
+      continue;
+
+    if (auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
       if (!BI->isConditional())
         continue;
       // Can't insert conditional information if they all go to the same place.
       if (BI->getSuccessor(0) == BI->getSuccessor(1))
         continue;
-      processBranch(BI, BranchBB, OpsToRename);
-    } else if (auto *SI = dyn_cast<SwitchInst>(BranchBB->getTerminator())) {
-      processSwitch(SI, BranchBB, OpsToRename);
+      processBranch(BI, &BB, OpsToRename);
+    } else if (auto *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
+      processSwitch(SI, &BB, OpsToRename);
     }
   }
   for (auto &Assume : AC.assumptions()) {
