@@ -96,10 +96,21 @@ static void pushInteger(InterpState &S, T Val, QualType QT) {
                 QT);
 }
 
-static void assignInteger(const Pointer &Dest, PrimType ValueT,
+static void assignInteger(InterpState &S, const Pointer &Dest, PrimType ValueT,
                           const APSInt &Value) {
-  INT_TYPE_SWITCH_NO_BOOL(
-      ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
+
+  if (ValueT == PT_IntAPS) {
+    Dest.deref<IntegralAP<true>>() =
+        S.allocAP<IntegralAP<true>>(Value.getBitWidth());
+    Dest.deref<IntegralAP<true>>().copy(Value);
+  } else if (ValueT == PT_IntAP) {
+    Dest.deref<IntegralAP<false>>() =
+        S.allocAP<IntegralAP<false>>(Value.getBitWidth());
+    Dest.deref<IntegralAP<false>>().copy(Value);
+  } else {
+    INT_TYPE_SWITCH_NO_BOOL(
+        ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
+  }
 }
 
 static QualType getElemType(const Pointer &P) {
@@ -849,7 +860,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   }
 
   // Write Result to ResultPtr and put Overflow on the stack.
-  assignInteger(ResultPtr, ResultT, Result);
+  assignInteger(S, ResultPtr, ResultT, Result);
   ResultPtr.initialize();
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -902,7 +913,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(CarryOutPtr, CarryOutT, CarryOut);
+  assignInteger(S, CarryOutPtr, CarryOutT, CarryOut);
   CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
@@ -1414,7 +1425,7 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(CarryOutPtr, CarryOutT, APSInt(Result, true));
+  assignInteger(S, CarryOutPtr, CarryOutT, APSInt(Result, true));
 
   pushInteger(S, CarryOut, Call->getType());
 

@@ -93,11 +93,6 @@ Bind default visibility defined STB_GLOBAL function symbols locally for
 .Fl shared.
 .It Fl -be8
 Write a Big Endian ELF File using BE8 format(AArch32 only)
-.It Fl -branch-to-branch
-Enable the branch-to-branch optimizations: a branch whose target is
-another branch instruction is rewritten to point to the latter branch
-target (AArch64 and X86_64 only). Enabled by default at
-.Fl O2 Ns .
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -419,7 +414,7 @@ If not specified,
 .Dv a.out
 is used as a default.
 .It Fl O Ns Ar value
-Optimize output file.
+Optimize output file size.
 .Ar value
 may be:
 .Pp
@@ -429,7 +424,7 @@ Disable string merging.
 .It Cm 1
 Enable string merging.
 .It Cm 2
-Enable string tail merging and branch-to-branch optimization.
+Enable string tail merging.
 .El
 .Pp
 .Fl O Ns Cm 1
