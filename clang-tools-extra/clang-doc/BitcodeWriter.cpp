@@ -128,7 +128,9 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_REFERENCE_BLOCK_ID, "ReferenceBlock"},
           {BI_TEMPLATE_BLOCK_ID, "TemplateBlock"},
           {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID, "TemplateSpecializationBlock"},
-          {BI_TEMPLATE_PARAM_BLOCK_ID, "TemplateParamBlock"}};
+          {BI_TEMPLATE_PARAM_BLOCK_ID, "TemplateParamBlock"},
+          {BI_CONSTRAINT_BLOCK_ID, "ConstraintBlock"},
+          {BI_CONCEPT_BLOCK_ID, "ConceptBlock"}};
       assert(Inits.size() == BlockIdCount);
       for (const auto &Init : Inits)
         BlockIdNameMap[Init.first] = Init.second;
@@ -205,7 +207,13 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {TYPEDEF_USR, {"USR", &genSymbolIdAbbrev}},
           {TYPEDEF_NAME, {"Name", &genStringAbbrev}},
           {TYPEDEF_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
-          {TYPEDEF_IS_USING, {"IsUsing", &genBoolAbbrev}}};
+          {TYPEDEF_IS_USING, {"IsUsing", &genBoolAbbrev}},
+          {CONCEPT_USR, {"USR", &genSymbolIdAbbrev}},
+          {CONCEPT_NAME, {"Name", &genStringAbbrev}},
+          {CONCEPT_IS_TYPE, {"IsType", &genBoolAbbrev}},
+          {CONCEPT_CONSTRAINT_EXPRESSION,
+           {"ConstraintExpression", &genStringAbbrev}},
+          {CONSTRAINT_EXPRESSION, {"Expression", &genStringAbbrev}}};
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
         RecordIdNameMap[Init.first] = Init.second;
@@ -263,7 +271,13 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Template Blocks.
         {BI_TEMPLATE_BLOCK_ID, {}},
         {BI_TEMPLATE_PARAM_BLOCK_ID, {TEMPLATE_PARAM_CONTENTS}},
-        {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID, {TEMPLATE_SPECIALIZATION_OF}}};
+        {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID, {TEMPLATE_SPECIALIZATION_OF}},
+        // Concept Block
+        {BI_CONCEPT_BLOCK_ID,
+         {CONCEPT_USR, CONCEPT_NAME, CONCEPT_IS_TYPE,
+          CONCEPT_CONSTRAINT_EXPRESSION}},
+        // Constraint Block
+        {BI_CONSTRAINT_BLOCK_ID, {CONSTRAINT_EXPRESSION}}};
 
 // AbbreviationMap
 
@@ -524,6 +538,8 @@ void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
     emitBlock(C);
   for (const auto &C : I.Children.Typedefs)
     emitBlock(C);
+  for (const auto &C : I.Children.Concepts)
+    emitBlock(C);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const EnumInfo &I) {
@@ -627,12 +643,25 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
     emitBlock(*I.Template);
 }
 
+void ClangDocBitcodeWriter::emitBlock(const ConceptInfo &I) {
+  StreamSubBlockGuard Block(Stream, BI_CONCEPT_BLOCK_ID);
+  emitRecord(I.USR, CONCEPT_USR);
+  emitRecord(I.Name, CONCEPT_NAME);
+  for (const auto &CI : I.Description)
+    emitBlock(CI);
+  emitRecord(I.IsType, CONCEPT_IS_TYPE);
+  emitRecord(I.ConstraintExpression, CONCEPT_CONSTRAINT_EXPRESSION);
+  emitBlock(I.Template);
+}
+
 void ClangDocBitcodeWriter::emitBlock(const TemplateInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TEMPLATE_BLOCK_ID);
   for (const auto &P : T.Params)
     emitBlock(P);
   if (T.Specialization)
     emitBlock(*T.Specialization);
+  for (const auto &C : T.Constraints)
+    emitBlock(C);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TemplateSpecializationInfo &T) {
@@ -645,6 +674,12 @@ void ClangDocBitcodeWriter::emitBlock(const TemplateSpecializationInfo &T) {
 void ClangDocBitcodeWriter::emitBlock(const TemplateParamInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TEMPLATE_PARAM_BLOCK_ID);
   emitRecord(T.Contents, TEMPLATE_PARAM_CONTENTS);
+}
+
+void ClangDocBitcodeWriter::emitBlock(const ConstraintInfo &C) {
+  StreamSubBlockGuard Block(Stream, BI_CONSTRAINT_BLOCK_ID);
+  emitRecord(C.ConstraintExpr, CONSTRAINT_EXPRESSION);
+  emitBlock(C.ConceptRef, FieldId::F_concept);
 }
 
 bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
@@ -663,6 +698,9 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
     break;
   case InfoType::IT_typedef:
     emitBlock(*static_cast<clang::doc::TypedefInfo *>(I));
+    break;
+  case InfoType::IT_concept:
+    emitBlock(*static_cast<clang::doc::ConceptInfo *>(I));
     break;
   case InfoType::IT_default:
     llvm::errs() << "Unexpected info, unable to write.\n";
