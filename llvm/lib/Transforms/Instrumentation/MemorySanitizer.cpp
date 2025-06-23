@@ -287,6 +287,20 @@ static cl::opt<bool>
                  cl::desc("propagate shadow through ICmpEQ and ICmpNE"),
                  cl::Hidden, cl::init(true));
 
+static cl::opt<MSanEmbedFaultingInstructionMode> ClEmbedFaultingInst(
+    "msan-embed-faulting-instruction",
+    cl::desc("[EXPERIMENTAL] Sets whether to embed the LLVM IR instruction "
+             "info for each UUM check."),
+    cl::values(
+        clEnumValN(MSanEmbedFaultingInstructionMode::None, "none",
+                   "Do not embed the faulting instruction information."),
+        clEnumValN(MSanEmbedFaultingInstructionMode::Name, "name",
+                   "Embed the LLVM IR instruction name (excluding operands)."),
+        clEnumValN(
+            MSanEmbedFaultingInstructionMode::Full, "full",
+            "Embed the complete LLVM IR instruction (including operands).")),
+    cl::Hidden, cl::init(MSanEmbedFaultingInstructionMode::None));
+
 static cl::opt<bool>
     ClHandleICmpExact("msan-handle-icmp-exact",
                       cl::desc("exact handling of relational integer ICmp"),
@@ -824,6 +838,39 @@ MemorySanitizer::getOrInsertMsanMetadataFunction(Module &M, StringRef Name,
                                std::forward<ArgsTy>(Args)...);
 }
 
+StringRef getWarningFnName(bool TrackOrigins, bool Recover,
+                           bool EmbedFaultingInst) {
+  StringRef warningFnName[2][2][2] = {
+      {
+          // TrackOrigins=false
+          {
+              // Recover=false
+              "__msan_warning_noreturn",         // EmbedFaultingInst=false
+              "__msan_warning_noreturn_instname" // EmbedFaultingInst=true
+          },
+          {
+              // Recover=true
+              "__msan_warning",         // EmbedFaultingInst=false
+              "__msan_warning_instname" // EmbedFaultingInst=true
+          },
+      },
+      {
+          // TrackOrigins=true
+          {
+              // Recover=false
+              "__msan_warning_with_origin_noreturn", // EmbedFaultingInst=false
+              "__msan_warning_with_origin_noreturn_instname" // EmbedFaultingInst=true
+          },
+          {
+              // Recover=true
+              "__msan_warning_with_origin",         // EmbedFaultingInst=false
+              "__msan_warning_with_origin_instname" // EmbedFaultingInst=true
+          },
+      }};
+
+  return warningFnName[TrackOrigins][Recover][EmbedFaultingInst];
+}
+
 /// Create KMSAN API callbacks.
 void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   IRBuilder<> IRB(*C);
@@ -837,9 +884,15 @@ void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   VAArgOriginTLS = nullptr;
   VAArgOverflowSizeTLS = nullptr;
 
-  WarningFn = M.getOrInsertFunction("__msan_warning",
-                                    TLI.getAttrList(C, {0}, /*Signed=*/false),
-                                    IRB.getVoidTy(), IRB.getInt32Ty());
+  SmallVector<Type *, 4> ArgsTy = {IRB.getInt32Ty()};
+  StringRef FnName = getWarningFnName(
+      /*TrackOrigins=*/false, /*Recover=*/true,
+      ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
+  if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
+    ArgsTy.push_back(IRB.getPtrTy());
+  WarningFn = M.getOrInsertFunction(
+      FnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false),
+      TLI.getAttrList(C, {0}, /*Signed=*/false));
 
   // Requests the per-task context state (kmsan_context_state*) from the
   // runtime library.
@@ -894,16 +947,22 @@ void MemorySanitizer::createUserspaceApi(Module &M,
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
   // which is not yet implemented.
+  StringRef WarningFnName = getWarningFnName(
+      TrackOrigins, Recover,
+      ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
+  SmallVector<Type *, 2> ArgsTy = {};
   if (TrackOrigins) {
-    StringRef WarningFnName = Recover ? "__msan_warning_with_origin"
-                                      : "__msan_warning_with_origin_noreturn";
-    WarningFn = M.getOrInsertFunction(WarningFnName,
-                                      TLI.getAttrList(C, {0}, /*Signed=*/false),
-                                      IRB.getVoidTy(), IRB.getInt32Ty());
+    ArgsTy.push_back(IRB.getInt32Ty());
+    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
+      ArgsTy.push_back(IRB.getPtrTy());
+    WarningFn = M.getOrInsertFunction(
+        WarningFnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false),
+        TLI.getAttrList(C, {0}, /*Signed=*/false));
   } else {
-    StringRef WarningFnName =
-        Recover ? "__msan_warning" : "__msan_warning_noreturn";
-    WarningFn = M.getOrInsertFunction(WarningFnName, IRB.getVoidTy());
+    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
+      ArgsTy.push_back(IRB.getPtrTy());
+    WarningFn = M.getOrInsertFunction(
+        WarningFnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false));
   }
 
   // Create the global TLS variables.
@@ -936,9 +995,15 @@ void MemorySanitizer::createUserspaceApi(Module &M,
        AccessSizeIndex++) {
     unsigned AccessSize = 1 << AccessSizeIndex;
     std::string FunctionName = "__msan_maybe_warning_" + itostr(AccessSize);
+    SmallVector<Type *, 3> ArgsTy = {IRB.getIntNTy(AccessSize * 8),
+                                     IRB.getInt32Ty()};
+    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
+      FunctionName = "__msan_maybe_warning_instname_" + itostr(AccessSize);
+      ArgsTy.push_back(IRB.getPtrTy());
+    }
     MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
-        FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
-        IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty());
+        FunctionName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false),
+        TLI.getAttrList(C, {0, 1}, /*Signed=*/false));
 
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
@@ -1410,7 +1475,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   /// Helper function to insert a warning at IRB's current insert point.
-  void insertWarningFn(IRBuilder<> &IRB, Value *Origin) {
+  void insertWarningFn(IRBuilder<> &IRB, Value *Origin, Value *InstName) {
     if (!Origin)
       Origin = (Value *)IRB.getInt32(0);
     assert(Origin->getType()->isIntegerTy());
@@ -1433,17 +1498,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
     }
 
+    SmallVector<Value *, 4> Args;
     if (MS.CompileKernel || MS.TrackOrigins)
-      IRB.CreateCall(MS.WarningFn, Origin)->setCannotMerge();
-    else
-      IRB.CreateCall(MS.WarningFn)->setCannotMerge();
+      Args.push_back(Origin);
+    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
+      Args.push_back(InstName);
+    IRB.CreateCall(MS.WarningFn, Args)->setCannotMerge();
+
     // FIXME: Insert UnreachableInst if !MS.Recover?
     // This may invalidate some of the following checks and needs to be done
     // at the very end.
   }
 
   void materializeOneCheck(IRBuilder<> &IRB, Value *ConvertedShadow,
-                           Value *Origin) {
+                           Value *Origin, Value *InstName) {
     const DataLayout &DL = F.getDataLayout();
     TypeSize TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
@@ -1454,9 +1522,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       ConvertedShadow = convertShadowToScalar(ConvertedShadow, IRB);
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
-      CallBase *CB = IRB.CreateCall(
-          Fn, {ConvertedShadow2,
-               MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+
+      SmallVector<Value *, 3> Args = {
+          ConvertedShadow2,
+          MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)};
+      if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
+        Args.push_back(InstName);
+
+      CallBase *CB = IRB.CreateCall(Fn, Args);
+
       CB->addParamAttr(0, Attribute::ZExt);
       CB->addParamAttr(1, Attribute::ZExt);
     } else {
@@ -1466,9 +1540,49 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           /* Unreachable */ !MS.Recover, MS.ColdCallWeights);
 
       IRB.SetInsertPoint(CheckTerm);
-      insertWarningFn(IRB, Origin);
+      // InstName will be ignored by insertWarningFn if ClEmbedFaultingInst is
+      // MSanEmbedFaultingInstructionMode::None
+      insertWarningFn(IRB, Origin, InstName);
       LLVM_DEBUG(dbgs() << "  CHECK: " << *Cmp << "\n");
     }
+  }
+
+  Value *getInstName(Instruction *Instruction) {
+    Value *InstName = nullptr;
+
+    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
+      IRBuilder<> IRB(Instruction);
+      StringRef InstNameStrRef;
+      // Keep str and maybeBuf at this scope level because they may be
+      // indirectly needed by CreateGlobalString
+      std::string str;
+      SmallVector<char> maybeBuf;
+
+      // Dumping the full instruction is expensive because the operands etc.
+      // likely make the string unique per instruction instance, hence we
+      // offer a choice whether to only print the instruction name.
+      if (ClEmbedFaultingInst == MSanEmbedFaultingInstructionMode::Full) {
+        llvm::raw_string_ostream buf(str);
+        Instruction->print(buf);
+        InstNameStrRef = StringRef(str);
+      } else if (ClEmbedFaultingInst ==
+                 MSanEmbedFaultingInstructionMode::Name) {
+        if (CallInst *CI = dyn_cast<CallInst>(Instruction)) {
+          if (CI->getCalledFunction()) {
+            Twine description = "call " + CI->getCalledFunction()->getName();
+            InstNameStrRef = description.toStringRef(maybeBuf);
+          } else {
+            InstNameStrRef = StringRef("Unknown call");
+          }
+        } else {
+          InstNameStrRef = StringRef(Instruction->getOpcodeName());
+        }
+      }
+
+      InstName = IRB.CreateGlobalString(InstNameStrRef);
+    }
+
+    return InstName;
   }
 
   void materializeInstructionChecks(
@@ -1478,6 +1592,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // correct origin.
     bool Combine = !MS.TrackOrigins;
     Instruction *Instruction = InstructionChecks.front().OrigIns;
+
+    Value *InstName = getInstName(Instruction);
+
     Value *Shadow = nullptr;
     for (const auto &ShadowData : InstructionChecks) {
       assert(ShadowData.OrigIns == Instruction);
@@ -1492,7 +1609,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         }
         if (llvm::isKnownNonZero(ConvertedShadow, DL)) {
           // Report as the value is definitely uninitialized.
-          insertWarningFn(IRB, ShadowData.Origin);
+          insertWarningFn(IRB, ShadowData.Origin, InstName);
           if (!MS.Recover)
             return; // Always fail and stop here, not need to check the rest.
           // Skip entire instruction,
@@ -1502,7 +1619,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
 
       if (!Combine) {
-        materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin);
+        materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin, InstName);
         continue;
       }
 
@@ -1519,7 +1636,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (Shadow) {
       assert(Combine);
       IRBuilder<> IRB(Instruction);
-      materializeOneCheck(IRB, Shadow, nullptr);
+      materializeOneCheck(IRB, Shadow, nullptr, InstName);
     }
   }
 
