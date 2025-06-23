@@ -88,36 +88,34 @@ void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
   mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
 }
 
-static constexpr const char *amdgpuIgnoreDenormalModeName =
-    "fir.amdgpu.ignore.denormal.mode";
-void fir::setAmdgpuIgnoreDenormalMode(mlir::ModuleOp mod) {
+static constexpr const char *ignoreDenormalModeName =
+    "fir.ignore.denormal.mode";
+void fir::setIgnoreDenormalMode(mlir::ModuleOp mod) {
   auto *ctx = mod.getContext();
-  mod->setAttr(amdgpuIgnoreDenormalModeName, mlir::UnitAttr::get(ctx));
+  mod->setAttr(ignoreDenormalModeName, mlir::UnitAttr::get(ctx));
 }
 
-bool fir::getAmdgpuIgnoreDenormalMode(mlir::ModuleOp mod) {
-  return mod->hasAttrOfType<mlir::UnitAttr>(amdgpuIgnoreDenormalModeName);
+bool fir::getIgnoreDenormalMode(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(ignoreDenormalModeName);
 }
 
-static constexpr const char *amdgpuFineGrainedMemoryName =
-    "fir.amdgpu.fine.grained.memory";
-void fir::setAmdgpuFineGrainedMemory(mlir::ModuleOp mod) {
+static constexpr const char *fineGrainedMemoryName = "fir.fine.grained.memory";
+void fir::setFineGrainedMemory(mlir::ModuleOp mod) {
   auto *ctx = mod.getContext();
-  mod->setAttr(amdgpuFineGrainedMemoryName, mlir::UnitAttr::get(ctx));
+  mod->setAttr(fineGrainedMemoryName, mlir::UnitAttr::get(ctx));
 }
 
-bool fir::getAmdgpuFineGrainedMemory(mlir::ModuleOp mod) {
-  return mod->hasAttrOfType<mlir::UnitAttr>(amdgpuFineGrainedMemoryName);
+bool fir::getFineGrainedMemory(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(fineGrainedMemoryName);
 }
-static constexpr const char *amdgpuRemoteMemoryName =
-    "fir.amdgpu.remote.memory";
-void fir::setAmdgpuRemoteMemory(mlir::ModuleOp mod) {
+static constexpr const char *remoteMemoryName = "fir.remote.memory";
+void fir::setRemoteMemory(mlir::ModuleOp mod) {
   auto *ctx = mod.getContext();
-  mod->setAttr(amdgpuRemoteMemoryName, mlir::UnitAttr::get(ctx));
+  mod->setAttr(remoteMemoryName, mlir::UnitAttr::get(ctx));
 }
 
-bool fir::getAmdgpuRemoteMemory(mlir::ModuleOp mod) {
-  return mod->hasAttrOfType<mlir::UnitAttr>(amdgpuRemoteMemoryName);
+bool fir::getRemoteMemory(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(remoteMemoryName);
 }
 
 llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {

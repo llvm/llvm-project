@@ -1565,11 +1565,11 @@ func.func @omp_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>,
   // CHECK: omp.atomic.update %[[X]] : memref<i32> {
   // CHECK-NEXT: (%[[XVAL:.*]]: i32):
   // CHECK-NEXT:   omp.yield(%{{.+}} : i32)
-  // CHECK-NEXT: } {atomic_control = #omp.atomic_control<amdgpu_ignore_denormal_mode = true, amdgpu_fine_grained_memory = true, amdgpu_remote_memory = true>}
+  // CHECK-NEXT: } {atomic_control = #omp.atomic_control<ignore_denormal_mode = true, fine_grained_memory = true, remote_memory = true>}
   omp.atomic.update %x : memref<i32> {
   ^bb0(%xval:i32):
     omp.yield(%const:i32)
-  } {atomic_control = #omp.atomic_control<amdgpu_ignore_denormal_mode = true, amdgpu_fine_grained_memory = true, amdgpu_remote_memory = true>}
+  } {atomic_control = #omp.atomic_control<ignore_denormal_mode = true, fine_grained_memory = true, remote_memory = true>}
   return
 }
 
