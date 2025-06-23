@@ -25,14 +25,28 @@ non_null:
   ret i32 %r
 }
 
-define i32 @caller(i32 %arg) {
-; CHECK-LABEL: define i32 @caller(
+define i32 @caller_simplified(i32 %arg) {
+; CHECK-LABEL: define i32 @caller_simplified(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[AGG0:%.*]] = insertvalue [2 x i32] poison, i32 0, 0
 ; CHECK-NEXT:    [[AGG1:%.*]] = insertvalue [2 x i32] [[AGG0]], i32 [[ARG]], 1
 ; CHECK-NEXT:    ret i32 0
 ;
   %agg0 = insertvalue [2 x i32] poison, i32 0, 0
+  %agg1 = insertvalue [2 x i32] %agg0, i32 %arg, 1
+  %v = call i32 @callee([2 x i32] %agg1)
+  ret i32 %v
+}
+
+define i32 @caller_not_simplified(i32 %arg) {
+; CHECK-LABEL: define i32 @caller_not_simplified(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[AGG0:%.*]] = insertvalue [2 x i32] poison, i32 1, 0
+; CHECK-NEXT:    [[AGG1:%.*]] = insertvalue [2 x i32] [[AGG0]], i32 [[ARG]], 1
+; CHECK-NEXT:    [[V:%.*]] = call i32 @callee([2 x i32] [[AGG1]])
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %agg0 = insertvalue [2 x i32] poison, i32 1, 0
   %agg1 = insertvalue [2 x i32] %agg0, i32 %arg, 1
   %v = call i32 @callee([2 x i32] %agg1)
   ret i32 %v
