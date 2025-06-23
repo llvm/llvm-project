@@ -17,6 +17,7 @@ class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
 
 /// Libcall Predicates
 def isOSDarwin : RuntimeLibcallPredicate<"TT.isOSDarwin()">;
+def isOSWindows : RuntimeLibcallPredicate<"TT.isOSWindows()">;
 
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
 def darwinHasExp10 : RuntimeLibcallPredicate<"darwinHasExp10(TT)">;
@@ -1271,6 +1272,7 @@ def __aeabi_memclr4 : RuntimeLibcallImpl<AEABI_MEMCLR4>;
 def __aeabi_memclr8 : RuntimeLibcallImpl<AEABI_MEMCLR8>;
 
 // isTargetWindows()
+defset list<RuntimeLibcallImpl> WindowsFPIntCastLibcalls = {
 def __stoi64 : RuntimeLibcallImpl<FPTOSINT_F32_I64>; // CallingConv::ARM_AAPCS_VFP
 def __dtoi64 : RuntimeLibcallImpl<FPTOSINT_F64_I64>; // CallingConv::ARM_AAPCS_VFP
 def __stou64 : RuntimeLibcallImpl<FPTOUINT_F32_I64>; // CallingConv::ARM_AAPCS_VFP
@@ -1279,6 +1281,7 @@ def __i64tos : RuntimeLibcallImpl<SINTTOFP_I64_F32>; // CallingConv::ARM_AAPCS_V
 def __i64tod : RuntimeLibcallImpl<SINTTOFP_I64_F64>; // CallingConv::ARM_AAPCS_VFP
 def __u64tos : RuntimeLibcallImpl<UINTTOFP_I64_F32>; // CallingConv::ARM_AAPCS_VFP
 def __u64tod : RuntimeLibcallImpl<UINTTOFP_I64_F64>; // CallingConv::ARM_AAPCS_VFP
+}
 
 def __rt_sdiv : RuntimeLibcallImpl<SDIVREM_I32>; // CallingConv::ARM_AAPCS
 def __rt_sdiv64 : RuntimeLibcallImpl<SDIVREM_I64>; // CallingConv::ARM_AAPCS
@@ -1304,6 +1307,51 @@ def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 // !isTargetMachO()
 def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
 def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
+
+
+def WindowARMDivRemCalls : LibcallImpls<
+  (add __rt_sdiv, __rt_sdiv64, __rt_udiv, __rt_udiv64),
+  isOSWindows> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def WindowARMFPIntCasts : LibcallImpls<
+  (add WindowsFPIntCastLibcalls),
+  isOSWindows> {
+  let CallingConv = ARM_AAPCS_VFP;
+}
+
+
+// Register based DivRem for AEABI (RTABI 4.2)
+def AEABIDivRemCalls : LibcallImpls<
+  (add __aeabi_idivmod, __aeabi_ldivmod,
+       __aeabi_uidivmod, __aeabi_uldivmod),
+  RuntimeLibcallPredicate<[{TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
+    TT.isTargetMuslAEABI()}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
+
+def ARMSystemLibrary
+    : SystemRuntimeLibrary<isARMOrThumb,
+      (add DefaultLibcallImpls32,
+           WindowARMDivRemCalls,
+           WindowARMFPIntCasts,
+           AEABIDivRemCalls,
+           DarwinSinCosStret, DarwinExp10,
+
+           // Use divmod compiler-rt calls for iOS 5.0 and later.
+           LibcallImpls<(add __divmodsi4, __udivmodsi4),
+                        RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
+                                                  (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>)> {
+  let DefaultLibcallCallingConv = LibcallCallingConv<[{
+     (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) ?
+        (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
+                                    : CallingConv::ARM_AAPCS) :
+                                      CallingConv::C
+  }]>;
+}
 
 //===----------------------------------------------------------------------===//
 // AVR Runtime Libcalls

@@ -141,7 +141,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: };
 
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, FloatABI::ABIType FloatABI) {
 // CHECK-NEXT:  struct LibcallImplPair {
 // CHECK-NEXT:    RTLIB::Libcall Func;
 // CHECK-NEXT:    RTLIB::LibcallImpl Impl;
