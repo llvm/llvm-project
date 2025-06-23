@@ -1,4 +1,4 @@
-# RUN: llvm-mc --arch=aarch64 --filetype=obj < %s | llvm-objdump -d -r --symbolize-operands --no-show-raw-insn --no-leading-addr - | FileCheck %s --match-full-lines
+# RUN: llvm-mc --triple=aarch64-elf --filetype=obj < %s | llvm-objdump -d -r --symbolize-operands --no-show-raw-insn --no-leading-addr - | FileCheck %s --match-full-lines
 
 # CHECK:      <fn1>:
 # CHECK-NEXT:   b <L0>
