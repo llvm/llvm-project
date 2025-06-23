@@ -287,9 +287,12 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
-  OS << Clause.Type << "(" << Clause.Reg
-     << ", numDescriptors = " << Clause.NumDescriptors
-     << ", space = " << Clause.Space << ", offset = ";
+  OS << Clause.Type << "(" << Clause.Reg << ", numDescriptors = ";
+  if (Clause.NumDescriptors == NumDescriptorsUnbounded)
+    OS << "unbounded";
+  else
+    OS << Clause.NumDescriptors;
+  OS << ", space = " << Clause.Space << ", offset = ";
   if (Clause.Offset == DescriptorTableOffsetAppend)
     OS << "DescriptorTableOffsetAppend";
   else

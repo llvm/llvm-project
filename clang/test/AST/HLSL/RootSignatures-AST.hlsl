@@ -41,7 +41,7 @@
 // CHECK-SAME:   t1, numDescriptors = 8, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
 // CHECK-SAME: ),
 // CHECK-SAME: UAV(
-// CHECK-SAME:   u1, numDescriptors = 4294967295, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
+// CHECK-SAME:   u1, numDescriptors = unbounded, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
 // CHECK-SAME: ),
 // CHECK-SAME: DescriptorTable(
 // CHECK-SAME:   numClauses = 3, visibility = All
