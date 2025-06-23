@@ -1489,7 +1489,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     // The std::nothrow_t arg never gets put on the stack.
     if (Call->getArg(NumArgs - 1)->getType()->isNothrowT())
       --NumArgs;
-    auto Args = llvm::ArrayRef(Call->getArgs(), Call->getNumArgs());
+    auto Args = ArrayRef(Call->getArgs(), Call->getNumArgs());
     // First arg is needed.
     Args = Args.drop_front();
 
@@ -2637,8 +2637,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
-                       llvm::ArrayRef<int64_t> ArrayIndices,
-                       int64_t &IntResult) {
+                       ArrayRef<int64_t> ArrayIndices, int64_t &IntResult) {
   CharUnits Result;
   unsigned N = E->getNumComponents();
   assert(N > 0);

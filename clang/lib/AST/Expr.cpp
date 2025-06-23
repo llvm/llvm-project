@@ -4588,7 +4588,7 @@ const IdentifierInfo *DesignatedInitExpr::Designator::getFieldName() const {
 }
 
 DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
-                                       llvm::ArrayRef<Designator> Designators,
+                                       ArrayRef<Designator> Designators,
                                        SourceLocation EqualOrColonLoc,
                                        bool GNUSyntax,
                                        ArrayRef<Expr *> IndexExprs, Expr *Init)
@@ -4621,12 +4621,12 @@ DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
   setDependence(computeDependence(this));
 }
 
-DesignatedInitExpr *
-DesignatedInitExpr::Create(const ASTContext &C,
-                           llvm::ArrayRef<Designator> Designators,
-                           ArrayRef<Expr*> IndexExprs,
-                           SourceLocation ColonOrEqualLoc,
-                           bool UsesColonSyntax, Expr *Init) {
+DesignatedInitExpr *DesignatedInitExpr::Create(const ASTContext &C,
+                                               ArrayRef<Designator> Designators,
+                                               ArrayRef<Expr *> IndexExprs,
+                                               SourceLocation ColonOrEqualLoc,
+                                               bool UsesColonSyntax,
+                                               Expr *Init) {
   void *Mem = C.Allocate(totalSizeToAlloc<Stmt *>(IndexExprs.size() + 1),
                          alignof(DesignatedInitExpr));
   return new (Mem) DesignatedInitExpr(C, C.VoidTy, Designators,
