@@ -2116,7 +2116,7 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
 
   // Every call was either to an external function guaranteed to not make a
   // call to this function or a direct call to internal function. Also, SCC is
-  // one. Together, the above checks ensures, this function cannot norecurse.
+  // one. Together, the above checks ensures, this function cannot recurse.
   F->setDoesNotRecurse();
   ++NumNoRecurse;
   Changed.insert(F);
