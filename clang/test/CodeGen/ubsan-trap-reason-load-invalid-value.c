@@ -12,4 +12,4 @@ bool load_invalid_value()
 
 // CHECK: call void @llvm.ubsantrap(i8 10) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$
+// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$UBSan Trap Reason

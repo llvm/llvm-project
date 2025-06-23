@@ -88,53 +88,48 @@ enum VariableTypeDescriptorKind : uint16_t {
 static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
   switch (ID) {
   case SanitizerHandler::AddOverflow:
-    return "The addition of two signed integers resulted in overflow.";
+    return "Signed integer addition overflowed.";
 
   case SanitizerHandler::BuiltinUnreachable:
-    return "_builtin_unreachable encountered.";
+    return "_builtin_unreachable() executed.";
 
   case SanitizerHandler::CFICheckFail:
-    return "Control flow integrity check failed.";
+    return "Control flow integrity check failed";
 
-  case SanitizerHandler::DivremOverflow: // Unsure
-    return "stub";
+  case SanitizerHandler::DivremOverflow:
+    return "Signed integer divide or remainder overflowed";
 
-  case SanitizerHandler::DynamicTypeCacheMiss: // Unsure
-    return "Data requested for dynamic type not found in cache memory.";
+  case SanitizerHandler::DynamicTypeCacheMiss:
+    return "Dynamic-type cache miss";
 
-  case SanitizerHandler::FloatCastOverflow: // Pasted from LLVM docs, maybe
-                                            // something better to put here.
-    return "Conversion to, from, or between floating-point types which would "
-           "overflow the destination.";
+  case SanitizerHandler::FloatCastOverflow:
+    return "Floating-point to integer conversion overflowed";
 
   case SanitizerHandler::FunctionTypeMismatch:
-    return "Function called with arguments of a different data type than "
-           "expected";
+    return "Function called with mismatched signature";
 
   case SanitizerHandler::ImplicitConversion:
-    return "Implicit conversion occurred.";
+    return "Implicit integer conversion overflowed or lost data";
 
   case SanitizerHandler::InvalidBuiltin:
-    return "Built-in function or keyword not recognized.";
+    return "Invalid use of builtin function";
 
   case SanitizerHandler::InvalidObjCCast:
     return "Invalid Objective-C cast.";
 
   case SanitizerHandler::LoadInvalidValue:
-    return "stub";
+    return "Loaded an invalid or uninitialized value";
 
   case SanitizerHandler::MissingReturn:
-    return "Function is missing a return.";
+    return "Non-void function fell off end without return";
 
   case SanitizerHandler::MulOverflow:
-    return "The multiplication of two signed integers resulted in overflow.";
+    return "Signed integer multiplication overflowed";
 
   case SanitizerHandler::NegateOverflow:
-    return "Underflow/negative overflow occurred.";
+    return "Signed integer negation overflowed";
 
-  case SanitizerHandler::
-      NullabilityArg: // Next 4 pasted from
-                      // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+  case SanitizerHandler::NullabilityArg:
     return "Passing null as a function parameter which is annotated with "
            "_Nonnull";
 
@@ -151,26 +146,25 @@ static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
            "be null";
 
   case SanitizerHandler::OutOfBounds:
-    return "Out of bounds -- memory accessed outside of expected boundaries.";
+    return "Array index out of bounds";
 
   case SanitizerHandler::PointerOverflow:
-    return "stub";
+    return "Pointer arithmetic overflowed bounds";
 
   case SanitizerHandler::ShiftOutOfBounds:
-    return "Bit shift attempted to move bits beyond boundaries of data type's "
-           "bit size.";
+    return "Shift amount exceeds bit-width of operand";
 
   case SanitizerHandler::SubOverflow:
-    return "The subtraction of two signed integers resulted in overflow.";
+    return "Signed integer subtraction overflowed";
 
   case SanitizerHandler::TypeMismatch:
-    return "Type mismatch -- value type used does not match type expected.";
+    return "Type mismatch in operation";
 
   case SanitizerHandler::AlignmentAssumption: // Help on bottom 2
-    return "stub";
+    return "Alignment assumption violated";
 
   case SanitizerHandler::VLABoundNotPositive:
-    return "stub";
+    return "Variable-length array bound is not positive";
 
   default:
     return "";
@@ -4133,8 +4127,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
-                                    bool NoMerge, StringRef Annotation,
-                                    StringRef TrapMessage) {
+                                    bool NoMerge) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4145,7 +4138,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
-  llvm::StringRef Category = GetTrapMessageForHandler(CheckHandlerID);
+  llvm::StringRef Category = "UBSan Trap Reason";
+  llvm::StringRef TrapMessage = GetTrapMessageForHandler(CheckHandlerID);
 
   if (getDebugInfo() && !Category.empty()) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
