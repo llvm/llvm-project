@@ -364,6 +364,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
         RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES,
         RTLIB::__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes);
   }
+
+  if (TT.getArch() == Triple::ArchType::msp430) {
+    setLibcallImplCallingConv(RTLIB::__mspabi_mpyll,
+                              CallingConv::MSP430_BUILTIN);
+  }
 }
 
 bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
