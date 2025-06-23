@@ -93,7 +93,7 @@ TEST_P(olLaunchKernelTest, SuccessSynchronous) {
                                 &LaunchArgs, nullptr));
 
   uint32_t *Data = (uint32_t *)Mem;
-  for (int i = 0; i < 64; i++) {
+  for (uint32_t i = 0; i < 64; i++) {
     ASSERT_EQ(Data[i], i);
   }
 
