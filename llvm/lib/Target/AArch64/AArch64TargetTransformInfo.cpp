@@ -5600,7 +5600,8 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   }
 
   // Segmented shuffle matching.
-  if ((ST->hasSVE2p1() || (ST->hasSME2p1() && ST->isStreaming())) &&
+  if ((ST->hasSVE2p1() ||
+       (ST->hasSME2p1() && ST->isSVEorStreamingSVEAvailable())) &&
       Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(SrcTy) &&
       SrcTy->getPrimitiveSizeInBits().isKnownMultipleOf(
           AArch64::SVEBitsPerBlock)) {
