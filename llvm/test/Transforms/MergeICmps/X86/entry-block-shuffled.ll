@@ -11,10 +11,10 @@ define zeroext i1 @opeq1(
 ; CHECK-LABEL: @opeq1(
 ; CHECK-NEXT:  entry2:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[S:%.*]], ptr [[A:%.*]], i64 0, i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[S]], ptr [[B:%.*]], i64 0, i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[S]], ptr [[B:%.*]], i64 0, i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %"land.rhs.i+land.rhs.i.2", label [[OPEQ1_EXIT:%.*]]
 ; CHECK:       "land.rhs.i+land.rhs.i.2":
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[A]], ptr [[B]], i64 8)
@@ -22,10 +22,10 @@ define zeroext i1 @opeq1(
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[LAND_RHS_I_31:%.*]], label [[OPEQ1_EXIT]]
 ; CHECK:       land.rhs.i.31:
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[S]], ptr [[A]], i64 0, i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[S]], ptr [[B]], i64 0, i32 3
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[S]], ptr [[B]], i64 0, i32 3
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    br label [[OPEQ1_EXIT]]
 ; CHECK:       opeq1.exit:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ [[TMP10]], [[LAND_RHS_I_31]] ], [ false, %"land.rhs.i+land.rhs.i.2" ], [ false, [[ENTRY2:%.*]] ]
