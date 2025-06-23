@@ -339,7 +339,7 @@ template <class... Ts> OverloadedVisit(Ts...) -> OverloadedVisit<Ts...>;
 
 } // namespace
 
-void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
+raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
   const auto Visitor = OverloadedVisit{
       [&OS](const RootFlags &Flags) { OS << Flags; },
       [&OS](const RootConstants &Constants) { OS << Constants; },
@@ -348,14 +348,17 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
       [&OS](const DescriptorTable &Table) { OS << Table; },
       [&OS](const StaticSampler &Sampler) { OS << Sampler; },
   };
+  std::visit(Visitor, Element);
+  return OS;
+}
 
+void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
   OS << " RootElements{";
   bool First = true;
   for (const RootElement &Element : Elements) {
     if (!First)
       OS << ",";
-    OS << " ";
-    std::visit(Visitor, Element);
+    OS << " " << Element;
     First = false;
   }
   OS << "}";
