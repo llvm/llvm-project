@@ -138,8 +138,8 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
     error = SetSoftwareBreakpoint(bp_addr, *bp_size, process);
     if (error.Fail())
       return error;
-
-    m_threads_stepping_with_breakpoint.insert({thread.GetID(), bp_addr});
   }
+
+  m_threads_stepping_with_breakpoint.insert({thread.GetID(), bp_locations});
   return error;
 }

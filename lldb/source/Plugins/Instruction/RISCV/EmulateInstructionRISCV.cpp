@@ -1809,7 +1809,7 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding load reserve insturuction",
               __FUNCTION__);
-    return {*pc + inst->is_rvc ? 2u : 4u};
+    return {*pc + (inst->is_rvc ? 2u : 4u)};
   }
 
   return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(status);
@@ -1874,7 +1874,7 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding store conditional insturuction",
               __FUNCTION__);
-    return {entry_pc + lr_inst->is_rvc ? 2u : 4u};
+    return {entry_pc + (lr_inst->is_rvc ? 2u : 4u)};
   }
 
   lldb::addr_t exit_pc = pc;
