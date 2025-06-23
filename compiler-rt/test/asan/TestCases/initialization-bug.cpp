@@ -34,7 +34,7 @@ int ATTRIBUTE_NOINLINE initX() {
   // CHECK: {{READ of size .* at 0x.* thread T0}}
   // CHECK: {{0x.* is located 0 bytes inside of global variable .*(y|z).*}}
   // CHECK: registered at:
-  // CHECK: 0x{{.*}} in __asan_register_globals
+  // CHECK: 0x{{.*}} in {{\.?__asan_register_globals}}
 }
 
 // This initializer begins our initialization order problems.

@@ -8,7 +8,7 @@ struct IntHolder {
   ATTRIBUTE_NOINLINE ~IntHolder() {
     printf("Value: %d\n", *val_);  // BOOM
     // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
-    // CHECK:  #0 0x{{.*}} in IntHolder::~IntHolder{{.*}}.cpp:[[@LINE-2]]
+    // CHECK:  #0 0x{{.*}} in {{\.?IntHolder::~IntHolder.*}}.cpp:[[@LINE-2]]
   }
   void set(int *val) { val_ = val; }
   int *get() { return val_; }

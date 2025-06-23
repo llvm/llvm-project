@@ -33,6 +33,6 @@ int main(int argc, char **argv) {
 }
 
 // CHECK0-NOT: DEDUP_TOKEN:
-// CHECK1: DEDUP_TOKEN: void Xyz::Abc<int, int>()
-// CHECK2: DEDUP_TOKEN: void Xyz::Abc<int, int>()--bar
-// CHECK3: DEDUP_TOKEN: void Xyz::Abc<int, int>()--bar--FOO()
+// CHECK1: DEDUP_TOKEN: {{\.?void}} Xyz::Abc<int, int>()
+// CHECK2: DEDUP_TOKEN: {{\.?void}} Xyz::Abc<int, int>()--{{\.?bar}}
+// CHECK3: DEDUP_TOKEN: {{\.?void}} Xyz::Abc<int, int>()--{{\.?bar}}--{{\.?FOO}}()

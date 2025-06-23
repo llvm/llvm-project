@@ -6,6 +6,9 @@
 // There's no interceptor for strcasestr on Windows
 // XFAIL: target={{.*windows-(msvc.*|gnu)}}
 
+// AIX does not define strcasestr.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #define _GNU_SOURCE
 #include <assert.h>
 #include <stdlib.h>

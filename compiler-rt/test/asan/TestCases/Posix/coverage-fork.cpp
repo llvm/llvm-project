@@ -6,6 +6,8 @@
 // UNSUPPORTED: android
 // UNSUPPORTED: iossim
 //
+// UNSUPPORTED: target={{.*aix.*}}
+
 // Ideally a forked-subprocess should only report it's own coverage,
 // not parent's one. But trace-pc-guard currently does nothing special for fork,
 // and thus this test is relaxed.

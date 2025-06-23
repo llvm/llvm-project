@@ -47,8 +47,8 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK-FGETS: {{.*ERROR: AddressSanitizer: stack-buffer-overflow}}
-// CHECK-FGETS: #{{.*}} in {{(wrap_|__interceptor_)?}}fgets
+// CHECK-FGETS: #{{.*}} in {{(wrap_|__interceptor_)?}}{{\.?fgets}}
 // CHECK-FPUTS: {{.*ERROR: AddressSanitizer: stack-buffer-overflow}}
-// CHECK-FPUTS: #{{.*}} in {{(wrap_|__interceptor_)?}}fputs
+// CHECK-FPUTS: #{{.*}} in {{(wrap_|__interceptor_)?}}{{\.?fputs}}
 // CHECK-PUTS: {{.*ERROR: AddressSanitizer: heap-use-after-free}}
-// CHECK-PUTS: #{{.*}} in {{(wrap_|__interceptor_)?}}puts
+// CHECK-PUTS: #{{.*}} in {{(wrap_|__interceptor_)?}}{{\.?puts}}

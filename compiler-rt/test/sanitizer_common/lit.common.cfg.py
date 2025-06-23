@@ -92,7 +92,7 @@ config.substitutions.append(
 
 config.suffixes = [".c", ".cpp"]
 
-if config.host_os not in ["Linux", "Darwin", "NetBSD", "FreeBSD", "SunOS"]:
+if config.host_os not in ["Linux", "Darwin", "NetBSD", "FreeBSD", "SunOS", "AIX"]:
     config.unsupported = True
 
 if not config.parallelism_group:
