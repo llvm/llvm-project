@@ -74,25 +74,12 @@ struct DemangledNameInfo {
     return BasenameRange.second > BasenameRange.first;
   }
 
-  /// Returns \c true if `BasenameRange` is empty.
-  bool isBasenameEmpty() const {
-    return BasenameRange.first == BasenameRange.second;
-  }
-
   /// Returns \c true if this object holds a valid scope range.
   bool hasScope() const { return ScopeRange.second > ScopeRange.first; }
-
-  /// Returns \c true if `ScopeRange` is empty.
-  bool isScopeEmpty() const { return ScopeRange.first == ScopeRange.second; }
 
   /// Returns \c true if this object holds a valid arguments range.
   bool hasArguments() const {
     return ArgumentsRange.second > ArgumentsRange.first;
-  }
-
-  /// Returns \c true if `ArgumentsRange` is empty.
-  bool isArgumentsEmpty() const {
-    return ArgumentsRange.first == ArgumentsRange.second;
   }
 
   /// Returns \c true if this object holds a valid qualifiers range.
@@ -100,22 +87,11 @@ struct DemangledNameInfo {
     return QualifiersRange.second > QualifiersRange.first;
   }
 
-  /// Returns \c true if `QualifiersRange` is empty.
-  bool isQualifiersEmpty() const {
-    return QualifiersRange.first == QualifiersRange.second;
-  }
-
   /// Returns \c true if this object holds a valid prefix range.
   bool hasPrefix() const { return PrefixRange.second > PrefixRange.first; }
 
-  /// Returns \c true if `PrefixRange` is empty.
-  bool isPrefixEmpty() const { return PrefixRange.first == PrefixRange.second; }
-
   /// Returns \c true if this object holds a valid suffix range.
   bool hasSuffix() const { return SuffixRange.second > SuffixRange.first; }
-
-  /// Returns \c true if `SuffixRange` is empty.
-  bool isSuffixEmpty() const { return SuffixRange.first == SuffixRange.second; }
 };
 
 /// An OutputBuffer which keeps a record of where certain parts of a
