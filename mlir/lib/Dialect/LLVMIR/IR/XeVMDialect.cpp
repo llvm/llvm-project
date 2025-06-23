@@ -329,28 +329,23 @@ XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
                        StringRef triple, StringRef chip, DictionaryAttr flags,
                        ArrayAttr linkFiles) {
   if (O < 0 || O > 3) {
-    emitError() << "The optimization level must be a number between 0 and 3.";
-    return failure();
+    return emitError() << "The optimization level must be a number between 0 and 3.";
   }
   if (triple.empty()) {
-    emitError() << "The target triple cannot be empty.";
-    return failure();
+    return emitError() << "The target triple cannot be empty.";
   }
   if (chip.empty()) {
-    emitError() << "The target chip cannot be empty.";
-    return failure();
+    return emitError() << "The target chip cannot be empty.";
   }
   if (linkFiles) {
     for (Attribute fileAttr : linkFiles) {
       if (auto fileStrAttr = llvm::dyn_cast<StringAttr>(fileAttr)) {
         StringRef filePath = fileStrAttr.getValue();
         if (filePath.empty()) {
-          emitError() << "File paths in linkFiles cannot be empty.";
-          return failure();
+          return emitError() << "File paths in linkFiles cannot be empty.";
         }
         if (!llvm::sys::fs::exists(filePath)) {
-          emitError() << "File '" << filePath << "' does not exist.";
-          return failure();
+          return emitError() << "File '" << filePath << "' does not exist.";
         }
       }
     }

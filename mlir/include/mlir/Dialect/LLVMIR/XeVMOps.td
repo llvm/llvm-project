@@ -444,7 +444,7 @@ def XeVM_MMAShapeAttr : XeVM_Attr<"MMAShape", "mma_shape"> {
     MMA operation is represented as D=AxB+C, where
       A has the shape MxK.
       B has the shape KxN.
-      D and C havethe shape MxN.
+      D and C have the shape MxN.
     This attribute encodes the shape of all matrices that participate in MMA.
   }];
   let parameters = (ins "int":$m, "int":$n, "int":$k);
