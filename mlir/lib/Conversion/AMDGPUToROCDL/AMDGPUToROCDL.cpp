@@ -1115,30 +1115,37 @@ struct TransposeLoadOpLowering
 
     Location loc = op.getLoc();
     auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto resultType = cast<VectorType>(op.getResult().getType());
     Value srcPtr =
         getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
                              (adaptor.getSrcIndices()));
-    auto elementTypeSize = cast<VectorType>(op.getDst().getType())
-                               .getElementType()
-                               .getIntOrFloatBitWidth();
 
-    // TODO: support ds_read_tr16_b64 intrinsic.
+    size_t numElements = resultType.getNumElements();
+    size_t elementTypeSize =
+        resultType.getElementType().getIntOrFloatBitWidth();
+
     switch (elementTypeSize) {
     case 4:
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr4_b64>(
-          op, op.getDst().getType(), srcPtr);
+      assert(numElements == 16);
+      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr4_b64>(op, resultType,
+                                                          srcPtr);
       break;
-    case 6:
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr6_b64>(
-          op, op.getDst().getType(), srcPtr);
+    case 32:
+      // To use ds_read_tr6_b96, the load size is vector<3xi32>.
+      // TODO: support native 6-bit data types.
+      assert(numElements == 3);
+      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr6_b96>(op, resultType,
+                                                          srcPtr);
       break;
     case 8:
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr8_b64>(
-          op, op.getDst().getType(), srcPtr);
+      assert(numElements == 8);
+      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr8_b64>(op, resultType,
+                                                          srcPtr);
       break;
     case 16:
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr16_b64>(
-          op, op.getDst().getType(), srcPtr);
+      assert(numElements == 4);
+      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr16_b64>(op, resultType,
+                                                           srcPtr);
       break;
     default:
       return op.emitOpError("Unsupported element size for transpose load");

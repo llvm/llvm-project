@@ -531,7 +531,7 @@ LogicalResult TransposeLoadOp::verify() {
     return emitOpError("source memory address space must be Workgroup");
 
   // TODO: support 6-bit element type vectors.
-  auto transferType = dyn_cast<VectorType>(getDst().getType());
+  auto transferType = dyn_cast<VectorType>(getType());
   if (!transferType)
     return emitOpError("destination type must be a vector type");
   size_t transferSize =
@@ -539,23 +539,24 @@ LogicalResult TransposeLoadOp::verify() {
   size_t elementTypeSize = srcType.getElementType().getIntOrFloatBitWidth();
 
   // ElementSize -> LoadSize
-  const std::map<int, int> KValidLoadSizeMap = {
+  const std::map<size_t, size_t> KValidLoadSizeMap = {
       {4, 64},
-      {6, 96},
+      {32, 96}, // 6-bit element loads use casted vector<3xi32>
       {8, 64},
       {16, 64},
   };
 
   auto validLoadSize = KValidLoadSizeMap.find(elementTypeSize);
-  if (validLoadSize == KValidLoadSizeMap.end())
+  if (validLoadSize == KValidLoadSizeMap.end()) {
     return emitOpError("Unsupported element type size for transpose load: ")
            << elementTypeSize << " bits";
-  if (transferSize != validLoadSize->second)
+  }
+  if (transferSize != validLoadSize->second) {
     return emitOpError("Transferring type size must be ")
-           << validLoadSize->second
-           << " bits for element type size "
+           << validLoadSize->second << " bits for element type size ";
+  }
 
-           return success();
+  return success();
 }
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc"
