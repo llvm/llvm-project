@@ -1321,7 +1321,6 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     VarDeclBits.addBit(D->isConstexpr());
     VarDeclBits.addBit(D->isInitCapture());
     VarDeclBits.addBit(D->isPreviousDeclInSameBlockScope());
-    VarDeclBits.addBit(D->hasInitWithSideEffects());
 
     VarDeclBits.addBit(D->isEscapingByref());
     HasDeducedType = D->getType()->getContainedDeducedType();
@@ -1371,11 +1370,10 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       !D->hasExtInfo() && D->getFirstDecl() == D->getMostRecentDecl() &&
       D->getKind() == Decl::Var && !D->isInline() && !D->isConstexpr() &&
       !D->isInitCapture() && !D->isPreviousDeclInSameBlockScope() &&
-      !D->hasInitWithSideEffects() && !D->isEscapingByref() &&
-      !HasDeducedType && D->getStorageDuration() != SD_Static &&
-      !D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo() &&
-      !D->isObjCForDecl() && !isa<ImplicitParamDecl>(D) &&
-      !D->isEscapingByref())
+      !D->isEscapingByref() && !HasDeducedType &&
+      D->getStorageDuration() != SD_Static && !D->getDescribedVarTemplate() &&
+      !D->getMemberSpecializationInfo() && !D->isObjCForDecl() &&
+      !isa<ImplicitParamDecl>(D) && !D->isEscapingByref())
     AbbrevToUse = Writer.getDeclVarAbbrev();
 
   Code = serialization::DECL_VAR;
@@ -2748,12 +2746,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // VarDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      22)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
+      21)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
             // SClass, TSCSpec, InitStyle,
             // isARCPseudoStrong, IsThisDeclarationADemotedDefinition,
             // isExceptionVariable, isNRVOVariable, isCXXForRangeDecl,
             // isInline, isInlineSpecified, isConstexpr,
-            // isInitCapture, isPrevDeclInSameScope, hasInitWithSideEffects,
+            // isInitCapture, isPrevDeclInSameScope,
             // EscapingByref, HasDeducedType, ImplicitParamKind, isObjCForDecl
   Abv->Add(BitCodeAbbrevOp(0));                         // VarKind (local enum)
   // Type Source Info
