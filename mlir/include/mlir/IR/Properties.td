@@ -219,6 +219,7 @@ class IntProp<string storageTypeParam, string desc = ""> :
   let optionalParser = [{
     return $_parser.parseOptionalInteger($_storage);
   }];
+  let printer = "$_printer.printInteger($_storage)";
   let writeToMlirBytecode = [{
     $_writer.writeVarInt($_storage);
   }];
