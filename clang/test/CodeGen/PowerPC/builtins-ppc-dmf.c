@@ -80,7 +80,7 @@ void test_dmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsign
 
 // CHECK-LABEL: @test_pmdmxvi8gerx4spp(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP:%.*]], align 128, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]]  = load <1024 x i1>, ptr [[VDMRP:%.*]], align 128, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4spp(<1024 x i1> [[TMP0]], <256 x i1> [[TMP1]], <16 x i8> [[VC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP:%.*]], align 128, !tbaa [[TBAA6]]
@@ -91,4 +91,20 @@ void test_pmdmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsi
   __vector_pair vp = *((__vector_pair *)vpp);
   __builtin_mma_pmdmxvi8gerx4spp(&vdmr, vp, vc, 0, 0, 0);
   *((__dmr1024 *)resp) = vdmr;
+}
+
+// CHECK-LABEL: @test_dmf_basic
+// CHECK-NEXT: entry:
+// CHECK-NEXT: [[TMP0:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+// CHECK-NEXT: [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1> [[TMP0]])
+// CHECK-NEXT: store <1024 x i1> [[TMP1]], ptr %res1, align 128
+// CHECK-NEXT: [[TMP2:%.*]] = load <1024 x i1>, ptr %res2, align 128
+// CHECK-NEXT: [[TMP3:%.*]] = load <1024 x i1>, ptr %p, align 128
+// CHECK-NEXT: [[TMP4:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1> [[TMP2]], <1024 x i1> [[TMP3]])
+// CHECK-NEXT: store <1024 x i1> [[TMP4]], ptr %res2, align 128
+void test_dmf_basic(char *p, char *res1, char *res2) {
+  __dmr1024 x[2];
+  __builtin_mma_dmsetdmrz(&x[0]);
+  __builtin_mma_dmmr((__dmr1024*)res1, &x[0]);
+  __builtin_mma_dmxor((__dmr1024*)res2, (__dmr1024*)p);
 }
