@@ -12849,10 +12849,10 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    std::optional<unsigned> FlatAS = A.getInfoCache().getFlatAddressSpace();
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
-    if (AS != *FlatAS || Map.empty())
+    if (AS != FlatAS || Map.empty())
       return ChangeStatus::UNCHANGED;
 
     LLVMContext &Ctx = getAssociatedValue().getContext();
