@@ -8,6 +8,7 @@
 #ifndef LLVM_FRONTEND_DIRECTIVE_SPELLING_H
 #define LLVM_FRONTEND_DIRECTIVE_SPELLING_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 
@@ -33,7 +34,7 @@ struct Spelling {
   VersionRange Versions;
 };
 
-StringRef FindName(llvm::iterator_range<const Spelling *>, unsigned Version);
+LLVM_ABI StringRef FindName(llvm::iterator_range<const Spelling *>, unsigned Version);
 
 } // namespace llvm::directive
 
