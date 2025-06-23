@@ -474,13 +474,11 @@ std::string PlatformAndroid::GetRunAs() {
   return run_as.str();
 }
 
-AdbClient::SyncService *PlatformAndroid::GetSyncService(Status &error) {
-  if (m_adb_sync_svc && m_adb_sync_svc->IsConnected())
-    return m_adb_sync_svc.get();
-
+std::unique_ptr<AdbClient::SyncService>
+PlatformAndroid::GetSyncService(Status &error) {
   AdbClientUP adb(GetAdbClient(error));
   if (error.Fail())
     return nullptr;
-  m_adb_sync_svc = adb->GetSyncService(error);
-  return (error.Success()) ? m_adb_sync_svc.get() : nullptr;
+
+  return adb->GetSyncService(error);
 }

@@ -417,13 +417,30 @@ Status AdbClient::ShellToFile(const char *command, milliseconds timeout,
   return Status();
 }
 
+// Returns a sync service for file operations.
+// This operation is thread-safe - each call creates an isolated sync service
+// with its own connection to avoid race conditions.
 std::unique_ptr<AdbClient::SyncService>
 AdbClient::GetSyncService(Status &error) {
-  std::unique_ptr<SyncService> sync_service;
-  error = StartSync();
-  if (error.Success())
-    sync_service.reset(new SyncService(std::move(m_conn)));
+  std::lock_guard<std::mutex> lock(m_sync_mutex);
 
+  // Create a temporary AdbClient with its own connection for this sync service
+  // This avoids the race condition of multiple threads accessing the same
+  // connection
+  AdbClient temp_client(m_device_id);
+
+  // Connect and start sync on the temporary client
+  error = temp_client.Connect();
+  if (error.Fail())
+    return nullptr;
+
+  error = temp_client.StartSync();
+  if (error.Fail())
+    return nullptr;
+
+  // Move the connection from the temporary client to the sync service
+  std::unique_ptr<SyncService> sync_service;
+  sync_service.reset(new SyncService(std::move(temp_client.m_conn)));
   return sync_service;
 }
 
@@ -487,7 +504,9 @@ Status AdbClient::SyncService::internalPushFile(const FileSpec &local_file,
                                                error.AsCString());
   }
   error = SendSyncRequest(
-      kDONE, llvm::sys::toTimeT(FileSystem::Instance().GetModificationTime(local_file)),
+      kDONE,
+      llvm::sys::toTimeT(
+          FileSystem::Instance().GetModificationTime(local_file)),
       nullptr);
   if (error.Fail())
     return error;

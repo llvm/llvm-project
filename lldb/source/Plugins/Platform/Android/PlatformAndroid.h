@@ -80,9 +80,7 @@ protected:
   std::string GetRunAs();
 
 private:
-  AdbClient::SyncService *GetSyncService(Status &error);
-
-  std::unique_ptr<AdbClient::SyncService> m_adb_sync_svc;
+  std::unique_ptr<AdbClient::SyncService> GetSyncService(Status &error);
   std::string m_device_id;
   uint32_t m_sdk_version;
 };

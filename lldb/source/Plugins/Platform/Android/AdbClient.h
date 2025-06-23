@@ -14,6 +14,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -135,6 +136,7 @@ private:
 
   std::string m_device_id;
   std::unique_ptr<Connection> m_conn;
+  mutable std::mutex m_sync_mutex;
 };
 
 } // namespace platform_android
