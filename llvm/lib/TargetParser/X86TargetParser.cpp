@@ -167,15 +167,19 @@ constexpr FeatureBitset FeaturesAlderlake =
     FeatureSERIALIZE | FeatureSHSTK | FeatureVAES | FeatureVPCLMULQDQ |
     FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG | FeatureAVXVNNI |
     FeatureHRESET | FeatureWIDEKL;
-constexpr FeatureBitset FeaturesSierraforest =
+constexpr FeatureBitset FeaturesArrowlake =
     FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
-    FeatureCLDEMOTE | FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
-constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
-    FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
+    FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
+constexpr FeatureBitset FeaturesSierraforest =
+    FeaturesArrowlake | FeatureCLDEMOTE;
+constexpr FeatureBitset FeaturesArrowlakeS =
+    FeaturesArrowlake | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
     FeaturesArrowlakeS | FeaturePREFETCHI;
 constexpr FeatureBitset FeaturesClearwaterforest =
-    FeaturesArrowlakeS | FeatureUSERMSR | FeaturePREFETCHI;
+    FeaturesSierraforest | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
@@ -367,7 +371,7 @@ constexpr ProcInfo Processors[] = {
   // Meteorlake microarchitecture based processors.
   { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Arrowlake microarchitecture based processors.
-  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
+  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesArrowlake, 'p', false },
   { {"arrowlake-s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, '\0', false },
   { {"arrowlake_s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, 'p', true },
   // Lunarlake microarchitecture based processors.

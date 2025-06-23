@@ -771,9 +771,9 @@ public:
 
     for (BasicBlock &BB : F) {
       for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-        if (It->second->getPredicateInfoFor(&Inst)) {
-          if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-            if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
+        if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+          if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
+            if (It->second->getPredicateInfoFor(&Inst)) {
               Value *Op = II->getOperand(0);
               Inst.replaceAllUsesWith(Op);
               Inst.eraseFromParent();

@@ -997,10 +997,9 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   }
 
   case cir::TEK_Complex: {
-    assert(!cir::MissingFeatures::complexType());
-    cgm.errorNYI(e->getSourceRange(), "complex l-values");
-    return {};
+    return emitComplexAssignmentLValue(e);
   }
+
   case cir::TEK_Aggregate:
     cgm.errorNYI(e->getSourceRange(), "aggregate lvalues");
     return {};

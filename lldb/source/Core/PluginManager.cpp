@@ -1152,6 +1152,38 @@ void PluginManager::AutoCompleteProcessName(llvm::StringRef name,
   }
 }
 
+#pragma mark ProtocolServer
+
+typedef PluginInstance<ProtocolServerCreateInstance> ProtocolServerInstance;
+typedef PluginInstances<ProtocolServerInstance> ProtocolServerInstances;
+
+static ProtocolServerInstances &GetProtocolServerInstances() {
+  static ProtocolServerInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    ProtocolServerCreateInstance create_callback) {
+  return GetProtocolServerInstances().RegisterPlugin(name, description,
+                                                     create_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    ProtocolServerCreateInstance create_callback) {
+  return GetProtocolServerInstances().UnregisterPlugin(create_callback);
+}
+
+llvm::StringRef
+PluginManager::GetProtocolServerPluginNameAtIndex(uint32_t idx) {
+  return GetProtocolServerInstances().GetNameAtIndex(idx);
+}
+
+ProtocolServerCreateInstance
+PluginManager::GetProtocolCreateCallbackForPluginName(llvm::StringRef name) {
+  return GetProtocolServerInstances().GetCallbackForName(name);
+}
+
 #pragma mark RegisterTypeBuilder
 
 struct RegisterTypeBuilderInstance
