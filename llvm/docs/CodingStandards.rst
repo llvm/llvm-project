@@ -1307,7 +1307,7 @@ suppress unused variable warning as follows:
 .. code-block:: c
 
     LLVMValueRef Value = LLVMMetadataAsValue(Context, NodeMD);
-    assert(LLVMIsAValueAsMetadata(Value) == NULL);
+    assert(LLVMIsAValueAsMetadata(Value) != NULL);
     (void)Value;
 
 Do Not Use ``using namespace std``
