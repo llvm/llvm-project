@@ -63,7 +63,7 @@ static LogicalResult transferPreconditions(
     return rewriter.notifyMatchFailure(xferOp, "not a memref source");
 
   Attribute addrSpace = memRefType.getMemorySpace();
-  if (!addrSpace || !dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace))
+  if (!isa_and_nonnull<amdgpu::AddressSpaceAttr>(addrSpace))
     return rewriter.notifyMatchFailure(xferOp, "no address space");
 
   if (dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
@@ -118,7 +118,7 @@ static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
   Value fill = builder.create<vector::SplatOp>(loc, unbroadcastedVectorType,
                                                readOp.getPadding());
   Value load = builder.create<vector::LoadOp>(
-      loc, unbroadcastedVectorType, readOp.getSource(), readOp.getIndices());
+      loc, unbroadcastedVectorType, readOp.getBase(), readOp.getIndices());
   Value res = builder.create<arith::SelectOp>(loc, unbroadcastedVectorType,
                                               readOp.getMask(), load, fill);
   // Insert a broadcasting op if required.
@@ -149,7 +149,7 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     }
 
     Location loc = readOp.getLoc();
-    Value src = readOp.getSource();
+    Value src = readOp.getBase();
 
     VectorType vectorType = readOp.getVectorType();
     int64_t vectorSize = vectorType.getNumElements();
@@ -222,8 +222,8 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 } // namespace
 
 void mlir::amdgpu::populateAmdgpuTransferReadToLoadPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<TransferReadLowering>(patterns.getContext());
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<TransferReadLowering>(patterns.getContext(), benefit);
 }
 
 struct AmdgpuTransferReadToLoadPass final

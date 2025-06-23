@@ -648,4 +648,107 @@ Entry:
   ret <4 x i16> %1
 }
 
+define i32 @ctpop_into_extract(ptr %p) {
+; CHECKO0-LABEL: ctpop_into_extract:
+; CHECKO0:       // %bb.0:
+; CHECKO0-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECKO0-NEXT:    // implicit-def: $d2
+; CHECKO0-NEXT:    fmov s2, w8
+; CHECKO0-NEXT:    ldr d0, [x0]
+; CHECKO0-NEXT:    fmov s1, s0
+; CHECKO0-NEXT:    fmov w8, s1
+; CHECKO0-NEXT:    fmov s1, w8
+; CHECKO0-NEXT:    // kill: def $d1 killed $s1
+; CHECKO0-NEXT:    cnt v1.8b, v1.8b
+; CHECKO0-NEXT:    uaddlv h1, v1.8b
+; CHECKO0-NEXT:    // kill: def $q1 killed $h1
+; CHECKO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECKO0-NEXT:    fmov w8, s1
+; CHECKO0-NEXT:    // implicit-def: $q1
+; CHECKO0-NEXT:    fmov d1, d2
+; CHECKO0-NEXT:    mov v1.s[1], w8
+; CHECKO0-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECKO0-NEXT:    sub v0.2s, v0.2s, v1.2s
+; CHECKO0-NEXT:    str d0, [x0]
+; CHECKO0-NEXT:    mov w0, wzr
+; CHECKO0-NEXT:    ret
+;
+; CHECK-LABEL: ctpop_into_extract:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    cnt v1.8b, v1.8b
+; CHECK-NEXT:    addv b1, v1.8b
+; CHECK-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-NEXT:    sub v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    str d0, [x8]
+; CHECK-NEXT:    ret
+;
+; BE-LABEL: ctpop_into_extract:
+; BE:       // %bb.0:
+; BE-NEXT:    ld1 { v0.2s }, [x0]
+; BE-NEXT:    movi v2.2d, #0xffffffffffffffff
+; BE-NEXT:    mov x8, x0
+; BE-NEXT:    mov w0, wzr
+; BE-NEXT:    fmov w9, s0
+; BE-NEXT:    fmov s1, w9
+; BE-NEXT:    cnt v1.8b, v1.8b
+; BE-NEXT:    addv b1, v1.8b
+; BE-NEXT:    mov v2.s[1], v1.s[0]
+; BE-NEXT:    sub v0.2s, v0.2s, v2.2s
+; BE-NEXT:    st1 { v0.2s }, [x8]
+; BE-NEXT:    ret
+;
+; GISEL-LABEL: ctpop_into_extract:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d0, [x0]
+; GISEL-NEXT:    mov x8, x0
+; GISEL-NEXT:    mov w0, wzr
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    fmov s1, w9
+; GISEL-NEXT:    mov w9, #-1 // =0xffffffff
+; GISEL-NEXT:    fmov s2, w9
+; GISEL-NEXT:    cnt v1.8b, v1.8b
+; GISEL-NEXT:    uaddlv h1, v1.8b
+; GISEL-NEXT:    mov v2.s[1], v1.s[0]
+; GISEL-NEXT:    sub v0.2s, v0.2s, v2.2s
+; GISEL-NEXT:    str d0, [x8]
+; GISEL-NEXT:    ret
+;
+; GISELO0-LABEL: ctpop_into_extract:
+; GISELO0:       // %bb.0:
+; GISELO0-NEXT:    mov w8, #-1 // =0xffffffff
+; GISELO0-NEXT:    // implicit-def: $d2
+; GISELO0-NEXT:    fmov s2, w8
+; GISELO0-NEXT:    ldr d0, [x0]
+; GISELO0-NEXT:    fmov s1, s0
+; GISELO0-NEXT:    fmov w8, s1
+; GISELO0-NEXT:    fmov s1, w8
+; GISELO0-NEXT:    // kill: def $d1 killed $s1
+; GISELO0-NEXT:    cnt v1.8b, v1.8b
+; GISELO0-NEXT:    uaddlv h1, v1.8b
+; GISELO0-NEXT:    // kill: def $q1 killed $h1
+; GISELO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; GISELO0-NEXT:    fmov w8, s1
+; GISELO0-NEXT:    // implicit-def: $q1
+; GISELO0-NEXT:    fmov d1, d2
+; GISELO0-NEXT:    mov v1.s[1], w8
+; GISELO0-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; GISELO0-NEXT:    sub v0.2s, v0.2s, v1.2s
+; GISELO0-NEXT:    str d0, [x0]
+; GISELO0-NEXT:    mov w0, wzr
+; GISELO0-NEXT:    ret
+  %1 = load <2 x i32>, ptr %p, align 4
+  %2 = extractelement <2 x i32> %1, i64 0
+  %3 = call i32 @llvm.ctpop.i32(i32 %2)
+  %4 = insertelement <2 x i32> <i32 -1, i32 poison>, i32 %3, i64 1
+  %5 = sub <2 x i32> %1, %4
+  store <2 x i32> %5, ptr %p, align 4
+  ret i32 0
+}
+
 declare <4 x i16> @llvm.ctpop.v4i16(<4 x i16>)

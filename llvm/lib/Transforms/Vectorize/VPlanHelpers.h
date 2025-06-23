@@ -286,9 +286,10 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Construct the vectorized value of a scalarized value \p V one lane at a
-  /// time.
-  void packScalarIntoVectorizedValue(const VPValue *Def, const VPLane &Lane);
+  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
+  /// and return the resulting value.
+  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
+                                       const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -364,6 +365,11 @@ struct VPCostContext {
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
+
+  /// Return true if \p I is considered uniform-after-vectorization in the
+  /// legacy cost model for \p VF. Only used to check for additional VPlan
+  /// simplifications.
+  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

@@ -895,7 +895,10 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   }
 }
 
-void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
+std::optional<unsigned>
+DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
+  // Args[0] is the return type.
+  std::optional<unsigned> ObjectPointerIndex;
   for (unsigned i = 1, N = Args.size(); i < N; ++i) {
     const DIType *Ty = Args[i];
     if (!Ty) {
@@ -906,8 +909,16 @@ void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
       addType(Arg, Ty);
       if (Ty->isArtificial())
         addFlag(Arg, dwarf::DW_AT_artificial);
+
+      if (Ty->isObjectPointer()) {
+        assert(!ObjectPointerIndex &&
+               "Can't have more than one object pointer");
+        ObjectPointerIndex = i;
+      }
     }
   }
+
+  return ObjectPointerIndex;
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
@@ -1013,6 +1024,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     constructEnumTypeDIE(Buffer, CTy);
     break;
   case dwarf::DW_TAG_variant_part:
+  case dwarf::DW_TAG_variant:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_class_type:
@@ -1066,7 +1078,17 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
             addDiscriminant(Variant, CI,
                             DD->isUnsignedDIType(Discriminator->getBaseType()));
           }
-          constructMemberDIE(Variant, DDTy);
+          // If the variant holds a composite type with tag
+          // DW_TAG_variant, inline those members into the variant
+          // DIE.
+          if (auto *Composite =
+                  dyn_cast_or_null<DICompositeType>(DDTy->getBaseType());
+              Composite != nullptr &&
+              Composite->getTag() == dwarf::DW_TAG_variant) {
+            constructTypeDIE(Variant, Composite);
+          } else {
+            constructMemberDIE(Variant, DDTy);
+          }
         } else {
           constructMemberDIE(Buffer, DDTy);
         }
@@ -1447,7 +1469,20 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
     // Add arguments. Do not add arguments for subprogram definition. They will
     // be handled while processing variables.
-    constructSubprogramArguments(SPDie, Args);
+    //
+    // Encode the object pointer as an index instead of a DIE reference in order
+    // to minimize the affect on the .debug_info size.
+    if (std::optional<unsigned> ObjectPointerIndex =
+            constructSubprogramArguments(SPDie, Args)) {
+      if (getDwarfDebug().tuneForLLDB() &&
+          getDwarfDebug().getDwarfVersion() >= 5) {
+        // 0th index in Args is the return type, hence adjust by 1. In DWARF
+        // we want the first parameter to be at index 0.
+        assert(*ObjectPointerIndex > 0);
+        addSInt(SPDie, dwarf::DW_AT_object_pointer,
+                dwarf::DW_FORM_implicit_const, *ObjectPointerIndex - 1);
+      }
+    }
   }
 
   addThrownTypes(SPDie, SP->getThrownTypes());
@@ -1931,13 +1966,14 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   if (DIE *StaticMemberDIE = getDIE(DT))
     return StaticMemberDIE;
 
+  DwarfUnit *ContextUnit = static_cast<DwarfUnit *>(ContextDIE->getUnit());
   DIE &StaticMemberDIE = createAndAddDIE(DT->getTag(), *ContextDIE, DT);
 
   const DIType *Ty = DT->getBaseType();
 
   addString(StaticMemberDIE, dwarf::DW_AT_name, DT->getName());
   addType(StaticMemberDIE, Ty);
-  addSourceLine(StaticMemberDIE, DT);
+  ContextUnit->addSourceLine(StaticMemberDIE, DT);
   addFlag(StaticMemberDIE, dwarf::DW_AT_external);
   addFlag(StaticMemberDIE, dwarf::DW_AT_declaration);
 

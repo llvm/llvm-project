@@ -139,6 +139,12 @@ if(CMAKE_HOST_APPLE)
   endif()
 endif()
 
+if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL Debug)
+  set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE_DEBUG}")
+else()
+  set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE}")
+endif()
+
 set(dotest_args_replacement ${LLVM_BUILD_MODE})
 
 if(LLDB_BUILT_STANDALONE)

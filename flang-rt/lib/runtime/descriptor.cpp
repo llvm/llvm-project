@@ -158,7 +158,7 @@ RT_API_ATTRS static inline int MapAllocIdx(const Descriptor &desc) {
 #endif
 }
 
-RT_API_ATTRS int Descriptor::Allocate(std::int64_t asyncId) {
+RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
   std::size_t elementBytes{ElementBytes()};
   if (static_cast<std::int64_t>(elementBytes) < 0) {
     // F'2023 7.4.4.2 p5: "If the character length parameter value evaluates
@@ -170,7 +170,7 @@ RT_API_ATTRS int Descriptor::Allocate(std::int64_t asyncId) {
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
-  void *p{alloc(byteSize ? byteSize : 1, asyncId)};
+  void *p{alloc(byteSize ? byteSize : 1, asyncObject)};
   if (!p) {
     return CFI_ERROR_MEM_ALLOCATION;
   }

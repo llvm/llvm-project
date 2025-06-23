@@ -198,14 +198,27 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
     // Determine the function's arity (i.e., the number of arguments) at the ABI
     // level by counting the number of parameters that are passed
     // as registers, such as pointers and 64-bit (or smaller) integers. The
-    // Linux x86-64 ABI allows up to 6 parameters to be passed in GPRs.
+    // Linux x86-64 ABI allows up to 6 integer parameters to be passed in GPRs.
     // Additional parameters or parameters larger than 64 bits may be passed on
-    // the stack, in which case the arity is denoted as 7.
+    // the stack, in which case the arity is denoted as 7. Floating-point
+    // arguments passed in XMM0-XMM7 are not counted toward arity because
+    // floating-point values are not relevant to enforcing kCFI at this time.
     const unsigned ArityToRegMap[8] = {X86::EAX, X86::ECX, X86::EDX, X86::EBX,
                                        X86::ESP, X86::EBP, X86::ESI, X86::EDI};
-    int Arity = MF.getInfo<X86MachineFunctionInfo>()->getArgumentStackSize() > 0
-                    ? 7
-                    : MF.getRegInfo().liveins().size();
+    int Arity;
+    if (MF.getInfo<X86MachineFunctionInfo>()->getArgumentStackSize() > 0) {
+      Arity = 7;
+    } else {
+      Arity = 0;
+      for (const auto &LI : MF.getRegInfo().liveins()) {
+        auto Reg = LI.first;
+        if (X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg) ||
+            X86::GR32RegClass.contains(Reg) ||
+            X86::GR64RegClass.contains(Reg)) {
+          ++Arity;
+        }
+      }
+    }
     DestReg = ArityToRegMap[Arity];
   }
 
@@ -464,7 +477,8 @@ static bool isIndirectBranchOrTailCall(const MachineInstr &MI) {
          Opc == X86::TAILJMPr64 || Opc == X86::TAILJMPm64 ||
          Opc == X86::TCRETURNri || Opc == X86::TCRETURNmi ||
          Opc == X86::TCRETURNri64 || Opc == X86::TCRETURNmi64 ||
-         Opc == X86::TAILJMPr64_REX || Opc == X86::TAILJMPm64_REX;
+         Opc == X86::TCRETURNri64_ImpCall || Opc == X86::TAILJMPr64_REX ||
+         Opc == X86::TAILJMPm64_REX;
 }
 
 void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
@@ -912,14 +926,20 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TT.isOSBinFormatCOFF()) {
     emitCOFFFeatureSymbol(M);
     emitCOFFReplaceableFunctionData(M);
+
+    if (M.getModuleFlag("import-call-optimization"))
+      EnableImportCallOptimization = true;
   }
   OutStreamer->emitSyntaxDirective();
 
   // If this is not inline asm and we're in 16-bit
   // mode prefix assembly with .code16.
   bool is16 = TT.getEnvironment() == Triple::CODE16;
-  if (M.getModuleInlineAsm().empty() && is16)
-    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+  if (M.getModuleInlineAsm().empty() && is16) {
+    auto *XTS =
+        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
+    XTS->emitCode16();
+  }
 }
 
 static void
@@ -1011,8 +1031,37 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     // points). If this doesn't occur, the linker can safely perform dead code
     // stripping. Since LLVM never generates code that does this, it is always
     // safe to set.
-    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitSubsectionsViaSymbols();
   } else if (TT.isOSBinFormatCOFF()) {
+    // If import call optimization is enabled, emit the appropriate section.
+    // We do this whether or not we recorded any items.
+    if (EnableImportCallOptimization) {
+      OutStreamer->switchSection(getObjFileLowering().getImportCallSection());
+
+      // Section always starts with some magic.
+      constexpr char ImpCallMagic[12] = "RetpolineV1";
+      OutStreamer->emitBytes(StringRef{ImpCallMagic, sizeof(ImpCallMagic)});
+
+      // Layout of this section is:
+      // Per section that contains an item to record:
+      //  uint32_t SectionSize: Size in bytes for information in this section.
+      //  uint32_t Section Number
+      //  Per call to imported function in section:
+      //    uint32_t Kind: the kind of item.
+      //    uint32_t InstOffset: the offset of the instr in its parent section.
+      for (auto &[Section, CallsToImportedFuncs] :
+           SectionToImportedFunctionCalls) {
+        unsigned SectionSize =
+            sizeof(uint32_t) * (2 + 2 * CallsToImportedFuncs.size());
+        OutStreamer->emitInt32(SectionSize);
+        OutStreamer->emitCOFFSecNumber(Section->getBeginSymbol());
+        for (auto &[CallsiteSymbol, Kind] : CallsToImportedFuncs) {
+          OutStreamer->emitInt32(Kind);
+          OutStreamer->emitCOFFSecOffset(CallsiteSymbol);
+        }
+      }
+    }
+
     if (usesMSVCFloatingPoint(TT, M)) {
       // In Windows' libcmt.lib, there is a file which is linked in only if the
       // symbol _fltused is referenced. Linking this in causes some

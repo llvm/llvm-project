@@ -98,14 +98,14 @@ body:             |
     ; CHECK-NEXT: $v28m4 = PseudoVLE32_V_M4 undef $v28m4, killed $x16, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $x15 = PseudoVSETVLI $x17, 73 /* e16, m2, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v0m2 = PseudoVLE32_V_M2 undef $v0m2, $x18, $noreg, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0 $x0, 82 /* e32, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0X0 $x0, 82 /* e32, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v4m4 = PseudoVLE32_V_M4 undef $v4m4, killed $x18, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v12m4 = VMV4R_V $v28m4, implicit $vtype
     $x15 = PseudoVSETVLI $x14, 82, implicit-def $vl, implicit-def $vtype
     $v28m4 = PseudoVLE32_V_M4 undef $v28m4, killed $x16, $noreg, 5, 0, implicit $vl, implicit $vtype
     $x15 = PseudoVSETVLI $x17, 73, implicit-def $vl, implicit-def $vtype
     $v0m2 = PseudoVLE32_V_M2 undef $v0m2, $x18, $noreg, 4, 0, implicit $vl, implicit $vtype
-    $x0 = PseudoVSETVLIX0 $x0, 82, implicit-def $vl, implicit-def $vtype
+    $x0 = PseudoVSETVLIX0X0 $x0, 82, implicit-def $vl, implicit-def $vtype
     $v4m4 = PseudoVLE32_V_M4 undef $v4m4, killed $x18, $noreg, 5, 0, implicit $vl, implicit $vtype
     $v12m4 = COPY $v28m4
 ...
@@ -120,16 +120,16 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x15 = PseudoVSETVLI $x14, 82 /* e32, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v28m4 = PseudoVLE32_V_M4 undef $v28m4, killed $x16, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0 $x0, 73 /* e16, m2, ta, mu */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0X0 $x0, 73 /* e16, m2, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v0m2 = PseudoVLE32_V_M2 undef $v0m2, $x18, $noreg, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0 $x0, 82 /* e32, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0X0 $x0, 82 /* e32, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v4m4 = PseudoVLE32_V_M4 undef $v4m4, killed $x18, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v12m4 = PseudoVMV_V_V_M4 undef $v12m4, $v28m4, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     $x15 = PseudoVSETVLI $x14, 82, implicit-def $vl, implicit-def $vtype
     $v28m4 = PseudoVLE32_V_M4 undef $v28m4, killed $x16, $noreg, 5, 0, implicit $vl, implicit $vtype
-    $x0 = PseudoVSETVLIX0 $x0, 73, implicit-def $vl, implicit-def $vtype
+    $x0 = PseudoVSETVLIX0X0 $x0, 73, implicit-def $vl, implicit-def $vtype
     $v0m2 = PseudoVLE32_V_M2  undef $v0m2, $x18, $noreg, 4, 0, implicit $vl, implicit $vtype
-    $x0 = PseudoVSETVLIX0 $x0, 82, implicit-def $vl, implicit-def $vtype
+    $x0 = PseudoVSETVLIX0X0 $x0, 82, implicit-def $vl, implicit-def $vtype
     $v4m4 = PseudoVLE32_V_M4  undef $v4m4, killed $x18, $noreg, 5, 0, implicit $vl, implicit $vtype
     $v12m4 = COPY $v28m4
 ...
@@ -144,12 +144,12 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x15 = PseudoVSETVLI $x14, 82 /* e32, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v28m4 = PseudoVLE32_V_M4 undef $v28m4, killed $x16, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0 $x0, 73 /* e16, m2, ta, mu */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0X0 $x0, 73 /* e16, m2, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v0m2 = PseudoVLE32_V_M2 undef $v0m2, $x18, $noreg, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v12m4 = VMV4R_V $v28m4, implicit $vtype
     $x15 = PseudoVSETVLI $x14, 82, implicit-def $vl, implicit-def $vtype
     $v28m4 = PseudoVLE32_V_M4 undef $v28m4, killed $x16, $noreg, 5, 0, implicit $vl, implicit $vtype
-    $x0 = PseudoVSETVLIX0 $x0, 73, implicit-def $vl, implicit-def $vtype
+    $x0 = PseudoVSETVLIX0X0 $x0, 73, implicit-def $vl, implicit-def $vtype
     $v0m2 = PseudoVLE32_V_M2 undef $v0m2, $x18, $noreg, 4, 0, implicit $vl, implicit $vtype
     $v12m4 = COPY $v28m4
 ...
@@ -185,11 +185,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x15 = PseudoVSETVLI $x14, 82 /* e32, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v28m4 = PseudoVLE32_V_M4 undef $v28m4, killed $x16, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0 $x0, 74 /* e16, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $x0 = PseudoVSETVLIX0X0 $x0, 74 /* e16, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v12m4 = VMV4R_V $v28m4, implicit $vtype
     $x15 = PseudoVSETVLI $x14, 82, implicit-def $vl, implicit-def $vtype
     $v28m4 = PseudoVLE32_V_M4 undef $v28m4, killed $x16, $noreg, 5, 0, implicit $vl, implicit $vtype
-    $x0 = PseudoVSETVLIX0 $x0, 74, implicit-def $vl, implicit-def $vtype
+    $x0 = PseudoVSETVLIX0X0 $x0, 74, implicit-def $vl, implicit-def $vtype
     $v12m4 = COPY $v28m4
 ...
 ---

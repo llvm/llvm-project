@@ -32,3 +32,18 @@ void fir::runtime::cuda::genSyncGlobalDescriptor(fir::FirOpBuilder &builder,
       builder, loc, fTy, hostPtr, sourceFile, sourceLine)};
   builder.create<fir::CallOp>(loc, callee, args);
 }
+
+void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
+                                                   mlir::Location loc,
+                                                   mlir::Value desc) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(CUFDescriptorCheckSection)>(loc,
+                                                                       builder);
+  auto fTy = func.getFunctionType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      builder, loc, fTy, desc, sourceFile, sourceLine)};
+  builder.create<fir::CallOp>(loc, func, args);
+}

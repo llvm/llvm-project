@@ -741,7 +741,13 @@ __externref_t externref_null() {
   // WEBASSEMBLY-NEXT: ret
 }
 
+int externref_is_null(__externref_t arg) {
+  return __builtin_wasm_ref_is_null_extern(arg);
+  // WEBASSEMBLY: tail call i32 @llvm.wasm.ref.is_null.extern(ptr addrspace(10) %arg)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 void *tp (void) {
   return __builtin_thread_pointer ();
-  // WEBASSEMBLY: call {{.*}} @llvm.thread.pointer()
+  // WEBASSEMBLY: call {{.*}} @llvm.thread.pointer.p0()
 }

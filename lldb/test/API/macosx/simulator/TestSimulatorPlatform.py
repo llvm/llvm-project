@@ -39,15 +39,15 @@ class TestSimulatorPlatformLaunching(TestBase):
         if expected_version:
             self.assertEqual(aout_info["min_version_os_sdk"], expected_version)
 
-    @skipIf(bugnumber="rdar://76995109")
     def run_with(self, arch, os, vers, env, expected_load_command):
         env_list = [env] if env else []
         triple = "-".join([arch, "apple", os + vers] + env_list)
         sdk = lldbutil.get_xcode_sdk(os, env)
 
-        version_min = ""
         if not vers:
             vers = lldbutil.get_xcode_sdk_version(sdk)
+
+        version_min = ""
         if env == "simulator":
             version_min = "-m{}-simulator-version-min={}".format(os, vers)
         elif os == "macosx":
@@ -56,11 +56,14 @@ class TestSimulatorPlatformLaunching(TestBase):
         sdk_root = lldbutil.get_xcode_sdk_root(sdk)
         clang = lldbutil.get_xcode_clang(sdk)
 
+        print(triple)
+
         self.build(
             dictionary={
                 "ARCH": arch,
                 "ARCH_CFLAGS": "-target {} {}".format(triple, version_min),
                 "SDKROOT": sdk_root,
+                "USE_SYSTEM_STDLIB": 1,
             },
             compiler=clang,
         )
@@ -146,6 +149,7 @@ class TestSimulatorPlatformLaunching(TestBase):
 
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
+    @skipIf(archs=["arm64", "arm64e"])
     def test_lc_version_min_macosx(self):
         """Test running a back-deploying non-simulator MacOS X binary"""
         self.run_with(
@@ -198,7 +202,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         self.run_with(
             arch=self.getArchitecture(),
             os="ios",
-            vers="11.0",
+            vers="14.0",
             env="simulator",
             expected_load_command="LC_BUILD_VERSION",
         )
@@ -229,7 +233,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         self.run_with(
             arch=self.getArchitecture(),
             os="tvos",
-            vers="11.0",
+            vers="14.0",
             env="simulator",
             expected_load_command="LC_BUILD_VERSION",
         )

@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InconsistentDeclarationParameterNameCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
-
-#include <functional>
 
 using namespace clang::ast_matchers;
 
@@ -134,8 +131,8 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
 
 InconsistentDeclarationsContainer
 findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
-                            const FunctionDecl *ParameterSourceDeclaration,
-                            SourceManager &SM, bool Strict) {
+                             const FunctionDecl *ParameterSourceDeclaration,
+                             SourceManager &SM, bool Strict) {
   InconsistentDeclarationsContainer InconsistentDeclarations;
   SourceLocation ParameterSourceLocation =
       ParameterSourceDeclaration->getLocation();

@@ -1574,14 +1574,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Enter a new evaluation context to insulate the lambda from any
   // cleanups from the enclosing full-expression.
-  PushExpressionEvaluationContext(
-      LSI->CallOperator->isConsteval()
-          ? ExpressionEvaluationContext::ImmediateFunctionContext
-          : ExpressionEvaluationContext::PotentiallyEvaluated);
-  ExprEvalContexts.back().InImmediateFunctionContext =
-      LSI->CallOperator->isConsteval();
-  ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
-      getLangOpts().CPlusPlus20 && LSI->CallOperator->isImmediateEscalating();
+  PushExpressionEvaluationContextForFunction(
+      ExpressionEvaluationContext::PotentiallyEvaluated, LSI->CallOperator);
 }
 
 void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
@@ -1633,8 +1627,8 @@ static void repeatForLambdaConversionFunctionCallingConvs(
         CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
         DefaultFree, DefaultMember, CallOpCC};
     llvm::sort(Convs);
-    llvm::iterator_range<CallingConv *> Range(
-        std::begin(Convs), std::unique(std::begin(Convs), std::end(Convs)));
+    llvm::iterator_range<CallingConv *> Range(std::begin(Convs),
+                                              llvm::unique(Convs));
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
 
     for (CallingConv C : Range) {
@@ -2028,6 +2022,7 @@ bool Sema::CaptureHasSideEffects(const Capture &From) {
 }
 
 bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                       SourceRange FixItRange,
                                        const Capture &From) {
   if (CaptureHasSideEffects(From))
     return false;
@@ -2047,7 +2042,12 @@ bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
   else
     diag << From.getVariable();
   diag << From.isNonODRUsed();
-  diag << FixItHint::CreateRemoval(CaptureRange);
+  // If we were able to resolve the fixit range we'll create a fixit,
+  // otherwise we just use the raw capture range for the diagnostic.
+  if (FixItRange.isValid())
+    diag << FixItHint::CreateRemoval(FixItRange);
+  else
+    diag << CaptureRange;
   return true;
 }
 
@@ -2099,6 +2099,39 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
     Field->setCapturedVLAType(Capture.getCapturedVLAType());
 
   return Field;
+}
+
+static SourceRange
+ConstructFixItRangeForUnusedCapture(Sema &S, SourceRange CaptureRange,
+                                    SourceLocation PrevCaptureLoc,
+                                    bool CurHasPreviousCapture, bool IsLast) {
+  if (!CaptureRange.isValid())
+    return SourceRange();
+
+  auto GetTrailingEndLocation = [&](SourceLocation StartPoint) {
+    SourceRange NextToken = S.getRangeForNextToken(
+        StartPoint, /*IncludeMacros=*/false, /*IncludeComments=*/true);
+    if (!NextToken.isValid())
+      return SourceLocation();
+    // Return the last location preceding the next token
+    return NextToken.getBegin().getLocWithOffset(-1);
+  };
+
+  if (!CurHasPreviousCapture && !IsLast) {
+    // If there are no captures preceding this capture, remove the
+    // trailing comma and anything up to the next token
+    SourceRange CommaRange =
+        S.getRangeForNextToken(CaptureRange.getEnd(), /*IncludeMacros=*/false,
+                               /*IncludeComments=*/false, tok::comma);
+    SourceLocation FixItEnd = GetTrailingEndLocation(CommaRange.getBegin());
+    return SourceRange(CaptureRange.getBegin(), FixItEnd);
+  }
+
+  // Otherwise, remove the comma since the last used capture, and
+  // anything up to the next token
+  SourceLocation FixItStart = S.getLocForEndOfToken(PrevCaptureLoc);
+  SourceLocation FixItEnd = GetTrailingEndLocation(CaptureRange.getEnd());
+  return SourceRange(FixItStart, FixItEnd);
 }
 
 ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -2168,21 +2201,11 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
             IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
         if (!NonODRUsedInitCapture) {
           bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
-          SourceRange FixItRange;
-          if (CaptureRange.isValid()) {
-            if (!CurHasPreviousCapture && !IsLast) {
-              // If there are no captures preceding this capture, remove the
-              // following comma.
-              FixItRange = SourceRange(CaptureRange.getBegin(),
-                                       getLocForEndOfToken(CaptureRange.getEnd()));
-            } else {
-              // Otherwise, remove the comma since the last used capture.
-              FixItRange = SourceRange(getLocForEndOfToken(PrevCaptureLoc),
-                                       CaptureRange.getEnd());
-            }
-          }
-
-          IsCaptureUsed = !DiagnoseUnusedLambdaCapture(FixItRange, From);
+          SourceRange FixItRange = ConstructFixItRangeForUnusedCapture(
+              *this, CaptureRange, PrevCaptureLoc, CurHasPreviousCapture,
+              IsLast);
+          IsCaptureUsed =
+              !DiagnoseUnusedLambdaCapture(CaptureRange, FixItRange, From);
         }
       }
 

@@ -13,10 +13,10 @@
 #ifndef LLVM_TABLEGEN_STRINGMATCHER_H
 #define LLVM_TABLEGEN_STRINGMATCHER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
@@ -33,18 +33,18 @@ public:
 
 private:
   StringRef StrVariableName;
-  const std::vector<StringPair> &Matches;
+  ArrayRef<StringPair> Matches;
   raw_ostream &OS;
 
 public:
-  StringMatcher(StringRef strVariableName,
-                const std::vector<StringPair> &matches, raw_ostream &os)
-    : StrVariableName(strVariableName), Matches(matches), OS(os) {}
+  StringMatcher(StringRef StrVariableName, ArrayRef<StringPair> Matches,
+                raw_ostream &OS)
+      : StrVariableName(StrVariableName), Matches(Matches), OS(OS) {}
 
   void Emit(unsigned Indent = 0, bool IgnoreDuplicates = false) const;
 
 private:
-  bool EmitStringMatcherForChar(const std::vector<const StringPair *> &Matches,
+  bool EmitStringMatcherForChar(ArrayRef<const StringPair *> Matches,
                                 unsigned CharNo, unsigned IndentCount,
                                 bool IgnoreDuplicates) const;
 };

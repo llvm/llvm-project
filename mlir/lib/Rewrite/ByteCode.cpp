@@ -1496,22 +1496,25 @@ LogicalResult ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
 void ByteCodeExecutor::processNativeFunResults(
     ByteCodeRewriteResultList &results, unsigned numResults,
     LogicalResult &rewriteResult) {
-  // Store the results in the bytecode memory or handle missing results on
-  // failure.
-  for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
-    PDLValue::Kind resultKind = read<PDLValue::Kind>();
-
+  if (failed(rewriteResult)) {
     // Skip the according number of values on the buffer on failure and exit
     // early as there are no results to process.
-    if (failed(rewriteResult)) {
+    for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
+      const PDLValue::Kind resultKind = read<PDLValue::Kind>();
       if (resultKind == PDLValue::Kind::TypeRange ||
           resultKind == PDLValue::Kind::ValueRange) {
         skip(2);
       } else {
         skip(1);
       }
-      return;
     }
+    return;
+  }
+
+  // Store the results in the bytecode memory
+  for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
+    PDLValue::Kind resultKind = read<PDLValue::Kind>();
+    (void)resultKind;
     PDLValue result = results.getResults()[resultIdx];
     LLVM_DEBUG(llvm::dbgs() << "  * Result: " << result << "\n");
     assert(result.getKind() == resultKind &&
@@ -2343,10 +2346,10 @@ void PDLByteCode::match(Operation *op, PatternRewriter &rewriter,
   assert(succeeded(executeResult) && "unexpected matcher execution failure");
 
   // Order the found matches by benefit.
-  std::stable_sort(matches.begin(), matches.end(),
-                   [](const MatchResult &lhs, const MatchResult &rhs) {
-                     return lhs.benefit > rhs.benefit;
-                   });
+  llvm::stable_sort(matches,
+                    [](const MatchResult &lhs, const MatchResult &rhs) {
+                      return lhs.benefit > rhs.benefit;
+                    });
 }
 
 LogicalResult PDLByteCode::rewrite(PatternRewriter &rewriter,

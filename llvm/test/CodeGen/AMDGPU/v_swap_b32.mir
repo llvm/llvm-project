@@ -1,9 +1,11 @@
 # RUN: llc -simplify-mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-shrink-instructions -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -simplify-mir -mtriple=amdgcn -mcpu=gfx900 -passes=si-shrink-instructions -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: swap_phys_condensed
 # GCN: bb.0:
 # GCN-NEXT: liveins:
 # GCN-NEXT: {{^[ ]*$}}
+# GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
 # GCN-NEXT: S_SETPC_B64_return
 ---
@@ -22,6 +24,7 @@ body:             |
 # GCN: bb.0:
 # GCN-NEXT: liveins:
 # GCN-NEXT: {{^[ ]*$}}
+# GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec
 # GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec
@@ -44,6 +47,7 @@ body:             |
 # GCN: bb.0:
 # GCN-NEXT: liveins:
 # GCN-NEXT: {{^[ ]*$}}
+# GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
 # GCN-NEXT: S_SETPC_B64_return
 ---
@@ -62,6 +66,7 @@ body:             |
 # GCN: bb.0:
 # GCN-NEXT: liveins:
 # GCN-NEXT: {{^[ ]*$}}
+# GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
 # GCN-NEXT: S_SETPC_B64_return
 ---
@@ -80,6 +85,7 @@ body:             |
 # GCN: bb.0:
 # GCN-NEXT: liveins:
 # GCN-NEXT: {{^[ ]*$}}
+# GCN-NEXT: $vgpr4_vgpr5 = COPY $vgpr0_vgpr1
 # GCN-NEXT: $vgpr0, $vgpr2 = V_SWAP_B32 $vgpr2, $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr1, $vgpr3 = V_SWAP_B32 $vgpr3, $vgpr1, implicit $exec
 ---
@@ -930,7 +936,8 @@ body:             |
 ...
 
 # GCN-LABEL: implicit_ops_mov_t_swap_b32
-# GCN: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
+# GCN:      $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $vgpr2, implicit killed $vgpr1_vgpr2, implicit-def $vgpr1
+# GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
 
 ---
 name:            implicit_ops_mov_t_swap_b32

@@ -79,7 +79,8 @@ SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
-  index::indexTopLevelDecls(AST, PP, DeclsToIndex, Collector, IndexOpts);
+  index::indexTopLevelDecls(AST, PP, DeclsToIndex, Collector,
+                            std::move(IndexOpts));
   if (MacroRefsToIndex)
     Collector.handleMacros(*MacroRefsToIndex);
 

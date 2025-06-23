@@ -11,7 +11,7 @@
 
 // template <class T, class Allocator, class U>
 //   typename forward_list<T, Allocator>::size_type
-//   erase(forward_list<T, Allocator>& c, const U& value);
+//   erase(forward_list<T, Allocator>& c, const U& value); // constexpr since C++26
 
 #include <forward_list>
 #include <optional>
@@ -21,14 +21,14 @@
 #include "min_allocator.h"
 
 template <class S, class U>
-void test0(S s, U val, S expected, std::size_t expected_erased_count) {
+TEST_CONSTEXPR_CXX26 void test0(S s, U val, S expected, std::size_t expected_erased_count) {
   ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase(s, val)));
   assert(expected_erased_count == std::erase(s, val));
   assert(s == expected);
 }
 
 template <class S>
-void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   test0(S(), 1, S(), 0);
 
   test0(S({1}), 1, S(), 1);
@@ -62,13 +62,21 @@ void test() {
   test0(S({1, 2, 1}), opt(3), S({1, 2, 1}), 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::forward_list<int>>();
   test<std::forward_list<int, min_allocator<int>>>();
   test<std::forward_list<int, test_allocator<int>>>();
-
   test<std::forward_list<long>>();
   test<std::forward_list<double>>();
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

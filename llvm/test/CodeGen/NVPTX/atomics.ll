@@ -351,14 +351,14 @@ declare float @llvm.nvvm.atomic.load.add.f32.p0(ptr %addr, float %val)
 define float @atomic_add_f32_generic(ptr %addr, float %val) {
 ; CHECK-LABEL: atomic_add_f32_generic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_generic_param_0];
-; CHECK-NEXT:    ld.param.b32 %f1, [atomic_add_f32_generic_param_1];
-; CHECK-NEXT:    atom.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [atomic_add_f32_generic_param_1];
+; CHECK-NEXT:    atom.add.f32 %r2, [%rd1], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.atomic.load.add.f32.p0(ptr %addr, float %val)
   ret float %ret
@@ -370,14 +370,14 @@ declare float @llvm.nvvm.atomic.load.add.f32.p1(ptr addrspace(1) %addr, float %v
 define float @atomic_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK-LABEL: atomic_add_f32_addrspace1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_addrspace1_param_0];
-; CHECK-NEXT:    ld.param.b32 %f1, [atomic_add_f32_addrspace1_param_1];
-; CHECK-NEXT:    atom.global.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [atomic_add_f32_addrspace1_param_1];
+; CHECK-NEXT:    atom.global.add.f32 %r2, [%rd1], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.atomic.load.add.f32.p1(ptr addrspace(1) %addr, float %val)
   ret float %ret
@@ -389,14 +389,14 @@ declare float @llvm.nvvm.atomic.load.add.f32.p3(ptr addrspace(3) %addr, float %v
 define float @atomic_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 ; CHECK-LABEL: atomic_add_f32_addrspace3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_addrspace3_param_0];
-; CHECK-NEXT:    ld.param.b32 %f1, [atomic_add_f32_addrspace3_param_1];
-; CHECK-NEXT:    atom.shared.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [atomic_add_f32_addrspace3_param_1];
+; CHECK-NEXT:    atom.shared.add.f32 %r2, [%rd1], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.atomic.load.add.f32.p3(ptr addrspace(3) %addr, float %val)
   ret float %ret
@@ -406,14 +406,14 @@ define float @atomic_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 define float @atomicrmw_add_f32_generic(ptr %addr, float %val) {
 ; CHECK-LABEL: atomicrmw_add_f32_generic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_add_f32_generic_param_0];
-; CHECK-NEXT:    ld.param.b32 %f1, [atomicrmw_add_f32_generic_param_1];
-; CHECK-NEXT:    atom.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [atomicrmw_add_f32_generic_param_1];
+; CHECK-NEXT:    atom.add.f32 %r2, [%rd1], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr %addr, float %val seq_cst
   ret float %ret
@@ -425,8 +425,7 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<17>;
-; CHECK-NEXT:    .reg .b32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %r<20>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -439,27 +438,27 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK-NEXT:    mov.b32 %r8, 65535;
 ; CHECK-NEXT:    shl.b32 %r9, %r8, %r1;
 ; CHECK-NEXT:    not.b32 %r2, %r9;
-; CHECK-NEXT:    ld.b32 %r16, [%rd1];
-; CHECK-NEXT:    cvt.f32.f16 %f2, %rs1;
+; CHECK-NEXT:    ld.b32 %r19, [%rd1];
+; CHECK-NEXT:    cvt.f32.f16 %r12, %rs1;
 ; CHECK-NEXT:  $L__BB24_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    shr.u32 %r10, %r16, %r1;
+; CHECK-NEXT:    shr.u32 %r10, %r19, %r1;
 ; CHECK-NEXT:    cvt.u16.u32 %rs2, %r10;
-; CHECK-NEXT:    cvt.f32.f16 %f1, %rs2;
-; CHECK-NEXT:    add.rn.f32 %f3, %f1, %f2;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %f3;
-; CHECK-NEXT:    cvt.u32.u16 %r11, %rs3;
-; CHECK-NEXT:    shl.b32 %r12, %r11, %r1;
-; CHECK-NEXT:    and.b32 %r13, %r16, %r2;
-; CHECK-NEXT:    or.b32 %r14, %r13, %r12;
+; CHECK-NEXT:    cvt.f32.f16 %r11, %rs2;
+; CHECK-NEXT:    add.rn.f32 %r13, %r11, %r12;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r13;
+; CHECK-NEXT:    cvt.u32.u16 %r14, %rs3;
+; CHECK-NEXT:    shl.b32 %r15, %r14, %r1;
+; CHECK-NEXT:    and.b32 %r16, %r19, %r2;
+; CHECK-NEXT:    or.b32 %r17, %r16, %r15;
 ; CHECK-NEXT:    membar.sys;
-; CHECK-NEXT:    atom.cas.b32 %r5, [%rd1], %r16, %r14;
-; CHECK-NEXT:    setp.ne.s32 %p1, %r5, %r16;
-; CHECK-NEXT:    mov.b32 %r16, %r5;
+; CHECK-NEXT:    atom.cas.b32 %r5, [%rd1], %r19, %r17;
+; CHECK-NEXT:    setp.ne.s32 %p1, %r5, %r19;
+; CHECK-NEXT:    mov.b32 %r19, %r5;
 ; CHECK-NEXT:    @%p1 bra $L__BB24_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    shr.u32 %r15, %r5, %r1;
-; CHECK-NEXT:    cvt.u16.u32 %rs4, %r15;
+; CHECK-NEXT:    shr.u32 %r18, %r5, %r1;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r18;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs4;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr %addr, half %val seq_cst
@@ -470,14 +469,14 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 define float @atomicrmw_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK-LABEL: atomicrmw_add_f32_addrspace1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_add_f32_addrspace1_param_0];
-; CHECK-NEXT:    ld.param.b32 %f1, [atomicrmw_add_f32_addrspace1_param_1];
-; CHECK-NEXT:    atom.global.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [atomicrmw_add_f32_addrspace1_param_1];
+; CHECK-NEXT:    atom.global.add.f32 %r2, [%rd1], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr addrspace(1) %addr, float %val seq_cst
   ret float %ret
@@ -487,14 +486,14 @@ define float @atomicrmw_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 define float @atomicrmw_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 ; CHECK-LABEL: atomicrmw_add_f32_addrspace3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_add_f32_addrspace3_param_0];
-; CHECK-NEXT:    ld.param.b32 %f1, [atomicrmw_add_f32_addrspace3_param_1];
-; CHECK-NEXT:    atom.shared.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [atomicrmw_add_f32_addrspace3_param_1];
+; CHECK-NEXT:    atom.shared.add.f32 %r2, [%rd1], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr addrspace(3) %addr, float %val seq_cst
   ret float %ret

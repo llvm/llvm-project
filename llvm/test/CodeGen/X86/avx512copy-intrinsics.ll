@@ -11,7 +11,7 @@ define <4 x i32> @test_mm_move_epi32(<4 x i32> %a0) nounwind {
 ; NOAVX512MOVZXC-LABEL: test_mm_move_epi32:
 ; NOAVX512MOVZXC:       # %bb.0:
 ; NOAVX512MOVZXC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # encoding: [0xc5,0xf0,0x57,0xc9]
-; NOAVX512MOVZXC-NEXT:    vblendps $1, %xmm0, %xmm1, %xmm0 # encoding: [0xc4,0xe3,0x71,0x0c,0xc0,0x01]
+; NOAVX512MOVZXC-NEXT:    vmovss %xmm0, %xmm1, %xmm0 # encoding: [0xc5,0xf2,0x10,0xc0]
 ; NOAVX512MOVZXC-NEXT:    # xmm0 = xmm0[0],xmm1[1,2,3]
 ; NOAVX512MOVZXC-NEXT:    retq # encoding: [0xc3]
   %res = shufflevector <4 x i32> %a0, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 4, i32 4, i32 4>

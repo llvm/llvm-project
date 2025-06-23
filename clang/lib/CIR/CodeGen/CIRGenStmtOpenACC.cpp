@@ -12,11 +12,9 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
-#include "CIRGenOpenACCClause.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
-
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -34,14 +32,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
   llvm::SmallVector<mlir::Value> operands;
   auto op = builder.create<Op>(start, retTy, operands);
 
-  {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    // Sets insertion point before the 'op', since every new expression needs to
-    // be before the operation.
-    builder.setInsertionPoint(op);
-    makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
-        .VisitClauseList(clauses);
-  }
+  emitOpenACCClauses(op, dirKind, dirLoc, clauses);
 
   {
     mlir::Block &block = op.getRegion().emplaceBlock();
@@ -109,14 +100,9 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
       builder.create<mlir::acc::YieldOp>(end);
     }
 
-    {
-      mlir::OpBuilder::InsertionGuard guardCase(builder);
-      CombinedConstructClauseInfo<Op> inf{computeOp, loopOp};
-      // We don't bother setting the insertion point, since the clause emitter
-      // is going to have to do this correctly.
-      makeClauseEmitter(inf, *this, builder, dirKind, dirLoc)
-          .VisitClauseList(clauses);
-    }
+    emitOpenACCClauses(computeOp, loopOp, dirKind, dirLoc, clauses);
+
+    updateLoopOpParallelism(loopOp, /*isOrphan=*/false, dirKind);
 
     builder.create<TermOp>(end);
   }
@@ -132,14 +118,7 @@ Op CIRGenFunction::emitOpenACCOp(
   llvm::SmallVector<mlir::Value> operands;
   auto op = builder.create<Op>(start, retTy, operands);
 
-  {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    // Sets insertion point before the 'op', since every new expression needs to
-    // be before the operation.
-    builder.setInsertionPoint(op);
-    makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
-        .VisitClauseList(clauses);
-  }
+  emitOpenACCClauses(op, dirKind, dirLoc, clauses);
   return op;
 }
 
@@ -258,6 +237,17 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
     llvm_unreachable("invalid compute construct kind");
   }
 }
+
+mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
+    const OpenACCHostDataConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+
+  return emitOpenACCOpAssociatedStmt<HostDataOp, mlir::acc::TerminatorOp>(
+      start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
+      s.getStructuredBlock());
+}
+
 mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct &s) {
   cgm.errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
@@ -266,11 +256,6 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
 mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {
   cgm.errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
-    const OpenACCHostDataConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
