@@ -324,7 +324,7 @@ IslExprBuilder::createAccessAddress(__isl_take isl_ast_expr *Expr) {
     // needed. But GlobalMap may contain SCoP-invariant vars.
     Value *DimSize = expandCodeFor(
         S, SE, Builder.GetInsertBlock()->getParent(), *GenSE, DL, "polly",
-        DimSCEV, DimSCEV->getType(), &*Builder.GetInsertPoint(), &GlobalMap,
+        DimSCEV, DimSCEV->getType(), Builder.GetInsertPoint(), &GlobalMap,
         /*LoopMap*/ nullptr, StartBlock->getSinglePredecessor());
 
     Type *Ty = getWidestType(DimSize->getType(), IndexOp->getType());
@@ -613,7 +613,7 @@ IslExprBuilder::createOpBooleanConditional(__isl_take isl_ast_expr *Expr) {
 
   auto InsertBB = Builder.GetInsertBlock();
   auto InsertPoint = Builder.GetInsertPoint();
-  auto NextBB = SplitBlock(InsertBB, &*InsertPoint, GenDT, GenLI);
+  auto NextBB = SplitBlock(InsertBB, InsertPoint, GenDT, GenLI);
   BasicBlock *CondBB = BasicBlock::Create(Context, "polly.cond", F);
   GenLI->changeLoopFor(CondBB, GenLI->getLoopFor(InsertBB));
   GenDT->addNewBlock(CondBB, InsertBB);

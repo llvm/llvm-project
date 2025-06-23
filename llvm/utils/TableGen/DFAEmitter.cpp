@@ -118,7 +118,6 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   OS << "// to by index in " << Name << "Transitions[].\n";
 
   SequenceToOffsetTable<DfaTransitionInfo> Table;
-  std::map<DfaTransitionInfo, unsigned> EmittedIndices;
   for (auto &T : DfaTransitions)
     Table.add(T.second.second);
   Table.layout();
@@ -258,7 +257,7 @@ void Automaton::emit(raw_ostream &OS) {
 
   StringRef Name = R->getName();
 
-  CustomDfaEmitter Emitter(Actions, std::string(Name) + "Action");
+  CustomDfaEmitter Emitter(Actions, Name.str() + "Action");
   // Starting from the initial state, build up a list of possible states and
   // transitions.
   std::deque<uint64_t> Worklist(1, 0);
@@ -323,7 +322,7 @@ Transition::Transition(const Record *R, Automaton *Parent) {
       Actions.emplace_back(static_cast<unsigned>(R->getValueAsInt(A)));
       Types.emplace_back("unsigned");
     } else if (isa<StringRecTy>(SymbolV->getType())) {
-      Actions.emplace_back(std::string(R->getValueAsString(A)));
+      Actions.emplace_back(R->getValueAsString(A).str());
       Types.emplace_back("std::string");
     } else {
       report_fatal_error("Unhandled symbol type!");
@@ -331,7 +330,7 @@ Transition::Transition(const Record *R, Automaton *Parent) {
 
     StringRef TypeOverride = Parent->getActionSymbolType(A);
     if (!TypeOverride.empty())
-      Types.back() = std::string(TypeOverride);
+      Types.back() = TypeOverride.str();
   }
 }
 

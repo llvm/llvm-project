@@ -114,8 +114,11 @@ public:
       return false;
     });
 
+    bufferization::BufferizationState bufferizationState;
+
     if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
-                                                updatedOptions)))
+                                                updatedOptions,
+                                                bufferizationState)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
@@ -149,8 +152,10 @@ public:
     // invalidate the results of the analysis. From now on, only small and
     // localized rewrites are allowed, such as replacing a tensor op with its
     // memref equivalent.
-    if (failed(bufferization::insertTensorCopies(getOperation(),
-                                                 bufferizationOptions)))
+    bufferization::BufferizationState bufferizationState;
+
+    if (failed(bufferization::insertTensorCopies(
+            getOperation(), bufferizationOptions, bufferizationState)))
       return signalPassFailure();
 
     // Option `testAnalysisOnly` is a debug/testing flag. If set, the results of
@@ -218,10 +223,10 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
   OneShotBufferizationOptions options;
   options.bufferizeFunctionBoundaries = true;
   options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
+  options.unknownTypeConverterFn = [](TensorType tensorType,
+                                      Attribute memorySpace,
                                       const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
+    return getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace);
   };
   if (analysisOnly) {
     options.testAnalysisOnly = true;

@@ -61,6 +61,7 @@
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
+#include "UseNumericLimitsCheck.h"
 #include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
@@ -173,6 +174,8 @@ public:
         "readability-uppercase-literal-suffix");
     CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
         "readability-use-anyofallof");
+    CheckFactories.registerCheck<UseNumericLimitsCheck>(
+        "readability-use-numeric-limits");
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
   }
@@ -186,6 +189,7 @@ static ClangTidyModuleRegistry::Add<ReadabilityModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the ReadabilityModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int ReadabilityModuleAnchorSource = 0;
 
 } // namespace clang::tidy

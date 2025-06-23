@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-windows-gnu -emit-llvm -std=c++11 -o - %s | FileCheck --check-prefix=GNU %s
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin   -emit-llvm -std=c++11 -o - %s | FileCheck --check-prefix=GNU %s
 
 class __declspec(dllexport) QAbstractLayoutStyleInfo {
 public:

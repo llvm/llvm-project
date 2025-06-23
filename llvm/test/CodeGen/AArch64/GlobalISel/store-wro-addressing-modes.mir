@@ -12,10 +12,11 @@ body:             |
     liveins: $x0, $x1, $w2
     ; CHECK-LABEL: name: strwrow
     ; CHECK: liveins: $x0, $x1, $w2
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %dst:gpr32 = COPY $w2
-    ; CHECK: STRWroW %dst, %base, %foo, 1, 1 :: (store (s32))
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %dst:gpr32 = COPY $w2
+    ; CHECK-NEXT: STRWroW %dst, %base, %foo, 1, 1 :: (store (s32))
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -37,10 +38,11 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: strxrow
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %dst:gpr64 = COPY $x2
-    ; CHECK: STRXroW %dst, %base, %foo, 1, 1 :: (store (s64))
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %dst:gpr64 = COPY $x2
+    ; CHECK-NEXT: STRXroW %dst, %base, %foo, 1, 1 :: (store (s64))
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -62,11 +64,12 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: strxrow_p0
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %dst:gpr64all = COPY $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %dst
-    ; CHECK: STRXroW [[COPY]], %base, %foo, 1, 1 :: (store (p0))
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %dst:gpr64all = COPY $x2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY %dst
+    ; CHECK-NEXT: STRXroW [[COPY]], %base, %foo, 1, 1 :: (store (p0))
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)

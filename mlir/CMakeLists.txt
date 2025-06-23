@@ -21,6 +21,11 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 if(MLIR_STANDALONE_BUILD)
   find_package(LLVM CONFIG REQUIRED)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LLVM_CMAKE_DIR})
+
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(HandleLLVMOptions)
   include(AddLLVM)
   include(TableGen)
@@ -63,6 +68,7 @@ list(INSERT CMAKE_MODULE_PATH 0
   )
 
 include(AddMLIR)
+include(IRDLToCpp)
 
 # -BSymbolic is incompatible with TypeID
 if("${CMAKE_SHARED_LINKER_FLAGS}" MATCHES "-Bsymbolic[^-]")
@@ -206,6 +212,7 @@ include_directories(BEFORE
 # Adding tools/mlir-tblgen here as calling add_tablegen sets some variables like
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
 # from another directory like tools
+add_subdirectory(tools/mlir-irdl-to-cpp)
 add_subdirectory(tools/mlir-linalg-ods-gen)
 add_subdirectory(tools/mlir-pdll)
 add_subdirectory(tools/mlir-tblgen)

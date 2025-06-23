@@ -11,6 +11,7 @@
 #define _LIBCPP___FLAT_SET_UTILS_H
 
 #include <__config>
+#include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__type_traits/container_traits.h>
@@ -60,7 +61,8 @@ struct __flat_set_utils {
       // C++23 Sequence Container should have insert_range member function
       // Note that not all Sequence Containers provide append_range.
       __set.__keys_.insert_range(__set.__keys_.end(), std::forward<_Range>(__rng));
-    } else if constexpr (ranges::common_range<_Range>) {
+    } else if constexpr (ranges::common_range<_Range> &&
+                         __has_input_iterator_category<ranges::iterator_t<_Range>>::value) {
       __set.__keys_.insert(__set.__keys_.end(), ranges::begin(__rng), ranges::end(__rng));
     } else {
       for (auto&& __x : __rng) {

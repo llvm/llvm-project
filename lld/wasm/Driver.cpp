@@ -23,7 +23,6 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
@@ -318,10 +317,6 @@ void LinkerDriver::addFile(StringRef path) {
     if (inWholeArchive) {
       for (const auto &[m, offset] : members) {
         auto *object = createObjectFile(m, path, offset);
-        // Mark object as live; object members are normally not
-        // live by default but -whole-archive is designed to treat
-        // them as such.
-        object->markLive();
         files.push_back(object);
       }
 
@@ -1231,9 +1226,9 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
   // Update pointers in input files.
   parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i)
-      if (Symbol *s = map.lookup(syms[i]))
-        syms[i] = s;
+    for (Symbol *&sym : syms)
+      if (Symbol *s = map.lookup(sym))
+        sym = s;
   });
 
   // Update pointers in the symbol table.

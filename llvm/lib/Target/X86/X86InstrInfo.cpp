@@ -53,6 +53,8 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "X86GenInstrInfo.inc"
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 static cl::opt<bool>
     NoFusing("disable-spill-fusing",
              cl::desc("Disable fusing of spill code into instructions"),
@@ -102,22 +104,8 @@ X86InstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (X86II::canUseApxExtendedReg(MCID))
     return RC;
 
-  switch (RC->getID()) {
-  default:
-    return RC;
-  case X86::GR8RegClassID:
-    return &X86::GR8_NOREX2RegClass;
-  case X86::GR16RegClassID:
-    return &X86::GR16_NOREX2RegClass;
-  case X86::GR32RegClassID:
-    return &X86::GR32_NOREX2RegClass;
-  case X86::GR64RegClassID:
-    return &X86::GR64_NOREX2RegClass;
-  case X86::GR32_NOSPRegClassID:
-    return &X86::GR32_NOREX2_NOSPRegClass;
-  case X86::GR64_NOSPRegClassID:
-    return &X86::GR64_NOREX2_NOSPRegClass;
-  }
+  const X86RegisterInfo *RI = Subtarget.getRegisterInfo();
+  return RI->constrainRegClassToNonRex2(RC);
 }
 
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
@@ -2365,33 +2353,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     break;
   case X86::BLENDPDrri:
   case X86::BLENDPSrri:
+  case X86::PBLENDWrri:
   case X86::VBLENDPDrri:
   case X86::VBLENDPSrri:
-    // If we're optimizing for size, try to use MOVSD/MOVSS.
-    if (MI.getParent()->getParent()->getFunction().hasOptSize()) {
-      unsigned Mask = (Opc == X86::BLENDPDrri || Opc == X86::VBLENDPDrri) ? 0x03: 0x0F;
-      if ((MI.getOperand(3).getImm() ^ Mask) == 1) {
-#define FROM_TO(FROM, TO)                                                      \
-  case X86::FROM:                                                              \
-    Opc = X86::TO;                                                             \
-    break;
-        switch (Opc) {
-        default:
-          llvm_unreachable("Unreachable!");
-        FROM_TO(BLENDPDrri, MOVSDrr)
-        FROM_TO(BLENDPSrri, MOVSSrr)
-        FROM_TO(VBLENDPDrri, VMOVSDrr)
-        FROM_TO(VBLENDPSrri, VMOVSSrr)
-        }
-        WorkingMI = CloneIfNew(MI);
-        WorkingMI->setDesc(get(Opc));
-        WorkingMI->removeOperand(3);
-        break;
-      }
-#undef FROM_TO
-    }
-    [[fallthrough]];
-  case X86::PBLENDWrri:
   case X86::VBLENDPDYrri:
   case X86::VBLENDPSYrri:
   case X86::VPBLENDDrri:
@@ -2499,6 +2463,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       break;
     }
 
+    assert(Opc == X86::MOVSDrr && "Only MOVSD can commute to SHUFPD");
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(X86::SHUFPDrri));
     WorkingMI->addOperand(MachineOperand::CreateImm(0x02));
@@ -3726,6 +3691,7 @@ bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
     return true;
   default:
@@ -5464,8 +5430,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
+        // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+        // optimization for replacing non-NF with NF. This is to keep backward
+        // compatiblity with old version of linkers without APX relocation type
+        // support on Linux OS.
+        bool IsWithReloc = X86EnableAPXForRelocation
+                               ? false
+                               : isAddMemInstrWithRelocation(Inst);
+
         // Try to replace non-NF with NF instructions.
-        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI) && !IsWithReloc) {
           unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
           if (!NewOp)
             return false;
@@ -7462,7 +7436,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
   if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
-      (Opc == X86::CALL32r || Opc == X86::CALL64r || Opc == X86::PUSH16r ||
+      (Opc == X86::CALL32r || Opc == X86::CALL64r ||
+       Opc == X86::CALL64r_ImpCall || Opc == X86::PUSH16r ||
        Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
@@ -8124,6 +8099,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (!MF.getFunction().hasOptSize() &&
       (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/ true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
+    return nullptr;
+
+  // Do not fold a NDD instruction and a memory instruction with relocation to
+  // avoid emit APX relocation when the flag is disabled for backward
+  // compatibility.
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  if (!X86EnableAPXForRelocation && isMemInstrWithGOTPCREL(LoadMI) &&
+      X86II::hasNewDataDest(TSFlags))
     return nullptr;
 
   // Determine the alignment of the load.

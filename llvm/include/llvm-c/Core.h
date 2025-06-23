@@ -393,6 +393,12 @@ typedef enum {
   LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
                                  overflow */
   LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
+  LLVMAtomicRMWBinOpFMaximum, /**< Sets the value if it's greater than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMinimum, /**< Sets the value if it's smaller than the
+                           original using an floating point comparison and
+                           return the old one */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -3668,6 +3674,24 @@ LLVMOpcode LLVMGetInstructionOpcode(LLVMValueRef Inst);
  * @see llvm::ICmpInst::getPredicate()
  */
 LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst);
+
+/**
+ * Get whether or not an icmp instruction has the samesign flag.
+ *
+ * This is only valid for instructions that correspond to llvm::ICmpInst.
+ *
+ * @see llvm::ICmpInst::hasSameSign()
+ */
+LLVMBool LLVMGetICmpSameSign(LLVMValueRef Inst);
+
+/**
+ * Set the samesign flag on an icmp instruction.
+ *
+ * This is only valid for instructions that correspond to llvm::ICmpInst.
+ *
+ * @see llvm::ICmpInst::setSameSign()
+ */
+void LLVMSetICmpSameSign(LLVMValueRef Inst, LLVMBool SameSign);
 
 /**
  * Obtain the float predicate of an instruction.

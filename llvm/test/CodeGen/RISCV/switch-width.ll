@@ -119,7 +119,7 @@ define i32 @trunc_i17(i64 %a)  {
 ; CHECK-LABEL: trunc_i17:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 32
-; CHECK-NEXT:    addiw a1, a1, -1
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    beq a0, a1, .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -159,7 +159,7 @@ define i32 @trunc_i16(i64 %a)  {
 ; CHECK-LABEL: trunc_i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addiw a1, a1, -1
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    beq a0, a1, .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -200,7 +200,7 @@ define i32 @trunc_i12(i64 %a)  {
 ; CHECK-LABEL: trunc_i12:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 1
-; CHECK-NEXT:    addiw a1, a1, -1
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    beq a0, a1, .LBB5_3
 ; CHECK-NEXT:  # %bb.1: # %entry

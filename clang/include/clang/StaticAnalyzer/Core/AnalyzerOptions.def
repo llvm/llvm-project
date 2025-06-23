@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines the analyzer options avaible with -analyzer-config.
+//  Note that clang/docs/tools/generate_analyzer_options_docs.py relies on the
+//  structure of this file, so if this file is refactored, then make sure to
+//  update that script as well.
 //
 //===----------------------------------------------------------------------===//
 
@@ -413,6 +416,19 @@ ANALYZER_OPTION(
     "#256, #257, #258 is extended to all pointers with address spaces and on "
     "any target.",
     true)
+
+ANALYZER_OPTION(
+    bool, InlineFunctionsWithAmbiguousLoops, "inline-functions-with-ambiguous-loops",
+    "If disabled (the default), the analyzer puts functions on a \"do not "
+    "inline this\" list if it finds an execution path within that function "
+    "that may potentially perform 'analyzer-max-loop' (= 4 by default) "
+    "iterations in a loop. (Note that functions that _definitely_ reach the "
+    "loop limit on some execution path are currently marked as \"do not "
+    "inline\" even if this option is enabled.) Enabling this option "
+    "eliminates this (somewhat arbitrary) restriction from the analysis "
+    "scope, which increases the analysis runtime (on average by ~10%, but "
+    "a few translation units may see much larger slowdowns).",
+    false)
 
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.

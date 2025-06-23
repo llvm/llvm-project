@@ -43,6 +43,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
@@ -52,9 +53,17 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SHA256.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <cstdint>
 #include <optional>
 using namespace clang;
 using namespace clang::CodeGen;
+
+// TODO: consider deprecating ClArrayBoundsPseudoFn; functionality is subsumed
+//       by -fsanitize-annotate-debug-info
+static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
+    "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
+    llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
+                   "in an inline function called __ubsan_check_array_bounds."));
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
@@ -119,6 +128,96 @@ CGDebugInfo::~CGDebugInfo() {
          "Region stack mismatch, stack not empty!");
 }
 
+void CGDebugInfo::addInstSourceAtomMetadata(llvm::Instruction *I,
+                                            uint64_t Group, uint8_t Rank) {
+  if (!I->getDebugLoc() || Group == 0 || !I->getDebugLoc()->getLine())
+    return;
+
+  // Saturate the 3-bit rank.
+  Rank = std::min<uint8_t>(Rank, 7);
+
+  const llvm::DebugLoc &DL = I->getDebugLoc();
+
+  // Each instruction can only be attributed to one source atom (a limitation of
+  // the implementation). If this instruction is already part of a source atom,
+  // pick the group in which it has highest precedence (lowest rank).
+  if (DL->getAtomGroup() && DL->getAtomRank() && DL->getAtomRank() < Rank) {
+    Group = DL->getAtomGroup();
+    Rank = DL->getAtomRank();
+  }
+
+  // Update the function-local watermark so we don't reuse this number for
+  // another atom.
+  KeyInstructionsInfo.HighestEmittedAtom =
+      std::max(Group, KeyInstructionsInfo.HighestEmittedAtom);
+
+  // Apply the new DILocation to the instruction.
+  llvm::DILocation *NewDL = llvm::DILocation::get(
+      I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+      DL.getInlinedAt(), DL.isImplicitCode(), Group, Rank);
+  I->setDebugLoc(NewDL);
+}
+
+void CGDebugInfo::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                             llvm::Value *Backup) {
+  addInstToSpecificSourceAtom(KeyInstruction, Backup,
+                              KeyInstructionsInfo.CurrentAtom);
+}
+
+void CGDebugInfo::addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                              llvm::Value *Backup,
+                                              uint64_t Group) {
+  if (!Group || !CGM.getCodeGenOpts().DebugKeyInstructions)
+    return;
+
+  addInstSourceAtomMetadata(KeyInstruction, Group, /*Rank=*/1);
+
+  llvm::Instruction *BackupI =
+      llvm::dyn_cast_or_null<llvm::Instruction>(Backup);
+  if (!BackupI)
+    return;
+
+  // Add the backup instruction to the group.
+  addInstSourceAtomMetadata(BackupI, Group, /*Rank=*/2);
+
+  // Look through chains of casts too, as they're probably going to evaporate.
+  // FIXME: And other nops like zero length geps?
+  // FIXME: Should use Cast->isNoopCast()?
+  uint8_t Rank = 3;
+  while (auto *Cast = dyn_cast<llvm::CastInst>(BackupI)) {
+    BackupI = dyn_cast<llvm::Instruction>(Cast->getOperand(0));
+    if (!BackupI)
+      break;
+    addInstSourceAtomMetadata(BackupI, Group, Rank++);
+  }
+}
+
+void CGDebugInfo::completeFunction() {
+  // Reset the atom group number tracker as the numbers are function-local.
+  KeyInstructionsInfo.NextAtom = 1;
+  KeyInstructionsInfo.HighestEmittedAtom = 0;
+  KeyInstructionsInfo.CurrentAtom = 0;
+}
+
+ApplyAtomGroup::ApplyAtomGroup(CGDebugInfo *DI) : DI(DI) {
+  if (!DI)
+    return;
+  OriginalAtom = DI->KeyInstructionsInfo.CurrentAtom;
+  DI->KeyInstructionsInfo.CurrentAtom = DI->KeyInstructionsInfo.NextAtom++;
+}
+
+ApplyAtomGroup::~ApplyAtomGroup() {
+  if (!DI)
+    return;
+
+  // We may not have used the group number at all.
+  DI->KeyInstructionsInfo.NextAtom =
+      std::min(DI->KeyInstructionsInfo.HighestEmittedAtom + 1,
+               DI->KeyInstructionsInfo.NextAtom);
+
+  DI->KeyInstructionsInfo.CurrentAtom = OriginalAtom;
+}
+
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF,
                                        SourceLocation TemporaryLocation)
     : CGF(&CGF) {
@@ -174,8 +273,15 @@ ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF, llvm::DebugLoc Loc)
     return;
   }
   OriginalLocation = CGF.Builder.getCurrentDebugLocation();
-  if (Loc)
+  if (Loc) {
+    // Key Instructions: drop the atom group and rank to avoid accidentally
+    // propagating it around.
+    if (Loc->getAtomGroup())
+      Loc = llvm::DILocation::get(Loc->getContext(), Loc.getLine(),
+                                  Loc->getColumn(), Loc->getScope(),
+                                  Loc->getInlinedAt(), Loc.isImplicitCode());
     CGF.Builder.SetCurrentDebugLocation(std::move(Loc));
+  }
 }
 
 ApplyDebugLocation::~ApplyDebugLocation() {
@@ -777,7 +883,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
     {
       if (BT->getKind() == BuiltinType::MFloat8) {
         Encoding = llvm::dwarf::DW_ATE_unsigned_char;
@@ -850,6 +956,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 
       bool Fractional = false;
       unsigned LMUL;
+      unsigned NFIELDS = Info.NumVectors;
       unsigned FixedSize = ElementCount * SEW;
       if (Info.ElementType == CGM.getContext().BoolTy) {
         // Mask type only occupies one vector register.
@@ -862,7 +969,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
         LMUL = FixedSize / 64;
       }
 
-      // Element count = (VLENB / SEW) x LMUL
+      // Element count = (VLENB / SEW) x LMUL x NFIELDS
       SmallVector<uint64_t, 12> Expr(
           // The DW_OP_bregx operation has two operands: a register which is
           // specified by an unsigned LEB128 number, followed by a signed LEB128
@@ -877,6 +984,9 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
         Expr.push_back(llvm::dwarf::DW_OP_div);
       else
         Expr.push_back(llvm::dwarf::DW_OP_mul);
+      // NFIELDS multiplier
+      if (NFIELDS > 1)
+        Expr.append({llvm::dwarf::DW_OP_constu, NFIELDS, llvm::dwarf::DW_OP_mul});
       // Element max index = count - 1
       Expr.append({llvm::dwarf::DW_OP_constu, 1, llvm::dwarf::DW_OP_minus});
 
@@ -1454,28 +1564,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
 
   SourceLocation Loc = AliasDecl->getLocation();
 
-  if (CGM.getCodeGenOpts().DebugTemplateAlias &&
-      // FIXME: This is a workaround for the issue
-      //        https://github.com/llvm/llvm-project/issues/89774
-      // The TemplateSpecializationType doesn't contain any instantiation
-      // information; dependent template arguments can't be resolved. For now,
-      // fall back to DW_TAG_typedefs for template aliases that are
-      // instantiation dependent, e.g.:
-      // ```
-      // template <int>
-      // using A = int;
-      //
-      // template<int I>
-      // struct S {
-      //   using AA = A<I>; // Instantiation dependent.
-      //   AA aa;
-      // };
-      //
-      // S<0> s;
-      // ```
-      // S::AA's underlying type A<I> is dependent on I so will be emitted as a
-      // DW_TAG_typedef.
-      !Ty->isInstantiationDependentType()) {
+  if (CGM.getCodeGenOpts().DebugTemplateAlias) {
     auto ArgVector = ::GetTemplateArgs(TD, Ty);
     TemplateArgs Args = {TD->getTemplateParameters(), ArgVector};
 
@@ -1589,9 +1678,8 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_IntelOclBicc;
   case CC_SpirFunction:
     return llvm::dwarf::DW_CC_LLVM_SpirFunction;
-  case CC_OpenCLKernel:
-  case CC_AMDGPUKernelCall:
-    return llvm::dwarf::DW_CC_LLVM_OpenCLKernel;
+  case CC_DeviceKernel:
+    return llvm::dwarf::DW_CC_LLVM_DeviceKernel;
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_SwiftAsync:
@@ -2530,6 +2618,55 @@ llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
 StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
   // Copy the gdb compatible name on the side and use its reference.
   return internString("_vptr$", RD->getNameAsString());
+}
+
+// Emit symbol for the debugger that points to the vtable address for
+// the given class. The symbol is named as '_vtable$'.
+// The debugger does not need to know any details about the contents of the
+// vtable as it can work this out using its knowledge of the ABI and the
+// existing information in the DWARF. The type is assumed to be 'void *'.
+void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
+                                   const CXXRecordDecl *RD) {
+  if (!CGM.getTarget().getCXXABI().isItaniumFamily())
+    return;
+
+  ASTContext &Context = CGM.getContext();
+  StringRef SymbolName = "_vtable$";
+  SourceLocation Loc;
+  QualType VoidPtr = Context.getPointerType(Context.VoidTy);
+
+  // We deal with two different contexts:
+  // - The type for the variable, which is part of the class that has the
+  //   vtable, is placed in the context of the DICompositeType metadata.
+  // - The DIGlobalVariable for the vtable is put in the DICompileUnitScope.
+
+  // The created non-member should be mark as 'artificial'. It will be
+  // placed inside the scope of the C++ class/structure.
+  llvm::DIScope *DContext = getContextDescriptor(RD, TheCU);
+  auto *Ctxt = cast<llvm::DICompositeType>(DContext);
+  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  llvm::DIType *VTy = getOrCreateType(VoidPtr, Unit);
+  llvm::DINode::DIFlags Flags = getAccessFlag(AccessSpecifier::AS_private, RD) |
+                                llvm::DINode::FlagArtificial;
+  auto Tag = CGM.getCodeGenOpts().DwarfVersion >= 5
+                 ? llvm::dwarf::DW_TAG_variable
+                 : llvm::dwarf::DW_TAG_member;
+  llvm::DIDerivedType *DT = DBuilder.createStaticMemberType(
+      Ctxt, SymbolName, Unit, /*LineNumber=*/0, VTy, Flags,
+      /*Val=*/nullptr, Tag);
+
+  // Use the same vtable pointer to global alignment for the symbol.
+  unsigned PAlign = CGM.getVtableGlobalVarAlignment();
+
+  // The global variable is in the CU scope, and links back to the type it's
+  // "within" via the declaration field.
+  llvm::DIGlobalVariableExpression *GVE =
+      DBuilder.createGlobalVariableExpression(
+          TheCU, SymbolName, VTable->getName(), Unit, /*LineNo=*/0,
+          getOrCreateType(VoidPtr, Unit), VTable->hasLocalLinkage(),
+          /*isDefined=*/true, nullptr, DT, /*TemplateParameters=*/nullptr,
+          PAlign);
+  VTable->addDebugInfo(GVE);
 }
 
 StringRef CGDebugInfo::getDynamicInitializerName(const VarDecl *VD,
@@ -3535,6 +3672,12 @@ llvm::DIType *CGDebugInfo::CreateType(const HLSLAttributedResourceType *Ty,
   return getOrCreateType(Ty->getWrappedType(), U);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const HLSLInlineSpirvType *Ty,
+                                      llvm::DIFile *U) {
+  // Debug information unneeded.
+  return nullptr;
+}
+
 llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
   const EnumDecl *ED = Ty->getDecl();
 
@@ -3888,6 +4031,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);
   case Type::HLSLAttributedResource:
     return CreateType(cast<HLSLAttributedResourceType>(Ty), Unit);
+  case Type::HLSLInlineSpirv:
+    return CreateType(cast<HLSLInlineSpirvType>(Ty), Unit);
 
   case Type::CountAttributed:
   case Type::Auto:
@@ -4496,8 +4641,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
     Flags |= llvm::DINode::FlagPrototyped;
   }
-  if (Name.starts_with("\01"))
-    Name = Name.substr(1);
+  Name.consume_front("\01");
 
   assert((!D || !isa<VarDecl>(D) ||
           GD.getDynamicInitKind() != DynamicInitKind::NoStub) &&
@@ -4586,8 +4730,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   } else {
     llvm_unreachable("not a function or ObjC method");
   }
-  if (!Name.empty() && Name[0] == '\01')
-    Name = Name.substr(1);
+  Name.consume_front("\01");
 
   if (D->isImplicit()) {
     Flags |= llvm::DINode::FlagArtificial;
@@ -4609,7 +4752,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   // Preserve btf_decl_tag attributes for parameters of extern functions
   // for BPF target. The parameters created in this loop are attached as
-  // DISubprogram's retainedNodes in the subsequent finalizeSubprogram call.
+  // DISubprogram's retainedNodes in the DIBuilder::finalize() call.
   if (IsDeclForCallSite && CGM.getTarget().getTriple().isBPF()) {
     if (auto *FD = dyn_cast<FunctionDecl>(D)) {
       llvm::DITypeRefArray ParamTypes = STy->getTypeArray();
@@ -4626,8 +4769,6 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);
-
-  DBuilder.finalizeSubprogram(SP);
 }
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
@@ -6256,4 +6397,79 @@ CodeGenFunction::LexicalScope::~LexicalScope() {
     ApplyDebugLocation DL(CGF, Range.getEnd());
     ForceCleanup();
   }
+}
+
+static std::string SanitizerHandlerToCheckLabel(SanitizerHandler Handler) {
+  std::string Label;
+  switch (Handler) {
+#define SANITIZER_CHECK(Enum, Name, Version)                                   \
+  case Enum:                                                                   \
+    Label = "__ubsan_check_" #Name;                                            \
+    break;
+
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+  };
+
+  // Label doesn't require sanitization
+  return Label;
+}
+
+static std::string
+SanitizerOrdinalToCheckLabel(SanitizerKind::SanitizerOrdinal Ordinal) {
+  std::string Label;
+  switch (Ordinal) {
+#define SANITIZER(NAME, ID)                                                    \
+  case SanitizerKind::SO_##ID:                                                 \
+    Label = "__ubsan_check_" NAME;                                             \
+    break;
+#include "clang/Basic/Sanitizers.def"
+  default:
+    llvm_unreachable("unexpected sanitizer kind");
+  }
+
+  // Sanitize label (convert hyphens to underscores; also futureproof against
+  // non-alpha)
+  for (unsigned int i = 0; i < Label.length(); i++)
+    if (!std::isalpha(Label[i]))
+      Label[i] = '_';
+
+  return Label;
+}
+
+llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
+    ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler) {
+  std::string Label;
+  if (Ordinals.size() == 1)
+    Label = SanitizerOrdinalToCheckLabel(Ordinals[0]);
+  else
+    Label = SanitizerHandlerToCheckLabel(Handler);
+
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+
+  for (auto Ord : Ordinals) {
+    // TODO: deprecate ClArrayBoundsPseudoFn
+    if (((ClArrayBoundsPseudoFn && Ord == SanitizerKind::SO_ArrayBounds) ||
+         CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(Ord)) &&
+        CheckDI) {
+      return getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
+    }
+  }
+
+  return CheckDI;
+}
+
+SanitizerDebugLocation::SanitizerDebugLocation(
+    CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler)
+    : CGF(CGF),
+      Apply(*CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler)) {
+  assert(!CGF->IsSanitizerScope);
+  CGF->IsSanitizerScope = true;
+}
+
+SanitizerDebugLocation::~SanitizerDebugLocation() {
+  assert(CGF->IsSanitizerScope);
+  CGF->IsSanitizerScope = false;
 }

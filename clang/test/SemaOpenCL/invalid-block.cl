@@ -14,7 +14,7 @@ void f1(void) {
   f0(bl2);
   bl1 = bl2;          // expected-error{{invalid operands to binary expression ('int (__generic ^const __private)(void)' and 'int (__generic ^const __private)(void)')}}
   int (^const bl3)(void); // expected-error{{invalid block variable declaration - must be initialized}} \
-                             expected-warning {{default initialization of an object of type 'int (__generic ^const __private)(void)' leaves the object uninitialized and is incompatible with C++}}
+                             expected-warning {{default initialization of an object of type 'int (__generic ^const __private)(void)' leaves the object uninitialized}}
 }
 
 // A block with extern storage class is not allowed.

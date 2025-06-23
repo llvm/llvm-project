@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
@@ -39,9 +40,13 @@ Error StepInRequestHandler::Run(const StepInArguments &args) const {
   // "threadCausedFocus" boolean value in the "stopped" events.
   dap.focus_tid = thread.GetThreadID();
 
+  if (!SBDebugger::StateIsStoppedState(dap.target.GetProcess().GetState()))
+    return make_error<NotStoppedError>();
+
+  lldb::SBError error;
   if (args.granularity == eSteppingGranularityInstruction) {
-    thread.StepInstruction(/*step_over=*/false);
-    return Error::success();
+    thread.StepInstruction(/*step_over=*/false, error);
+    return ToError(error);
   }
 
   std::string step_in_target;
@@ -50,8 +55,9 @@ Error StepInRequestHandler::Run(const StepInArguments &args) const {
     step_in_target = it->second;
 
   RunMode run_mode = args.singleThread ? eOnlyThisThread : eOnlyDuringStepping;
-  thread.StepInto(step_in_target.c_str(), run_mode);
-  return Error::success();
+  thread.StepInto(step_in_target.c_str(), LLDB_INVALID_LINE_NUMBER, error,
+                  run_mode);
+  return ToError(error);
 }
 
 } // namespace lldb_dap

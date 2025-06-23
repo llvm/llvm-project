@@ -69,7 +69,7 @@ elif config.android:
   else:
     set_default("target_suffix", "-%s-android" % config.target_arch)
 else:
-  if config.target_arch.startswith("arm"):
+  if config.target_arch.startswith("arm") and not config.target_arch.startswith("arm64"):
     if config.target_arch.endswith("hf"):
       set_default("target_suffix", "-armhf")
     else:

@@ -1837,8 +1837,7 @@ bool TwoAddressInstructionImpl::run() {
   MRI->leaveSSA();
 
   // This pass will rewrite the tied-def to meet the RegConstraint.
-  MF->getProperties()
-      .set(MachineFunctionProperties::Property::TiedOpsRewritten);
+  MF->getProperties().setTiedOpsRewritten();
 
   TiedOperandMap TiedOperands;
   for (MachineBasicBlock &MBBI : *MF) {

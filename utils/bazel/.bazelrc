@@ -58,6 +58,11 @@ build --experimental_cc_shared_library
 # https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6df
 build --build_runfile_links=false
 
+# Enable header processing to verify that header-only libraries are
+# self-contained (for sub-projects that enable "parse_headers" feature).
+# See https://bazel.build/docs/bazel-and-cpp#toolchain-features
+build --process_headers_in_dependencies
+
 ###############################################################################
 # Options to select different strategies for linking potential dependent
 # libraries. The default leaves it disabled.

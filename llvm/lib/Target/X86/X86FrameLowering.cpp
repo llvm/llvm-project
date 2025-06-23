@@ -2399,7 +2399,8 @@ X86FrameLowering::getWinEHFuncletFrameSize(const MachineFunction &MF) const {
 static bool isTailCallOpcode(unsigned Opc) {
   return Opc == X86::TCRETURNri || Opc == X86::TCRETURNdi ||
          Opc == X86::TCRETURNmi || Opc == X86::TCRETURNri64 ||
-         Opc == X86::TCRETURNdi64 || Opc == X86::TCRETURNmi64;
+         Opc == X86::TCRETURNri64_ImpCall || Opc == X86::TCRETURNdi64 ||
+         Opc == X86::TCRETURNmi64;
 }
 
 void X86FrameLowering::emitEpilogue(MachineFunction &MF,
@@ -2431,7 +2432,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t NumBytes = 0;
 
   bool NeedsDwarfCFI = (!MF.getTarget().getTargetTriple().isOSDarwin() &&
-                        !MF.getTarget().getTargetTriple().isOSWindows()) &&
+                        !MF.getTarget().getTargetTriple().isOSWindows() &&
+                        !MF.getTarget().getTargetTriple().isUEFI()) &&
                        MF.needsFrameMoves();
 
   Register ArgBaseReg;
@@ -2913,13 +2915,14 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   // 1. Use push2 when
   //       a) number of CSR > 1 if no need padding
   //       b) number of CSR > 2 if need padding
+  //       c) stack alignment >= 16 bytes
   // 2. When the number of CSR push is odd
   //    a. Start to use push2 from the 1st push if stack is 16B aligned.
   //    b. Start to use push2 from the 2nd push if stack is not 16B aligned.
   // 3. When the number of CSR push is even, start to use push2 from the 1st
   //    push and make the stack 16B aligned before the push
   unsigned NumRegsForPush2 = 0;
-  if (STI.hasPush2Pop2()) {
+  if (STI.hasPush2Pop2() && getStackAlignment() >= 16) {
     unsigned NumCSGPR = llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
       return X86::GR64RegClass.contains(I.getReg());
     });

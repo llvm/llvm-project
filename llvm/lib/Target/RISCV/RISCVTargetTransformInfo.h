@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
+class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   using BaseT = BasicTTIImplBase<RISCVTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -90,22 +90,21 @@ public:
 
   /// \name EVL Support for predicated vectorization.
   /// Whether the target supports the %evl parameter of VP intrinsic efficiently
-  /// in hardware, for the given opcode and type/alignment. (see LLVM Language
-  /// Reference - "Vector Predication Intrinsics",
+  /// in hardware. (see LLVM Language Reference - "Vector Predication
+  /// Intrinsics",
   /// https://llvm.org/docs/LangRef.html#vector-predication-intrinsics and
   /// "IR-level VP intrinsics",
   /// https://llvm.org/docs/Proposals/VectorPredication.html#ir-level-vp-intrinsics).
-  /// \param Opcode the opcode of the instruction checked for predicated version
-  /// support.
-  /// \param DataType the type of the instruction with the \p Opcode checked for
-  /// prediction support.
-  /// \param Alignment the alignment for memory access operation checked for
-  /// predicated version support.
-  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                             Align Alignment) const override;
+  bool hasActiveVectorLength() const override;
 
   TargetTransformInfo::PopcntSupportKind
   getPopcntSupport(unsigned TyWidth) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind) const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool supportsScalableVectors() const override {
@@ -161,14 +160,15 @@ public:
   }
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override;
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override;
 
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
@@ -237,8 +237,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -371,11 +371,10 @@ public:
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
-    case RecurKind::IAnyOf:
     case RecurKind::FMin:
     case RecurKind::FMax:
       return true;
-    case RecurKind::FAnyOf:
+    case RecurKind::AnyOf:
     case RecurKind::FAdd:
     case RecurKind::FMulAdd:
       // We can't promote f16/bf16 fadd reductions and scalable vectors can't be

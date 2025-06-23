@@ -164,6 +164,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         return std::make_unique<OHOSTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                      Opts);
       }
+    case llvm::Triple::Managarm:
+      return std::make_unique<ManagarmTargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                       Opts);
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                      Opts);
@@ -466,6 +469,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         return std::make_unique<OHOSTargetInfo<RISCV64TargetInfo>>(Triple,
                                                                    Opts);
       }
+    case llvm::Triple::Managarm:
+      return std::make_unique<ManagarmTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                     Opts);
     default:
       return std::make_unique<RISCV64TargetInfo>(Triple, Opts);
     }
@@ -654,6 +660,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<PS5OSTargetInfo<X86_64TargetInfo>>(Triple, Opts);
     case llvm::Triple::Hurd:
       return std::make_unique<HurdTargetInfo<X86_64TargetInfo>>(Triple, Opts);
+    case llvm::Triple::Managarm:
+      return std::make_unique<ManagarmTargetInfo<X86_64TargetInfo>>(Triple,
+                                                                    Opts);
     default:
       return std::make_unique<X86_64TargetInfo>(Triple, Opts);
     }
@@ -774,9 +783,10 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 using namespace clang::targets;
 /// CreateTargetInfo - Return the target info object for the specified target
 /// options.
-TargetInfo *
-TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
-                             const std::shared_ptr<TargetOptions> &Opts) {
+TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
+                                         TargetOptions &OptsRef) {
+  TargetOptions *Opts = &OptsRef;
+
   llvm::Triple Triple(llvm::Triple::normalize(Opts->Triple));
 
   // Construct the target

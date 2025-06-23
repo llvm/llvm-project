@@ -17,6 +17,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -48,9 +50,6 @@ MCAsmInfo::MCAsmInfo() {
   LinkerPrivateGlobalPrefix = "";
   InlineAsmStart = "APP";
   InlineAsmEnd = "NO_APP";
-  Code16Directive = ".code16";
-  Code32Directive = ".code32";
-  Code64Directive = ".code64";
   ZeroDirective = "\t.zero\t";
   AsciiDirective = "\t.ascii\t";
   AscizDirective = "\t.asciz\t";
@@ -150,4 +149,21 @@ std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
   if (It != NameToSpecifier.end())
     return It->second;
   return {};
+}
+
+void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
+  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr))
+    printSpecifierExpr(OS, *SE);
+  else
+    Expr.print(OS, this);
+}
+
+bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &E,
+                                          MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  if (!E.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  Res.setSpecifier(E.getSpecifier());
+  return !Res.getSubSym();
 }

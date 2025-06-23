@@ -151,9 +151,8 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   setMinimumJumpTableEntries(100);
 
   // Use fast calling convention for library functions.
-  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-    setLibcallCallingConv(static_cast<RTLIB::Libcall>(I), CallingConv::Fast);
-  }
+  for (RTLIB::Libcall LC : RTLIB::libcalls())
+    setLibcallCallingConv(LC, CallingConv::Fast);
 
   MaxStoresPerMemset = 16; // For @llvm.memset -> sequence of stores
   MaxStoresPerMemsetOptSize = 8;
@@ -1085,37 +1084,6 @@ SDValue LanaiTargetLowering::LowerFRAMEADDR(SDValue Op,
         DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, MachinePointerInfo());
   }
   return FrameAddr;
-}
-
-const char *LanaiTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case LanaiISD::ADJDYNALLOC:
-    return "LanaiISD::ADJDYNALLOC";
-  case LanaiISD::RET_GLUE:
-    return "LanaiISD::RET_GLUE";
-  case LanaiISD::CALL:
-    return "LanaiISD::CALL";
-  case LanaiISD::SELECT_CC:
-    return "LanaiISD::SELECT_CC";
-  case LanaiISD::SETCC:
-    return "LanaiISD::SETCC";
-  case LanaiISD::SUBBF:
-    return "LanaiISD::SUBBF";
-  case LanaiISD::SET_FLAG:
-    return "LanaiISD::SET_FLAG";
-  case LanaiISD::BR_CC:
-    return "LanaiISD::BR_CC";
-  case LanaiISD::Wrapper:
-    return "LanaiISD::Wrapper";
-  case LanaiISD::HI:
-    return "LanaiISD::HI";
-  case LanaiISD::LO:
-    return "LanaiISD::LO";
-  case LanaiISD::SMALL:
-    return "LanaiISD::SMALL";
-  default:
-    return nullptr;
-  }
 }
 
 SDValue LanaiTargetLowering::LowerConstantPool(SDValue Op,

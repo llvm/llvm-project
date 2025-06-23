@@ -169,7 +169,7 @@ export async function createDebugAdapterExecutable(
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
 ): Promise<vscode.DebugAdapterExecutable> {
-  const config = vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
+  const config = vscode.workspace.workspaceFile ? vscode.workspace.getConfiguration("lldb-dap") : vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
   const log_path = config.get<string>("log-path");
   let env: { [key: string]: string } = {};
   if (log_path) {
@@ -184,6 +184,7 @@ export async function createDebugAdapterExecutable(
       ...configEnvironment,
       ...env,
     },
+    cwd: configuration.cwd ?? workspaceFolder?.uri.fsPath,
   };
   const dbgArgs = await getDAPArguments(workspaceFolder, configuration);
 

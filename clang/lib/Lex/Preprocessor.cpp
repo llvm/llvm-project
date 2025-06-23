@@ -247,6 +247,8 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
     llvm::errs() << " [LeadingSpace]";
   if (Tok.isExpandDisabled())
     llvm::errs() << " [ExpandDisabled]";
+  if (Tok.isFirstPPToken())
+    llvm::errs() << " [First pp-token]";
   if (Tok.needsCleaning()) {
     const char *Start = SourceMgr.getCharacterData(Tok.getLocation());
     llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength())
@@ -319,7 +321,7 @@ Preprocessor::macro_begin(bool IncludeExternalMacros) const {
 
   // Make sure we cover all macros in visible modules.
   for (const ModuleMacro &Macro : ModuleMacros)
-    CurSubmoduleState->Macros.insert(std::make_pair(Macro.II, MacroState()));
+    CurSubmoduleState->Macros.try_emplace(Macro.II);
 
   return CurSubmoduleState->Macros.begin();
 }
@@ -759,6 +761,8 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
 
 void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   assert(II.isOutOfDate() && "not out of date");
+  assert(getExternalSource() &&
+         "getExternalSource() should not return nullptr");
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
 
@@ -833,6 +837,11 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     // Don't diagnose this keyword again in this translation unit.
     II.setIsFutureCompatKeyword(false);
   }
+
+  // If this identifier would be a keyword in C++, diagnose as a compatibility
+  // issue.
+  if (II.IsKeywordInCPlusPlus() && !DisableMacroExpansion)
+    Diag(Identifier, diag::warn_pp_identifier_is_cpp_keyword) << &II;
 
   // If this is an extension token, diagnose its use.
   // We avoid diagnosing tokens that originate from macro definitions.

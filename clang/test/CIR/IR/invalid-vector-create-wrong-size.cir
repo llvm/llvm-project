@@ -1,0 +1,16 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  cir.func @foo() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+
+    // expected-error @below {{operand count of 4 doesn't match vector type '!cir.vector<8 x !cir.int<s, 32>>' element count of 8}}
+    %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<8 x !s32i>
+    cir.return
+  }
+}

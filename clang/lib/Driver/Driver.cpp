@@ -17,6 +17,7 @@
 #include "ToolChains/Clang.h"
 #include "ToolChains/CrossWindows.h"
 #include "ToolChains/Cuda.h"
+#include "ToolChains/Cygwin.h"
 #include "ToolChains/Darwin.h"
 #include "ToolChains/DragonFly.h"
 #include "ToolChains/FreeBSD.h"
@@ -32,6 +33,7 @@
 #include "ToolChains/Linux.h"
 #include "ToolChains/MSP430.h"
 #include "ToolChains/MSVC.h"
+#include "ToolChains/Managarm.h"
 #include "ToolChains/MinGW.h"
 #include "ToolChains/MipsLinux.h"
 #include "ToolChains/NaCl.h"
@@ -146,6 +148,7 @@ getNVIDIAOffloadTargetTriple(const Driver &D, const ArgList &Args,
   D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
   return std::nullopt;
 }
+
 static std::optional<llvm::Triple>
 getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   if (!Args.hasArg(options::OPT_offload_EQ)) {
@@ -165,6 +168,17 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
     return TT;
   D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
   return std::nullopt;
+}
+
+template <typename F> static bool usesInput(const ArgList &Args, F &&Fn) {
+  return llvm::any_of(Args, [&](Arg *A) {
+    return (A->getOption().matches(options::OPT_x) &&
+            Fn(types::lookupTypeForTypeSpecifier(A->getValue()))) ||
+           (A->getOption().getKind() == Option::InputClass &&
+            StringRef(A->getValue()).rfind('.') != StringRef::npos &&
+            Fn(types::lookupTypeForExtension(
+                &A->getValue()[StringRef(A->getValue()).rfind('.') + 1])));
+  });
 }
 
 // static
@@ -1583,28 +1597,27 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       A->claim();
 
       if (Args.hasArg(options::OPT_spirv)) {
+        const llvm::StringMap<llvm::Triple::SubArchType> ValidTargets = {
+            {"vulkan1.2", llvm::Triple::SPIRVSubArch_v15},
+            {"vulkan1.3", llvm::Triple::SPIRVSubArch_v16}};
         llvm::Triple T(TargetTriple);
-        T.setArch(llvm::Triple::spirv);
-        T.setOS(llvm::Triple::Vulkan);
 
-        // Set specific Vulkan version if applicable.
+        // Set specific Vulkan version. Default to vulkan1.3.
+        auto TargetInfo = ValidTargets.find("vulkan1.3");
+        assert(TargetInfo != ValidTargets.end());
         if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
-          const llvm::StringMap<llvm::Triple::SubArchType> ValidTargets = {
-              {"vulkan1.2", llvm::Triple::SPIRVSubArch_v15},
-              {"vulkan1.3", llvm::Triple::SPIRVSubArch_v16}};
-
-          auto TargetInfo = ValidTargets.find(A->getValue());
-          if (TargetInfo != ValidTargets.end()) {
-            T.setOSName(TargetInfo->getKey());
-            T.setArch(llvm::Triple::spirv, TargetInfo->getValue());
-          } else {
+          TargetInfo = ValidTargets.find(A->getValue());
+          if (TargetInfo == ValidTargets.end()) {
             Diag(diag::err_drv_invalid_value)
                 << A->getAsString(Args) << A->getValue();
           }
           A->claim();
         }
-
-        TargetTriple = T.str();
+        if (TargetInfo != ValidTargets.end()) {
+          T.setOSName(TargetInfo->getKey());
+          T.setArch(llvm::Triple::spirv, TargetInfo->getValue());
+          TargetTriple = T.str();
+        }
       }
     } else {
       Diag(diag::err_drv_dxc_missing_target_profile);
@@ -3001,6 +3014,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
               Ty = types::TY_CXX;
             else if (CCCIsCPP() || CCGenDiagnostics)
               Ty = types::TY_C;
+            else if (IsDXCMode())
+              Ty = types::TY_HLSL;
             else
               Ty = types::TY_Object;
           }
@@ -4223,6 +4238,39 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                              const InputList &Inputs,
                              ActionList &Actions) const {
 
+  // Diagnose misuse of /Fo.
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
+    StringRef V = A->getValue();
+    if (Inputs.size() > 1 && !V.empty() &&
+        !llvm::sys::path::is_separator(V.back())) {
+      // Check whether /Fo tries to name an output file for multiple inputs.
+      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
+          << A->getSpelling() << V;
+      Args.eraseArg(options::OPT__SLASH_Fo);
+    }
+  }
+
+  // Diagnose misuse of /Fa.
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
+    StringRef V = A->getValue();
+    if (Inputs.size() > 1 && !V.empty() &&
+        !llvm::sys::path::is_separator(V.back())) {
+      // Check whether /Fa tries to name an asm file for multiple inputs.
+      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
+          << A->getSpelling() << V;
+      Args.eraseArg(options::OPT__SLASH_Fa);
+    }
+  }
+
+  // Diagnose misuse of /o.
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_o)) {
+    if (A->getValue()[0] == '\0') {
+      // It has to have a value.
+      Diag(clang::diag::err_drv_missing_argument) << A->getSpelling() << 1;
+      Args.eraseArg(options::OPT__SLASH_o);
+    }
+  }
+
   // Ignore /Yc/Yu if both /Yc and /Yu passed but with different filenames.
   Arg *YcArg = Args.getLastArg(options::OPT__SLASH_Yc);
   Arg *YuArg = Args.getLastArg(options::OPT__SLASH_Yu);
@@ -4281,6 +4329,14 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     Args.eraseArg(options::OPT__SLASH_Yc);
     Args.eraseArg(options::OPT__SLASH_Yu);
     YcArg = YuArg = nullptr;
+  }
+
+  if (Args.hasArg(options::OPT_include_pch) &&
+      Args.hasArg(options::OPT_ignore_pch)) {
+    // If -ignore-pch is used, -include-pch is disabled. Since -emit-pch is
+    // CC1option, it will not be added to command argments if -ignore-pch is
+    // used.
+    Args.eraseArg(options::OPT_include_pch);
   }
 
   bool LinkOnly = phases::Link == FinalPhase && Inputs.size() > 0;
@@ -4363,39 +4419,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   if (!SuppressMissingInputWarning && Inputs.empty()) {
     Diag(clang::diag::err_drv_no_input_files);
     return;
-  }
-
-  // Diagnose misuse of /Fo.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fo tries to name an output file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fo);
-    }
-  }
-
-  // Diagnose misuse of /Fa.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fa tries to name an asm file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fa);
-    }
-  }
-
-  // Diagnose misuse of /o.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_o)) {
-    if (A->getValue()[0] == '\0') {
-      // It has to have a value.
-      Diag(clang::diag::err_drv_missing_argument) << A->getSpelling() << 1;
-      Args.eraseArg(options::OPT__SLASH_o);
-    }
   }
 
   handleArguments(C, Args, Inputs, Actions);
@@ -4868,7 +4891,10 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   // For HIP non-rdc non-device-only compilation, create a linker wrapper
   // action for each host object to link, bundle and wrap device files in
   // it.
-  if (isa<AssembleJobAction>(HostAction) && HIPNoRDC && !offloadDeviceOnly()) {
+  if ((isa<AssembleJobAction>(HostAction) ||
+       (isa<BackendJobAction>(HostAction) &&
+        HostAction->getType() == types::TY_LTO_BC)) &&
+      HIPNoRDC && !offloadDeviceOnly()) {
     ActionList AL{HostAction};
     HostAction = C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_Object);
     HostAction->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
@@ -5359,11 +5385,11 @@ void Driver::BuildJobs(Compilation &C) const {
     });
   }
 
-  // If the user passed -Qunused-arguments or there were errors, don't warn
-  // about any unused arguments.
-  if (Diags.hasErrorOccurred() ||
-      C.getArgs().hasArg(options::OPT_Qunused_arguments))
-    return;
+  // If the user passed -Qunused-arguments or there were errors, don't
+  // warn about any unused arguments.
+  bool ReportUnusedArguments =
+      !Diags.hasErrorOccurred() &&
+      !C.getArgs().hasArg(options::OPT_Qunused_arguments);
 
   // Claim -fdriver-only here.
   (void)C.getArgs().hasArg(options::OPT_fdriver_only);
@@ -5417,7 +5443,7 @@ void Driver::BuildJobs(Compilation &C) const {
             !C.getActions().empty()) {
           Diag(diag::err_drv_unsupported_opt_for_target)
               << A->getSpelling() << getTargetTriple();
-        } else {
+        } else if (ReportUnusedArguments) {
           Diag(clang::diag::warn_drv_unused_argument)
               << A->getAsString(C.getArgs());
         }
@@ -5609,19 +5635,20 @@ class ToolSelector final {
     if (!BJ || !CJ)
       return nullptr;
 
+    auto HasBitcodeInput = [](const JobActionInfo &AI) {
+      for (auto &Input : AI.JA->getInputs())
+        if (!types::isLLVMIR(Input->getType()))
+          return false;
+      return true;
+    };
+
     // Check if the initial input (to the compile job or its predessor if one
     // exists) is LLVM bitcode. In that case, no preprocessor step is required
     // and we can still collapse the compile and backend jobs when we have
     // -save-temps. I.e. there is no need for a separate compile job just to
     // emit unoptimized bitcode.
-    bool InputIsBitcode = true;
-    for (size_t i = 1; i < ActionInfo.size(); i++)
-      if (ActionInfo[i].JA->getType() != types::TY_LLVM_BC &&
-          ActionInfo[i].JA->getType() != types::TY_LTO_BC) {
-        InputIsBitcode = false;
-        break;
-      }
-    if (!InputIsBitcode && !canCollapsePreprocessorAction())
+    bool InputIsBitcode = all_of(ActionInfo, HasBitcodeInput);
+    if (SaveTemps && !InputIsBitcode)
       return nullptr;
 
     // Get compiler tool.
@@ -5635,7 +5662,7 @@ class ToolSelector final {
     if (!T->hasIntegratedBackend() && !(OutputIsLLVM && T->canEmitIR()))
       return nullptr;
 
-    if (T->canEmitIR() && ((SaveTemps && !InputIsBitcode) || EmbedBitcode))
+    if (T->canEmitIR() && EmbedBitcode)
       return nullptr;
 
     Inputs = CJ->getInputs();
@@ -6204,7 +6231,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   if (is_style_windows(llvm::sys::path::Style::native)) {
     // BoundArch may contains ':', which is invalid in file names on Windows,
     // therefore replace it with '%'.
-    std::replace(BoundArch.begin(), BoundArch.end(), ':', '@');
+    llvm::replace(BoundArch, ':', '@');
   }
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
@@ -6824,15 +6851,29 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::Fuchsia:
       TC = std::make_unique<toolchains::Fuchsia>(*this, Target, Args);
       break;
+    case llvm::Triple::Managarm:
+      TC = std::make_unique<toolchains::Managarm>(*this, Target, Args);
+      break;
     case llvm::Triple::Solaris:
       TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);
       break;
     case llvm::Triple::CUDA:
       TC = std::make_unique<toolchains::NVPTXToolChain>(*this, Target, Args);
       break;
-    case llvm::Triple::AMDHSA:
-      TC = std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args);
+    case llvm::Triple::AMDHSA: {
+      if (Target.getArch() == llvm::Triple::spirv64) {
+        TC = std::make_unique<toolchains::SPIRVAMDToolChain>(*this, Target,
+                                                             Args);
+      } else {
+        bool DL = usesInput(Args, types::isOpenCL) ||
+                  usesInput(Args, types::isLLVMIR);
+        TC = DL ? std::make_unique<toolchains::ROCMToolChain>(*this, Target,
+                                                              Args)
+                : std::make_unique<toolchains::AMDGPUToolChain>(*this, Target,
+                                                                Args);
+      }
       break;
+    }
     case llvm::Triple::AMDPAL:
     case llvm::Triple::Mesa3D:
       TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
@@ -6852,6 +6893,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::GNU:
         TC = std::make_unique<toolchains::MinGW>(*this, Target, Args);
+        break;
+      case llvm::Triple::Cygnus:
+        TC = std::make_unique<toolchains::Cygwin>(*this, Target, Args);
         break;
       case llvm::Triple::Itanium:
         TC = std::make_unique<toolchains::CrossWindowsToolChain>(*this, Target,
@@ -7197,9 +7241,10 @@ static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
 ///
 ///  '#': Silence information about the changes to the command line arguments.
 ///
-///  '^': Add FOO as a new argument at the beginning of the command line.
+///  '^FOO': Add FOO as a new argument at the beginning of the command line
+///  right after the name of the compiler executable.
 ///
-///  '+': Add FOO as a new argument at the end of the command line.
+///  '+FOO': Add FOO as a new argument at the end of the command line.
 ///
 ///  's/XXX/YYY/': Substitute the regular expression XXX with YYY in the command
 ///  line.
@@ -7287,7 +7332,7 @@ static void applyOneOverrideOption(raw_ostream &OS,
 void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                                   const char *OverrideStr,
                                   llvm::StringSet<> &SavedStrings,
-                                  raw_ostream *OS) {
+                                  StringRef EnvVar, raw_ostream *OS) {
   if (!OS)
     OS = &llvm::nulls();
 
@@ -7296,7 +7341,7 @@ void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
     OS = &llvm::nulls();
   }
 
-  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
+  *OS << "### " << EnvVar << ": " << OverrideStr << "\n";
 
   // This does not need to be efficient.
 

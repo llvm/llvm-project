@@ -80,8 +80,8 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
   };
   llvm::DIDumpOptions DumpOpts;
   DumpOpts.GetNameForDWARFReg = GetRegName;
-  llvm::DWARFExpression(m_data.GetAsLLVM(), m_data.GetAddressByteSize())
-      .print(s->AsRawOstream(), DumpOpts, nullptr);
+  llvm::DWARFExpression E(m_data.GetAsLLVM(), m_data.GetAddressByteSize());
+  llvm::DWARFExpressionPrinter::print(&E, s->AsRawOstream(), DumpOpts, nullptr);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }
@@ -155,6 +155,7 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_APPLE_uninit:
   case DW_OP_PGI_omp_thread_num:
   case DW_OP_hi_user:
+  case DW_OP_GNU_implicit_pointer:
     break;
 
   case DW_OP_addr:

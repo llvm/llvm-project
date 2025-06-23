@@ -1,0 +1,37 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -S -emit-llvm -fsanitize=address %t/test.c -o - | FileCheck %s --check-prefixes=SANITIZE
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -S -emit-llvm -fsanitize=address -fsanitize-ignorelist=%t/order-0.ignorelist %t/test.c -o - | FileCheck %s --check-prefixes=IGNORE
+// RUN: %clang -target x86_64-unknown-linux-gnu -S -emit-llvm -fsanitize=address -fsanitize-ignorelist=%t/order-1.ignorelist %t/test.c -o - | FileCheck %s --check-prefixes=SANITIZE
+// RUN: %clang -target x86_64-unknown-linux-gnu -S -emit-llvm -fsanitize=address -fsanitize-ignorelist=%t/order-2.ignorelist %t/test.c -o - | FileCheck %s --check-prefixes=IGNORE
+// RUN: %clang -target x86_64-unknown-linux-gnu -S -emit-llvm -fsanitize=address -fsanitize-ignorelist=%t/order-3.ignorelist %t/test.c -o - | FileCheck %s --check-prefixes=SANITIZE
+
+// The same type can appear multiple times within an ignorelist. Any ``=sanitize`` type
+// entries enable sanitizer instrumentation, even if it was ignored by entries before.
+// If multiple entries match the source, then the latest entry takes the
+// precedence.
+
+//--- order-0.ignorelist
+global:global_array
+
+//--- order-1.ignorelist
+global:global_array
+global:global_array=sanitize
+
+//--- order-2.ignorelist
+global:*
+global:global_array=sanitize
+global:global_array
+
+//--- order-3.ignorelist
+global:*
+global:global_array=sanitize
+global:global*
+global:*array=sanitize
+
+//--- test.c
+// SANITIZE: @global_array ={{.*}} global {{.*}}, comdat, align {{.*}} 
+// IGNORE: @global_array ={{.*}} global {{.*}}, no_sanitize_address, align {{.*}}
+unsigned global_array[100] = {-1};

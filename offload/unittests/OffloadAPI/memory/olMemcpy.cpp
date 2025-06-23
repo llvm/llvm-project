@@ -11,8 +11,9 @@
 #include <gtest/gtest.h>
 
 using olMemcpyTest = OffloadQueueTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemcpyTest);
 
-TEST_F(olMemcpyTest, SuccessHtoD) {
+TEST_P(olMemcpyTest, SuccessHtoD) {
   constexpr size_t Size = 1024;
   void *Alloc;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
@@ -23,7 +24,7 @@ TEST_F(olMemcpyTest, SuccessHtoD) {
   olMemFree(Alloc);
 }
 
-TEST_F(olMemcpyTest, SuccessDtoH) {
+TEST_P(olMemcpyTest, SuccessDtoH) {
   constexpr size_t Size = 1024;
   void *Alloc;
   std::vector<uint8_t> Input(Size, 42);
@@ -41,7 +42,7 @@ TEST_F(olMemcpyTest, SuccessDtoH) {
   ASSERT_SUCCESS(olMemFree(Alloc));
 }
 
-TEST_F(olMemcpyTest, SuccessDtoD) {
+TEST_P(olMemcpyTest, SuccessDtoD) {
   constexpr size_t Size = 1024;
   void *AllocA;
   void *AllocB;
@@ -64,7 +65,7 @@ TEST_F(olMemcpyTest, SuccessDtoD) {
   ASSERT_SUCCESS(olMemFree(AllocB));
 }
 
-TEST_F(olMemcpyTest, SuccessHtoHSync) {
+TEST_P(olMemcpyTest, SuccessHtoHSync) {
   constexpr size_t Size = 1024;
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);
@@ -77,7 +78,7 @@ TEST_F(olMemcpyTest, SuccessHtoHSync) {
   }
 }
 
-TEST_F(olMemcpyTest, SuccessDtoHSync) {
+TEST_P(olMemcpyTest, SuccessDtoHSync) {
   constexpr size_t Size = 1024;
   void *Alloc;
   std::vector<uint8_t> Input(Size, 42);
@@ -94,7 +95,7 @@ TEST_F(olMemcpyTest, SuccessDtoHSync) {
   ASSERT_SUCCESS(olMemFree(Alloc));
 }
 
-TEST_F(olMemcpyTest, SuccessSizeZero) {
+TEST_P(olMemcpyTest, SuccessSizeZero) {
   constexpr size_t Size = 1024;
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);

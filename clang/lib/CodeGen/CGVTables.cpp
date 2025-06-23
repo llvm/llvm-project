@@ -124,7 +124,7 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
   auto *DIS = Fn->getSubprogram();
   if (!DIS)
     return;
-  auto *NewDIS = DIS->replaceWithDistinct(DIS->clone());
+  auto *NewDIS = llvm::MDNode::replaceWithDistinct(DIS->clone());
   VMap.MD()[DIS].reset(NewDIS);
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
@@ -985,7 +985,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   assert(!VTable->isDeclaration() && "Shouldn't set properties on declaration");
   CGM.setGVProperties(VTable, RD);
 
-  CGM.EmitVTableTypeMetadata(RD, VTable, *VTLayout.get());
+  CGM.EmitVTableTypeMetadata(RD, VTable, *VTLayout);
 
   if (UsingRelativeLayout) {
     RemoveHwasanMetadata(VTable);

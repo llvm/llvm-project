@@ -159,18 +159,15 @@ static bool TagIsRecordType(dw_tag_t tag) {
   }
 }
 
-/// Get the object parameter DIE if one exists, otherwise returns
-/// a default DWARFDIE. If \c containing_decl_ctx is not a valid
-/// C++ declaration context for class methods, assume no object
-/// parameter exists for the given \c subprogram.
-static DWARFDIE
-GetCXXObjectParameter(const DWARFDIE &subprogram,
-                      const clang::DeclContext &containing_decl_ctx) {
+DWARFDIE
+DWARFASTParserClang::GetObjectParameter(const DWARFDIE &subprogram,
+                                        const DWARFDIE &decl_ctx_die) {
+  assert(subprogram);
   assert(subprogram.Tag() == DW_TAG_subprogram ||
          subprogram.Tag() == DW_TAG_inlined_subroutine ||
          subprogram.Tag() == DW_TAG_subroutine_type);
 
-  if (!DeclKindIsCXXClass(containing_decl_ctx.getDeclKind()))
+  if (!decl_ctx_die.IsStructUnionOrClass())
     return {};
 
   if (DWARFDIE object_parameter =
@@ -1304,16 +1301,14 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   clang::CallingConv calling_convention =
       ConvertDWARFCallingConventionToClang(attrs);
 
-  const DWARFDIE object_parameter =
-      GetCXXObjectParameter(die, *containing_decl_ctx);
+  const DWARFDIE object_parameter = GetObjectParameter(die, decl_ctx_die);
 
   // clang_type will get the function prototype clang type after this
   // call
-  CompilerType clang_type =
-      m_ast.CreateFunctionType(return_clang_type, function_param_types.data(),
-                               function_param_types.size(), is_variadic,
-                               GetCXXMethodCVQuals(die, object_parameter),
-                               calling_convention, attrs.ref_qual);
+  CompilerType clang_type = m_ast.CreateFunctionType(
+      return_clang_type, function_param_types, is_variadic,
+      GetCXXMethodCVQuals(die, object_parameter), calling_convention,
+      attrs.ref_qual);
 
   if (attrs.name) {
     bool type_handled = false;
@@ -1531,8 +1526,7 @@ void DWARFASTParserClang::ParseInheritance(
     const lldb::ModuleSP &module_sp,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     ClangASTImporter::LayoutInfo &layout_info) {
-  auto ast =
-      class_clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ast = class_clang_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
     return;
 
@@ -1837,7 +1831,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
-  metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
+  if (!attrs.is_forward_declaration)
+    metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   if (ParseTemplateParameterInfos(die, template_param_infos)) {
@@ -2412,12 +2407,13 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
   DWARFDeclContext decl_ctx = die.GetDWARFDeclContext();
   sstr << decl_ctx.GetQualifiedName();
 
+  DWARFDIE decl_ctx_die;
   clang::DeclContext *containing_decl_ctx =
-      GetClangDeclContextContainingDIE(die, nullptr);
+      GetClangDeclContextContainingDIE(die, &decl_ctx_die);
   assert(containing_decl_ctx);
 
-  const unsigned cv_quals = GetCXXMethodCVQuals(
-      die, GetCXXObjectParameter(die, *containing_decl_ctx));
+  const unsigned cv_quals =
+      GetCXXMethodCVQuals(die, GetObjectParameter(die, decl_ctx_die));
 
   ParseChildParameters(containing_decl_ctx, die, is_variadic,
                        has_template_params, param_types, param_names);
@@ -2478,8 +2474,8 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(
     std::unique_ptr<Declaration> decl_up;
     if (decl_file || decl_line || decl_column)
       decl_up = std::make_unique<Declaration>(
-          die.GetCU()->GetFile(decl_file ? *decl_file : 0),
-          decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
+          die.GetCU()->GetFile(decl_file.value_or(0)), decl_line.value_or(0),
+          decl_column.value_or(0));
 
     SymbolFileDWARF *dwarf = die.GetDWARF();
     // Supply the type _only_ if it has already been parsed
@@ -2822,7 +2818,7 @@ llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(
     const CompilerType &int_type, const DWARFFormValue &form_value) const {
   clang::QualType qt = ClangUtil::GetQualType(int_type);
   assert(qt->isIntegralOrEnumerationType());
-  auto ts_ptr = int_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ts_ptr = int_type.GetTypeSystem<TypeSystemClang>();
   if (!ts_ptr)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "TypeSystem not clang");
@@ -3130,8 +3126,7 @@ bool DWARFASTParserClang::ParseChildMembers(
   FieldInfo last_field_info;
 
   ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
-  auto ts = class_clang_type.GetTypeSystem();
-  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast = class_clang_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
     return false;
 

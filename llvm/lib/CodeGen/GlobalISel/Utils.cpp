@@ -259,7 +259,7 @@ void llvm::reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
 void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                               MachineOptimizationRemarkEmitter &MORE,
                               MachineOptimizationRemarkMissed &R) {
-  MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+  MF.getProperties().setFailedISel();
   reportGISelDiagnostic(DS_Error, MF, TPC, MORE, R);
 }
 
@@ -1027,39 +1027,50 @@ llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
 
 std::optional<SmallVector<APInt>>
 llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                       unsigned DstScalarSizeInBits, unsigned ExtOp,
                        const MachineRegisterInfo &MRI) {
-  LLT Ty = MRI.getType(Op1);
-  if (Ty != MRI.getType(Op2))
-    return std::nullopt;
+  assert(ExtOp == TargetOpcode::G_SEXT || ExtOp == TargetOpcode::G_ZEXT ||
+         ExtOp == TargetOpcode::G_ANYEXT);
 
-  auto TryFoldScalar = [&MRI, Pred](Register LHS,
-                                    Register RHS) -> std::optional<APInt> {
-    auto LHSCst = getIConstantVRegVal(LHS, MRI);
+  const LLT Ty = MRI.getType(Op1);
+
+  auto GetICmpResultCst = [&](bool IsTrue) {
+    if (IsTrue)
+      return ExtOp == TargetOpcode::G_SEXT
+                 ? APInt::getAllOnes(DstScalarSizeInBits)
+                 : APInt::getOneBitSet(DstScalarSizeInBits, 0);
+    return APInt::getZero(DstScalarSizeInBits);
+  };
+
+  auto TryFoldScalar = [&](Register LHS, Register RHS) -> std::optional<APInt> {
     auto RHSCst = getIConstantVRegVal(RHS, MRI);
-    if (!LHSCst || !RHSCst)
+    if (!RHSCst)
+      return std::nullopt;
+    auto LHSCst = getIConstantVRegVal(LHS, MRI);
+    if (!LHSCst)
       return std::nullopt;
 
     switch (Pred) {
     case CmpInst::Predicate::ICMP_EQ:
-      return APInt(/*numBits=*/1, LHSCst->eq(*RHSCst));
+      return GetICmpResultCst(LHSCst->eq(*RHSCst));
     case CmpInst::Predicate::ICMP_NE:
-      return APInt(/*numBits=*/1, LHSCst->ne(*RHSCst));
+      return GetICmpResultCst(LHSCst->ne(*RHSCst));
     case CmpInst::Predicate::ICMP_UGT:
-      return APInt(/*numBits=*/1, LHSCst->ugt(*RHSCst));
+      return GetICmpResultCst(LHSCst->ugt(*RHSCst));
     case CmpInst::Predicate::ICMP_UGE:
-      return APInt(/*numBits=*/1, LHSCst->uge(*RHSCst));
+      return GetICmpResultCst(LHSCst->uge(*RHSCst));
     case CmpInst::Predicate::ICMP_ULT:
-      return APInt(/*numBits=*/1, LHSCst->ult(*RHSCst));
+      return GetICmpResultCst(LHSCst->ult(*RHSCst));
     case CmpInst::Predicate::ICMP_ULE:
-      return APInt(/*numBits=*/1, LHSCst->ule(*RHSCst));
+      return GetICmpResultCst(LHSCst->ule(*RHSCst));
     case CmpInst::Predicate::ICMP_SGT:
-      return APInt(/*numBits=*/1, LHSCst->sgt(*RHSCst));
+      return GetICmpResultCst(LHSCst->sgt(*RHSCst));
     case CmpInst::Predicate::ICMP_SGE:
-      return APInt(/*numBits=*/1, LHSCst->sge(*RHSCst));
+      return GetICmpResultCst(LHSCst->sge(*RHSCst));
     case CmpInst::Predicate::ICMP_SLT:
-      return APInt(/*numBits=*/1, LHSCst->slt(*RHSCst));
+      return GetICmpResultCst(LHSCst->slt(*RHSCst));
     case CmpInst::Predicate::ICMP_SLE:
-      return APInt(/*numBits=*/1, LHSCst->sle(*RHSCst));
+      return GetICmpResultCst(LHSCst->sle(*RHSCst));
     default:
       return std::nullopt;
     }
@@ -1990,6 +2001,17 @@ Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
     return VectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
                            Ty.getElementCount());
   return IntegerType::get(C, Ty.getSizeInBits());
+}
+
+bool llvm::isAssertMI(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_ASSERT_ALIGN:
+  case TargetOpcode::G_ASSERT_SEXT:
+  case TargetOpcode::G_ASSERT_ZEXT:
+    return true;
+  }
 }
 
 APInt llvm::GIConstant::getScalarValue() const {

@@ -243,17 +243,17 @@ public:
 
   bool GetAutoConfirm() const;
 
-  const FormatEntity::Entry *GetDisassemblyFormat() const;
+  FormatEntity::Entry GetDisassemblyFormat() const;
 
-  const FormatEntity::Entry *GetFrameFormat() const;
+  FormatEntity::Entry GetFrameFormat() const;
 
-  const FormatEntity::Entry *GetFrameFormatUnique() const;
+  FormatEntity::Entry GetFrameFormatUnique() const;
 
   uint64_t GetStopDisassemblyMaxSize() const;
 
-  const FormatEntity::Entry *GetThreadFormat() const;
+  FormatEntity::Entry GetThreadFormat() const;
 
-  const FormatEntity::Entry *GetThreadStopFormat() const;
+  FormatEntity::Entry GetThreadStopFormat() const;
 
   lldb::ScriptLanguage GetScriptLanguage() const;
 
@@ -297,7 +297,7 @@ public:
 
   bool GetShowStatusline() const;
 
-  const FormatEntity::Entry *GetStatuslineFormat() const;
+  FormatEntity::Entry GetStatuslineFormat() const;
   bool SetStatuslineFormat(const FormatEntity::Entry &format);
 
   llvm::StringRef GetSeparator() const;
@@ -306,6 +306,10 @@ public:
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
+
+  llvm::StringRef GetDisabledAnsiPrefix() const;
+
+  llvm::StringRef GetDisabledAnsiSuffix() const;
 
   bool GetUseAutosuggestion() const;
 
@@ -598,6 +602,10 @@ public:
   void FlushProcessOutput(Process &process, bool flush_stdout,
                           bool flush_stderr);
 
+  void AddProtocolServer(lldb::ProtocolServerSP protocol_server_sp);
+  void RemoveProtocolServer(lldb::ProtocolServerSP protocol_server_sp);
+  lldb::ProtocolServerSP GetProtocolServer(llvm::StringRef protocol) const;
+
   SourceManager::SourceFileCache &GetSourceFileCache() {
     return m_source_file_cache;
   }
@@ -767,6 +775,8 @@ protected:
   llvm::SmallVector<ProgressReport, 4> m_progress_reports;
   mutable std::mutex m_progress_reports_mutex;
   /// @}
+
+  llvm::SmallVector<lldb::ProtocolServerSP> m_protocol_servers;
 
   std::mutex m_destroy_callback_mutex;
   lldb::callback_token_t m_destroy_callback_next_token = 0;

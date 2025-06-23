@@ -753,6 +753,24 @@ func.func @truncExtf3(%arg0: f32) -> f16 {
   return %truncf : f16
 }
 
+// CHECK-LABEL: @truncSitofp
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i32 to f32
+//       CHECK-NOT: truncf
+//       CHECK:     return %[[SITOFP]]
+func.func @truncSitofp(%arg0: i32) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i32 to f64
+  %trunc = arith.truncf %sitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncSitofpConstrained
+//       CHECK: truncf
+func.func @truncSitofpConstrained(%arg0: i32) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i32 to f64
+  %trunc = arith.truncf %sitofp to_nearest_even : f64 to f32
+  return %trunc : f32
+}
+
 // TODO: We should also add a test for not folding arith.extf on information loss.
 // This may happen when extending f8E5M2FNUZ to f16.
 
@@ -982,7 +1000,7 @@ func.func @tripleAddAddOvf2(%arg0: index) -> index {
 
 
 // CHECK-LABEL: @foldSubXX_tensor
-//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32> 
+//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32>
 //       CHECK:   %[[sub:.+]] = arith.subi
 //       CHECK:   return %[[c0]], %[[sub]]
 func.func @foldSubXX_tensor(%static : tensor<10xi32>, %dyn : tensor<?x?xi32>) -> (tensor<10xi32>, tensor<?x?xi32>) {
@@ -2930,118 +2948,6 @@ func.func @truncIShrSIToTrunciShrUIBadShiftAmt1(%a: i64) -> i32 {
 func.func @truncIShrSIToTrunciShrUIBadShiftAmt2(%a: i64) -> i32 {
   %c31 = arith.constant 31: i64
   %sh = arith.shrsi %a, %c31 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtended
-//  CHECK-SAME:   (%[[A:.+]]: i32, %[[B:.+]]: i32)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[A]], %[[B]] : i32
-//  CHECK-NEXT:   return %[[HIGH]] : i32
-func.func @wideMulToMulSIExtended(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedVector
-//  CHECK-SAME:   (%[[A:.+]]: vector<3xi32>, %[[B:.+]]: vector<3xi32>)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[A]], %[[B]] : vector<3xi32>
-//  CHECK-NEXT:   return %[[HIGH]] : vector<3xi32>
-func.func @wideMulToMulSIExtendedVector(%a: vector<3xi32>, %b: vector<3xi32>) -> vector<3xi32> {
-  %x = arith.extsi %a: vector<3xi32> to vector<3xi64>
-  %y = arith.extsi %b: vector<3xi32> to vector<3xi64>
-  %m = arith.muli %x, %y: vector<3xi64>
-  %c32 = arith.constant dense<32>: vector<3xi64>
-  %sh = arith.shrui %m, %c32 : vector<3xi64>
-  %hi = arith.trunci %sh: vector<3xi64> to vector<3xi32>
-  return %hi : vector<3xi32>
-}
-
-// CHECK-LABEL: @wideMulToMulUIExtended
-//  CHECK-SAME:   (%[[A:.+]]: i32, %[[B:.+]]: i32)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mului_extended %[[A]], %[[B]] : i32
-//  CHECK-NEXT:   return %[[HIGH]] : i32
-func.func @wideMulToMulUIExtended(%a: i32, %b: i32) -> i32 {
-  %x = arith.extui %a: i32 to i64
-  %y = arith.extui %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulUIExtendedVector
-//  CHECK-SAME:   (%[[A:.+]]: vector<3xi32>, %[[B:.+]]: vector<3xi32>)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mului_extended %[[A]], %[[B]] : vector<3xi32>
-//  CHECK-NEXT:   return %[[HIGH]] : vector<3xi32>
-func.func @wideMulToMulUIExtendedVector(%a: vector<3xi32>, %b: vector<3xi32>) -> vector<3xi32> {
-  %x = arith.extui %a: vector<3xi32> to vector<3xi64>
-  %y = arith.extui %b: vector<3xi32> to vector<3xi64>
-  %m = arith.muli %x, %y: vector<3xi64>
-  %c32 = arith.constant dense<32>: vector<3xi64>
-  %sh = arith.shrui %m, %c32 : vector<3xi64>
-  %hi = arith.trunci %sh: vector<3xi64> to vector<3xi32>
-  return %hi : vector<3xi32>
-}
-
-// CHECK-LABEL: @wideMulToMulIExtendedMixedExt
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulIExtendedMixedExt(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extui %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadExt
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadExt(%a: i16, %b: i16) -> i32 {
-  %x = arith.extsi %a: i16 to i64
-  %y = arith.extsi %b: i16 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadShift1
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadShift1(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c33 = arith.constant 33: i64
-  %sh = arith.shrui %m, %c33 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadShift2
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadShift2(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c31 = arith.constant 31: i64
-  %sh = arith.shrui %m, %c31 : i64
   %hi = arith.trunci %sh: i64 to i32
   return %hi : i32
 }
