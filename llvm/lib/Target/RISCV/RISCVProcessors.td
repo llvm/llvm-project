@@ -292,7 +292,8 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                        FeatureStdExtZbb],
                                       SiFiveIntelligenceTuneFeatures>;
 
-def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390", NoSchedModel,
+def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390",
+                                      SiFiveX390Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
                                        FeatureStdExtM,
