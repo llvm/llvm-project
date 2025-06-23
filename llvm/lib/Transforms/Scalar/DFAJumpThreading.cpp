@@ -618,6 +618,8 @@ private:
 
     VisitedBlocks UniqueBlocks;
     for (auto *IncomingBB : Phi->blocks()) {
+      if(Res.size() >= MaxNumPaths)
+        break;
       if (!UniqueBlocks.insert(IncomingBB).second)
         continue;
       if (!SwitchOuterLoop->contains(IncomingBB))
@@ -657,6 +659,8 @@ private:
             getPathsFromStateDefMap(StateDef, IncomingPhi, VB);
         for (ThreadingPath &Path : PredPaths) {
           Path.push_back(PhiBB);
+          if(Res.size() >= MaxNumPaths)
+            break;
           Res.push_back(std::move(Path));
         }
         continue;
@@ -679,6 +683,10 @@ private:
           ThreadingPath NewPath(Path);
           NewPath.appendExcludingFirst(IPath);
           NewPath.push_back(PhiBB);
+          if(Res.size() >= MaxNumPaths) {
+            VB.erase(PhiBB);
+            return Res;
+	  }
           Res.push_back(NewPath);
         }
       }
