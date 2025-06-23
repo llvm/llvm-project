@@ -19,8 +19,8 @@ namespace scudo {
 class ScopedString {
 public:
   explicit ScopedString() { String.push_back('\0'); }
-  uptr length() { return String.size() - 1; }
-  const char *data() { return String.data(); }
+  uptr length() const { return String.size() - 1; }
+  const char *data() const { return String.data(); }
   void clear() {
     String.clear();
     String.push_back('\0');
@@ -30,6 +30,11 @@ public:
   void output() const { outputRaw(String.data()); }
   void reserve(size_t Size) { String.reserve(Size + 1); }
   uptr capacity() { return String.capacity() - 1; }
+
+  // Copies the string to the buffer, truncating if necessary.
+  // Null-terminates the output if output_length is greater than zero.
+  // Returns the original string's size (including null).
+  size_t copyToBuffer(char *OutputBase, size_t OutputLength);
 
 private:
   void appendNumber(u64 AbsoluteValue, u8 Base, u8 MinNumberLength,
