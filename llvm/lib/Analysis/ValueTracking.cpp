@@ -278,16 +278,7 @@ static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
 
 bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
                               unsigned Depth) {
-  if (computeKnownBits(V, SQ, Depth).isNonNegative())
-    return true;
-
-  Value *X, *Y;
-  if (match(V, m_NSWSub(m_Value(X), m_Value(Y))))
-    if (std::optional<bool> result =
-            isImpliedByDomCondition(ICmpInst::ICMP_SLE, Y, X, SQ.CxtI, SQ.DL))
-      return *result;
-
-  return false;
+  return computeKnownBits(V, SQ, Depth).isNonNegative();
 }
 
 bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
@@ -371,6 +362,12 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
 
   computeKnownBits(Op0, DemandedElts, Known2, Q, Depth + 1);
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
+
+  if (!Add && NSW)
+    if (std::optional<bool> result =
+            isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL);
+        *result)
+      KnownOut.makeNonNegative();
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
