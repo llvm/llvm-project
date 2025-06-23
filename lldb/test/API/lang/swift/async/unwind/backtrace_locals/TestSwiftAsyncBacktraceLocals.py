@@ -23,6 +23,7 @@ class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
         self.build()
         target, process, thread, main_bkpt = lldbutil.run_to_source_breakpoint(
             self, 'main breakpoint', self.src)
+        main_bkpt.SetEnabled(False) # avoid hitting multiple locations in async breakpoints
         self.run_fibo_tests(target, process)
 
     @swiftTest
@@ -34,6 +35,7 @@ class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
         self.build()
         target, process, thread, main_bkpt = lldbutil.run_to_source_breakpoint(
             self, 'main actor breakpoint', self.src)
+        main_bkpt.SetEnabled(False) # avoid hitting multiple locations in async breakpoints
         self.run_fibo_tests(target, process)
 
         

@@ -403,6 +403,6 @@ let Definition = "thread" in {
 
 let Definition = "language" in {
   def EnableFilterForLineBreakpoints: Property<"enable-filter-for-line-breakpoints", "Boolean">,
-    DefaultTrue,
+    DefaultFalse,
     Desc<"If true, allow Language plugins to filter locations when setting breakpoints by line number or regex.">;
 }
