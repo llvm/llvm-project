@@ -825,8 +825,8 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
     RewritePatternSet &patterns) {
   patterns.add<CreateNdDescDistribution, StoreNdDistribution,
                LoadNdDistribution, DpasDistribution, PrefetchNdDistribution,
-               UpdateNdOffsetDistribution>(patterns.getContext());
-  patterns.add<GpuBarrierDistribution>(patterns.getContext(), 10);
+               UpdateNdOffsetDistribution, GpuBarrierDistribution>(
+      patterns.getContext());
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
