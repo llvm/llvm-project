@@ -15,7 +15,6 @@
 #define LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
@@ -33,19 +32,17 @@ class FunctionPropertiesInfo {
   void updateAggregateStats(const Function &F, const LoopInfo &LI);
   void reIncludeBB(const BasicBlock &BB);
 
-  ir2vec::Embedding FunctionEmbedding = ir2vec::Embedding(0.0);
-  std::optional<ir2vec::Vocab> IR2VecVocab;
-
 public:
   LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(const Function &F, const DominatorTree &DT,
-                            const LoopInfo &LI,
-                            const IR2VecVocabResult *VocabResult);
+                            const LoopInfo &LI);
 
   LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(Function &F, FunctionAnalysisManager &FAM);
 
-  bool operator==(const FunctionPropertiesInfo &FPI) const;
+  bool operator==(const FunctionPropertiesInfo &FPI) const {
+    return std::memcmp(this, &FPI, sizeof(FunctionPropertiesInfo)) == 0;
+  }
 
   bool operator!=(const FunctionPropertiesInfo &FPI) const {
     return !(*this == FPI);
@@ -140,19 +137,6 @@ public:
   int64_t CallReturnsVectorPointerCount = 0;
   int64_t CallWithManyArgumentsCount = 0;
   int64_t CallWithPointerArgumentCount = 0;
-
-  const ir2vec::Embedding &getFunctionEmbedding() const {
-    return FunctionEmbedding;
-  }
-
-  const std::optional<ir2vec::Vocab> &getIR2VecVocab() const {
-    return IR2VecVocab;
-  }
-
-  // Helper intended to be useful for unittests
-  void setFunctionEmbeddingForTest(const ir2vec::Embedding &Embedding) {
-    FunctionEmbedding = Embedding;
-  }
 };
 
 // Analysis pass
@@ -208,7 +192,7 @@ private:
 
   DominatorTree &getUpdatedDominatorTree(FunctionAnalysisManager &FAM) const;
 
-  DenseSet<const BasicBlock *> Successors, CallUsers;
+  DenseSet<const BasicBlock *> Successors;
 
   // Edges we might potentially need to remove from the dominator tree.
   SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;
