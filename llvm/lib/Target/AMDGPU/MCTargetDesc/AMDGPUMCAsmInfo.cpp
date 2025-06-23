@@ -55,7 +55,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   UsesCFIWithoutEH = true;
   DwarfRegNumForCFI = true;
 
-  UseIntegratedAssembler = false;
   initializeVariantKinds(variantKindDescs);
 }
 
