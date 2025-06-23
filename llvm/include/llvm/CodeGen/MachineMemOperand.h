@@ -50,27 +50,28 @@ struct MachinePointerInfo {
 
   uint8_t StackID;
 
+  const Value *OrgV;
+
   explicit MachinePointerInfo(const Value *v, int64_t offset = 0,
-                              uint8_t ID = 0)
-      : V(v), Offset(offset), StackID(ID) {
+                              uint8_t ID = 0, const Value *orgv = nullptr)
+      : V(v), Offset(offset), StackID(ID), OrgV(orgv) {
     AddrSpace = v ? v->getType()->getPointerAddressSpace() : 0;
   }
 
   explicit MachinePointerInfo(const PseudoSourceValue *v, int64_t offset = 0,
                               uint8_t ID = 0)
-      : V(v), Offset(offset), StackID(ID) {
+      : V(v), Offset(offset), StackID(ID), OrgV((const Value *)nullptr) {
     AddrSpace = v ? v->getAddressSpace() : 0;
   }
 
   explicit MachinePointerInfo(unsigned AddressSpace = 0, int64_t offset = 0)
       : V((const Value *)nullptr), Offset(offset), AddrSpace(AddressSpace),
-        StackID(0) {}
+        StackID(0), OrgV((const Value *)nullptr) {}
 
   explicit MachinePointerInfo(
-    PointerUnion<const Value *, const PseudoSourceValue *> v,
-    int64_t offset = 0,
-    uint8_t ID = 0)
-    : V(v), Offset(offset), StackID(ID) {
+      PointerUnion<const Value *, const PseudoSourceValue *> v,
+      int64_t offset = 0, uint8_t ID = 0)
+      : V(v), Offset(offset), StackID(ID), OrgV((const Value *)nullptr) {
     if (V) {
       if (const auto *ValPtr = dyn_cast_if_present<const Value *>(V))
         AddrSpace = ValPtr->getType()->getPointerAddressSpace();
@@ -83,7 +84,8 @@ struct MachinePointerInfo {
     if (V.isNull())
       return MachinePointerInfo(AddrSpace, Offset + O);
     if (isa<const Value *>(V))
-      return MachinePointerInfo(cast<const Value *>(V), Offset + O, StackID);
+      return MachinePointerInfo(cast<const Value *>(V), Offset + O, StackID,
+                                OrgV);
     return MachinePointerInfo(cast<const PseudoSourceValue *>(V), Offset + O,
                               StackID);
   }

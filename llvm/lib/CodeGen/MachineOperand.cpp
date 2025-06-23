@@ -1050,7 +1050,7 @@ bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
 
   return isDereferenceableAndAlignedPointer(
       BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size), DL,
-      dyn_cast<Instruction>(BasePtr));
+      dyn_cast<Instruction>(OrgV ? OrgV : BasePtr));
 }
 
 /// getConstantPool - Return a MachinePointerInfo record that refers to the

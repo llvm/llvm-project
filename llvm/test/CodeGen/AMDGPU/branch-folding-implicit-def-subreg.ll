@@ -14,8 +14,8 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT:   renamable $vgpr31 = COPY $vgpr0, implicit $exec
   ; GFX90A-NEXT:   renamable $sgpr17 = S_LOAD_DWORD_IMM renamable $sgpr8_sgpr9, 24, 0 :: (dereferenceable invariant load (s32) from %ir.arg4.kernarg.offset.align.down, align 8, addrspace 4)
-  ; GFX90A-NEXT:   early-clobber renamable $sgpr20_sgpr21_sgpr22_sgpr23 = S_LOAD_DWORDX4_IMM_ec renamable $sgpr8_sgpr9, 24, 0 :: (dereferenceable invariant load (s128) from %ir.arg6.kernarg.offset.align.down, align 8, addrspace 4)
-  ; GFX90A-NEXT:   renamable $sgpr33 = S_LOAD_DWORD_IMM renamable $sgpr8_sgpr9, 40, 0 :: (dereferenceable invariant load (s32) from %ir.arg6.kernarg.offset.align.down + 16, align 8, addrspace 4)
+  ; GFX90A-NEXT:   early-clobber renamable $sgpr20_sgpr21_sgpr22_sgpr23 = S_LOAD_DWORDX4_IMM_ec renamable $sgpr8_sgpr9, 24, 0 :: (dereferenceable invariant load (s128) from %ir.f1.kernarg.segment + 24, align 8, addrspace 4)
+  ; GFX90A-NEXT:   renamable $sgpr33 = S_LOAD_DWORD_IMM renamable $sgpr8_sgpr9, 40, 0 :: (dereferenceable invariant load (s32) from %ir.f1.kernarg.segment + 40, align 8, addrspace 4)
   ; GFX90A-NEXT:   renamable $sgpr24_sgpr25_sgpr26_sgpr27 = S_LOAD_DWORDX4_IMM renamable $sgpr8_sgpr9, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset1, addrspace 4)
   ; GFX90A-NEXT:   renamable $sgpr46_sgpr47 = S_LOAD_DWORDX2_IMM renamable $sgpr8_sgpr9, 16, 0 :: (dereferenceable invariant load (s64) from %ir.arg.kernarg.offset1 + 16, align 16, addrspace 4)
   ; GFX90A-NEXT:   S_BITCMP1_B32 renamable $sgpr17, 0, implicit-def $scc

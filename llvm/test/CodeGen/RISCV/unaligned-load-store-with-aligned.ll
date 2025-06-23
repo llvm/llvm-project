@@ -6,11 +6,9 @@ define void @store_b32_basealign2_offset1(ptr align 2 %p, i32 %v) {
 ; CHECK-LABEL: store_b32_basealign2_offset1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    srli a2, a1, 24
-; CHECK-NEXT:    srli a3, a1, 16
-; CHECK-NEXT:    srli a4, a1, 8
+; CHECK-NEXT:    srli a3, a1, 8
 ; CHECK-NEXT:    sb a1, 1(a0)
-; CHECK-NEXT:    sb a4, 2(a0)
-; CHECK-NEXT:    sb a3, 3(a0)
+; CHECK-NEXT:    sh a3, 2(a0)
 ; CHECK-NEXT:    sb a2, 4(a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -23,11 +21,9 @@ define void @store_b32_basealign2_offset3(ptr align 2 %p, i32 %v) {
 ; CHECK-LABEL: store_b32_basealign2_offset3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    srli a2, a1, 24
-; CHECK-NEXT:    srli a3, a1, 16
-; CHECK-NEXT:    srli a4, a1, 8
+; CHECK-NEXT:    srli a3, a1, 8
 ; CHECK-NEXT:    sb a1, 3(a0)
-; CHECK-NEXT:    sb a4, 4(a0)
-; CHECK-NEXT:    sb a3, 5(a0)
+; CHECK-NEXT:    sh a3, 4(a0)
 ; CHECK-NEXT:    sb a2, 6(a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -39,14 +35,10 @@ entry:
 define void @store_b64_basealign4_offset1(ptr align 4 %p) {
 ; CHECK-LABEL: store_b64_basealign4_offset1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sb zero, 5(a0)
-; CHECK-NEXT:    sb zero, 6(a0)
-; CHECK-NEXT:    sb zero, 7(a0)
-; CHECK-NEXT:    sb zero, 8(a0)
 ; CHECK-NEXT:    sb zero, 1(a0)
-; CHECK-NEXT:    sb zero, 2(a0)
-; CHECK-NEXT:    sb zero, 3(a0)
-; CHECK-NEXT:    sb zero, 4(a0)
+; CHECK-NEXT:    sh zero, 2(a0)
+; CHECK-NEXT:    sw zero, 4(a0)
+; CHECK-NEXT:    sb zero, 8(a0)
 ; CHECK-NEXT:    ret
 entry:
   %len = getelementptr inbounds nuw i8, ptr %p, i32 1
@@ -58,8 +50,7 @@ define void @store_b64_basealign4_offset2(ptr align 4 %p) {
 ; CHECK-LABEL: store_b64_basealign4_offset2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sh zero, 2(a0)
-; CHECK-NEXT:    sh zero, 4(a0)
-; CHECK-NEXT:    sh zero, 6(a0)
+; CHECK-NEXT:    sw zero, 4(a0)
 ; CHECK-NEXT:    sh zero, 8(a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -71,15 +62,12 @@ entry:
 define i32 @load_b32_base_align2_offset1(ptr align 2 %p) {
 ; CHECK-LABEL: load_b32_base_align2_offset1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lbu a1, 2(a0)
+; CHECK-NEXT:    lhu a1, 2(a0)
 ; CHECK-NEXT:    lbu a2, 1(a0)
-; CHECK-NEXT:    lbu a3, 3(a0)
 ; CHECK-NEXT:    lbu a0, 4(a0)
 ; CHECK-NEXT:    slli a1, a1, 8
 ; CHECK-NEXT:    or a1, a1, a2
-; CHECK-NEXT:    slli a3, a3, 16
 ; CHECK-NEXT:    slli a0, a0, 24
-; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:
@@ -91,15 +79,12 @@ entry:
 define i32 @load_b32_base_align2_offset3(ptr align 2 %p) {
 ; CHECK-LABEL: load_b32_base_align2_offset3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lbu a1, 4(a0)
+; CHECK-NEXT:    lhu a1, 4(a0)
 ; CHECK-NEXT:    lbu a2, 3(a0)
-; CHECK-NEXT:    lbu a3, 5(a0)
 ; CHECK-NEXT:    lbu a0, 6(a0)
 ; CHECK-NEXT:    slli a1, a1, 8
 ; CHECK-NEXT:    or a1, a1, a2
-; CHECK-NEXT:    slli a3, a3, 16
 ; CHECK-NEXT:    slli a0, a0, 24
-; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:
