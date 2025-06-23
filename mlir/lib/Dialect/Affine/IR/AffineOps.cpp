@@ -1046,16 +1046,20 @@ simplifyMapWithOperands(AffineMap &map, ArrayRef<Value> operands) {
                        map.getContext());
 }
 
-/// Assuming `dimOrSym` is a quantity in `map` that is defined by `minOp`,
-/// replaces the patterns:
+/// Assuming `dimOrSym` is a quantity in `map` that is defined by `minOp`.
+/// Assuming that the quantity is of the form:
+///   `affine_min(f(x, y), symbolic_cst)`.
+/// This function checks that `0 < affine_min(f(x, y), symbolic_cst)` and
+/// proceeds with replacing the patterns:
 /// ```
-///   dimOrSym.ceildiv(cst) * cst
-///   (dimOrSym + cst - 1).floordiv(cst) * cst
+///   dimOrSym.ceildiv(symbolic_cst)
+///   (dimOrSym + symbolic_cst - 1).floordiv(symbolic_cst)
 /// ```
-/// by `cst` in `map`.
-/// This simplification is valid iff `minOp` is guaranteed to be nonnegative.
+/// by `1`.
+///
 /// Additionally, allows the caller to pass `affineMinKnownToBeNonNegative` to
 /// inject static information that may not be statically discoverable.
+///
 /// Warning: ValueBoundsConstraintSet::computeConstantBound is needed to check
 /// for the nonnegative case, if `affineMinKnownToBeNonNegative` is false.
 static LogicalResult replaceAffineMinBoundingBoxExpression(
@@ -1071,7 +1075,7 @@ static LogicalResult replaceAffineMinBoundingBoxExpression(
               presburger::BoundType::LB, {row, values},
               /*stopCondition=*/nullptr,
               /*closedUB=*/true);
-      if (failed(lowerBound) || lowerBound.value() < 0)
+      if (failed(lowerBound) || lowerBound.value() <= 0)
         return failure();
     }
   }
@@ -1079,23 +1083,22 @@ static LogicalResult replaceAffineMinBoundingBoxExpression(
   AffineMap initialMap = *map;
   for (unsigned i = 0, e = affineMinMap.getNumResults(); i != e; ++i) {
     auto m = affineMinMap.getSubMap(ArrayRef<unsigned>{i});
-    // TODO: this should also work with nonnegative symbolic divisors.
-    if (!m.isSingleConstant())
+    AffineExpr expr = m.getResult(0);
+    if (!expr.isSymbolicOrConstant())
       continue;
 
-    auto cst = m.getSingleConstantResult();
     DenseMap<AffineExpr, AffineExpr> repl;
-    // dimOrSym.ceilDiv(cst) * cst -> cst
-    repl[dimOrSym.ceilDiv(cst) * cst] =
-        getAffineConstantExpr(cst, minOp.getContext());
-    // (dimOrSym + cst - 1).floorDiv(cst) * cst -> cst
-    repl[(dimOrSym + cst - 1).floorDiv(cst) * cst] =
-        getAffineConstantExpr(cst, minOp.getContext());
+    // dimOrSym.ceilDiv(expr) -> 1
+    repl[dimOrSym.ceilDiv(expr)] = getAffineConstantExpr(1, minOp.getContext());
+    // (dimOrSym + expr - 1).floorDiv(expr) -> 1
+    repl[(dimOrSym + expr - 1).floorDiv(expr)] =
+        getAffineConstantExpr(1, minOp.getContext());
     auto newMap = map->replace(repl);
     if (newMap == *map)
       continue;
     *map = newMap;
   }
+
   return success(*map != initialMap);
 }
 
@@ -3096,7 +3099,7 @@ void AffineIfOp::build(OpBuilder &builder, OperationState &result,
 /// set constraints.
 static void composeSetAndOperands(IntegerSet &set,
                                   SmallVectorImpl<Value> &operands,
-                                  bool composeAffineMin) {
+                                  bool composeAffineMin = false) {
   // We will simply reuse the API of the map composition by viewing the LHSs of
   // the equalities and inequalities of `set` as the affine exprs of an affine
   // map. Convert to equivalent map, compose, and convert back to set.
@@ -3116,7 +3119,7 @@ static void composeSetAndOperands(IntegerSet &set,
 LogicalResult AffineIfOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
   auto set = getIntegerSet();
   SmallVector<Value, 4> operands(getOperands());
-  composeSetAndOperands(set, operands, /*composeAffineMin=*/false);
+  composeSetAndOperands(set, operands);
   canonicalizeSetAndOperands(&set, &operands);
 
   // Check if the canonicalization or composition led to any change.
