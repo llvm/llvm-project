@@ -3180,6 +3180,12 @@ def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic(
 def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
  AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;
 
+def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
+ AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
+ AssemblerPredicate<(not FeatureGFX1250Insts)>;
+
 // Include AMDGPU TD files
 include "SISchedule.td"
 include "GCNProcessors.td"

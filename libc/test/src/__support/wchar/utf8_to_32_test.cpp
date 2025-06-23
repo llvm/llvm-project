@@ -13,7 +13,7 @@
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, OneByte) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   char ch = 'A';
 
@@ -28,7 +28,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, OneByte) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoBytes) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   const char ch[2] = {static_cast<char>(0xC2),
                       static_cast<char>(0x8E)}; //  car symbol
@@ -44,7 +44,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoBytes) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, ThreeBytes) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   const char ch[3] = {static_cast<char>(0xE2), static_cast<char>(0x88),
                       static_cast<char>(0x91)}; // ∑ sigma symbol
@@ -61,7 +61,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, ThreeBytes) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, FourBytes) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
                       static_cast<char>(0xA4),
@@ -80,7 +80,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, FourBytes) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidByte) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   const char ch = static_cast<char>(0x80); // invalid starting bit sequence
 
@@ -92,7 +92,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidByte) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidMultiByte) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   const char ch[4] = {
       static_cast<char>(0x80), static_cast<char>(0x00), static_cast<char>(0x80),
@@ -112,7 +112,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidMultiByte) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidLastByte) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   // Last byte is invalid since it does not have correct starting sequence.
   // 0xC0 --> 11000000 starting sequence should be 10xxxxxx
@@ -132,7 +132,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidLastByte) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, ValidTwoByteWithExtraRead) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   const char ch[3] = {static_cast<char>(0xC2), static_cast<char>(0x8E),
                       static_cast<char>(0x80)};
@@ -153,7 +153,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, ValidTwoByteWithExtraRead) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   const char ch[4] = {static_cast<char>(0xC2), static_cast<char>(0x8E),
                       static_cast<char>(0xC7), static_cast<char>(0x8C)};
@@ -179,7 +179,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidPop) {
   LIBC_NAMESPACE::internal::mbstate state;
-  state.bytes_processed = 0;
+  state.bytes_stored = 0;
   state.total_bytes = 0;
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   const char ch[2] = {static_cast<char>(0xC2), static_cast<char>(0x8E)};
