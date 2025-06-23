@@ -193,3 +193,11 @@ void f_lambda_assign_all()
     };
   Lambda();
 }
+
+void f_copy_after_ref()
+{
+  std::shared_ptr<int> ptr;
+  auto& ref = ptr;
+  f(ptr);
+  *ref = 1;
+}

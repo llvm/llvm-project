@@ -27,11 +27,8 @@ allDeclRefExprsHonourLambda(const VarDecl &VarDecl, const Decl &Decl,
   auto Matches = match(
       decl(forEachDescendant(
           declRefExpr(to(varDecl(equalsNode(&VarDecl))),
-
                       unless(hasAncestor(lambdaExpr(hasAnyCapture(lambdaCapture(
-                          capturesVar(varDecl(equalsNode(&VarDecl))))))))
-
-                          )
+                          capturesVar(varDecl(equalsNode(&VarDecl)))))))))
               .bind("declRef"))),
       Decl, Context);
   llvm::SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
@@ -39,10 +36,8 @@ allDeclRefExprsHonourLambda(const VarDecl &VarDecl, const Decl &Decl,
   return DeclRefs;
 }
 
-static const Expr *getLastVarUsage(const VarDecl &Var, const Decl &Func,
-                                   ASTContext &Context) {
-  auto Exprs = allDeclRefExprsHonourLambda(Var, Func, Context);
-
+static const Expr *
+getLastVarUsage(const llvm::SmallPtrSet<const DeclRefExpr *, 16> &Exprs) {
   const Expr *LastExpr = nullptr;
   for (const clang::DeclRefExpr *Expr : Exprs) {
     if (!LastExpr)
@@ -130,8 +125,16 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  const Expr *LastUsage =
-      getLastVarUsage(*MatchedDecl, *MatchedFunc, *Result.Context);
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> AllReferences =
+      allDeclRefExprsHonourLambda(*MatchedDecl, *MatchedFunc, *Result.Context);
+  for (const auto *Reference : AllReferences) {
+    if (Reference->getType()->isLValueReferenceType()) {
+      // variable may be caught by reference and still used via reference during
+      // MatchedUse
+      return;
+    }
+  }
+  const Expr *LastUsage = getLastVarUsage(AllReferences);
 
   if (LastUsage && LastUsage->getBeginLoc() > MatchedUse->getBeginLoc()) {
     // "use" is not the last reference to x
@@ -169,7 +172,6 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
       Lexer::getSourceText(Range, Source, Result.Context->getLangOpts());
 
   if (NeedleExprCode == "=") {
-
     diag(MatchedUse->getBeginLoc(), "could be std::move()")
         << FixItHint::CreateInsertion(MatchedUse->getBeginLoc(),
                                       (MatchedDecl->getName() +
