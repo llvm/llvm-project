@@ -49,9 +49,10 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
     return x;
   // When |x| > 2^51, x is an Integer or Nan/Inf
   if (x_abs > 0x4320000000000000) {
-    // |x| < 2^52
-    if (x_abs < 0x4330000000000000)
-      return (x_abs & 0x1) ? -1.0 : 1.0;
+    if (x_abs & 1)
+      return -1.0;
+    if (!(x_abs & 1))
+      return 1.0;
     if (xbits.is_nan())
       return x;
     if (xbits.is_inf()) {
