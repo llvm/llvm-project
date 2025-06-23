@@ -343,7 +343,6 @@ module attributes {transform.with_named_sequence} {
 module {
   func.func @fail_for_float_neutral(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
     // expected-error @below {{'linalg.generic' op Failed to get an identity value for the reduction operation.}}
-    // expected-note @below {{when applied to this op}}
     %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?xf32>) {
     ^bb0(%in: f32, %out: f32):
       %1 = llvm.fmul %in, %in  : f32
@@ -355,7 +354,7 @@ module {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{transform.structured.tile_reduction_using_for failed to apply}}
+      // expected-error @below {{failed to tile using partial reduction}}
       %fill_op, %split_linalg_op, %combining_linalg_op, %for_op = transform.structured.tile_reduction_using_for %0 by tile_sizes = [0, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
     }
@@ -480,3 +479,167 @@ module attributes {transform.with_named_sequence} {
 //     CHECK:   }
 //     CHECK:   linalg.reduce
 //     CHECK:   return
+
+// -----
+
+// Check that only one of the reduction dimension can be tiled (in this case outer).
+
+#map = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d0)>
+module {
+  func.func @reduction_tile_single_of_multiple_reduction_outer(
+        %arg0: tensor<86x128xf32>, %arg1: tensor<4096x86x128xf32>, %arg2: tensor<4096xf32>) -> tensor<4096xf32> {
+    %0 = linalg.generic {
+        indexing_maps = [#map, #map1, #map2],
+        iterator_types = ["parallel", "reduction", "reduction"]}
+        ins(%arg0, %arg1 : tensor<86x128xf32>, tensor<4096x86x128xf32>) outs(%arg2 : tensor<4096xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %1 = arith.mulf %in, %in_0 : f32
+      %2 = arith.addf %1, %out : f32
+      linalg.yield %2 : f32
+    } -> tensor<4096xf32>
+    return %0 : tensor<4096xf32>
+  }
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+      %fill_op, %split_linalg_op, %combining_linalg_op, %for_op =
+          transform.structured.tile_reduction_using_for %0 reduction_dims = [1] by tile_sizes = [0, 2]
+          : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+    }
+  }
+}
+//      CHECK: #[[INIT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+//      CHECK: @reduction_tile_single_of_multiple_reduction_outer(
+// CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<4096xf32>
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C2:.+]] = arith.constant 2 : index
+//  CHECK-DAG:   %[[C86:.+]] = arith.constant 86 : index
+//  CHECK-DAG:   %[[EMPTY:.+]] = tensor.empty() : tensor<4096x2xf32>
+//      CHECK:   %[[FILL:.+]] = linalg.fill
+// CHECK-SAME:       outs(%[[EMPTY]] :
+//      CHECK:   %[[RESULT:.+]] = scf.for %[[IV:[a-zA-Z0-9]+]] = %[[C0]] to %[[C86]] step %[[C2]]
+// CHECK-SAME:       iter_args(%[[ITER_ARG:.+]] = %[[FILL]])
+//      CHECK:     %[[PARTIAL_RESULT:.+]] = linalg.generic
+// CHECK-SAME:         indexing_maps = [#{{.+}}, #{{.+}}, #[[INIT_MAP]]]
+// CHECK-SAME:         iterator_types = ["parallel", "parallel", "reduction"]
+// CHECK-SAME:         outs(%[[ITER_ARG]] :
+//      CHECK:     scf.yield %[[PARTIAL_RESULT]]
+//      CHECK:   %[[REDUCE:.+]] = linalg.reduce
+// CHECK-SAME:       ins(%[[RESULT]] :
+// CHECK-SAME:       outs(%[[INIT]] :
+// CHECK-SAME:       dimensions = [1]
+//      CHECK:   return %[[REDUCE]]
+
+// -----
+
+// Check that only one of the reduction dimension can be tiled (in this case inner).
+
+#map = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d0)>
+module {
+  func.func @reduction_tile_single_of_multiple_reduction_inner(
+        %arg0: tensor<86x128xf32>, %arg1: tensor<4096x86x128xf32>, %arg2: tensor<4096xf32>) -> tensor<4096xf32> {
+    %0 = linalg.generic {
+        indexing_maps = [#map, #map1, #map2],
+        iterator_types = ["parallel", "reduction", "reduction"]}
+        ins(%arg0, %arg1 : tensor<86x128xf32>, tensor<4096x86x128xf32>) outs(%arg2 : tensor<4096xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %1 = arith.mulf %in, %in_0 : f32
+      %2 = arith.addf %1, %out : f32
+      linalg.yield %2 : f32
+    } -> tensor<4096xf32>
+    return %0 : tensor<4096xf32>
+  }
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+      %fill_op, %split_linalg_op, %combining_linalg_op, %for_op =
+          transform.structured.tile_reduction_using_for %0 reduction_dims = [2] by tile_sizes = [0, 0, 64]
+          : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+    }
+  }
+}
+//      CHECK: #[[INIT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+//      CHECK: @reduction_tile_single_of_multiple_reduction_inner(
+// CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<4096xf32>
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C64:.+]] = arith.constant 64 : index
+//  CHECK-DAG:   %[[C128:.+]] = arith.constant 128 : index
+//  CHECK-DAG:   %[[EMPTY:.+]] = tensor.empty() : tensor<4096x64xf32>
+//      CHECK:   %[[FILL:.+]] = linalg.fill
+// CHECK-SAME:       outs(%[[EMPTY]] :
+//      CHECK:   %[[RESULT:.+]] = scf.for %[[IV:[a-zA-Z0-9]+]] = %[[C0]] to %[[C128]] step %[[C64]]
+// CHECK-SAME:       iter_args(%[[ITER_ARG:.+]] = %[[FILL]])
+//      CHECK:     %[[PARTIAL_RESULT:.+]] = linalg.generic
+// CHECK-SAME:         indexing_maps = [#{{.+}}, #{{.+}}, #[[INIT_MAP]]]
+// CHECK-SAME:         iterator_types = ["parallel", "reduction", "parallel"]
+// CHECK-SAME:         outs(%[[ITER_ARG]] :
+//      CHECK:     scf.yield %[[PARTIAL_RESULT]]
+//      CHECK:   %[[REDUCE:.+]] = linalg.reduce
+// CHECK-SAME:       ins(%[[RESULT]] :
+// CHECK-SAME:       outs(%[[INIT]] :
+// CHECK-SAME:       dimensions = [1]
+//      CHECK:   return %[[REDUCE]]
+
+// -----
+
+// Check that both the reduction dimensions are tiled but the dimensions in the output are swapped.
+
+#map = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d0)>
+module {
+  func.func @reduction_tile_single_of_multiple_reduction_reversed(
+        %arg0: tensor<86x128xf32>, %arg1: tensor<4096x86x128xf32>, %arg2: tensor<4096xf32>) -> tensor<4096xf32> {
+    %0 = linalg.generic {
+        indexing_maps = [#map, #map1, #map2],
+        iterator_types = ["parallel", "reduction", "reduction"]}
+        ins(%arg0, %arg1 : tensor<86x128xf32>, tensor<4096x86x128xf32>) outs(%arg2 : tensor<4096xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %1 = arith.mulf %in, %in_0 : f32
+      %2 = arith.addf %1, %out : f32
+      linalg.yield %2 : f32
+    } -> tensor<4096xf32>
+    return %0 : tensor<4096xf32>
+  }
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+      %fill_op, %split_linalg_op, %combining_linalg_op, %for_op =
+          transform.structured.tile_reduction_using_for %0 reduction_dims = [2, 1] by tile_sizes = [0, 2, 64]
+          : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+    }
+  }
+}
+//      CHECK: #[[INIT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
+//      CHECK: @reduction_tile_single_of_multiple_reduction_reversed(
+// CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<4096xf32>
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C2:.+]] = arith.constant 2 : index
+//  CHECK-DAG:   %[[C64:.+]] = arith.constant 64 : index
+//  CHECK-DAG:   %[[C86:.+]] = arith.constant 86 : index
+//  CHECK-DAG:   %[[C128:.+]] = arith.constant 128 : index
+//  CHECK-DAG:   %[[EMPTY:.+]] = tensor.empty() : tensor<4096x64x2xf32>
+//      CHECK:   %[[FILL:.+]] = linalg.fill
+// CHECK-SAME:       outs(%[[EMPTY]] :
+//      CHECK:   %[[RESULT:.+]] = scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[C86]] step %[[C2]]
+// CHECK-SAME:       iter_args(%[[ITER_ARG:.+]] = %[[FILL]])
+//      CHECK:     %[[RESULT0:.+]] = scf.for %[[IV1:[a-zA-Z0-9]+]] = %[[C0]] to %[[C128]] step %[[C64]]
+// CHECK-SAME:         iter_args(%[[ITER_ARG0:.+]] = %[[ITER_ARG]])
+//      CHECK:       %[[PARTIAL_RESULT:.+]] = linalg.generic
+// CHECK-SAME:           indexing_maps = [#{{.+}}, #{{.+}}, #[[INIT_MAP]]]
+// CHECK-SAME:           iterator_types = ["parallel", "parallel", "parallel"]
+// CHECK-SAME:           outs(%[[ITER_ARG0]] :
+//      CHECK:       scf.yield %[[PARTIAL_RESULT]]
+//      CHECK      scf.yield %[[RESULT0]]
+//      CHECK:   %[[REDUCE:.+]] = linalg.reduce
+// CHECK-SAME:       ins(%[[RESULT]] :
+// CHECK-SAME:       outs(%[[INIT]] :
+// CHECK-SAME:       dimensions = [1, 2]
+//      CHECK: return %[[REDUCE]]
