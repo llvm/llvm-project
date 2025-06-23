@@ -1423,3 +1423,197 @@ DWARF:
   EXPECT_EQ(func->getParamDecl(1)->getDeclContext(), func);
   EXPECT_EQ(func->getParamDecl(1)->getName(), "namedParam");
 }
+
+TEST_F(DWARFASTParserClangTests, TestObjectPointer_IndexEncoding) {
+  // This tests the behaviour of DWARFASTParserClang
+  // for DW_TAG_subprogram definitions which have a DW_AT_object_pointer
+  // that encodes a constant index (instead of a DIE reference).
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - Context
+    - func
+    - this
+    - self
+    - arg
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_object_pointer
+              Form:            DW_FORM_implicit_const
+              Value:           1
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x4
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_object_pointer
+              Form:            DW_FORM_implicit_const
+              Value:           0
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+
+        - Code:            0x5
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+
+        - Code:            0x6
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_artificial
+              Form:            DW_FORM_flag_present
+
+  debug_info:
+     - Version:  5
+       UnitType: DW_UT_compile
+       AddrSize: 8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x04
+
+#   DW_TAG_structure_type
+#     DW_AT_name [DW_FORM_strp] ("Context")
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x0
+
+#     DW_TAG_subprogram
+#       DW_AT_name [DW_FORM_strp] ("func")
+#       DW_AT_object_pointer [DW_FORM_implicit_const] (1)
+        - AbbrCode: 0x3
+          Values:
+            - Value: 0x8
+            - Value: 0x1
+            - Value: 0x1
+            - Value: 0x1
+
+#       DW_TAG_formal_parameter
+#         DW_AT_name [DW_FORM_strp] ("arg")
+        - AbbrCode: 0x5
+          Values:
+          - Value: 0x17
+
+#       DW_TAG_formal_parameter
+#         DW_AT_name [DW_FORM_strp] ("self")
+#         DW_AT_artificial
+        - AbbrCode: 0x6
+          Values:
+          - Value: 0x12
+          - Value: 0x1
+
+        - AbbrCode: 0x0
+
+#     DW_TAG_subprogram
+#       DW_AT_object_pointer [DW_FORM_implicit_const] (0)
+#       DW_AT_name [DW_FORM_strp] ("func")
+        - AbbrCode:        0x4
+          Values:
+            - Value: 0x8
+            - Value: 0x1
+            - Value: 0x1
+            - Value: 0x1
+
+#       DW_TAG_formal_parameter
+#         DW_AT_name [DW_FORM_strp] ("this")
+#         DW_AT_artificial
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0xd
+            - Value:           0x1
+
+#       DW_TAG_formal_parameter
+#         DW_AT_name [DW_FORM_strp] ("arg")
+        - AbbrCode: 0x5
+          Values:
+          - Value: 0x17
+
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0
+...
+)";
+
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  auto context_die = cu_die.GetFirstChild();
+  ASSERT_TRUE(context_die.IsValid());
+  ASSERT_EQ(context_die.Tag(), DW_TAG_structure_type);
+
+  auto sub1 = context_die.GetFirstChild();
+  ASSERT_TRUE(sub1.IsValid());
+  ASSERT_EQ(sub1.Tag(), DW_TAG_subprogram);
+
+  auto sub2 = sub1.GetSibling();
+  ASSERT_TRUE(sub2.IsValid());
+  ASSERT_EQ(sub2.Tag(), DW_TAG_subprogram);
+
+  // Object parameter is at constant index 1
+  {
+    auto param_die = sub1.GetFirstChild().GetSibling();
+    ASSERT_TRUE(param_die.IsValid());
+
+    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(sub1, context_die));
+  }
+
+  // Object parameter is at constant index 0
+  {
+    auto param_die = sub2.GetFirstChild();
+    ASSERT_TRUE(param_die.IsValid());
+
+    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(sub2, context_die));
+  }
+}
