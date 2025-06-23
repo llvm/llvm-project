@@ -2978,11 +2978,10 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
       (parser.parseLParen() || parser.parseInteger(value) ||
        parser.parseRParen()))
     return failure();
-  if (value > 1) {
+  if (value > 1)
     result.addAttribute(
         "num_collapse",
         IntegerAttr::get(parser.getBuilder().getI64Type(), value));
-  }
 
   // Parse tiles
   SmallVector<int64_t> tiles;
@@ -2999,9 +2998,8 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
        parser.parseRParen()))
     return failure();
 
-  if (tiles.size() > 0) {
+  if (tiles.size() > 0)
     result.addAttribute("tile_sizes", DenseI64ArrayAttr::get(ctx, tiles));
-  }
 
   // Parse the body.
   Region *region = result.addRegion();
@@ -3026,13 +3024,13 @@ void LoopNestOp::print(OpAsmPrinter &p) {
   if (getLoopInclusive())
     p << "inclusive ";
   p << "step (" << getLoopSteps() << ") ";
-  if (int64_t numCollapse = getNumCollapse()) {
+  if (int64_t numCollapse = getNumCollapse())
     if (numCollapse > 1)
       p << "collapse(" << numCollapse << ") ";
-  }
-  if (const auto tiles = getTileSizes()) {
+
+  if (const auto tiles = getTileSizes())
     p << "tiles(" << tiles.value() << ") ";
-  }
+
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
