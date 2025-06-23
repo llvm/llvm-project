@@ -271,6 +271,22 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
 
+bool ARMBaseTargetMachine::isAPCS_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_APCS;
+}
+
+bool ARMBaseTargetMachine::isAAPCS_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS ||
+         TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
+
+bool ARMBaseTargetMachine::isAAPCS16_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
+
 MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
