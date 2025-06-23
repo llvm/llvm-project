@@ -3243,9 +3243,11 @@ void AsmPrinter::preprocessXXStructorList(const DataLayout &DL,
     S.Priority = Priority->getLimitedValue(65535);
     S.Func = CS->getOperand(1);
     if (!CS->getOperand(2)->isNullValue()) {
-      if (TM.getTargetTriple().isOSAIX())
-        llvm::report_fatal_error(
+      if (TM.getTargetTriple().isOSAIX()) {
+        CS->getContext().emitError(
             "associated data of XXStructor list is not yet supported on AIX");
+      }
+
       S.ComdatKey =
           dyn_cast<GlobalValue>(CS->getOperand(2)->stripPointerCasts());
     }
