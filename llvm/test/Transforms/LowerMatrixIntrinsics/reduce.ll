@@ -6,8 +6,8 @@ define i32 @reduce_add_4x2(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x i32>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[COL_LOAD]], <4 x i32> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[REDUCE]]
 ;
   %inv = call <8 x i32> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -43,14 +43,14 @@ define i32 @reduce_add_1x8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load volatile <1 x i32>, ptr [[VEC_GEP10]], align 4
 ; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr i32, ptr [[IN]], i64 7
 ; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load volatile <1 x i32>, ptr [[VEC_GEP12]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD1]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <1 x i32> [[COL_LOAD3]], <1 x i32> [[COL_LOAD5]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <1 x i32> [[COL_LOAD7]], <1 x i32> [[COL_LOAD9]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <1 x i32> [[COL_LOAD11]], <1 x i32> [[COL_LOAD13]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP7]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add <1 x i32> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <1 x i32> [[TMP1]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <1 x i32> [[TMP2]], [[COL_LOAD5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <1 x i32> [[TMP3]], [[COL_LOAD7]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <1 x i32> [[TMP4]], [[COL_LOAD9]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add <1 x i32> [[TMP5]], [[COL_LOAD11]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <1 x i32> [[TMP6]], [[COL_LOAD13]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.add.v1i32(<1 x i32> [[TMP7]])
 ; CHECK-NEXT:    ret i32 [[REDUCE]]
 ;
   %inv = call <8 x i32> @llvm.matrix.column.major.load(ptr %in, i64 1, i1 1, i32 1, i32 8)
@@ -65,10 +65,9 @@ define i32 @reduce_add_1x3(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <1 x i32>, ptr [[VEC_GEP]], align 4
 ; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[IN]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load volatile <1 x i32>, ptr [[VEC_GEP2]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD1]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <1 x i32> [[COL_LOAD3]], <1 x i32> poison, <2 x i32> <i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add <1 x i32> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <1 x i32> [[TMP1]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.add.v1i32(<1 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[REDUCE]]
 ;
   %inv = call <3 x i32> @llvm.matrix.column.major.load(ptr %in, i64 1, i1 1, i32 1, i32 3)
@@ -92,8 +91,8 @@ define i32 @reduce_and(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x i32>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[COL_LOAD]], <4 x i32> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[REDUCE]]
 ;
   %inv = call <8 x i32> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -106,8 +105,8 @@ define i32 @reduce_or(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x i32>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[COL_LOAD]], <4 x i32> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[REDUCE]]
 ;
   %inv = call <8 x i32> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -120,8 +119,8 @@ define i32 @reduce_mul(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x i32>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[COL_LOAD]], <4 x i32> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[REDUCE]]
 ;
   %inv = call <8 x i32> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -134,8 +133,8 @@ define i32 @reduce_xor(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x i32>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[COL_LOAD]], <4 x i32> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[REDUCE]]
 ;
   %inv = call <8 x i32> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -162,8 +161,9 @@ define float @reduce_fadd_reassoc(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc <4 x float> zeroinitializer, [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc <4 x float> [[TMP1]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -190,8 +190,9 @@ define float @reduce_fadd_reassoccontract(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc contract <4 x float> zeroinitializer, [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc contract <4 x float> [[TMP1]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -218,8 +219,9 @@ define float @reduce_fmul_reassoc(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call reassoc float @llvm.vector.reduce.fmul.v8f32(float 1.000000e+00, <8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <4 x float> splat (float 1.000000e+00), [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc <4 x float> [[TMP1]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[REDUCE:%.*]] = call reassoc float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -246,8 +248,8 @@ define float @reduce_fmax(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.maximum.v4f32(<4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]])
+; CHECK-NEXT:    [[REDUCE:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP1]])
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -260,8 +262,8 @@ define float @reduce_fmaximum(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]])
+; CHECK-NEXT:    [[REDUCE:%.*]] = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[TMP1]])
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -274,8 +276,8 @@ define float @reduce_fmin(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call float @llvm.vector.reduce.fmin.v8f32(<8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.minimum.v4f32(<4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]])
+; CHECK-NEXT:    [[REDUCE:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP1]])
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
@@ -288,8 +290,8 @@ define float @reduce_fminimum(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <4 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <4 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[REDUCE:%.*]] = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> [[COL_LOAD]], <4 x float> [[COL_LOAD1]])
+; CHECK-NEXT:    [[REDUCE:%.*]] = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[TMP1]])
 ; CHECK-NEXT:    ret float [[REDUCE]]
 ;
   %inv = call <8 x float> @llvm.matrix.column.major.load(ptr %in, i64 4, i1 1, i32 4, i32 2)
