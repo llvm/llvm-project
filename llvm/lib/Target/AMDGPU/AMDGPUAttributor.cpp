@@ -138,6 +138,18 @@ static bool funcRequiresHostcallPtr(const Function &F) {
          F.hasFnAttribute(Attribute::SanitizeMemTag);
 }
 
+static bool isAlignAndMakeBuffer(const AbstractAttribute *AA,
+                                 const Instruction *I) {
+  if (isa<AAAlign>(AA)) {
+    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+      if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+        return true;
+    }
+  }
+
+  return false;
+}
+
 namespace {
 class AMDGPUInformationCache : public InformationCache {
 public:
@@ -233,6 +245,12 @@ public:
   unsigned getMaxWavesPerEU(const Function &F) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getMaxWavesPerEU();
+  }
+
+  bool shouldTrackUse(const AbstractAttribute *QueryingAA,
+                      Value &AssociatedValue, const Use *U,
+                      const Instruction *I) const override {
+    return isAlignAndMakeBuffer(QueryingAA, I);
   }
 
 private:
@@ -1381,7 +1399,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAInstanceInfo::ID});
+       &AAInstanceInfo::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1432,6 +1450,23 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*CmpX->getPointerOperand()));
+      } else if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc) {
+          IRPosition IRP = IRPosition::inst(*II);
+
+          Attributor::AlignmentCallbackTy ACB =
+              [](const IRPosition &IRP, const AbstractAttribute *AA,
+                 SmallVectorImpl<AA::ValueAndContext> &Values) {
+                if (auto *I = dyn_cast<Instruction>(&IRP.getAssociatedValue()))
+                  if (isAlignAndMakeBuffer(AA, I)) {
+                    Values.push_back(
+                        AA::ValueAndContext{*I->getOperand(0), nullptr});
+                  }
+              };
+          A.registerAlignmentCallback(IRP, ACB);
+
+          A.getOrCreateAAFor<AAAlign>(IRP);
+        }
       }
     }
   }

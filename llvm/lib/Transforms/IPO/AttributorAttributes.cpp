@@ -5202,6 +5202,10 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       TrackUse = true;
     return 0;
   }
+  if (A.getInfoCache().shouldTrackUse(&QueryingAA, AssociatedValue, U, I)) {
+    TrackUse = true;
+    return 0;
+  }
 
   MaybeAlign MA;
   if (const auto *CB = dyn_cast<CallBase>(I)) {
@@ -5369,8 +5373,14 @@ struct AAAlignFloating : AAAlignImpl {
     bool Stripped;
     bool UsedAssumedInformation = false;
     SmallVector<AA::ValueAndContext> Values;
-    if (!A.getAssumedSimplifiedValues(getIRPosition(), *this, Values,
-                                      AA::AnyScope, UsedAssumedInformation)) {
+    const auto &AligmentCBs = A.getAlignmentCallback(getIRPosition());
+    if (!AligmentCBs.empty()) {
+      for (const auto &CB : AligmentCBs) {
+        CB(getIRPosition(), this, Values);
+      }
+    } else if (!A.getAssumedSimplifiedValues(getIRPosition(), *this, Values,
+                                             AA::AnyScope,
+                                             UsedAssumedInformation)) {
       Values.push_back({getAssociatedValue(), getCtxI()});
       Stripped = false;
     } else {
