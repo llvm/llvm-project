@@ -71,14 +71,14 @@ def Inst3 : TestInstruction {
   let AsmString = "Inst3";
 }
 
-// CHECK-LABEL: decodeFn0
-// CHECK-LABEL: decodeFn1
-// CHECK-LABEL: decodeFn2
-// CHECK-LABEL: decodeFn3
-// CHECK-LABEL: decodeToMCInst
+// CHECK-LABEL: DecodeStatus decodeFn0(DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: DecodeStatus decodeFn1(DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: DecodeStatus decodeFn2(DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: DecodeStatus decodeFn3(DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: decodeToMCInst(unsigned Idx, DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
 // CHECK: static constexpr DecodeFnTy decodeFnTable[]
 // CHECK-NEXT: decodeFn0,
 // CHECK-NEXT: decodeFn1,
 // CHECK-NEXT: decodeFn2,
 // CHECK-NEXT: decodeFn3,
-// CHECK: return decodeFnTable[Idx]
+// CHECK: return decodeFnTable[Idx](S, insn, MI, Address, Decoder, DecodeComplete)
