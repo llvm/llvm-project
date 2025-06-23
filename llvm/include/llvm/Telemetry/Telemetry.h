@@ -144,7 +144,12 @@ public:
 /// monitored and transmitting the data elsewhere.
 class LLVM_ABI Manager {
 public:
+  Manager() = default;
   virtual ~Manager() = default;
+
+  // Explicitly non-copyable.
+  Manager(Manager const&) = delete;
+  Manager& operator=(Manager const&) = delete;
 
   // Dispatch Telemetry data to the Destination(s).
   // The argument is non-const because the Manager may add or remove
