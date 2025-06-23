@@ -123,7 +123,7 @@ public:
   // 'reader' will always be a wrapper around a CoreFile in real use
   // but allows testing without having to mock a CoreFile.
   //
-  // This call may fail in the case that the core file segment does not contain
+  // This call will fail in the case that the core file segment does not contain
   // enough data to read all the tags.
   typedef std::function<size_t(lldb::offset_t, size_t, void *)> CoreReaderFn;
   llvm::
