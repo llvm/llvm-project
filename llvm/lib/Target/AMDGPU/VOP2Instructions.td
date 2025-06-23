@@ -1945,6 +1945,9 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
     if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExt32BitDPP then
     def _dpp8_gfx10 : VOP2_DPP8<op, !cast<VOP2_Pseudo>(NAME#"_e32")>;
   }
+  multiclass VOP2_Real_dpp_dpp8_gfx10<bits<6> op> :
+    VOP2_Real_dpp_gfx10<op>,
+    VOP2_Real_dpp8_gfx10<op>;
 
   //===------------------------- VOP2 (with name) -------------------------===//
   multiclass VOP2_Real_e32_gfx10_with_name<bits<6> op, string opName,
@@ -2172,7 +2175,7 @@ defm V_LDEXP_F16       : VOP2_Real_gfx10<0x03b>;
 let IsSingle = 1 in {
   defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
 }
-defm V_PK_FMAC_F16     :  VOP2_Real_dpp_gfx10<0x03c>, VOP2_Real_dpp8_gfx10<0x03c>;
+defm V_PK_FMAC_F16     :  VOP2_Real_dpp_dpp8_gfx10<0x03c>;
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
