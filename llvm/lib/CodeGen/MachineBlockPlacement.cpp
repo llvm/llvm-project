@@ -104,6 +104,12 @@ static cl::opt<unsigned> MaxBytesForAlignmentOverride(
              "alignment"),
     cl::init(0), cl::Hidden);
 
+static cl::opt<unsigned> PredecessorLimit(
+    "block-placement-predecessor-limit",
+    cl::desc("For blocks with more predecessors, certain layout optimizations"
+             "will be disabled to prevent quadratic compile time."),
+    cl::init(1000), cl::Hidden);
+
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned> ExitBlockBias(
     "block-placement-exit-block-bias",
@@ -1030,6 +1036,11 @@ bool MachineBlockPlacement::isTrellis(
   SmallPtrSet<const MachineBasicBlock *, 8> SeenPreds;
 
   for (MachineBasicBlock *Succ : ViableSuccs) {
+    // Compile-time optimization: runtime is quadratic in the number of
+    // predecessors. For such uncommon cases, exit early.
+    if (Succ->pred_size() > PredecessorLimit)
+      return false;
+
     int PredCount = 0;
     for (auto *SuccPred : Succ->predecessors()) {
       // Allow triangle successors, but don't count them.
@@ -1470,6 +1481,11 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
 
   // There isn't a better layout when there are no unscheduled predecessors.
   if (SuccChain.UnscheduledPredecessors == 0)
+    return false;
+
+  // Compile-time optimization: runtime is quadratic in the number of
+  // predecessors. For such uncommon cases, exit early.
+  if (Succ->pred_size() > PredecessorLimit)
     return false;
 
   // There are two basic scenarios here:

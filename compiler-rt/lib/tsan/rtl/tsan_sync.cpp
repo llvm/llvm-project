@@ -247,11 +247,14 @@ void MetaMap::MoveMemory(uptr src, uptr dst, uptr sz) {
   CHECK_NE(src, dst);
   CHECK_NE(sz, 0);
   uptr diff = dst - src;
-  u32 *src_meta = MemToMeta(src);
-  u32 *dst_meta = MemToMeta(dst);
-  u32 *src_meta_end = MemToMeta(src + sz);
-  uptr inc = 1;
-  if (dst > src) {
+  u32 *src_meta, *dst_meta, *src_meta_end;
+  uptr inc;
+  if (dst < src) {
+    src_meta = MemToMeta(src);
+    dst_meta = MemToMeta(dst);
+    src_meta_end = MemToMeta(src + sz);
+    inc = 1;
+  } else {
     src_meta = MemToMeta(src + sz) - 1;
     dst_meta = MemToMeta(dst + sz) - 1;
     src_meta_end = MemToMeta(src) - 1;

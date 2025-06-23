@@ -1312,7 +1312,7 @@ private:
   DenseSet<DebugAggregate> NotAlwaysStackHomed;
 
   VariableID getVariableID(const DebugVariable &Var) {
-    return static_cast<VariableID>(FnVarLocs->insertVariable(Var));
+    return FnVarLocs->insertVariable(Var);
   }
 
   /// Join the LiveOut values of preds that are contained in \p Visited into
@@ -1556,7 +1556,7 @@ void AssignmentTrackingLowering::emitDbgValue(
 
     VariableID Var = getVariableID(DebugVariable(Source));
     VarLocInfo VarLoc;
-    VarLoc.VariableID = static_cast<VariableID>(Var);
+    VarLoc.VariableID = Var;
     VarLoc.Expr = Expr;
     VarLoc.Values = RawLocationWrapper(Val);
     VarLoc.DL = DL;
@@ -1642,7 +1642,7 @@ void AssignmentTrackingLowering::processUnknownStoreToVariable(
       Fn.getContext(), 0, 0, V.getVariable()->getScope(), InlinedAt);
 
   VarLocInfo VarLoc;
-  VarLoc.VariableID = static_cast<VariableID>(Var);
+  VarLoc.VariableID = Var;
   VarLoc.Expr = DIExpression::get(I.getContext(), {});
   VarLoc.Values = RawLocationWrapper(
       ValueAsMetadata::get(PoisonValue::get(Type::getInt1Ty(I.getContext()))));

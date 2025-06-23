@@ -246,9 +246,10 @@ static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
   // Get the mangled name.
   std::string Name;
   llvm::raw_string_ostream MangledNameStream(Name);
-  MangleContext *Mangler = Context.createMangleContext();
+  std::unique_ptr<MangleContext> Mangler(Context.createMangleContext());
   Mangler->mangleName(FnDeclForMangling, MangledNameStream);
   MangledNameStream.flush();
+
   return Name;
 }
 

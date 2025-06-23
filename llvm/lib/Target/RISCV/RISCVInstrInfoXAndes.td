@@ -15,16 +15,16 @@
 //===----------------------------------------------------------------------===//
 
 // A 11-bit signed immediate where the least significant bit is zero.
-def simm11_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = SImmAsmOperand<11, "Lsb0">;
+def bare_simm11_lsb0 : Operand<OtherVT> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<11>;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsrN<1>";
   let DecoderMethod = "decodeSImmOperandAndLslN<11, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedInt<10, 1>(Imm);
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<10, 1>(Imm);
+    return MCOp.isBareSymbolRef();
   }];
   let OperandType = "OPERAND_PCREL";
 }
@@ -58,8 +58,8 @@ def simm20_lsb000 : Operand<XLenVT> {
 //===----------------------------------------------------------------------===//
 
 class NDSRVInstBB<bit cs, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs1, uimmlog2xlen:$cimm, simm11_lsb0:$imm10),
-             opcodestr, "$rs1, $cimm, $imm10", [], InstFormatOther>,
+    : RVInst<(outs), (ins GPR:$rs1, uimmlog2xlen:$cimm, bare_simm11_lsb0:$imm10),
+             opcodestr, "$rs1, $cimm, $imm10", [], InstFormatNDS_BRANCH_10>,
       Sched<[WriteJmp, ReadIALU]> {
   bits<10> imm10;
   bits<5> rs1;
@@ -82,8 +82,8 @@ class NDSRVInstBB<bit cs, string opcodestr>
 }
 
 class NDSRVInstBC<bits<3> funct3, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs1, uimm7:$cimm, simm11_lsb0:$imm10),
-             opcodestr, "$rs1, $cimm, $imm10", [], InstFormatOther>,
+    : RVInst<(outs), (ins GPR:$rs1, uimm7:$cimm, bare_simm11_lsb0:$imm10),
+             opcodestr, "$rs1, $cimm, $imm10", [], InstFormatNDS_BRANCH_10>,
       Sched<[WriteJmp, ReadIALU]> {
   bits<10> imm10;
   bits<5> rs1;

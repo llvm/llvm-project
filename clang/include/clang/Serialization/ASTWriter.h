@@ -75,6 +75,9 @@ class StoredDeclsList;
 class SwitchCase;
 class Token;
 
+struct VisibleLookupBlockOffsets;
+struct LookupBlockOffsets;
+
 namespace serialization {
 enum class DeclUpdateKind;
 } // namespace serialization
@@ -606,9 +609,7 @@ private:
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
                                         const DeclContext *DC);
   void WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC,
-                                    uint64_t &VisibleBlockOffset,
-                                    uint64_t &ModuleLocalBlockOffset,
-                                    uint64_t &TULocalBlockOffset);
+                                    VisibleLookupBlockOffsets &Offsets);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
   void WriteComments(ASTContext &Context);
@@ -776,6 +777,9 @@ public:
     auto I = DeclIDs.find(D);
     return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
+
+  void AddLookupOffsets(const LookupBlockOffsets &Offsets,
+                        RecordDataImpl &Record);
 
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
