@@ -1176,15 +1176,18 @@ public:
 
   void handleInstrProfError(Error Err, uint64_t MismatchedFuncSum);
 
+  // Get the profile record and handle errors if necessary.
+  bool getRecord(IndexedInstrProfReader *PGOReader);
+
   // Read counts for the instrumented BB from profile.
-  bool readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
+  bool readCounters(bool &AllZeros,
                     InstrProfRecord::CountPseudoKind &PseudoKind);
 
   // Populate the counts for all BBs.
   void populateCounters();
 
   // Set block coverage based on profile coverage values.
-  void populateCoverage(IndexedInstrProfReader *PGOReader);
+  void populateCoverage();
 
   // Set the branch weights based on the count values.
   void setBranchWeights();
@@ -1441,14 +1444,9 @@ void PGOUseFunc::handleInstrProfError(Error Err, uint64_t MismatchedFuncSum) {
   });
 }
 
-// Read the profile from ProfileFileName and assign the value to the
-// instrumented BB and the edges. This function also updates ProgramMaxCount.
-// Return true if the profile are successfully read, and false on errors.
-bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
-                              InstrProfRecord::CountPseudoKind &PseudoKind) {
-  auto &Ctx = M->getContext();
+bool PGOUseFunc::getRecord(IndexedInstrProfReader *PGOReader) {
   uint64_t MismatchedFuncSum = 0;
-  Expected<InstrProfRecord> Result = PGOReader->getInstrProfRecord(
+  auto Result = PGOReader->getInstrProfRecord(
       FuncInfo.FuncName, FuncInfo.FunctionHash, FuncInfo.DeprecatedFuncName,
       &MismatchedFuncSum);
   if (Error E = Result.takeError()) {
@@ -1456,6 +1454,16 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
     return false;
   }
   ProfileRecord = std::move(Result.get());
+  ProgramMaxCount = PGOReader->getMaximumFunctionCount(IsCS);
+  return true;
+}
+
+// Read the profile from ProfileFileName and assign the value to the
+// instrumented BB and the edges. This function also updates ProgramMaxCount.
+// Return true if the profile are successfully read, and false on errors.
+bool PGOUseFunc::readCounters(bool &AllZeros,
+                              InstrProfRecord::CountPseudoKind &PseudoKind) {
+  auto &Ctx = M->getContext();
   PseudoKind = ProfileRecord.getCountPseudoKind();
   if (PseudoKind != InstrProfRecord::NotPseudo) {
     return true;
@@ -1488,22 +1496,13 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
         DS_Warning));
     return false;
   }
-  ProgramMaxCount = PGOReader->getMaximumFunctionCount(IsCS);
   return true;
 }
 
-void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
-  uint64_t MismatchedFuncSum = 0;
-  Expected<InstrProfRecord> Result = PGOReader->getInstrProfRecord(
-      FuncInfo.FuncName, FuncInfo.FunctionHash, FuncInfo.DeprecatedFuncName,
-      &MismatchedFuncSum);
-  if (auto Err = Result.takeError()) {
-    handleInstrProfError(std::move(Err), MismatchedFuncSum);
-    return;
-  }
+void PGOUseFunc::populateCoverage() {
   IsCS ? NumOfCSPGOFunc++ : NumOfPGOFunc++;
 
-  std::vector<uint64_t> &CountsFromProfile = Result.get().Counts;
+  ArrayRef<uint64_t> CountsFromProfile = ProfileRecord.Counts;
   DenseMap<const BasicBlock *, bool> Coverage;
   unsigned Index = 0;
   for (auto &BB : F)
@@ -2243,8 +2242,10 @@ static bool annotateAllFunctions(
     PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, LI, PSI, IsCS,
                     InstrumentFuncEntry, InstrumentLoopEntries,
                     HasSingleByteCoverage);
+    if (!Func.getRecord(PGOReader.get()))
+      continue;
     if (HasSingleByteCoverage) {
-      Func.populateCoverage(PGOReader.get());
+      Func.populateCoverage();
       continue;
     }
     // When PseudoKind is set to a vaule other than InstrProfRecord::NotPseudo,
@@ -2253,7 +2254,7 @@ static bool annotateAllFunctions(
     // attribute and drop all the profile counters.
     InstrProfRecord::CountPseudoKind PseudoKind = InstrProfRecord::NotPseudo;
     bool AllZeros = false;
-    if (!Func.readCounters(PGOReader.get(), AllZeros, PseudoKind))
+    if (!Func.readCounters(AllZeros, PseudoKind))
       continue;
     if (AllZeros) {
       F.setEntryCount(ProfileCount(0, Function::PCT_Real));
