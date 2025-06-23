@@ -237,7 +237,7 @@ Expected<UnwindTable> llvm::dwarf::createUnwindTable(const FDE *Fde) {
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
     AllRows.push_back(Row);
-  return UnwindTable(AllRows);
+  return UnwindTable(std::move(AllRows));
 }
 
 Expected<UnwindTable> llvm::dwarf::createUnwindTable(const CIE *Cie) {
@@ -254,7 +254,7 @@ Expected<UnwindTable> llvm::dwarf::createUnwindTable(const CIE *Cie) {
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
     Rows.push_back(Row);
-  return UnwindTable(Rows);
+  return UnwindTable(std::move(Rows));
 }
 
 Expected<UnwindTable::RowContainer>
