@@ -386,10 +386,7 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
     return false;
 
   if (IsWholeWave) {
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    const SIInstrInfo *TII = ST.getInstrInfo();
-    const MachineInstr *Setup = TII->getWholeWaveFunctionSetup(MF);
-    Ret.addReg(Setup->getOperand(0).getReg());
+    addOriginalExecToReturn(B.getMF(), Ret);
   }
 
   // TODO: Handle CalleeSavedRegsViaCopy.
@@ -1613,4 +1610,12 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   return true;
+}
+
+void AMDGPUCallLowering::addOriginalExecToReturn(MachineFunction &MF,
+                                                 MachineInstrBuilder &Ret) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const MachineInstr *Setup = TII->getWholeWaveFunctionSetup(MF);
+  Ret.addReg(Setup->getOperand(0).getReg());
 }
