@@ -427,8 +427,10 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     } else
       ErrStream << E.getTarget().getSection().getName() << " + "
                 << formatv("{0:x}", E.getOffset());
-    ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
-              << " is out of range of " << G.getEdgeKindName(E.getKind())
+    ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress());
+    if (E.getAddend())
+      ErrStream << " with addend " << formatv("{0:x}", E.getAddend());
+    ErrStream << " is out of range of " << G.getEdgeKindName(E.getKind())
               << " fixup at " << formatv("{0:x}", B.getFixupAddress(E)) << " (";
 
     Symbol *BestSymbolForBlock = nullptr;
