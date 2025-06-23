@@ -434,8 +434,8 @@ std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
       targetOp.getInReductionVars(), targetOp.getInReductionByrefAttr(),
       targetOp.getInReductionSymsAttr(), targetOp.getIsDevicePtrVars(),
       innerMapInfos, targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
-      targetOp.getPrivateSymsAttr(), targetOp.getThreadLimit(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
+      targetOp.getThreadLimit(), targetOp.getPrivateMapsAttr());
   rewriter.inlineRegionBefore(targetOp.getRegion(), newTargetOp.getRegion(),
                               newTargetOp.getRegion().begin());
 
@@ -653,8 +653,8 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
         targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
         targetOp.getIsDevicePtrVars(), preMapOperands,
         targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
-        targetOp.getPrivateSymsAttr(), targetOp.getThreadLimit(),
-        targetOp.getPrivateMapsAttr()); 
+        targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
+        targetOp.getThreadLimit(), targetOp.getPrivateMapsAttr());
   auto *preTargetBlock = rewriter.createBlock(
       &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
   IRMapping preMapping;
@@ -695,8 +695,8 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
       targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
       targetOp.getIsDevicePtrVars(), postMapOperands,
       targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
-      targetOp.getPrivateSymsAttr(), targetOp.getThreadLimit(),
-      targetOp.getPrivateMapsAttr()); 
+      targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
+      targetOp.getThreadLimit(), targetOp.getPrivateMapsAttr());
 
   auto *isolatedTargetBlock =
         rewriter.createBlock(&isolatedTargetOp.getRegion(),
@@ -722,8 +722,8 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
         targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
         targetOp.getIsDevicePtrVars(), postMapOperands,
         targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
-        targetOp.getPrivateSymsAttr(), targetOp.getThreadLimit(),
-        targetOp.getPrivateMapsAttr()); 
+        targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
+        targetOp.getThreadLimit(), targetOp.getPrivateMapsAttr());
     auto *postTargetBlock = rewriter.createBlock(
           &postTargetOp.getRegion(), postTargetOp.getRegion().begin(), {}, {});
     IRMapping postMapping;
