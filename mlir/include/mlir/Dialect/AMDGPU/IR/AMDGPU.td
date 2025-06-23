@@ -898,6 +898,27 @@ def AMDGPU_GatherToLDSOp :
   let hasVerifier = 1;
 }
 
+def AMDGPU_TransposeLoadOp :
+    AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
+    Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
+    Results<(outs MFMAInTypes:$dst)> {
+  let summary = "MLIR wrapper for CDNA Transpose Load instructions";
+  let description = [{
+    The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions.
+
+    Operands:
+    * `$src`: LDS memref to read from.
+    * `$srcIndices`: indices into `$src` to read from for this thread.
+    * `$dst`: target register this transpose load instruction will write to.
+
+    Note: Lowering is only supported on gfx950 and up.
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($dst)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_ScaledMFMAOp :
     AMDGPU_Op<"scaled_mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,
