@@ -436,11 +436,11 @@ def AArch64fabd_p : PatFrags<(ops node:$pg, node:$op1, node:$op2),
                               (AArch64fabs_mt node:$pg, (AArch64fsub_p node:$pg, node:$op1, node:$op2), undef)]>;
 
 def AArch64fmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
-                             [(AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za)]>;
+                             [(AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za),
+                              (AArch64fma_p node:$pg, node:$zm, node:$zn, node:$za)]>;
 
 def AArch64fmlaidx : PatFrags<(ops node:$acc, node:$op1, node:$op2, node:$idx),
                               [(AArch64fmla_p (SVEAllActive), node:$acc, node:$op1, (int_aarch64_sve_dup_laneq node:$op2, node:$idx)),
-                               (AArch64fmla_p (SVEAllActive), node:$acc, (int_aarch64_sve_dup_laneq node:$op2, node:$idx), node:$op1),
                                (int_aarch64_sve_fmla_lane node:$acc, node:$op1, node:$op2, node:$idx)]>;
 
 def AArch64fmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
@@ -450,7 +450,6 @@ def AArch64fmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
 
 def AArch64fmlsidx : PatFrags<(ops node:$acc, node:$op1, node:$op2, node:$idx),
                               [(AArch64fmla_p (SVEAllActive), node:$acc, (AArch64fneg_mt(SVEAllActive), node:$op1, (undef)), (int_aarch64_sve_dup_laneq node:$op2, node:$idx)),
-                               (AArch64fmla_p (SVEAllActive), node:$acc, (int_aarch64_sve_dup_laneq node:$op2, node:$idx), (AArch64fneg_mt(SVEAllActive), node:$op1, (undef))),
                                (int_aarch64_sve_fmls_lane node:$acc, node:$op1, node:$op2, node:$idx)]>;
 
 def AArch64fnmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
@@ -570,7 +569,8 @@ def AArch64fadd : PatFrags<(ops node:$op1, node:$op2),
 
 def AArch64fmul : PatFrags<(ops node:$op1, node:$op2),
                             [(fmul node:$op1, node:$op2),
-                             (AArch64fmul_p (SVEAllActive), node:$op1, node:$op2)]>;
+                             (AArch64fmul_p (SVEAllActive), node:$op1, node:$op2),
+                             (AArch64fmul_p (SVEAllActive), node:$op2, node:$op1)]>;
 
 def AArch64fmulidx : PatFrags<(ops node:$op1, node:$op2, node:$idx),
                               [(AArch64fmul node:$op1, (int_aarch64_sve_dup_laneq node:$op2, node:$idx)),
@@ -896,27 +896,15 @@ let Predicates = [HasSVE_or_SME] in {
   // 64B segmented lane splats currently end up as trn instructions instead.
   def : Pat<(nxv2f64 (AArch64fmul nxv2f64:$L, (AArch64trn1 nxv2f64:$R, nxv2f64:$R))),
             (FMUL_ZZZI_D $L, $R, 0)>;
-  def : Pat<(nxv2f64 (AArch64fmul (AArch64trn1 nxv2f64:$R, nxv2f64:$R), nxv2f64:$L)),
-            (FMUL_ZZZI_D $L, $R, 0)>;
   def : Pat<(nxv2f64 (AArch64fmul nxv2f64:$L, (AArch64trn2 nxv2f64:$R, nxv2f64:$R))),
-            (FMUL_ZZZI_D $L, $R, 1)>;
-  def : Pat<(nxv2f64 (AArch64fmul (AArch64trn2 nxv2f64:$R, nxv2f64:$R), nxv2f64:$L)),
             (FMUL_ZZZI_D $L, $R, 1)>;
   def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, nxv2f64:$L, (AArch64trn1 nxv2f64:$R, nxv2f64:$R))),
             (FMLA_ZZZI_D $Acc, $L, $R, 0)>;
-  def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, (AArch64trn1 nxv2f64:$R, nxv2f64:$R), nxv2f64:$L)),
-            (FMLA_ZZZI_D $Acc, $L, $R, 0)>;
   def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, nxv2f64:$L, (AArch64trn2 nxv2f64:$R, nxv2f64:$R))),
-            (FMLA_ZZZI_D $Acc, $L, $R, 1)>;
-  def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, (AArch64trn2 nxv2f64:$R, nxv2f64:$R), nxv2f64:$L)),
             (FMLA_ZZZI_D $Acc, $L, $R, 1)>;
   def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, (AArch64fneg_mt (SVEAllActive), nxv2f64:$L, (undef)), (AArch64trn1 nxv2f64:$R, nxv2f64:$R))),
             (FMLS_ZZZI_D $Acc, $L, $R, 0)>;
-  def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, (AArch64trn1 nxv2f64:$R, nxv2f64:$R),(AArch64fneg_mt (SVEAllActive), nxv2f64:$L, (undef)))),
-            (FMLS_ZZZI_D $Acc, $L, $R, 0)>;
   def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, (AArch64fneg_mt (SVEAllActive), nxv2f64:$L, (undef)), (AArch64trn2 nxv2f64:$R, nxv2f64:$R))),
-            (FMLS_ZZZI_D $Acc, $L, $R, 1)>;
-  def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, (AArch64trn2 nxv2f64:$R, nxv2f64:$R), (AArch64fneg_mt (SVEAllActive), nxv2f64:$L, (undef)))),
             (FMLS_ZZZI_D $Acc, $L, $R, 1)>;
 } // End HasSVE_or_SME
 
