@@ -272,9 +272,10 @@ FailureOr<SmallVector<Operation *>> yieldReplacementForFusedProducer(
 struct SCFTileAndFuseResult {
   /// List of untiled operations that were fused with the tiled consumer.
   llvm::SetVector<Operation *> fusedProducers;
-  /// List of tiled and fused operations generated. The first one in this list
-  /// is guaranteed to be the tiled operations generated during tiling of the
-  /// generated operation.
+  /// List of tiled and fused operations generated. The first element is always
+  /// the tiled version of the original consumer operation processed by
+  /// `tileConsumerAndFuseProducersUsingSCF`, followed by any operations that
+  /// were fused with it.
   llvm::SetVector<Operation *> tiledAndFusedOps;
   /// The `scf.for` operations that iterate over the tiles.
   SmallVector<LoopLikeOpInterface> loops;
