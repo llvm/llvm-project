@@ -30,18 +30,20 @@ CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
 void CharacterConverter::clear() {
   state->partial = 0;
-  state->bytes_processed = 0;
+  state->bytes_stored = 0;
   state->total_bytes = 0;
 }
 
-bool CharacterConverter::isComplete() {
-  return state->bytes_processed == state->total_bytes;
+bool CharacterConverter::isFull() {
+  return state->bytes_stored == state->total_bytes && state->total_bytes != 0;
 }
+
+bool CharacterConverter::isEmpty() { return state->bytes_stored == 0; }
 
 int CharacterConverter::push(char8_t utf8_byte) {
   uint8_t num_ones = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
   // Checking the first byte if first push
-  if (state->bytes_processed == 0) {
+  if (isEmpty()) {
     // UTF-8 char has 1 byte total
     if (num_ones == 0) {
       state->total_bytes = 1;
@@ -58,21 +60,21 @@ int CharacterConverter::push(char8_t utf8_byte) {
     }
     // Invalid first byte
     else {
-      // bytes_processed and total_bytes will always be 0 here
+      // bytes_stored and total_bytes will always be 0 here
       state->partial = static_cast<char32_t>(0);
       return -1;
     }
     state->partial = static_cast<char32_t>(utf8_byte);
-    state->bytes_processed++;
+    state->bytes_stored++;
     return 0;
   }
   // Any subsequent push
   // Adding 6 more bits so need to left shift
-  if (num_ones == 1 && !isComplete()) {
+  if (num_ones == 1 && !isFull()) {
     char32_t byte = utf8_byte & MASK_ENCODED_BITS;
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
     state->partial |= byte;
-    state->bytes_processed++;
+    state->bytes_stored++;
     return 0;
   }
   // Invalid byte -> reset the state
@@ -82,11 +84,10 @@ int CharacterConverter::push(char8_t utf8_byte) {
 
 int CharacterConverter::push(char32_t utf32) {
   // we can't be partially through a conversion when pushing a utf32 value
-  if (!isComplete())
+  if (!isEmpty())
     return -1;
 
   state->partial = utf32;
-  state->bytes_processed = 0;
 
   // determine number of utf-8 bytes needed to represent this utf32 value
   constexpr char32_t MAX_VALUE_PER_UTF8_LEN[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
@@ -94,6 +95,7 @@ int CharacterConverter::push(char32_t utf32) {
   for (uint8_t i = 0; i < NUM_RANGES; i++) {
     if (state->partial <= MAX_VALUE_PER_UTF8_LEN[i]) {
       state->total_bytes = i + 1;
+      state->bytes_stored = i + 1;
       return 0;
     }
   }
@@ -107,7 +109,7 @@ int CharacterConverter::push(char32_t utf32) {
 ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   // If pop is called too early, do not reset the state, use error to determine
   // whether enough bytes have been pushed
-  if (!isComplete() || state->bytes_processed == 0)
+  if (!isFull())
     return Error(-1);
   char32_t utf32 = state->partial;
   // reset if successful pop
@@ -116,7 +118,7 @@ ErrorOr<char32_t> CharacterConverter::pop_utf32() {
 }
 
 ErrorOr<char8_t> CharacterConverter::pop_utf8() {
-  if (isComplete())
+  if (isEmpty())
     return Error(-1);
 
   constexpr char8_t FIRST_BYTE_HEADERS[] = {0, 0xC0, 0xE0, 0xF0};
@@ -125,9 +127,8 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   char32_t output;
 
   // Shift to get the next 6 bits from the utf32 encoding
-  const size_t shift_amount =
-      (state->total_bytes - state->bytes_processed - 1) * ENCODED_BITS_PER_UTF8;
-  if (state->bytes_processed == 0) {
+  const size_t shift_amount = (state->bytes_stored - 1) * ENCODED_BITS_PER_UTF8;
+  if (isFull()) {
     /*
       Choose the correct set of most significant bits to encode the length
       of the utf8 sequence. The remaining bits contain the most significant
@@ -141,7 +142,7 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
              ((state->partial >> shift_amount) & MASK_ENCODED_BITS);
   }
 
-  state->bytes_processed++;
+  state->bytes_stored--;
   return static_cast<char8_t>(output);
 }
 

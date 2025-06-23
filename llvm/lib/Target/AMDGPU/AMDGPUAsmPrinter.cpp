@@ -350,7 +350,7 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
       HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
       break;
     default:
-      report_fatal_error("Unexpected code object version");
+      reportFatalUsageError("unsupported code object version");
     }
   }
 

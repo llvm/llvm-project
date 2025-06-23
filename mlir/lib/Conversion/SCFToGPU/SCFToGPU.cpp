@@ -245,7 +245,7 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
   Location terminatorLoc = terminator.getLoc();
   terminator.erase();
   builder.setInsertionPointToEnd(innermostForOp.getBody());
-  builder.create<gpu::TerminatorOp>(terminatorLoc, std::nullopt);
+  builder.create<gpu::TerminatorOp>(terminatorLoc, TypeRange());
   launchOp.getBody().front().getOperations().splice(
       launchOp.getBody().front().begin(),
       innermostForOp.getBody()->getOperations());

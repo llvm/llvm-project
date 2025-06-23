@@ -509,6 +509,8 @@ const RangeInfo *ResourceRange::lookup(uint32_t X) const {
   return Intervals.lookup(X, nullptr);
 }
 
+void ResourceRange::clear() { return Intervals.clear(); }
+
 std::optional<const RangeInfo *> ResourceRange::insert(const RangeInfo &Info) {
   uint32_t LowerBound = Info.LowerBound;
   uint32_t UpperBound = Info.UpperBound;
