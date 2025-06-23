@@ -111,6 +111,59 @@ def MemRefElementTypeInterface : TypeInterface<"MemRefElementTypeInterface"> {
 }
 
 //===----------------------------------------------------------------------===//
+// PtrLikeTypeInterface
+//===----------------------------------------------------------------------===//
+
+def PtrLikeTypeInterface : TypeInterface<"PtrLikeTypeInterface"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    A ptr-like type represents an object storing a memory address. This object
+    is constituted by:
+    - A memory address called the base pointer. This pointer is treated as a
+      bag of bits without any assumed structure. The bit-width of the base
+      pointer must be a compile-time constant. However, the bit-width may remain
+      opaque or unavailable during transformations that do not depend on the
+      base pointer. Finally, it is considered indivisible in the sense that as
+      a `PtrLikeTypeInterface` value, it has no metadata.
+    - Optional metadata about the pointer. For example, the size of the  memory
+      region associated with the pointer.
+
+    Furthermore, all ptr-like types have two properties:
+    - The memory space associated with the address held by the pointer.
+    - An optional element type. If the element type is not specified, the
+      pointer is considered opaque.
+  }];
+  let methods = [
+    InterfaceMethod<[{
+      Returns the memory space of this ptr-like type.
+    }],
+    "::mlir::Attribute", "getMemorySpace">,
+    InterfaceMethod<[{
+      Returns the element type of this ptr-like type. Note: this method can
+      return `::mlir::Type()`, in which case the pointer is considered opaque.
+    }],
+    "::mlir::Type", "getElementType">,
+    InterfaceMethod<[{
+      Returns whether this ptr-like type has non-empty metadata.
+    }],
+    "bool", "hasPtrMetadata">,
+    InterfaceMethod<[{
+      Returns a clone of this type with the given memory space and element type,
+      or `failure` if the type cannot be cloned with the specified arguments.
+      If the pointer is opaque and `elementType` is not `std::nullopt` the
+      method will return `failure`.
+
+      If no `elementType` is provided and ptr is not opaque, the `elementType`
+      of this type is used.
+    }],
+    "::llvm::FailureOr<::mlir::PtrLikeTypeInterface>", "clonePtrWith", (ins
+      "::mlir::Attribute":$memorySpace,
+      "::std::optional<::mlir::Type>":$elementType
+    )>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // ShapedType
 //===----------------------------------------------------------------------===//
 

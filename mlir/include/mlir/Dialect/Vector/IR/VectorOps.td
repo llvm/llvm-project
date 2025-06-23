@@ -836,6 +836,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
   let arguments = (ins AnyVectorOfAnyRank:$source);
   let results = (outs Variadic<AnyType>:$elements);
   let assemblyFormat = "$source attr-dict `:` type($source)";
+  let hasFolder = 1;
 }
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
@@ -873,6 +874,7 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   let arguments = (ins Variadic<AnyType>:$elements);
   let results = (outs AnyFixedVectorOfAnyRank:$dest);
   let assemblyFormat = "$elements attr-dict `:` type($dest)";
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
@@ -1734,7 +1736,9 @@ def Vector_TransferWriteOp :
   let hasVerifier = 1;
 }
 
-def Vector_LoadOp : Vector_Op<"load"> {
+def Vector_LoadOp : Vector_Op<"load", [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+  ]> {
   let summary = "reads an n-D slice of memory into an n-D vector";
   let description = [{
     The 'vector.load' operation reads an n-D slice of memory into an n-D
@@ -1820,7 +1824,9 @@ def Vector_LoadOp : Vector_Op<"load"> {
       "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
 }
 
-def Vector_StoreOp : Vector_Op<"store"> {
+def Vector_StoreOp : Vector_Op<"store", [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+  ]> {
   let summary = "writes an n-D vector to an n-D slice of memory";
   let description = [{
     The 'vector.store' operation writes an n-D vector to an n-D slice of memory.
