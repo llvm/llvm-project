@@ -625,7 +625,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
       !Level.isOptimizingForSize())
     FPM.addPass(PGOMemOPSizeOpt());
 
-  FPM.addPass(TailCallElimPass());
+  FPM.addPass(TailCallElimPass(/*UpdateFunctionEntryCount=*/
+                               isInstrumentedPGOUse()));
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 
@@ -1578,7 +1579,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(DivRemPairsPass());
 
   // Try to annotate calls that were created during optimization.
-  OptimizePM.addPass(TailCallElimPass());
+  OptimizePM.addPass(
+      TailCallElimPass(/*UpdateFunctionEntryCount=*/isInstrumentedPGOUse()));
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
@@ -2066,7 +2068,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // LTO provides additional opportunities for tailcall elimination due to
   // link-time inlining, and visibility of nocapture attribute.
-  FPM.addPass(TailCallElimPass());
+  FPM.addPass(
+      TailCallElimPass(/*UpdateFunctionEntryCount=*/isInstrumentedPGOUse()));
 
   // Run a few AA driver optimizations here and now to cleanup the code.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM),
@@ -2346,4 +2349,9 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
     TM->registerDefaultAliasAnalyses(AA);
 
   return AA;
+}
+
+bool PassBuilder::isInstrumentedPGOUse() const {
+  return (PGOOpt && PGOOpt->Action == PGOOptions::IRUse) ||
+         !UseCtxProfile.empty();
 }
