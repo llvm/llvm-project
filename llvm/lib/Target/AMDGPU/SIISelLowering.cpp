@@ -13659,6 +13659,9 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
+  // Fold the fneg of a vselect into the v2 vselect operands.
+  // xor (vselect c, a, b), 0x80000000 ->
+  //   bitcast (vselect c, (fneg (bitcast a)), (fneg (bitcast b)))
   if (VT == MVT::v2i32 && LHS.getNumOperands() > 1) {
 
     const ConstantSDNode *CRHS0 = dyn_cast<ConstantSDNode>(RHS.getOperand(0));
