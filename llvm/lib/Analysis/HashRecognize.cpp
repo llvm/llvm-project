@@ -497,35 +497,29 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
-/// Checks that \p Needle and \p Reference are used together in a BinaryOperator
-/// with opcode \p BOToMatch, which is a recurrence over both, ignoring zext and
-/// trunc. In other words, it checks for the following pattern:
+/// A small helper for arePHIsIntertwined that is asymmetric in \p L and \p R,
+/// and hence needs to be called twice.
+static bool isXoredWith(const Value *L, const Value *R) {
+  return count_if(L->users(), [L, R](const User *U) {
+           return match(U, m_c_Xor(m_Specific(L),
+                                   m_CombineOr(m_ZExtOrSelf(m_Specific(R)),
+                                               m_Trunc(m_Specific(R)))));
+         }) == 1;
+}
+
+/// Checks that \p L and \p R are used together in an XOR, which is a recurrence
+/// over both, ignoring zext and trunc. In other words, it checks for the
+/// following pattern:
 ///
 /// loop:
-///   %needle = phi [_, %entry], [%needle.next, %loop]
-///   %reference = phi [_, %entry], [%reference.next, %loop]
+///   %L = phi [_, %entry], [%L.next, %loop]
+///   %R = phi [_, %entry], [%R.next, %loop]
 ///   ...
-///   _ = BOTOMatch ((trunc|zext|self) %needle) ((trunc|zext|self) %reference)
+///   _ = xor ((trunc|zext|self) %L) ((trunc|zext|self) %R)
 ///
 ///  where at least one cast is self.
-///
-/// \p BOToMatch is XOR in the case of CRC.
-static bool arePHIsIntertwined(const PHINode *Needle, const PHINode *Reference,
-                               const Loop &L,
-                               Instruction::BinaryOps BOToMatch) {
-  return any_of(ArrayRef({Needle, Reference}), [&](const PHINode *S) {
-    return count_if(S->users(), [&](const User *U) {
-             auto *BO = dyn_cast<BinaryOperator>(U);
-             if (!BO || BO->getOpcode() != BOToMatch)
-               return false;
-             return all_of(BO->operands(), [Needle, Reference](const Use &U) {
-               return match(
-                   U.get(),
-                   m_CombineOr(m_ZExtOrTruncOrSelf(m_Specific(Reference)),
-                               m_ZExtOrTruncOrSelf(m_Specific(Needle))));
-             });
-           }) == 1;
-  });
+static bool arePHIsIntertwined(const PHINode *L, const PHINode *R) {
+  return isXoredWith(L, R) || isXoredWith(R, L);
 }
 
 // Recognizes a multiplication or division by the constant two, using SCEV. By
@@ -576,8 +570,7 @@ HashRecognize::recognizeCRC() const {
   if (SimpleRecurrence) {
     if (isBigEndianBitShift(SimpleRecurrence.BO, SE) != ByteOrderSwapped)
       return "Loop with non-unit bitshifts";
-    if (!arePHIsIntertwined(SimpleRecurrence.Phi, ConditionalRecurrence.Phi, L,
-                            Instruction::BinaryOps::Xor))
+    if (!arePHIsIntertwined(SimpleRecurrence.Phi, ConditionalRecurrence.Phi))
       return "Recurrences not intertwined with XOR";
   }
 
