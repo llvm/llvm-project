@@ -30,6 +30,7 @@
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/maybe_const.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
 #include <__utility/declval.h>
@@ -163,6 +164,14 @@ concept __concat_indirectly_readable =
                                        __concat_rvalue_reference_t<_Rs...>,
                                        iterator_t<_Rs>> &&
      ...);
+
+template <bool _Const, class... _Rs>
+concept __concat_is_random_access =
+    (random_access_range<__maybe_const<_Const, _Rs>> && ...) && (sized_range<__maybe_const<_Const, _Rs>> && ...);
+
+template <bool _Const, class... _Rs>
+concept __concat_is_bidirectional =
+    ((bidirectional_range<__maybe_const<_Const, _Rs>> && ...) && (common_range<__maybe_const<_Const, _Rs>> && ...));
 
 template <class... _Rs>
 concept __concatable = requires {
