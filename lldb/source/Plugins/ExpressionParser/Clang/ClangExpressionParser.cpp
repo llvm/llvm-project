@@ -662,7 +662,6 @@ static void SetupLangOpts(CompilerInstance &compiler,
 
 static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
                                          lldb_private::Target &target) {
-  Log *log = GetLog(LLDBLog::Expressions);
   LangOptions &lang_opts = compiler.getLangOpts();
   lang_opts.Modules = true;
   // We want to implicitly build modules.
