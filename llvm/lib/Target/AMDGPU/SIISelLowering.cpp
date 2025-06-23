@@ -2459,7 +2459,7 @@ void SITargetLowering::allocateSpecialInputVGPRsFixed(
     SIMachineFunctionInfo &Info) const {
   Register Reg = CCInfo.AllocateReg(AMDGPU::VGPR31);
   if (!Reg)
-    report_fatal_error("failed to allocated VGPR for implicit arguments");
+    report_fatal_error("failed to allocate VGPR for implicit arguments");
 
   const unsigned Mask = 0x3ff;
   Info.setWorkItemIDX(ArgDescriptor::createRegister(Reg, Mask));
@@ -4492,11 +4492,8 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
                      .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
                      .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
                      .Default(Register());
-
-  if (Reg == AMDGPU::NoRegister) {
-    report_fatal_error(
-        Twine("invalid register name \"" + StringRef(RegName) + "\"."));
-  }
+  if (!Reg)
+    return Reg;
 
   if (!Subtarget->hasFlatScrRegister() &&
       Subtarget->getRegisterInfo()->regsOverlap(Reg, AMDGPU::FLAT_SCR)) {

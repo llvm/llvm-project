@@ -98,9 +98,6 @@ void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
 void initializeAMDGPUAsmPrinterPass(PassRegistry &);
 
-Pass *createAMDGPUAttributorLegacyPass();
-void initializeAMDGPUAttributorLegacyPass(PassRegistry &);
-
 // DPP/Iterative option enables the atomic optimizer with given strategy
 // whereas None disables the atomic optimizer.
 enum class ScanOptions { DPP, Iterative, None };
