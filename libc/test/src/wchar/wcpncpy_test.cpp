@@ -22,35 +22,58 @@ TEST(LlvmLibcWCPNCpyTest, EmptySrc) {
   ASSERT_TRUE(dest[2] == L'\0');
 }
 
-// TEST(LlvmLibcWCPCpyTest, EmptyDest) {
-//   // Empty dest should result in src
-//   const wchar_t *src = L"abc";
-//   wchar_t dest[4];
-//   wchar_t *result = LIBC_NAMESPACE::wcpcpy(dest, src);
-//   ASSERT_EQ(dest + 3, result);
-//   ASSERT_TRUE(result[0] == L'\0');
-//   ASSERT_TRUE(dest[0] == L'a');
-//   ASSERT_TRUE(dest[1] == L'b');
-//   ASSERT_TRUE(dest[2] == L'c');
-// }
+TEST(LlvmLibcWCPNCpyTest, Untouched) {
+  wchar_t dest[] = {L'a', L'b'};
+  const wchar_t src[] = {L'x', L'\0'};
+  LIBC_NAMESPACE::wcpncpy(dest, src, 0);
+  ASSERT_TRUE(dest[0] == L'a');
+  ASSERT_TRUE(dest[1] == L'b');
+}
 
-// TEST(LlvmLibcWCPCpyTest, OffsetDest) {
-//   // Offsetting should result in a concatenation.
-//   const wchar_t *src = L"abc";
-//   wchar_t dest[7];
-//   dest[0] = L'x';
-//   dest[1] = L'y';
-//   dest[2] = L'z';
-//   wchar_t *result = LIBC_NAMESPACE::wcpcpy(dest + 3, src);
-//   ASSERT_TRUE(dest[0] == L'x');
-//   ASSERT_TRUE(dest[1] == L'y');
-//   ASSERT_TRUE(dest[2] == L'z');
-//   ASSERT_TRUE(dest[3] == src[0]);
-//   ASSERT_TRUE(dest[4] == src[1]);
-//   ASSERT_TRUE(dest[5] == src[2]);
-//   ASSERT_TRUE(result[0] == L'\0');
-//   ASSERT_EQ(dest + 6, result);
-// }
+TEST(LlvmLibcWCPNCpyTest, CopyOne) {
+  wchar_t dest[] = {L'a', L'b'};
+  const wchar_t src[] = {L'x', L'y'};
+  wchar_t * res = LIBC_NAMESPACE::wcpncpy(dest, src, 1);
+  ASSERT_TRUE(dest[0] == L'x');
+  ASSERT_TRUE(dest[1] == L'b');
+  ASSERT_EQ(dest + 1, res);
+}
+
+TEST(LlvmLibcWCPNCpyTest, CopyNull) {
+  wchar_t dest[] = {L'a', L'b'};
+  const wchar_t src[] = {L'\0', L'y'};
+  wchar_t * res = LIBC_NAMESPACE::wcpncpy(dest, src, 1);
+  ASSERT_TRUE(dest[0] == L'\0');
+  ASSERT_TRUE(dest[1] == L'b');
+  ASSERT_EQ(dest + 1, res);
+}
+
+TEST(LlvmLibcWCPNCpyTest, CopyPastSrc) {
+  wchar_t dest[] = {L'a', L'b'};
+  const wchar_t src[] = {L'\0', L'y'};
+  wchar_t * res = LIBC_NAMESPACE::wcpncpy(dest, src, 2);
+  ASSERT_TRUE(dest[0] == L'\0');
+  ASSERT_TRUE(dest[1] == L'\0');
+  ASSERT_EQ(dest + 2, res);
+}
+
+TEST(LlvmLibcWCPNCpyTest, CopyTwoNoNull) {
+  wchar_t dest[] = {L'a', L'b'};
+  const wchar_t src[] = {L'x', L'y'};
+  wchar_t * res = LIBC_NAMESPACE::wcpncpy(dest, src, 2);
+  ASSERT_TRUE(dest[0] == L'x');
+  ASSERT_TRUE(dest[1] == L'y');
+  ASSERT_EQ(dest + 2, res);
+}
+
+TEST(LlvmLibcWCPNCpyTest, CopyTwoWithNull) {
+  wchar_t dest[] = {L'a', L'b'};
+  const wchar_t src[] = {L'x', L'\0'};
+  wchar_t * res = LIBC_NAMESPACE::wcpncpy(dest, src, 2);
+  ASSERT_TRUE(dest[0] == L'x');
+  ASSERT_TRUE(dest[1] == L'\0');
+  ASSERT_EQ(dest + 2, res);
+}
 
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 TEST(LlvmLibcWCPNCpyTest, NullptrCrash) {
