@@ -44,7 +44,7 @@ defm sort_symbols : Eq<"sort-symbols", "Specify the keys to sort the symbols bef
 def stack_sizes : FF<"stack-sizes", "Display contents of all stack sizes sections. This option has no effect for GNU style output">;
 def stackmap : FF<"stackmap", "Display contents of stackmap section">;
 defm string_dump : Eq<"string-dump", "Display the specified section(s) as a list of strings">, MetaVarName<"<name or index>">;
-def string_table : FF<"string-table", "Display the string table (only for XCOFF now)">;
+def string_table : FF<"string-table", "Display the string table (only for XCOFF/COFF now)">;
 def symbols : FF<"symbols", "Display the symbol table. Also display the dynamic symbol table when using GNU output style for ELF">;
 def unwind : FF<"unwind", "Display unwind information">;
 

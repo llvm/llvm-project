@@ -117,6 +117,14 @@ public:
     return HasTcgen05 && PTXVersion >= 86;
   }
 
+  // TMA G2S copy with cta_group::1/2 support
+  bool hasCpAsyncBulkTensorCTAGroupSupport() const {
+    // TODO: Update/tidy-up after the family-conditional support arrives
+    return ((FullSmVersion == 1001 || FullSmVersion == 1011) &&
+            PTXVersion >= 86) ||
+           (FullSmVersion == 1031 && PTXVersion >= 88);
+  }
+
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the

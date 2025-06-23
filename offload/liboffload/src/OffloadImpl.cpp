@@ -229,26 +229,19 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
   // Find the info if it exists under any of the given names
   auto GetInfo = [&](std::vector<std::string> Names) {
-    InfoQueueTy DevInfo;
     if (Device == HostDevice())
       return std::string("Host");
 
     if (!Device->Device)
       return std::string("");
 
-    if (auto Err = Device->Device->obtainInfoImpl(DevInfo))
+    auto Info = Device->Device->obtainInfoImpl();
+    if (auto Err = Info.takeError())
       return std::string("");
 
     for (auto Name : Names) {
-      auto InfoKeyMatches = [&](const InfoQueueTy::InfoQueueEntryTy &Info) {
-        return Info.Key == Name;
-      };
-      auto Item = std::find_if(DevInfo.getQueue().begin(),
-                               DevInfo.getQueue().end(), InfoKeyMatches);
-
-      if (Item != std::end(DevInfo.getQueue())) {
-        return Item->Value;
-      }
+      if (auto Entry = Info->get(Name))
+        return (*Entry)->Value;
     }
 
     return std::string("");
@@ -258,7 +251,8 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_PLATFORM:
     return ReturnValue(Device->Platform);
   case OL_DEVICE_INFO_TYPE:
-    return ReturnValue(OL_DEVICE_TYPE_GPU);
+    return Device == HostDevice() ? ReturnValue(OL_DEVICE_TYPE_HOST)
+                                  : ReturnValue(OL_DEVICE_TYPE_GPU);
   case OL_DEVICE_INFO_NAME:
     return ReturnValue(GetInfo({"Device Name"}).c_str());
   case OL_DEVICE_INFO_VENDOR:
@@ -398,7 +392,7 @@ ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
 }
 
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
-                    ol_device_handle_t DstDevice, void *SrcPtr,
+                    ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size,
                     ol_event_handle_t *EventOut) {
   if (DstDevice == HostDevice() && SrcDevice == HostDevice()) {
@@ -415,18 +409,20 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
 
   // If no queue is given the memcpy will be synchronous
   auto QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
-  Error Res = Error::success();
 
   if (DstDevice == HostDevice()) {
-    Res = SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl);
+    if (auto Res =
+            SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl))
+      return Res;
   } else if (SrcDevice == HostDevice()) {
-    Res = DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl);
+    if (auto Res =
+            DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
+      return Res;
   } else {
-    Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device, DstPtr,
-                                          Size, QueueImpl);
+    if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
+                                                   DstPtr, Size, QueueImpl))
+      return Res;
   }
-  if (Res)
-    return Res;
 
   if (EventOut)
     *EventOut = makeEvent(Queue);
@@ -496,12 +492,12 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
   KernelArgsTy LaunchArgs{};
-  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroupsX;
-  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroupsY;
-  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroupsZ;
-  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSizeX;
-  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSizeY;
-  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSizeZ;
+  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroups.x;
+  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroups.y;
+  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroups.z;
+  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
+  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
+  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
 
   KernelLaunchParamsTy Params;

@@ -21,7 +21,27 @@ define <vscale x 1 x i8> @masked_load_nxv1i8(ptr %a, <vscale x 1 x i1> %mask) no
   %load = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8(ptr %a, i32 1, <vscale x 1 x i1> %mask, <vscale x 1 x i8> undef)
   ret <vscale x 1 x i8> %load
 }
-declare <vscale x 1 x i8> @llvm.masked.load.nxv1i8(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x i8>)
+
+define <vscale x 1 x i8> @masked_load_passthru_nxv1i8(ptr %a, <vscale x 1 x i1> %mask) nounwind {
+; V-LABEL: masked_load_passthru_nxv1i8:
+; V:       # %bb.0:
+; V-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
+; V-NEXT:    vmv.v.i v8, 0
+; V-NEXT:    vle8.v v8, (a0), v0.t
+; V-NEXT:    ret
+;
+; ZVE32-LABEL: masked_load_passthru_nxv1i8:
+; ZVE32:       # %bb.0:
+; ZVE32-NEXT:    csrr a1, vlenb
+; ZVE32-NEXT:    srli a1, a1, 3
+; ZVE32-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
+; ZVE32-NEXT:    vmv.v.i v8, 0
+; ZVE32-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; ZVE32-NEXT:    vle8.v v8, (a0), v0.t
+; ZVE32-NEXT:    ret
+  %load = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8(ptr %a, i32 1, <vscale x 1 x i1> %mask, <vscale x 1 x i8> zeroinitializer)
+  ret <vscale x 1 x i8> %load
+}
 
 define <vscale x 1 x i16> @masked_load_nxv1i16(ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; V-LABEL: masked_load_nxv1i16:

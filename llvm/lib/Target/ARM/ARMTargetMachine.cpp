@@ -41,6 +41,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
@@ -82,7 +83,7 @@ namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
   RegisterTargetMachine<ARMLETargetMachine> A(getTheThumbLETarget());
@@ -328,7 +329,7 @@ ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 ScheduleDAGInstrs *
 ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   // add DAG Mutations here.
   const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
   if (ST.hasFusion())
@@ -338,7 +339,7 @@ ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 ARMBaseTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   // add DAG Mutations here.
   const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
   if (ST.hasFusion())

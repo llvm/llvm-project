@@ -38,12 +38,11 @@ size_t getTypeNameLength(bool RemoveStars, StringRef Text) {
     else if (C == '>')
       --TemplateTypenameCntr;
     const CharType NextChar =
-        isAlphanumeric(C)
-            ? Alpha
-            : (isWhitespace(C) ||
-               (!RemoveStars && TemplateTypenameCntr == 0 && C == '*'))
-                  ? Space
-                  : Punctuation;
+        isAlphanumeric(C) ? Alpha
+        : (isWhitespace(C) ||
+           (!RemoveStars && TemplateTypenameCntr == 0 && C == '*'))
+            ? Space
+            : Punctuation;
     if (NextChar != Space) {
       ++NumChars; // Count the non-space character.
       if (LastChar == Space && NextChar == Alpha && BeforeSpace == Alpha)
@@ -444,10 +443,10 @@ void UseAutoCheck::check(const MatchFinder::MatchResult &Result) {
     replaceIterators(Decl, Result.Context);
   } else if (const auto *Decl =
                  Result.Nodes.getNodeAs<DeclStmt>(DeclWithNewId)) {
-    replaceExpr(Decl, Result.Context,
-                [](const Expr *Expr) { return Expr->getType(); },
-                "use auto when initializing with new to avoid "
-                "duplicating the type name");
+    replaceExpr(
+        Decl, Result.Context, [](const Expr *Expr) { return Expr->getType(); },
+        "use auto when initializing with new to avoid "
+        "duplicating the type name");
   } else if (const auto *Decl =
                  Result.Nodes.getNodeAs<DeclStmt>(DeclWithCastId)) {
     replaceExpr(

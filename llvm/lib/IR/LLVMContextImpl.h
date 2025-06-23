@@ -310,36 +310,33 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 
 /// DenseMapInfo for DILocation.
 template <> struct MDNodeKeyImpl<DILocation> {
-  unsigned Line;
-  unsigned Column;
   Metadata *Scope;
   Metadata *InlinedAt;
-  bool ImplicitCode;
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
 #endif
+  unsigned Line;
+  uint16_t Column;
+  bool ImplicitCode;
 
-  MDNodeKeyImpl(unsigned Line, unsigned Column, Metadata *Scope,
+  MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
                 uint8_t AtomRank)
-      : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt),
-        ImplicitCode(ImplicitCode)
+      : Scope(Scope), InlinedAt(InlinedAt),
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-        ,
-        AtomGroup(AtomGroup), AtomRank(AtomRank)
+        AtomGroup(AtomGroup), AtomRank(AtomRank),
 #endif
-  {
+        Line(Line), Column(Column), ImplicitCode(ImplicitCode) {
   }
 
   MDNodeKeyImpl(const DILocation *L)
-      : Line(L->getLine()), Column(L->getColumn()), Scope(L->getRawScope()),
-        InlinedAt(L->getRawInlinedAt()), ImplicitCode(L->isImplicitCode())
+      : Scope(L->getRawScope()), InlinedAt(L->getRawInlinedAt()),
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-        ,
-        AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank())
+        AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank()),
 #endif
-  {
+        Line(L->getLine()), Column(L->getColumn()),
+        ImplicitCode(L->isImplicitCode()) {
   }
 
   bool isKeyOf(const DILocation *RHS) const {
@@ -355,13 +352,19 @@ template <> struct MDNodeKeyImpl<DILocation> {
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-                        ,
-                        AtomGroup, (uint8_t)AtomRank);
-#else
-    );
+    // Hashing AtomGroup and AtomRank substantially impacts performance whether
+    // Key Instructions is enabled or not. We can't detect whether it's enabled
+    // here cheaply; avoiding hashing zero values is a good approximation. This
+    // affects Key Instruction builds too, but any potential costs incurred by
+    // messing with the hash distribution* appear to still be massively
+    // outweighed by the overall compile time savings by performing this check.
+    // * (hash_combine(x) != hash_combine(x, 0))
+    if (AtomGroup || AtomRank)
+      return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode,
+                          AtomGroup, (uint8_t)AtomRank);
 #endif
+    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
   }
 };
 

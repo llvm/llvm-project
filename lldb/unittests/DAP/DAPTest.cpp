@@ -32,7 +32,8 @@ TEST_F(DAPTest, SendProtocolMessages) {
       /*transport=*/*to_dap,
   };
   dap.Send(Event{/*event=*/"my-event", /*body=*/std::nullopt});
-  ASSERT_THAT_EXPECTED(from_dap->Read(std::chrono::milliseconds(1)),
-                       HasValue(testing::VariantWith<Event>(testing::FieldsAre(
-                           /*event=*/"my-event", /*body=*/std::nullopt))));
+  ASSERT_THAT_EXPECTED(
+      from_dap->Read<protocol::Message>(std::chrono::milliseconds(1)),
+      HasValue(testing::VariantWith<Event>(testing::FieldsAre(
+          /*event=*/"my-event", /*body=*/std::nullopt))));
 }

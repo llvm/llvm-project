@@ -10,20 +10,23 @@ program requires
   ! READ
   ! ----------------------------------------------------------------------------
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicRead
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Acquire
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK: OmpClause -> Read
+  ! CHECK: OmpClause -> Acquire
   !$omp atomic read
   i = j
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicRead
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> Acquire
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Relaxed
+  ! CHECK: OmpClause -> Read
   !$omp atomic relaxed read
   i = j
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicRead
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> Acquire
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK: OmpClause -> Read
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Relaxed
   !$omp atomic read relaxed
   i = j
   
@@ -31,20 +34,23 @@ program requires
   ! WRITE
   ! ----------------------------------------------------------------------------
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicWrite
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Release
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK: OmpClause -> Write
+  ! CHECK: OmpClause -> Release
   !$omp atomic write
   i = j
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicWrite
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> Release
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Relaxed
+  ! CHECK: OmpClause -> Write
   !$omp atomic relaxed write
   i = j
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicWrite
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> Release
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK: OmpClause -> Write
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Relaxed
   !$omp atomic write relaxed
   i = j
 
@@ -52,31 +58,34 @@ program requires
   ! UPDATE
   ! ----------------------------------------------------------------------------
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicUpdate
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Release
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK: OmpClause -> Update
+  ! CHECK: OmpClause -> Release
   !$omp atomic update
   i = i + j
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicUpdate
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> Release
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Relaxed
+  ! CHECK: OmpClause -> Update
   !$omp atomic relaxed update
   i = i + j
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicUpdate
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> Release
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK: OmpClause -> Update
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Relaxed
   !$omp atomic update relaxed
   i = i + j
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomic
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Release
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK: OmpClause -> Release
   !$omp atomic
   i = i + j
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomic
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> Release
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Relaxed
   !$omp atomic relaxed
   i = i + j
 
@@ -84,24 +93,27 @@ program requires
   ! CAPTURE
   ! ----------------------------------------------------------------------------
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicCapture
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> AcqRel
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK: OmpClause -> Capture
+  ! CHECK: OmpClause -> AcqRel
   !$omp atomic capture
   i = j
   j = j + 1
   !$omp end atomic
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicCapture
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> AcqRel
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Relaxed
+  ! CHECK: OmpClause -> Capture
   !$omp atomic relaxed capture
   i = j
   j = j + 1
   !$omp end atomic
 
-  ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicCapture
-  ! CHECK-NOT: OmpMemoryOrderClause -> OmpClause -> AcqRel
-  ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
+  ! CHECK-LABEL: OpenMPAtomicConstruct
+  ! CHECK-NOT: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Capture
+  ! CHECK: OmpClause -> Relaxed
   !$omp atomic capture relaxed
   i = j
   j = j + 1

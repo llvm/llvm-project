@@ -21,13 +21,14 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <optional>
 using namespace llvm;
 
 namespace llvm {
-extern cl::opt<bool> PickMergedSourceLocations;
+LLVM_ABI extern cl::opt<bool> PickMergedSourceLocations;
 } // namespace llvm
 
 namespace {

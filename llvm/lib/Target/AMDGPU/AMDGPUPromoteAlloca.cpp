@@ -437,9 +437,34 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
-  if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
-      !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
-    return nullptr;
+
+  // Walk backwards through nested GEPs to collect both constant and variable
+  // offsets, so that nested vector GEP chains can be lowered in one step.
+  //
+  // Given this IR fragment as input:
+  //
+  //   %0 = alloca [10 x <2 x i32>], align 8, addrspace(5)
+  //   %1 = getelementptr [10 x <2 x i32>], ptr addrspace(5) %0, i32 0, i32 %j
+  //   %2 = getelementptr i8, ptr addrspace(5) %1, i32 4
+  //   %3 = load i32, ptr addrspace(5) %2, align 4
+  //
+  // Combine both GEP operations in a single pass, producing:
+  //   BasePtr      = %0
+  //   ConstOffset  = 4
+  //   VarOffsets   = { %j -> element_size(<2 x i32>) }
+  //
+  // That lets us emit a single buffer_load directly into a VGPR, without ever
+  // allocating scratch memory for the intermediate pointer.
+  Value *CurPtr = GEP;
+  while (auto *CurGEP = dyn_cast<GetElementPtrInst>(CurPtr)) {
+    if (!CurGEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
+      return nullptr;
+
+    // Move to the next outer pointer.
+    CurPtr = CurGEP->getPointerOperand();
+  }
+
+  assert(CurPtr == Alloca && "GEP not based on alloca");
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
   if (VarOffsets.size() > 1)

@@ -41,12 +41,12 @@ getMachOSpecifier(uint64_t LLVMDisassembler_VariantKind) {
   }
 }
 
-/// tryAddingSymbolicOperand - tryAddingSymbolicOperand trys to add a symbolic
+/// tryAddingSymbolicOperand - tryAddingSymbolicOperand tries to add a symbolic
 /// operand in place of the immediate Value in the MCInst.  The immediate
 /// Value has not had any PC adjustment made by the caller. If the instruction
 /// is a branch that adds the PC to the immediate Value then isBranch is
 /// Success, else Fail. If GetOpInfo is non-null, then it is called to get any
-/// symbolic information at the Address for this instrution.  If that returns
+/// symbolic information at the Address for this instruction.  If that returns
 /// non-zero then the symbolic information it returns is used to create an
 /// MCExpr and that is added as an operand to the MCInst.  If GetOpInfo()
 /// returns zero and isBranch is Success then a symbol look up for

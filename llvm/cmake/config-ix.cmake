@@ -1,8 +1,3 @@
-if( WIN32 AND NOT CYGWIN )
-  # We consider Cygwin as another Unix
-  set(PURE_WINDOWS 1)
-endif()
-
 include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
@@ -24,6 +19,7 @@ if (ANDROID OR CYGWIN OR CMAKE_SYSTEM_NAME MATCHES "AIX|DragonFly|FreeBSD|Haiku|
   set(HAVE_SYS_MMAN_H 1)
   set(HAVE_SYSEXITS_H 1)
   set(HAVE_UNISTD_H 1)
+  set(HAVE_SYS_IOCTL_H 1)
 elseif (APPLE)
   set(HAVE_MACH_MACH_H 1)
   set(HAVE_MALLOC_MALLOC_H 1)
@@ -31,13 +27,15 @@ elseif (APPLE)
   set(HAVE_SYS_MMAN_H 1)
   set(HAVE_SYSEXITS_H 1)
   set(HAVE_UNISTD_H 1)
-elseif (PURE_WINDOWS)
+  set(HAVE_SYS_IOCTL_H 1)
+elseif (WIN32)
   set(HAVE_MACH_MACH_H 0)
   set(HAVE_MALLOC_MALLOC_H 0)
   set(HAVE_PTHREAD_H 0)
   set(HAVE_SYS_MMAN_H 0)
   set(HAVE_SYSEXITS_H 0)
   set(HAVE_UNISTD_H 0)
+  set(HAVE_SYS_IOCTL_H 0)
 elseif (ZOS)
   # Confirmed in
   # https://github.com/llvm/llvm-project/pull/104706#issuecomment-2297109613
@@ -47,6 +45,7 @@ elseif (ZOS)
   set(HAVE_SYS_MMAN_H 1)
   set(HAVE_SYSEXITS_H 0)
   set(HAVE_UNISTD_H 1)
+  set(HAVE_SYS_IOCTL_H 1)
 else()
   # Other platforms that we don't promise support for.
   check_include_file(mach/mach.h HAVE_MACH_MACH_H)
@@ -55,6 +54,7 @@ else()
   check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
   check_include_file(sysexits.h HAVE_SYSEXITS_H)
   check_include_file(unistd.h HAVE_UNISTD_H)
+  check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
 endif()
 
 if( UNIX AND NOT (APPLE OR BEOS OR HAIKU) )
@@ -132,7 +132,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 endif()
 
 # library checks
-if( NOT PURE_WINDOWS )
+if(NOT WIN32)
   check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)
   if (HAVE_LIBPTHREAD)
     check_library_exists(pthread pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
@@ -195,8 +195,19 @@ if(LLVM_ENABLE_ZSTD)
   elseif(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
     find_package(zstd QUIET)
   endif()
+
+  # If LLVM_USE_STATIC_ZSTD is specified, make sure we enable zstd only if static
+  # libraries are found.
+  if(LLVM_USE_STATIC_ZSTD AND NOT TARGET zstd::libzstd_static)
+    # Fail if LLVM_ENABLE_ZSTD is FORCE_ON.
+    if(LLVM_ENABLE_ZSTD STREQUAL FORCE_ON)
+        message(FATAL_ERROR "Failed to find static zstd libraries, but LLVM_USE_STATIC_ZSTD=ON and LLVM_ENABLE_ZSTD=FORCE_ON.")
+    endif()
+    set(LLVM_ENABLE_ZSTD OFF)
+  else()
+    set(LLVM_ENABLE_ZSTD ${zstd_FOUND})
+  endif()
 endif()
-set(LLVM_ENABLE_ZSTD ${zstd_FOUND})
 
 if(LLVM_ENABLE_LIBXML2)
   if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON)
@@ -264,7 +275,7 @@ endif()
 # party code may call MSan interceptors like strlen, leading to false positives.
 if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
   # Don't look for these libraries on Windows.
-  if (NOT PURE_WINDOWS)
+  if (NOT WIN32)
     # Skip libedit if using ASan as it contains memory leaks.
     if (LLVM_ENABLE_LIBEDIT AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*")
       if(LLVM_ENABLE_LIBEDIT STREQUAL FORCE_ON)
@@ -373,7 +384,7 @@ check_symbol_exists(sbrk unistd.h HAVE_SBRK)
 check_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
 check_symbol_exists(strerror_s string.h HAVE_DECL_STRERROR_S)
 check_symbol_exists(setenv stdlib.h HAVE_SETENV)
-if( PURE_WINDOWS )
+if(WIN32)
   check_symbol_exists(_chsize_s io.h HAVE__CHSIZE_S)
 
   check_function_exists(_alloca HAVE__ALLOCA)
@@ -409,8 +420,7 @@ else()
       "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
 endif()
 
-# This check requires _GNU_SOURCE.
-if (NOT PURE_WINDOWS)
+if (NOT WIN32)
   if (LLVM_PTHREAD_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
   endif()

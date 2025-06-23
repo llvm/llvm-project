@@ -294,11 +294,11 @@ define <2 x i64> @v2i64(<2 x i64> %d) {
 ;
 ; CHECK-GI-LABEL: v2i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    mov x9, v0.d[1]
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    clz x9, x9
+; CHECK-GI-NEXT:    fmov d0, x9
 ; CHECK-GI-NEXT:    clz x8, x8
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    clz x8, x9
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -411,16 +411,16 @@ define <4 x i64> @v4i64(<4 x i64> %d) {
 ;
 ; CHECK-GI-LABEL: v4i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    fmov x10, d0
+; CHECK-GI-NEXT:    fmov x11, d1
 ; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov x11, v1.d[1]
-; CHECK-GI-NEXT:    clz x9, x9
+; CHECK-GI-NEXT:    mov x9, v1.d[1]
 ; CHECK-GI-NEXT:    clz x10, x10
-; CHECK-GI-NEXT:    mov v0.d[0], x9
-; CHECK-GI-NEXT:    mov v1.d[0], x10
+; CHECK-GI-NEXT:    clz x11, x11
+; CHECK-GI-NEXT:    fmov d0, x10
+; CHECK-GI-NEXT:    fmov d1, x11
 ; CHECK-GI-NEXT:    clz x8, x8
-; CHECK-GI-NEXT:    clz x9, x11
+; CHECK-GI-NEXT:    clz x9, x9
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    ret

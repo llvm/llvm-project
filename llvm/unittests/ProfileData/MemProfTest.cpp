@@ -15,17 +15,26 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
+#include "llvm/ProfileData/MemProfCommon.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <initializer_list>
 
+LLVM_ABI extern llvm::cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
+LLVM_ABI extern llvm::cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
+LLVM_ABI extern llvm::cl::opt<unsigned>
+    MemProfMinAveLifetimeAccessDensityHotThreshold;
+LLVM_ABI extern llvm::cl::opt<bool> MemProfUseHotHints;
+
 namespace llvm {
 namespace memprof {
+
 namespace {
 
 using ::llvm::DIGlobal;
@@ -859,6 +868,74 @@ TotalLifetimeAccessDensity: 444
 ...
 )YAML");
 }
+
+// Test getAllocType helper.
+// Basic checks on the allocation type for values just above and below
+// the thresholds.
+TEST(MemProf, GetAllocType) {
+  const uint64_t AllocCount = 2;
+  // To be cold we require that
+  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 <
+  //    MemProfLifetimeAccessDensityColdThreshold
+  // so compute the ColdTotalLifetimeAccessDensityThreshold at the threshold.
+  const uint64_t ColdTotalLifetimeAccessDensityThreshold =
+      (uint64_t)(MemProfLifetimeAccessDensityColdThreshold * AllocCount * 100);
+  // To be cold we require that
+  // ((float)TotalLifetime) / AllocCount >=
+  //    MemProfAveLifetimeColdThreshold * 1000
+  // so compute the TotalLifetime right at the threshold.
+  const uint64_t ColdTotalLifetimeThreshold =
+      MemProfAveLifetimeColdThreshold * AllocCount * 1000;
+  // To be hot we require that
+  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
+  //    MemProfMinAveLifetimeAccessDensityHotThreshold
+  // so compute the HotTotalLifetimeAccessDensityThreshold  at the threshold.
+  const uint64_t HotTotalLifetimeAccessDensityThreshold =
+      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount *
+                 100);
+
+  // Make sure the option for detecting hot allocations is set.
+  bool OrigMemProfUseHotHints = MemProfUseHotHints;
+  MemProfUseHotHints = true;
+
+  // Test Hot
+  // More accesses per byte per sec than hot threshold is hot.
+  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
+                         ColdTotalLifetimeThreshold + 1),
+            AllocationType::Hot);
+
+  // Restore original option value.
+  MemProfUseHotHints = OrigMemProfUseHotHints;
+
+  // Without MemProfUseHotHints (default) we should treat simply as NotCold.
+  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
+                         ColdTotalLifetimeThreshold + 1),
+            AllocationType::NotCold);
+
+  // Test Cold
+  // Long lived with less accesses per byte per sec than cold threshold is cold.
+  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1,
+                         AllocCount, ColdTotalLifetimeThreshold + 1),
+            AllocationType::Cold);
+
+  // Test NotCold
+  // Long lived with more accesses per byte per sec than cold threshold is not
+  // cold.
+  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1,
+                         AllocCount, ColdTotalLifetimeThreshold + 1),
+            AllocationType::NotCold);
+  // Short lived with more accesses per byte per sec than cold threshold is not
+  // cold.
+  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1,
+                         AllocCount, ColdTotalLifetimeThreshold - 1),
+            AllocationType::NotCold);
+  // Short lived with less accesses per byte per sec than cold threshold is not
+  // cold.
+  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1,
+                         AllocCount, ColdTotalLifetimeThreshold - 1),
+            AllocationType::NotCold);
+}
+
 } // namespace
 } // namespace memprof
 } // namespace llvm

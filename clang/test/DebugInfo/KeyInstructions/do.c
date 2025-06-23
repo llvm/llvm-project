@@ -25,9 +25,12 @@ void a(int A) {
 // CHECK: %tobool = icmp ne i32 %dec, 0, !dbg [[G2R1:!.*]]
 // CHECK: br i1 %tobool, label %do.body, label %do.end, !dbg [[G3R1:!.*]], !llvm.loop
     do { } while (--A);
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)

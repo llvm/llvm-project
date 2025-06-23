@@ -69,20 +69,26 @@ void Block::cleanup() {
 void Block::replacePointer(Pointer *Old, Pointer *New) {
   assert(Old);
   assert(New);
+  assert(Old != New);
   if (IsStatic) {
     assert(!Pointers);
     return;
   }
-
 #ifndef NDEBUG
   assert(hasPointer(Old));
 #endif
 
-  removePointer(Old);
-  addPointer(New);
+  if (Old->Prev)
+    Old->Prev->Next = New;
+  if (Old->Next)
+    Old->Next->Prev = New;
+  New->Prev = Old->Prev;
+  New->Next = Old->Next;
+  if (Pointers == Old)
+    Pointers = New;
 
   Old->PointeeStorage.BS.Pointee = nullptr;
-
+  New->PointeeStorage.BS.Pointee = this;
 #ifndef NDEBUG
   assert(!hasPointer(Old));
   assert(hasPointer(New));

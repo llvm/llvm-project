@@ -326,39 +326,34 @@ def StdVariantChecker : Checker<"StdVariant">,
 
 let ParentPackage = Nullability in {
 
-def NullabilityBase : Checker<"NullabilityBase">,
-  HelpText<"Stores information during the analysis about nullability.">,
-  Documentation<NotDocumented>,
-  Hidden;
+  def NullPassedToNonnullChecker
+      : Checker<"NullPassedToNonnull">,
+        HelpText<"Warns when a null pointer is passed to a pointer which has a "
+                 "_Nonnull type.">,
+        Documentation<HasDocumentation>;
 
-def NullPassedToNonnullChecker : Checker<"NullPassedToNonnull">,
-  HelpText<"Warns when a null pointer is passed to a pointer which has a "
-           "_Nonnull type.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<HasDocumentation>;
+  def NullReturnedFromNonnullChecker
+      : Checker<"NullReturnedFromNonnull">,
+        HelpText<"Warns when a null pointer is returned from a function that "
+                 "has _Nonnull return type.">,
+        Documentation<HasDocumentation>;
 
-def NullReturnedFromNonnullChecker : Checker<"NullReturnedFromNonnull">,
-  HelpText<"Warns when a null pointer is returned from a function that has "
-           "_Nonnull return type.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<HasDocumentation>;
+  def NullableDereferencedChecker
+      : Checker<"NullableDereferenced">,
+        HelpText<"Warns when a nullable pointer is dereferenced.">,
+        Documentation<HasDocumentation>;
 
-def NullableDereferencedChecker : Checker<"NullableDereferenced">,
-  HelpText<"Warns when a nullable pointer is dereferenced.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<HasDocumentation>;
+  def NullablePassedToNonnullChecker
+      : Checker<"NullablePassedToNonnull">,
+        HelpText<"Warns when a nullable pointer is passed to a pointer which "
+                 "has a _Nonnull type.">,
+        Documentation<HasDocumentation>;
 
-def NullablePassedToNonnullChecker : Checker<"NullablePassedToNonnull">,
-  HelpText<"Warns when a nullable pointer is passed to a pointer which has a "
-           "_Nonnull type.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<HasDocumentation>;
-
-def NullableReturnedFromNonnullChecker : Checker<"NullableReturnedFromNonnull">,
-  HelpText<"Warns when a nullable pointer is returned from a function that has "
-           "_Nonnull return type.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<NotDocumented>;
+  def NullableReturnedFromNonnullChecker
+      : Checker<"NullableReturnedFromNonnull">,
+        HelpText<"Warns when a nullable pointer is returned from a function "
+                 "that has _Nonnull return type.">,
+        Documentation<NotDocumented>;
 
 } // end "nullability"
 

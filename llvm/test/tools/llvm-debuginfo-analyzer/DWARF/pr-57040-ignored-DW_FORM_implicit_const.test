@@ -28,7 +28,7 @@
 ;  8    return ParamUnsigned;
 ;  9  }
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,format,producer \
 ; RUN:                         --print=scopes,symbols,types \
 ; RUN:                         %p/Inputs/pr-57040-test-dwarf-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
@@ -38,6 +38,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 14.0.6'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT: [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
 ; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo' -> 'int'
 ; ONE-NEXT: [003]                 {Block}
@@ -47,7 +48,7 @@
 ; ONE-NEXT: [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
 ; ONE-NEXT: [003]     4           {TypeAlias} 'INTEGER' -> 'int'
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,format,producer \
 ; RUN:                         --print=scopes,symbols,types \
 ; RUN:                         %p/Inputs/pr-57040-test-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
@@ -57,6 +58,7 @@
 ; TWO-EMPTY:
 ; TWO-NEXT: [001]             {CompileUnit} 'test.cpp'
 ; TWO-NEXT: [002]               {Producer} 'GNU C++17 11.3.0 {{.*}}'
+; TWO-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; TWO-NEXT: [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
 ; TWO-NEXT: [002]     2         {Function} extern not_inlined 'foo' -> 'int'
 ; TWO-NEXT: [003]                 {Block}

@@ -443,7 +443,8 @@ makeReproducerStreamFactory(StringRef outputFile) {
 
 void printAsTextualPipeline(
     raw_ostream &os, StringRef anchorName,
-    const llvm::iterator_range<OpPassManager::pass_iterator> &passes);
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty = false);
 
 std::string mlir::makeReproducer(
     StringRef anchorName,

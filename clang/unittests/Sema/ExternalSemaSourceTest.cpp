@@ -268,20 +268,6 @@ TEST(ExternalSemaSource, ExternalTypoCorrectionOrdering) {
   ASSERT_EQ(1, Watcher.SeenCount);
 }
 
-TEST(ExternalSemaSource, ExternalDelayedTypoCorrection) {
-  auto Installer = std::make_unique<ExternalSemaSourceInstaller>();
-  auto Provider = makeIntrusiveRefCnt<FunctionTypoProvider>("aaa", "bbb");
-  DiagnosticWatcher Watcher("aaa", "bbb");
-  Installer->PushSource(Provider.get());
-  Installer->PushWatcher(&Watcher);
-  std::vector<std::string> Args(1, "-std=c++11");
-  ASSERT_TRUE(clang::tooling::runToolOnCodeWithArgs(
-      std::move(Installer), "namespace AAA { } void foo() { AAA::aaa(); }",
-      Args));
-  ASSERT_LE(0, Provider->CallCount);
-  ASSERT_EQ(1, Watcher.SeenCount);
-}
-
 // We should only try MaybeDiagnoseMissingCompleteType if we can't otherwise
 // solve the problem.
 TEST(ExternalSemaSource, TryOtherTacticsBeforeDiagnosing) {

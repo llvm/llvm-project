@@ -1,4 +1,26 @@
 add_proxy_header_library(
+  char8_t 
+  HDRS
+    char8_t.h
+  DEPENDS
+    libc.hdr.uchar_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.char8_t
+    libc.include.uchar
+)
+
+add_proxy_header_library(
+  char32_t 
+  HDRS
+    char32_t.h
+  DEPENDS
+    libc.hdr.uchar_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.char32_t
+    libc.include.uchar
+)
+
+add_proxy_header_library(
   div_t
   HDRS
     div_t.h

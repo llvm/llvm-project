@@ -225,7 +225,7 @@ class X86InstrInfo final : public X86GenInstrInfo {
   X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   bool analyzeBranchImpl(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                          MachineBasicBlock *&FBB,

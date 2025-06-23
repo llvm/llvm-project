@@ -55,8 +55,15 @@ bool isValidAddrOffset(int Scale, int64_t OffsetVal);
 // Check address offset for load/store instructions.
 bool isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset);
 
+enum RegisterAccessType {
+  REGISTER_WRITE = 1,
+  REGISTER_READ = 2,
+  REGISTER_EXCHANGE = 3
+};
+
 // Verify if it's correct to use a special register.
-bool checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits);
+bool checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
+                   RegisterAccessType RA);
 } // namespace Xtensa
 } // end namespace llvm
 

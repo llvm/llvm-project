@@ -16,6 +16,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_THINLTOBITCODEWRITER_H
 #define LLVM_TRANSFORMS_IPO_THINLTOBITCODEWRITER_H
 
+#include "llvm/Support/Compiler.h"
 #include <llvm/IR/PassManager.h>
 
 namespace llvm {
@@ -36,7 +37,7 @@ public:
       : OS(OS), ThinLinkOS(ThinLinkOS),
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };

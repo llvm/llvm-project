@@ -19,6 +19,13 @@ TEST_P(olGetDeviceInfoTest, SuccessType) {
                                  sizeof(ol_device_type_t), &DeviceType));
 }
 
+TEST_P(olGetDeviceInfoTest, HostSuccessType) {
+  ol_device_type_t DeviceType;
+  ASSERT_SUCCESS(olGetDeviceInfo(Host, OL_DEVICE_INFO_TYPE,
+                                 sizeof(ol_device_type_t), &DeviceType));
+  ASSERT_EQ(DeviceType, OL_DEVICE_TYPE_HOST);
+}
+
 TEST_P(olGetDeviceInfoTest, SuccessPlatform) {
   ol_platform_handle_t Platform = nullptr;
   ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM,

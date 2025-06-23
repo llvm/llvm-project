@@ -39,6 +39,10 @@
 # define __has_builtin(x) 0
 #endif
 
+#ifndef __has_warning
+# define __has_warning(x) 0
+#endif
+
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
 // C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
 #ifndef LLVM_HAS_CPP_ATTRIBUTE
@@ -205,7 +209,7 @@
 #define LLVM_ABI_FRIEND LLVM_ABI
 #define LLVM_ABI_EXPORT __declspec(dllexport)
 #elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__)
+    defined(__MVS__) || defined(__CYGWIN__)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_ABI_FRIEND
 #define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
@@ -232,6 +236,12 @@
 #define LLVM_PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
 #else
 #define LLVM_PREFETCH(addr, rw, locality)
+#endif
+
+#if __has_attribute(uninitialized)
+#define LLVM_ATTRIBUTE_UNINITIALIZED __attribute__((uninitialized))
+#else
+#define LLVM_ATTRIBUTE_UNINITIALIZED
 #endif
 
 #if __has_attribute(used)
@@ -709,5 +719,29 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #else
 #define LLVM_PREFERRED_TYPE(T)
 #endif
+
+/// \macro LLVM_VIRTUAL_ANCHOR_FUNCTION
+/// This macro is used to adhere to LLVM's policy that each class with a vtable
+/// must have at least one out-of-line virtual function. This macro allows us
+/// to declare such a function in `final` classes without triggering a warning.
+// clang-format off
+// Autoformatting makes this look awful.
+#if defined(__clang__)
+  // Make sure this is only parsed if __clang__ is defined
+  #if __has_warning("-Wunnecessary-virtual-specifier")
+    #define LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION()                            \
+      _Pragma("clang diagnostic push")                                        \
+      _Pragma("clang diagnostic ignored \"-Wunnecessary-virtual-specifier\"") \
+      virtual void anchor()                                                   \
+      _Pragma("clang diagnostic pop")
+  #else // __has_warning
+    #define LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION()                            \
+      virtual void anchor()
+  #endif
+#else // defined(__clang__)
+  #define LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION()                              \
+    virtual void anchor()
+#endif
+// clang-format on
 
 #endif

@@ -19,7 +19,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
-#include <climits>
 #include <cstdint>
 
 namespace llvm {
@@ -32,6 +31,10 @@ class Value;
 class DXILResourceTypeMap;
 
 namespace dxil {
+
+// Returns the resource name from dx_resource_handlefrombinding or
+// dx_resource_handlefromimplicitbinding call
+StringRef getResourceNameFromBindingCall(CallInst *CI);
 
 /// The dx.RawBuffer target extension type
 ///
@@ -297,7 +300,7 @@ public:
       : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid) {}
 
   TargetExtType *getHandleTy() const { return HandleTy; }
-  LLVM_ABI StructType *createElementStruct();
+  LLVM_ABI StructType *createElementStruct(StringRef CBufferName = "");
 
   // Conditions to check before accessing specific views.
   LLVM_ABI bool isUAV() const;
@@ -355,11 +358,15 @@ public:
       return std::tie(RecordID, Space, LowerBound, Size) <
              std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
+    bool overlapsWith(const ResourceBinding &RHS) const {
+      return Space == RHS.Space && LowerBound + Size - 1 >= RHS.LowerBound;
+    }
   };
 
 private:
   ResourceBinding Binding;
   TargetExtType *HandleTy;
+  StringRef Name;
   GlobalVariable *Symbol = nullptr;
 
 public:
@@ -367,10 +374,10 @@ public:
   ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
 
   ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
-               uint32_t Size, TargetExtType *HandleTy,
+               uint32_t Size, TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
       : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
-        Symbol(Symbol) {}
+        Name(Name), Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.RecordID = ID; }
 
@@ -380,19 +387,18 @@ public:
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
+  const StringRef getName() const { return Name; }
 
   bool hasSymbol() const { return Symbol; }
-  LLVM_ABI GlobalVariable *createSymbol(Module &M, StructType *Ty,
-                                        StringRef Name = "");
+  LLVM_ABI GlobalVariable *createSymbol(Module &M, StructType *Ty);
   LLVM_ABI MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   LLVM_ABI std::pair<uint32_t, uint32_t>
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceInfo &RHS) const {
-    return std::tie(Binding, HandleTy, Symbol) ==
-           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol);
+    return std::tie(Binding, HandleTy, Symbol, Name) ==
+           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol, RHS.Name);
   }
   bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceInfo &RHS) const {

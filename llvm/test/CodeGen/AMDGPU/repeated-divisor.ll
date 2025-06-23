@@ -232,8 +232,8 @@ define <2 x float> @v_repeat_divisor_f32_x2_arcp_daz(float %x, float %y, float %
 ; GFX11-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
 ; GFX11-NEXT:    v_div_fixup_f32 v2, v3, v2, 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %div0 = fdiv arcp float %x, %D
   %div1 = fdiv arcp float %y, %D
@@ -434,8 +434,8 @@ define <3 x float> @v_repeat_divisor_f32_x3_arcp(float %x, float %y, float %z, f
 ; GFX11-NEXT:    v_div_fmas_f32 v4, v4, v5, v6
 ; GFX11-NEXT:    v_div_fixup_f32 v3, v4, v3, 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v3
+; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX11-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %div0 = fdiv arcp float %x, %D

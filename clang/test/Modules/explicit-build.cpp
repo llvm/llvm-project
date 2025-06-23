@@ -1,17 +1,20 @@
+// Requires a specific target as the "module file has a different size than expected" is not reliable on all architectures.
+// REQUIRES: x86-registered-target
+
 // RUN: rm -rf %t
 
 // -------------------------------
 // Build chained modules A, B, and C
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-name=a -emit-module %S/Inputs/explicit-build/module.modulemap -o %t/a.pcm \
 // RUN:            2>&1 | FileCheck --check-prefix=CHECK-NO-IMPLICIT-BUILD %s --allow-empty
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -fmodule-name=b -emit-module %S/Inputs/explicit-build/module.modulemap -o %t/b.pcm \
 // RUN:            2>&1 | FileCheck --check-prefix=CHECK-NO-IMPLICIT-BUILD %s --allow-empty
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/b.pcm \
 // RUN:            -fmodule-name=c -emit-module %S/Inputs/explicit-build/module.modulemap -o %t/c.pcm \
 // RUN:            2>&1 | FileCheck --check-prefix=CHECK-NO-IMPLICIT-BUILD %s --allow-empty
@@ -20,7 +23,7 @@
 
 // -------------------------------
 // Build B with an implicit build of A
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-name=b -emit-module %S/Inputs/explicit-build/module.modulemap -o %t/b-not-a.pcm \
 // RUN:            2>&1 | FileCheck --check-prefix=CHECK-B-NO-A %s
 //
@@ -29,36 +32,36 @@
 
 // -------------------------------
 // Check that we can use the explicitly-built A, B, and C modules.
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -verify %s -DHAVE_A
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-map-file=%S/Inputs/explicit-build/module.modulemap \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -verify %s -DHAVE_A
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/b.pcm \
 // RUN:            -verify %s -DHAVE_A -DHAVE_B
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -fmodule-file=%t/b.pcm \
 // RUN:            -verify %s -DHAVE_A -DHAVE_B
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -fmodule-file=%t/b.pcm \
 // RUN:            -fmodule-file=%t/c.pcm \
 // RUN:            -verify %s -DHAVE_A -DHAVE_B -DHAVE_C
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -fmodule-file=%t/c.pcm \
@@ -67,12 +70,12 @@
 // -------------------------------
 // Check that -fmodule-file= in a module build makes the file transitively
 // available even if it's not used.
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fno-implicit-modules -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fno-implicit-modules -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/b.pcm \
 // RUN:            -fmodule-name=d -emit-module %S/Inputs/explicit-build/module.modulemap -o %t/d.pcm \
 // RUN:            2>&1 | FileCheck --check-prefix=CHECK-NO-IMPLICIT-BUILD %s --allow-empty
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fno-implicit-modules -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fno-implicit-modules -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/d.pcm \
 // RUN:            -verify %s -DHAVE_A -DHAVE_B
@@ -104,35 +107,35 @@
 
 // -------------------------------
 // Check that we can use a mixture of implicit and explicit modules.
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/b-not-a.pcm \
 // RUN:            -verify %s -DHAVE_A -DHAVE_B
 
 // -------------------------------
 // Try to use two different flavors of the 'a' module.
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -fmodule-file=%t/b-not-a.pcm \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-MULTIPLE-AS %s
 //
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -fmodule-file=%t/b-not-a.pcm \
 // RUN:            -fmodule-map-file=%S/Inputs/explicit-build/module.modulemap \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-MULTIPLE-AS %s
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-name=a -emit-module %S/Inputs/explicit-build/module.modulemap -o %t/a-alt.pcm \
 // RUN:            2>&1 | FileCheck --check-prefix=CHECK-NO-IMPLICIT-BUILD %s --allow-empty
 //
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -fmodule-file=%t/a-alt.pcm \
 // RUN:            -fmodule-map-file=%S/Inputs/explicit-build/module.modulemap \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-MULTIPLE-AS %s
 //
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/a-alt.pcm \
 // RUN:            -fmodule-file=%t/a.pcm \
 // RUN:            -fmodule-map-file=%S/Inputs/explicit-build/module.modulemap \
@@ -142,35 +145,35 @@
 
 // -------------------------------
 // Try to import a PCH with -fmodule-file=
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-name=a -emit-pch %S/Inputs/explicit-build/a.h -o %t/a.pch -DBUILDING_A_PCH \
 // RUN:            2>&1 | FileCheck --check-prefix=CHECK-NO-IMPLICIT-BUILD %s --allow-empty
 //
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/a.pch \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-A-AS-PCH %s
 //
-// CHECK-A-AS-PCH: fatal error: AST file '{{.*}}a.pch' was not built as a module
+// CHECK-A-AS-PCH: fatal error: precompiled file '{{.*}}a.pch' was not built as a module
 
 // -------------------------------
 // Try to import a non-AST file with -fmodule-file=
 //
 // RUN: touch %t/not.pcm
 //
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/not.pcm \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-BAD-FILE %s
 //
-// CHECK-BAD-FILE: fatal error: file '{{.*}}not.pcm' is not a valid precompiled module file: file too small to contain AST file magic
+// CHECK-BAD-FILE: fatal error: file '{{.*}}not.pcm' is not a valid module file: file too small to contain precompiled file magic
 
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/nonexistent.pcm \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FILE %s
 //
 // CHECK-NO-FILE: fatal error: module file '{{.*}}nonexistent.pcm' not found: module file not found
 
 // RUN: mv %t/a.pcm %t/a-tmp.pcm
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/c.pcm \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FILE-INDIRECT %s
@@ -185,7 +188,7 @@
 // Check that we don't get upset if B's timestamp is newer than C's.
 // RUN: touch %t/b.pcm
 //
-// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/c.pcm \
 // RUN:            -verify %s -DHAVE_A -DHAVE_B -DHAVE_C
@@ -194,7 +197,7 @@
 //
 // RUN: cp %t/b-not-a.pcm %t/b.pcm
 //
-// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -I%S/Inputs/explicit-build \
 // RUN:            -fmodule-file=%t/c.pcm \
 // RUN:            %s -DHAVE_A -DHAVE_B -DHAVE_C 2>&1 | FileCheck --check-prefix=CHECK-MISMATCHED-B %s

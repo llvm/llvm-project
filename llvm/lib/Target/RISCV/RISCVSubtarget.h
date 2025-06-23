@@ -83,6 +83,7 @@ public:
     SiFive7,
     VentanaVeyron,
     MIPSP8700,
+    Andes45,
   };
   enum RISCVVRGatherCostModelEnum : uint8_t {
     Quadratic,

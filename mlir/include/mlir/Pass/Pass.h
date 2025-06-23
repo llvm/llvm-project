@@ -118,8 +118,9 @@ public:
                     function_ref<LogicalResult(const Twine &)> errorHandler);
 
   /// Prints out the pass in the textual representation of pipelines. If this is
-  /// an adaptor pass, print its pass managers.
-  void printAsTextualPipeline(raw_ostream &os);
+  /// an adaptor pass, print its pass managers. When `pretty` is true, the
+  /// printed pipeline is formatted for readability.
+  void printAsTextualPipeline(raw_ostream &os, bool pretty = false);
 
   //===--------------------------------------------------------------------===//
   // Statistics

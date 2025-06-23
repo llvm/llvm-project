@@ -35,7 +35,6 @@ struct __from_chars_result {
   errc __ec;
 };
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Fp>
 _LIBCPP_EXPORTED_FROM_ABI __from_chars_result<_Fp> __from_chars_floating_point(
     _LIBCPP_NOESCAPE const char* __first, _LIBCPP_NOESCAPE const char* __last, chars_format __fmt);
@@ -45,7 +44,6 @@ extern template __from_chars_result<float> __from_chars_floating_point(
 
 extern template __from_chars_result<double> __from_chars_floating_point(
     _LIBCPP_NOESCAPE const char* __first, _LIBCPP_NOESCAPE const char* __last, chars_format __fmt);
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Fp>
 _LIBCPP_HIDE_FROM_ABI from_chars_result

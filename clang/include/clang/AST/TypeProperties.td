@@ -317,6 +317,9 @@ let Class = FunctionProtoType in {
   def : Property<"trailingReturn", Bool> {
     let Read = [{ node->hasTrailingReturn() }];
   }
+  def : Property<"cfiUncheckedCallee", Bool> {
+    let Read = [{ node->hasCFIUncheckedCallee() }];
+  }
   def : Property<"methodQualifiers", Qualifiers> {
     let Read = [{ node->getMethodQuals() }];
   }
@@ -353,6 +356,7 @@ let Class = FunctionProtoType in {
     epi.ExtInfo = extInfo;
     epi.Variadic = variadic;
     epi.HasTrailingReturn = trailingReturn;
+    epi.CFIUncheckedCallee = cfiUncheckedCallee;
     epi.TypeQuals = methodQualifiers;
     epi.RefQualifier = refQualifier;
     epi.ExceptionSpec = exceptionSpecifier;
@@ -881,7 +885,7 @@ let Class = BuiltinType in {
 
 #define SVE_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 
 #define PPC_VECTOR_TYPE(NAME, ID, SIZE) \
       case BuiltinType::ID: return ctx.ID##Ty;

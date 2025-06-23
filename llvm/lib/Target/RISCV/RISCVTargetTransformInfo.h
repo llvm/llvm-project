@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
+class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   using BaseT = BasicTTIImplBase<RISCVTTIImpl>;
   using TTI = TargetTransformInfo;
 

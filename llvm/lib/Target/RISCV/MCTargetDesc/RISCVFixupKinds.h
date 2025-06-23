@@ -54,7 +54,7 @@ enum Fixups {
   // 20-bit fixup for symbol references in the 32-bit qc.li instruction
   fixup_riscv_qc_abs20_u,
   // 32-bit fixup for symbol references in the 48-bit qc.j/qc.jal instructions
-  fixup_riscv_qc_e_jump_plt,
+  fixup_riscv_qc_e_call_plt,
 
   // Used as a sentinel, must be the last
   fixup_riscv_invalid,

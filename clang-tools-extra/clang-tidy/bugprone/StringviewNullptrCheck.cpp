@@ -33,7 +33,7 @@ AST_MATCHER(clang::VarDecl, isDirectInitialization) {
 
 } // namespace
 
-RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
+static RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
   auto ConstructionWarning =
       cat("constructing basic_string_view from null is undefined; replace with "
           "the default constructor");

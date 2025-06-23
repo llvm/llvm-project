@@ -73,9 +73,6 @@ static cl::opt<bool>
     EnableHexSDNodeSched("enable-hexagon-sdnode-sched", cl::Hidden,
                          cl::desc("Enable Hexagon SDNode scheduling"));
 
-static cl::opt<bool> EnableFastMath("ffast-math", cl::Hidden,
-                                    cl::desc("Enable Fast Math processing"));
-
 static cl::opt<int> MinimumJumpTables("minimum-jump-tables", cl::Hidden,
                                       cl::init(5),
                                       cl::desc("Set minimum jump tables"));
@@ -1850,46 +1847,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     initializeHVXLowering();
 
   computeRegisterProperties(&HRI);
-
-  //
-  // Library calls for unsupported operations
-  //
-  bool FastMath  = EnableFastMath;
-
-  setLibcallName(RTLIB::SDIV_I32, "__hexagon_divsi3");
-  setLibcallName(RTLIB::SDIV_I64, "__hexagon_divdi3");
-  setLibcallName(RTLIB::UDIV_I32, "__hexagon_udivsi3");
-  setLibcallName(RTLIB::UDIV_I64, "__hexagon_udivdi3");
-  setLibcallName(RTLIB::SREM_I32, "__hexagon_modsi3");
-  setLibcallName(RTLIB::SREM_I64, "__hexagon_moddi3");
-  setLibcallName(RTLIB::UREM_I32, "__hexagon_umodsi3");
-  setLibcallName(RTLIB::UREM_I64, "__hexagon_umoddi3");
-
-  // This is the only fast library function for sqrtd.
-  if (FastMath)
-    setLibcallName(RTLIB::SQRT_F64, "__hexagon_fast2_sqrtdf2");
-
-  // Prefix is: nothing  for "slow-math",
-  //            "fast2_" for V5+ fast-math double-precision
-  // (actually, keep fast-math and fast-math2 separate for now)
-  if (FastMath) {
-    setLibcallName(RTLIB::ADD_F64, "__hexagon_fast_adddf3");
-    setLibcallName(RTLIB::SUB_F64, "__hexagon_fast_subdf3");
-    setLibcallName(RTLIB::MUL_F64, "__hexagon_fast_muldf3");
-    setLibcallName(RTLIB::DIV_F64, "__hexagon_fast_divdf3");
-    setLibcallName(RTLIB::DIV_F32, "__hexagon_fast_divsf3");
-  } else {
-    setLibcallName(RTLIB::ADD_F64, "__hexagon_adddf3");
-    setLibcallName(RTLIB::SUB_F64, "__hexagon_subdf3");
-    setLibcallName(RTLIB::MUL_F64, "__hexagon_muldf3");
-    setLibcallName(RTLIB::DIV_F64, "__hexagon_divdf3");
-    setLibcallName(RTLIB::DIV_F32, "__hexagon_divsf3");
-  }
-
-  if (FastMath)
-    setLibcallName(RTLIB::SQRT_F32, "__hexagon_fast2_sqrtf");
-  else
-    setLibcallName(RTLIB::SQRT_F32, "__hexagon_sqrtf");
 }
 
 const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {

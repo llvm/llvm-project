@@ -274,11 +274,13 @@ static bool supportsAmdgpu(uint64_t Type) {
 }
 
 static uint64_t resolveAmdgpu(uint64_t Type, uint64_t Offset, uint64_t S,
-                              uint64_t /*LocData*/, int64_t Addend) {
+                              uint64_t LocData, int64_t Addend) {
+  assert((LocData == 0 || Addend == 0) &&
+         "one of LocData and Addend must be 0");
   switch (Type) {
   case ELF::R_AMDGPU_ABS32:
   case ELF::R_AMDGPU_ABS64:
-    return S + Addend;
+    return S + LocData + Addend;
   default:
     llvm_unreachable("Invalid relocation type");
   }
@@ -888,7 +890,8 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
         return Elf64BEObj->getRelSection(R.getRawDataRefImpl())->sh_type;
       };
 
-      if (GetRelSectionType() == ELF::SHT_RELA) {
+      if (GetRelSectionType() == ELF::SHT_RELA ||
+          GetRelSectionType() == ELF::SHT_CREL) {
         Addend = getELFAddend(R);
         // LoongArch and RISCV relocations use both LocData and Addend.
         if (Obj->getArch() != Triple::loongarch32 &&

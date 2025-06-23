@@ -28,6 +28,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <bitset>
 
@@ -212,23 +213,23 @@ public:
       return true;
     }
 
-    if (Inst.getOpcode() == RISCV::C_JAL || Inst.getOpcode() == RISCV::C_J) {
+    switch (Inst.getOpcode()) {
+    case RISCV::C_J:
+    case RISCV::C_JAL:
+    case RISCV::QC_E_J:
+    case RISCV::QC_E_JAL:
       Target = Addr + Inst.getOperand(0).getImm();
       return true;
-    }
-
-    if (Inst.getOpcode() == RISCV::JAL) {
+    case RISCV::JAL:
       Target = Addr + Inst.getOperand(1).getImm();
       return true;
-    }
-
-    if (Inst.getOpcode() == RISCV::JALR) {
+    case RISCV::JALR: {
       if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
         Target = *TargetRegState + Inst.getOperand(2).getImm();
         return true;
       }
-
       return false;
+    }
     }
 
     return false;
@@ -331,7 +332,8 @@ static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
   return new RISCVMCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeRISCVTargetMC() {
   for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);
     TargetRegistry::RegisterMCObjectFileInfo(*T, createRISCVMCObjectFileInfo);

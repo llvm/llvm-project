@@ -531,8 +531,10 @@ struct StaticLibcallNameMap {
   StaticLibcallNameMap() {
     static const std::pair<const char *, RTLIB::Libcall> NameLibcalls[] = {
 #define HANDLE_LIBCALL(code, name) {(const char *)name, RTLIB::code},
+#define LIBCALL_NO_NAME nullptr
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
+#undef LIBCALL_NO_NAME
     };
     for (const auto &NameLibcall : NameLibcalls) {
       if (NameLibcall.first != nullptr &&

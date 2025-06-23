@@ -659,6 +659,35 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   return NumErrors;
 }
 
+bool DWARFVerifier::verifyExpressionOp(const DWARFExpression::Operation &Op,
+                                       DWARFUnit *U) {
+  for (unsigned Operand = 0; Operand < Op.Desc.Op.size(); ++Operand) {
+    unsigned Size = Op.Desc.Op[Operand];
+
+    if (Size == DWARFExpression::Operation::BaseTypeRef) {
+      // For DW_OP_convert the operand may be 0 to indicate that conversion to
+      // the generic type should be done, so don't look up a base type in that
+      // case. The same holds for DW_OP_reinterpret, which is currently not
+      // supported.
+      if (Op.Opcode == DW_OP_convert && Op.Operands[Operand] == 0)
+        continue;
+      auto Die = U->getDIEForOffset(U->getOffset() + Op.Operands[Operand]);
+      if (!Die || Die.getTag() != dwarf::DW_TAG_base_type)
+        return false;
+    }
+  }
+
+  return true;
+}
+
+bool DWARFVerifier::verifyExpression(const DWARFExpression &E, DWARFUnit *U) {
+  for (auto &Op : E)
+    if (!verifyExpressionOp(Op, U))
+      return false;
+
+  return true;
+}
+
 unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                                  DWARFAttribute &AttrValue) {
   unsigned NumErrors = 0;
@@ -727,7 +756,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
             any_of(Expression, [](const DWARFExpression::Operation &Op) {
               return Op.isError();
             });
-        if (Error || !Expression.verify(U))
+        if (Error || !verifyExpression(Expression, U))
           ReportError("Invalid DWARF expressions",
                       "DIE contains invalid DWARF expression:");
       }

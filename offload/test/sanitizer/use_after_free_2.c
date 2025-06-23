@@ -22,7 +22,7 @@ int main() {
     *P = 3;
   }
   // clang-format off
-// CHECK: OFFLOAD ERROR: Memory access fault by GPU {{.*}} (agent 0x{{.*}}) at virtual address [[PTR:0x[0-9a-z]*]]. Reasons: {{.*}}
+// CHECK: OFFLOAD ERROR: memory access fault by GPU {{.*}} (agent 0x{{.*}}) at virtual address [[PTR:0x[0-9a-z]*]]. Reasons: {{.*}}
 // CHECK: Device pointer [[PTR]] points into prior host-issued allocation:
 // CHECK: Last deallocation:
 // CHECK: Last allocation of size 1073741824

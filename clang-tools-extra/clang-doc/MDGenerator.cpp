@@ -75,39 +75,49 @@ static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
 }
 
 static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
-  if (I.Kind == "FullComment") {
+  switch (I.Kind) {
+  case CommentKind::CK_FullComment:
     for (const auto &Child : I.Children)
       writeDescription(*Child, OS);
-  } else if (I.Kind == "ParagraphComment") {
+    break;
+
+  case CommentKind::CK_ParagraphComment:
     for (const auto &Child : I.Children)
       writeDescription(*Child, OS);
     writeNewLine(OS);
-  } else if (I.Kind == "BlockCommandComment") {
+    break;
+
+  case CommentKind::CK_BlockCommandComment:
     OS << genEmphasis(I.Name);
     for (const auto &Child : I.Children)
       writeDescription(*Child, OS);
-  } else if (I.Kind == "InlineCommandComment") {
+    break;
+
+  case CommentKind::CK_InlineCommandComment:
     OS << genEmphasis(I.Name) << " " << I.Text;
-  } else if (I.Kind == "ParamCommandComment") {
+    break;
+
+  case CommentKind::CK_ParamCommandComment:
+  case CommentKind::CK_TParamCommandComment: {
     std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
     OS << genEmphasis(I.ParamName) << I.Text << Direction;
     for (const auto &Child : I.Children)
       writeDescription(*Child, OS);
-  } else if (I.Kind == "TParamCommandComment") {
-    std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
-    OS << genEmphasis(I.ParamName) << I.Text << Direction;
+    break;
+  }
+
+  case CommentKind::CK_VerbatimBlockComment:
     for (const auto &Child : I.Children)
       writeDescription(*Child, OS);
-  } else if (I.Kind == "VerbatimBlockComment") {
-    for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
-  } else if (I.Kind == "VerbatimBlockLineComment") {
+    break;
+
+  case CommentKind::CK_VerbatimBlockLineComment:
+  case CommentKind::CK_VerbatimLineComment:
     OS << I.Text;
     writeNewLine(OS);
-  } else if (I.Kind == "VerbatimLineComment") {
-    OS << I.Text;
-    writeNewLine(OS);
-  } else if (I.Kind == "HTMLStartTagComment") {
+    break;
+
+  case CommentKind::CK_HTMLStartTagComment: {
     if (I.AttrKeys.size() != I.AttrValues.size())
       return;
     std::string Buffer;
@@ -117,12 +127,20 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
 
     std::string CloseTag = I.SelfClosing ? "/>" : ">";
     writeLine("<" + I.Name + Attrs.str() + CloseTag, OS);
-  } else if (I.Kind == "HTMLEndTagComment") {
+    break;
+  }
+
+  case CommentKind::CK_HTMLEndTagComment:
     writeLine("</" + I.Name + ">", OS);
-  } else if (I.Kind == "TextComment") {
+    break;
+
+  case CommentKind::CK_TextComment:
     OS << I.Text;
-  } else {
-    OS << "Unknown comment kind: " << I.Kind << ".\n\n";
+    break;
+
+  case CommentKind::CK_Unknown:
+    OS << "Unknown comment kind: " << static_cast<int>(I.Kind) << ".\n\n";
+    break;
   }
 }
 

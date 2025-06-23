@@ -24,7 +24,7 @@ void fObs(void) __attribute__((availability(macOS, introduced = 10.11, obsoleted
 
 void fAPItoDepr(void) __attribute__((availability(macOS, introduced = 10.11, deprecated = 100000)));
 
-void dontRemapFutureVers(void) __attribute__((availability(macOS, introduced = 20)));
+void dontRemapFutureVers(void) __attribute__((availability(macOS, introduced = 30)));
 
 void usage(void) {
   f0();

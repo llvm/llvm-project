@@ -1,11 +1,36 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - 2>&1 | FileCheck %s
 
+enum A {
+  A_one,
+  A_two
+};
+enum A a;
+
+// CHECK:   cir.global external @a = #cir.int<0> : !u32i
+
+enum B : int;
+enum B b;
+
+// CHECK:   cir.global external @b = #cir.int<0> : !s32i
+
+enum C : int {
+  C_one,
+  C_two
+};
+enum C c;
+
+// CHECK:   cir.global external @c = #cir.int<0> : !s32i
+
+enum class D : int;
+enum D d;
+
+// CHECK:   cir.global external @d = #cir.int<0> : !s32i
+
 int f1() {
   int i;
   return i;
 }
 
-// CHECK: module
 // CHECK: cir.func @_Z2f1v() -> !s32i
 // CHECK:    %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:    %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"] {alignment = 4 : i64}
@@ -145,29 +170,3 @@ void ref_local(short x) {
 // CHECK:   %[[Y_REF_ADDR:.*]] = cir.alloca !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>, ["y", init, const] {alignment = 8 : i64}
 // CHECK:   cir.store{{.*}} %[[ARG]], %[[X_ADDR]] : !s16i, !cir.ptr<!s16i>
 // CHECK:   cir.store{{.*}} %[[X_ADDR]], %[[Y_REF_ADDR]] : !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>
-
-enum A {
-  A_one,
-  A_two
-};
-enum A a;
-
-// CHECK:   cir.global external @a = #cir.int<0> : !u32i
-
-enum B : int;
-enum B b;
-
-// CHECK:   cir.global external @b = #cir.int<0> : !s32i
-
-enum C : int {
-  C_one,
-  C_two
-};
-enum C c;
-
-// CHECK:   cir.global external @c = #cir.int<0> : !s32i
-
-enum class D : int;
-enum D d;
-
-// CHECK:   cir.global external @d = #cir.int<0> : !s32i

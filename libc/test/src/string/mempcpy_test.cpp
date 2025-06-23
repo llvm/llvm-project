@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#include "hdr/signal_macros.h"
 #include "src/string/mempcpy.h"
 #include "test/UnitTest/Test.h"
 
@@ -26,3 +26,12 @@ TEST(LlvmLibcMempcpyTest, ZeroCount) {
   void *result = LIBC_NAMESPACE::mempcpy(dest, src, 0);
   ASSERT_EQ(static_cast<char *>(result), dest + 0);
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+
+TEST(LlvmLibcMempcpyTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::mempcpy(nullptr, nullptr, 1); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)

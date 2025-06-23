@@ -26,7 +26,7 @@ class ARCSubtarget;
 class ARCTargetLowering;
 class ARCTargetMachine;
 
-class ARCTTIImpl : public BasicTTIImplBase<ARCTTIImpl> {
+class ARCTTIImpl final : public BasicTTIImplBase<ARCTTIImpl> {
   using BaseT = BasicTTIImplBase<ARCTTIImpl>;
   friend BaseT;
 

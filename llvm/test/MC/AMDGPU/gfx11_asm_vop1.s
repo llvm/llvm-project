@@ -3808,3 +3808,9 @@ v_trunc_f64 v[5:6], src_scc
 
 v_trunc_f64 v[254:255], 0xaf123456
 // GFX11: v_trunc_f64_e32 v[254:255], 0xaf123456  ; encoding: [0xff,0x2e,0xfc,0x7f,0x56,0x34,0x12,0xaf]
+
+v_trunc_f16 v[5].l, v[1].h
+// GFX11: v_trunc_f16_e32 v5.l, v1.h              ; encoding: [0x81,0xbb,0x0a,0x7e]
+
+v_trunc_f16 v[5:5].l, v[1:1].h
+// GFX11: v_trunc_f16_e32 v5.l, v1.h              ; encoding: [0x81,0xbb,0x0a,0x7e]

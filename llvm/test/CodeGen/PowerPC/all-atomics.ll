@@ -4336,704 +4336,959 @@ entry:
 define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-LABEL: test_compare_and_swap:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, uc@toc@ha
-; CHECK-NEXT:    addis 4, 2, sc@toc@ha
-; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lbz 5, uc@toc@l(3)
-; CHECK-NEXT:    lbz 8, sc@toc@l(4)
-; CHECK-NEXT:    addi 6, 3, uc@toc@l
-; CHECK-NEXT:    addi 0, 4, sc@toc@l
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_1: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lbarx 7, 0, 0
-; CHECK-NEXT:    cmpw 7, 5
-; CHECK-NEXT:    bne 0, .LBB3_3
-; CHECK-NEXT:  # %bb.2: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stbcx. 8, 0, 0
-; CHECK-NEXT:    bne 0, .LBB3_1
-; CHECK-NEXT:  .LBB3_3: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    stb 7, sc@toc@l(4)
-; CHECK-NEXT:    lbz 8, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_4: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lbarx 5, 0, 6
-; CHECK-NEXT:    cmpw 5, 8
-; CHECK-NEXT:    bne 0, .LBB3_6
-; CHECK-NEXT:  # %bb.5: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stbcx. 7, 0, 6
-; CHECK-NEXT:    bne 0, .LBB3_4
-; CHECK-NEXT:  .LBB3_6: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    stb 5, uc@toc@l(3)
-; CHECK-NEXT:    lbz 7, sc@toc@l(4)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 8, 7
-; CHECK-NEXT:    addis 7, 2, ss@toc@ha
-; CHECK-NEXT:    addi 12, 7, ss@toc@l
-; CHECK-NEXT:  .LBB3_7: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 9, 0, 12
-; CHECK-NEXT:    cmpw 9, 5
-; CHECK-NEXT:    bne 0, .LBB3_9
-; CHECK-NEXT:  # %bb.8: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 8, 0, 12
-; CHECK-NEXT:    bne 0, .LBB3_7
-; CHECK-NEXT:  .LBB3_9: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    sth 9, ss@toc@l(7)
-; CHECK-NEXT:    lbz 7, sc@toc@l(4)
-; CHECK-NEXT:    lbz 5, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 8, 7
-; CHECK-NEXT:    addis 7, 2, us@toc@ha
-; CHECK-NEXT:    addi 11, 7, us@toc@l
-; CHECK-NEXT:  .LBB3_10: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 9, 0, 11
-; CHECK-NEXT:    cmpw 9, 5
-; CHECK-NEXT:    bne 0, .LBB3_12
-; CHECK-NEXT:  # %bb.11: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 8, 0, 11
-; CHECK-NEXT:    bne 0, .LBB3_10
-; CHECK-NEXT:  .LBB3_12: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    sth 9, us@toc@l(7)
-; CHECK-NEXT:    lbz 7, sc@toc@l(4)
-; CHECK-NEXT:    lbz 5, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 8, 7
-; CHECK-NEXT:    addis 7, 2, si@toc@ha
-; CHECK-NEXT:    addi 10, 7, si@toc@l
-; CHECK-NEXT:  .LBB3_13: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lwarx 9, 0, 10
-; CHECK-NEXT:    cmpw 9, 5
-; CHECK-NEXT:    bne 0, .LBB3_15
-; CHECK-NEXT:  # %bb.14: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stwcx. 8, 0, 10
-; CHECK-NEXT:    bne 0, .LBB3_13
-; CHECK-NEXT:  .LBB3_15: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    stw 9, si@toc@l(7)
-; CHECK-NEXT:    lbz 5, sc@toc@l(4)
-; CHECK-NEXT:    lbz 7, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 8, 5
-; CHECK-NEXT:    addis 5, 2, ui@toc@ha
-; CHECK-NEXT:    addi 9, 5, ui@toc@l
-; CHECK-NEXT:  .LBB3_16: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lwarx 30, 0, 9
-; CHECK-NEXT:    cmpw 30, 7
-; CHECK-NEXT:    bne 0, .LBB3_18
-; CHECK-NEXT:  # %bb.17: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stwcx. 8, 0, 9
-; CHECK-NEXT:    bne 0, .LBB3_16
-; CHECK-NEXT:  .LBB3_18: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    stw 30, ui@toc@l(5)
-; CHECK-NEXT:    addis 30, 2, sll@toc@ha
-; CHECK-NEXT:    lbz 8, sc@toc@l(4)
-; CHECK-NEXT:    lbz 7, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 29, 8
-; CHECK-NEXT:    addi 8, 30, sll@toc@l
-; CHECK-NEXT:  .LBB3_19: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 28, 0, 8
-; CHECK-NEXT:    cmpd 28, 7
-; CHECK-NEXT:    bne 0, .LBB3_21
-; CHECK-NEXT:  # %bb.20: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 29, 0, 8
-; CHECK-NEXT:    bne 0, .LBB3_19
-; CHECK-NEXT:  .LBB3_21: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    addis 29, 2, ull@toc@ha
-; CHECK-NEXT:    std 28, sll@toc@l(30)
-; CHECK-NEXT:    lbz 7, sc@toc@l(4)
-; CHECK-NEXT:    lbz 30, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 28, 7
-; CHECK-NEXT:    addi 7, 29, ull@toc@l
-; CHECK-NEXT:  .LBB3_22: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 27, 0, 7
-; CHECK-NEXT:    cmpd 27, 30
-; CHECK-NEXT:    bne 0, .LBB3_24
-; CHECK-NEXT:  # %bb.23: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 28, 0, 7
-; CHECK-NEXT:    bne 0, .LBB3_22
-; CHECK-NEXT:  .LBB3_24: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    std 27, ull@toc@l(29)
-; CHECK-NEXT:    lbz 30, uc@toc@l(3)
-; CHECK-NEXT:    lbz 29, sc@toc@l(4)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_25: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lbarx 28, 0, 0
-; CHECK-NEXT:    cmpw 28, 30
-; CHECK-NEXT:    bne 0, .LBB3_27
-; CHECK-NEXT:  # %bb.26: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stbcx. 29, 0, 0
-; CHECK-NEXT:    bne 0, .LBB3_25
-; CHECK-NEXT:  .LBB3_27: # %entry
-; CHECK-NEXT:    xor 0, 28, 30
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    lbz 30, sc@toc@l(4)
-; CHECK-NEXT:    cntlzw 0, 0
-; CHECK-NEXT:    srwi 0, 0, 5
-; CHECK-NEXT:    stw 0, ui@toc@l(5)
-; CHECK-NEXT:    lbz 0, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_28: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lbarx 29, 0, 6
-; CHECK-NEXT:    cmpw 29, 0
-; CHECK-NEXT:    bne 0, .LBB3_30
-; CHECK-NEXT:  # %bb.29: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stbcx. 30, 0, 6
-; CHECK-NEXT:    bne 0, .LBB3_28
-; CHECK-NEXT:  .LBB3_30: # %entry
-; CHECK-NEXT:    xor 6, 29, 0
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    lbz 0, sc@toc@l(4)
-; CHECK-NEXT:    cntlzw 6, 6
-; CHECK-NEXT:    extsb 0, 0
-; CHECK-NEXT:    srwi 6, 6, 5
-; CHECK-NEXT:    stw 6, ui@toc@l(5)
-; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_31: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 30, 0, 12
-; CHECK-NEXT:    cmpw 30, 6
-; CHECK-NEXT:    bne 0, .LBB3_33
-; CHECK-NEXT:  # %bb.32: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 0, 0, 12
-; CHECK-NEXT:    bne 0, .LBB3_31
-; CHECK-NEXT:  .LBB3_33: # %entry
-; CHECK-NEXT:    xor 6, 30, 6
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    lbz 12, sc@toc@l(4)
-; CHECK-NEXT:    cntlzw 6, 6
-; CHECK-NEXT:    extsb 12, 12
-; CHECK-NEXT:    srwi 6, 6, 5
-; CHECK-NEXT:    stw 6, ui@toc@l(5)
-; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_34: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 0, 0, 11
-; CHECK-NEXT:    cmpw 0, 6
-; CHECK-NEXT:    bne 0, .LBB3_36
-; CHECK-NEXT:  # %bb.35: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 12, 0, 11
-; CHECK-NEXT:    bne 0, .LBB3_34
-; CHECK-NEXT:  .LBB3_36: # %entry
-; CHECK-NEXT:    xor 6, 0, 6
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    lbz 11, sc@toc@l(4)
-; CHECK-NEXT:    cntlzw 6, 6
-; CHECK-NEXT:    extsb 11, 11
-; CHECK-NEXT:    srwi 6, 6, 5
-; CHECK-NEXT:    stw 6, ui@toc@l(5)
-; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_37: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lwarx 12, 0, 10
-; CHECK-NEXT:    cmpw 12, 6
-; CHECK-NEXT:    bne 0, .LBB3_39
-; CHECK-NEXT:  # %bb.38: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stwcx. 11, 0, 10
-; CHECK-NEXT:    bne 0, .LBB3_37
-; CHECK-NEXT:  .LBB3_39: # %entry
-; CHECK-NEXT:    xor 6, 12, 6
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    lbz 10, sc@toc@l(4)
-; CHECK-NEXT:    cntlzw 6, 6
-; CHECK-NEXT:    extsb 10, 10
-; CHECK-NEXT:    srwi 6, 6, 5
-; CHECK-NEXT:    stw 6, ui@toc@l(5)
-; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_40: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lwarx 11, 0, 9
-; CHECK-NEXT:    cmpw 11, 6
-; CHECK-NEXT:    bne 0, .LBB3_42
-; CHECK-NEXT:  # %bb.41: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stwcx. 10, 0, 9
-; CHECK-NEXT:    bne 0, .LBB3_40
-; CHECK-NEXT:  .LBB3_42: # %entry
-; CHECK-NEXT:    xor 6, 11, 6
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    lbz 9, sc@toc@l(4)
-; CHECK-NEXT:    cntlzw 6, 6
-; CHECK-NEXT:    extsb 9, 9
-; CHECK-NEXT:    srwi 6, 6, 5
-; CHECK-NEXT:    stw 6, ui@toc@l(5)
-; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_43: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 10, 0, 8
-; CHECK-NEXT:    cmpd 10, 6
-; CHECK-NEXT:    bne 0, .LBB3_45
-; CHECK-NEXT:  # %bb.44: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 9, 0, 8
-; CHECK-NEXT:    bne 0, .LBB3_43
-; CHECK-NEXT:  .LBB3_45: # %entry
-; CHECK-NEXT:    xor 6, 10, 6
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    lbz 4, sc@toc@l(4)
-; CHECK-NEXT:    lbz 3, uc@toc@l(3)
-; CHECK-NEXT:    cntlzd 6, 6
-; CHECK-NEXT:    extsb 4, 4
-; CHECK-NEXT:    rldicl 6, 6, 58, 63
-; CHECK-NEXT:    stw 6, ui@toc@l(5)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_46: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 6, 0, 7
-; CHECK-NEXT:    cmpd 6, 3
-; CHECK-NEXT:    bne 0, .LBB3_48
-; CHECK-NEXT:  # %bb.47: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 4, 0, 7
-; CHECK-NEXT:    bne 0, .LBB3_46
-; CHECK-NEXT:  .LBB3_48: # %entry
-; CHECK-NEXT:    xor 3, 6, 3
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; CHECK-NEXT:    cntlzd 3, 3
-; CHECK-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; CHECK-NEXT:    rldicl 3, 3, 58, 63
-; CHECK-NEXT:    stw 3, ui@toc@l(5)
-; CHECK-NEXT:    blr
+; CHECK-NEXT:   addis 4, 2, sc@toc@ha
+; CHECK-NEXT:   addis 3, 2, uc@toc@ha
+; CHECK-NEXT:   std 27, -40(1)                          # 8-byte Folded Spill
+; CHECK-NEXT:   std 28, -32(1)                          # 8-byte Folded Spill
+; CHECK-NEXT:   std 29, -24(1)                          # 8-byte Folded Spill
+; CHECK-NEXT:   std 30, -16(1)                          # 8-byte Folded Spill
+; CHECK-NEXT:   addi 6, 4, sc@toc@l
+; CHECK-NEXT:   lbz 7, uc@toc@l(3)
+; CHECK-NEXT:   lbz 8, sc@toc@l(4)
+; CHECK-NEXT:   lbarx 5, 0, 6
+; CHECK-NEXT:   clrlwi  9, 5, 24
+; CHECK-NEXT:   cmplw   9, 7
+; CHECK-NEXT:   bne     0, .LBB3_4
+; CHECK-NEXT: # %bb.1:                                # %cmpxchg.fencedstore276
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_2:                                # %cmpxchg.trystore275
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stbcx. 8, 0, 6
+; CHECK-NEXT:   beq     0, .LBB3_4
+; CHECK-NEXT: # %bb.3:                                # %cmpxchg.releasedload274
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_2 Depth=1
+; CHECK-NEXT:   lbarx 5, 0, 6
+; CHECK-NEXT:   clrlwi  9, 5, 24
+; CHECK-NEXT:   cmplw   9, 7
+; CHECK-NEXT:   beq     0, .LBB3_2
+; CHECK-NEXT: .LBB3_4:                                # %cmpxchg.nostore272
+; CHECK-NEXT:   addi 7, 3, uc@toc@l
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   stb 5, sc@toc@l(4)
+; CHECK-NEXT:   lbz 9, uc@toc@l(3)
+; CHECK-NEXT:   lbarx 8, 0, 7
+; CHECK-NEXT:   clrlwi  10, 8, 24
+; CHECK-NEXT:   cmplw   10, 9
+; CHECK-NEXT:   bne     0, .LBB3_8
+; CHECK-NEXT: # %bb.5:                                # %cmpxchg.fencedstore257
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   clrlwi  5, 5, 24
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_6:                                # %cmpxchg.trystore256
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stbcx. 5, 0, 7
+; CHECK-NEXT:   beq     0, .LBB3_8
+; CHECK-NEXT: # %bb.7:                                # %cmpxchg.releasedload255
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_6 Depth=1
+; CHECK-NEXT:   lbarx 8, 0, 7
+; CHECK-NEXT:   clrlwi  10, 8, 24
+; CHECK-NEXT:   cmplw   10, 9
+; CHECK-NEXT:   beq     0, .LBB3_6
+; CHECK-NEXT: .LBB3_8:                                # %cmpxchg.nostore253
+; CHECK-NEXT:   addis 5, 2, ss@toc@ha
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   stb 8, uc@toc@l(3)
+; CHECK-NEXT:   clrlwi  10, 8, 24
+; CHECK-NEXT:   lbz 11, sc@toc@l(4)
+; CHECK-NEXT:   addi 8, 5, ss@toc@l
+; CHECK-NEXT:   lharx 9, 0, 8
+; CHECK-NEXT:   clrlwi  12, 9, 16
+; CHECK-NEXT:   cmplw   12, 10
+; CHECK-NEXT:   bne     0, .LBB3_12
+; CHECK-NEXT: # %bb.9:                                # %cmpxchg.fencedstore238
+; CHECK-NEXT:   extsb 11, 11
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   clrlwi  11, 11, 16
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_10:                               # %cmpxchg.trystore237
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   sthcx. 11, 0, 8
+; CHECK-NEXT:   beq     0, .LBB3_12
+; CHECK-NEXT: # %bb.11:                               # %cmpxchg.releasedload236
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_10 Depth=1
+; CHECK-NEXT:   lharx 9, 0, 8
+; CHECK-NEXT:   clrlwi  12, 9, 16
+; CHECK-NEXT:   cmplw   12, 10
+; CHECK-NEXT:   beq     0, .LBB3_10
+; CHECK-NEXT: .LBB3_12:                               # %cmpxchg.nostore234
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   sth 9, ss@toc@l(5)
+; CHECK-NEXT:   addis 5, 2, us@toc@ha
+; CHECK-NEXT:   lbz 11, uc@toc@l(3)
+; CHECK-NEXT:   lbz 12, sc@toc@l(4)
+; CHECK-NEXT:   addi 9, 5, us@toc@l
+; CHECK-NEXT:   lharx 10, 0, 9
+; CHECK-NEXT:   clrlwi  0, 10, 16
+; CHECK-NEXT:   cmplw   0, 11
+; CHECK-NEXT:   bne     0, .LBB3_16
+; CHECK-NEXT: # %bb.13:                               # %cmpxchg.fencedstore219
+; CHECK-NEXT:   extsb 12, 12
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   clrlwi  12, 12, 16
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_14:                               # %cmpxchg.trystore218
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   sthcx. 12, 0, 9
+; CHECK-NEXT:   beq     0, .LBB3_16
+; CHECK-NEXT: # %bb.15:                               # %cmpxchg.releasedload217
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_14 Depth=1
+; CHECK-NEXT:   lharx 10, 0, 9
+; CHECK-NEXT:   clrlwi  0, 10, 16
+; CHECK-NEXT:   cmplw   0, 11
+; CHECK-NEXT:   beq     0, .LBB3_14
+; CHECK-NEXT: .LBB3_16:                               # %cmpxchg.nostore215
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   sth 10, us@toc@l(5)
+; CHECK-NEXT:   addis 5, 2, si@toc@ha
+; CHECK-NEXT:   lbz 12, uc@toc@l(3)
+; CHECK-NEXT:   lbz 0, sc@toc@l(4)
+; CHECK-NEXT:   addi 10, 5, si@toc@l
+; CHECK-NEXT:   lwarx 11, 0, 10
+; CHECK-NEXT:   cmplw   11, 12
+; CHECK-NEXT:   bne     0, .LBB3_20
+; CHECK-NEXT: # %bb.17:                               # %cmpxchg.fencedstore200
+; CHECK-NEXT:   extsb 0, 0
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_18:                               # %cmpxchg.trystore199
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stwcx. 0, 0, 10
+; CHECK-NEXT:   beq     0, .LBB3_20
+; CHECK-NEXT: # %bb.19:                               # %cmpxchg.releasedload198
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_18 Depth=1
+; CHECK-NEXT:   lwarx 11, 0, 10
+; CHECK-NEXT:   cmplw   11, 12
+; CHECK-NEXT:   beq     0, .LBB3_18
+; CHECK-NEXT: .LBB3_20:                               # %cmpxchg.nostore196
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   stw 11, si@toc@l(5)
+; CHECK-NEXT:   addis 5, 2, ui@toc@ha
+; CHECK-NEXT:   lbz 0, uc@toc@l(3)
+; CHECK-NEXT:   lbz 30, sc@toc@l(4)
+; CHECK-NEXT:   addi 11, 5, ui@toc@l
+; CHECK-NEXT:   lwarx 12, 0, 11
+; CHECK-NEXT:   cmplw   12, 0
+; CHECK-NEXT:   bne     0, .LBB3_24
+; CHECK-NEXT: # %bb.21:                               # %cmpxchg.fencedstore181
+; CHECK-NEXT:   extsb 30, 30
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_22:                               # %cmpxchg.trystore180
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stwcx. 30, 0, 11
+; CHECK-NEXT:   beq     0, .LBB3_24
+; CHECK-NEXT: # %bb.23:                               # %cmpxchg.releasedload179
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_22 Depth=1
+; CHECK-NEXT:   lwarx 12, 0, 11
+; CHECK-NEXT:   cmplw   12, 0
+; CHECK-NEXT:   beq     0, .LBB3_22
+; CHECK-NEXT: .LBB3_24:                               # %cmpxchg.nostore177
+; CHECK-NEXT:   addis 30, 2, sll@toc@ha
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   stw 12, ui@toc@l(5)
+; CHECK-NEXT:   lbz 29, uc@toc@l(3)
+; CHECK-NEXT:   lbz 28, sc@toc@l(4)
+; CHECK-NEXT:   addi 12, 30, sll@toc@l
+; CHECK-NEXT:   ldarx 0, 0, 12
+; CHECK-NEXT:   cmpld   0, 29
+; CHECK-NEXT:   bne     0, .LBB3_28
+; CHECK-NEXT: # %bb.25:                               # %cmpxchg.fencedstore162
+; CHECK-NEXT:   extsb 28, 28
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_26:                               # %cmpxchg.trystore161
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stdcx. 28, 0, 12
+; CHECK-NEXT:   beq     0, .LBB3_28
+; CHECK-NEXT: # %bb.27:                               # %cmpxchg.releasedload160
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_26 Depth=1
+; CHECK-NEXT:   ldarx 0, 0, 12
+; CHECK-NEXT:   cmpld   0, 29
+; CHECK-NEXT:   beq     0, .LBB3_26
+; CHECK-NEXT: .LBB3_28:                               # %cmpxchg.nostore158
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   std 0, sll@toc@l(30)
+; CHECK-NEXT:   addis 30, 2, ull@toc@ha
+; CHECK-NEXT:   lbz 28, uc@toc@l(3)
+; CHECK-NEXT:   lbz 27, sc@toc@l(4)
+; CHECK-NEXT:   addi 0, 30, ull@toc@l
+; CHECK-NEXT:   ldarx 29, 0, 0
+; CHECK-NEXT:   cmpld   29, 28
+; CHECK-NEXT:   bne     0, .LBB3_32
+; CHECK-NEXT: # %bb.29:                               # %cmpxchg.fencedstore143
+; CHECK-NEXT:   extsb 27, 27
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_30:                               # %cmpxchg.trystore142
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stdcx. 27, 0, 0
+; CHECK-NEXT:   beq     0, .LBB3_32
+; CHECK-NEXT: # %bb.31:                               # %cmpxchg.releasedload141
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_30 Depth=1
+; CHECK-NEXT:   ldarx 29, 0, 0
+; CHECK-NEXT:   cmpld   29, 28
+; CHECK-NEXT:   beq     0, .LBB3_30
+; CHECK-NEXT: .LBB3_32:                               # %cmpxchg.nostore139
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   std 29, ull@toc@l(30)
+; CHECK-NEXT:   lbz 30, uc@toc@l(3)
+; CHECK-NEXT:   lbz 29, sc@toc@l(4)
+; CHECK-NEXT:   lbarx 28, 0, 6
+; CHECK-NEXT:   clrlwi  28, 28, 24
+; CHECK-NEXT:   cmplw   28, 30
+; CHECK-NEXT:   bne     0, .LBB3_36
+; CHECK-NEXT: # %bb.33:                               # %cmpxchg.fencedstore124
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_34:                               # %cmpxchg.trystore123
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stbcx. 29, 0, 6
+; CHECK-NEXT:   beq     0, .LBB3_37
+; CHECK-NEXT: # %bb.35:                               # %cmpxchg.releasedload122
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_34 Depth=1
+; CHECK-NEXT:   lbarx 28, 0, 6
+; CHECK-NEXT:   clrlwi  28, 28, 24
+; CHECK-NEXT:   cmplw   28, 30
+; CHECK-NEXT:   beq     0, .LBB3_34
+; CHECK-NEXT: .LBB3_36:                               # %cmpxchg.nostore120
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT:   b .LBB3_38
+; CHECK-NEXT: .LBB3_37:                               # %cmpxchg.success121
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   creqv 20, 20, 20
+; CHECK-NEXT: .LBB3_38:                               # %cmpxchg.end118
+; CHECK-NEXT:   li 6, 0
+; CHECK-NEXT:   li 30, 1
+; CHECK-NEXT:   isel 6, 30, 6, 20
+; CHECK-NEXT:   lbz 30, sc@toc@l(4)
+; CHECK-NEXT:   stw 6, ui@toc@l(5)
+; CHECK-NEXT:   lbz 6, uc@toc@l(3)
+; CHECK-NEXT:   lbarx 29, 0, 7
+; CHECK-NEXT:   clrlwi  29, 29, 24
+; CHECK-NEXT:   cmplw   29, 6
+; CHECK-NEXT:   bne     0, .LBB3_42
+; CHECK-NEXT: # %bb.39:                               # %cmpxchg.fencedstore105
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_40:                               # %cmpxchg.trystore104
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stbcx. 30, 0, 7
+; CHECK-NEXT:   beq     0, .LBB3_43
+; CHECK-NEXT: # %bb.41:                               # %cmpxchg.releasedload103
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_40 Depth=1
+; CHECK-NEXT:   lbarx 29, 0, 7
+; CHECK-NEXT:   clrlwi  29, 29, 24
+; CHECK-NEXT:   cmplw   29, 6
+; CHECK-NEXT:   beq     0, .LBB3_40
+; CHECK-NEXT: .LBB3_42:                               # %cmpxchg.nostore101
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT:   b .LBB3_44
+; CHECK-NEXT: .LBB3_43:                               # %cmpxchg.success102
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   creqv 20, 20, 20
+; CHECK-NEXT: .LBB3_44:                               # %cmpxchg.end99
+; CHECK-NEXT:   li 6, 0
+; CHECK-NEXT:   li 7, 1
+; CHECK-NEXT:   isel 6, 7, 6, 20
+; CHECK-NEXT:   lbz 7, sc@toc@l(4)
+; CHECK-NEXT:   stw 6, ui@toc@l(5)
+; CHECK-NEXT:   lbz 6, uc@toc@l(3)
+; CHECK-NEXT:   lharx 30, 0, 8
+; CHECK-NEXT:   clrlwi  30, 30, 16
+; CHECK-NEXT:   cmplw   30, 6
+; CHECK-NEXT:   bne     0, .LBB3_48
+; CHECK-NEXT: # %bb.45:                               # %cmpxchg.fencedstore86
+; CHECK-NEXT:   extsb 7, 7
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   clrlwi  7, 7, 16
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_46:                               # %cmpxchg.trystore85
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   sthcx. 7, 0, 8
+; CHECK-NEXT:   beq     0, .LBB3_49
+; CHECK-NEXT: # %bb.47:                               # %cmpxchg.releasedload84
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_46 Depth=1
+; CHECK-NEXT:   lharx 30, 0, 8
+; CHECK-NEXT:   clrlwi  30, 30, 16
+; CHECK-NEXT:   cmplw   30, 6
+; CHECK-NEXT:   beq     0, .LBB3_46
+; CHECK-NEXT: .LBB3_48:                               # %cmpxchg.nostore82
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT:   b .LBB3_50
+; CHECK-NEXT: .LBB3_49:                               # %cmpxchg.success83
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   creqv 20, 20, 20
+; CHECK-NEXT: .LBB3_50:                               # %cmpxchg.end80
+; CHECK-NEXT:   li 6, 0
+; CHECK-NEXT:   li 7, 1
+; CHECK-NEXT:   isel 6, 7, 6, 20
+; CHECK-NEXT:   lbz 7, sc@toc@l(4)
+; CHECK-NEXT:   stw 6, ui@toc@l(5)
+; CHECK-NEXT:   lbz 6, uc@toc@l(3)
+; CHECK-NEXT:   lharx 8, 0, 9
+; CHECK-NEXT:   clrlwi  8, 8, 16
+; CHECK-NEXT:   cmplw   8, 6
+; CHECK-NEXT:   bne     0, .LBB3_54
+; CHECK-NEXT: # %bb.51:                               # %cmpxchg.fencedstore67
+; CHECK-NEXT:   extsb 7, 7
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   clrlwi  7, 7, 16
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_52:                               # %cmpxchg.trystore66
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   sthcx. 7, 0, 9
+; CHECK-NEXT:   beq     0, .LBB3_55
+; CHECK-NEXT: # %bb.53:                               # %cmpxchg.releasedload65
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_52 Depth=1
+; CHECK-NEXT:   lharx 8, 0, 9
+; CHECK-NEXT:   clrlwi  8, 8, 16
+; CHECK-NEXT:   cmplw   8, 6
+; CHECK-NEXT:   beq     0, .LBB3_52
+; CHECK-NEXT: .LBB3_54:                               # %cmpxchg.nostore63
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT:   b .LBB3_56
+; CHECK-NEXT: .LBB3_55:                               # %cmpxchg.success64
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   creqv 20, 20, 20
+; CHECK-NEXT: .LBB3_56:                               # %cmpxchg.end61
+; CHECK-NEXT:   li 6, 0
+; CHECK-NEXT:   li 7, 1
+; CHECK-NEXT:   isel 6, 7, 6, 20
+; CHECK-NEXT:   lbz 7, sc@toc@l(4)
+; CHECK-NEXT:   stw 6, ui@toc@l(5)
+; CHECK-NEXT:   lbz 6, uc@toc@l(3)
+; CHECK-NEXT:   lwarx 8, 0, 10
+; CHECK-NEXT:   cmplw   8, 6
+; CHECK-NEXT:   bne     0, .LBB3_60
+; CHECK-NEXT: # %bb.57:                               # %cmpxchg.fencedstore48
+; CHECK-NEXT:   extsb 7, 7
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_58:                               # %cmpxchg.trystore47
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stwcx. 7, 0, 10
+; CHECK-NEXT:   beq     0, .LBB3_61
+; CHECK-NEXT: # %bb.59:                               # %cmpxchg.releasedload46
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_58 Depth=1
+; CHECK-NEXT:   lwarx 8, 0, 10
+; CHECK-NEXT:   cmplw   8, 6
+; CHECK-NEXT:   beq     0, .LBB3_58
+; CHECK-NEXT: .LBB3_60:                               # %cmpxchg.nostore44
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT:   b .LBB3_62
+; CHECK-NEXT: .LBB3_61:                               # %cmpxchg.success45
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   creqv 20, 20, 20
+; CHECK-NEXT: .LBB3_62:                               # %cmpxchg.end42
+; CHECK-NEXT:   li 6, 0
+; CHECK-NEXT:   li 7, 1
+; CHECK-NEXT:   isel 6, 7, 6, 20
+; CHECK-NEXT:   lbz 7, sc@toc@l(4)
+; CHECK-NEXT:   stw 6, ui@toc@l(5)
+; CHECK-NEXT:   lbz 6, uc@toc@l(3)
+; CHECK-NEXT:   lwarx 8, 0, 11
+; CHECK-NEXT:   cmplw   8, 6
+; CHECK-NEXT:   bne     0, .LBB3_66
+; CHECK-NEXT: # %bb.63:                               # %cmpxchg.fencedstore29
+; CHECK-NEXT:   extsb 7, 7
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_64:                               # %cmpxchg.trystore28
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stwcx. 7, 0, 11
+; CHECK-NEXT:   beq     0, .LBB3_67
+; CHECK-NEXT: # %bb.65:                               # %cmpxchg.releasedload27
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_64 Depth=1
+; CHECK-NEXT:   lwarx 8, 0, 11
+; CHECK-NEXT:   cmplw   8, 6
+; CHECK-NEXT:   beq     0, .LBB3_64
+; CHECK-NEXT: .LBB3_66:                               # %cmpxchg.nostore25
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT:   b .LBB3_68
+; CHECK-NEXT: .LBB3_67:                               # %cmpxchg.success26
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   creqv 20, 20, 20
+; CHECK-NEXT: .LBB3_68:                               # %cmpxchg.end23
+; CHECK-NEXT:   li 6, 0
+; CHECK-NEXT:   li 7, 1
+; CHECK-NEXT:   isel 6, 7, 6, 20
+; CHECK-NEXT:   lbz 7, sc@toc@l(4)
+; CHECK-NEXT:   stw 6, ui@toc@l(5)
+; CHECK-NEXT:   lbz 6, uc@toc@l(3)
+; CHECK-NEXT:   ldarx 8, 0, 12
+; CHECK-NEXT:   cmpld   8, 6
+; CHECK-NEXT:   bne     0, .LBB3_72
+; CHECK-NEXT: # %bb.69:                               # %cmpxchg.fencedstore10
+; CHECK-NEXT:   extsb 7, 7
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_70:                               # %cmpxchg.trystore9
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stdcx. 7, 0, 12
+; CHECK-NEXT:   beq     0, .LBB3_73
+; CHECK-NEXT: # %bb.71:                               # %cmpxchg.releasedload8
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_70 Depth=1
+; CHECK-NEXT:   ldarx 8, 0, 12
+; CHECK-NEXT:   cmpld   8, 6
+; CHECK-NEXT:   beq     0, .LBB3_70
+; CHECK-NEXT: .LBB3_72:                               # %cmpxchg.nostore6
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT:   b .LBB3_74
+; CHECK-NEXT: .LBB3_73:                               # %cmpxchg.success7
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   creqv 20, 20, 20
+; CHECK-NEXT: .LBB3_74:                               # %cmpxchg.end4
+; CHECK-NEXT:   li 6, 0
+; CHECK-NEXT:   li 7, 1
+; CHECK-NEXT:   lbz 3, uc@toc@l(3)
+; CHECK-NEXT:   lbz 4, sc@toc@l(4)
+; CHECK-NEXT:   isel 6, 7, 6, 20
+; CHECK-NEXT:   stw 6, ui@toc@l(5)
+; CHECK-NEXT:   ldarx 6, 0, 0
+; CHECK-NEXT:   cmpld   6, 3
+; CHECK-NEXT:   bne     0, .LBB3_78
+; CHECK-NEXT: # %bb.75:                               # %cmpxchg.fencedstore
+; CHECK-NEXT:   extsb 4, 4
+; CHECK-NEXT:   sync
+; CHECK-NEXT:   .p2align        5
+; CHECK-NEXT: .LBB3_76:                               # %cmpxchg.trystore
+; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:   stdcx. 4, 0, 0
+; CHECK-NEXT:   beq     0, .LBB3_79
+; CHECK-NEXT: # %bb.77:                               # %cmpxchg.releasedload
+; CHECK-NEXT:                                         #   in Loop: Header=BB3_76 Depth=1
+; CHECK-NEXT:   ldarx 6, 0, 0
+; CHECK-NEXT:   cmpld   6, 3
+; CHECK-NEXT:   beq     0, .LBB3_76
+; CHECK-NEXT: .LBB3_78:                               # %cmpxchg.nostore
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT:   b .LBB3_80
+; CHECK-NEXT: .LBB3_79:                               # %cmpxchg.success
+; CHECK-NEXT:   lwsync
+; CHECK-NEXT:   creqv 20, 20, 20
+; CHECK-NEXT: .LBB3_80:                               # %cmpxchg.end
+; CHECK-NEXT:   li 3, 0
+; CHECK-NEXT:   li 4, 1
+; CHECK-NEXT:   ld 30, -16(1)                           # 8-byte Folded Reload
+; CHECK-NEXT:   ld 29, -24(1)                           # 8-byte Folded Reload
+; CHECK-NEXT:   ld 28, -32(1)                           # 8-byte Folded Reload
+; CHECK-NEXT:   ld 27, -40(1)                           # 8-byte Folded Reload
+; CHECK-NEXT:   isel 3, 4, 3, 20
+; CHECK-NEXT:   stw 3, ui@toc@l(5)
+; CHECK-NEXT:   blr
 ;
 ; AIX32-LABEL: test_compare_and_swap:
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr 0
-; AIX32-NEXT:    stwu 1, -128(1)
-; AIX32-NEXT:    stw 0, 136(1)
-; AIX32-NEXT:    stw 28, 112(1) # 4-byte Folded Spill
-; AIX32-NEXT:    lwz 28, L..C0(2) # @sc
-; AIX32-NEXT:    stw 29, 116(1) # 4-byte Folded Spill
-; AIX32-NEXT:    lwz 29, L..C1(2) # @uc
-; AIX32-NEXT:    lbz 3, 0(29)
-; AIX32-NEXT:    rlwinm 5, 28, 3, 27, 28
-; AIX32-NEXT:    stw 21, 84(1) # 4-byte Folded Spill
-; AIX32-NEXT:    lbz 4, 0(28)
-; AIX32-NEXT:    stw 17, 68(1) # 4-byte Folded Spill
-; AIX32-NEXT:    stw 18, 72(1) # 4-byte Folded Spill
-; AIX32-NEXT:    stw 19, 76(1) # 4-byte Folded Spill
-; AIX32-NEXT:    stw 20, 80(1) # 4-byte Folded Spill
-; AIX32-NEXT:    xori 21, 5, 24
-; AIX32-NEXT:    stw 22, 88(1) # 4-byte Folded Spill
-; AIX32-NEXT:    stw 23, 92(1) # 4-byte Folded Spill
-; AIX32-NEXT:    stw 24, 96(1) # 4-byte Folded Spill
-; AIX32-NEXT:    slw 5, 3, 21
-; AIX32-NEXT:    li 3, 255
-; AIX32-NEXT:    slw 4, 4, 21
-; AIX32-NEXT:    stw 25, 100(1) # 4-byte Folded Spill
-; AIX32-NEXT:    stw 26, 104(1) # 4-byte Folded Spill
-; AIX32-NEXT:    slw 3, 3, 21
-; AIX32-NEXT:    stw 27, 108(1) # 4-byte Folded Spill
-; AIX32-NEXT:    stw 30, 120(1) # 4-byte Folded Spill
-; AIX32-NEXT:    stw 31, 124(1) # 4-byte Folded Spill
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    rlwinm 18, 28, 0, 0, 29
-; AIX32-NEXT:    and 4, 4, 3
-; AIX32-NEXT:    and 5, 5, 3
-; AIX32-NEXT:  L..BB3_1: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 7, 0, 18
-; AIX32-NEXT:    and 6, 7, 3
-; AIX32-NEXT:    cmpw 6, 5
-; AIX32-NEXT:    bne 0, L..BB3_3
-; AIX32-NEXT:  # %bb.2: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 7, 7, 3
-; AIX32-NEXT:    or 7, 7, 4
-; AIX32-NEXT:    stwcx. 7, 0, 18
-; AIX32-NEXT:    bne 0, L..BB3_1
-; AIX32-NEXT:  L..BB3_3: # %entry
-; AIX32-NEXT:    rlwinm 5, 29, 3, 27, 28
-; AIX32-NEXT:    srw 3, 6, 21
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    rlwinm 20, 29, 0, 0, 29
-; AIX32-NEXT:    xori 25, 5, 24
-; AIX32-NEXT:    slw 5, 3, 25
-; AIX32-NEXT:    stb 3, 0(28)
-; AIX32-NEXT:    li 3, 255
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    slw 6, 4, 25
-; AIX32-NEXT:    slw 3, 3, 25
-; AIX32-NEXT:    and 4, 5, 3
-; AIX32-NEXT:    and 5, 6, 3
-; AIX32-NEXT:  L..BB3_4: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 7, 0, 20
-; AIX32-NEXT:    and 6, 7, 3
-; AIX32-NEXT:    cmpw 6, 5
-; AIX32-NEXT:    bne 0, L..BB3_6
-; AIX32-NEXT:  # %bb.5: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 7, 7, 3
-; AIX32-NEXT:    or 7, 7, 4
-; AIX32-NEXT:    stwcx. 7, 0, 20
-; AIX32-NEXT:    bne 0, L..BB3_4
-; AIX32-NEXT:  L..BB3_6: # %entry
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    srw 4, 6, 25
-; AIX32-NEXT:    lbz 3, 0(28)
-; AIX32-NEXT:    extsb 5, 3
-; AIX32-NEXT:    lwz 3, L..C2(2) # @ss
-; AIX32-NEXT:    stb 4, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    rlwinm 6, 3, 3, 27, 27
-; AIX32-NEXT:    rlwinm 22, 3, 0, 0, 29
-; AIX32-NEXT:    xori 26, 6, 16
-; AIX32-NEXT:    slw 6, 4, 26
-; AIX32-NEXT:    li 4, 0
-; AIX32-NEXT:    slw 5, 5, 26
-; AIX32-NEXT:    ori 4, 4, 65535
-; AIX32-NEXT:    slw 4, 4, 26
-; AIX32-NEXT:    and 5, 5, 4
-; AIX32-NEXT:    and 6, 6, 4
-; AIX32-NEXT:  L..BB3_7: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 8, 0, 22
-; AIX32-NEXT:    and 7, 8, 4
-; AIX32-NEXT:    cmpw 7, 6
-; AIX32-NEXT:    bne 0, L..BB3_9
-; AIX32-NEXT:  # %bb.8: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 8, 8, 4
-; AIX32-NEXT:    or 8, 8, 5
-; AIX32-NEXT:    stwcx. 8, 0, 22
-; AIX32-NEXT:    bne 0, L..BB3_7
-; AIX32-NEXT:  L..BB3_9: # %entry
-; AIX32-NEXT:    srw 4, 7, 26
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    sth 4, 0(3)
-; AIX32-NEXT:    lbz 3, 0(28)
-; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    extsb 5, 3
-; AIX32-NEXT:    lwz 3, L..C3(2) # @us
-; AIX32-NEXT:    rlwinm 6, 3, 3, 27, 27
-; AIX32-NEXT:    rlwinm 19, 3, 0, 0, 29
-; AIX32-NEXT:    xori 24, 6, 16
-; AIX32-NEXT:    slw 6, 4, 24
-; AIX32-NEXT:    li 4, 0
-; AIX32-NEXT:    slw 5, 5, 24
-; AIX32-NEXT:    ori 4, 4, 65535
-; AIX32-NEXT:    slw 4, 4, 24
-; AIX32-NEXT:    and 5, 5, 4
-; AIX32-NEXT:    and 6, 6, 4
-; AIX32-NEXT:  L..BB3_10: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 8, 0, 19
-; AIX32-NEXT:    and 7, 8, 4
-; AIX32-NEXT:    cmpw 7, 6
-; AIX32-NEXT:    bne 0, L..BB3_12
-; AIX32-NEXT:  # %bb.11: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 8, 8, 4
-; AIX32-NEXT:    or 8, 8, 5
-; AIX32-NEXT:    stwcx. 8, 0, 19
-; AIX32-NEXT:    bne 0, L..BB3_10
-; AIX32-NEXT:  L..BB3_12: # %entry
-; AIX32-NEXT:    srw 4, 7, 24
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    lwz 17, L..C4(2) # @si
-; AIX32-NEXT:    sth 4, 0(3)
-; AIX32-NEXT:    lbz 4, 0(28)
-; AIX32-NEXT:    lbz 3, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    extsb 4, 4
-; AIX32-NEXT:  L..BB3_13: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 5, 0, 17
-; AIX32-NEXT:    cmpw 5, 3
-; AIX32-NEXT:    bne 0, L..BB3_15
-; AIX32-NEXT:  # %bb.14: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    stwcx. 4, 0, 17
-; AIX32-NEXT:    bne 0, L..BB3_13
-; AIX32-NEXT:  L..BB3_15: # %entry
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    stw 5, 0(17)
-; AIX32-NEXT:    lwz 27, L..C5(2) # @ui
-; AIX32-NEXT:    lbz 4, 0(28)
-; AIX32-NEXT:    lbz 3, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    extsb 4, 4
-; AIX32-NEXT:  L..BB3_16: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 5, 0, 27
-; AIX32-NEXT:    cmpw 5, 3
-; AIX32-NEXT:    bne 0, L..BB3_18
-; AIX32-NEXT:  # %bb.17: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    stwcx. 4, 0, 27
-; AIX32-NEXT:    bne 0, L..BB3_16
-; AIX32-NEXT:  L..BB3_18: # %entry
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    lwz 31, L..C6(2) # @sll
-; AIX32-NEXT:    stw 5, 0(27)
-; AIX32-NEXT:    lbz 3, 0(28)
-; AIX32-NEXT:    li 23, 0
-; AIX32-NEXT:    addi 4, 1, 56
-; AIX32-NEXT:    li 7, 5
-; AIX32-NEXT:    li 8, 5
-; AIX32-NEXT:    stw 23, 56(1)
-; AIX32-NEXT:    extsb 6, 3
-; AIX32-NEXT:    lbz 3, 0(29)
-; AIX32-NEXT:    srawi 5, 6, 31
-; AIX32-NEXT:    stw 3, 60(1)
-; AIX32-NEXT:    mr 3, 31
-; AIX32-NEXT:    bl .__atomic_compare_exchange_8[PR]
-; AIX32-NEXT:    nop
-; AIX32-NEXT:    lwz 3, 60(1)
-; AIX32-NEXT:    lbz 4, 0(28)
-; AIX32-NEXT:    lwz 30, L..C7(2) # @ull
-; AIX32-NEXT:    li 7, 5
-; AIX32-NEXT:    li 8, 5
-; AIX32-NEXT:    stw 3, 4(31)
-; AIX32-NEXT:    lwz 3, 56(1)
-; AIX32-NEXT:    extsb 6, 4
-; AIX32-NEXT:    addi 4, 1, 56
-; AIX32-NEXT:    srawi 5, 6, 31
-; AIX32-NEXT:    stw 23, 56(1)
-; AIX32-NEXT:    stw 3, 0(31)
-; AIX32-NEXT:    lbz 3, 0(29)
-; AIX32-NEXT:    stw 3, 60(1)
-; AIX32-NEXT:    mr 3, 30
-; AIX32-NEXT:    bl .__atomic_compare_exchange_8[PR]
-; AIX32-NEXT:    nop
-; AIX32-NEXT:    lwz 4, 60(1)
-; AIX32-NEXT:    lwz 3, 56(1)
-; AIX32-NEXT:    stw 4, 4(30)
-; AIX32-NEXT:    lbz 4, 0(28)
-; AIX32-NEXT:    stw 3, 0(30)
-; AIX32-NEXT:    lbz 3, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    slw 5, 4, 21
-; AIX32-NEXT:    li 4, 255
-; AIX32-NEXT:    slw 6, 3, 21
-; AIX32-NEXT:    slw 4, 4, 21
-; AIX32-NEXT:    and 5, 5, 4
-; AIX32-NEXT:    and 6, 6, 4
-; AIX32-NEXT:  L..BB3_19: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 8, 0, 18
-; AIX32-NEXT:    and 7, 8, 4
-; AIX32-NEXT:    cmpw 7, 6
-; AIX32-NEXT:    bne 0, L..BB3_21
-; AIX32-NEXT:  # %bb.20: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 8, 8, 4
-; AIX32-NEXT:    or 8, 8, 5
-; AIX32-NEXT:    stwcx. 8, 0, 18
-; AIX32-NEXT:    bne 0, L..BB3_19
-; AIX32-NEXT:  L..BB3_21: # %entry
-; AIX32-NEXT:    srw 4, 7, 21
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    lbz 5, 0(28)
-; AIX32-NEXT:    cmpw 4, 3
-; AIX32-NEXT:    li 3, 1
-; AIX32-NEXT:    iseleq 4, 3, 23
-; AIX32-NEXT:    slw 6, 5, 25
-; AIX32-NEXT:    li 5, 255
-; AIX32-NEXT:    stw 4, 0(27)
-; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    slw 5, 5, 25
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    slw 7, 4, 25
-; AIX32-NEXT:    and 6, 6, 5
-; AIX32-NEXT:    and 7, 7, 5
-; AIX32-NEXT:  L..BB3_22: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 9, 0, 20
-; AIX32-NEXT:    and 8, 9, 5
-; AIX32-NEXT:    cmpw 8, 7
-; AIX32-NEXT:    bne 0, L..BB3_24
-; AIX32-NEXT:  # %bb.23: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 9, 9, 5
-; AIX32-NEXT:    or 9, 9, 6
-; AIX32-NEXT:    stwcx. 9, 0, 20
-; AIX32-NEXT:    bne 0, L..BB3_22
-; AIX32-NEXT:  L..BB3_24: # %entry
-; AIX32-NEXT:    srw 5, 8, 25
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    cmpw 5, 4
-; AIX32-NEXT:    lbz 5, 0(28)
-; AIX32-NEXT:    iseleq 4, 3, 23
-; AIX32-NEXT:    extsb 5, 5
-; AIX32-NEXT:    stw 4, 0(27)
-; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    slw 6, 5, 26
-; AIX32-NEXT:    li 5, 0
-; AIX32-NEXT:    slw 7, 4, 26
-; AIX32-NEXT:    ori 5, 5, 65535
-; AIX32-NEXT:    slw 5, 5, 26
-; AIX32-NEXT:    and 6, 6, 5
-; AIX32-NEXT:    and 7, 7, 5
-; AIX32-NEXT:  L..BB3_25: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 9, 0, 22
-; AIX32-NEXT:    and 8, 9, 5
-; AIX32-NEXT:    cmpw 8, 7
-; AIX32-NEXT:    bne 0, L..BB3_27
-; AIX32-NEXT:  # %bb.26: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 9, 9, 5
-; AIX32-NEXT:    or 9, 9, 6
-; AIX32-NEXT:    stwcx. 9, 0, 22
-; AIX32-NEXT:    bne 0, L..BB3_25
-; AIX32-NEXT:  L..BB3_27: # %entry
-; AIX32-NEXT:    srw 5, 8, 26
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    cmpw 5, 4
-; AIX32-NEXT:    lbz 5, 0(28)
-; AIX32-NEXT:    iseleq 4, 3, 23
-; AIX32-NEXT:    extsb 5, 5
-; AIX32-NEXT:    stw 4, 0(27)
-; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    slw 6, 5, 24
-; AIX32-NEXT:    li 5, 0
-; AIX32-NEXT:    slw 7, 4, 24
-; AIX32-NEXT:    ori 5, 5, 65535
-; AIX32-NEXT:    slw 5, 5, 24
-; AIX32-NEXT:    and 6, 6, 5
-; AIX32-NEXT:    and 7, 7, 5
-; AIX32-NEXT:  L..BB3_28: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 9, 0, 19
-; AIX32-NEXT:    and 8, 9, 5
-; AIX32-NEXT:    cmpw 8, 7
-; AIX32-NEXT:    bne 0, L..BB3_30
-; AIX32-NEXT:  # %bb.29: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 9, 9, 5
-; AIX32-NEXT:    or 9, 9, 6
-; AIX32-NEXT:    stwcx. 9, 0, 19
-; AIX32-NEXT:    bne 0, L..BB3_28
-; AIX32-NEXT:  L..BB3_30: # %entry
-; AIX32-NEXT:    srw 5, 8, 24
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    cmpw 5, 4
-; AIX32-NEXT:    lbz 5, 0(28)
-; AIX32-NEXT:    iseleq 4, 3, 23
-; AIX32-NEXT:    stw 4, 0(27)
-; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    extsb 5, 5
-; AIX32-NEXT:  L..BB3_31: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 6, 0, 17
-; AIX32-NEXT:    cmpw 1, 6, 4
-; AIX32-NEXT:    bne 1, L..BB3_33
-; AIX32-NEXT:  # %bb.32: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    stwcx. 5, 0, 17
-; AIX32-NEXT:    bne 0, L..BB3_31
-; AIX32-NEXT:  L..BB3_33: # %entry
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    isel 4, 3, 23, 6
-; AIX32-NEXT:    lbz 5, 0(28)
-; AIX32-NEXT:    stw 4, 0(27)
-; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    sync
-; AIX32-NEXT:    extsb 5, 5
-; AIX32-NEXT:  L..BB3_34: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 6, 0, 27
-; AIX32-NEXT:    cmpw 1, 6, 4
-; AIX32-NEXT:    bne 1, L..BB3_36
-; AIX32-NEXT:  # %bb.35: # %entry
-; AIX32-NEXT:    #
-; AIX32-NEXT:    stwcx. 5, 0, 27
-; AIX32-NEXT:    bne 0, L..BB3_34
-; AIX32-NEXT:  L..BB3_36: # %entry
-; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    isel 3, 3, 23, 6
-; AIX32-NEXT:    li 7, 5
-; AIX32-NEXT:    li 8, 5
-; AIX32-NEXT:    lbz 4, 0(28)
-; AIX32-NEXT:    stw 3, 0(27)
-; AIX32-NEXT:    lbz 3, 0(29)
-; AIX32-NEXT:    stw 23, 56(1)
-; AIX32-NEXT:    extsb 6, 4
-; AIX32-NEXT:    addi 4, 1, 56
-; AIX32-NEXT:    stw 3, 60(1)
-; AIX32-NEXT:    mr 3, 31
-; AIX32-NEXT:    srawi 5, 6, 31
-; AIX32-NEXT:    bl .__atomic_compare_exchange_8[PR]
-; AIX32-NEXT:    nop
-; AIX32-NEXT:    lbz 4, 0(28)
-; AIX32-NEXT:    stw 3, 0(27)
-; AIX32-NEXT:    lbz 3, 0(29)
-; AIX32-NEXT:    li 7, 5
-; AIX32-NEXT:    li 8, 5
-; AIX32-NEXT:    extsb 6, 4
-; AIX32-NEXT:    addi 4, 1, 56
-; AIX32-NEXT:    stw 3, 60(1)
-; AIX32-NEXT:    mr 3, 30
-; AIX32-NEXT:    stw 23, 56(1)
-; AIX32-NEXT:    srawi 5, 6, 31
-; AIX32-NEXT:    bl .__atomic_compare_exchange_8[PR]
-; AIX32-NEXT:    nop
-; AIX32-NEXT:    stw 3, 0(27)
-; AIX32-NEXT:    lwz 31, 124(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 30, 120(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 29, 116(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 28, 112(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 27, 108(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 26, 104(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 25, 100(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 24, 96(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 23, 92(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 22, 88(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 21, 84(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 20, 80(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 19, 76(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 18, 72(1) # 4-byte Folded Reload
-; AIX32-NEXT:    lwz 17, 68(1) # 4-byte Folded Reload
-; AIX32-NEXT:    addi 1, 1, 128
-; AIX32-NEXT:    lwz 0, 8(1)
-; AIX32-NEXT:    mtlr 0
+; AIX32-NEXT:   stwu 1, -144(1)
+; AIX32-NEXT:   stw 0, 152(1)
+; AIX32-NEXT:   stw 29, 132(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   lwz 29, L..C0(2)                        # @sc
+; AIX32-NEXT:   stw 26, 120(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   not     3, 29
+; AIX32-NEXT:   stw 30, 136(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   lwz 30, L..C1(2)                        # @uc
+; AIX32-NEXT:   lbz 4, 0(30)
+; AIX32-NEXT:   lbz 5, 0(29)
+; AIX32-NEXT:   stw 27, 124(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   rlwinm 27, 29, 0, 0, 29
+; AIX32-NEXT:   stw 14, 72(1)                           # 4-byte Folded Spill
+; AIX32-NEXT:   stw 15, 76(1)                           # 4-byte Folded Spill
+; AIX32-NEXT:   rlwinm 26, 3, 3, 27, 28
+; AIX32-NEXT:   li 3, 255
+; AIX32-NEXT:   slw 3, 3, 26
+; AIX32-NEXT:   stw 16, 80(1)                           # 4-byte Folded Spill
+; AIX32-NEXT:   stw 17, 84(1)                           # 4-byte Folded Spill
+; AIX32-NEXT:   stw 18, 88(1)                           # 4-byte Folded Spill
+; AIX32-NEXT:   stw 19, 92(1)                           # 4-byte Folded Spill
+; AIX32-NEXT:   stw 20, 96(1)                           # 4-byte Folded Spill
+; AIX32-NEXT:   stw 21, 100(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   stw 22, 104(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   stw 23, 108(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   stw 24, 112(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   stw 25, 116(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   stw 28, 128(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   stw 31, 140(1)                          # 4-byte Folded Spill
+; AIX32-NEXT:   not     25, 3
+; AIX32-NEXT:   lwarx 3, 0, 27
+; AIX32-NEXT:   srw 6, 3, 26
+; AIX32-NEXT:   clrlwi  6, 6, 24
+; AIX32-NEXT:   cmplw   6, 4
+; AIX32-NEXT:   bne     0, L..BB3_4
+; AIX32-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore289
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   slw 5, 5, 26
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT:  L..BB3_2:                               # %cmpxchg.trystore288
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   and 6, 3, 25
+; AIX32-NEXT:   or 6, 6, 5
+; AIX32-NEXT:   stwcx. 6, 0, 27
+; AIX32-NEXT:   beq     0, L..BB3_4
+; AIX32-NEXT:  # %bb.3:                                # %cmpxchg.releasedload287
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_2 Depth=1
+; AIX32-NEXT:   lwarx 3, 0, 27
+; AIX32-NEXT:   srw 6, 3, 26
+; AIX32-NEXT:   clrlwi  6, 6, 24
+; AIX32-NEXT:   cmplw   6, 4
+; AIX32-NEXT:   beq     0, L..BB3_2
+; AIX32-NEXT:  L..BB3_4:                               # %cmpxchg.nostore285
+; AIX32-NEXT:   not     4, 30
+; AIX32-NEXT:   srw 5, 3, 26
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   rlwinm 24, 30, 0, 0, 29
+; AIX32-NEXT:   rlwinm 23, 4, 3, 27, 28
+; AIX32-NEXT:   li 4, 255
+; AIX32-NEXT:   stb 5, 0(29)
+; AIX32-NEXT:   slw 4, 4, 23
+; AIX32-NEXT:   not     22, 4
+; AIX32-NEXT:   lwarx 4, 0, 24
+; AIX32-NEXT:   srw 6, 4, 23
+; AIX32-NEXT:   clrlwi  6, 6, 24
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   bne     0, L..BB3_8
+; AIX32-NEXT:  # %bb.5:                                # %cmpxchg.fencedstore256
+; AIX32-NEXT:   clrlwi  5, 5, 24
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   slw 5, 5, 23
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT:  L..BB3_6:                               # %cmpxchg.trystore255
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   and 6, 4, 22
+; AIX32-NEXT:   or 6, 6, 5
+; AIX32-NEXT:   stwcx. 6, 0, 24
+; AIX32-NEXT:   beq     0, L..BB3_8
+; AIX32-NEXT:  # %bb.7:                                # %cmpxchg.releasedload254
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_6 Depth=1
+; AIX32-NEXT:   lwarx 4, 0, 24
+; AIX32-NEXT:   srw 6, 4, 23
+; AIX32-NEXT:   clrlwi  6, 6, 24
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   beq     0, L..BB3_6
+; AIX32-NEXT:  L..BB3_8:                               # %cmpxchg.nostore252
+; AIX32-NEXT:   srw 4, 4, 23
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   lis 3, 0
+; AIX32-NEXT:   lbz 7, 0(29)
+; AIX32-NEXT:   stb 4, 0(30)
+; AIX32-NEXT:   clrlwi  6, 4, 24
+; AIX32-NEXT:   lwz 4, L..C2(2)                         # @ss
+; AIX32-NEXT:   ori 3, 3, 65535
+; AIX32-NEXT:   clrlwi  5, 4, 30
+; AIX32-NEXT:   rlwinm 21, 4, 0, 0, 29
+; AIX32-NEXT:   xori 5, 5, 2
+; AIX32-NEXT:   slwi 20, 5, 3
+; AIX32-NEXT:   slw 5, 3, 20
+; AIX32-NEXT:   not     19, 5
+; AIX32-NEXT:   lwarx 5, 0, 21
+; AIX32-NEXT:   srw 8, 5, 20
+; AIX32-NEXT:   clrlwi  8, 8, 16
+; AIX32-NEXT:   cmplw   8, 6
+; AIX32-NEXT:   bne     0, L..BB3_12
+; AIX32-NEXT:  # %bb.9:                                # %cmpxchg.fencedstore223
+; AIX32-NEXT:   extsb 7, 7
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   clrlwi  7, 7, 16
+; AIX32-NEXT:   slw 7, 7, 20
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT:  L..BB3_10:                              # %cmpxchg.trystore222
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   and 8, 5, 19
+; AIX32-NEXT:   or 8, 8, 7
+; AIX32-NEXT:   stwcx. 8, 0, 21
+; AIX32-NEXT:   beq     0, L..BB3_12
+; AIX32-NEXT:  # %bb.11:                               # %cmpxchg.releasedload221
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_10 Depth=1
+; AIX32-NEXT:   lwarx 5, 0, 21
+; AIX32-NEXT:   srw 8, 5, 20
+; AIX32-NEXT:   clrlwi  8, 8, 16
+; AIX32-NEXT:   cmplw   8, 6
+; AIX32-NEXT:   beq     0, L..BB3_10
+; AIX32-NEXT:  L..BB3_12:                              # %cmpxchg.nostore219
+; AIX32-NEXT:   srw 5, 5, 20
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   lbz 6, 0(29)
+; AIX32-NEXT:   sth 5, 0(4)
+; AIX32-NEXT:   lwz 4, L..C3(2)                         # @us
+; AIX32-NEXT:   lbz 5, 0(30)
+; AIX32-NEXT:   clrlwi  7, 4, 30
+; AIX32-NEXT:   rlwinm 18, 4, 0, 0, 29
+; AIX32-NEXT:   xori 7, 7, 2
+; AIX32-NEXT:   slwi 17, 7, 3
+; AIX32-NEXT:   slw 3, 3, 17
+; AIX32-NEXT:   not     16, 3
+; AIX32-NEXT:   lwarx 3, 0, 18
+; AIX32-NEXT:   srw 7, 3, 17
+; AIX32-NEXT:   clrlwi  7, 7, 16
+; AIX32-NEXT:   cmplw   7, 5
+; AIX32-NEXT:   bne     0, L..BB3_16
+; AIX32-NEXT:  # %bb.13:                               # %cmpxchg.fencedstore190
+; AIX32-NEXT:   extsb 6, 6
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   clrlwi  6, 6, 16
+; AIX32-NEXT:   slw 6, 6, 17
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT:  L..BB3_14:                              # %cmpxchg.trystore189
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   and 7, 3, 16
+; AIX32-NEXT:   or 7, 7, 6
+; AIX32-NEXT:   stwcx. 7, 0, 18
+; AIX32-NEXT:   beq     0, L..BB3_16
+; AIX32-NEXT:  # %bb.15:                               # %cmpxchg.releasedload188
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_14 Depth=1
+; AIX32-NEXT:   lwarx 3, 0, 18
+; AIX32-NEXT:   srw 7, 3, 17
+; AIX32-NEXT:   clrlwi  7, 7, 16
+; AIX32-NEXT:   cmplw   7, 5
+; AIX32-NEXT:   beq     0, L..BB3_14
+; AIX32-NEXT:  L..BB3_16:                              # %cmpxchg.nostore186
+; AIX32-NEXT:   srw 3, 3, 17
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   lwz 15, L..C4(2)                        # @si
+; AIX32-NEXT:   lbz 5, 0(29)
+; AIX32-NEXT:   sth 3, 0(4)
+; AIX32-NEXT:   lbz 4, 0(30)
+; AIX32-NEXT:   lwarx 3, 0, 15
+; AIX32-NEXT:   cmplw   3, 4
+; AIX32-NEXT:   bne     0, L..BB3_20
+; AIX32-NEXT:  # %bb.17:                               # %cmpxchg.fencedstore171
+; AIX32-NEXT:   extsb 5, 5
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   .align  5
+; AIX32-NEXT:  L..BB3_18:                              # %cmpxchg.trystore170
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   stwcx. 5, 0, 15
+; AIX32-NEXT:   beq     0, L..BB3_20
+; AIX32-NEXT:  # %bb.19:                               # %cmpxchg.releasedload169
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_18 Depth=1
+; AIX32-NEXT:   lwarx 3, 0, 15
+; AIX32-NEXT:   cmplw   3, 4
+; AIX32-NEXT:   beq     0, L..BB3_18
+; AIX32-NEXT:  L..BB3_20:                              # %cmpxchg.nostore167
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   lwz 28, L..C5(2)                        # @ui
+; AIX32-NEXT:   stw 3, 0(15)
+; AIX32-NEXT:   lbz 4, 0(30)
+; AIX32-NEXT:   lbz 5, 0(29)
+; AIX32-NEXT:   lwarx 3, 0, 28
+; AIX32-NEXT:   cmplw   3, 4
+; AIX32-NEXT:   bne     0, L..BB3_24
+; AIX32-NEXT:  # %bb.21:                               # %cmpxchg.fencedstore152
+; AIX32-NEXT:   extsb 5, 5
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   .align  5
+; AIX32-NEXT:  L..BB3_22:                              # %cmpxchg.trystore151
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   stwcx. 5, 0, 28
+; AIX32-NEXT:   beq     0, L..BB3_24
+; AIX32-NEXT:  # %bb.23:                               # %cmpxchg.releasedload150
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_22 Depth=1
+; AIX32-NEXT:   lwarx 3, 0, 28
+; AIX32-NEXT:   cmplw   3, 4
+; AIX32-NEXT:   beq     0, L..BB3_22
+; AIX32-NEXT:  L..BB3_24:                              # %cmpxchg.nostore148
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lwz 31, L..C6(2)                        # @sll
+; AIX32-NEXT:   lbz 3, 0(29)
+; AIX32-NEXT:   li 14, 0
+; AIX32-NEXT:   addi 4, 1, 64
+; AIX32-NEXT:   li 7, 5
+; AIX32-NEXT:   li 8, 5
+; AIX32-NEXT:   stw 14, 64(1)
+; AIX32-NEXT:   extsb 6, 3
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   srawi 5, 6, 31
+; AIX32-NEXT:   stw 3, 68(1)
+; AIX32-NEXT:   mr      3, 31
+; AIX32-NEXT:   bl .__atomic_compare_exchange_8[PR]
+; AIX32-NEXT:   nop
+; AIX32-NEXT:   lwz 3, 68(1)
+; AIX32-NEXT:   lbz 4, 0(29)
+; AIX32-NEXT:   li 7, 5
+; AIX32-NEXT:   li 8, 5
+; AIX32-NEXT:   stw 3, 4(31)
+; AIX32-NEXT:   lwz 3, 64(1)
+; AIX32-NEXT:   extsb 6, 4
+; AIX32-NEXT:   addi 4, 1, 64
+; AIX32-NEXT:   stw 14, 64(1)
+; AIX32-NEXT:   srawi 5, 6, 31
+; AIX32-NEXT:   stw 3, 0(31)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   lwz 31, L..C7(2)                        # @ull
+; AIX32-NEXT:   stw 3, 68(1)
+; AIX32-NEXT:   mr      3, 31
+; AIX32-NEXT:   bl .__atomic_compare_exchange_8[PR]
+; AIX32-NEXT:   nop
+; AIX32-NEXT:   lwz 3, 64(1)
+; AIX32-NEXT:   lwz 4, 68(1)
+; AIX32-NEXT:   lbz 5, 0(29)
+; AIX32-NEXT:   stw 4, 4(31)
+; AIX32-NEXT:   stw 3, 0(31)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   lwarx 4, 0, 27
+; AIX32-NEXT:   srw 6, 4, 26
+; AIX32-NEXT:   clrlwi  6, 6, 24
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   bne     0, L..BB3_28
+; AIX32-NEXT:  # %bb.25:                               # %cmpxchg.fencedstore119
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   slw 5, 5, 26
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT:  L..BB3_26:                              # %cmpxchg.trystore118
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   and 4, 4, 25
+; AIX32-NEXT:   or 4, 4, 5
+; AIX32-NEXT:   stwcx. 4, 0, 27
+; AIX32-NEXT:   beq     0, L..BB3_29
+; AIX32-NEXT:  # %bb.27:                               # %cmpxchg.releasedload117
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_26 Depth=1
+; AIX32-NEXT:   lwarx 4, 0, 27
+; AIX32-NEXT:   srw 6, 4, 26
+; AIX32-NEXT:   clrlwi  6, 6, 24
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   beq     0, L..BB3_26
+; AIX32-NEXT:  L..BB3_28:                              # %cmpxchg.nostore115
+; AIX32-NEXT:   crxor 20, 20, 20
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   b L..BB3_30
+; AIX32-NEXT:  L..BB3_29:                              # %cmpxchg.success116
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   creqv 20, 20, 20
+; AIX32-NEXT:  L..BB3_30:                              # %cmpxchg.end113
+; AIX32-NEXT:   li 3, 0
+; AIX32-NEXT:   li 4, 1
+; AIX32-NEXT:   lbz 5, 0(29)
+; AIX32-NEXT:   isel 3, 4, 3, 20
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   lwarx 4, 0, 24
+; AIX32-NEXT:   srw 6, 4, 23
+; AIX32-NEXT:   clrlwi  6, 6, 24
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   bne     0, L..BB3_34
+; AIX32-NEXT:  # %bb.31:                               # %cmpxchg.fencedstore86
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   slw 5, 5, 23
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT:  L..BB3_32:                              # %cmpxchg.trystore85
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   and 4, 4, 22
+; AIX32-NEXT:   or 4, 4, 5
+; AIX32-NEXT:   stwcx. 4, 0, 24
+; AIX32-NEXT:   beq     0, L..BB3_35
+; AIX32-NEXT:  # %bb.33:                               # %cmpxchg.releasedload84
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_32 Depth=1
+; AIX32-NEXT:   lwarx 4, 0, 24
+; AIX32-NEXT:   srw 6, 4, 23
+; AIX32-NEXT:   clrlwi  6, 6, 24
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   beq     0, L..BB3_32
+; AIX32-NEXT:  L..BB3_34:                              # %cmpxchg.nostore82
+; AIX32-NEXT:   crxor 20, 20, 20
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   b L..BB3_36
+; AIX32-NEXT:  L..BB3_35:                              # %cmpxchg.success83
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   creqv 20, 20, 20
+; AIX32-NEXT:  L..BB3_36:                              # %cmpxchg.end80
+; AIX32-NEXT:   li 3, 0
+; AIX32-NEXT:   li 4, 1
+; AIX32-NEXT:   lbz 5, 0(29)
+; AIX32-NEXT:   isel 3, 4, 3, 20
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   lwarx 4, 0, 21
+; AIX32-NEXT:   srw 6, 4, 20
+; AIX32-NEXT:   clrlwi  6, 6, 16
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   bne     0, L..BB3_40
+; AIX32-NEXT:  # %bb.37:                               # %cmpxchg.fencedstore53
+; AIX32-NEXT:   extsb 5, 5
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   clrlwi  5, 5, 16
+; AIX32-NEXT:   slw 5, 5, 20
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT:  L..BB3_38:                              # %cmpxchg.trystore52
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   and 4, 4, 19
+; AIX32-NEXT:   or 4, 4, 5
+; AIX32-NEXT:   stwcx. 4, 0, 21
+; AIX32-NEXT:   beq     0, L..BB3_41
+; AIX32-NEXT:  # %bb.39:                               # %cmpxchg.releasedload51
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_38 Depth=1
+; AIX32-NEXT:   lwarx 4, 0, 21
+; AIX32-NEXT:   srw 6, 4, 20
+; AIX32-NEXT:   clrlwi  6, 6, 16
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   beq     0, L..BB3_38
+; AIX32-NEXT:  L..BB3_40:                              # %cmpxchg.nostore49
+; AIX32-NEXT:   crxor 20, 20, 20
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   b L..BB3_42
+; AIX32-NEXT:  L..BB3_41:                              # %cmpxchg.success50
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   creqv 20, 20, 20
+; AIX32-NEXT:  L..BB3_42:                              # %cmpxchg.end47
+; AIX32-NEXT:   li 3, 0
+; AIX32-NEXT:   li 4, 1
+; AIX32-NEXT:   lbz 5, 0(29)
+; AIX32-NEXT:   isel 3, 4, 3, 20
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   lwarx 4, 0, 18
+; AIX32-NEXT:   srw 6, 4, 17
+; AIX32-NEXT:   clrlwi  6, 6, 16
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   bne     0, L..BB3_46
+; AIX32-NEXT:  # %bb.43:                               # %cmpxchg.fencedstore29
+; AIX32-NEXT:   extsb 5, 5
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   clrlwi  5, 5, 16
+; AIX32-NEXT:   slw 5, 5, 17
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT:  L..BB3_44:                              # %cmpxchg.trystore28
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   and 4, 4, 16
+; AIX32-NEXT:   or 4, 4, 5
+; AIX32-NEXT:   stwcx. 4, 0, 18
+; AIX32-NEXT:   beq     0, L..BB3_47
+; AIX32-NEXT:  # %bb.45:                               # %cmpxchg.releasedload27
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_44 Depth=1
+; AIX32-NEXT:   lwarx 4, 0, 18
+; AIX32-NEXT:   srw 6, 4, 17
+; AIX32-NEXT:   clrlwi  6, 6, 16
+; AIX32-NEXT:   cmplw   6, 3
+; AIX32-NEXT:   beq     0, L..BB3_44
+; AIX32-NEXT:  L..BB3_46:                              # %cmpxchg.nostore25
+; AIX32-NEXT:   crxor 20, 20, 20
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   b L..BB3_48
+; AIX32-NEXT:  L..BB3_47:                              # %cmpxchg.success26
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   creqv 20, 20, 20
+; AIX32-NEXT:  L..BB3_48:                              # %cmpxchg.end23
+; AIX32-NEXT:   li 3, 0
+; AIX32-NEXT:   li 4, 1
+; AIX32-NEXT:   isel 3, 4, 3, 20
+; AIX32-NEXT:   lbz 4, 0(29)
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   lwarx 5, 0, 15
+; AIX32-NEXT:   cmplw   5, 3
+; AIX32-NEXT:   bne     0, L..BB3_52
+; AIX32-NEXT:  # %bb.49:                               # %cmpxchg.fencedstore10
+; AIX32-NEXT:   extsb 4, 4
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   .align  5
+; AIX32-NEXT:  L..BB3_50:                              # %cmpxchg.trystore9
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   stwcx. 4, 0, 15
+; AIX32-NEXT:   beq     0, L..BB3_53
+; AIX32-NEXT:  # %bb.51:                               # %cmpxchg.releasedload8
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_50 Depth=1
+; AIX32-NEXT:   lwarx 5, 0, 15
+; AIX32-NEXT:   cmplw   5, 3
+; AIX32-NEXT:   beq     0, L..BB3_50
+; AIX32-NEXT:  L..BB3_52:                              # %cmpxchg.nostore6
+; AIX32-NEXT:   crxor 20, 20, 20
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   b L..BB3_54
+; AIX32-NEXT:  L..BB3_53:                              # %cmpxchg.success7
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   creqv 20, 20, 20
+; AIX32-NEXT:  L..BB3_54:                              # %cmpxchg.end4
+; AIX32-NEXT:   li 3, 0
+; AIX32-NEXT:   li 4, 1
+; AIX32-NEXT:   isel 3, 4, 3, 20
+; AIX32-NEXT:   lbz 4, 0(29)
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   lwarx 5, 0, 28
+; AIX32-NEXT:   cmplw   5, 3
+; AIX32-NEXT:   bne     0, L..BB3_58
+; AIX32-NEXT:  # %bb.55:                               # %cmpxchg.fencedstore
+; AIX32-NEXT:   extsb 4, 4
+; AIX32-NEXT:   sync
+; AIX32-NEXT:   .align  5
+; AIX32-NEXT:  L..BB3_56:                              # %cmpxchg.trystore
+; AIX32-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   stwcx. 4, 0, 28
+; AIX32-NEXT:   beq     0, L..BB3_59
+; AIX32-NEXT:  # %bb.57:                               # %cmpxchg.releasedload
+; AIX32-NEXT:                                          #   in Loop: Header=BB3_56 Depth=1
+; AIX32-NEXT:   lwarx 5, 0, 28
+; AIX32-NEXT:   cmplw   5, 3
+; AIX32-NEXT:   beq     0, L..BB3_56
+; AIX32-NEXT:  L..BB3_58:                              # %cmpxchg.nostore
+; AIX32-NEXT:   crxor 20, 20, 20
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   b L..BB3_60
+; AIX32-NEXT:  L..BB3_59:                              # %cmpxchg.success
+; AIX32-NEXT:   lwsync
+; AIX32-NEXT:   creqv 20, 20, 20
+; AIX32-NEXT:  L..BB3_60:                              # %cmpxchg.end
+; AIX32-NEXT:   li 3, 1
+; AIX32-NEXT:   li 31, 0
+; AIX32-NEXT:   lbz 4, 0(29)
+; AIX32-NEXT:   isel 3, 3, 31, 20
+; AIX32-NEXT:   li 7, 5
+; AIX32-NEXT:   li 8, 5
+; AIX32-NEXT:   extsb 6, 4
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   addi 4, 1, 64
+; AIX32-NEXT:   stw 31, 64(1)
+; AIX32-NEXT:   srawi 5, 6, 31
+; AIX32-NEXT:   stw 3, 68(1)
+; AIX32-NEXT:   lwz 3, L..C6(2)                         # @sll
+; AIX32-NEXT:   bl .__atomic_compare_exchange_8[PR]
+; AIX32-NEXT:   nop
+; AIX32-NEXT:   lbz 4, 0(29)
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lbz 3, 0(30)
+; AIX32-NEXT:   li 7, 5
+; AIX32-NEXT:   li 8, 5
+; AIX32-NEXT:   extsb 6, 4
+; AIX32-NEXT:   stw 3, 68(1)
+; AIX32-NEXT:   lwz 3, L..C7(2)                         # @ull
+; AIX32-NEXT:   addi 4, 1, 64
+; AIX32-NEXT:   stw 31, 64(1)
+; AIX32-NEXT:   srawi 5, 6, 31
+; AIX32-NEXT:   bl .__atomic_compare_exchange_8[PR]
+; AIX32-NEXT:   nop
+; AIX32-NEXT:   stw 3, 0(28)
+; AIX32-NEXT:   lwz 31, 140(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 30, 136(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 29, 132(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 28, 128(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 27, 124(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 26, 120(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 25, 116(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 24, 112(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 23, 108(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 22, 104(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 21, 100(1)                          # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 20, 96(1)                           # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 19, 92(1)                           # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 18, 88(1)                           # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 17, 84(1)                           # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 16, 80(1)                           # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 15, 76(1)                           # 4-byte Folded Reload
+; AIX32-NEXT:   lwz 14, 72(1)                           # 4-byte Folded Reload
+; AIX32-NEXT:   addi 1, 1, 144
+; AIX32-NEXT:   lwz 0, 8(1)
+; AIX32-NEXT:   mtlr 0
 ; AIX32-NEXT:    blr
 entry:
   %0 = load i8, ptr @uc, align 1
@@ -5597,21 +5852,20 @@ entry:
 define dso_local i64 @cmpswplp(ptr noundef %ptr, ptr nocapture noundef readnone %oldval, i64 noundef %newval) local_unnamed_addr #0 {
 ; CHECK-LABEL: cmpswplp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi 4, 5, 1
-; CHECK-NEXT:  .LBB6_1: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 6, 0, 3
-; CHECK-NEXT:    cmpd 1, 6, 5
-; CHECK-NEXT:    bne 1, .LBB6_3
-; CHECK-NEXT:  # %bb.2: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 4, 0, 3
-; CHECK-NEXT:    bne 0, .LBB6_1
-; CHECK-NEXT:  .LBB6_3: # %entry
-; CHECK-NEXT:    li 3, 66
-; CHECK-NEXT:    li 4, 55
-; CHECK-NEXT:    isel 3, 4, 3, 6
-; CHECK-NEXT:    blr
+; CHECK-NEXT:   ldarx 4, 0, 3
+; CHECK-NEXT:   cmpld   4, 5
+; CHECK-NEXT:   bne     0, .LBB6_2
+; CHECK-NEXT: # %bb.1:                                # %cmpxchg.fencedstore
+; CHECK-NEXT:   addi 4, 5, 1
+; CHECK-NEXT:   stdcx. 4, 0, 3
+; CHECK-NEXT:   beq     0, .LBB6_4
+; CHECK-NEXT: .LBB6_2:                                # %cmpxchg.failure
+; CHECK-NEXT:   crxor 20, 20, 20
+; CHECK-NEXT: .LBB6_3:                                # %cmpxchg.end
+; CHECK-NEXT:   li 3, 66
+; CHECK-NEXT:   li 4, 55
+; CHECK-NEXT:   isel 3, 4, 3, 20
+; CHECK-NEXT:   blr
 ;
 ; AIX32-LABEL: cmpswplp:
 ; AIX32:       # %bb.0: # %entry

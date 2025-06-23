@@ -75,8 +75,7 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
   } else if (Header.e_machine == EM_CUDA) {
     if (~Header.e_flags & EF_CUDA_64BIT_ADDRESS)
       return createError("Invalid CUDA addressing mode");
-    if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM35 ||
-        (Header.e_flags & EF_CUDA_SM) > EF_CUDA_SM90)
+    if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM35)
       return createError("Unsupported NVPTX architecture");
   }
 

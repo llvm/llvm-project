@@ -484,7 +484,8 @@ def gentbl_sharded_ops(
         test = False,
         includes = [],
         strip_include_prefix = None,
-        deps = []):
+        deps = [],
+        **kwargs):
     """Generate sharded op declarations and definitions.
 
     This special build rule shards op definitions in a TableGen file and generates multiple copies
@@ -524,6 +525,7 @@ def gentbl_sharded_ops(
         td_file = td_file,
         test = test,
         deps = deps,
+        **kwargs
     )
     all_files = [hdr_out, src_out]
     for i in range(0, shard_count):
@@ -535,9 +537,14 @@ def gentbl_sharded_ops(
             out = out_file,
             sharder = sharder,
             src_file = src_file,
+            **kwargs
         )
         all_files.append(out_file)
-    native.filegroup(name = name, srcs = all_files)
+    native.filegroup(
+        name = name,
+        srcs = all_files,
+        **kwargs
+    )
 
 def gentbl_sharded_op_defs(name, source_file, shard_count):
     """Generates multiple copies of a source file that includes sharded op definitions.
