@@ -193,8 +193,7 @@ public:
   bool GetIncludeTranscript() const {
     if (m_include_transcript.has_value())
       return m_include_transcript.value();
-    // `m_include_transcript` has no value set, so return a value based on
-    // `m_summary_only`.
+    // Default to false in both default mode and summary mode.
     return false;
   }
 
