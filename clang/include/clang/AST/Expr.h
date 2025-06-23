@@ -1852,8 +1852,7 @@ class StringLiteral final
 
 public:
   /// This is the "fully general" constructor that allows representation of
-  /// strings formed from multiple concatenated tokens. This same constructor
-  /// also work for a single token case.
+  /// strings formed from one or more concatenated tokens.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
                                StringLiteralKind Kind, bool Pascal, QualType Ty,
                                ArrayRef<SourceLocation> Locs);
