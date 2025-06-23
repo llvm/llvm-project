@@ -15,21 +15,21 @@
 .aeabi_attribute Tag_Feature_GCS, 1
 
 .section ".note.gnu.property", "a"
-.long 4
+.long 0x4
 .long 0x10
 .long 0x5
 .asciz "GNU"
 .long 0xc0000000 // GNU_PROPERTY_AARCH64_FEATURE_1_AND
-.long 4
-.long 2          // GNU_PROPERTY_AARCH64_FEATURE_1_PAC
-.long 0
+.long 0x4
+.long 0x2          // GNU_PROPERTY_AARCH64_FEATURE_1_PAC
+.long 0x0
 
 .section ".note.gnu.property", "a"
-.long 4
-.long 24
-.long 5
+.long 0x4
+.long 0x18
+.long 0x5
 .asciz "GNU"
 .long 0xc0000001
-.long 16
-.quad 305419896 // platform
-.quad 2271560481  // version
+.long 0x10
+.quad 0x12345678 // platform
+.quad 0x87654321  // version

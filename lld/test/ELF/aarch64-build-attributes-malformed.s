@@ -1,3 +1,5 @@
+# REQUIRES: aarch64
+
 # RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o %t.o
 # RUN: ld.lld %t.o /dev/null 2>&1 | FileCheck %s
 

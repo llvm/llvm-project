@@ -2,20 +2,21 @@
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o %t1.o
-// RUN: llvm-mc -triple=aarch64 -filetype=obj merged-2.s -o %t2.o
-// RUN: llvm-mc -triple=aarch64 -filetype=obj merged-3.s -o %t3.o
+// RUN: llvm-mc -triple=aarch64 -filetype=obj pauth-bti-gcs.s -o %t2.o
+// RUN: llvm-mc -triple=aarch64 -filetype=obj pauth-bti-pac.s -o %t3.o
 // RUN: ld.lld -r %t1.o %t2.o %t3.o -o %t.merged.o
 // RUN: llvm-readelf -n %t.merged.o | FileCheck %s --check-prefix=NOTE
+
+/// This test merges three object files with AArch64 build attributes.
+/// All contain identical PAuth ABI info (platform/version), which must be preserved.
+/// Only BTI is common across all three in the AND feature set, so the merged output
+/// must show BTI only. PAC and GCS are present in subsets and should not appear.
 
 // NOTE: Displaying notes found in: .note.gnu.property
 // NOTE-NEXT:  Owner                Data size 	Description
 // NOTE-NEXT:  GNU                  0x00000028	NT_GNU_PROPERTY_TYPE_0 (property note)
 // NOTE-NEXT:    Properties:    aarch64 feature: BTI
 // NOTE-NEXT:        AArch64 PAuth ABI core info: platform 0x31 (unknown), version 0x13
-
-/// The Build attributes section appearing in the output of
-/// llvm-mc should not appear in the output of lld, because
-/// AArch64 build attributes are being transformed into .gnu.properties.
 
 // CHECK: .note.gnu.property
 // CHECK-NOT: .ARM.attributes
@@ -29,7 +30,7 @@
 .aeabi_attribute Tag_Feature_GCS, 1
 
 
-//--- merged-2.s
+//--- pauth-bti-gcs.s
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute Tag_PAuth_Platform, 49
 .aeabi_attribute Tag_PAuth_Schema, 19
@@ -39,7 +40,7 @@
 .aeabi_attribute Tag_Feature_GCS, 1
 
 
-//--- merged-3.s
+//--- pauth-bti-pac.s
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute Tag_PAuth_Platform, 49
 .aeabi_attribute Tag_PAuth_Schema, 19
