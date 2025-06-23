@@ -3207,7 +3207,10 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     return true;
   }
 
-  report_fatal_error("unknown special variable with appending linkage");
+  GV->getContext().emitError(
+      "unknown special variable with appending linkage: " +
+      GV->getNameOrAsOperand());
+  return true;
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each
