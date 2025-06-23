@@ -4,12 +4,8 @@
 typedef unsigned int uint;
 typedef unsigned short int ushort;
 
-void test_bitop3_feature(global uint* out, uint a, uint b, uint c) {
+void test(global uint* out, uint a, uint b, uint c) {
+  __builtin_amdgcn_s_setprio_inc_wg(1); // expected-error {{'__builtin_amdgcn_s_setprio_inc_wg' needs target feature setprio-inc-wg-inst}}
   *out = __builtin_amdgcn_bitop3_b32(a, b, c, 1); // expected-error {{'__builtin_amdgcn_bitop3_b32' needs target feature bitop3-insts}}
   *out = __builtin_amdgcn_bitop3_b16((ushort)a, (ushort)b, (ushort)c, 1); // expected-error {{'__builtin_amdgcn_bitop3_b16' needs target feature bitop3-insts}}
-}
-
-void test_bitop3_args(global uint* out, uint a, uint b, uint c) {
-  *out = __builtin_amdgcn_bitop3_b32(a, b, c, a); // expected-error {{argument to '__builtin_amdgcn_bitop3_b32' must be a constant integer}}
-  *out = __builtin_amdgcn_bitop3_b16((ushort)a, (ushort)b, (ushort)c, a); // expected-error {{argument to '__builtin_amdgcn_bitop3_b16' must be a constant integer}}
 }

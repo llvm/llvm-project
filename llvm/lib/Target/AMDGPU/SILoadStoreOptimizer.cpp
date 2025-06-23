@@ -1315,8 +1315,13 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   // correct for the new instruction.  This should return true, because
   // this function should only be called on CombineInfo objects that
   // have already been confirmed to be mergeable.
-  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
+  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE) {
+    if (STM->hasUnalignedDS2Bug() &&
+        (CI.I->memoperands_empty() ||
+         (*CI.I->memoperands_begin())->getAlign().value() < CI.Width * 4))
+      return nullptr;
     offsetsCanBeCombined(CI, *STM, Paired, true);
+  }
   return Where;
 }
 

@@ -1298,6 +1298,9 @@ module std [system] {
 
     header "flat_map"
     export *
+    export std.algorithm.ranges_sort
+    export std.ranges.zip_view
+    export std.tuple
   }
 
   module flat_set {
@@ -1865,6 +1868,7 @@ module std [system] {
     module iota_view                      { header "__ranges/iota_view.h" }
     module istream_view                   { header "__ranges/istream_view.h" }
     module join_view                      { header "__ranges/join_view.h" }
+    module join_with_view                 { header "__ranges/join_with_view.h" }
     module lazy_split_view {
       header "__ranges/lazy_split_view.h"
       export std.functional.bind_back

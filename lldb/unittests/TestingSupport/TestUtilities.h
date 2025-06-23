@@ -59,6 +59,15 @@ private:
 
   std::string Buffer;
 };
+
+template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
+  llvm::json::Value value = toJSON(input);
+  llvm::json::Path::Root root;
+  T output;
+  if (!fromJSON(value, output, root))
+    return root.getError();
+  return output;
+}
 } // namespace lldb_private
 
 #endif

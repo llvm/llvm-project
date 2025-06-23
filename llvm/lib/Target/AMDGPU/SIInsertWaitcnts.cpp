@@ -836,6 +836,7 @@ public:
 
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+  bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
@@ -2424,6 +2425,12 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
       !ScoreBrackets.hasPendingEvent(VMEM_GROUP))
     Wait.XCnt = ~0u;
 
+  // Since the translation for VMEM addresses occur in-order, we can skip the
+  // XCnt if the current instruction is of VMEM type and has a memory dependency
+  // with another VMEM instruction in flight.
+  if (Wait.XCnt != ~0u && isVmemAccess(*It))
+    Wait.XCnt = ~0u;
+
   if (WCG->createNewWaitcnt(Block, It, Wait))
     Modified = true;
 
@@ -2528,6 +2535,11 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
   }
 
   return false;
+}
+
+bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
+  return (TII->isFLAT(MI) && mayAccessVMEMThroughFlat(MI)) ||
+         (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
 }
 
 static bool isGFX12CacheInvOrWBInst(MachineInstr &Inst) {

@@ -474,13 +474,13 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX1250-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 16
-; GFX1250-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
-; GFX1250-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
+; GFX1250-NEXT:    ds_load_b64 v[0:1], v2 offset:8
+; GFX1250-NEXT:    ds_load_b64 v[2:3], v2
 ; GFX1250-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX1250-NEXT:    s_wait_dscnt 0x1
-; GFX1250-NEXT:    ds_store_2addr_b32 v4, v0, v1 offset0:2 offset1:3
+; GFX1250-NEXT:    ds_store_b64 v4, v[0:1] offset:8
 ; GFX1250-NEXT:    s_wait_dscnt 0x1
-; GFX1250-NEXT:    ds_store_2addr_b32 v4, v2, v3 offset1:1
+; GFX1250-NEXT:    ds_store_b64 v4, v[2:3]
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1250-NEXT:  .LBB3_2: ; %for.end
 ; GFX1250-NEXT:    s_endpgm

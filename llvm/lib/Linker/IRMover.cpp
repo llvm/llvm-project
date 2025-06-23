@@ -9,7 +9,6 @@
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/Constants.h"
