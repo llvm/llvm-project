@@ -104,16 +104,16 @@ define i32 @PR55714_i32(i32 %n, i32 %q) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal (,%ecx,8), %eax
-; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR55714_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    leal (,%rsi,8), %eax
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rsi,8), %eax
 ; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    retq
   %mul = mul i32 %q, 7
   %add = add i32 %mul, %n
@@ -123,21 +123,19 @@ define i32 @PR55714_i32(i32 %n, i32 %q) {
 define i64 @PR55714_i64(i64 %n, i64 %q) {
 ; X86-LABEL: PR55714_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (,%eax,8), %ecx
-; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $7, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    leal (%edx,%ecx,8), %edx
+; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR55714_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    leaq (,%rsi,8), %rax
+; X64-NEXT:    leaq (%rdi,%rsi,8), %rax
 ; X64-NEXT:    subq %rsi, %rax
-; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    retq
   %mul = mul i64 %q, 7
   %add = add i64 %mul, %n

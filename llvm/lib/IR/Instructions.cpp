@@ -1854,23 +1854,18 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
                                        SmallVectorImpl<int> &Result) {
   ElementCount EC = cast<VectorType>(Mask->getType())->getElementCount();
 
-  if (isa<ConstantAggregateZero>(Mask)) {
-    Result.resize(EC.getKnownMinValue(), 0);
-    return;
-  }
-
-  Result.reserve(EC.getKnownMinValue());
-
-  if (EC.isScalable()) {
-    assert((isa<ConstantAggregateZero>(Mask) || isa<UndefValue>(Mask)) &&
-           "Scalable vector shuffle mask must be undef or zeroinitializer");
+  if (isa<ConstantAggregateZero>(Mask) || isa<UndefValue>(Mask)) {
     int MaskVal = isa<UndefValue>(Mask) ? -1 : 0;
-    for (unsigned I = 0; I < EC.getKnownMinValue(); ++I)
-      Result.emplace_back(MaskVal);
+    Result.append(EC.getKnownMinValue(), MaskVal);
     return;
   }
 
-  unsigned NumElts = EC.getKnownMinValue();
+  assert(!EC.isScalable() &&
+         "Scalable vector shuffle mask must be undef or zeroinitializer");
+
+  unsigned NumElts = EC.getFixedValue();
+
+  Result.reserve(NumElts);
 
   if (auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
     for (unsigned i = 0; i != NumElts; ++i)

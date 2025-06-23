@@ -98,6 +98,8 @@ public:
   HLSLWaveSizeAttr *mergeWaveSizeAttr(Decl *D, const AttributeCommonInfo &AL,
                                       int Min, int Max, int Preferred,
                                       int SpelledArgsCount);
+  HLSLVkConstantIdAttr *
+  mergeVkConstantIdAttr(Decl *D, const AttributeCommonInfo &AL, int Id);
   HLSLShaderAttr *mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                   llvm::Triple::EnvironmentType ShaderType);
   HLSLParamModifierAttr *
@@ -119,17 +121,36 @@ public:
                                        bool IsCompAssign);
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
 
+  /// Computes the unique Root Signature identifier from the given signature,
+  /// then lookup if there is a previousy created Root Signature decl.
+  ///
+  /// Returns the identifier and if it was found
+  std::pair<IdentifierInfo *, bool>
+  ActOnStartRootSignatureDecl(StringRef Signature);
+
+  /// Creates the Root Signature decl of the parsed Root Signature elements
+  /// onto the AST and push it onto current Scope
+  void ActOnFinishRootSignatureDecl(
+      SourceLocation Loc, IdentifierInfo *DeclIdent,
+      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements);
+
+  // Returns true when D is invalid and a diagnostic was produced
+  bool handleRootSignatureDecl(HLSLRootSignatureDecl *D, SourceLocation Loc);
   void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_PositionAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
+
+  void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   QualType ProcessResourceTypeAttributes(QualType Wrapped);
@@ -144,6 +165,7 @@ public:
 
   // Diagnose whether the input ID is uint/unit2/uint3 type.
   bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
+  bool diagnosePositionType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
   bool ContainsBitField(QualType BaseTy);
@@ -154,7 +176,7 @@ public:
   QualType getInoutParameterType(QualType Ty);
 
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
-
+  bool handleInitialization(VarDecl *VDecl, Expr *&Init);
   void deduceAddressSpace(VarDecl *Decl);
 
 private:

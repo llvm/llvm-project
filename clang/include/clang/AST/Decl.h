@@ -1352,6 +1352,11 @@ public:
     return const_cast<VarDecl *>(this)->getInitializingDeclaration();
   }
 
+  /// Checks whether this declaration has an initializer with side effects,
+  /// without triggering deserialization if the initializer is not yet
+  /// deserialized.
+  bool hasInitWithSideEffects() const;
+
   /// Determine whether this variable's value might be usable in a
   /// constant expression, according to the relevant language standard.
   /// This only checks properties of the declaration, and does not check
@@ -3417,16 +3422,13 @@ public:
 
   static IndirectFieldDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation L, const IdentifierInfo *Id,
-                                   QualType T,
-                                   llvm::MutableArrayRef<NamedDecl *> CH);
+                                   QualType T, MutableArrayRef<NamedDecl *> CH);
 
   static IndirectFieldDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   using chain_iterator = ArrayRef<NamedDecl *>::const_iterator;
 
-  ArrayRef<NamedDecl *> chain() const {
-    return llvm::ArrayRef(Chaining, ChainingSize);
-  }
+  ArrayRef<NamedDecl *> chain() const { return {Chaining, ChainingSize}; }
   chain_iterator chain_begin() const { return chain().begin(); }
   chain_iterator chain_end() const { return chain().end(); }
 
@@ -4490,18 +4492,18 @@ private:
 };
 
 class FileScopeAsmDecl : public Decl {
-  StringLiteral *AsmString;
+  Expr *AsmString;
   SourceLocation RParenLoc;
 
-  FileScopeAsmDecl(DeclContext *DC, StringLiteral *asmstring,
-                   SourceLocation StartL, SourceLocation EndL)
-    : Decl(FileScopeAsm, DC, StartL), AsmString(asmstring), RParenLoc(EndL) {}
+  FileScopeAsmDecl(DeclContext *DC, Expr *asmstring, SourceLocation StartL,
+                   SourceLocation EndL)
+      : Decl(FileScopeAsm, DC, StartL), AsmString(asmstring), RParenLoc(EndL) {}
 
   virtual void anchor();
 
 public:
-  static FileScopeAsmDecl *Create(ASTContext &C, DeclContext *DC,
-                                  StringLiteral *Str, SourceLocation AsmLoc,
+  static FileScopeAsmDecl *Create(ASTContext &C, DeclContext *DC, Expr *Str,
+                                  SourceLocation AsmLoc,
                                   SourceLocation RParenLoc);
 
   static FileScopeAsmDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
@@ -4513,9 +4515,11 @@ public:
     return SourceRange(getAsmLoc(), getRParenLoc());
   }
 
-  const StringLiteral *getAsmString() const { return AsmString; }
-  StringLiteral *getAsmString() { return AsmString; }
-  void setAsmString(StringLiteral *Asm) { AsmString = Asm; }
+  const Expr *getAsmStringExpr() const { return AsmString; }
+  Expr *getAsmStringExpr() { return AsmString; }
+  void setAsmString(Expr *Asm) { AsmString = Asm; }
+
+  std::string getAsmString() const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == FileScopeAsm; }

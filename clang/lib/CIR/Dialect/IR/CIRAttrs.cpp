@@ -184,6 +184,26 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// ConstComplexAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                         cir::ComplexType type, mlir::TypedAttr real,
+                         mlir::TypedAttr imag) {
+  mlir::Type elemType = type.getElementType();
+  if (real.getType() != elemType)
+    return emitError()
+           << "type of the real part does not match the complex type";
+
+  if (imag.getType() != elemType)
+    return emitError()
+           << "type of the imaginary part does not match the complex type";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CIR ConstArrayAttr
 //===----------------------------------------------------------------------===//
 

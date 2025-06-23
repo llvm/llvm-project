@@ -86,14 +86,14 @@ bool fromJSON(const llvm::json::Value &Params, ExceptionBreakpointsFilter &EBF,
 json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
   json::Object result{{"filter", EBF.filter}, {"label", EBF.label}};
 
-  if (EBF.description)
-    result.insert({"description", *EBF.description});
+  if (!EBF.description.empty())
+    result.insert({"description", EBF.description});
   if (EBF.defaultState)
-    result.insert({"default", *EBF.defaultState});
+    result.insert({"default", EBF.defaultState});
   if (EBF.supportsCondition)
-    result.insert({"supportsCondition", *EBF.supportsCondition});
-  if (EBF.conditionDescription)
-    result.insert({"conditionDescription", *EBF.conditionDescription});
+    result.insert({"supportsCondition", EBF.supportsCondition});
+  if (!EBF.conditionDescription.empty())
+    result.insert({"conditionDescription", EBF.conditionDescription});
 
   return result;
 }
@@ -418,23 +418,41 @@ json::Value toJSON(const Capabilities &C) {
   for (const auto &feature : C.supportedFeatures)
     result.insert({ToString(feature), true});
 
-  if (C.exceptionBreakpointFilters && !C.exceptionBreakpointFilters->empty())
+  if (!C.exceptionBreakpointFilters.empty())
+    result.insert({"exceptionBreakpointFilters", C.exceptionBreakpointFilters});
+  if (!C.completionTriggerCharacters.empty())
     result.insert(
-        {"exceptionBreakpointFilters", *C.exceptionBreakpointFilters});
-  if (C.completionTriggerCharacters && !C.completionTriggerCharacters->empty())
+        {"completionTriggerCharacters", C.completionTriggerCharacters});
+  if (!C.additionalModuleColumns.empty())
+    result.insert({"additionalModuleColumns", C.additionalModuleColumns});
+  if (!C.supportedChecksumAlgorithms.empty())
     result.insert(
-        {"completionTriggerCharacters", *C.completionTriggerCharacters});
-  if (C.additionalModuleColumns && !C.additionalModuleColumns->empty())
-    result.insert({"additionalModuleColumns", *C.additionalModuleColumns});
-  if (C.supportedChecksumAlgorithms && !C.supportedChecksumAlgorithms->empty())
-    result.insert(
-        {"supportedChecksumAlgorithms", *C.supportedChecksumAlgorithms});
-  if (C.breakpointModes && !C.breakpointModes->empty())
-    result.insert({"breakpointModes", *C.breakpointModes});
+        {"supportedChecksumAlgorithms", C.supportedChecksumAlgorithms});
+  if (!C.breakpointModes.empty())
+    result.insert({"breakpointModes", C.breakpointModes});
 
   // lldb-dap extensions
-  if (C.lldbExtVersion && !C.lldbExtVersion->empty())
-    result.insert({"$__lldb_version", *C.lldbExtVersion});
+  if (!C.lldbExtVersion.empty())
+    result.insert({"$__lldb_version", C.lldbExtVersion});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Params, ExceptionFilterOptions &EFO,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("filterId", EFO.filterId) &&
+         O.mapOptional("condition", EFO.condition) &&
+         O.mapOptional("mode", EFO.mode);
+}
+
+json::Value toJSON(const ExceptionFilterOptions &EFO) {
+  json::Object result{{"filterId", EFO.filterId}};
+
+  if (!EFO.condition.empty())
+    result.insert({"condition", EFO.condition});
+  if (!EFO.mode.empty())
+    result.insert({"mode", EFO.mode});
 
   return result;
 }
@@ -585,8 +603,10 @@ llvm::json::Value toJSON(const SteppingGranularity &SG) {
 bool fromJSON(const json::Value &Params, StepInTarget &SIT, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("id", SIT.id) && O.map("label", SIT.label) &&
-         O.map("line", SIT.line) && O.map("column", SIT.column) &&
-         O.map("endLine", SIT.endLine) && O.map("endColumn", SIT.endColumn);
+         O.mapOptional("line", SIT.line) &&
+         O.mapOptional("column", SIT.column) &&
+         O.mapOptional("endLine", SIT.endLine) &&
+         O.mapOptional("endColumn", SIT.endColumn);
 }
 
 llvm::json::Value toJSON(const StepInTarget &SIT) {
@@ -602,6 +622,15 @@ llvm::json::Value toJSON(const StepInTarget &SIT) {
     target.insert({"endColumn", SIT.endColumn});
 
   return target;
+}
+
+bool fromJSON(const json::Value &Params, Thread &T, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("id", T.id) && O.map("name", T.name);
+}
+
+json::Value toJSON(const Thread &T) {
+  return json::Object{{"id", T.id}, {"name", T.name}};
 }
 
 bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
@@ -843,22 +872,20 @@ llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
 
 bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
               llvm::json::Path P) {
-  std::optional<llvm::StringRef> raw_address =
-      Params.getAsObject()->getString("address");
-  if (!raw_address) {
-    P.report("missing 'address' field");
+  llvm::json::ObjectMapper O(Params, P);
+  std::string raw_address;
+  if (!O || !O.map("address", raw_address))
     return false;
-  }
 
-  std::optional<lldb::addr_t> address = DecodeMemoryReference(*raw_address);
+  std::optional<lldb::addr_t> address = DecodeMemoryReference(raw_address);
   if (!address) {
-    P.report("invalid 'address'");
+    P.field("address").report("expected string encoded uint64_t");
     return false;
   }
 
   DI.address = *address;
-  llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("instruction", DI.instruction) &&
+
+  return O.map("instruction", DI.instruction) &&
          O.mapOptional("instructionBytes", DI.instructionBytes) &&
          O.mapOptional("symbol", DI.symbol) &&
          O.mapOptional("location", DI.location) &&

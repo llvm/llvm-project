@@ -187,4 +187,37 @@ cir.func @vector_shuffle_dynamic_test() {
 // CHECK:    cir.return
 // CHECK: }
 
+cir.func @vector_splat_test() {
+    %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+    %1 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["shl", init]
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.const #cir.int<2> : !s32i
+    %4 = cir.const #cir.int<3> : !s32i
+    %5 = cir.const #cir.int<4> : !s32i
+    %6 = cir.vec.create(%2, %3, %4, %5 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    cir.store %6, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+    %7 = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+    %8 = cir.const #cir.int<3> : !s32i
+    %9 = cir.vec.splat %8 : !s32i, !cir.vector<4 x !s32i>
+    %10 = cir.shift(left, %7 : !cir.vector<4 x !s32i>, %9 : !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+    cir.store %10, %1 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+    cir.return
+}
+
+// CHECK: cir.func @vector_splat_test() {
+// CHECK-NEXT: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CHECK-NEXT: %[[SHL_RES:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["shl", init]
+// CHECK-NEXT: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK-NEXT: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
+// CHECK-NEXT: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
+// CHECK-NEXT: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CHECK-NEXT: cir.store %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK-NEXT: %[[TMP:.*]] = cir.load %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CHECK-NEXT: %[[SPLAT_VAL:.*]] = cir.const #cir.int<3> : !s32i
+// CHECK-NEXT: %[[SPLAT_VEC:.*]] = cir.vec.splat %[[SPLAT_VAL]] : !s32i, !cir.vector<4 x !s32i>
+// CHECK-NEXT: %[[SHL:.*]] = cir.shift(left, %[[TMP]] : !cir.vector<4 x !s32i>, %[[SPLAT_VEC]] : !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+// CHECK-NEXT: cir.store %[[SHL]], %[[SHL_RES:.*]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK-NEXT: cir.return
+
 }

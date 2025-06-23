@@ -35,6 +35,7 @@ struct EnumInfo;
 struct FunctionInfo;
 struct Info;
 struct TypedefInfo;
+struct ConceptInfo;
 
 enum class InfoType {
   IT_default,
@@ -42,8 +43,28 @@ enum class InfoType {
   IT_record,
   IT_function,
   IT_enum,
-  IT_typedef
+  IT_typedef,
+  IT_concept
 };
+
+enum class CommentKind {
+  CK_FullComment,
+  CK_ParagraphComment,
+  CK_TextComment,
+  CK_InlineCommandComment,
+  CK_HTMLStartTagComment,
+  CK_HTMLEndTagComment,
+  CK_BlockCommandComment,
+  CK_ParamCommandComment,
+  CK_TParamCommandComment,
+  CK_VerbatimBlockComment,
+  CK_VerbatimBlockLineComment,
+  CK_VerbatimLineComment,
+  CK_Unknown
+};
+
+CommentKind stringToCommentKind(llvm::StringRef KindStr);
+llvm::StringRef commentKindToString(CommentKind Kind);
 
 // A representation of a parsed comment.
 struct CommentInfo {
@@ -60,13 +81,13 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  // TODO: The Kind field should be an enum, so we can switch on it easily.
-  SmallString<16>
-      Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
-            // InlineCommandComment, HTMLStartTagComment, HTMLEndTagComment,
-            // BlockCommandComment, ParamCommandComment,
-            // TParamCommandComment, VerbatimBlockComment,
-            // VerbatimBlockLineComment, VerbatimLineComment).
+  CommentKind Kind = CommentKind::
+      CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
+                  // TextComment, InlineCommandComment, HTMLStartTagComment,
+                  // HTMLEndTagComment, BlockCommandComment,
+                  // ParamCommandComment, TParamCommandComment,
+                  // VerbatimBlockComment, VerbatimBlockLineComment,
+                  // VerbatimLineComment).
   SmallString<64> Text;      // Text of the comment.
   SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
   SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
@@ -147,6 +168,7 @@ struct ScopeChildren {
   std::vector<FunctionInfo> Functions;
   std::vector<EnumInfo> Enums;
   std::vector<TypedefInfo> Typedefs;
+  std::vector<ConceptInfo> Concepts;
 
   void sort();
 };
@@ -192,6 +214,15 @@ struct TemplateSpecializationInfo {
   std::vector<TemplateParamInfo> Params;
 };
 
+struct ConstraintInfo {
+  ConstraintInfo() = default;
+  ConstraintInfo(SymbolID USR, StringRef Name)
+      : ConceptRef(USR, Name, InfoType::IT_concept) {}
+  Reference ConceptRef;
+
+  SmallString<16> ConstraintExpr;
+};
+
 // Records the template information for a struct or function that is a template
 // or an explicit template specialization.
 struct TemplateInfo {
@@ -200,6 +231,7 @@ struct TemplateInfo {
 
   // Set when this is a specialization of another record/function.
   std::optional<TemplateSpecializationInfo> Specialization;
+  std::vector<ConstraintInfo> Constraints;
 };
 
 // Info for field types.
@@ -492,6 +524,17 @@ struct EnumInfo : public SymbolInfo {
   std::optional<TypeInfo> BaseType;
 
   llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
+};
+
+struct ConceptInfo : public SymbolInfo {
+  ConceptInfo() : SymbolInfo(InfoType::IT_concept) {}
+  ConceptInfo(SymbolID USR) : SymbolInfo(InfoType::IT_concept, USR) {}
+
+  void merge(ConceptInfo &&I);
+
+  bool IsType;
+  TemplateInfo Template;
+  SmallString<16> ConstraintExpression;
 };
 
 struct Index : public Reference {

@@ -2029,7 +2029,7 @@ struct DSEState {
     auto *InnerCallee = Malloc->getCalledFunction();
     if (!InnerCallee)
       return false;
-    LibFunc Func;
+    LibFunc Func = NotLibFunc;
     StringRef ZeroedVariantName;
     if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
         Func != LibFunc_malloc) {
@@ -2345,7 +2345,8 @@ bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
-         EA.isNotCapturedBefore(UnderlyingObj, CB, /*OrAt*/ true);
+         capturesNothing(
+             EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt*/ true));
 }
 
 SmallVector<MemoryLocation, 1>

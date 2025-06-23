@@ -220,7 +220,6 @@ int x = cwg2640_a\N{abc});
 int y = cwg2640_a\N{LOTUS});
 // expected-error@-1 {{character <U+1FAB7> not allowed in an identifier}}
 // expected-error@-2 {{use of undeclared identifier 'cwg2640_a🪷'}}
-// expected-error@-3 {{extraneous ')' before ';'}}
 } // namespace cwg2640
 
 // cwg2642: na

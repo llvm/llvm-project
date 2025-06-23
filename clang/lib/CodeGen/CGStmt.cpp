@@ -757,10 +757,9 @@ void CodeGenFunction::LexicalScope::rescopeLabels() {
     = CGF.EHStack.getInnermostNormalCleanup();
 
   // Change the scope depth of all the labels.
-  for (SmallVectorImpl<const LabelDecl*>::const_iterator
-         i = Labels.begin(), e = Labels.end(); i != e; ++i) {
-    assert(CGF.LabelMap.count(*i));
-    JumpDest &dest = CGF.LabelMap.find(*i)->second;
+  for (const LabelDecl *Label : Labels) {
+    assert(CGF.LabelMap.count(Label));
+    JumpDest &dest = CGF.LabelMap.find(Label)->second;
     assert(dest.getScopeDepth().isValid());
     assert(innermostScope.encloses(dest.getScopeDepth()));
     dest.setScopeDepth(innermostScope);
@@ -1605,6 +1604,7 @@ static bool isSwiftAsyncCallee(const CallExpr *CE) {
 /// if the function returns void, or may be missing one if the function returns
 /// non-void.  Fun stuff :).
 void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
+  ApplyAtomGroup Grp(getDebugInfo());
   if (requiresReturnValueCheck()) {
     llvm::Constant *SLoc = EmitCheckSourceLocation(S.getBeginLoc());
     auto *SLocPtr =
@@ -1680,16 +1680,19 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     // If this function returns a reference, take the address of the expression
     // rather than the value.
     RValue Result = EmitReferenceBindingToExpr(RV);
-    Builder.CreateStore(Result.getScalarVal(), ReturnValue);
+    auto *I = Builder.CreateStore(Result.getScalarVal(), ReturnValue);
+    addInstToCurrentSourceAtom(I, I->getValueOperand());
   } else {
     switch (getEvaluationKind(RV->getType())) {
     case TEK_Scalar: {
       llvm::Value *Ret = EmitScalarExpr(RV);
-      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
+      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect) {
         EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
                           /*isInit*/ true);
-      else
-        Builder.CreateStore(Ret, ReturnValue);
+      } else {
+        auto *I = Builder.CreateStore(Ret, ReturnValue);
+        addInstToCurrentSourceAtom(I, I->getValueOperand());
+      }
       break;
     }
     case TEK_Complex:
@@ -2298,8 +2301,8 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
 
       // Okay, we can dead code eliminate everything except this case.  Emit the
       // specified series of statements and we're good.
-      for (unsigned i = 0, e = CaseStmts.size(); i != e; ++i)
-        EmitStmt(CaseStmts[i]);
+      for (const Stmt *CaseStmt : CaseStmts)
+        EmitStmt(CaseStmt);
       incrementProfileCounter(&S);
       PGO->markStmtMaybeUsed(S.getBody());
 

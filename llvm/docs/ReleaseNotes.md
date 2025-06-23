@@ -208,6 +208,9 @@ Changes to the RISC-V Backend
   Extensions.
 * `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
 * The `Shlcofideleg` extension was added.
+* `-mcpu=sifive-x390` was added.
+* `-mtune=andes-45-series` was added.
+* Adds assembler support for the Andes `XAndesvbfhcvt` (Andes Vector BFLOAT16 Conversion extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -248,6 +251,9 @@ Changes to the C API
 * Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
   debugging metadata of enumerators larger than 64 bits.
 
+* Added ``LLVMGetICmpSameSign`` and ``LLVMSetICmpSameSign`` for the `samesign`
+  flag on `icmp` instructions.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -264,6 +270,7 @@ Changes to the LLVM tools
 * llvm-strip now supports continuing to process files on encountering an error.
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
+* llvm-addr2line now supports a `+` prefix when specifying an address.
 
 Changes to LLDB
 ---------------------------------

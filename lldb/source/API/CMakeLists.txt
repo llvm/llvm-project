@@ -125,6 +125,8 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/API
   DEPENDS
     lldb-sbapi-dwarf-enums
 
@@ -310,7 +312,7 @@ foreach(header
     # unifdef returns 0 when the file is unchanged and 1 if something was changed.
     # That means if we successfully remove SWIG code, the build system believes
     # that the command has failed and stops. This is undesirable.
-    set(copy_command ${unifdef_EXECUTABLE} -USWIG -o ${staged_header} ${header} || (exit 0))
+    set(copy_command ${unifdef_EXECUTABLE} -USWIG ${header} > ${staged_header} || (exit 0))
   else()
     set(copy_command ${CMAKE_COMMAND} -E copy ${header} ${staged_header})
   endif()
@@ -324,7 +326,7 @@ foreach(header
 endforeach()
 
 add_custom_command(TARGET liblldb POST_BUILD
-  COMMAND ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h ${lldb_header_staging_dir}/lldb-defines.h ${LLDB_VERSION_MAJOR} ${LLDB_VERSION_MINOR} ${LLDB_VERSION_PATCH}
+  COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h ${lldb_header_staging_dir}/lldb-defines.h ${LLDB_VERSION_MAJOR} ${LLDB_VERSION_MINOR} ${LLDB_VERSION_PATCH}
 )
 add_custom_target(liblldb-header-staging DEPENDS ${lldb_staged_headers})
 add_dependencies(liblldb liblldb-header-staging)

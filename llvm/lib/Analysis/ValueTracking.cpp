@@ -3043,6 +3043,10 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     // (X | (X != 0)) is non zero
     if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
       return true;
+    // X | Y != 0 if X != Y.
+    if (isKnownNonEqual(I->getOperand(0), I->getOperand(1), DemandedElts, Q,
+                        Depth))
+      return true;
     // X | Y != 0 if X != 0 or Y != 0.
     return isKnownNonZero(I->getOperand(1), DemandedElts, Q, Depth) ||
            isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
@@ -3516,6 +3520,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
   if (!isa<Constant>(V) &&
       isKnownNonNullFromDominatingCondition(V, Q.CxtI, Q.DT))
     return true;
+
+  if (const Value *Stripped = stripNullTest(V))
+    return isKnownNonZero(Stripped, DemandedElts, Q, Depth);
 
   return false;
 }
@@ -5604,19 +5611,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Look through extract element. If the index is non-constant or
     // out-of-range demand all elements, otherwise just the extracted element.
     const Value *Vec = Op->getOperand(0);
-    const Value *Idx = Op->getOperand(1);
-    auto *CIdx = dyn_cast<ConstantInt>(Idx);
 
+    APInt DemandedVecElts;
     if (auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType())) {
       unsigned NumElts = VecTy->getNumElements();
-      APInt DemandedVecElts = APInt::getAllOnes(NumElts);
+      DemandedVecElts = APInt::getAllOnes(NumElts);
+      auto *CIdx = dyn_cast<ConstantInt>(Op->getOperand(1));
       if (CIdx && CIdx->getValue().ult(NumElts))
         DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
-      return computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known,
-                                 Q, Depth + 1);
+    } else {
+      DemandedVecElts = APInt(1, 1);
     }
 
-    break;
+    return computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known,
+                               Q, Depth + 1);
   }
   case Instruction::InsertElement: {
     if (isa<ScalableVectorType>(Op->getType()))
@@ -7579,16 +7587,23 @@ static bool isGuaranteedNotToBeUndefOrPoison(
     if (isa<UndefValue>(C))
       return !includesUndef(Kind);
 
-    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(V) ||
+    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(C) ||
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C)) {
-      if (includesUndef(Kind) && C->containsUndefElement())
-        return false;
-      if (includesPoison(Kind) && C->containsPoisonElement())
-        return false;
-      return !C->containsConstantExpression();
+    if (C->getType()->isVectorTy()) {
+      if (isa<ConstantExpr>(C)) {
+        // Scalable vectors can use a ConstantExpr to build a splat.
+        if (Constant *SplatC = C->getSplatValue())
+          if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
+            return true;
+      } else {
+        if (includesUndef(Kind) && C->containsUndefElement())
+          return false;
+        if (includesPoison(Kind) && C->containsPoisonElement())
+          return false;
+        return !C->containsConstantExpression();
+      }
     }
   }
 
@@ -7834,8 +7849,6 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(
    iterator_range<BasicBlock::const_iterator> Range, unsigned ScanLimit) {
   assert(ScanLimit && "scan limit must be non-zero");
   for (const Instruction &I : Range) {
-    if (isa<DbgInfoIntrinsic>(I))
-        continue;
     if (--ScanLimit == 0)
       return false;
     if (!isGuaranteedToTransferExecutionToSuccessor(&I))
@@ -8038,8 +8051,6 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
     // well-defined operands.
 
     for (const auto &I : make_range(Begin, End)) {
-      if (isa<DbgInfoIntrinsic>(I))
-        continue;
       if (--ScanLimit == 0)
         break;
 
@@ -8064,8 +8075,6 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
 
   while (true) {
     for (const auto &I : make_range(Begin, End)) {
-      if (isa<DbgInfoIntrinsic>(I))
-        continue;
       if (--ScanLimit == 0)
         return false;
       if (mustTriggerUB(&I, YieldsPoison))
@@ -8652,6 +8661,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     if (LHSSafe && RHSSafe) {
       // Both operands are known non-NaN.
       NaNBehavior = SPNB_RETURNS_ANY;
+      Ordered = CmpInst::isOrdered(Pred);
     } else if (CmpInst::isOrdered(Pred)) {
       // An ordered comparison will return false when given a NaN, so it
       // returns the RHS.
@@ -9058,6 +9068,7 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
   // Handle the case of a simple two-predecessor recurrence PHI.
   // There's a lot more that could theoretically be done here, but
   // this is sufficient to catch some interesting cases.
+  // TODO: Expand list -- gep, uadd.sat etc.
   if (P->getNumIncomingValues() != 2)
     return false;
 
@@ -9067,36 +9078,16 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     auto *LU = dyn_cast<BinaryOperator>(L);
     if (!LU)
       continue;
-    unsigned Opcode = LU->getOpcode();
+    Value *LL = LU->getOperand(0);
+    Value *LR = LU->getOperand(1);
 
-    switch (Opcode) {
-    default:
-      continue;
-    // TODO: Expand list -- xor, gep, uadd.sat etc.
-    case Instruction::LShr:
-    case Instruction::AShr:
-    case Instruction::Shl:
-    case Instruction::Add:
-    case Instruction::Sub:
-    case Instruction::UDiv:
-    case Instruction::URem:
-    case Instruction::And:
-    case Instruction::Or:
-    case Instruction::Mul:
-    case Instruction::FMul: {
-      Value *LL = LU->getOperand(0);
-      Value *LR = LU->getOperand(1);
-      // Find a recurrence.
-      if (LL == P)
-        L = LR;
-      else if (LR == P)
-        L = LL;
-      else
-        continue; // Check for recurrence with L and R flipped.
-
-      break; // Match!
-    }
-    };
+    // Find a recurrence.
+    if (LL == P)
+      L = LR;
+    else if (LR == P)
+      L = LL;
+    else
+      continue; // Check for recurrence with L and R flipped.
 
     // We have matched a recurrence of the form:
     //   %iv = [R, %entry], [%iv.next, %backedge]
@@ -9567,15 +9558,45 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
   unsigned Width = Lower.getBitWidth();
   const APInt *C;
   switch (BO.getOpcode()) {
-  case Instruction::Add:
-    if (match(BO.getOperand(1), m_APInt(C)) && !C->isZero()) {
+  case Instruction::Sub:
+    if (match(BO.getOperand(0), m_APInt(C))) {
       bool HasNSW = IIQ.hasNoSignedWrap(&BO);
       bool HasNUW = IIQ.hasNoUnsignedWrap(&BO);
 
       // If the caller expects a signed compare, then try to use a signed range.
       // Otherwise if both no-wraps are set, use the unsigned range because it
       // is never larger than the signed range. Example:
-      // "add nuw nsw i8 X, -2" is unsigned [254,255] vs. signed [-128, 125].
+      // "sub nuw nsw i8 -2, x" is unsigned [0, 254] vs. signed [-128, 126].
+      // "sub nuw nsw i8 2, x" is unsigned [0, 2] vs. signed [-125, 127].
+      if (PreferSignedRange && HasNSW && HasNUW)
+        HasNUW = false;
+
+      if (HasNUW) {
+        // 'sub nuw c, x' produces [0, C].
+        Upper = *C + 1;
+      } else if (HasNSW) {
+        if (C->isNegative()) {
+          // 'sub nsw -C, x' produces [SINT_MIN, -C - SINT_MIN].
+          Lower = APInt::getSignedMinValue(Width);
+          Upper = *C - APInt::getSignedMaxValue(Width);
+        } else {
+          // Note that sub 0, INT_MIN is not NSW. It techically is a signed wrap
+          // 'sub nsw C, x' produces [C - SINT_MAX, SINT_MAX].
+          Lower = *C - APInt::getSignedMaxValue(Width);
+          Upper = APInt::getSignedMinValue(Width);
+        }
+      }
+    }
+    break;
+  case Instruction::Add:
+    if (match(BO.getOperand(1), m_APInt(C)) && !C->isZero()) {
+      bool HasNSW = IIQ.hasNoSignedWrap(&BO);
+      bool HasNUW = IIQ.hasNoUnsignedWrap(&BO);
+
+      // If the caller expects a signed compare, then try to use a signed
+      // range. Otherwise if both no-wraps are set, use the unsigned range
+      // because it is never larger than the signed range. Example: "add nuw
+      // nsw i8 X, -2" is unsigned [254,255] vs. signed [-128, 125].
       if (PreferSignedRange && HasNSW && HasNUW)
         HasNUW = false;
 
@@ -10151,4 +10172,27 @@ void llvm::findValuesAffectedByCondition(
       Worklist.push_back(X);
     }
   }
+}
+
+const Value *llvm::stripNullTest(const Value *V) {
+  // (X >> C) or/add (X & mask(C) != 0)
+  if (const auto *BO = dyn_cast<BinaryOperator>(V)) {
+    if (BO->getOpcode() == Instruction::Add ||
+        BO->getOpcode() == Instruction::Or) {
+      const Value *X;
+      const APInt *C1, *C2;
+      if (match(BO, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C1)),
+                              m_ZExt(m_SpecificICmp(
+                                  ICmpInst::ICMP_NE,
+                                  m_And(m_Deferred(X), m_LowBitMask(C2)),
+                                  m_Zero())))) &&
+          C2->popcount() == C1->getZExtValue())
+        return X;
+    }
+  }
+  return nullptr;
+}
+
+Value *llvm::stripNullTest(Value *V) {
+  return const_cast<Value *>(stripNullTest(const_cast<const Value *>(V)));
 }

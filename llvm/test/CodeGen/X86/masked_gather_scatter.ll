@@ -3481,7 +3481,7 @@ define <2 x float> @large_index(ptr %base, <2 x i128> %ind, <2 x i1> %mask, <2 x
 ; X86-SKX-NEXT:  .LBB47_1: # %cond.load
 ; X86-SKX-NEXT:    vmovd %xmm0, %ecx
 ; X86-SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X86-SKX-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; X86-SKX-NEXT:    vmovss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; X86-SKX-NEXT:    testb $2, %al
 ; X86-SKX-NEXT:    je .LBB47_4
 ; X86-SKX-NEXT:  .LBB47_3: # %cond.load1
