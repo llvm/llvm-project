@@ -997,6 +997,10 @@ MLIR_CAPI_EXPORTED MlirBlock mlirBlockGetSuccessor(MlirBlock block,
 MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumPredecessors(MlirBlock block);
 
 /// Returns `pos`-th predecessor of the block.
+///
+/// WARNING: This getter is more expensive than the others here because
+/// the impl actually iterates the use-def chain (of block operands) anew for
+/// each indexed access.
 MLIR_CAPI_EXPORTED MlirBlock mlirBlockGetPredecessor(MlirBlock block,
                                                      intptr_t pos);
 

@@ -2668,6 +2668,10 @@ private:
 /// A list of block predecessors. The (returned) predecessor list is
 /// associated with the operation and block whose predecessors these are, and
 /// thus extends the lifetime of this operation and block.
+///
+/// WARNING: This Sliceable is more expensive than the others here because
+/// mlirBlockGetPredecessor actually iterates the use-def chain (of block
+/// operands) anew for each indexed access.
 class PyBlockPredecessors : public Sliceable<PyBlockPredecessors, PyBlock> {
 public:
   static constexpr const char *pyClassName = "BlockPredecessors";
