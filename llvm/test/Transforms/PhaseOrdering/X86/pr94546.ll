@@ -10,10 +10,9 @@
 
 define <4 x double> @PR94546(<4 x double> %a, <4 x double> %b) {
 ; SSE2-LABEL: @PR94546(
-; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <2 x i32> <i32 0, i32 6>
-; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 7>
-; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 1>
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 poison, i32 poison, i32 6>
+; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 poison, i32 poison, i32 7>
+; SSE2-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
 ; SSE2-NEXT:    ret <4 x double> [[TMP4]]
 ;
 ; SSE4-LABEL: @PR94546(

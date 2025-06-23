@@ -451,10 +451,11 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const override;
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+  getShuffleCostImpl(TTI::ShuffleKind Kind, VectorType *DstTy,
+                     VectorType *SrcTy, ArrayRef<int> Mask,
+                     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+                     ArrayRef<const Value *> Args = {},
+                     const Instruction *CxtI = nullptr) const override;
 
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,

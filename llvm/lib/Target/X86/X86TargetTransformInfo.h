@@ -149,10 +149,11 @@ public:
                                   TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+  getShuffleCostImpl(TTI::ShuffleKind Kind, VectorType *DstTy,
+                     VectorType *SrcTy, ArrayRef<int> Mask,
+                     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+                     ArrayRef<const Value *> Args = {},
+                     const Instruction *CxtI = nullptr) const override;
   InstructionCost
   getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,

@@ -4,9 +4,10 @@
 define <8 x i32> @test1(<4 x i32> %0, <4 x i32> %1) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.abs.v8i32(<8 x i32> [[TMP2]], i1 false)
-; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP3:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP4:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
 entry:
   %2 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %0, i1 false)
@@ -48,8 +49,9 @@ entry:
 define <8 x i1> @test4(<4 x float> %0, <4 x float> %1) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> [[TMP2]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP0:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP1:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x i1> [[TMP3]]
 ;
 entry:
