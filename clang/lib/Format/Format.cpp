@@ -196,6 +196,10 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("BeforeLambdaBody", Wrapping.BeforeLambdaBody);
     IO.mapOptional("BeforeWhile", Wrapping.BeforeWhile);
     IO.mapOptional("IndentBraces", Wrapping.IndentBraces);
+    IO.mapOptional("IndentLambdaBracesNested",
+                   Wrapping.IndentLambdaBracesNested);
+    IO.mapOptional("IndentLambdaBracesUnnested",
+                   Wrapping.IndentLambdaBracesUnnested);
     IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
     IO.mapOptional("SplitEmptyRecord", Wrapping.SplitEmptyRecord);
     IO.mapOptional("SplitEmptyNamespace", Wrapping.SplitEmptyNamespace);
@@ -1382,6 +1386,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*BeforeLambdaBody=*/false,
                             /*BeforeWhile=*/false,
                             /*IndentBraces=*/false,
+                            /*IndentLambdaBracesNested=*/false,
+                            /*IndentLambdaBracesUnnested=*/false,
                             /*SplitEmptyFunction=*/true,
                             /*SplitEmptyRecord=*/true,
                             /*SplitEmptyNamespace=*/true};
@@ -1452,6 +1458,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*BeforeLambdaBody=*/true,
         /*BeforeWhile=*/true,
         /*IndentBraces=*/true,
+        /*IndentLambdaBracesNested=*/true,
+        /*IndentLambdaBracesUnnested=*/true,
         /*SplitEmptyFunction=*/true,
         /*SplitEmptyRecord=*/true,
         /*SplitEmptyNamespace=*/true};
@@ -1552,6 +1560,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*BeforeLambdaBody=*/false,
                              /*BeforeWhile=*/false,
                              /*IndentBraces=*/false,
+                             /*IndentLambdaBracesNested=*/false,
+                             /*IndentLambdaBracesUnnested=*/false,
                              /*SplitEmptyFunction=*/true,
                              /*SplitEmptyRecord=*/true,
                              /*SplitEmptyNamespace=*/true};
