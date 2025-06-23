@@ -49,7 +49,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
   RetainedKnowledge DerefRK;
   bool IsAligned = Ptr->getPointerAlignment(DL) >= Alignment;
   return getKnowledgeForValue(
-      Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
+      Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *AC,
       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
         if (!isValidAssumeForContext(Assume, CtxI, DT))
           return false;
@@ -203,12 +203,12 @@ static bool isDereferenceableAndAlignedPointer(
                                               Size, DL, CtxI, AC, DT, TLI,
                                               Visited, MaxDepth);
 
-  return isDereferenceableAndAlignedPointerViaAssumption(
-      V, Alignment,
-      [Size](const RetainedKnowledge &RK) {
-        return RK.ArgValue >= Size.getZExtValue();
-      },
-      DL, CtxI, AC, DT);
+  return AC && isDereferenceableAndAlignedPointerViaAssumption(
+                   V, Alignment,
+                   [Size](const RetainedKnowledge &RK) {
+                     return RK.ArgValue >= Size.getZExtValue();
+                   },
+                   DL, CtxI, AC, DT);
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(
