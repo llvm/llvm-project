@@ -4959,8 +4959,8 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
       if (Inv)
         std::swap(NewLHS, NewRHS);
 
-      SDValue NewSelect =
-          DAG.getNode(ISD::SELECT, SL, VT, Cond, NewLHS, NewRHS);
+      SDValue NewSelect = DAG.getNode(ISD::SELECT, SL, VT,
+                                      Cond, NewLHS, NewRHS);
       DCI.AddToWorklist(NewSelect.getNode());
       return DAG.getNode(LHS.getOpcode(), SL, VT, NewSelect);
     }
