@@ -3608,10 +3608,11 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
   // Otherwise report the problem to the user.
   std::string S;
   raw_string_ostream OS(S);
-  OS << "Unsupported expression in static initializer: ";
+  OS << "unsupported expression in static initializer: ";
   CE->printAsOperand(OS, /*PrintType=*/false,
                      !MF ? nullptr : MF->getFunction().getParent());
-  report_fatal_error(Twine(S));
+  CE->getContext().emitError(S);
+  return MCConstantExpr::create(0, Ctx);
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
