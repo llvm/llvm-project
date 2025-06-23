@@ -2242,7 +2242,7 @@ bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
       return false;
 
   for (unsigned i = EltSize, e = 16; i != e; i += EltSize) {
-    // An UNDEF element is a sequence of UNDEF bits.
+    // An UNDEF element is a sequence of UNDEF bytes.
     if (N->getMaskElt(i) < 0) {
       for (unsigned j = 1; j != EltSize; ++j)
         if (N->getMaskElt(i + j) >= 0)
