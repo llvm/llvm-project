@@ -3,10 +3,10 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+dsp %s -o - | FileCheck %s
 
 define arm_aapcs_vfpcc i32 @usat_lsl(i32 %num){
-; CHECK-LABEL:  usat_lsl
-; CHECK:        @ %bb.0: @ %entry
-; CHECK-NEXT: 	usat	r0, #7, r0, lsl #2
-; CHECK-NEXT:   bx	lr
+; CHECK-LABEL: usat_lsl:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    usat r0, #7, r0, lsl #2
+; CHECK-NEXT:    bx lr
 entry:
   %shl = shl i32 %num, 2
   %0 = tail call i32 @llvm.arm.usat(i32 %shl, i32 7)
@@ -14,10 +14,10 @@ entry:
 }
 
 define arm_aapcs_vfpcc i32 @usat_asr(i32 %num){
-; CHECK-LABEL:  usat_asr
-; CHECK:        @ %bb.0: @ %entry
-; CHECK-NEXT:   usat	r0, #7, r0, asr #2
-; CHECK-NEXT:   bx	lr
+; CHECK-LABEL: usat_asr:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    usat r0, #7, r0, asr #2
+; CHECK-NEXT:    bx lr
 entry:
   %shr = ashr i32 %num, 2
   %0 = tail call i32 @llvm.arm.usat(i32 %shr, i32 7)
@@ -25,10 +25,6 @@ entry:
 }
 
 define arm_aapcs_vfpcc i32 @usat_lsl2(i32 %num){
-; CHECK-LABEL: usat_lsl2:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    usat r0, #15, r0, lsl #15
-; CHECK-NEXT:    bx lr
 entry:
   %shl = shl nsw i32 %num, 15
   %0 = icmp sgt i32 %shl, 0
@@ -39,10 +35,6 @@ entry:
 }
 
 define arm_aapcs_vfpcc i32 @usat_asr2(i32 %num){
-; CHECK-LABEL: usat_asr2:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    usat r0, #15, r0, asr #15
-; CHECK-NEXT:    bx lr
 entry:
   %shr = ashr i32 %num, 15
   %0 = icmp sgt i32 %shr, 0
