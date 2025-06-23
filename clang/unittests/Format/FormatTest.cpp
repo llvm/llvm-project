@@ -25768,6 +25768,29 @@ TEST_F(FormatTest, OperatorPassedAsAFunctionPtr) {
   verifyFormat("foo(operator, , -42);", Style);
 }
 
+TEST_F(FormatTest, LineSpliceWithTrailingWhitespace) {
+  // Test that each sequence of a backslash (\) immediately followed by zero or
+  // more horizontal whitespace characters and then a new-line character is
+  // treated as a single logical line while formatting (as per P2223R2).
+  FormatStyle Style = getLLVMStyle();
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  Style.UseTab = FormatStyle::UT_Never;
+
+  verifyFormat("int i;",
+               "  \\  \n"
+               "  int i;",
+               Style);
+  verifyFormat("#define FOO(args) \\\n  struct a {};\n",
+               "#define FOO( args )   \\   \n"
+               "struct a{\\\t\t\t\n"
+               "  };\n",
+               Style);
+  verifyFormat("comment here",
+               "comment \\ \n"
+               "here",
+               Style);
+}
+
 TEST_F(FormatTest, WhitespaceSensitiveMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.WhitespaceSensitiveMacros.push_back("FOO");
