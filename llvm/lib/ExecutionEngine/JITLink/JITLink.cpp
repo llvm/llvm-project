@@ -13,9 +13,10 @@
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/XCOFF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
-#include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/x86.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -312,7 +313,7 @@ void LinkGraph::dump(raw_ostream &OS) {
     OS << "section " << Sec->getName() << ":\n\n";
 
     std::vector<Block *> SortedBlocks;
-    llvm::copy(Sec->blocks(), std::back_inserter(SortedBlocks));
+    llvm::append_range(SortedBlocks, Sec->blocks());
     llvm::sort(SortedBlocks, [](const Block *LHS, const Block *RHS) {
       return LHS->getAddress() < RHS->getAddress();
     });
@@ -338,7 +339,7 @@ void LinkGraph::dump(raw_ostream &OS) {
       if (!B->edges_empty()) {
         OS << "    edges:\n";
         std::vector<Edge> SortedEdges;
-        llvm::copy(B->edges(), std::back_inserter(SortedEdges));
+        llvm::append_range(SortedEdges, B->edges());
         llvm::sort(SortedEdges, [](const Edge &LHS, const Edge &RHS) {
           return LHS.getOffset() < RHS.getOffset();
         });
@@ -465,7 +466,7 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
   case Triple::x86_64:
     return x86_64::createAnonymousPointer;
   case Triple::x86:
-    return i386::createAnonymousPointer;
+    return x86::createAnonymousPointer;
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointer;
@@ -481,7 +482,7 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
   case Triple::x86_64:
     return x86_64::createAnonymousPointerJumpStub;
   case Triple::x86:
-    return i386::createAnonymousPointerJumpStub;
+    return x86::createAnonymousPointerJumpStub;
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointerJumpStub;
@@ -501,6 +502,8 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
     return createLinkGraphFromELFObject(ObjectBuffer, std::move(SSP));
   case file_magic::coff_object:
     return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
+  case file_magic::xcoff_object_64:
+    return createLinkGraphFromXCOFFObject(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
@@ -532,6 +535,8 @@ void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {
     return link_ELF(std::move(G), std::move(Ctx));
   case Triple::COFF:
     return link_COFF(std::move(G), std::move(Ctx));
+  case Triple::XCOFF:
+    return link_XCOFF(std::move(G), std::move(Ctx));
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported object format"));
   };

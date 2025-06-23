@@ -39,24 +39,16 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
-  if (DestRC == &NVPTX::Int1RegsRegClass) {
+  if (DestRC == &NVPTX::B1RegClass) {
     Op = NVPTX::IMOV1r;
-  } else if (DestRC == &NVPTX::Int16RegsRegClass) {
+  } else if (DestRC == &NVPTX::B16RegClass) {
     Op = NVPTX::MOV16r;
-  } else if (DestRC == &NVPTX::Int32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int32RegsRegClass ? NVPTX::IMOV32r
-                                             : NVPTX::BITCONVERT_32_F2I);
-  } else if (DestRC == &NVPTX::Int64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int64RegsRegClass ? NVPTX::IMOV64r
-                                             : NVPTX::BITCONVERT_64_F2I);
-  } else if (DestRC == &NVPTX::Int128RegsRegClass) {
+  } else if (DestRC == &NVPTX::B32RegClass) {
+    Op = NVPTX::IMOV32r;
+  } else if (DestRC == &NVPTX::B64RegClass) {
+    Op = NVPTX::IMOV64r;
+  } else if (DestRC == &NVPTX::B128RegClass) {
     Op = NVPTX::IMOV128r;
-  } else if (DestRC == &NVPTX::Float32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float32RegsRegClass ? NVPTX::FMOV32r
-                                               : NVPTX::BITCONVERT_32_I2F);
-  } else if (DestRC == &NVPTX::Float64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float64RegsRegClass ? NVPTX::FMOV64r
-                                               : NVPTX::BITCONVERT_64_I2F);
   } else {
     llvm_unreachable("Bad register copy");
   }
@@ -209,9 +201,7 @@ bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case NVPTX::CallUniPrintCallRetInst1:
   case NVPTX::CallArgBeginInst:
-  case NVPTX::CallArgI32imm:
   case NVPTX::CallArgParam:
-  case NVPTX::LastCallArgI32imm:
   case NVPTX::LastCallArgParam:
   case NVPTX::CallArgEndInst1:
     return true;

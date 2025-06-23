@@ -3385,6 +3385,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyOperation::createFromCapsule)
       .def_prop_ro("operation", [](nb::object self) { return self; })
       .def_prop_ro("opview", &PyOperation::createOpView)
+      .def_prop_ro("block", &PyOperation::getBlock)
       .def_prop_ro(
           "successors",
           [](PyOperationBase &self) {
@@ -3977,11 +3978,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kValueDunderStrDocstring)
       .def(
           "get_name",
-          [](PyValue &self, bool useLocalScope) {
+          [](PyValue &self, bool useLocalScope, bool useNameLocAsPrefix) {
             PyPrintAccumulator printAccum;
             MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
             if (useLocalScope)
               mlirOpPrintingFlagsUseLocalScope(flags);
+            if (useNameLocAsPrefix)
+              mlirOpPrintingFlagsPrintNameLocAsPrefix(flags);
             MlirAsmState valueState =
                 mlirAsmStateCreateForValue(self.get(), flags);
             mlirValuePrintAsOperand(self.get(), valueState,
@@ -3991,7 +3994,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             mlirAsmStateDestroy(valueState);
             return printAccum.join();
           },
-          nb::arg("use_local_scope") = false)
+          nb::arg("use_local_scope") = false,
+          nb::arg("use_name_loc_as_prefix") = false)
       .def(
           "get_name",
           [](PyValue &self, PyAsmState &state) {

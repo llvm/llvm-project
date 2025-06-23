@@ -11,6 +11,7 @@
 #define LLVM_ANALYSIS_INLINEMODELFEATUREMAPS_H
 
 #include "llvm/Analysis/TensorSpec.h"
+#include "llvm/Support/Compiler.h"
 
 #include <array>
 #include <vector>
@@ -141,6 +142,12 @@ enum class FeatureIndex : size_t {
   INLINE_FEATURE_ITERATOR(POPULATE_INDICES)
 #undef POPULATE_INDICES
 
+// IR2Vec embeddings
+// Dimensions of embeddings are not known in the compile time (until vocab is 
+// read). Hence macros cannot be used here.
+  callee_embedding,
+  caller_embedding,
+
   NumberOfFeatures
 };
 // clang-format on
@@ -153,13 +160,13 @@ inlineCostFeatureToMlFeature(InlineCostFeatureIndex Feature) {
 constexpr size_t NumberOfFeatures =
     static_cast<size_t>(FeatureIndex::NumberOfFeatures);
 
-extern const std::vector<TensorSpec> FeatureMap;
+LLVM_ABI extern std::vector<TensorSpec> FeatureMap;
 
-extern const char *const DecisionName;
-extern const TensorSpec InlineDecisionSpec;
-extern const char *const DefaultDecisionName;
-extern const TensorSpec DefaultDecisionSpec;
-extern const char *const RewardName;
+LLVM_ABI extern const char *const DecisionName;
+LLVM_ABI extern const TensorSpec InlineDecisionSpec;
+LLVM_ABI extern const char *const DefaultDecisionName;
+LLVM_ABI extern const TensorSpec DefaultDecisionSpec;
+LLVM_ABI extern const char *const RewardName;
 
 using InlineFeatures = std::vector<int64_t>;
 

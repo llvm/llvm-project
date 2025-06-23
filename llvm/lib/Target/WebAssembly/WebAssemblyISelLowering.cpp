@@ -170,6 +170,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::SUB, MVT::i128, Custom);
     setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
     setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
+    setOperationAction(ISD::UADDO, MVT::i64, Custom);
   }
 
   if (Subtarget->hasNontrappingFPToInt())
@@ -383,11 +384,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
   setMaxAtomicSizeInBitsSupported(64);
-
-  // Define the emscripten name for return address helper.
-  // TODO: when implementing other Wasm backends, make this generic or only do
-  // this on emscripten depending on what they end up doing.
-  setLibcallName(RTLIB::RETURN_ADDRESS, "emscripten_return_address");
 
   // Always convert switches to br_tables unless there is only one case, which
   // is equivalent to a simple branch. This reduces code size for wasm, and we
@@ -1108,7 +1104,20 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
       break;
     }
     }
+    break;
   }
+
+  // For 128-bit addition if the upper bits are all zero then it's known that
+  // the upper bits of the result will have all bits guaranteed zero except the
+  // first.
+  case WebAssemblyISD::I64_ADD128:
+    if (Op.getResNo() == 1) {
+      SDValue LHS_HI = Op.getOperand(1);
+      SDValue RHS_HI = Op.getOperand(3);
+      if (isNullConstant(LHS_HI) && isNullConstant(RHS_HI))
+        Known.Zero.setBitsFrom(1);
+    }
+    break;
   }
 }
 
@@ -1678,6 +1687,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return LowerMUL_LOHI(Op, DAG);
+  case ISD::UADDO:
+    return LowerUADDO(Op, DAG);
   }
 }
 
@@ -1794,10 +1805,33 @@ SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
   }
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  SDValue Hi =
+  SDValue Lo =
       DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
-  SDValue Lo(Hi.getNode(), 1);
-  SDValue Ops[] = {Hi, Lo};
+  SDValue Hi(Lo.getNode(), 1);
+  SDValue Ops[] = {Lo, Hi};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+// Lowers `UADDO` intrinsics to an `i64.add128` instruction when it's enabled.
+//
+// This enables generating a single wasm instruction for this operation where
+// the upper half of both operands are constant zeros. The upper half of the
+// result is then whether the overflow happened.
+SDValue WebAssemblyTargetLowering::LowerUADDO(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  assert(Subtarget->hasWideArithmetic());
+  assert(Op.getValueType() == MVT::i64);
+  assert(Op.getOpcode() == ISD::UADDO);
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue Result =
+      DAG.getNode(WebAssemblyISD::I64_ADD128, DL,
+                  DAG.getVTList(MVT::i64, MVT::i64), LHS, Zero, RHS, Zero);
+  SDValue CarryI64(Result.getNode(), 1);
+  SDValue CarryI32 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, CarryI64);
+  SDValue Ops[] = {Result, CarryI32};
   return DAG.getMergeValues(Ops, DL);
 }
 
@@ -2503,8 +2537,7 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   };
 
   auto GetMostCommon = [](auto &Counts) {
-    auto CommonIt =
-        std::max_element(Counts.begin(), Counts.end(), llvm::less_second());
+    auto CommonIt = llvm::max_element(Counts, llvm::less_second());
     assert(CommonIt != Counts.end() && "Unexpected all-undef build_vector");
     return *CommonIt;
   };
@@ -2833,7 +2866,6 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
 
 SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
                                                       SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   EVT ResT = Op.getValueType();
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 

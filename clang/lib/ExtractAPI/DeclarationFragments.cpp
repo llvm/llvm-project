@@ -249,13 +249,6 @@ DeclarationFragmentsBuilder::getFragmentsForNNS(const NestedNameSpecifier *NNS,
     Fragments.append("__super", DeclarationFragments::FragmentKind::Keyword);
     break;
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
-    // A type prefixed by the `template` keyword.
-    Fragments.append("template", DeclarationFragments::FragmentKind::Keyword);
-    Fragments.appendSpace();
-    // Fallthrough after adding the keyword to handle the actual type.
-    [[fallthrough]];
-
   case NestedNameSpecifier::TypeSpec: {
     const Type *T = NNS->getAsType();
     // FIXME: Handle C++ template specialization type

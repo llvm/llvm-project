@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s -fexperimental-new-constant-interpreter
 
-#if __has_feature(ptrauth_intrinsics)
-#warning Pointer authentication enabled!
-// expected-warning@-1 {{Pointer authentication enabled!}}
+#if !__has_feature(ptrauth_intrinsics)
+// This error means that the __ptrauth intrinsics availability test says that
+// they are not available. This error is not expected in the output of this
+// test, if it is seen there is a feature detection regression.
+#error __ptrauth intrinsics not enabled
 #endif
 
 #if __aarch64__

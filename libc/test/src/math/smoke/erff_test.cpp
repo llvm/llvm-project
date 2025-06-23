@@ -17,6 +17,9 @@
 using LlvmLibcErffTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcErffTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::erff(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::erff(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::erff(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, LIBC_NAMESPACE::erff(neg_inf));

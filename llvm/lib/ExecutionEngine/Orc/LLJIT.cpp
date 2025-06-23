@@ -57,8 +57,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   std::vector<Type *> HelperArgTypes;
   for (auto *Arg : HelperPrefixArgs)
     HelperArgTypes.push_back(Arg->getType());
-  for (auto *T : WrapperFnType->params())
-    HelperArgTypes.push_back(T);
+  llvm::append_range(HelperArgTypes, WrapperFnType->params());
   auto *HelperFnType =
       FunctionType::get(WrapperFnType->getReturnType(), HelperArgTypes, false);
   auto *HelperFn = Function::Create(HelperFnType, GlobalValue::ExternalLinkage,
@@ -72,8 +71,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   IRBuilder<> IB(EntryBlock);
 
   std::vector<Value *> HelperArgs;
-  for (auto *Arg : HelperPrefixArgs)
-    HelperArgs.push_back(Arg);
+  llvm::append_range(HelperArgs, HelperPrefixArgs);
   for (auto &Arg : WrapperFn->args())
     HelperArgs.push_back(&Arg);
   auto *HelperResult = IB.CreateCall(HelperFn, HelperArgs);
@@ -271,9 +269,8 @@ public:
   }
 
   void registerInitFunc(JITDylib &JD, SymbolStringPtr InitName) {
-    getExecutionSession().runSessionLocked([&]() {
-        InitFunctions[&JD].add(InitName);
-      });
+    getExecutionSession().runSessionLocked(
+        [&]() { InitFunctions[&JD].add(InitName); });
   }
 
   void registerDeInitFunc(JITDylib &JD, SymbolStringPtr DeInitName) {
@@ -937,8 +934,8 @@ Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
 Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
                                                   SymbolStringPtr Name) {
   if (auto Sym = ES->lookup(
-        makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
-        Name))
+          makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
+          Name))
     return Sym->getAddress();
   else
     return Sym.takeError();
@@ -953,7 +950,9 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
-  auto GetMemMgr = []() { return std::make_unique<SectionMemoryManager>(); };
+  auto GetMemMgr = [](const MemoryBuffer &) {
+    return std::make_unique<SectionMemoryManager>();
+  };
   auto Layer =
       std::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 

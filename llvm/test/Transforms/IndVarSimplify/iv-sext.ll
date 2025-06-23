@@ -26,7 +26,7 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK-NEXT:    [[HIPART_119:%.*]] = phi i32 [ [[HIPART_0_LCSSA:%.*]], [[BB8]] ], [ 0, [[BB_NPH22]] ]
 ; CHECK-NEXT:    [[LOPART_118:%.*]] = phi i32 [ [[LOPART_0_LCSSA:%.*]], [[BB8]] ], [ 0, [[BB_NPH22]] ]
 ; CHECK-NEXT:    [[PEAKCOUNT_117:%.*]] = phi float [ [[PEAKCOUNT_2_LCSSA:%.*]], [[BB8]] ], [ [[VAL]], [[BB_NPH22]] ]
-; CHECK-NEXT:    [[VAL4:%.*]] = icmp ugt i64 [[INDVARS_IV1]], 0
+; CHECK-NEXT:    [[VAL4:%.*]] = icmp samesign ugt i64 [[INDVARS_IV1]], 0
 ; CHECK-NEXT:    br i1 [[VAL4]], label [[BB1:%.*]], label [[BB3_PREHEADER:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV1]], -1

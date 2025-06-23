@@ -104,25 +104,38 @@ struct HardwareLimits {
   unsigned KmcntMax;     // gfx12+ only.
 };
 
+#define AMDGPU_DECLARE_WAIT_EVENTS(DECL)                                       \
+  DECL(VMEM_ACCESS)              /* vmem read & write */                       \
+  DECL(VMEM_READ_ACCESS)         /* vmem read */                               \
+  DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */         \
+  DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
+  DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
+  DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
+  DECL(LDS_ACCESS)               /* lds read & write */                        \
+  DECL(GDS_ACCESS)               /* gds read & write */                        \
+  DECL(SQ_MESSAGE)               /* send message */                            \
+  DECL(SMEM_ACCESS)              /* scalar-memory read & write */              \
+  DECL(EXP_GPR_LOCK)             /* export holding on its data src */          \
+  DECL(GDS_GPR_LOCK)             /* GDS holding on its data and addr src */    \
+  DECL(EXP_POS_ACCESS)           /* write to export position */                \
+  DECL(EXP_PARAM_ACCESS)         /* write to export parameter */               \
+  DECL(VMW_GPR_LOCK)             /* vmem write holding on its data src */      \
+  DECL(EXP_LDS_ACCESS)           /* read by ldsdir counting as export */
+
+// clang-format off
+#define AMDGPU_EVENT_ENUM(Name) Name,
 enum WaitEventType {
-  VMEM_ACCESS,              // vector-memory read & write
-  VMEM_READ_ACCESS,         // vector-memory read
-  VMEM_SAMPLER_READ_ACCESS, // vector-memory SAMPLER read (gfx12+ only)
-  VMEM_BVH_READ_ACCESS,     // vector-memory BVH read (gfx12+ only)
-  VMEM_WRITE_ACCESS,        // vector-memory write that is not scratch
-  SCRATCH_WRITE_ACCESS,     // vector-memory write that may be scratch
-  LDS_ACCESS,               // lds read & write
-  GDS_ACCESS,               // gds read & write
-  SQ_MESSAGE,               // send message
-  SMEM_ACCESS,              // scalar-memory read & write
-  EXP_GPR_LOCK,             // export holding on its data src
-  GDS_GPR_LOCK,             // GDS holding on its data and addr src
-  EXP_POS_ACCESS,           // write to export position
-  EXP_PARAM_ACCESS,         // write to export parameter
-  VMW_GPR_LOCK,             // vector-memory write holding on its data src
-  EXP_LDS_ACCESS,           // read by ldsdir counting as export
-  NUM_WAIT_EVENTS,
+  AMDGPU_DECLARE_WAIT_EVENTS(AMDGPU_EVENT_ENUM)
+  NUM_WAIT_EVENTS
 };
+#undef AMDGPU_EVENT_ENUM
+
+#define AMDGPU_EVENT_NAME(Name) #Name,
+static constexpr StringLiteral WaitEventTypeName[] = {
+  AMDGPU_DECLARE_WAIT_EVENTS(AMDGPU_EVENT_NAME)
+};
+#undef AMDGPU_EVENT_NAME
+// clang-format on
 
 // The mapping is:
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
@@ -168,8 +181,8 @@ static const unsigned instrsForExtendedCounterTypes[NUM_EXTENDED_INST_CNTS] = {
     AMDGPU::S_WAIT_KMCNT};
 
 static bool updateVMCntOnly(const MachineInstr &Inst) {
-  return SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLATGlobal(Inst) ||
-         SIInstrInfo::isFLATScratch(Inst);
+  return (SIInstrInfo::isVMEM(Inst) && !SIInstrInfo::isFLAT(Inst)) ||
+         SIInstrInfo::isFLATGlobal(Inst) || SIInstrInfo::isFLATScratch(Inst);
 }
 
 #ifndef NDEBUG
@@ -189,9 +202,9 @@ VmemType getVmemType(const MachineInstr &Inst) {
   // We have to make an additional check for isVSAMPLE here since some
   // instructions don't have a sampler, but are still classified as sampler
   // instructions for the purposes of e.g. waitcnt.
-  return BaseInfo->BVH                                         ? VMEM_BVH
-         : (BaseInfo->Sampler || SIInstrInfo::isVSAMPLE(Inst)) ? VMEM_SAMPLER
-                                                               : VMEM_NOSAMPLER;
+  bool HasSampler =
+      BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst);
+  return BaseInfo->BVH ? VMEM_BVH : HasSampler ? VMEM_SAMPLER : VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
@@ -387,8 +400,12 @@ public:
     return LDSDMAStores;
   }
 
-  void print(raw_ostream &);
-  void dump() { print(dbgs()); }
+  bool hasPointSampleAccel(const MachineInstr &MI) const;
+  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
+                                      RegInterval Interval) const;
+
+  void print(raw_ostream &) const;
+  void dump() const { print(dbgs()); }
 
 private:
   struct MergeInfo {
@@ -645,9 +662,9 @@ public:
     (void)ForceVMCounter;
   }
 
-  bool shouldFlushVmCnt(MachineLoop *ML, WaitcntBrackets &Brackets);
+  bool shouldFlushVmCnt(MachineLoop *ML, const WaitcntBrackets &Brackets);
   bool isPreheaderToFlush(MachineBasicBlock &MBB,
-                          WaitcntBrackets &ScoreBrackets);
+                          const WaitcntBrackets &ScoreBrackets);
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool run(MachineFunction &MF);
 
@@ -691,14 +708,24 @@ public:
 #endif // NDEBUG
   }
 
-  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM or
-  // FLAT instruction.
+  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
+  // instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
+    switch (Inst.getOpcode()) {
+    case AMDGPU::GLOBAL_INV:
+      return VMEM_READ_ACCESS; // tracked using loadcnt
+    case AMDGPU::GLOBAL_WB:
+    case AMDGPU::GLOBAL_WBINV:
+      return VMEM_WRITE_ACCESS; // tracked using storecnt
+    default:
+      break;
+    }
+
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
         VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
 
-    assert(SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLAT(Inst));
+    assert(SIInstrInfo::isVMEM(Inst));
     // LDS DMA loads are also stores, but on the LDS side. On the VMEM side
     // these should use VM_CNT.
     if (!ST->hasVscnt() || SIInstrInfo::mayWriteLDSThroughDMA(Inst))
@@ -826,6 +853,34 @@ void WaitcntBrackets::setScoreByOperand(const MachineInstr *MI,
   setScoreByInterval(Interval, CntTy, Score);
 }
 
+// Return true if the subtarget is one that enables Point Sample Acceleration
+// and the MachineInstr passed in is one to which it might be applied (the
+// hardware makes this decision based on several factors, but we can't determine
+// this at compile time, so we have to assume it might be applied if the
+// instruction supports it).
+bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
+  if (!ST->hasPointSampleAccel() || !SIInstrInfo::isMIMG(MI))
+    return false;
+
+  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+  return BaseInfo->PointSampleAccel;
+}
+
+// Return true if the subtarget enables Point Sample Acceleration, the supplied
+// MachineInstr is one to which it might be applied and the supplied interval is
+// one that has outstanding writes to vmem-types different than VMEM_NOSAMPLER
+// (this is the type that a point sample accelerated instruction effectively
+// becomes)
+bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
+    const MachineInstr &MI, RegInterval Interval) const {
+  if (!hasPointSampleAccel(MI))
+    return false;
+
+  return hasOtherPendingVmemTypes(Interval, VMEM_NOSAMPLER);
+}
+
 void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     const SIRegisterInfo *TRI,
                                     const MachineRegisterInfo *MRI,
@@ -942,8 +997,13 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           // defs. That's required for a sane index into `VgprMemTypes` below
           assert(TRI->isVectorRegister(*MRI, Op.getReg()));
           VmemType V = getVmemType(Inst);
+          unsigned char TypesMask = 1 << V;
+          // If instruction can have Point Sample Accel applied, we have to flag
+          // this with another potential dependency
+          if (hasPointSampleAccel(Inst))
+            TypesMask |= 1 << VMEM_NOSAMPLER;
           for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
-            VgprVmemTypes[RegNo] |= 1 << V;
+            VgprVmemTypes[RegNo] |= TypesMask;
         }
       }
       setScoreByInterval(Interval, T, CurrScore);
@@ -990,7 +1050,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   }
 }
 
-void WaitcntBrackets::print(raw_ostream &OS) {
+void WaitcntBrackets::print(raw_ostream &OS) const {
   OS << '\n';
   for (auto T : inst_counter_types(MaxCounter)) {
     unsigned SR = getScoreRange(T);
@@ -1053,6 +1113,20 @@ void WaitcntBrackets::print(raw_ostream &OS) {
     }
     OS << '\n';
   }
+
+  OS << "Pending Events: ";
+  if (hasPendingEvent()) {
+    ListSeparator LS;
+    for (unsigned I = 0; I != NUM_WAIT_EVENTS; ++I) {
+      if (hasPendingEvent((WaitEventType)I)) {
+        OS << LS << WaitEventTypeName[I];
+      }
+    }
+  } else {
+    OS << "none";
+  }
+  OS << '\n';
+
   OS << '\n';
 }
 
@@ -1218,10 +1292,15 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
   MachineInstr *WaitcntInstr = nullptr;
   MachineInstr *WaitcntVsCntInstr = nullptr;
 
+  LLVM_DEBUG(dbgs() << "PreGFX12::applyPreexistingWaitcnt at: " << *It);
+
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
-    if (II.isMetaInstruction())
+    LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
+    if (II.isMetaInstruction()) {
+      LLVM_DEBUG(dbgs() << "skipped meta instruction\n");
       continue;
+    }
 
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
     bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
@@ -1273,9 +1352,9 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
 
     LLVM_DEBUG(It == WaitcntInstr->getParent()->end()
                    ? dbgs()
-                         << "applyPreexistingWaitcnt\n"
+                         << "applied pre-existing waitcnt\n"
                          << "New Instr at block end: " << *WaitcntInstr << '\n'
-                   : dbgs() << "applyPreexistingWaitcnt\n"
+                   : dbgs() << "applied pre-existing waitcnt\n"
                             << "Old Instr: " << *It
                             << "New Instr: " << *WaitcntInstr << '\n');
   }
@@ -1289,10 +1368,10 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     Wait.StoreCnt = ~0u;
 
     LLVM_DEBUG(It == WaitcntVsCntInstr->getParent()->end()
-                   ? dbgs() << "applyPreexistingWaitcnt\n"
+                   ? dbgs() << "applied pre-existing waitcnt\n"
                             << "New Instr at block end: " << *WaitcntVsCntInstr
                             << '\n'
-                   : dbgs() << "applyPreexistingWaitcnt\n"
+                   : dbgs() << "applied pre-existing waitcnt\n"
                             << "Old Instr: " << *It
                             << "New Instr: " << *WaitcntVsCntInstr << '\n');
   }
@@ -1366,10 +1445,15 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   MachineInstr *CombinedStoreDsCntInstr = nullptr;
   MachineInstr *WaitInstrs[NUM_EXTENDED_INST_CNTS] = {};
 
+  LLVM_DEBUG(dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: " << *It);
+
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
-    if (II.isMetaInstruction())
+    LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
+    if (II.isMetaInstruction()) {
+      LLVM_DEBUG(dbgs() << "skipped meta instruction\n");
       continue;
+    }
 
     MachineInstr **UpdatableInstr;
 
@@ -1439,10 +1523,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.DsCnt = ~0u;
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: "
                               << *CombinedLoadDsCntInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It << "New Instr: "
                               << *CombinedLoadDsCntInstr << '\n');
     } else {
@@ -1464,10 +1548,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.DsCnt = ~0u;
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: "
                               << *CombinedStoreDsCntInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It << "New Instr: "
                               << *CombinedStoreDsCntInstr << '\n');
     } else {
@@ -1523,10 +1607,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       setNoWait(Wait, CT);
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: " << *WaitInstrs[CT]
                               << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It
                               << "New Instr: " << *WaitInstrs[CT] << '\n');
     } else {
@@ -1813,9 +1897,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           // previous write and this write are the same type of VMEM
           // instruction, in which case they are (in some architectures)
           // guaranteed to write their results in order anyway.
+          // Additionally check instructions where Point Sample Acceleration
+          // might be applied.
           if (Op.isUse() || !updateVMCntOnly(MI) ||
               ScoreBrackets.hasOtherPendingVmemTypes(Interval,
                                                      getVmemType(MI)) ||
+              ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Interval) ||
               !ST->hasVmemWriteVgprInOrder()) {
             ScoreBrackets.determineWait(LOAD_CNT, Interval, Wait);
             ScoreBrackets.determineWait(SAMPLE_CNT, Interval, Wait);
@@ -2009,7 +2096,7 @@ bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
   });
 }
 
-static bool isCacheInvOrWBInst(MachineInstr &Inst) {
+static bool isGFX12CacheInvOrWBInst(MachineInstr &Inst) {
   auto Opc = Inst.getOpcode();
   return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
          Opc == AMDGPU::GLOBAL_WBINV;
@@ -2090,9 +2177,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
-    // TODO: Track this properly.
-    if (isCacheInvOrWBInst(Inst))
+    if (isGFX12CacheInvOrWBInst(Inst)) {
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
+                                   Inst);
       return;
+    }
 
     assert(Inst.mayLoadOrStore());
 
@@ -2254,7 +2343,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   bool Modified = false;
 
   LLVM_DEBUG({
-    dbgs() << "*** Block" << Block.getNumber() << " ***";
+    dbgs() << "*** Begin Block: ";
+    Block.printName(dbgs());
     ScoreBrackets.dump();
   });
 
@@ -2385,13 +2475,19 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   Modified |= generateWaitcnt(Wait, Block.instr_end(), Block, ScoreBrackets,
                               OldWaitcntInstr);
 
+  LLVM_DEBUG({
+    dbgs() << "*** End Block: ";
+    Block.printName(dbgs());
+    ScoreBrackets.dump();
+  });
+
   return Modified;
 }
 
 // Return true if the given machine basic block is a preheader of a loop in
 // which we want to flush the vmcnt counter, and false otherwise.
-bool SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
-                                          WaitcntBrackets &ScoreBrackets) {
+bool SIInsertWaitcnts::isPreheaderToFlush(
+    MachineBasicBlock &MBB, const WaitcntBrackets &ScoreBrackets) {
   auto [Iterator, IsInserted] = PreheadersToFlush.try_emplace(&MBB, false);
   if (!IsInserted)
     return Iterator->second;
@@ -2414,8 +2510,9 @@ bool SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
 }
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
-  return SIInstrInfo::isVMEM(MI) ||
-         (SIInstrInfo::isFLAT(MI) && mayAccessVMEMThroughFlat(MI));
+  if (SIInstrInfo::isFLAT(MI))
+    return mayAccessVMEMThroughFlat(MI);
+  return SIInstrInfo::isVMEM(MI);
 }
 
 // Return true if it is better to flush the vmcnt counter in the preheader of
@@ -2427,7 +2524,7 @@ bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
 //    loop, and at least one use of a vgpr containing a value that is loaded
 //    outside of the loop.
 bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
-                                        WaitcntBrackets &Brackets) {
+                                        const WaitcntBrackets &Brackets) {
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
   bool UsesVgprLoadedOutside = false;
@@ -2584,6 +2681,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT)
           continue;
 
+        if (!ST->hasImageInsts() &&
+            (CT == EXP_CNT || CT == SAMPLE_CNT || CT == BVH_CNT))
+          continue;
+
         BuildMI(EntryBB, I, DebugLoc(),
                 TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(0);
@@ -2603,7 +2704,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
   for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
-    BlockInfos.insert({MBB, BlockInfo()});
+    BlockInfos.try_emplace(MBB);
 
   std::unique_ptr<WaitcntBrackets> Brackets;
   bool Repeat;
@@ -2623,12 +2724,17 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         else
           *Brackets = *BI.Incoming;
       } else {
-        if (!Brackets)
+        if (!Brackets) {
           Brackets = std::make_unique<WaitcntBrackets>(
               ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
-        else
-          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits,
-                                      WaitEventMaskForInst, SmemAccessCounter);
+        } else {
+          // Reinitialize in-place. N.B. do not do this by assigning from a
+          // temporary because the WaitcntBrackets class is large and it could
+          // cause this function to use an unreasonable amount of stack space.
+          Brackets->~WaitcntBrackets();
+          new (Brackets.get()) WaitcntBrackets(
+              ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
+        }
       }
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
@@ -2641,8 +2747,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
           BlockInfo &SuccBI = SuccBII->second;
           if (!SuccBI.Incoming) {
             SuccBI.Dirty = true;
-            if (SuccBII <= BII)
+            if (SuccBII <= BII) {
+              LLVM_DEBUG(dbgs() << "repeat on backedge\n");
               Repeat = true;
+            }
             if (!MoveBracketsToSucc) {
               MoveBracketsToSucc = &SuccBI;
             } else {
@@ -2650,8 +2758,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
             }
           } else if (SuccBI.Incoming->merge(*Brackets)) {
             SuccBI.Dirty = true;
-            if (SuccBII <= BII)
+            if (SuccBII <= BII) {
+              LLVM_DEBUG(dbgs() << "repeat on backedge\n");
               Repeat = true;
+            }
           }
         }
         if (MoveBracketsToSucc)

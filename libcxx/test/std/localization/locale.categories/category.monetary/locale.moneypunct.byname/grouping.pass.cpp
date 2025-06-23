@@ -5,8 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// XFAIL: darwin
+
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
+// XFAIL darwin
 //
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd

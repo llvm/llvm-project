@@ -931,6 +931,8 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -1568,12 +1570,12 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)
     return false;
 
-  AtomicRMWInst::BinOp Op = RMWI->getOperation();
-  switch (Op) {
+  switch (RMWI->getOperation()) {
   case AtomicRMWInst::Add:
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Or:
@@ -1581,7 +1583,14 @@ bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
     return C->isZero();
   case AtomicRMWInst::And:
     return C->isMinusOne();
-  // FIXME: we could also treat Min/Max/UMin/UMax by the INT_MIN/INT_MAX/...
+  case AtomicRMWInst::Min:
+    return C->isMaxValue(true);
+  case AtomicRMWInst::Max:
+    return C->isMinValue(true);
+  case AtomicRMWInst::UMin:
+    return C->isMaxValue(false);
+  case AtomicRMWInst::UMax:
+    return C->isMinValue(false);
   default:
     return false;
   }
@@ -1819,6 +1828,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::UIncWrap:

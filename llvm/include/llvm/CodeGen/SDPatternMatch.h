@@ -142,6 +142,8 @@ inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
 inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
 
+inline Opcode_match m_Poison() { return Opcode_match(ISD::POISON); }
+
 template <unsigned NumUses, typename Pattern> struct NUses_match {
   Pattern P;
 
@@ -730,6 +732,11 @@ inline BinaryOpc_match<LHS, RHS, true> m_Xor(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_BitwiseLogic(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_And(L, R), m_Or(L, R), m_Xor(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R);
 }
@@ -931,6 +938,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_AnyExt(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::TRUNCATE, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::ABS, Op);
 }
 
 /// Match a zext or identity
@@ -1145,17 +1156,17 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
+    constexpr size_t NumPatterns = std::tuple_size_v<std::tuple<PatternTs...>>;
+
     SmallVector<SDValue> Leaves;
     collectLeaves(N, Leaves);
-    if (Leaves.size() != std::tuple_size_v<std::tuple<PatternTs...>>)
+    if (Leaves.size() != NumPatterns)
       return false;
 
     // Matches[I][J] == true iff sd_context_match(Leaves[I], Ctx,
     // std::get<J>(Patterns)) == true
-    std::array<SmallBitVector, std::tuple_size_v<std::tuple<PatternTs...>>>
-        Matches;
-    for (size_t I = 0, N = Leaves.size(); I < N; I++) {
-      SmallVector<bool> MatchResults;
+    std::array<SmallBitVector, NumPatterns> Matches;
+    for (size_t I = 0; I != NumPatterns; I++) {
       std::apply(
           [&](auto &...P) {
             (Matches[I].push_back(sd_context_match(Leaves[I], Ctx, P)), ...);
@@ -1163,7 +1174,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
           Patterns);
     }
 
-    SmallBitVector Used(std::tuple_size_v<std::tuple<PatternTs...>>);
+    SmallBitVector Used(NumPatterns);
     return reassociatableMatchHelper(Matches, Used);
   }
 

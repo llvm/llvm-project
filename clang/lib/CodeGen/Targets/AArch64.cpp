@@ -136,13 +136,15 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
 
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
@@ -152,8 +154,8 @@ public:
         assert(Error.empty());
       }
     }
-    auto *Fn = cast<llvm::Function>(GV);
     setBranchProtectionFnAttributes(BPI, *Fn);
+    setPointerAuthFnAttributes(CGM.getCodeGenOpts().PointerAuth, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -485,9 +487,38 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     }
     Size = llvm::alignTo(Size, Alignment);
 
+    // If the Aggregate is made up of pointers, use an array of pointers for the
+    // coerced type. This prevents having to convert ptr2int->int2ptr through
+    // the call, allowing alias analysis to produce better code.
+    auto ContainsOnlyPointers = [&](const auto &Self, QualType Ty) {
+      if (isEmptyRecord(getContext(), Ty, true))
+        return false;
+      const RecordType *RT = Ty->getAs<RecordType>();
+      if (!RT)
+        return false;
+      const RecordDecl *RD = RT->getDecl();
+      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (const auto &I : CXXRD->bases())
+          if (!Self(Self, I.getType()))
+            return false;
+      }
+      return all_of(RD->fields(), [&](FieldDecl *FD) {
+        QualType FDTy = FD->getType();
+        if (FDTy->isArrayType())
+          FDTy = getContext().getBaseElementType(FDTy);
+        return (FDTy->isPointerOrReferenceType() &&
+                getContext().getTypeSize(FDTy) == 64 &&
+                !FDTy->getPointeeType().hasAddressSpace()) ||
+               Self(Self, FDTy);
+      });
+    };
+
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
     llvm::Type *BaseTy = llvm::Type::getIntNTy(getVMContext(), Alignment);
+    if ((Size == 64 || Size == 128) && Alignment == 64 &&
+        ContainsOnlyPointers(ContainsOnlyPointers, Ty))
+      BaseTy = llvm::PointerType::getUnqual(getVMContext());
     return ABIArgInfo::getDirect(
         Size == Alignment ? BaseTy
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
@@ -699,7 +730,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltCoerceToSeq, std::back_inserter(CoerceToSeq));
+      llvm::append_range(CoerceToSeq, EltCoerceToSeq);
 
     NVec += NElt * NV;
     NPred += NElt * NP;
@@ -772,8 +803,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
   case BuiltinType::Id:                                                        \
     isPredicate = true;                                                        \
     break;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   default:
     return false;
   }
@@ -818,7 +848,7 @@ void AArch64ABIInfo::flattenType(
     flattenType(AT->getElementType(), EltFlattened);
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltFlattened, std::back_inserter(Flattened));
+      llvm::append_range(Flattened, EltFlattened);
     return;
   }
 

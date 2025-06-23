@@ -203,7 +203,7 @@ InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
   unsigned Offset = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
-    if (OperandInfoMap.insert({OperandInfo, Offset}).second) {
+    if (OperandInfoMap.try_emplace(OperandInfo, Offset).second) {
       OperandInfoList.push_back(OperandInfo);
       Offset += OperandInfo.size();
     }
@@ -503,7 +503,8 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
     LogicalOpListSize = std::max(LogicalOpList.size(), LogicalOpListSize);
 
     auto I =
-        LogicalOpSizeMap.insert({LogicalOpList, LogicalOpSizeMap.size()}).first;
+        LogicalOpSizeMap.try_emplace(LogicalOpList, LogicalOpSizeMap.size())
+            .first;
     InstMap[I->second].push_back(
         (Namespace + "::" + Inst->TheDef->getName()).str());
   }
@@ -850,7 +851,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     std::vector<const Record *> ImplicitOps = Inst->ImplicitUses;
     llvm::append_range(ImplicitOps, Inst->ImplicitDefs);
-    if (EmittedLists.insert({ImplicitOps, ImplicitListSize}).second) {
+    if (EmittedLists.try_emplace(ImplicitOps, ImplicitListSize).second) {
       ImplicitLists.push_back(ImplicitOps);
       ImplicitListSize += ImplicitOps.size();
     }
@@ -1106,12 +1107,14 @@ void InstrInfoEmitter::emitRecord(
   OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
   std::vector<const Record *> ImplicitOps = Inst.ImplicitUses;
   llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
-  OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
-     << ",\t";
 
   // Emit the operand info offset.
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
-  OS << OperandInfoMap.find(OperandInfo)->second << ",\t0";
+  OS << OperandInfoMap.find(OperandInfo)->second << ",\t";
+
+  // Emit implicit operand base.
+  OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
+     << ",\t0";
 
   // Emit all of the target independent flags...
   if (Inst.isPreISelOpcode)

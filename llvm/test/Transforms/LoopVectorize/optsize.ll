@@ -621,8 +621,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[TMP0]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
+; NPGSO-NEXT:    [[TMP0:%.*]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; NPGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; NPGSO-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 508
@@ -698,9 +697,9 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1026
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1026, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -747,9 +746,9 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; PGSO-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1026
 ; PGSO-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
-; PGSO-NEXT:    br i1 true, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; PGSO-NEXT:    br label %[[FOR_END:.*]]
 ; PGSO:       [[SCALAR_PH]]:
-; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1026, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; PGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; PGSO:       [[FOR_BODY]]:
 ; PGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -796,9 +795,9 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; NPGSO-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1026
 ; NPGSO-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
-; NPGSO-NEXT:    br i1 true, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; NPGSO-NEXT:    br label %[[FOR_END:.*]]
 ; NPGSO:       [[SCALAR_PH]]:
-; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1026, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; NPGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; NPGSO:       [[FOR_BODY]]:
 ; NPGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]

@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <list>
@@ -1640,13 +1639,11 @@ static const char *DefaultCommentPrefixes[] = {"COM", "RUN"};
 
 static void addDefaultPrefixes(FileCheckRequest &Req) {
   if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      Req.CheckPrefixes.push_back(Prefix);
+    llvm::append_range(Req.CheckPrefixes, DefaultCheckPrefixes);
     Req.IsDefaultCheckPrefix = true;
   }
   if (Req.CommentPrefixes.empty())
-    for (const char *Prefix : DefaultCommentPrefixes)
-      Req.CommentPrefixes.push_back(Prefix);
+    llvm::append_range(Req.CommentPrefixes, DefaultCommentPrefixes);
 }
 
 struct PrefixMatcher {

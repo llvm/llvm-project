@@ -70,6 +70,8 @@ llvm_config.use_default_substitutions()
 
 llvm_config.use_clang()
 
+config.substitutions.append(("%src_dir", config.clang_src_dir))
+
 config.substitutions.append(("%src_include_dir", config.clang_src_dir + "/include"))
 
 config.substitutions.append(("%target_triple", config.target_triple))
@@ -224,6 +226,11 @@ config.substitutions.append(("%host_cxx", config.host_cxx))
 # Determine whether the test target is compatible with execution on the host.
 if "aarch64" in config.host_arch:
     config.available_features.add("aarch64-host")
+
+# Some tests are sensitive to whether clang is statically or dynamically linked
+# to other libraries.
+if not (config.build_shared_libs or config.link_llvm_dylib or config.link_clang_dylib):
+    config.available_features.add("static-libs")
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:

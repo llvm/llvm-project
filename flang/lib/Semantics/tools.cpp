@@ -813,6 +813,38 @@ bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
   return std::any_of(directs.begin(), directs.end(), IsAllocatable);
 }
 
+static bool MayHaveDefinedAssignment(
+    const DerivedTypeSpec &derived, std::set<const Scope *> &checked) {
+  if (const Scope *scope{derived.GetScope()};
+      scope && checked.find(scope) == checked.end()) {
+    checked.insert(scope);
+    for (const auto &[_, symbolRef] : *scope) {
+      if (const auto *generic{symbolRef->detailsIf<GenericDetails>()}) {
+        if (generic->kind().IsAssignment()) {
+          return true;
+        }
+      } else if (symbolRef->has<ObjectEntityDetails>() &&
+          !IsPointer(*symbolRef)) {
+        if (const DeclTypeSpec *type{symbolRef->GetType()}) {
+          if (type->IsPolymorphic()) {
+            return true;
+          } else if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+            if (MayHaveDefinedAssignment(*derived, checked)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool MayHaveDefinedAssignment(const DerivedTypeSpec &derived) {
+  std::set<const Scope *> checked;
+  return MayHaveDefinedAssignment(derived, checked);
+}
+
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->category() == DeclTypeSpec::Character &&
@@ -1076,7 +1108,7 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     return std::nullopt;
   } else {
     return parser::MessageFormattedText{
-        "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
+        "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US,
         symbol.name(),
         DEREF(FindModuleContaining(symbol.owner())).GetName().value()};
   }
@@ -1733,16 +1765,20 @@ bool HadUseError(
         at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
     for (const auto &[location, sym] : details->occurrences()) {
       const Symbol &ultimate{sym->GetUltimate()};
-      auto &attachment{
-          msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US,
-              at, sym->owner().GetName().value())};
-      if (&*sym != &ultimate) {
-        // For incompatible definitions where one comes from a hermetic
-        // module file's incorporated dependences and the other from another
-        // module of the same name.
-        attachment.Attach(ultimate.name(),
-            "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
-            ultimate.owner().GetName().value());
+      if (sym->owner().IsModule()) {
+        auto &attachment{msg.Attach(location,
+            "'%s' was use-associated from module '%s'"_en_US, at,
+            sym->owner().GetName().value())};
+        if (&*sym != &ultimate) {
+          // For incompatible definitions where one comes from a hermetic
+          // module file's incorporated dependences and the other from another
+          // module of the same name.
+          attachment.Attach(ultimate.name(),
+              "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
+              ultimate.owner().GetName().value());
+        }
+      } else {
+        msg.Attach(sym->name(), "declared here"_en_US);
       }
     }
     context.SetError(*symbol);

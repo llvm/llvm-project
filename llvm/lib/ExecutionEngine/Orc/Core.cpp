@@ -127,8 +127,7 @@ void UnsatisfiedSymbolDependencies::log(raw_ostream &OS) const {
 SymbolsNotFound::SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
                                  SymbolNameSet Symbols)
     : SSP(std::move(SSP)) {
-  for (auto &Sym : Symbols)
-    this->Symbols.push_back(Sym);
+  llvm::append_range(this->Symbols, Symbols);
   assert(!this->Symbols.empty() && "Can not fail to resolve an empty set");
 }
 
@@ -732,7 +731,8 @@ JITDylib::defineMaterializing(MaterializationResponsibility &FromMR,
             Symbols.erase(Symbols.find_as(S));
 
           // FIXME: Return all duplicates.
-          return make_error<DuplicateDefinition>(std::string(*Name));
+          return make_error<DuplicateDefinition>(
+              std::string(*Name), "defineMaterializing operation");
         }
 
         // Otherwise just make a note to discard this symbol after the loop.
@@ -1425,7 +1425,8 @@ Error JITDylib::defineImpl(MaterializationUnit &MU) {
   if (!Duplicates.empty()) {
     LLVM_DEBUG(
         { dbgs() << "  Error: Duplicate symbols " << Duplicates << "\n"; });
-    return make_error<DuplicateDefinition>(std::string(**Duplicates.begin()));
+    return make_error<DuplicateDefinition>(std::string(**Duplicates.begin()),
+                                           MU.getName().str());
   }
 
   // Discard any overridden defs in this MU.
@@ -1529,7 +1530,7 @@ Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
   }
 
   std::unique_lock<std::mutex> Lock(LookupMutex);
-  CV.wait(Lock, [&] { return Count == 0 || CompoundErr; });
+  CV.wait(Lock, [&] { return Count == 0; });
 
   if (CompoundErr)
     return std::move(CompoundErr);
@@ -2387,8 +2388,8 @@ void ExecutionSession::OL_applyQueryPhase1(
       // Build the definition generator stack for this JITDylib.
       runSessionLocked([&] {
         IPLS->CurDefGeneratorStack.reserve(JD.DefGenerators.size());
-        for (auto &DG : reverse(JD.DefGenerators))
-          IPLS->CurDefGeneratorStack.push_back(DG);
+        llvm::append_range(IPLS->CurDefGeneratorStack,
+                           reverse(JD.DefGenerators));
       });
 
       // Flag that we've done our initialization.

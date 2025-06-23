@@ -1360,9 +1360,8 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOutNoShouldStop(
   const bool calculate_return_value =
       false; // No need to calculate the return value here.
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
-      *this, addr_context, first_insn, stop_other_threads, report_stop_vote,
-      report_run_vote, frame_idx, eLazyBoolNo, continue_to_next_branch,
-      calculate_return_value));
+      *this, stop_other_threads, report_stop_vote, report_run_vote, frame_idx,
+      continue_to_next_branch, calculate_return_value));
 
   ThreadPlanStepOut *new_plan =
       static_cast<ThreadPlanStepOut *>(thread_plan_sp.get());
@@ -1669,10 +1668,14 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
   ExecutionContext exe_ctx(shared_from_this());
 
   const FormatEntity::Entry *thread_format;
-  if (stop_format)
-    thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
-  else
-    thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadFormat();
+  FormatEntity::Entry format_entry;
+  if (stop_format) {
+    format_entry = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
+    thread_format = &format_entry;
+  } else {
+    format_entry = exe_ctx.GetTargetRef().GetDebugger().GetThreadFormat();
+    thread_format = &format_entry;
+  }
 
   assert(thread_format);
 

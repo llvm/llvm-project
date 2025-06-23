@@ -469,6 +469,9 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
   // to disable the optimization in this case.
   if (CurPPLexer) CurPPLexer->MIOpt.ExpandedMacro();
 
+  if (!hasSeenMainFileFirstPPToken())
+    HandleMainFileFirstPPToken(Identifier);
+
   // If this is a builtin macro, like __LINE__ or _Pragma, handle it specially.
   if (MI->isBuiltinMacro()) {
     if (Callbacks)
@@ -2089,6 +2092,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   CreateString(OS.str(), Tok, Tok.getLocation(), Tok.getLocation());
   Tok.setFlagValue(Token::StartOfLine, IsAtStartOfLine);
   Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
+  Tok.clearFlag(Token::NeedsCleaning);
 }
 
 void Preprocessor::markMacroAsUsed(MacroInfo *MI) {

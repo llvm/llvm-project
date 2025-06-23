@@ -72,7 +72,6 @@ struct LinalgFoldIntoElementwisePass
       LinalgFoldIntoElementwisePass>::LinalgFoldIntoElementwisePassBase;
 
   void runOnOperation() override {
-    llvm::outs() << "Hellow from fold into elemenwise \n";
     Operation *op = getOperation();
     RewritePatternSet patterns(op->getContext());
     populateLinalgFoldIntoElementwisePatterns(patterns);

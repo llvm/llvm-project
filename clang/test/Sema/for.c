@@ -24,3 +24,8 @@ void b10(void) { for (typedef struct { int i; } (*s)(struct { int j; });;); } /*
 void b11 (void) { for (static _Thread_local struct { int i; } s;s.i;); } /* c11-warning {{declaration of non-local variable in 'for' loop is a C23 extension}}
                                                                             c23-warning {{declaration of non-local variable in 'for' loop is incompatible with C standards before C23}} */
 #endif
+
+void b12(void) {
+  for(_Static_assert(1, "");;) {} /* c11-warning {{non-variable declaration in 'for' loop is a C23 extension}}
+                                     c23-warning {{non-variable declaration in 'for' loop is incompatible with C standards before C23}} */
+}

@@ -72,8 +72,11 @@ namespace {
       //   Preceding an expression by a parenthesized type name converts the
       //   value of the expression to the unqualified, non-atomic version of
       //   the named type.
+      // Don't drop __ptrauth qualifiers. We want to treat casting to a
+      // __ptrauth-qualified type as an error instead of implicitly ignoring
+      // the qualifier.
       if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
-          !DestType->isArrayType()) {
+          !DestType->isArrayType() && !DestType.getPointerAuth()) {
         DestType = DestType.getAtomicUnqualifiedType();
       }
 
@@ -158,14 +161,24 @@ namespace {
       Self.CheckCastAlign(SrcExpr.get(), DestType, OpRange);
     }
 
-    void checkObjCConversion(CheckedConversionKind CCK) {
+    void checkObjCConversion(CheckedConversionKind CCK,
+                             bool IsReinterpretCast = false) {
       assert(Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers());
 
       Expr *src = SrcExpr.get();
-      if (Self.ObjC().CheckObjCConversion(OpRange, DestType, src, CCK) ==
-          SemaObjC::ACR_unbridged)
+      if (Self.ObjC().CheckObjCConversion(
+              OpRange, DestType, src, CCK, true, false, BO_PtrMemD,
+              IsReinterpretCast) == SemaObjC::ACR_unbridged)
         IsARCUnbridgedCast = true;
       SrcExpr = src;
+    }
+
+    void checkQualifiedDestType() {
+      // Destination type may not be qualified with __ptrauth.
+      if (DestType.getPointerAuth()) {
+        Self.Diag(DestRange.getBegin(), diag::err_ptrauth_qualifier_cast)
+            << DestType << DestRange;
+      }
     }
 
     /// Check for and handle non-overload placeholder expressions.
@@ -308,6 +321,8 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
   CastOperation Op(*this, DestType, E);
   Op.OpRange = SourceRange(OpLoc, Parens.getEnd());
   Op.DestRange = AngleBrackets;
+
+  Op.checkQualifiedDestType();
 
   switch (Kind) {
   default: llvm_unreachable("Unknown C++ cast!");
@@ -1153,8 +1168,31 @@ static unsigned int checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
     return false;
   };
 
+  auto IsFarProc = [](const FunctionType *T) {
+    // The definition of FARPROC depends on the platform in terms of its return
+    // type, which could be int, or long long, etc. We'll look for a source
+    // signature for: <integer type> (*)() and call that "close enough" to
+    // FARPROC to be sufficient to silence the diagnostic. This is similar to
+    // how we allow casts between function pointers and void * for supporting
+    // dlsym.
+    // Note: we could check for __stdcall on the function pointer as well, but
+    // that seems like splitting hairs.
+    if (!T->getReturnType()->isIntegerType())
+      return false;
+    if (const auto *PT = T->getAs<FunctionProtoType>())
+      return !PT->isVariadic() && PT->getNumParams() == 0;
+    return true;
+  };
+
   // Skip if either function type is void(*)(void)
   if (IsVoidVoid(SrcFTy) || IsVoidVoid(DstFTy))
+    return 0;
+
+  // On Windows, GetProcAddress() returns a FARPROC, which is a typedef for a
+  // function pointer type (with no prototype, in C). We don't want to diagnose
+  // this case so we don't diagnose idiomatic code on Windows.
+  if (Self.getASTContext().getTargetInfo().getTriple().isOSWindows() &&
+      IsFarProc(SrcFTy))
     return 0;
 
   // Check return type.
@@ -1227,7 +1265,8 @@ void CastOperation::CheckReinterpretCast() {
 
   if (isValidCast(tcr)) {
     if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
-      checkObjCConversion(CheckedConversionKind::OtherCast);
+      checkObjCConversion(CheckedConversionKind::OtherCast,
+                          /*IsReinterpretCast=*/true);
     DiagnoseReinterpretUpDownCast(Self, SrcExpr.get(), DestType, OpRange);
 
     if (unsigned DiagID = checkCastFunctionType(Self, SrcExpr, DestType))
@@ -3091,10 +3130,10 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
-  // C23 6.5.4p4:
-  //   The type nullptr_t shall not be converted to any type other than void,
-  //   bool, or a pointer type. No type other than nullptr_t shall be converted
-  //   to nullptr_t.
+  // C23 6.5.5p4:
+  //   ... The type nullptr_t shall not be converted to any type other than
+  //   void, bool or a pointer type.If the target type is nullptr_t, the cast
+  //   expression shall be a null pointer constant or have type nullptr_t.
   if (SrcType->isNullPtrType()) {
     // FIXME: 6.3.2.4p2 says that nullptr_t can be converted to itself, but
     // 6.5.4p4 is a constraint check and nullptr_t is not void, bool, or a
@@ -3115,11 +3154,20 @@ void CastOperation::CheckCStyleCast() {
                                          Self.CurFPFeatureOverrides());
     }
   }
+
   if (DestType->isNullPtrType() && !SrcType->isNullPtrType()) {
-    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
-        << /*type to nullptr*/ 1 << SrcType;
-    SrcExpr = ExprError();
-    return;
+    if (!SrcExpr.get()->isNullPointerConstant(Self.Context,
+                                              Expr::NPC_NeverValueDependent)) {
+      Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
+          << /*type to nullptr*/ 1 << SrcType;
+      SrcExpr = ExprError();
+      return;
+    }
+    // Need to convert the source from whatever its type is to a null pointer
+    // type first.
+    SrcExpr = ImplicitCastExpr::Create(Self.Context, DestType, CK_NullToPointer,
+                                       SrcExpr.get(), nullptr, VK_PRValue,
+                                       Self.CurFPFeatureOverrides());
   }
 
   if (DestType->isExtVectorType()) {
@@ -3380,6 +3428,8 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
   // -Wcast-qual
   DiagnoseCastQual(Op.Self, Op.SrcExpr, Op.DestType);
 
+  Op.checkQualifiedDestType();
+
   return Op.complete(CStyleCastExpr::Create(
       Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
       &Op.BasePath, CurFPFeatureOverrides(), CastTypeInfo, LPLoc, RPLoc));
@@ -3398,6 +3448,8 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
   if (Op.SrcExpr.isInvalid())
     return ExprError();
+
+  Op.checkQualifiedDestType();
 
   auto *SubExpr = Op.SrcExpr.get();
   if (auto *BindExpr = dyn_cast<CXXBindTemporaryExpr>(SubExpr))

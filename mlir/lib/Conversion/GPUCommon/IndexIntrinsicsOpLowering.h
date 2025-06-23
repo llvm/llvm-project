@@ -12,6 +12,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include <limits>
 
 namespace mlir {
 namespace gpu {
@@ -116,7 +117,9 @@ public:
 
     if (upperBound && intrType != IntrType::None) {
       int32_t min = (intrType == IntrType::Dim ? 1 : 0);
-      int32_t max = *upperBound + (intrType == IntrType::Id ? 0 : 1);
+      int32_t max = *upperBound == std::numeric_limits<int32_t>::max()
+                        ? *upperBound
+                        : *upperBound + (intrType == IntrType::Id ? 0 : 1);
       newOp->setAttr("range", LLVM::ConstantRangeAttr::get(
                                   rewriter.getContext(), 32, min, max));
     }

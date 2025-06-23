@@ -242,13 +242,12 @@ static unsigned calculateMMLEIndex(unsigned i) {
 /// ApplyFixup - Apply the \p Value for given \p Fixup into the provided
 /// data fragment, at the offset specified by the fixup and following the
 /// fixup kind as appropriate.
-void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void MipsAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                 const MCValue &Target,
                                 MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved,
-                                const MCSubtargetInfo *STI) const {
+                                bool IsResolved) {
   MCFixupKind Kind = Fixup.getKind();
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   Value = adjustFixupValue(Fixup, Value, Ctx);
 
   if (!Value)
@@ -353,8 +352,7 @@ std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
       .Default(MCAsmBackend::getFixupKind(Name));
 }
 
-const MCFixupKindInfo &MipsAsmBackend::
-getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo MipsAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo LittleEndianInfos[] = {
       // This table *must* be in same the order of fixup_* kinds in
       // MipsFixupKinds.h.
@@ -527,7 +525,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
   static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
 
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -558,10 +556,8 @@ bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                           const MCFixup &Fixup,
-                                           const MCValue &Target,
-                                           const MCSubtargetInfo *STI) {
+bool MipsAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
+                                           const MCValue &Target) {
   const unsigned FixupKind = Fixup.getKind();
   switch (FixupKind) {
   default:
@@ -600,14 +596,6 @@ bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case Mips::fixup_MICROMIPS_JALR:
     return true;
   }
-}
-
-bool MipsAsmBackend::isMicroMips(const MCSymbol *Sym) const {
-  if (const auto *ElfSym = dyn_cast<const MCSymbolELF>(Sym)) {
-    if (ElfSym->getOther() & ELF::STO_MIPS_MICROMIPS)
-      return true;
-  }
-  return false;
 }
 
 namespace {

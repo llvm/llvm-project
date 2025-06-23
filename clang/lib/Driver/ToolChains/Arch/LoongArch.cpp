@@ -8,10 +8,9 @@
 
 #include "LoongArch.h"
 #include "../Clang.h"
-#include "ToolChains/CommonArgs.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
@@ -253,6 +252,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
         Features.push_back("+lsx");
     } else /*-mno-lsx*/ {
       Features.push_back("-lsx");
+      Features.push_back("-lasx");
     }
   }
 

@@ -80,14 +80,6 @@ public:
     SRCK_InRegs    // Small structs in registers (-freg-struct-return).
   };
 
-  enum ProfileInstrKind {
-    ProfileNone,       // Profile instrumentation is turned off.
-    ProfileClangInstr, // Clang instrumentation to generate execution counts
-                       // to use with PGO.
-    ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
-    ProfileCSIRInstr, // IR level PGO context sensitive instrumentation in LLVM.
-  };
-
   enum EmbedBitcodeKind {
     Embed_Off,      // No embedded bitcode.
     Embed_All,      // Embed both bitcode and commandline in the output.
@@ -281,6 +273,10 @@ public:
   /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
 
+  /// Name of the patchable function entry section with
+  /// -fpatchable-function-entry.
+  std::string PatchableFunctionEntrySection;
+
   /// Name of the profile file to use with -fprofile-sample-use.
   std::string SampleProfileFile;
 
@@ -331,6 +327,10 @@ public:
   /// The name of the partition that symbols are assigned to, specified with
   /// -fsymbol-partition (see https://lld.llvm.org/Partitions.html).
   std::string SymbolPartition;
+
+  /// If non-empty, allow the compiler to assume that the given source file
+  /// identifier is unique at link time.
+  std::string UniqueSourceFileIdentifier;
 
   enum RemarkKind {
     RK_Missing,            // Remark argument not present on the command line.
@@ -394,6 +394,10 @@ public:
   /// for the given fraction of PGO counters will be excluded from sanitization
   /// (0.0 [default] to skip none, 1.0 to skip all).
   SanitizerMaskCutoffs SanitizeSkipHotCutoffs;
+
+  /// Set of sanitizer checks, for which the instrumentation will be annotated
+  /// with extra debug info.
+  SanitizerSet SanitizeAnnotateDebugInfo;
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
@@ -489,6 +493,9 @@ public:
   /// The name of a file to use with \c .secure_log_unique directives.
   std::string AsSecureLogFile;
 
+  /// A list of functions that are replacable by the loader.
+  std::vector<std::string> LoaderReplaceableFunctionNames;
+
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
@@ -505,35 +512,41 @@ public:
 
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
-    return getProfileInstr() == ProfileClangInstr;
+    return getProfileInstr() ==
+           llvm::driver::ProfileInstrKind::ProfileClangInstr;
   }
 
   /// Check if IR level profile instrumentation is on.
   bool hasProfileIRInstr() const {
-    return getProfileInstr() == ProfileIRInstr;
+    return getProfileInstr() == llvm::driver::ProfileInstrKind::ProfileIRInstr;
   }
 
   /// Check if CS IR level profile instrumentation is on.
   bool hasProfileCSIRInstr() const {
-    return getProfileInstr() == ProfileCSIRInstr;
+    return getProfileInstr() ==
+           llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
   }
 
   /// Check if any form of instrumentation is on.
-  bool hasProfileInstr() const { return getProfileInstr() != ProfileNone; }
+  bool hasProfileInstr() const {
+    return getProfileInstr() != llvm::driver::ProfileInstrKind::ProfileNone;
+  }
 
   /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {
-    return getProfileUse() == ProfileClangInstr;
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileClangInstr;
   }
 
   /// Check if IR level profile use is on.
   bool hasProfileIRUse() const {
-    return getProfileUse() == ProfileIRInstr ||
-           getProfileUse() == ProfileCSIRInstr;
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileIRInstr ||
+           getProfileUse() == llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
   }
 
   /// Check if CSIR profile use is on.
-  bool hasProfileCSIRUse() const { return getProfileUse() == ProfileCSIRInstr; }
+  bool hasProfileCSIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
+  }
 
   /// Check if type and variable info should be emitted.
   bool hasReducedDebugInfo() const {
@@ -561,6 +574,12 @@ public:
   /// Reset all of the options that are not considered when building a
   /// module.
   void resetNonModularOptions(StringRef ModuleFormat);
+
+  // Is the given function name one of the functions that can be replaced by the
+  // loader?
+  bool isLoaderReplaceableFunctionName(StringRef FuncName) const {
+    return llvm::is_contained(LoaderReplaceableFunctionNames, FuncName);
+  }
 };
 
 }  // end namespace clang

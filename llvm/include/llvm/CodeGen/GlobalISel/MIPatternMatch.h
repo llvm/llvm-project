@@ -14,8 +14,11 @@
 #define LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/InstrTypes.h"
 
 namespace llvm {
@@ -393,6 +396,7 @@ inline bind_ty<const MachineInstr *> m_MInstr(const MachineInstr *&MI) {
 inline bind_ty<LLT> m_Type(LLT &Ty) { return Ty; }
 inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
+inline bind_ty<FPClassTest> m_FPClassTest(FPClassTest &T) { return T; }
 
 template <typename BindTy> struct deferred_helper {
   static bool match(const MachineRegisterInfo &MRI, BindTy &VR, BindTy &V) {
@@ -762,6 +766,32 @@ struct CompareOp_match {
   }
 };
 
+template <typename LHS_P, typename Test_P, unsigned Opcode>
+struct ClassifyOp_match {
+  LHS_P L;
+  Test_P T;
+
+  ClassifyOp_match(const LHS_P &LHS, const Test_P &Tst) : L(LHS), T(Tst) {}
+
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (!mi_match(Op, MRI, m_MInstr(TmpMI)) || TmpMI->getOpcode() != Opcode)
+      return false;
+
+    Register LHS = TmpMI->getOperand(1).getReg();
+    if (!L.match(MRI, LHS))
+      return false;
+
+    FPClassTest TmpClass =
+        static_cast<FPClassTest>(TmpMI->getOperand(2).getImm());
+    if (T.match(MRI, TmpClass))
+      return true;
+
+    return false;
+  }
+};
+
 template <typename Pred, typename LHS, typename RHS>
 inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_ICMP>
 m_GICmp(const Pred &P, const LHS &L, const RHS &R) {
@@ -802,6 +832,14 @@ template <typename Pred, typename LHS, typename RHS>
 inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>
 m_c_GFCmp(const Pred &P, const LHS &L, const RHS &R) {
   return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>(P, L, R);
+}
+
+/// Matches the register and immediate used in a fpclass test
+/// G_IS_FPCLASS %val, 96
+template <typename LHS, typename Test>
+inline ClassifyOp_match<LHS, Test, TargetOpcode::G_IS_FPCLASS>
+m_GIsFPClass(const LHS &L, const Test &T) {
+  return ClassifyOp_match<LHS, Test, TargetOpcode::G_IS_FPCLASS>(L, T);
 }
 
 // Helper for checking if a Reg is of specific type.

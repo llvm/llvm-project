@@ -519,7 +519,7 @@ public:
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   static bool isFalkorShiftExtFast(const MachineInstr &MI);
-  /// Return true if the instructions is a SEH instruciton used for unwinding
+  /// Return true if the instructions is a SEH instruction used for unwinding
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
 
@@ -724,6 +724,19 @@ static inline bool isIndirectBranchOpcode(int Opc) {
     return true;
   }
   return false;
+}
+
+static inline bool isIndirectCallOpcode(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::BLR:
+  case AArch64::BLRAA:
+  case AArch64::BLRAB:
+  case AArch64::BLRAAZ:
+  case AArch64::BLRABZ:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static inline bool isPTrueOpcode(unsigned Opc) {

@@ -12,28 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceAttributes.h"
-#include "Delta.h"
-#include "TestRunner.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cassert>
-#include <iterator>
-#include <utility>
-
-namespace llvm {
-class LLVMContext;
-} // namespace llvm
 
 using namespace llvm;
 
@@ -166,11 +149,7 @@ public:
 } // namespace
 
 /// Removes out-of-chunk attributes from module.
-static void extractAttributesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceAttributesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   AttributeRemapper R(O, WorkItem.getModule());
   R.visit(WorkItem.getModule());
-}
-
-void llvm::reduceAttributesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractAttributesFromModule, "Reducing Attributes");
 }
