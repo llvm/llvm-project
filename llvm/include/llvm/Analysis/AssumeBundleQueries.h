@@ -104,9 +104,12 @@ struct RetainedKnowledge {
   uint64_t ArgValue = 0;
   Value *IRArgValue = nullptr;
   Value *WasOn = nullptr;
+  RetainedKnowledge(Attribute::AttrKind AttrKind = Attribute::None,
+                    uint64_t ArgValue = 0, Value *WasOn = nullptr)
+      : AttrKind(AttrKind), ArgValue(ArgValue), WasOn(WasOn) {}
   bool operator==(RetainedKnowledge Other) const {
     return AttrKind == Other.AttrKind && WasOn == Other.WasOn &&
-           ArgValue == Other.ArgValue;
+           ArgValue == Other.ArgValue && IRArgValue == Other.IRArgValue;
   }
   bool operator!=(RetainedKnowledge Other) const { return !(*this == Other); }
   /// This is only intended for use in std::min/std::max between attribute that
