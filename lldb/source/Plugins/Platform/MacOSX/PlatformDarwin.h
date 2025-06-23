@@ -120,9 +120,6 @@ public:
   llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) override;
 
-  llvm::Expected<std::string>
-  ResolveSDKPathFromDebugInfo(Module &module) override;
-
   llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) override;
 
   llvm::Expected<std::string>
