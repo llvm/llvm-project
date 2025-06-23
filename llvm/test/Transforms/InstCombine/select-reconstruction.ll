@@ -37,14 +37,18 @@ define i40 @select_reconstruction_any_cmp_val(i40 %arg0, i8 %arg1) {
   ret i40 %recomb
 }
 
+; negative test
 define i40 @select_reconstruction_257_mask(i40 %arg0) {
 ; CHECK-LABEL: define i40 @select_reconstruction_257_mask(
 ; CHECK-SAME: i40 [[ARG0:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i40 [[ARG0]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i40 [[ARG0]], -257
+; CHECK-NEXT:    [[SELECT_LOW:%.*]] = select i1 [[TMP2]], i8 0, i8 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i40 0, i40 [[TMP3]]
-; CHECK-NEXT:    ret i40 [[TMP4]]
+; CHECK-NEXT:    [[ZEXT_LOW:%.*]] = zext i8 [[SELECT_LOW]] to i40
+; CHECK-NEXT:    [[RECOMB:%.*]] = or disjoint i40 [[TMP4]], [[ZEXT_LOW]]
+; CHECK-NEXT:    ret i40 [[RECOMB]]
 ;
   %low = trunc i40 %arg0 to i8
   %is_low_two = icmp eq i8 %low, 2

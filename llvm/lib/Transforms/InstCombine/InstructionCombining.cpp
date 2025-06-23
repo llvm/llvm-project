@@ -1350,16 +1350,17 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   };
 
   // Special case for reconstructing across a select:
-  // (Cond ? V1 : (X & Mask)) op
+  // (Cond ? V1 : (X & Mask)) |
   // zext (Cond ? V2 : trunc X)
-  // -> (Cond ? (V1 op zext V2) : ((X & Mask) op zext trunc X))
+  // -> (Cond ? (V1 | zext V2) : X)
   auto foldReconstruction = [&](Value *V1, Value *Masked,
                                 Value *ZExtSel) -> Value * {
     if (Opcode != Instruction::Or)
       return nullptr;
 
     Value *X;
-    if (!match(Masked, m_OneUse(m_And(m_Value(X), m_Constant()))))
+    const APInt *C;
+    if (!match(Masked, m_OneUse(m_And(m_Value(X), m_APInt(C)))))
       return nullptr;
 
     Value *V2, *Trunc;
@@ -1367,20 +1368,20 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                  m_Value(Trunc))))))
       return nullptr;
 
+    if (*C != APInt::getBitsSetFrom(X->getType()->getScalarSizeInBits(),
+                                    Trunc->getType()->getScalarSizeInBits())) {
+      return nullptr;
+    }
+
     if (!match(Trunc, m_Trunc(m_Specific(X))))
       return nullptr;
 
     Value *ZExtTrue = Builder.CreateZExt(V2, V1->getType());
-    Value *True;
-    if (!(True = simplifyBinOp(Opcode, V1, ZExtTrue, FMF, Q)))
-      True = Builder.CreateOr(V1, ZExtTrue);
+    Value *True = simplifyBinOp(Opcode, V1, ZExtTrue, FMF, Q);
+    if (!True)
+      return nullptr;
 
-    Value *ZExtFalse = Builder.CreateZExt(Trunc, V1->getType());
-    Value *False;
-    if (!(False = simplifyBinOp(Opcode, Masked, ZExtFalse, FMF, Q)))
-      False = Builder.CreateOr(Masked, ZExtFalse);
-
-    return Builder.CreateSelect(Cond, True, False, I.getName());
+    return Builder.CreateSelect(Cond, True, X, I.getName());
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
