@@ -44,7 +44,7 @@ module mod { header "mod.h" }
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
 // CHECK:            "clang-context-hash": "[[HASH_TU:.*]],
-// CHECK:            "clang-module-deps": [
+// CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_MOD]]",
 // CHECK-NEXT:           "module-name": "mod"

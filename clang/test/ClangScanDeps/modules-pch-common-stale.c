@@ -62,7 +62,7 @@ module mod_tu_extra { header "mod_tu_extra.h" }
 // CHECK-TU-CLEAN-NEXT:       "commands": [
 // CHECK-TU-CLEAN-NEXT:         {
 // CHECK-TU-CLEAN-NEXT:           "clang-context-hash": "{{.*}}",
-// CHECK-TU-CLEAN:                "clang-module-deps": [
+// CHECK-TU-CLEAN-NEXT:           "clang-module-deps": [
 // CHECK-TU-CLEAN-NEXT:             {
 // CHECK-TU-CLEAN-NEXT:               "context-hash": "{{.*}}",
 // CHECK-TU-CLEAN-NEXT:               "module-name": "mod_tu"
@@ -149,7 +149,7 @@ module mod_tu_extra { header "mod_tu_extra.h" }
 // CHECK-TU-INCREMENTAL-NEXT:       "commands": [
 // CHECK-TU-INCREMENTAL-NEXT:         {
 // CHECK-TU-INCREMENTAL-NEXT:           "clang-context-hash": "{{.*}}",
-// CHECK-TU-INCREMENTAL:                "clang-module-deps": [
+// CHECK-TU-INCREMENTAL-NEXT:           "clang-module-deps": [
 // CHECK-TU-INCREMENTAL-NEXT:             {
 // CHECK-TU-INCREMENTAL-NEXT:               "context-hash": "{{.*}}",
 // CHECK-TU-INCREMENTAL-NEXT:               "module-name": "mod_tu"

@@ -44,7 +44,7 @@
 // CHECK:          "commands": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "clang-context-hash":
-// CHECK:              "clang-module-deps": []
+// CHECK-NEXT:         "clang-module-deps": []
 // CHECK-NEXT:         "command-line": [
 // CHECK-NEXT:           "-cc1"
 // CHECK:                "-o"
@@ -56,7 +56,7 @@
 // CHECK-NEXT:       }
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "clang-context-hash":
-// CHECK:              "clang-module-deps": []
+// CHECK-NEXT:         "clang-module-deps": []
 // CHECK-NEXT:         "command-line": [
 // CHECK-NEXT:           "-cc1"
 // CHECK:                "-o"

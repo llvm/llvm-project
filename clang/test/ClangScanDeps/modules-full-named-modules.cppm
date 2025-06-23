@@ -187,7 +187,7 @@ export void World();
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
 // CHECK:                 "module-name": "M:interface_part"
-// CHECK-NEXT:            "named-module-deps": []
+// CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
 // CHECK-NEXT:              "{{.*}}/interface_part-{{.*}}.pcm",
@@ -196,7 +196,7 @@ export void World();
 // CHECK:               },
 // CHECK-NEXT:          {
 // CHECK:                 "module-name": "M:interface_part"
-// CHECK-NEXT:            "named-module-deps": []
+// CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
 // CHECK-NEXT:              "[[PREFIX]]/interface_part.o",
@@ -309,7 +309,7 @@ int main() {
 // CHECK:             "commands": [
 // CHECK-NEXT:          {
 // CHECK:                 "module-name": "M:interface_part"
-// CHECK-NEXT:            "named-module-deps": []
+// CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
 // CHECK-NEXT:              "{{.*}}/interface_part-{{.*}}.pcm",
@@ -318,7 +318,7 @@ int main() {
 // CHECK:               },
 // CHECK-NEXT:          {
 // CHECK:                 "module-name": "M:interface_part"
-// CHECK-NEXT:            "named-module-deps": []
+// CHECK-NOT:             "named-module-deps": []
 // CHECK:                 "command-line": [
 // CHECK:                   "-o",
 // CHECK-NEXT:              "[[PREFIX]]/interface_part.o",

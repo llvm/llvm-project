@@ -75,7 +75,7 @@ module mod {
 // CHECK:     {
 // CHECK-NEXT:  "modules": [
 // CHECK-NEXT:   {
-// CHECK:          "clang-module-deps": [],
+// CHECK-NEXT:     "clang-module-deps": [],
 // CHECK:          "context-hash": "[[HASH:.*]]",
 // CHECK:        }
 // CHECK:       "translation-units": [
@@ -83,7 +83,7 @@ module mod {
 // CHECK:          "commands": [
 // CHECK:          {
 // CHECK-NEXT:        "clang-context-hash": "{{.*}}",
-// CHECK:             "clang-module-deps": [
+// CHECK-NEXT:        "clang-module-deps": [
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "context-hash": "[[HASH]]",
 // CHECK-NEXT:            "module-name": "mod"
@@ -100,7 +100,7 @@ module mod {
 // CHECK:           "commands": [
 // CHECK:           {
 // CHECK-NEXT:         "clang-context-hash": "{{.*}}",
-// CHECK:              "clang-module-deps": [
+// CHECK-NEXT:         "clang-module-deps": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "context-hash": "[[HASH]]",
 // CHECK-NEXT:             "module-name": "mod"
@@ -112,7 +112,7 @@ module mod {
 // SKIPOPT:      {
 // SKIPOPT-NEXT:   "modules": [
 // SKIPOPT-NEXT:    {
-// SKIPOPT:           "clang-module-deps": [],
+// SKIPOPT-NEXT:      "clang-module-deps": [],
 // SKIPOPT:           "context-hash": "[[HASH0:.*]]",
 // SKIPOPT:         }
 // SKIPOPT:        "translation-units": [
@@ -120,7 +120,7 @@ module mod {
 // SKIPOPT:            "commands": [
 // SKIPOPT:             {
 // SKIPOPT-NEXT:          "clang-context-hash": "{{.*}}",
-// SKIPOPT:               "clang-module-deps": [
+// SKIPOPT-NEXT:          "clang-module-deps": [
 // SKIPOPT-NEXT:            {
 // SKIPOPT-NEXT:              "context-hash": "[[HASH0]]",
 // SKIPOPT-NEXT:              "module-name": "mod"
@@ -129,7 +129,7 @@ module mod {
 // SKIPOPT:      {
 // SKIPOPT-NEXT:   "modules": [
 // SKIPOPT-NEXT:     {
-// SKIPOPT:            "clang-module-deps": [],
+// SKIPOPT-NEXT:       "clang-module-deps": [],
 // SKIPOPT-NOT:        "context-hash": "[[HASH0]]",
 // SKIPOPT:            "context-hash": "[[HASH2:.*]]",
 // SKIPOPT:          }
@@ -138,7 +138,7 @@ module mod {
 // SKIPOPT:           "commands": [
 // SKIPOPT:             {
 // SKIPOPT-NEXT:          "clang-context-hash": "{{.*}}",
-// SKIPOPT:               "clang-module-deps": [
+// SKIPOPT-NEXT:          "clang-module-deps": [
 // SKIPOPT-NEXT:            {
 // SKIPOPT-NOT:              "context-hash": "[[HASH0]]",
 // SKIPOPT-NEXT:             "context-hash": "[[HASH2]]"
@@ -160,7 +160,7 @@ module mod {
 // RELPATH:            "commands": [
 // RELPATH:             {
 // RELPATH-NEXT:          "clang-context-hash": "{{.*}}",
-// RELPATH:               "clang-module-deps": [
+// RELPATH-NEXT:          "clang-module-deps": [
 // RELPATH-NEXT:            {
 // RELPATH-NEXT:              "context-hash": "[[HASH3]]",
 // RELPATH-NEXT:              "module-name": "mod"
@@ -178,7 +178,7 @@ module mod {
 // RELPATH:           "commands": [
 // RELPATH:             {
 // RELPATH-NEXT:          "clang-context-hash": "{{.*}}",
-// RELPATH:               "clang-module-deps": [
+// RELPATH-NEXT:          "clang-module-deps": [
 // RELPATH-NEXT:            {
 // RELPATH-NOT:              "context-hash": "[[HASH3]]",
 // RELPATH-NEXT:             "context-hash": "[[HASH4]]"

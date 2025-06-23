@@ -38,7 +38,7 @@
 // CHECK-PCH-NEXT:   "translation-units": [
 // CHECK-PCH-NEXT:     {
 // CHECK-PCH:            "clang-context-hash": "[[HASH_PCH:.*]]",
-// CHECK-PCH:            "clang-module-deps": [
+// CHECK-PCH-NEXT:       "clang-module-deps": [
 // CHECK-PCH-NEXT:         {
 // CHECK-PCH-NEXT:           "context-hash": "[[HASH_MOD_COMMON]]",
 // CHECK-PCH-NEXT:           "module-name": "ModCommon"
@@ -86,7 +86,7 @@
 // CHECK-TU-NEXT:   "translation-units": [
 // CHECK-TU-NEXT:     {
 // CHECK-TU:            "clang-context-hash": "[[HASH_TU:.*]]",
-// CHECK-TU:            "clang-module-deps": [
+// CHECK-TU-NEXT:       "clang-module-deps": [
 // CHECK-TU-NEXT:         {
 // CHECK-TU-NEXT:           "context-hash": "[[HASH_MOD_TU]]"
 // CHECK-TU-NEXT:           "module-name": "ModTU"

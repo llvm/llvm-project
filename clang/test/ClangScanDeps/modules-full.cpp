@@ -91,7 +91,7 @@
 // CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "clang-context-hash": "[[HASH_TU_DINCLUDE:[A-Z0-9]+]]",
-// CHECK:                "clang-module-deps": [
+// CHECK-NEXT:           "clang-module-deps": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_H1_DINCLUDE]]",
 // CHECK-NEXT:               "module-name": "header1"
@@ -114,7 +114,7 @@
 // CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
-// CHECK:                "clang-module-deps": [
+// CHECK-NEXT:           "clang-module-deps": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_H1]]",
 // CHECK-NEXT:               "module-name": "header1"
@@ -137,7 +137,7 @@
 // CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
-// CHECK:                "clang-module-deps": [
+// CHECK-NEXT:           "clang-module-deps": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_H1]]",
 // CHECK-NEXT:               "module-name": "header1"
@@ -160,7 +160,7 @@
 // CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
-// CHECK:                "clang-module-deps": [
+// CHECK-NEXT:           "clang-module-deps": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_H1]]",
 // CHECK-NEXT:               "module-name": "header1"

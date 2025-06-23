@@ -512,10 +512,11 @@ public:
                                   StringRef(I.ContextHash));
                     if (I.ModuleName.size())
                       JOS.attribute("module-name", (I.ModuleName));
-                    JOS.attributeArray("named-module-deps", [&] {
-                      for (const auto &Dep : I.NamedModuleDeps)
-                        JOS.value(Dep);
-                    });
+                    if (!I.NamedModuleDeps.empty())
+                      JOS.attributeArray("named-module-deps", [&] {
+                        for (const auto &Dep : I.NamedModuleDeps)
+                          JOS.value(Dep);
+                      });
                     JOS.attributeArray("clang-module-deps",
                                        toJSONSorted(JOS, I.ClangModuleDeps));
                     JOS.attributeArray("command-line",
@@ -531,10 +532,11 @@ public:
                   JOS.attribute("clang-context-hash", StringRef(I.ContextHash));
                   if (I.ModuleName.size())
                     JOS.attribute("module-name", (I.ModuleName));
-                  JOS.attributeArray("named-module-deps", [&] {
-                    for (const auto &Dep : I.NamedModuleDeps)
-                      JOS.value(Dep);
-                  });
+                  if (!I.NamedModuleDeps.empty())
+                    JOS.attributeArray("named-module-deps", [&] {
+                      for (const auto &Dep : I.NamedModuleDeps)
+                        JOS.value(Dep);
+                    });
                   JOS.attributeArray("clang-module-deps",
                                      toJSONSorted(JOS, I.ClangModuleDeps));
                   JOS.attributeArray("command-line",

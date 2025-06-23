@@ -76,7 +76,7 @@
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
 // CHECK:            "clang-context-hash": "[[HASH_TU:.*]]",
-// CHECK:            "clang-module-deps": [
+// CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_MOD_HEADER]]",
 // CHECK-NEXT:           "module-name": "ModHeader"

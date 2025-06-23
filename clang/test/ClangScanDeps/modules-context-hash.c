@@ -45,7 +45,7 @@
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
 // CHECK:            "clang-context-hash": "{{.*}}",
-// CHECK:            "clang-module-deps": [
+// CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_MOD_A]]",
 // CHECK-NEXT:           "module-name": "mod"
@@ -83,7 +83,7 @@
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
 // CHECK:            "clang-context-hash": "{{.*}}",
-// CHECK:            "clang-module-deps": [
+// CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NOT:            "context-hash": "[[HASH_MOD_A]]",
 // CHECK:                "module-name": "mod"

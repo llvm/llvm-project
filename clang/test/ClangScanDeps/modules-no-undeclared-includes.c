@@ -54,7 +54,7 @@ module User [no_undeclared_includes] { header "user.h" }
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
 // CHECK:            "clang-context-hash": "{{.*}}"
-// CHECK:            "clang-module-deps": [
+// CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "{{.*}}"
 // CHECK-NEXT:           "module-name": "User"
