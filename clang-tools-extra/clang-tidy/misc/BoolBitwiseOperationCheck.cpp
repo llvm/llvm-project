@@ -9,7 +9,6 @@
 #include "BoolBitwiseOperationCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/ScopeExit.h"
 #include <array>
 #include <optional>
 #include <utility>
@@ -96,7 +95,7 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
 
-  auto DiagEmitterProc = [MatchedExpr, this] {
+  auto DiagEmitter = [MatchedExpr, this] {
     const NamedDecl *ND = getLHSNamedDeclIfCompoundAssign(MatchedExpr);
     return diag(MatchedExpr->getOperatorLoc(),
                 "use logical operator '%0' for boolean %select{variable "
@@ -104,7 +103,6 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
            << translate(MatchedExpr->getOpcodeStr()) << (ND == nullptr) << ND
            << MatchedExpr->getOpcodeStr();
   };
-  auto DiagEmitter = llvm::make_scope_exit(DiagEmitterProc);
 
   const bool HasVolatileOperand = llvm::any_of(
       std::array{MatchedExpr->getLHS(), MatchedExpr->getRHS()},
@@ -112,61 +110,46 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
         return E->IgnoreImpCasts()->getType().isVolatileQualified();
       });
   if (HasVolatileOperand)
-    return;
+    return (void)DiagEmitter();
 
   const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(
       *Result.Context, /*IncludePossibleEffects=*/!StrictMode);
   if (HasSideEffects)
-    return;
+    return (void)DiagEmitter();
 
   SourceLocation Loc = MatchedExpr->getOperatorLoc();
 
-  if (Loc.isInvalid() || Loc.isMacroID()) {
-    if (IgnoreMacros)
-      DiagEmitter.release();
-    return;
-  }
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return void(IgnoreMacros || DiagEmitter());
 
   Loc = Result.SourceManager->getSpellingLoc(Loc);
-  if (Loc.isInvalid() || Loc.isMacroID()) {
-    if (IgnoreMacros)
-      DiagEmitter.release();
-    return;
-  }
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return void(IgnoreMacros || DiagEmitter());
 
   const CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
-  if (TokenRange.isInvalid()) {
-    if (IgnoreMacros)
-      DiagEmitter.release();
-    return;
-  }
+  if (TokenRange.isInvalid())
+    return void(IgnoreMacros || DiagEmitter());
 
   StringRef Spelling = Lexer::getSourceText(TokenRange, *Result.SourceManager,
                                             Result.Context->getLangOpts());
   const std::string FixSpelling = translate(Spelling);
 
   if (FixSpelling.empty())
-    return;
+    return (void)DiagEmitter();
 
   FixItHint InsertEqual;
   if (MatchedExpr->isCompoundAssignmentOp()) {
     const auto *DelcRefLHS =
         dyn_cast<DeclRefExpr>(MatchedExpr->getLHS()->IgnoreImpCasts());
     if (!DelcRefLHS)
-      return;
+      return (void)DiagEmitter();
     const SourceLocation LocLHS = DelcRefLHS->getEndLoc();
-    if (LocLHS.isInvalid() || LocLHS.isMacroID()) {
-      if (IgnoreMacros)
-        DiagEmitter.release();
-      return;
-    }
+    if (LocLHS.isInvalid() || LocLHS.isMacroID())
+      return void(IgnoreMacros || DiagEmitter());
     const SourceLocation InsertLoc = clang::Lexer::getLocForEndOfToken(
         LocLHS, 0, *Result.SourceManager, Result.Context->getLangOpts());
-    if (InsertLoc.isInvalid() || InsertLoc.isMacroID()) {
-      if (IgnoreMacros)
-        DiagEmitter.release();
-      return;
-    }
+    if (InsertLoc.isInvalid() || InsertLoc.isMacroID())
+      return void(IgnoreMacros || DiagEmitter());
     InsertEqual = FixItHint::CreateInsertion(
         InsertLoc, " = " + DelcRefLHS->getDecl()->getNameAsString());
   }
@@ -202,18 +185,14 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
         SurroundedExpr->getEndLoc(), 0, *Result.SourceManager,
         Result.Context->getLangOpts());
     if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
-        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID()) {
-      if (IgnoreMacros)
-        DiagEmitter.release();
-      return;
-    }
+        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID())
+      return void(IgnoreMacros || DiagEmitter());
     InsertBrace1 = FixItHint::CreateInsertion(InsertFirstLoc, "(");
     InsertBrace2 = FixItHint::CreateInsertion(InsertSecondLoc, ")");
   }
 
-  DiagEmitter.release();
-  DiagEmitterProc() << InsertEqual << ReplaceOperator << InsertBrace1
-                    << InsertBrace2;
+  DiagEmitter() << InsertEqual << ReplaceOperator << InsertBrace1
+                << InsertBrace2;
 }
 
 } // namespace clang::tidy::misc
