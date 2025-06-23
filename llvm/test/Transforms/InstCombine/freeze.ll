@@ -144,9 +144,9 @@ define i32 @early_freeze_test3(i32 %v1) {
 
 define i32 @early_freeze_test4(i32 %v1) {
 ; CHECK-LABEL: @early_freeze_test4(
-; CHECK-NEXT:    [[V2:%.*]] = mul i32 [[V1_FR:%.*]], [[V1_FR]]
-; CHECK-NEXT:    [[V2_FR:%.*]] = freeze i32 [[V2]]
-; CHECK-NEXT:    ret i32 [[V2_FR]]
+; CHECK-NEXT:    [[V2_FR:%.*]] = freeze i32 [[V2:%.*]]
+; CHECK-NEXT:    [[V3:%.*]] = mul i32 [[V2_FR]], [[V2_FR]]
+; CHECK-NEXT:    ret i32 [[V3]]
 ;
   %v2 = mul i32 %v1, %v1
   %v2.fr = freeze i32 %v2
