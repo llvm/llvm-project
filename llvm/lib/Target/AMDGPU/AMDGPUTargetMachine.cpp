@@ -1636,7 +1636,7 @@ static const char RegAllocOptNotSupportedMessage[] =
 
 bool GCNPassConfig::addRegAssignAndRewriteFast() {
   if (!usingDefaultRegAlloc())
-    report_fatal_error(RegAllocOptNotSupportedMessage);
+    reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
   addPass(&GCNPreRALongBranchRegID);
 
@@ -1662,7 +1662,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
 bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   if (!usingDefaultRegAlloc())
-    report_fatal_error(RegAllocOptNotSupportedMessage);
+    reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
   addPass(&GCNPreRALongBranchRegID);
 
@@ -2073,9 +2073,6 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 }
 
 void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
-  // AMDGPUAnnotateKernelFeaturesPass is missing here, but it will hopefully be
-  // deleted soon.
-
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(AMDGPUPreloadKernelArgumentsPass(TM));
 

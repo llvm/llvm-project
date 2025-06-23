@@ -898,8 +898,7 @@ DWARF:
     auto param_die = decl_die.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die,
-              ast_parser.GetCXXObjectParameter(decl_die, context_die));
+    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(decl_die, context_die));
   }
 
   {
@@ -912,8 +911,8 @@ DWARF:
     auto param_die = subprogram_definition.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetCXXObjectParameter(subprogram_definition,
-                                                          context_die));
+    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(subprogram_definition,
+                                                       context_die));
   }
 }
 
