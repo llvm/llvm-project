@@ -921,7 +921,20 @@ def AMDGPU_TransposeLoadOp :
   let summary = "MLIR wrapper for CDNA Transpose Load instructions";
   let description = [{
     The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions.
+    The transpose load op represents a subgroup load from LDS memory,
+    where the subgroup of threads collectively reads a matrix from the source
+    memref, with each thread reading a vector of the matrix, and gets a transposed matrix
+    in as the result. That is, each thread reads a vector of the col-major matrix at different
+    indices, and the thread's read result is a vector of the corresponding row of the transposed
+    matrix.
 
+    This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics. Please refer
+    to the ROCDL documentation for more details about its exact semantics.
+
+    Format example:
+    ```
+    %0 = amdgpu.transpose_load %src[%srcIndices] : memref<128x256xf16> -> vector<4xf16>
+    ```
     Operands:
     * `$src`: LDS memref to read from.
     * `$srcIndices`: indices into `$src` to read from for this thread.
