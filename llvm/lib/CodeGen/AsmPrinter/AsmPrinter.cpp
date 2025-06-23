@@ -1084,9 +1084,12 @@ void AsmPrinter::emitFunctionEntryLabel() {
 
   // The function label could have already been emitted if two symbols end up
   // conflicting due to asm renaming.  Detect this and emit an error.
-  if (CurrentFnSym->isVariable())
-    report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
-                       "' is a protected alias");
+  if (CurrentFnSym->isVariable()) {
+    LLVMContext &Ctx = MF->getFunction().getContext();
+    Ctx.emitError("'" + Twine(CurrentFnSym->getName()) +
+                  "' is a protected alias");
+    return;
+  }
 
   OutStreamer->emitLabel(CurrentFnSym);
 
