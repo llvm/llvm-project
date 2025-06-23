@@ -80,14 +80,13 @@ enum LocalNum {
   LN_Last
 };
 
-// Associate global and local DFS info with defs and uses, so we can sort them
-// into a global domination ordering.
+// Associate global and local DFS info with defs (PInfo set) and uses (U set),
+// so we can sort them into a global domination ordering.
 struct ValueDFS {
   int DFSIn = 0;
   int DFSOut = 0;
   unsigned int LocalNum = LN_Middle;
-  // Only one of Def or Use will be set.
-  Value *Def = nullptr;
+  // Only one of U or PInfo will be set.
   Use *U = nullptr;
   PredicateBase *PInfo = nullptr;
 };
@@ -101,7 +100,6 @@ struct ValueDFS_Compare {
   bool operator()(const ValueDFS &A, const ValueDFS &B) const {
     if (&A == &B)
       return false;
-    assert(!A.Def && !B.Def && "Should not have Def during comparison");
 
     // Order by block first.
     if (A.DFSIn != B.DFSIn)
@@ -133,7 +131,7 @@ struct ValueDFS_Compare {
 
   // For a phi use, or a non-materialized def, return the edge it represents.
   std::pair<BasicBlock *, BasicBlock *> getBlockEdge(const ValueDFS &VD) const {
-    if (!VD.Def && VD.U) {
+    if (VD.U) {
       auto *PHI = cast<PHINode>(VD.U->getUser());
       return std::make_pair(PHI->getIncomingBlock(*VD.U), PHI->getParent());
     }
@@ -229,7 +227,14 @@ class PredicateInfoBuilder {
   void addInfoFor(SmallVectorImpl<Value *> &OpsToRename, Value *Op,
                   PredicateBase *PB);
 
-  typedef SmallVectorImpl<ValueDFS> ValueDFSStack;
+  struct StackEntry {
+    const ValueDFS *V;
+    Value *Def = nullptr;
+
+    StackEntry(const ValueDFS *V) : V(V) {}
+  };
+
+  using ValueDFSStack = SmallVectorImpl<StackEntry>;
   void convertUsesToDFSOrdered(Value *, SmallVectorImpl<ValueDFS> &);
   Value *materializeStack(unsigned int &, ValueDFSStack &, Value *);
   bool stackIsInScope(const ValueDFSStack &, const ValueDFS &) const;
@@ -254,7 +259,7 @@ bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
   // a LN_Last def, we need to pop the stack.  We deliberately sort phi uses
   // next to the defs they must go with so that we can know it's time to pop
   // the stack when we hit the end of the phi uses for a given def.
-  const ValueDFS &Top = Stack.back();
+  const ValueDFS &Top = *Stack.back().V;
   if (Top.LocalNum == LN_Last && Top.PInfo) {
     if (!VDUse.U)
       return false;
@@ -496,8 +501,8 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
        RenameIter != RenameStack.end(); ++RenameIter) {
     auto *Op =
         RenameIter == RenameStack.begin() ? OrigOp : (RenameIter - 1)->Def;
-    ValueDFS &Result = *RenameIter;
-    auto *ValInfo = Result.PInfo;
+    StackEntry &Result = *RenameIter;
+    auto *ValInfo = Result.V->PInfo;
     ValInfo->RenamedOp = (RenameStack.end() - Start) == RenameStack.begin()
                              ? OrigOp
                              : (RenameStack.end() - Start - 1)->Def;
@@ -625,19 +630,18 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
     // currently and will be considered equal. We could get rid of the
     // stable sort by creating one if we wanted.
     llvm::stable_sort(OrderedUses, Compare);
-    SmallVector<ValueDFS, 8> RenameStack;
+    SmallVector<StackEntry, 8> RenameStack;
     // For each use, sorted into dfs order, push values and replaces uses with
     // top of stack, which will represent the reaching def.
-    for (auto &VD : OrderedUses) {
+    for (const ValueDFS &VD : OrderedUses) {
       // We currently do not materialize copy over copy, but we should decide if
       // we want to.
-      bool PossibleCopy = VD.PInfo != nullptr;
       if (RenameStack.empty()) {
         LLVM_DEBUG(dbgs() << "Rename Stack is empty\n");
       } else {
         LLVM_DEBUG(dbgs() << "Rename Stack Top DFS numbers are ("
-                          << RenameStack.back().DFSIn << ","
-                          << RenameStack.back().DFSOut << ")\n");
+                          << RenameStack.back().V->DFSIn << ","
+                          << RenameStack.back().V->DFSOut << ")\n");
       }
 
       LLVM_DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
@@ -646,8 +650,8 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
       // Sync to our current scope.
       popStackUntilDFSScope(RenameStack, VD);
 
-      if (VD.Def || PossibleCopy) {
-        RenameStack.push_back(VD);
+      if (VD.PInfo) {
+        RenameStack.push_back(&VD);
         continue;
       }
 
@@ -659,7 +663,7 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
         LLVM_DEBUG(dbgs() << "Skipping execution due to debug counter\n");
         continue;
       }
-      ValueDFS &Result = RenameStack.back();
+      StackEntry &Result = RenameStack.back();
 
       // If the possible copy dominates something, materialize our stack up to
       // this point. This ensures every comparison that affects our operation
