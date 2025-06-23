@@ -7270,8 +7270,14 @@ private:
     //     of arguments, hence MEMBER_OF(4)
     //
     // map(p, p[:100])
+    // For "pragma omp target":
+    // &p, &p, sizeof(p), TARGET_PARAM | TO | FROM
+    // &p, &p[0], 100*sizeof(float), PTR_AND_OBJ | TO | FROM (*)
+    // Otherwise:
     // ===> map(p[:100])
     // &p, &p[0], 100*sizeof(float), TARGET_PARAM | PTR_AND_OBJ | TO | FROM
+    // (*) We need to use PTR_AND_OBJ here to ensure that the mapped copies of
+    // p and p[0] get attached.
 
     // Track if the map information being generated is the first for a capture.
     bool IsCaptureFirstInfo = IsFirstComponentList;
@@ -7289,14 +7295,26 @@ private:
     // components.
     bool IsExpressionFirstInfo = true;
     bool FirstPointerInComplexData = false;
+    bool SkipStandalonePtrMapping = false;
     Address BP = Address::invalid();
     const Expr *AssocExpr = I->getAssociatedExpression();
     const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
-    if (AreBothBasePtrAndPteeMapped && std::next(I) == CE)
+    // For map(p, p[0]) on a "target" construct, we need to map "p" by itself
+    // as it has to be passed by-reference as the kernel argument.
+    // For other constructs, we can skip mapping "p" because the PTR_AND_OBJ
+    // mapping for map(p[0]) will take care of mapping p as well.
+    SkipStandalonePtrMapping =
+        AreBothBasePtrAndPteeMapped &&
+        (!isa<const OMPExecutableDirective *>(CurDir) ||
+         !isOpenMPTargetExecutionDirective(
+             cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind()));
+
+    if (SkipStandalonePtrMapping && std::next(I) == CE)
       return;
+
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
@@ -7672,7 +7690,7 @@ private:
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
                              !IsExpressionFirstInfo || RequiresReference ||
                                  FirstPointerInComplexData || IsMemberReference,
-                             AreBothBasePtrAndPteeMapped ||
+                             SkipStandalonePtrMapping ||
                                  (IsCaptureFirstInfo && !RequiresReference),
                              IsNonContiguous);
 
@@ -8811,8 +8829,19 @@ public:
         ++EI;
       }
     }
-    llvm::stable_sort(DeclComponentLists, [](const MapData &LHS,
-                                             const MapData &RHS) {
+    llvm::stable_sort(DeclComponentLists, [VD](const MapData &LHS,
+                                               const MapData &RHS) {
+      // For cases like map(p, p[0], p[0][0]), the shortest map, like map(p)
+      // in this case, should be handled first, to ensure that it gets the
+      // TARGET_PARAM flag.
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+          std::get<0>(LHS);
+      OMPClauseMappableExprCommon::MappableExprComponentListRef ComponentsR =
+          std::get<0>(RHS);
+      if (VD && VD->getType()->isAnyPointerType() && Components.size() == 1 &&
+          ComponentsR.size() > 1)
+        return true;
+
       ArrayRef<OpenMPMapModifierKind> MapModifiers = std::get<2>(LHS);
       OpenMPMapClauseKind MapType = std::get<1>(RHS);
       bool HasPresent =
