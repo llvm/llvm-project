@@ -15,9 +15,9 @@
 #define LLVM_IR_OPTBISECT_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
-#include <set>
 
 namespace llvm {
 
@@ -118,7 +118,7 @@ public:
   bool isEnabled() const override { return !DisabledPasses.empty(); }
 
 private:
-  std::set<std::string> DisabledPasses = {};
+  StringSet<> DisabledPasses = {};
 };
 
 /// Singleton instance of the OptBisect class, so multiple pass managers don't

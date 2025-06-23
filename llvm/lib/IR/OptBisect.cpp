@@ -17,7 +17,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <sstream>
 
 using namespace llvm;
 
@@ -83,14 +82,12 @@ static void printDisablePassMessage(const StringRef &Name, StringRef TargetDesc,
 }
 
 void OptDisable::setDisabled(StringRef Passes) {
-  std::stringstream StrStream(Passes.str());
-  std::string Token;
+  llvm::SmallVector<llvm::StringRef, 8> Tokens;
 
-  while (std::getline(StrStream, Token, ',')) {
-    if (!Token.empty()) {
-      std::transform(Token.begin(), Token.end(), Token.begin(), ::tolower);
-      DisabledPasses.insert(Token);
-    }
+  Passes.split(Tokens, ',', -1, false);
+
+  for (auto Token : Tokens) {
+    DisabledPasses.insert(Token.lower());
   }
 }
 
@@ -98,11 +95,7 @@ bool OptDisable::shouldRunPass(const StringRef PassName,
                                StringRef IRDescription) {
   assert(isEnabled());
 
-  std::string LowerName = PassName.str();
-  std::transform(LowerName.begin(), LowerName.end(), LowerName.begin(),
-                 ::tolower);
-
-  bool ShouldRun = DisabledPasses.find(LowerName) == DisabledPasses.end();
+  bool ShouldRun = !DisabledPasses.contains(PassName.lower());
   if (OptDisableVerbose)
     printDisablePassMessage(PassName, IRDescription, ShouldRun);
   return ShouldRun;
