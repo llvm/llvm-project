@@ -510,7 +510,7 @@ public:
                   JOS.object([&] {
                     JOS.attribute("clang-context-hash",
                                   StringRef(I.ContextHash));
-                    if (I.ModuleName.size())
+                    if (!I.ModuleName.empty())
                       JOS.attribute("module-name", (I.ModuleName));
                     if (!I.NamedModuleDeps.empty())
                       JOS.attributeArray("named-module-deps", [&] {
@@ -530,7 +530,7 @@ public:
               } else {
                 JOS.object([&] {
                   JOS.attribute("clang-context-hash", StringRef(I.ContextHash));
-                  if (I.ModuleName.size())
+                  if (!I.ModuleName.empty())
                     JOS.attribute("module-name", (I.ModuleName));
                   if (!I.NamedModuleDeps.empty())
                     JOS.attributeArray("named-module-deps", [&] {
