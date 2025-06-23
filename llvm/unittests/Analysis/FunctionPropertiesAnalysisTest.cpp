@@ -127,10 +127,9 @@ protected:
   }
 
   std::unique_ptr<ir2vec::Embedder> createEmbedder(const Function &F) {
-    auto EmbResult =
-        ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
-    EXPECT_TRUE(static_cast<bool>(EmbResult));
-    return std::move(*EmbResult);
+    auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
+    EXPECT_TRUE(static_cast<bool>(Emb));
+    return std::move(Emb);
   }
 };
 
