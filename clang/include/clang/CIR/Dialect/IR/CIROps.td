@@ -81,13 +81,6 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
 
 //===----------------------------------------------------------------------===//
-// CIR Op Traits
-//===----------------------------------------------------------------------===//
-
-def SameFirstOperandAndResultType :
-  NativeOpTrait<"SameFirstOperandAndResultType">;
-
-//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
@@ -243,7 +236,7 @@ def CastOp : CIR_Op<"cast",
 //===----------------------------------------------------------------------===//
 
 def PtrStrideOp : CIR_Op<"ptr_stride",
-                         [Pure, SameFirstOperandAndResultType]> {
+                         [Pure, AllTypesMatch<["base", "result"]>]> {
   let summary = "Pointer access with stride";
   let description = [{
     Given a base pointer as first operand, provides a new pointer after applying
