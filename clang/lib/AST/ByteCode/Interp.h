@@ -2713,7 +2713,7 @@ inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
 template <class LT, class RT, ShiftDir Dir>
 inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
                     LT *Result) {
-
+  static_assert(!needsAlloc<LT>());
   const unsigned Bits = LHS.bitWidth();
 
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
@@ -2770,7 +2770,10 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
       LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
                                 LT::AsUnsigned::from(RHS, Bits), Bits, &R);
     }
-  } else {
+    S.Stk.push<LT>(LT::from(R));
+    return true;
+  }
+
     // Right shift.
     if (Compare(RHS, RT::from(MaxShiftAmount, RHS.bitWidth())) ==
         ComparisonCategoryResult::Greater) {
@@ -2779,10 +2782,8 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
       // Do the shift on potentially signed LT, then convert to unsigned type.
       LT A;
       LT::shiftRight(LHS, LT::from(RHS, Bits), Bits, &A);
-      // LT::shiftRight(LHS, LT(RHSTemp), Bits, &A);
       R = LT::AsUnsigned::from(A);
     }
-  }
 
   S.Stk.push<LT>(LT::from(R));
   return true;
@@ -2790,40 +2791,43 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
 
 /// A version of DoShift that works on IntegralAP.
 template <class LT, class RT, ShiftDir Dir>
-inline bool DoShiftAP(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
-                      LT *Result) {
-  const unsigned Bits = LHS.bitWidth();
-  const APSInt &LHSAP = LHS.toAPSInt();
-  APSInt RHSAP = RHS.toAPSInt();
+inline bool DoShiftAP(InterpState &S, CodePtr OpPC, const APSInt &LHS,
+                      APSInt RHS, LT *Result) {
+  const unsigned Bits = LHS.getBitWidth();
 
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
   if (S.getLangOpts().OpenCL)
-    RHSAP &= APSInt(llvm::APInt(RHSAP.getBitWidth(),
-                                static_cast<uint64_t>(LHSAP.getBitWidth() - 1)),
-                    RHSAP.isUnsigned());
+    RHS &=
+        APSInt(llvm::APInt(RHS.getBitWidth(), static_cast<uint64_t>(Bits - 1)),
+               RHS.isUnsigned());
 
   if (RHS.isNegative()) {
     // During constant-folding, a negative shift is an opposite shift. Such a
     // shift is not a constant expression.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
+    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS; //.toAPSInt();
     if (!S.noteUndefinedBehavior())
       return false;
-    RHS = -RHS;
     return DoShiftAP<LT, RT,
                      Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
-        S, OpPC, LHS, RHS, Result);
+        S, OpPC, LHS, -RHS, Result);
   }
 
-  if (!CheckShift<Dir>(S, OpPC, LHS, RHS, Bits))
+  if (!CheckShift<Dir>(S, OpPC, static_cast<LT>(LHS), static_cast<RT>(RHS),
+                       Bits))
     return false;
 
+  unsigned SA = (unsigned)RHS.getLimitedValue(Bits - 1);
   if constexpr (Dir == ShiftDir::Left) {
-    unsigned SA = (unsigned)RHSAP.getLimitedValue(LHS.bitWidth() - 1);
-    Result->copy(LHSAP << SA);
+    if constexpr (needsAlloc<LT>())
+      Result->copy(LHS << SA);
+    else
+      *Result = LT(LHS << SA);
   } else {
-    unsigned SA = (unsigned)RHSAP.getLimitedValue(LHS.bitWidth() - 1);
-    Result->copy(LHSAP >> SA);
+    if constexpr (needsAlloc<LT>())
+      Result->copy(LHS >> SA);
+    else
+      *Result = LT(LHS >> SA);
   }
 
   S.Stk.push<LT>(*Result);
@@ -2837,9 +2841,12 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   auto RHS = S.Stk.pop<RT>();
   auto LHS = S.Stk.pop<LT>();
 
-  if constexpr (needsAlloc<LT>()) {
-    LT Result = S.allocAP<LT>(LHS.bitWidth());
-    return DoShiftAP<LT, RT, ShiftDir::Right>(S, OpPC, LHS, RHS, &Result);
+  if constexpr (needsAlloc<LT>() || needsAlloc<RT>()) {
+    LT Result;
+    if constexpr (needsAlloc<LT>())
+      Result = S.allocAP<LT>(LHS.bitWidth());
+    return DoShiftAP<LT, RT, ShiftDir::Right>(S, OpPC, LHS.toAPSInt(),
+                                              RHS.toAPSInt(), &Result);
   } else {
     LT Result;
     return DoShift<LT, RT, ShiftDir::Right>(S, OpPC, LHS, RHS, &Result);
@@ -2852,9 +2859,13 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   using RT = typename PrimConv<NameR>::T;
   auto RHS = S.Stk.pop<RT>();
   auto LHS = S.Stk.pop<LT>();
-  if constexpr (needsAlloc<LT>()) {
-    LT Result = S.allocAP<LT>(LHS.bitWidth());
-    return DoShiftAP<LT, RT, ShiftDir::Left>(S, OpPC, LHS, RHS, &Result);
+
+  if constexpr (needsAlloc<LT>() || needsAlloc<RT>()) {
+    LT Result;
+    if constexpr (needsAlloc<LT>())
+      Result = S.allocAP<LT>(LHS.bitWidth());
+    return DoShiftAP<LT, RT, ShiftDir::Left>(S, OpPC, LHS.toAPSInt(),
+                                             RHS.toAPSInt(), &Result);
   } else {
     LT Result;
     return DoShift<LT, RT, ShiftDir::Left>(S, OpPC, LHS, RHS, &Result);
