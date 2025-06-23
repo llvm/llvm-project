@@ -164,10 +164,8 @@ void ObjCMessageExpr::initArgsAndSelLocs(ArrayRef<Expr *> Args,
     MyArgs[I] = Args[I];
 
   SelLocsKind = SelLocsK;
-  if (!isImplicit()) {
-    if (SelLocsK == SelLoc_NonStandard)
-      std::copy(SelLocs.begin(), SelLocs.end(), getStoredSelLocs());
-  }
+  if (!isImplicit() && SelLocsK == SelLoc_NonStandard)
+    llvm::copy(SelLocs, getStoredSelLocs());
 }
 
 ObjCMessageExpr *

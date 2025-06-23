@@ -428,7 +428,7 @@ OMPUpdateClause *OMPUpdateClause::CreateEmpty(const ASTContext &C,
 void OMPPrivateClause::setPrivateCopies(ArrayRef<Expr *> VL) {
   assert(VL.size() == varlist_size() &&
          "Number of private copies is not the same as the preallocated buffer");
-  std::copy(VL.begin(), VL.end(), varlist_end());
+  llvm::copy(VL, varlist_end());
 }
 
 OMPPrivateClause *
@@ -453,13 +453,13 @@ OMPPrivateClause *OMPPrivateClause::CreateEmpty(const ASTContext &C,
 void OMPFirstprivateClause::setPrivateCopies(ArrayRef<Expr *> VL) {
   assert(VL.size() == varlist_size() &&
          "Number of private copies is not the same as the preallocated buffer");
-  std::copy(VL.begin(), VL.end(), varlist_end());
+  llvm::copy(VL, varlist_end());
 }
 
 void OMPFirstprivateClause::setInits(ArrayRef<Expr *> VL) {
   assert(VL.size() == varlist_size() &&
          "Number of inits is not the same as the preallocated buffer");
-  std::copy(VL.begin(), VL.end(), getPrivateCopies().end());
+  llvm::copy(VL, getPrivateCopies().end());
 }
 
 OMPFirstprivateClause *
@@ -486,29 +486,28 @@ OMPFirstprivateClause *OMPFirstprivateClause::CreateEmpty(const ASTContext &C,
 void OMPLastprivateClause::setPrivateCopies(ArrayRef<Expr *> PrivateCopies) {
   assert(PrivateCopies.size() == varlist_size() &&
          "Number of private copies is not the same as the preallocated buffer");
-  std::copy(PrivateCopies.begin(), PrivateCopies.end(), varlist_end());
+  llvm::copy(PrivateCopies, varlist_end());
 }
 
 void OMPLastprivateClause::setSourceExprs(ArrayRef<Expr *> SrcExprs) {
   assert(SrcExprs.size() == varlist_size() && "Number of source expressions is "
                                               "not the same as the "
                                               "preallocated buffer");
-  std::copy(SrcExprs.begin(), SrcExprs.end(), getPrivateCopies().end());
+  llvm::copy(SrcExprs, getPrivateCopies().end());
 }
 
 void OMPLastprivateClause::setDestinationExprs(ArrayRef<Expr *> DstExprs) {
   assert(DstExprs.size() == varlist_size() && "Number of destination "
                                               "expressions is not the same as "
                                               "the preallocated buffer");
-  std::copy(DstExprs.begin(), DstExprs.end(), getSourceExprs().end());
+  llvm::copy(DstExprs, getSourceExprs().end());
 }
 
 void OMPLastprivateClause::setAssignmentOps(ArrayRef<Expr *> AssignmentOps) {
   assert(AssignmentOps.size() == varlist_size() &&
          "Number of assignment expressions is not the same as the preallocated "
          "buffer");
-  std::copy(AssignmentOps.begin(), AssignmentOps.end(),
-            getDestinationExprs().end());
+  llvm::copy(AssignmentOps, getDestinationExprs().end());
 }
 
 OMPLastprivateClause *OMPLastprivateClause::Create(
@@ -555,32 +554,32 @@ OMPSharedClause *OMPSharedClause::CreateEmpty(const ASTContext &C, unsigned N) {
 void OMPLinearClause::setPrivates(ArrayRef<Expr *> PL) {
   assert(PL.size() == varlist_size() &&
          "Number of privates is not the same as the preallocated buffer");
-  std::copy(PL.begin(), PL.end(), varlist_end());
+  llvm::copy(PL, varlist_end());
 }
 
 void OMPLinearClause::setInits(ArrayRef<Expr *> IL) {
   assert(IL.size() == varlist_size() &&
          "Number of inits is not the same as the preallocated buffer");
-  std::copy(IL.begin(), IL.end(), getPrivates().end());
+  llvm::copy(IL, getPrivates().end());
 }
 
 void OMPLinearClause::setUpdates(ArrayRef<Expr *> UL) {
   assert(UL.size() == varlist_size() &&
          "Number of updates is not the same as the preallocated buffer");
-  std::copy(UL.begin(), UL.end(), getInits().end());
+  llvm::copy(UL, getInits().end());
 }
 
 void OMPLinearClause::setFinals(ArrayRef<Expr *> FL) {
   assert(FL.size() == varlist_size() &&
          "Number of final updates is not the same as the preallocated buffer");
-  std::copy(FL.begin(), FL.end(), getUpdates().end());
+  llvm::copy(FL, getUpdates().end());
 }
 
 void OMPLinearClause::setUsedExprs(ArrayRef<Expr *> UE) {
   assert(
       UE.size() == varlist_size() + 1 &&
       "Number of used expressions is not the same as the preallocated buffer");
-  std::copy(UE.begin(), UE.end(), getFinals().end() + 2);
+  llvm::copy(UE, getFinals().end() + 2);
 }
 
 OMPLinearClause *OMPLinearClause::Create(
@@ -659,22 +658,21 @@ void OMPCopyinClause::setSourceExprs(ArrayRef<Expr *> SrcExprs) {
   assert(SrcExprs.size() == varlist_size() && "Number of source expressions is "
                                               "not the same as the "
                                               "preallocated buffer");
-  std::copy(SrcExprs.begin(), SrcExprs.end(), varlist_end());
+  llvm::copy(SrcExprs, varlist_end());
 }
 
 void OMPCopyinClause::setDestinationExprs(ArrayRef<Expr *> DstExprs) {
   assert(DstExprs.size() == varlist_size() && "Number of destination "
                                               "expressions is not the same as "
                                               "the preallocated buffer");
-  std::copy(DstExprs.begin(), DstExprs.end(), getSourceExprs().end());
+  llvm::copy(DstExprs, getSourceExprs().end());
 }
 
 void OMPCopyinClause::setAssignmentOps(ArrayRef<Expr *> AssignmentOps) {
   assert(AssignmentOps.size() == varlist_size() &&
          "Number of assignment expressions is not the same as the preallocated "
          "buffer");
-  std::copy(AssignmentOps.begin(), AssignmentOps.end(),
-            getDestinationExprs().end());
+  llvm::copy(AssignmentOps, getDestinationExprs().end());
 }
 
 OMPCopyinClause *OMPCopyinClause::Create(
@@ -700,22 +698,21 @@ void OMPCopyprivateClause::setSourceExprs(ArrayRef<Expr *> SrcExprs) {
   assert(SrcExprs.size() == varlist_size() && "Number of source expressions is "
                                               "not the same as the "
                                               "preallocated buffer");
-  std::copy(SrcExprs.begin(), SrcExprs.end(), varlist_end());
+  llvm::copy(SrcExprs, varlist_end());
 }
 
 void OMPCopyprivateClause::setDestinationExprs(ArrayRef<Expr *> DstExprs) {
   assert(DstExprs.size() == varlist_size() && "Number of destination "
                                               "expressions is not the same as "
                                               "the preallocated buffer");
-  std::copy(DstExprs.begin(), DstExprs.end(), getSourceExprs().end());
+  llvm::copy(DstExprs, getSourceExprs().end());
 }
 
 void OMPCopyprivateClause::setAssignmentOps(ArrayRef<Expr *> AssignmentOps) {
   assert(AssignmentOps.size() == varlist_size() &&
          "Number of assignment expressions is not the same as the preallocated "
          "buffer");
-  std::copy(AssignmentOps.begin(), AssignmentOps.end(),
-            getDestinationExprs().end());
+  llvm::copy(AssignmentOps, getDestinationExprs().end());
 }
 
 OMPCopyprivateClause *OMPCopyprivateClause::Create(
@@ -741,28 +738,28 @@ OMPCopyprivateClause *OMPCopyprivateClause::CreateEmpty(const ASTContext &C,
 void OMPReductionClause::setPrivates(ArrayRef<Expr *> Privates) {
   assert(Privates.size() == varlist_size() &&
          "Number of private copies is not the same as the preallocated buffer");
-  std::copy(Privates.begin(), Privates.end(), varlist_end());
+  llvm::copy(Privates, varlist_end());
 }
 
 void OMPReductionClause::setLHSExprs(ArrayRef<Expr *> LHSExprs) {
   assert(
       LHSExprs.size() == varlist_size() &&
       "Number of LHS expressions is not the same as the preallocated buffer");
-  std::copy(LHSExprs.begin(), LHSExprs.end(), getPrivates().end());
+  llvm::copy(LHSExprs, getPrivates().end());
 }
 
 void OMPReductionClause::setRHSExprs(ArrayRef<Expr *> RHSExprs) {
   assert(
       RHSExprs.size() == varlist_size() &&
       "Number of RHS expressions is not the same as the preallocated buffer");
-  std::copy(RHSExprs.begin(), RHSExprs.end(), getLHSExprs().end());
+  llvm::copy(RHSExprs, getLHSExprs().end());
 }
 
 void OMPReductionClause::setReductionOps(ArrayRef<Expr *> ReductionOps) {
   assert(ReductionOps.size() == varlist_size() && "Number of reduction "
                                                   "expressions is not the same "
                                                   "as the preallocated buffer");
-  std::copy(ReductionOps.begin(), ReductionOps.end(), getRHSExprs().end());
+  llvm::copy(ReductionOps, getRHSExprs().end());
 }
 
 void OMPReductionClause::setInscanCopyOps(ArrayRef<Expr *> Ops) {
@@ -843,28 +840,28 @@ OMPReductionClause::CreateEmpty(const ASTContext &C, unsigned N,
 void OMPTaskReductionClause::setPrivates(ArrayRef<Expr *> Privates) {
   assert(Privates.size() == varlist_size() &&
          "Number of private copies is not the same as the preallocated buffer");
-  std::copy(Privates.begin(), Privates.end(), varlist_end());
+  llvm::copy(Privates, varlist_end());
 }
 
 void OMPTaskReductionClause::setLHSExprs(ArrayRef<Expr *> LHSExprs) {
   assert(
       LHSExprs.size() == varlist_size() &&
       "Number of LHS expressions is not the same as the preallocated buffer");
-  std::copy(LHSExprs.begin(), LHSExprs.end(), getPrivates().end());
+  llvm::copy(LHSExprs, getPrivates().end());
 }
 
 void OMPTaskReductionClause::setRHSExprs(ArrayRef<Expr *> RHSExprs) {
   assert(
       RHSExprs.size() == varlist_size() &&
       "Number of RHS expressions is not the same as the preallocated buffer");
-  std::copy(RHSExprs.begin(), RHSExprs.end(), getLHSExprs().end());
+  llvm::copy(RHSExprs, getLHSExprs().end());
 }
 
 void OMPTaskReductionClause::setReductionOps(ArrayRef<Expr *> ReductionOps) {
   assert(ReductionOps.size() == varlist_size() && "Number of task reduction "
                                                   "expressions is not the same "
                                                   "as the preallocated buffer");
-  std::copy(ReductionOps.begin(), ReductionOps.end(), getRHSExprs().end());
+  llvm::copy(ReductionOps, getRHSExprs().end());
 }
 
 OMPTaskReductionClause *OMPTaskReductionClause::Create(
@@ -896,28 +893,28 @@ OMPTaskReductionClause *OMPTaskReductionClause::CreateEmpty(const ASTContext &C,
 void OMPInReductionClause::setPrivates(ArrayRef<Expr *> Privates) {
   assert(Privates.size() == varlist_size() &&
          "Number of private copies is not the same as the preallocated buffer");
-  std::copy(Privates.begin(), Privates.end(), varlist_end());
+  llvm::copy(Privates, varlist_end());
 }
 
 void OMPInReductionClause::setLHSExprs(ArrayRef<Expr *> LHSExprs) {
   assert(
       LHSExprs.size() == varlist_size() &&
       "Number of LHS expressions is not the same as the preallocated buffer");
-  std::copy(LHSExprs.begin(), LHSExprs.end(), getPrivates().end());
+  llvm::copy(LHSExprs, getPrivates().end());
 }
 
 void OMPInReductionClause::setRHSExprs(ArrayRef<Expr *> RHSExprs) {
   assert(
       RHSExprs.size() == varlist_size() &&
       "Number of RHS expressions is not the same as the preallocated buffer");
-  std::copy(RHSExprs.begin(), RHSExprs.end(), getLHSExprs().end());
+  llvm::copy(RHSExprs, getLHSExprs().end());
 }
 
 void OMPInReductionClause::setReductionOps(ArrayRef<Expr *> ReductionOps) {
   assert(ReductionOps.size() == varlist_size() && "Number of in reduction "
                                                   "expressions is not the same "
                                                   "as the preallocated buffer");
-  std::copy(ReductionOps.begin(), ReductionOps.end(), getRHSExprs().end());
+  llvm::copy(ReductionOps, getRHSExprs().end());
 }
 
 void OMPInReductionClause::setTaskgroupDescriptors(
@@ -925,8 +922,7 @@ void OMPInReductionClause::setTaskgroupDescriptors(
   assert(TaskgroupDescriptors.size() == varlist_size() &&
          "Number of in reduction descriptors is not the same as the "
          "preallocated buffer");
-  std::copy(TaskgroupDescriptors.begin(), TaskgroupDescriptors.end(),
-            getReductionOps().end());
+  llvm::copy(TaskgroupDescriptors, getReductionOps().end());
 }
 
 OMPInReductionClause *OMPInReductionClause::Create(
@@ -1322,13 +1318,13 @@ OMPFromClause::CreateEmpty(const ASTContext &C,
 void OMPUseDevicePtrClause::setPrivateCopies(ArrayRef<Expr *> VL) {
   assert(VL.size() == varlist_size() &&
          "Number of private copies is not the same as the preallocated buffer");
-  std::copy(VL.begin(), VL.end(), varlist_end());
+  llvm::copy(VL, varlist_end());
 }
 
 void OMPUseDevicePtrClause::setInits(ArrayRef<Expr *> VL) {
   assert(VL.size() == varlist_size() &&
          "Number of inits is not the same as the preallocated buffer");
-  std::copy(VL.begin(), VL.end(), getPrivateCopies().end());
+  llvm::copy(VL, getPrivateCopies().end());
 }
 
 OMPUseDevicePtrClause *OMPUseDevicePtrClause::Create(
@@ -1543,7 +1539,7 @@ OMPNontemporalClause *OMPNontemporalClause::CreateEmpty(const ASTContext &C,
 void OMPNontemporalClause::setPrivateRefs(ArrayRef<Expr *> VL) {
   assert(VL.size() == varlist_size() && "Number of private references is not "
                                         "the same as the preallocated buffer");
-  std::copy(VL.begin(), VL.end(), varlist_end());
+  llvm::copy(VL, varlist_end());
 }
 
 OMPInclusiveClause *OMPInclusiveClause::Create(const ASTContext &C,
