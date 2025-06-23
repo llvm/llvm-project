@@ -66,7 +66,7 @@ LogicalResult verify2DBlockLoadRestriction(BlockLoad2dOp op) {
 
   if (op.getTranspose() && op.getPackRegister())
     return op.emitOpError(
-        "transpose and vnni_transform are mutually exclusive");
+        "transpose and pack_register are mutually exclusive");
 
   if (!op.getTranspose() && !op.getPackRegister()) {
     uint32_t tileHeight = op.getTileHeight();
@@ -121,7 +121,7 @@ LogicalResult verify2DBlockLoadRestriction(BlockLoad2dOp op) {
   }
 
   if (op.getTranspose()) {
-    assert(!op.getPackRegister() && "Expecting vnni_transform should be false");
+    assert(!op.getPackRegister() && "Expecting pack_register should be false");
 
     uint32_t vBlocks = op.getVBlocks();
     if (vBlocks != 1)
@@ -152,7 +152,7 @@ LogicalResult verify2DBlockLoadRestriction(BlockLoad2dOp op) {
   }
 
   assert(op.getPackRegister() && !op.getTranspose() &&
-         "Expecting vnni_transform should be true and transpose should be "
+         "Expecting pack_register should be true and transpose should be "
          "false");
 
   uint32_t vBlocks = op.getVBlocks();
@@ -179,7 +179,7 @@ LogicalResult verify2DBlockLoadRestriction(BlockLoad2dOp op) {
           "to 32 for 16 bit elements");
     break;
   default:
-    return op.emitOpError("vnni_transform is only supported for 8 and 16 bit "
+    return op.emitOpError("pack_register is only supported for 8 and 16 bit "
                           "elements");
   }
 
@@ -241,7 +241,7 @@ LogicalResult BlockLoad2dOp::verify() {
   if (getPackRegister()) {
     if (tileWidth != 16)
       return emitOpError(
-          "tile_width when vnni_transform is true should be equal "
+          "tile_width when pack_register is true should be equal "
           "to subgroup size (16 elements)");
     return success();
   }
