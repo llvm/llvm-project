@@ -148,9 +148,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 0
-  ; CHECK-NEXT:   SW [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, -1
-  ; CHECK-NEXT:   BGEU [[COPY2]], [[ADDI]], %bb.2
+  ; CHECK-NEXT:   BLTU killed [[ADDI1]], [[COPY2]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -268,9 +268,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
-  ; CHECK-NEXT:   SW [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-  ; CHECK-NEXT:   BGE [[COPY2]], [[ADDI]], %bb.2
+  ; CHECK-NEXT:   BLT killed [[ADDI1]], [[COPY2]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -328,9 +328,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
-  ; CHECK-NEXT:   SW [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-  ; CHECK-NEXT:   BGE [[ADDI]], [[COPY2]], %bb.2
+  ; CHECK-NEXT:   BLT [[COPY2]], killed [[ADDI1]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
