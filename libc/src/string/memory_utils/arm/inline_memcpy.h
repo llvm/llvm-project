@@ -20,19 +20,29 @@ namespace {
 
 LIBC_INLINE_VAR constexpr size_t kWordSize = sizeof(uint32_t);
 
-template <size_t bytes>
+enum Strategy {
+  ForceWordLdStChain,
+  AssumeWordAligned,
+  AssumeUnaligned,
+};
+
+template <size_t bytes, Strategy strategy = AssumeUnaligned>
 LIBC_INLINE void copy_and_bump_pointers(Ptr &dst, CPtr &src) {
-  if constexpr (bytes == 1 || bytes == 2 || bytes == 4) {
-    memcpy_inline<bytes>(dst, src);
-  } else {
+  if constexpr (strategy == AssumeUnaligned) {
+    memcpy_inline<bytes>(assume_aligned<1>(dst), assume_aligned<1>(src));
+  } else if constexpr (strategy == AssumeWordAligned) {
+    static_assert(bytes >= kWordSize);
+    memcpy_inline<bytes>(assume_aligned<kWordSize>(dst),
+                         assume_aligned<kWordSize>(src));
+  } else if constexpr (strategy == ForceWordLdStChain) {
     // We restrict loads/stores to 4 byte to prevent the use of load/store
     // multiple (LDM, STM) and load/store double (LDRD, STRD). First, they may
     // fault (see notes below) and second, they use more registers which in turn
     // adds push/pop instructions in the hot path.
-    static_assert(bytes % kWordSize == 0);
+    static_assert((bytes % kWordSize == 0) && (bytes >= kWordSize));
     LIBC_LOOP_UNROLL
     for (size_t i = 0; i < bytes / kWordSize; ++i) {
-      const uintptr_t offset = i * kWordSize;
+      const size_t offset = i * kWordSize;
       memcpy_inline<kWordSize>(dst + offset, src + offset);
     }
   }
@@ -45,11 +55,19 @@ LIBC_INLINE void copy_and_bump_pointers(Ptr &dst, CPtr &src) {
   src += bytes;
 }
 
-template <size_t block_size>
-LIBC_INLINE void copy_blocks(Ptr &dst, CPtr &src, size_t &size) {
+LIBC_INLINE void copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src,
+                                              const size_t size) {
+  LIBC_LOOP_NOUNROLL
+  for (size_t i = 0; i < size; ++i)
+    *dst++ = *src++;
+}
+
+template <size_t block_size, Strategy strategy>
+LIBC_INLINE void copy_blocks_and_update_args(Ptr &dst, CPtr &src,
+                                             size_t &size) {
   LIBC_LOOP_NOUNROLL
   for (size_t i = 0; i < size / block_size; ++i)
-    copy_and_bump_pointers<block_size>(dst, src);
+    copy_and_bump_pointers<block_size, strategy>(dst, src);
   // Update `size` once at the end instead of once per iteration.
   size %= block_size;
 }
@@ -66,19 +84,57 @@ LIBC_INLINE auto misaligned(CPtr a) {
 } // namespace
 
 // Implementation for Cortex-M0, M0+, M1.
-// The implementation makes sure that all accesses are aligned.
+// Notes:
+// - It compiles down to 196 bytes, but 220 bytes when used through `memcpy`
+//   that also needs to return the `dst` ptr.
+// - These cores do not allow for unaligned loads/stores.
+// - When `src` and `dst` are coaligned, we start by aligning them and perform
+//   bulk copies. We let the compiler know the pointers are aligned so it can
+//   use load/store multiple (LDM, STM). This significantly increase throughput
+//   but it also requires more registers and push/pop instructions. This impacts
+//   latency for small size copies.
+// - When `src` and `dst` are misaligned, we align `dst` and recompose words
+//   using multiple aligned loads. `load_aligned` takes care of endianness
+//   issues.
 [[maybe_unused]] LIBC_INLINE void inline_memcpy_arm_low_end(Ptr dst, CPtr src,
                                                             size_t size) {
-  // For now, dummy implementation that performs byte per byte copy.
-  LIBC_LOOP_NOUNROLL
-  for (size_t i = 0; i < size; ++i)
-    dst[i] = src[i];
+  if (size >= 8) {
+    if (const size_t offset = distance_to_align_up<kWordSize>(dst))
+        [[unlikely]] {
+      copy_bytes_and_bump_pointers(dst, src, offset);
+      size -= offset;
+    }
+    const auto src_alignment = distance_to_align_down<kWordSize>(src);
+    if (src_alignment == 0) [[likely]] {
+      // Both `src` and `dst` are now word-aligned.
+      copy_blocks_and_update_args<64, AssumeWordAligned>(dst, src, size);
+      copy_blocks_and_update_args<16, AssumeWordAligned>(dst, src, size);
+      copy_blocks_and_update_args<4, AssumeWordAligned>(dst, src, size);
+    } else {
+      // `dst` is aligned but `src` is not.
+      LIBC_LOOP_NOUNROLL
+      while (size >= kWordSize) {
+        // Recompose word from multiple loads depending on the alignment.
+        const uint32_t value =
+            src_alignment == 2
+                ? load_aligned<uint32_t, uint16_t, uint16_t>(src)
+                : load_aligned<uint32_t, uint8_t, uint16_t, uint8_t>(src);
+        memcpy_inline<kWordSize>(assume_aligned<kWordSize>(dst), &value);
+        dst += kWordSize;
+        src += kWordSize;
+        size -= kWordSize;
+      }
+    }
+    // Up to 3 bytes may still need to be copied.
+    // Handling them with the slow loop below.
+  }
+  copy_bytes_and_bump_pointers(dst, src, size);
 }
 
 // Implementation for Cortex-M3, M4, M7, M23, M33, M35P, M52 with hardware
 // support for unaligned loads and stores.
 // Notes:
-// - It compiles down to <300 bytes.
+// - It compiles down to 266 bytes.
 // - `dst` and `src` are not `__restrict` to prevent the compiler from
 //   reordering loads/stores.
 // - We keep state variables to a strict minimum to keep everything in the free
@@ -108,9 +164,9 @@ LIBC_INLINE auto misaligned(CPtr a) {
       size -= offset;
     }
   }
-  copy_blocks<64>(dst, src, size);
-  copy_blocks<16>(dst, src, size);
-  copy_blocks<4>(dst, src, size);
+  copy_blocks_and_update_args<64, ForceWordLdStChain>(dst, src, size);
+  copy_blocks_and_update_args<16, ForceWordLdStChain>(dst, src, size);
+  copy_blocks_and_update_args<4, AssumeUnaligned>(dst, src, size);
   if (size & 1)
     copy_and_bump_pointers<1>(dst, src);
   if (size & 2) [[unlikely]]
