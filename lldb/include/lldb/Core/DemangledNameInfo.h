@@ -71,7 +71,8 @@ struct DemangledNameInfo {
 
   /// Returns \c true if this object holds a valid basename range.
   bool hasBasename() const {
-    return BasenameRange.second >= BasenameRange.first;
+    // A function always has a name.
+    return BasenameRange.second > BasenameRange.first;
   }
 
   /// Returns \c true if this object holds a valid scope range.

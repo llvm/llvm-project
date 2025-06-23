@@ -420,7 +420,7 @@ TEST(MangledTest, DemangledNameInfo_SetValue) {
   // (without a valid basename).
   mangled.SetValue(ConstString("_Zinvalid"));
   ASSERT_NE(mangled.GetDemangledInfo(), std::nullopt);
-  EXPECT_TRUE(mangled.GetDemangledInfo()->hasBasename());
+  EXPECT_FALSE(mangled.GetDemangledInfo()->hasBasename());
 }
 
 struct DemanglingPartsTestCase {
@@ -545,7 +545,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
      /*.basename=*/"",
      /*.scope=*/"",
      /*.qualifiers=*/"",
-     /*.valid_basename=*/true
+     /*.valid_basename=*/false
    },
    { "___ZNK5dyld313MachOAnalyzer18forEachInitializerER11DiagnosticsRKNS0_15VMAddrConverterEU13block_pointerFvjEPKv_block_invoke.204",
      { /*.BasenameRange=*/{55, 73}, /*.ScopeRange=*/{33, 55}, /*.ArgumentsRange=*/{ 73, 181 },
