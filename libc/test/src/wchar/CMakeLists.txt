@@ -47,6 +47,7 @@ add_libc_test(
     libc.src.__support.libc_errno
     libc.src.wchar.mbtowc
     libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(

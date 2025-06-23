@@ -9,6 +9,7 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/libc_errno.h"
 #include "src/wchar/mbtowc.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcMBToWC, OneByte) {
@@ -21,7 +22,7 @@ TEST(LlvmLibcMBToWC, OneByte) {
   // Should fail since we have not read enough
   n = LIBC_NAMESPACE::mbtowc(dest, ch, 0);
   ASSERT_EQ(n, -1);
-  ASSERT_EQ(static_cast<int>(libc_errno), EILSEQ);
+  ASSERT_ERRNO_EQ(EILSEQ);
 }
 
 TEST(LlvmLibcMBToWC, TwoByte) {
@@ -38,7 +39,7 @@ TEST(LlvmLibcMBToWC, TwoByte) {
   // Should fail after trying to read next byte too
   n = LIBC_NAMESPACE::mbtowc(dest, ch + 1, 1);
   ASSERT_EQ(n, -1);
-  ASSERT_EQ(static_cast<int>(libc_errno), EILSEQ);
+  ASSERT_ERRNO_EQ(EILSEQ);
 }
 
 TEST(LlvmLibcMBToWC, ThreeByte) {
@@ -52,7 +53,7 @@ TEST(LlvmLibcMBToWC, ThreeByte) {
   // Should fail since we have not read enough
   n = LIBC_NAMESPACE::mbtowc(dest, ch, 2);
   ASSERT_EQ(n, -1);
-  ASSERT_EQ(static_cast<int>(libc_errno), EILSEQ);
+  ASSERT_ERRNO_EQ(EILSEQ);
 }
 
 TEST(LlvmLibcMBToWC, FourByte) {
@@ -67,7 +68,7 @@ TEST(LlvmLibcMBToWC, FourByte) {
   // Should fail since we have not read enough
   n = LIBC_NAMESPACE::mbtowc(dest, ch, 2);
   ASSERT_EQ(n, -1);
-  ASSERT_EQ(static_cast<int>(libc_errno), EILSEQ);
+  ASSERT_ERRNO_EQ(EILSEQ);
 }
 
 TEST(LlvmLibcMBToWC, InvalidByte) {
@@ -75,7 +76,7 @@ TEST(LlvmLibcMBToWC, InvalidByte) {
   wchar_t dest[2];
   int n = LIBC_NAMESPACE::mbtowc(dest, ch, 1);
   ASSERT_EQ(n, -1);
-  ASSERT_EQ(static_cast<int>(libc_errno), EILSEQ);
+  ASSERT_ERRNO_EQ(EILSEQ);
 }
 
 TEST(LlvmLibcMBToWC, InvalidMultiByte) {
@@ -86,7 +87,7 @@ TEST(LlvmLibcMBToWC, InvalidMultiByte) {
   // Trying to push all 4 should error
   int n = LIBC_NAMESPACE::mbtowc(dest, ch, 4);
   ASSERT_EQ(n, -1);
-  ASSERT_EQ(static_cast<int>(libc_errno), EILSEQ);
+  ASSERT_ERRNO_EQ(EILSEQ);
 
   // Trying to push the second and third should correspond to null wc
   n = LIBC_NAMESPACE::mbtowc(dest, ch + 1, 2);
@@ -103,7 +104,7 @@ TEST(LlvmLibcMBToWC, InvalidLastByte) {
   // Trying to push all 4 should error
   int n = LIBC_NAMESPACE::mbtowc(dest, ch, 4);
   ASSERT_EQ(n, -1);
-  ASSERT_EQ(static_cast<int>(libc_errno), EILSEQ);
+  ASSERT_ERRNO_EQ(EILSEQ);
 }
 
 TEST(LlvmLibcMBToWC, ValidTwoByteWithExtraRead) {
