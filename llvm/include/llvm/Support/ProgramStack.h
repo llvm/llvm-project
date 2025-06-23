@@ -9,8 +9,8 @@
 #ifndef LLVM_SUPPORT_PROGRAMSTACK_H
 #define LLVM_SUPPORT_PROGRAMSTACK_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 
 // LLVM_HAS_SPLIT_STACKS is exposed in the header because CrashRecoveryContext
 // needs to know if it's running on another thread or not.

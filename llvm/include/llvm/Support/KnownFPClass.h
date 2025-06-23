@@ -14,8 +14,8 @@
 #ifndef LLVM_SUPPORT_KNOWNFPCLASS_H
 #define LLVM_SUPPORT_KNOWNFPCLASS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -218,7 +218,8 @@ struct KnownFPClass {
   ///
   /// This assumes a copy-like operation and will replace any currently known
   /// information.
-  LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src, DenormalMode Mode);
+  LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
+                                           DenormalMode Mode);
 
   void resetAll() { *this = KnownFPClass(); }
 };
