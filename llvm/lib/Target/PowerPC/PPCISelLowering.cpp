@@ -9590,15 +9590,15 @@ bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
 
   unsigned EltWidth = VT.getScalarSizeInBits();
 
-  for (unsigned J = 0; J < NumOps; ++J) {
-    SDValue OpVal = BVN.getOperand(J);
-    unsigned BitPos = J * EltWidth;
+  unsigned BitPos = 0;
+  for (auto OpVal : BVN.op_values()) {
     auto *CN = dyn_cast<ConstantSDNode>(OpVal);
 
     if (!CN)
       return false;
 
     ConstValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth), BitPos);
+    BitPos += EltWidth;
   }
 
   for (unsigned J = 0; J < 16; ++J) {
@@ -9630,7 +9630,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // The xxlxor instruction sets a vector with all zeros.
     if (isValidMtVsrBmi(BitMask, *BVN) && BitMask != 0 && BitMask != 0xffff) {
       SDValue SDConstant = DAG.getTargetConstant(BitMask, dl, MVT::i32);
-      MachineSDNode* MSDNode = DAG.getMachineNode(PPC::MTVSRBMI, dl,MVT::v16i8, SDConstant);
+      MachineSDNode *MSDNode =
+          DAG.getMachineNode(PPC::MTVSRBMI, dl, MVT::v16i8, SDConstant);
       SDValue SDV = SDValue(MSDNode, 0);
       EVT DVT = BVN->getValueType(0);
       EVT SVT = SDV.getValueType();
