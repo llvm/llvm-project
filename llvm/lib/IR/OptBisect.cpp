@@ -65,7 +65,6 @@ static OptDisable &getOptDisabler() {
 static cl::opt<std::string> OptDisablePass(
     "opt-disable", cl::Hidden, cl::init(""), cl::Optional,
     cl::cb<void, std::string>([](std::string Passes) {
-      getOptDisabler().initMap();
       getOptDisabler().setDisabled(Passes);
     }),
     cl::desc("Optimization pass(es) to disable (comma separated)"));
