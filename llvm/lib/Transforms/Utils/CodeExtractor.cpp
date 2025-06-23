@@ -1866,14 +1866,11 @@ CallInst *CodeExtractor::emitReplacerCall(
   // This takes place of the original loop
   BasicBlock *codeReplacer =
       BasicBlock::Create(Context, "codeRepl", oldFunction, ReplIP);
-  // In cases with multiple levels of outlining, e.g. with OpenMP,
-  // AllocationBlock may end up in a function different than oldFunction. We
-  // need to make sure we do not use it in those cases, otherwise the alloca
-  // will end up in a different function from its users and break the module.
+  if (AllocationBlock)
+    assert(AllocationBlock->getParent() == oldFunction &&
+           "AllocationBlock is not in the same function");
   BasicBlock *AllocaBlock =
-      (AllocationBlock && oldFunction == AllocationBlock->getParent())
-          ? AllocationBlock
-          : &oldFunction->getEntryBlock();
+      AllocationBlock ? AllocationBlock : &oldFunction->getEntryBlock();
 
   // Update the entry count of the function.
   if (BFI)
