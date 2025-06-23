@@ -4774,7 +4774,9 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   Use *MaybePoisonOperand = nullptr;
   for (Use &U : OrigOpInst->operands()) {
     if (isa<MetadataAsValue>(U.get()) ||
-        isGuaranteedNotToBeUndefOrPoison(U.get()))
+        isGuaranteedNotToBeUndefOrPoison(U.get()) ||
+        // Treat identical operands as a single operand.
+        (MaybePoisonOperand && MaybePoisonOperand->get() == U.get()))
       continue;
     if (!MaybePoisonOperand)
       MaybePoisonOperand = &U;
