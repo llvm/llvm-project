@@ -2019,6 +2019,7 @@ def TileReductionUsingForallOp :
 
   // TODO: support mixed static-dynamic (see TileUsingForallOp).
   let arguments = (ins TransformHandleTypeInterface:$target,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$reduction_dims,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$num_threads,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
@@ -2036,10 +2037,11 @@ def TileReductionUsingForallOp :
 
   let assemblyFormat = [{
     $target
+    (`reduction_dims` `=` $reduction_dims^)?
     `by`
     (`num_threads` `=` $num_threads^)?
-    (`,` `tile_sizes` `=` $tile_sizes^)?
-    (`,` `mapping` `=` $mapping^)?
+    (`tile_sizes` `=` $tile_sizes^)?
+    (`mapping` `=` $mapping^)?
     attr-dict
     `:` functional-type(operands, results)
   }];
