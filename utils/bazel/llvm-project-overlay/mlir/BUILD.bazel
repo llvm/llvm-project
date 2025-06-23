@@ -3185,6 +3185,7 @@ cc_library(
     hdrs = glob(["include/mlir/Conversion/MeshToMPI/*.h"]),
     includes = ["include"],
     deps = [
+        ":AffineDialect",
         ":ArithDialect",
         ":BufferizationDialect",
         ":ConversionPassIncGen",
@@ -3197,6 +3198,7 @@ cc_library(
         ":MPIDialect",
         ":MemRefDialect",
         ":MeshDialect",
+        ":MeshTransforms",
         ":Pass",
         ":SCFDialect",
         ":Support",
@@ -12503,6 +12505,7 @@ td_library(
     deps = [
         ":AttrTdFiles",
         ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
     ],
 )
 
@@ -12561,6 +12564,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":DLTIDialect",
         ":IR",
         ":MPIAttrsIncGen",
         ":MPIIncGen",
