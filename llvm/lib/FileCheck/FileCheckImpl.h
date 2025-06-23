@@ -98,7 +98,8 @@ public:
 
   /// \returns the value corresponding to string representation \p StrVal
   /// according to the matching format represented by this instance.
-  LLVM_ABI APInt valueFromStringRepr(StringRef StrVal, const SourceMgr &SM) const;
+  LLVM_ABI APInt valueFromStringRepr(StringRef StrVal,
+                                     const SourceMgr &SM) const;
 };
 
 /// Class to represent an overflow error that might result when manipulating a
@@ -116,12 +117,18 @@ public:
 
 /// Performs operation and \returns its result or an error in case of failure,
 /// such as if an overflow occurs.
-LLVM_ABI Expected<APInt> exprAdd(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-LLVM_ABI Expected<APInt> exprSub(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-LLVM_ABI Expected<APInt> exprMul(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-LLVM_ABI Expected<APInt> exprDiv(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-LLVM_ABI Expected<APInt> exprMax(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-LLVM_ABI Expected<APInt> exprMin(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+LLVM_ABI Expected<APInt> exprAdd(const APInt &Lhs, const APInt &Rhs,
+                                 bool &Overflow);
+LLVM_ABI Expected<APInt> exprSub(const APInt &Lhs, const APInt &Rhs,
+                                 bool &Overflow);
+LLVM_ABI Expected<APInt> exprMul(const APInt &Lhs, const APInt &Rhs,
+                                 bool &Overflow);
+LLVM_ABI Expected<APInt> exprDiv(const APInt &Lhs, const APInt &Rhs,
+                                 bool &Overflow);
+LLVM_ABI Expected<APInt> exprMax(const APInt &Lhs, const APInt &Rhs,
+                                 bool &Overflow);
+LLVM_ABI Expected<APInt> exprMin(const APInt &Lhs, const APInt &Rhs,
+                                 bool &Overflow);
 
 /// Base class representing the AST of a given expression.
 class ExpressionAST {
@@ -455,7 +462,7 @@ public:
   /// \p CmdlineDefines. \returns an error list containing diagnostics against
   /// \p SM for all definition parsing failures, if any, or Success otherwise.
   LLVM_ABI Error defineCmdlineVariables(ArrayRef<StringRef> CmdlineDefines,
-                               SourceMgr &SM);
+                                        SourceMgr &SM);
 
   /// Create @LINE pseudo variable. Value is set when pattern are being
   /// matched.
@@ -658,8 +665,8 @@ public:
   /// is the name of a pseudo variable, or an error holding a diagnostic
   /// against \p SM if parsing fail. If parsing was successful, also strips
   /// \p Str from the variable name.
-  LLVM_ABI static Expected<VariableProperties> parseVariable(StringRef &Str,
-                                                    const SourceMgr &SM);
+  LLVM_ABI static Expected<VariableProperties>
+  parseVariable(StringRef &Str, const SourceMgr &SM);
   /// Parses \p Expr for a numeric substitution block at line \p LineNumber,
   /// or before input is parsed if \p LineNumber is None. Parameter
   /// \p IsLegacyLineExpr indicates whether \p Expr should be a legacy @LINE
@@ -670,7 +677,8 @@ public:
   /// successful, sets \p DefinedNumericVariable to point to the class
   /// representing the numeric variable defined in this numeric substitution
   /// block, or std::nullopt if this block does not define any variable.
-  LLVM_ABI static Expected<std::unique_ptr<Expression>> parseNumericSubstitutionBlock(
+  LLVM_ABI static Expected<std::unique_ptr<Expression>>
+  parseNumericSubstitutionBlock(
       StringRef Expr, std::optional<NumericVariable *> &DefinedNumericVariable,
       bool IsLegacyLineExpr, std::optional<size_t> LineNumber,
       FileCheckPatternContext *Context, const SourceMgr &SM);
@@ -681,8 +689,8 @@ public:
   /// global options that influence the parsing such as whitespace
   /// canonicalization, \p SM provides the SourceMgr used for error reports.
   /// \returns true in case of an error, false otherwise.
-  LLVM_ABI bool parsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
-                    const FileCheckRequest &Req);
+  LLVM_ABI bool parsePattern(StringRef PatternStr, StringRef Prefix,
+                             SourceMgr &SM, const FileCheckRequest &Req);
   struct Match {
     size_t Pos;
     size_t Len;
@@ -709,16 +717,18 @@ public:
   LLVM_ABI MatchResult match(StringRef Buffer, const SourceMgr &SM) const;
   /// Prints the value of successful substitutions.
   LLVM_ABI void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
-                          SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
-                          std::vector<FileCheckDiag> *Diags) const;
+                                   SMRange MatchRange,
+                                   FileCheckDiag::MatchType MatchTy,
+                                   std::vector<FileCheckDiag> *Diags) const;
   LLVM_ABI void printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
-                       std::vector<FileCheckDiag> *Diags) const;
+                                std::vector<FileCheckDiag> *Diags) const;
 
   bool hasVariable() const {
     return !(Substitutions.empty() && VariableDefs.empty());
   }
-  LLVM_ABI void printVariableDefs(const SourceMgr &SM, FileCheckDiag::MatchType MatchTy,
-                         std::vector<FileCheckDiag> *Diags) const;
+  LLVM_ABI void printVariableDefs(const SourceMgr &SM,
+                                  FileCheckDiag::MatchType MatchTy,
+                                  std::vector<FileCheckDiag> *Diags) const;
 
   Check::FileCheckType getCheckTy() const { return CheckTy; }
 
@@ -843,9 +853,10 @@ struct FileCheckString {
       : Pat(std::move(P)), Prefix(S), Loc(L), DagNotStrings(std::move(D)) {}
 
   /// Matches check string and its "not strings" and/or "dag strings".
-  LLVM_ABI size_t Check(const SourceMgr &SM, StringRef Buffer, bool IsLabelScanMode,
-               size_t &MatchLen, FileCheckRequest &Req,
-               std::vector<FileCheckDiag> *Diags) const;
+  LLVM_ABI size_t Check(const SourceMgr &SM, StringRef Buffer,
+                        bool IsLabelScanMode, size_t &MatchLen,
+                        FileCheckRequest &Req,
+                        std::vector<FileCheckDiag> *Diags) const;
 
   /// Verifies that there is a single line in the given \p Buffer. Errors are
   /// reported against \p SM.
@@ -856,15 +867,16 @@ struct FileCheckString {
   /// Verifies that none of the strings in \p NotStrings are found in the given
   /// \p Buffer. Errors are reported against \p SM and diagnostics recorded in
   /// \p Diags according to the verbosity level set in \p Req.
-  LLVM_ABI bool CheckNot(const SourceMgr &SM, StringRef Buffer,
-                const std::vector<const DagNotPrefixInfo *> &NotStrings,
-                const FileCheckRequest &Req,
-                std::vector<FileCheckDiag> *Diags) const;
+  LLVM_ABI bool
+  CheckNot(const SourceMgr &SM, StringRef Buffer,
+           const std::vector<const DagNotPrefixInfo *> &NotStrings,
+           const FileCheckRequest &Req,
+           std::vector<FileCheckDiag> *Diags) const;
   /// Matches "dag strings" and their mixed "not strings".
   LLVM_ABI size_t CheckDag(const SourceMgr &SM, StringRef Buffer,
-                  std::vector<const DagNotPrefixInfo *> &NotStrings,
-                  const FileCheckRequest &Req,
-                  std::vector<FileCheckDiag> *Diags) const;
+                           std::vector<const DagNotPrefixInfo *> &NotStrings,
+                           const FileCheckRequest &Req,
+                           std::vector<FileCheckDiag> *Diags) const;
 };
 
 } // namespace llvm
