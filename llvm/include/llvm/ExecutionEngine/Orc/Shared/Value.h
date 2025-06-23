@@ -64,7 +64,7 @@ public:
   Value(Value &&RHS) noexcept;
   Value &operator=(const Value &RHS);
   Value &operator=(Value &&RHS) noexcept;
-  ~Value();
+  ~Value() = default;
 
   template <typename T> static Value from(ExecutorAddr Ty, T result);
   template <typename T> void setValue(T Val);
