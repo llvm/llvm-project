@@ -118,8 +118,6 @@ void TargetFeaturesEmitter::printFeatureKeyValues(
 
   // End feature table.
   OS << "};\n";
-
-  return;
 }
 
 void TargetFeaturesEmitter::printCPUKeyValues(raw_ostream &OS,
@@ -146,8 +144,6 @@ void TargetFeaturesEmitter::printCPUKeyValues(raw_ostream &OS,
 
   // End processor table.
   OS << "};\n";
-
-  return;
 }
 
 void TargetFeaturesEmitter::run(raw_ostream &OS) {

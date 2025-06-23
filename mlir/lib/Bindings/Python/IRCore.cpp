@@ -3385,6 +3385,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyOperation::createFromCapsule)
       .def_prop_ro("operation", [](nb::object self) { return self; })
       .def_prop_ro("opview", &PyOperation::createOpView)
+      .def_prop_ro("block", &PyOperation::getBlock)
       .def_prop_ro(
           "successors",
           [](PyOperationBase &self) {

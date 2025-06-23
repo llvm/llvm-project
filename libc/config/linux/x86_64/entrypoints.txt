@@ -384,6 +384,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcsncat
     libc.src.wchar.wcscpy
     libc.src.wchar.wmemchr
+    libc.src.wchar.wcpcpy
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -1244,6 +1245,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recv
     libc.src.sys.socket.recvfrom
     libc.src.sys.socket.recvmsg
+
+    # wchar.h entrypoints
+    libc.src.wchar.mbrtowc
+    libc.src.wchar.wcrtomb
   )
 endif()
 

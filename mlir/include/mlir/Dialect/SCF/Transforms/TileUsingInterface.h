@@ -85,28 +85,21 @@ struct SCFTilingOptions {
     return *this;
   }
 
+  /// Specify mapping of loops to devices. This is only respected when the loop
+  /// constructs support such a mapping (like `scf.forall`). Will be ignored
+  /// when using loop constructs that dont support such a mapping (like
+  /// `scf.for`)
+  SmallVector<Attribute> mappingVector = {};
+  SCFTilingOptions &setMapping(ArrayRef<Attribute> mapping) {
+    mappingVector = llvm::to_vector(mapping);
+    return *this;
+  }
+
+  //-------------------------------------------------------------------------//
+  // Options related reduction tiling
+  //-------------------------------------------------------------------------//
+
   /// Specify how reduction dimensions should be tiled.
-  ///
-  /// Tiling can be thought of as splitting a dimension into 2 and materializing
-  /// the outer dimension as a loop:
-  ///
-  /// op[original] -> op[original / x, x] -> loop[original] { op[x] }
-  ///
-  /// For parallel dimensions, the split can only happen in one way, with both
-  /// dimensions being parallel. For reduction dimensions however, there is a
-  /// choice in how we split the reduction dimension. This enum exposes this
-  /// choice.
-  enum class ReductionTilingStrategy {
-    // [reduction] -> [reduction1, reduction2]
-    // -> loop[reduction1] { [reduction2] }
-    FullReduction,
-    // [reduction] -> [reduction1, parallel2]
-    // -> loop[reduction1] { [parallel2] }; merge[reduction1]
-    PartialReductionOuterReduction,
-    // [reduction] -> [parallel1, reduction2]
-    // -> loop[parallel1] { [reduction2] }; merge[parallel1]
-    PartialReductionOuterParallel
-  };
   ReductionTilingStrategy reductionStrategy =
       ReductionTilingStrategy::FullReduction;
   SCFTilingOptions &
@@ -115,13 +108,13 @@ struct SCFTilingOptions {
     return *this;
   }
 
-  /// Specify mapping of loops to devices. This is only respected when the loop
-  /// constructs support such a mapping (like `scf.forall`). Will be ignored
-  /// when using loop constructs that dont support such a mapping (like
-  /// `scf.for`)
-  SmallVector<Attribute> mappingVector = {};
-  SCFTilingOptions &setMapping(ArrayRef<Attribute> mapping) {
-    mappingVector = llvm::to_vector(mapping);
+  /// Specify the reduction dimensions to be tiled. Note that this needs to be
+  /// specified. If left unspecified, then none of the reduction dimensions are
+  /// tiled.
+  SetVector<unsigned> reductionDims;
+  SCFTilingOptions &setReductionDims(ArrayRef<unsigned> dims) {
+    reductionDims.clear();
+    reductionDims.insert(dims.begin(), dims.end());
     return *this;
   }
 };

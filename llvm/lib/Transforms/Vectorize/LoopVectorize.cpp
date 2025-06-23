@@ -2429,7 +2429,7 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else if (VF.isScalable() &&
+  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
              !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
              Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee
@@ -5343,8 +5343,8 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
-    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
-                               CostKind, 0);
+    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                               VectorTy, {}, CostKind, 0);
   return Cost;
 }
 
@@ -5361,8 +5361,8 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS,
                                CostKind) +
-           TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy, {},
-                              CostKind);
+           TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
+                              VectorTy, {}, CostKind);
   }
   StoreInst *SI = cast<StoreInst>(I);
 
@@ -5428,8 +5428,8 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
     assert(!Legal->isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
-            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
-                               CostKind, 0);
+            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                               VectorTy, {}, CostKind, 0);
   }
   return Cost;
 }
@@ -6171,6 +6171,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       SmallVector<int> Mask(VF.getKnownMinValue());
       std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                cast<VectorType>(VectorTy),
                                 cast<VectorType>(VectorTy), Mask, CostKind,
                                 VF.getKnownMinValue() - 1);
     }
