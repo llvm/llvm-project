@@ -892,9 +892,10 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// Append a rewrite. Rewrites are committed upon success and rolled back upon
   /// failure.
   template <typename RewriteTy, typename... Args>
-  void appendRewrite(Args &&...args) {
+  RewriteTy *appendRewrite(Args &&...args) {
     rewrites.push_back(
         std::make_unique<RewriteTy>(*this, std::forward<Args>(args)...));
+    return static_cast<RewriteTy *>(rewrites.back().get());
   }
 
   /// Undo the rewrites (motions, splits) one by one in reverse order until
@@ -1211,7 +1212,6 @@ UnresolvedMaterializationRewrite::UnresolvedMaterializationRewrite(
       mappedValues(std::move(mappedValues)) {
   assert((!originalType || kind == MaterializationKind::Target) &&
          "original type is valid only for target materializations");
-  rewriterImpl.unresolvedMaterializations[op] = this;
 }
 
 void UnresolvedMaterializationRewrite::rollback() {
@@ -1502,8 +1502,9 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     mapping.map(valuesToMap, convertOp.getResults());
   if (castOp)
     *castOp = convertOp;
-  appendRewrite<UnresolvedMaterializationRewrite>(
-      convertOp, converter, kind, originalType, std::move(valuesToMap));
+  unresolvedMaterializations[convertOp] =
+      appendRewrite<UnresolvedMaterializationRewrite>(
+          convertOp, converter, kind, originalType, std::move(valuesToMap));
   return convertOp.getResults();
 }
 
