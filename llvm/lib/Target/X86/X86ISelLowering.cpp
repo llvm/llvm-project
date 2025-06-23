@@ -58064,7 +58064,27 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+  unsigned int Opcode = N->getOpcode();
   SDLoc DL(N);
+
+  // Use a 32-bit sub+zext if upper 33 bits known zero.
+  if (VT == MVT::i64 && Subtarget.is64Bit()) {
+    APInt HiMask = APInt::getHighBitsSet(64, 33);
+    if (DAG.MaskedValueIsZero(Op0, HiMask) &&
+        DAG.MaskedValueIsZero(Op1, HiMask)) {
+      SDValue LHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op0);
+      SDValue RHS = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
+      bool NUW = Op0->getFlags().hasNoUnsignedWrap();
+      NUW = NUW & DAG.willNotOverflowAdd(false, LHS, RHS);
+      SDNodeFlags Flags;
+      Flags.setNoUnsignedWrap(NUW);
+      // Always true since in the worst case 0 - 2147483647 = -2147483647, still
+      // fits in i32
+      Flags.setNoSignedWrap(true);
+      SDValue Sub = DAG.getNode(Opcode, DL, MVT::i32, LHS, RHS, Flags);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Sub);
+    }
+  }
 
   auto IsNonOpaqueConstant = [&](SDValue Op) {
     return DAG.isConstantIntBuildVectorOrConstantInt(Op,
