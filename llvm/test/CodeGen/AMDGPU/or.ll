@@ -5,9 +5,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=true  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GFX8S %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG %s
 
-;; Added tests with "-amdgpu-scalarize-global-loads=true" to allow the generation of s_or_b64, particularly in the v2i32 case. See SWDEV-517886.
-;; Also removed the previously unused "GCN" check-prefixes from the test.
-
 define amdgpu_kernel void @or_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX6-LABEL: or_v2i32:
 ; GFX6:       ; %bb.0:
