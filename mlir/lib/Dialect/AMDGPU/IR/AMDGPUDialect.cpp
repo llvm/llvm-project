@@ -536,10 +536,26 @@ LogicalResult TransposeLoadOp::verify() {
     return emitOpError("destination type must be a vector type");
   size_t transferSize =
       transferType.getNumElements() * transferType.getElementTypeBitWidth();
-  if (transferSize != 64)
-    return emitOpError("Transferring type size must be 64 bits");
+  size_t elementTypeSize = srcType.getElementType().getIntOrFloatBitWidth();
 
-  return success();
+  // ElementSize -> LoadSize
+  const std::map<int, int> KValidLoadSizeMap = {
+      {4, 64},
+      {6, 96},
+      {8, 64},
+      {16, 64},
+  };
+
+  auto validLoadSize = KValidLoadSizeMap.find(elementTypeSize);
+  if (validLoadSize == KValidLoadSizeMap.end())
+    return emitOpError("Unsupported element type size for transpose load: ")
+           << elementTypeSize << " bits";
+  if (transferSize != validLoadSize->second)
+    return emitOpError("Transferring type size must be ")
+           << validLoadSize->second
+           << " bits for element type size "
+
+           return success();
 }
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc"

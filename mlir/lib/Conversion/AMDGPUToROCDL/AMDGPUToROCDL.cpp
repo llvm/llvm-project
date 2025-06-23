@@ -1128,6 +1128,10 @@ struct TransposeLoadOpLowering
       rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr4_b64>(
           op, op.getDst().getType(), srcPtr);
       break;
+    case 6:
+      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr6_b64>(
+          op, op.getDst().getType(), srcPtr);
+      break;
     case 8:
       rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr8_b64>(
           op, op.getDst().getType(), srcPtr);
