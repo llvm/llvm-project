@@ -188,8 +188,10 @@ DWARFASTParserClang::GetObjectParameter(const DWARFDIE &subprogram,
     if (child.Tag() != DW_TAG_formal_parameter)
       continue;
 
-    if (param_index == object_pointer_index.value_or(0))
+    if (param_index == object_pointer_index.value_or(0)) {
       object_pointer = child;
+      break;
+    }
 
     ++param_index;
   }
