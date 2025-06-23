@@ -420,7 +420,7 @@ TEST(MangledTest, DemangledNameInfo_SetValue) {
   // (without a valid basename).
   mangled.SetValue(ConstString("_Zinvalid"));
   ASSERT_NE(mangled.GetDemangledInfo(), std::nullopt);
-  EXPECT_FALSE(mangled.GetDemangledInfo()->hasBasename());
+  EXPECT_TRUE(mangled.GetDemangledInfo()->hasBasename());
 }
 
 struct DemanglingPartsTestCase {
@@ -545,7 +545,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
      /*.basename=*/"",
      /*.scope=*/"",
      /*.qualifiers=*/"",
-     /*.valid_basename=*/false
+     /*.valid_basename=*/true
    },
    { "___ZNK5dyld313MachOAnalyzer18forEachInitializerER11DiagnosticsRKNS0_15VMAddrConverterEU13block_pointerFvjEPKv_block_invoke.204",
      { /*.BasenameRange=*/{55, 73}, /*.ScopeRange=*/{33, 55}, /*.ArgumentsRange=*/{ 73, 181 },
@@ -648,43 +648,43 @@ struct DemangledNameInfoTestCase {
 DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
     // clang-format off
    {
-    { /*.BasenameRange=*/{0, 10}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 0},
-      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+    { /*.BasenameRange=*/{0, 10}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{1, 0},
+      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
       /*valid_basename=*/true, /*valid_scope=*/false, /*valid_arguments=*/false,
       /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
    },
    {
-    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 10}, /*.ArgumentsRange=*/{0, 0},
-      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{0, 10}, /*.ArgumentsRange=*/{1, 0},
+      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
       /*valid_basename=*/false, /*valid_scope=*/true, /*valid_arguments=*/false,
       /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
    },
    {
-    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 10},
-      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{0, 10},
+      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
       /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/true,
       /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
    },
    {
-    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 0},
-      /*.QualifiersRange=*/{0, 10}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{1, 0},
+      /*.QualifiersRange=*/{0, 10}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
       /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
       /*valid_qualifiers=*/true, /*valid_prefix=*/false, /*valid_suffix=*/false,
    },
    {
-    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 0},
-      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 10}, /*.SuffixRange=*/{0, 0}
+    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{1, 0},
+      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{0, 10}, /*.SuffixRange=*/{1, 0}
     },
       /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
       /*valid_qualifiers=*/false, /*valid_prefix=*/true, /*valid_suffix=*/false,
    },
    {
-    { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{0, 0},
-      /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 10}
+    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{1, 0},
+      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{0, 10}
     },
       /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
       /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/true,
