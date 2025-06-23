@@ -497,11 +497,9 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
-/// Checks that \p Needle and \p Reference are used together in a
-/// BinaryOperator, which is a recurrence over both, ignoring zext and trunc.
-/// Additionally checks that the BinaryOperator has opcode \p BOToMatch, which
-/// is XOR in the case of CRC. In other words, it checks for the following
-/// pattern:
+/// Checks that \p Needle and \p Reference are used together in a BinaryOperator
+/// with opcode \p BOToMatch, which is a recurrence over both, ignoring zext and
+/// trunc. In other words, it checks for the following pattern:
 ///
 /// loop:
 ///   %needle = phi [_, %entry], [%needle.next, %loop]
@@ -509,16 +507,16 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
 ///   ...
 ///   _ = BOTOMatch ((trunc|zext|self) %needle) ((trunc|zext|self) %reference)
 ///
-static bool arePHIsIntertwined(
-    const PHINode *Needle, const PHINode *Reference, const Loop &L,
-    Instruction::BinaryOps BOToMatch = Instruction::BinaryOpsEnd) {
+///  where at least one cast is self.
+///
+/// \p BOToMatch is XOR in the case of CRC.
+static bool arePHIsIntertwined(const PHINode *Needle, const PHINode *Reference,
+                               const Loop &L,
+                               Instruction::BinaryOps BOToMatch) {
   return any_of(ArrayRef({Needle, Reference}), [&](const PHINode *S) {
     return count_if(S->users(), [&](const User *U) {
              auto *BO = dyn_cast<BinaryOperator>(U);
-             if (!BO)
-               return false;
-             if (BOToMatch != Instruction::BinaryOpsEnd &&
-                 BO->getOpcode() != BOToMatch)
+             if (!BO || BO->getOpcode() != BOToMatch)
                return false;
              return all_of(BO->operands(), [Needle, Reference](const Use &U) {
                return match(
