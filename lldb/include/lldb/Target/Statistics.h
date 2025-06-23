@@ -195,7 +195,7 @@ public:
       return m_include_transcript.value();
     // `m_include_transcript` has no value set, so return a value based on
     // `m_summary_only`.
-    return !GetSummaryOnly();
+    return false;
   }
 
   void SetIncludePlugins(bool value) { m_include_plugins = value; }

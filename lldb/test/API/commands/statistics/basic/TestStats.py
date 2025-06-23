@@ -896,7 +896,7 @@ class TestCase(TestBase):
                     "targets.frameVariable": True,
                     "targets.totalSharedLibraryEventHitCount": True,
                     "modules": True,
-                    "transcript": True,
+                    "transcript": False,
                 },
             },
             {  # Summary mode
@@ -983,6 +983,24 @@ class TestCase(TestBase):
                     "transcript": False,
                 },
             },
+            {  # Default mode without modules and with transcript
+                "command_options": " --modules=false --transcript=true",
+                "api_options": {
+                    "SetIncludeModules": False,
+                    "SetIncludeTranscript": True,
+                },
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": True,
+                },
+            },
             {  # Default mode without modules
                 "command_options": " --modules=false",
                 "api_options": {
@@ -997,6 +1015,23 @@ class TestCase(TestBase):
                     "targets.frameVariable": True,
                     "targets.totalSharedLibraryEventHitCount": True,
                     "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Default mode with transcript
+                "command_options": " --transcript=true",
+                "api_options": {
+                    "SetIncludeTranscript": True,
+                },
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": True,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": True,
                     "transcript": True,
                 },
             },
