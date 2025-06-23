@@ -644,8 +644,7 @@ struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
                                 [](auto d) { return d == 1; }))
       return rewriter.notifyMatchFailure(loadOp,
                                          "only vector<1x1x...xN> supported");
-    auto linearTy = VectorType::get(vecTy.getShape().back(),
-                                    vecTy.getElementType(), vecTy.isScalable());
+    auto linearTy = typeConverter->convertType<VectorType>(loadOp.getType());
     auto newLoad = rewriter.create<vector::LoadOp>(
         loadOp.getLoc(), linearTy, adaptor.getBase(), adaptor.getIndices());
     rewriter.replaceOp(loadOp, newLoad.getResult());
