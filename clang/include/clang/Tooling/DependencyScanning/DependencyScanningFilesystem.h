@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 #include <optional>
+#include <variant>
 
 namespace clang {
 namespace tooling {
