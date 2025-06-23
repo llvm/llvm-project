@@ -348,7 +348,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.RemarksFormat =
       Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
 
-  Conf.RemarksWithHotness = 
+  Conf.RemarksWithHotness =
       Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
 
