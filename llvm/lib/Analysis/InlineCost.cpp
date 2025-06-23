@@ -526,13 +526,13 @@ public:
 
   InlineResult analyze();
 
-  // Lookup simplified Value. May return a value owned by the caller.
+  /// Lookup simplified Value. May return a value owned by the caller.
   Value *getSimplifiedValueUnchecked(Value *V) const {
     return SimplifiedValues.lookup(V);
   }
 
-  // Lookup simplified Value, but return nullptr if the simplified value is
-  // owned by the caller.
+  /// Lookup simplified Value, but return nullptr if the simplified value is
+  /// owned by the caller.
   template <typename T> T *getSimplifiedValue(Value *V) const {
     Value *SimpleV = SimplifiedValues.lookup(V);
     if (!SimpleV)
