@@ -65,6 +65,7 @@ static OptDisable &getOptDisabler() {
 static cl::opt<std::string> OptDisablePass(
     "opt-disable", cl::Hidden, cl::init(""), cl::Optional,
     cl::cb<void, std::string>([](std::string Passes) {
+      getOptDisabler().initMap();
       getOptDisabler().setDisabled(Passes);
     }),
     cl::desc("Optimization pass(es) to disable (comma separated)"));
@@ -82,7 +83,7 @@ static void printDisablePassMessage(const StringRef &Name, StringRef TargetDesc,
 }
 
 void OptDisable::setDisabled(StringRef Passes) {
-  llvm::SmallVector<llvm::StringRef, 8> Tokens;
+  llvm::SmallVector<llvm::StringRef, 4> Tokens;
 
   Passes.split(Tokens, ',', -1, false);
 
