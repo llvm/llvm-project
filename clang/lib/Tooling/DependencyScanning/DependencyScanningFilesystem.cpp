@@ -107,11 +107,11 @@ DependencyScanningFilesystemSharedCache::getShardForUID(
   return CacheShards[Hash % NumShards];
 }
 
-std::vector<DependencyScanningFilesystemSharedCache::InvalidEntryDiagInfo>
+std::vector<DependencyScanningFilesystemSharedCache::OutOfDateEntry>
 DependencyScanningFilesystemSharedCache::getInvalidEntryDiagInfo(
     llvm::vfs::FileSystem &UnderlyingFS) const {
   // Iterate through all shards and look for cached stat errors.
-  std::vector<InvalidEntryDiagInfo> InvalidDiagInfo;
+  std::vector<OutOfDateEntry> InvalidDiagInfo;
   for (unsigned i = 0; i < NumShards; i++) {
     const CacheShard &Shard = CacheShards[i];
     std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);

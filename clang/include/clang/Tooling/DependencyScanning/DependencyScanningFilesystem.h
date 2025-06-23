@@ -220,40 +220,33 @@ public:
   CacheShard &getShardForFilename(StringRef Filename) const;
   CacheShard &getShardForUID(llvm::sys::fs::UniqueID UID) const;
 
-  struct InvalidEntryDiagInfo {
+  struct OutOfDateEntry {
     // A null terminated string that contains a path.
     const char *Path = nullptr;
 
-    enum class Type : unsigned char { NegativeCaching = 1, SizeChanged = 2 };
-
-    Type T;
-
+    struct NegativelyCachedInfo {};
     struct SizeChangedInfo {
       uint64_t CachedSize = 0;
       uint64_t ActualSize = 0;
     };
 
-    std::optional<SizeChangedInfo> SizeInfo;
+    std::variant<NegativelyCachedInfo, SizeChangedInfo> Info;
 
-    InvalidEntryDiagInfo(const char *Path) : Path(Path) {
-      T = Type::NegativeCaching;
-    }
+    OutOfDateEntry(const char *Path)
+        : Path(Path), Info(NegativelyCachedInfo{}) {}
 
-    InvalidEntryDiagInfo(const char *Path, uint64_t CachedSize,
-                         uint64_t ActualSize)
-        : Path(Path), SizeInfo({CachedSize, ActualSize}) {
-      T = Type::SizeChanged;
-    }
+    OutOfDateEntry(const char *Path, uint64_t CachedSize, uint64_t ActualSize)
+        : Path(Path), Info(SizeChangedInfo{CachedSize, ActualSize}) {}
   };
 
   /// Visits all cached entries and re-stat an entry using UnderlyingFS to check
-  /// if the cache contains invalid entries. An entry can be invalid for two
-  /// reasons:
+  /// if the cache contains out-of-date entries. An entry can be out-of-date for
+  /// two reasons:
   ///  1. The entry contains a stat error, indicating the file did not exist
   ///     in the cache, but the file exists on the UnderlyingFS.
   ///  2. The entry is associated with a file whose size is different from the
-  ///     actual size on the UnderlyingFS.
-  std::vector<InvalidEntryDiagInfo>
+  ///     size of the file on the same path on the UnderlyingFS.
+  std::vector<OutOfDateEntry>
   getInvalidEntryDiagInfo(llvm::vfs::FileSystem &UnderlyingFS) const;
 
 private:

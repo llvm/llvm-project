@@ -226,7 +226,9 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
 
   ASSERT_EQ(InvalidEntries.size(), 1u);
   ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);
-  auto SizeInfo = InvalidEntries[0].SizeInfo;
+  auto SizeInfo = std::get_if<
+      DependencyScanningFilesystemSharedCache::OutOfDateEntry::SizeChangedInfo>(
+      &InvalidEntries[0].Info);
   ASSERT_TRUE(SizeInfo);
   ASSERT_EQ(SizeInfo->CachedSize, 0u);
   ASSERT_EQ(SizeInfo->ActualSize, 8u);
