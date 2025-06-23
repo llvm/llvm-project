@@ -363,11 +363,10 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   computeKnownBits(Op0, DemandedElts, Known2, Q, Depth + 1);
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
 
-  if (!Add && NSW)
-    if (std::optional<bool> result =
-            isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL);
-        *result)
-      KnownOut.makeNonNegative();
+  if (!Add && NSW &&
+      isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+          .value_or(false))
+    KnownOut.makeNonNegative();
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
