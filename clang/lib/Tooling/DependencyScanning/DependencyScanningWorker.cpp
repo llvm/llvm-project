@@ -859,8 +859,7 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:
-    DepFS =
-        new DependencyScanningWorkerFilesystem(Service.getSharedCache(), FS);
+    DepFS = new DependencyScanningWorkerFilesystem(Service, FS);
     BaseFS = DepFS;
     break;
   case ScanningMode::CanonicalPreprocessing:
