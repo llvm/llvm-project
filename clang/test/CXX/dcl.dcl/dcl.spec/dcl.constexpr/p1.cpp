@@ -94,7 +94,13 @@ struct S {
 #endif
 };
 
+template<typename T>
+struct P {
+  constexpr T h() const { return 1;}
+};
+
 // explicit specialization can differ in constepxr
+template <> int P<int>::h() const { return 0; }
 template <> notlit ft(notlit nl) { return nl; }
 template <> char ft(char c) { return c; } // expected-note {{previous}}
 template <> constexpr char ft(char nl); // expected-error {{constexpr declaration of 'ft<char>' follows non-constexpr declaration}}
