@@ -1463,9 +1463,8 @@ public:
     // defines varargs anyway.
     if (fnType->getCallConv() == CC_C) {
       bool HasAVXType = false;
-      for (CallArgList::const_iterator
-             it = args.begin(), ie = args.end(); it != ie; ++it) {
-        if (getABIInfo<X86_64ABIInfo>().isPassedUsingAVXType(it->Ty)) {
+      for (const CallArg &arg : args) {
+        if (getABIInfo<X86_64ABIInfo>().isPassedUsingAVXType(arg.Ty)) {
           HasAVXType = true;
           break;
         }
