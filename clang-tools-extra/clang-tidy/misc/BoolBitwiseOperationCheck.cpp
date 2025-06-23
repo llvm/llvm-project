@@ -20,9 +20,9 @@ namespace clang::tidy::misc {
 static const NamedDecl *
 getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
   if (BO->isCompoundAssignmentOp()) {
-    const auto *DelcRefLHS =
+    const auto *DeclRefLHS =
         dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreImpCasts());
-    return DelcRefLHS ? DelcRefLHS->getDecl() : nullptr;
+    return DeclRefLHS ? DeclRefLHS->getDecl() : nullptr;
   }
   return nullptr;
 }
@@ -58,10 +58,10 @@ constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
                              {"bitor", "or"},
                              {"or_eq", "or"}}};
 
-static std::string translate(llvm::StringRef Value) {
+static llvm::StringRef translate(llvm::StringRef Value) {
   for (const auto &[Bitwise, Logical] : OperatorsTransformation) {
     if (Value == Bitwise)
-      return Logical.str();
+      return Logical;
   }
 
   return {};
@@ -130,20 +130,19 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (TokenRange.isInvalid())
     return void(IgnoreMacros || DiagEmitter());
 
-  StringRef Spelling = Lexer::getSourceText(TokenRange, *Result.SourceManager,
-                                            Result.Context->getLangOpts());
-  const std::string FixSpelling = translate(Spelling);
+  const StringRef FixSpelling = translate(Lexer::getSourceText(
+      TokenRange, *Result.SourceManager, Result.Context->getLangOpts()));
 
   if (FixSpelling.empty())
     return (void)DiagEmitter();
 
   FixItHint InsertEqual;
   if (MatchedExpr->isCompoundAssignmentOp()) {
-    const auto *DelcRefLHS =
+    const auto *DeclRefLHS =
         dyn_cast<DeclRefExpr>(MatchedExpr->getLHS()->IgnoreImpCasts());
-    if (!DelcRefLHS)
+    if (!DeclRefLHS)
       return (void)DiagEmitter();
-    const SourceLocation LocLHS = DelcRefLHS->getEndLoc();
+    const SourceLocation LocLHS = DeclRefLHS->getEndLoc();
     if (LocLHS.isInvalid() || LocLHS.isMacroID())
       return void(IgnoreMacros || DiagEmitter());
     const SourceLocation InsertLoc = clang::Lexer::getLocForEndOfToken(
@@ -151,7 +150,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
     if (InsertLoc.isInvalid() || InsertLoc.isMacroID())
       return void(IgnoreMacros || DiagEmitter());
     InsertEqual = FixItHint::CreateInsertion(
-        InsertLoc, " = " + DelcRefLHS->getDecl()->getNameAsString());
+        InsertLoc, " = " + DeclRefLHS->getDecl()->getNameAsString());
   }
 
   auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
