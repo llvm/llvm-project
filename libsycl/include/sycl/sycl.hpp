@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file is a SYCL2020 standard header file.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_SYCL_HPP
 #define _LIBSYCL_SYCL_HPP

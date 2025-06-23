@@ -9,11 +9,11 @@ libsycl runtime library and headers require C++17 support or higher.
 
 ### How to use libsycl with Clang
 
-TBD
+TODO
 
 #### How to build
 
-TBD
+TODO
 
 # License
 

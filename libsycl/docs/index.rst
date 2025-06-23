@@ -1,7 +1,14 @@
+=====================
+SYCL runtime implementation
+=====================
+
+.. contents::
+   :local:
+
 .. _index:
 
 Current Status
-==============
+========
 
 The implementation is in the very early stages of upstreaming. The first milestone is to get
 support for a simple SYCL application with device code using Unified Shared Memory:
@@ -45,6 +52,9 @@ This requires at least partial support of the following functionality on the lib
   * ``sycl::id`` and ``sycl::range`` classes
   * Unified shared memory allocation/deallocation
   * Program manager, an internal component for retrieving and using device images from the multi-architectural binaries
+
+Builds steps
+========
 
 To build LLVM with libsycl runtime enabled the following script can be used.
 

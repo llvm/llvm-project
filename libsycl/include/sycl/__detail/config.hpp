@@ -28,31 +28,31 @@
 
 #ifndef __SYCL_DEVICE_ONLY__
 
-#ifndef _LIBSYCL_EXPORT
-#ifdef _WIN32
+#  ifndef _LIBSYCL_EXPORT
+#    ifdef _WIN32
 
-#define _LIBSYCL_DLL_LOCAL
+#      define _LIBSYCL_DLL_LOCAL
 
-#if _LIBSYCL_BUILD_SYCL_DLL
-#define _LIBSYCL_EXPORT __declspec(dllexport)
-#else
-#define _LIBSYCL_EXPORT __declspec(dllimport)
-#endif //_LIBSYCL_BUILD_SYCL_DLL
+#      if _LIBSYCL_BUILD_SYCL_DLL
+#        define _LIBSYCL_EXPORT __declspec(dllexport)
+#      else
+#        define _LIBSYCL_EXPORT __declspec(dllimport)
+#      endif //_LIBSYCL_BUILD_SYCL_DLL
 
-#else // _WIN32
+#    else // _WIN32
 
-#define _LIBSYCL_DLL_LOCAL __attribute__((visibility("hidden")))
-#define _LIBSYCL_EXPORT __attribute__((visibility("default")))
+#      define _LIBSYCL_DLL_LOCAL [[gnu::visibility("hidden")]]
+#      define _LIBSYCL_EXPORT [[gnu::visibility("default")]]
 
-#endif // _WIN32
-#endif // _LIBSYCL_EXPORT
+#    endif // _WIN32
+#  endif   // _LIBSYCL_EXPORT
 
 #else // __SYCL_DEVICE_ONLY__
 
-#ifndef _LIBSYCL_EXPORT
-#define _LIBSYCL_EXPORT
-#define _LIBSYCL_DLL_LOCAL
-#endif
+#  ifndef _LIBSYCL_EXPORT
+#    define _LIBSYCL_EXPORT
+#    define _LIBSYCL_DLL_LOCAL
+#  endif
 
 #endif // __SYCL_DEVICE_ONLY__
 
