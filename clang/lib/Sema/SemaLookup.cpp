@@ -1565,6 +1565,21 @@ void Sema::makeMergedDefinitionVisible(NamedDecl *ND) {
   if (auto *TD = dyn_cast<TemplateDecl>(ND))
     for (auto *Param : *TD->getTemplateParameters())
       makeMergedDefinitionVisible(Param);
+
+  // If we import a named module which contains a header, and then we include a
+  // header which contains a definition of enums, we will skip parsing the enums
+  // in the current TU. But we need to ensure the visibility of the enum
+  // contants, since they are able to be found with the parents of their
+  // parents.
+  if (auto *ED = dyn_cast<EnumDecl>(ND);
+      ED && ED->isFromGlobalModule() && !ED->isScoped()) {
+    for (auto *ECD : ED->enumerators()) {
+      ECD->setVisibleDespiteOwningModule();
+      DeclContext *RedeclCtx = ED->getDeclContext()->getRedeclContext();
+      if (RedeclCtx->lookup(ECD->getDeclName()).empty())
+        RedeclCtx->makeDeclVisibleInContext(ECD);
+    }
+  }
 }
 
 /// Find the module in which the given declaration was defined.
@@ -2185,22 +2200,10 @@ bool LookupResult::isAvailableForLookup(Sema &SemaRef, NamedDecl *ND) {
   // Class and enumeration member names can be found by name lookup in any
   // context in which a definition of the type is reachable.
   //
-  // FIXME: The current implementation didn't consider about scope. For example,
-  // ```
-  // // m.cppm
-  // export module m;
-  // enum E1 { e1 };
-  // // Use.cpp
-  // import m;
-  // void test() {
-  //   auto a = E1::e1; // Error as expected.
-  //   auto b = e1; // Should be error. namespace-scope name e1 is not visible
-  // }
-  // ```
-  // For the above example, the current implementation would emit error for `a`
-  // correctly. However, the implementation wouldn't diagnose about `b` now.
-  // Since we only check the reachability for the parent only.
-  // See clang/test/CXX/module/module.interface/p7.cpp for example.
+  // NOTE: The above wording may be problematic. See
+  // https://github.com/llvm/llvm-project/issues/131058 But it is much complext
+  // to adjust it in Sema's lookup process. Now we hacked it in ASTWriter. See
+  // the comments in ASTDeclContextNameLookupTrait::getLookupVisibility.
   if (auto *TD = dyn_cast<TagDecl>(DC))
     return SemaRef.hasReachableDefinition(TD);
 

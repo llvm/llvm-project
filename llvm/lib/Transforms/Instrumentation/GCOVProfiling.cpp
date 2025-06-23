@@ -245,7 +245,7 @@ namespace {
   // to the block.
   class GCOVLines : public GCOVRecord {
   public:
-    const StringRef getFilename() { return Filename; }
+    StringRef getFilename() { return Filename; }
 
     void addLine(uint32_t Line) {
       assert(Line != 0 && "Line zero is not a valid real line number.");
