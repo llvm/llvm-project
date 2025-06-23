@@ -1435,6 +1435,28 @@
 //
 // CHECK-SHARED-ASAN-AIX: {{.*}}error: shared AddressSanitizer runtime is not supported on AIX
 
+// RUN: not %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=/missing_resource_dir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:     | FileCheck --check-prefixes=CHECK-MISSING-EXPORT-AIX %s
+// CHECK-MISSING-EXPORT-AIX: {{.*}}error: cannot link 'asan': export file missing from resource directories
+
+// RUN: not %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     -shared --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=/missing_resource_dir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:     | FileCheck --check-prefixes=CHECK-MISSING-IMPORT-AIX %s
+// CHECK-MISSING-IMPORT-AIX: {{.*}}error: cannot link 'AddressSanitizer': import file missing from resource directories
+
+// RUN: not %clang++ -fsanitize=address -### %s 2>&1 \
+// RUN:     -shared --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=/missing_resource_dir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:     | FileCheck --check-prefixes=CHECK-MISSING-CXX-IMPORT-AIX %s
+// CHECK-MISSING-CXX-IMPORT-AIX: {{.*}}error: cannot link 'AddressSanitizer': c++ import file
+// missing from resource directories
+
 // RUN: %clang -fsanitize=address -shared -### %s 2>&1 \
 // RUN:     --target=powerpc-ibm-aix \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \

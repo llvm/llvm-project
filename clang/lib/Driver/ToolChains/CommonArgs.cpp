@@ -1644,15 +1644,22 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   for (auto RT : HelperStaticRuntimes)
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, true);
   bool AddExportDynamic = false;
+  StringRef RTNeedsExport;
   for (auto RT : StaticRuntimes) {
     // AIX does not support --whole-archive.
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false,
                         !TC.getTriple().isOSAIX());
-    AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
+    if (!addSanitizerDynamicList(TC, Args, CmdArgs, RT)) {
+      AddExportDynamic = true;
+      RTNeedsExport = RT;
+    }
   }
   for (auto RT : NonWholeStaticRuntimes) {
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, false);
-    AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
+    if (!addSanitizerDynamicList(TC, Args, CmdArgs, RT)) {
+      AddExportDynamic = true;
+      RTNeedsExport = RT;
+    }
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.
@@ -1660,8 +1667,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (!TC.getTriple().isOSAIX())
       CmdArgs.push_back("--export-dynamic");
     else
-      llvm::report_fatal_error("Sanitizer interface functions must be exported "
-                               "by export files on AIX.");
+      TC.getDriver().Diag(diag::err_drv_missing_sanitizer_file) << RTNeedsExport << "export";
   }
 
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)
