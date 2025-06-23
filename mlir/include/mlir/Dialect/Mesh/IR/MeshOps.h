@@ -212,6 +212,11 @@ void maybeInsertSourceShardingAnnotation(MeshSharding sharding,
                                          OpOperand &operand,
                                          OpBuilder &builder);
 
+/// Converts a vector of OpFoldResults (ints) into vector of Values of the
+/// provided type.
+SmallVector<Value> getMixedAsValues(OpBuilder b, const Location &loc,
+                                    llvm::ArrayRef<int64_t> statics,
+                                    ValueRange dynamics, Type type = Type());
 } // namespace mesh
 } // namespace mlir
 
