@@ -14,10 +14,10 @@
 #ifndef LLVM_TELEMETRY_TELEMETRY_H
 #define LLVM_TELEMETRY_TELEMETRY_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <map>
 #include <memory>
@@ -148,8 +148,8 @@ public:
   virtual ~Manager() = default;
 
   // Explicitly non-copyable.
-  Manager(Manager const&) = delete;
-  Manager& operator=(Manager const&) = delete;
+  Manager(Manager const &) = delete;
+  Manager &operator=(Manager const &) = delete;
 
   // Dispatch Telemetry data to the Destination(s).
   // The argument is non-const because the Manager may add or remove
