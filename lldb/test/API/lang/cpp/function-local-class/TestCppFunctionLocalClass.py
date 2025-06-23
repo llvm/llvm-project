@@ -34,16 +34,8 @@ class TestCase(TestBase):
             result_type="TypedefUnnamed2",
             result_children=[ValueCheck(name="b", value="3")],
         )
-        self.expect_expr(
-            "unnamed",
-            result_type="(unnamed struct)",
-            result_children=[ValueCheck(name="i", value="4")],
-        )
-        self.expect_expr(
-            "unnamed2",
-            result_type="(unnamed struct)",
-            result_children=[ValueCheck(name="j", value="5")],
-        )
+        self.expect("expression unnamed", substrs=["(unnamed struct at", "i = 4"])
+        self.expect("expression unnamed2", substrs=["(unnamed struct at", "j = 5"])
 
         # Try a class that is only forward declared.
         self.expect_expr("fwd", result_type="Forward *")

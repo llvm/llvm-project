@@ -10,11 +10,12 @@ from lldbsuite.test.lldbtest import *
 
 
 class ExprInsideLambdaTestCase(TestBase):
-    def expectExprError(self, expr: str, expected: str):
+    def expectExprError(self, expr: str, expected_errors: str):
         frame = self.thread.GetFrameAtIndex(0)
         value = frame.EvaluateExpression(expr)
         errmsg = value.GetError().GetCString()
-        self.assertIn(expected, errmsg)
+        for expected in expected_errors:
+            self.assertIn(expected, errmsg)
 
     def test_expr_inside_lambda(self):
         """Test that lldb evaluating expressions inside lambda expressions works correctly."""
@@ -76,7 +77,7 @@ class ExprInsideLambdaTestCase(TestBase):
         self.expect_expr("local_var", result_type="int", result_value="137")
 
         # Check access to variable in previous frame which we didn't capture
-        self.expectExprError("local_var_copy", "use of undeclared identifier")
+        self.expectExprError("local_var_copy", ["use of undeclared identifier"])
 
         lldbutil.continue_to_breakpoint(process, bkpt)
 
@@ -110,19 +111,17 @@ class ExprInsideLambdaTestCase(TestBase):
         # Check access to outer top-level structure's members
         self.expectExprError(
             "class_var",
-            ("use of non-static data member" " 'class_var' of 'Foo' from nested type"),
+            ["use of non-static data member 'class_var' of 'Foo' from nested type"],
         )
 
-        self.expectExprError(
-            "base_var", ("use of non-static data member" " 'base_var'")
-        )
+        self.expectExprError("base_var", ["use of non-static data member 'base_var'"])
 
         self.expectExprError(
             "local_var",
-            (
-                "use of non-static data member 'local_var'"
-                " of '(unnamed class)' from nested type 'LocalLambdaClass'"
-            ),
+            [
+                "use of non-static data member 'local_var' of '(unnamed class at",
+                "from nested type 'LocalLambdaClass'",
+            ],
         )
 
         # Inside non_capturing_method
@@ -133,5 +132,5 @@ class ExprInsideLambdaTestCase(TestBase):
 
         self.expectExprError(
             "class_var",
-            ("use of non-static data member" " 'class_var' of 'Foo' from nested type"),
+            ["use of non-static data member 'class_var' of 'Foo' from nested type"],
         )

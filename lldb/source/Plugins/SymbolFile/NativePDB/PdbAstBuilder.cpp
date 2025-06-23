@@ -1128,7 +1128,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
     CompilerType param_type_ct = m_clang.GetType(qt);
     clang::ParmVarDecl *param = m_clang.CreateParameterDeclaration(
         &function_decl, OptionalClangModuleID(), param_name.str().c_str(),
-        param_type_ct, clang::SC_None, true);
+        param_type_ct, clang::SC_None, clang::SourceLocation(), true);
     lldbassert(m_uid_to_decl.count(toOpaqueUid(param_uid)) == 0);
 
     m_uid_to_decl[toOpaqueUid(param_uid)] = param;

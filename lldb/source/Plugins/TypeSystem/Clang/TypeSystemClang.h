@@ -327,13 +327,12 @@ public:
                                                bool is_framework = false,
                                                bool is_explicit = false);
 
-  CompilerType
-  CreateRecordType(clang::DeclContext *decl_ctx,
-                   OptionalClangModuleID owning_module,
-                   lldb::AccessType access_type, llvm::StringRef name, int kind,
-                   lldb::LanguageType language,
-                   std::optional<ClangASTMetadata> metadata = std::nullopt,
-                   bool exports_symbols = false);
+  CompilerType CreateRecordType(
+      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
+      lldb::AccessType access_type, llvm::StringRef name, int kind,
+      lldb::LanguageType language,
+      std::optional<ClangASTMetadata> metadata = std::nullopt,
+      bool exports_symbols = false, const Declaration &declaration = {});
 
   class TemplateParameterInfos {
   public:
@@ -421,7 +420,8 @@ public:
 
   clang::FunctionTemplateDecl *CreateFunctionTemplateDecl(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-      clang::FunctionDecl *func_decl, const TemplateParameterInfos &infos);
+      clang::FunctionDecl *func_decl, const TemplateParameterInfos &infos,
+      const Declaration &declaration);
 
   void CreateFunctionTemplateSpecializationInfo(
       clang::FunctionDecl *func_decl, clang::FunctionTemplateDecl *Template,
@@ -438,7 +438,7 @@ public:
   clang::ClassTemplateSpecializationDecl *CreateClassTemplateSpecializationDecl(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       clang::ClassTemplateDecl *class_template_decl, int kind,
-      const TemplateParameterInfos &infos);
+      const TemplateParameterInfos &infos, const Declaration &declaration);
 
   CompilerType
   CreateClassTemplateSpecializationType(clang::ClassTemplateSpecializationDecl *
@@ -477,7 +477,8 @@ public:
   clang::FunctionDecl *CreateFunctionDeclaration(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       llvm::StringRef name, const CompilerType &function_Type,
-      clang::StorageClass storage, bool is_inline);
+      clang::StorageClass storage, bool is_inline,
+      const Declaration &declaration = {});
 
   CompilerType
   CreateFunctionType(const CompilerType &result_type,
@@ -485,11 +486,10 @@ public:
                      unsigned type_quals, clang::CallingConv cc = clang::CC_C,
                      clang::RefQualifierKind ref_qual = clang::RQ_None);
 
-  clang::ParmVarDecl *
-  CreateParameterDeclaration(clang::DeclContext *decl_ctx,
-                             OptionalClangModuleID owning_module,
-                             const char *name, const CompilerType &param_type,
-                             int storage, bool add_decl = false);
+  clang::ParmVarDecl *CreateParameterDeclaration(
+      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
+      const char *name, const CompilerType &param_type, int storage,
+      clang::SourceLocation loc, bool add_decl = false);
 
   CompilerType CreateBlockPointerType(const CompilerType &function_type);
 
@@ -1003,7 +1003,8 @@ public:
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       const char *mangled_name, const CompilerType &method_type,
       lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-      bool is_explicit, bool is_attr_used, bool is_artificial);
+      bool is_explicit, bool is_attr_used, bool is_artificial,
+      const Declaration &declaration = {});
 
   void AddMethodOverridesForCXXRecordType(lldb::opaque_compiler_type_t type);
 
@@ -1170,6 +1171,15 @@ public:
   static void RequireCompleteType(CompilerType type);
 
   bool SetDeclIsForcefullyCompleted(const clang::TagDecl *td);
+
+  /// Turns the given \c decl into a \c clang::SourceLocation.
+  ///
+  /// Will create a \c FileID in this \c DWARFASTParserClang's \c ASTContext
+  /// if necessary.
+  ///
+  /// If no \c FileID could be found/created, returns an empty \c
+  /// SourceLocation.
+  clang::SourceLocation GetLocForDecl(const lldb_private::Declaration &decl);
 
 private:
   /// Returns the PrintingPolicy used when generating the internal type names.
