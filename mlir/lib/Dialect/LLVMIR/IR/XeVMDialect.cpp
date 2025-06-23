@@ -65,8 +65,7 @@ LogicalResult verify2DBlockLoadRestriction(BlockLoad2dOp op) {
                             << expectedSize << " bits";
 
   if (op.getTranspose() && op.getPackRegister())
-    return op.emitOpError(
-        "transpose and pack_register are mutually exclusive");
+    return op.emitOpError("transpose and pack_register are mutually exclusive");
 
   if (!op.getTranspose() && !op.getPackRegister()) {
     uint32_t tileHeight = op.getTileHeight();
@@ -329,7 +328,8 @@ XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
                        StringRef triple, StringRef chip, DictionaryAttr flags,
                        ArrayAttr linkFiles) {
   if (O < 0 || O > 3) {
-    return emitError() << "The optimization level must be a number between 0 and 3.";
+    return emitError()
+           << "The optimization level must be a number between 0 and 3.";
   }
   if (triple.empty()) {
     return emitError() << "The target triple cannot be empty.";
