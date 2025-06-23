@@ -1699,9 +1699,9 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[FOR_BODY]]:
-; CHECK-VF4IC1-NEXT:    [[IV_J:%.*]] = phi i64 [ [[INC3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-VF4IC1-NEXT:    [[IV_I:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
-; CHECK-VF4IC1-NEXT:    [[RDX:%.*]] = phi i64 [ [[COND:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-VF4IC1-NEXT:    [[IV_J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[IV_I:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_I]]
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-VF4IC1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV_I]]
@@ -1776,9 +1776,9 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; CHECK-VF4IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[FOR_BODY]]:
-; CHECK-VF4IC4-NEXT:    [[IV_J:%.*]] = phi i64 [ [[INC3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-VF4IC4-NEXT:    [[IV_I:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL13]], %[[SCALAR_PH]] ]
-; CHECK-VF4IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[COND:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-VF4IC4-NEXT:    [[IV_J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[IV_I:%.*]] = phi i64 [ [[BC_RESUME_VAL13]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_I]]
 ; CHECK-VF4IC4-NEXT:    [[TMP21:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-VF4IC4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV_I]]
@@ -1852,9 +1852,9 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF1IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; CHECK-VF1IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[FOR_BODY]]:
-; CHECK-VF1IC4-NEXT:    [[IV_J:%.*]] = phi i64 [ [[INC3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-VF1IC4-NEXT:    [[IV_I1:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ]
-; CHECK-VF1IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[COND:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-VF1IC4-NEXT:    [[IV_J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[IV_I1:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_I1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP31:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
 ; CHECK-VF1IC4-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV_I1]]
@@ -1873,9 +1873,9 @@ entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
-  %iv.j = phi i64 [ %inc3, %for.body ], [ 9223372036854775808, %entry]
-  %iv.i = phi i64 [ %inc, %for.body ], [ 0, %entry ]
-  %rdx = phi i64 [ %cond, %for.body ], [ %rdx.start, %entry ]
+  %iv.j = phi i64 [ 9223372036854775808, %entry], [ %inc3, %for.body ]
+  %iv.i = phi i64 [ 0, %entry ], [ %inc, %for.body ]
+  %rdx = phi i64 [ %rdx.start, %entry ], [ %cond, %for.body ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv.i
   %0 = load i64, ptr %arrayidx, align 8
   %arrayidx1 = getelementptr inbounds i64, ptr %b, i64 %iv.i
