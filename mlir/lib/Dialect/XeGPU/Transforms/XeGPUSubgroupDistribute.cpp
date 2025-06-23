@@ -455,6 +455,14 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
     if (!operand)
       return rewriter.notifyMatchFailure(
           subgroupOp, "warp result is not a xegpu::LoadNd op");
+    // Make sure the load op is the last operation in the warp op body. This
+    // ensure that load op is not sinked earlier violating any barrier
+    // synchronizations.
+    auto yield = cast<gpu::YieldOp>(
+        subgroupOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    Operation *lastNode = yield->getPrevNode();
+    if (!dyn_cast_or_null<xegpu::LoadNdOp>(lastNode))
+      return failure();
 
     auto loadOp = operand->get().getDefiningOp<xegpu::LoadNdOp>();
     xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
@@ -782,6 +790,27 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+struct GpuBarrierDistribution final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                PatternRewriter &rewriter) const override {
+    auto yield = cast<gpu::YieldOp>(
+        subgroupOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    Operation *lastNode = yield->getPrevNode();
+    // The last node must be a gpu::BarrierOp.
+    auto barrierOp = dyn_cast_or_null<gpu::BarrierOp>(lastNode);
+    if (!barrierOp)
+      return failure();
+    // Simply move the barrier op outside of the warp op.
+    rewriter.setInsertionPointAfter(subgroupOp);
+    rewriter.create<gpu::BarrierOp>(
+        barrierOp.getLoc(), barrierOp->getResultTypes(),
+        barrierOp->getOperands(), barrierOp->getAttrs());
+    rewriter.eraseOp(barrierOp);
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -797,6 +826,7 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
   patterns.add<CreateNdDescDistribution, StoreNdDistribution,
                LoadNdDistribution, DpasDistribution, PrefetchNdDistribution,
                UpdateNdOffsetDistribution>(patterns.getContext());
+  patterns.add<GpuBarrierDistribution>(patterns.getContext(), 10);
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
