@@ -6,7 +6,8 @@
 # RUN: | llvm-dwarfdump - --debug-line \
 # RUN: | FileCheck %s --check-prefix=DBG
 
-
+# Test is_stmt emission for a key-instructions function inlined into a
+# not-key-instructions function, and vice versa.
 
 --- |
   target triple = "x86_64-unknown-linux-gnu"

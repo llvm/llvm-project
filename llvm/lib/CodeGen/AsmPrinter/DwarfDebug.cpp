@@ -2079,8 +2079,9 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
+  // There may be a mixture of scopes using and not using Key Instructions.
   // Not-Key-Instructions functions inlined into Key Instructions functions
-  // should use default is_stmt handling. Key Instructions functions inlined
+  // should use not-key is_stmt handling. Key Instructions functions inlined
   // into not-key-instructions functions currently fall back to not-key
   // handling to avoid having to run computeKeyInstructions for all functions
   // (which will impact non-key-instructions builds).
@@ -2667,7 +2668,8 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   // built with Key Instructions. If this function was built with Key
   // Instructions but a function inlined into it wasn't then we continue to use
   // Key Instructions for this function and fall back to non-key behaviour for
-  // the inlined function (except it doesn't beneit from findForceIsStmtInstrs).
+  // the inlined function (except it doesn't benefit from
+  // findForceIsStmtInstrs).
   if (KeyInstructionsAreStmts && SP->getKeyInstructionsEnabled())
     computeKeyInstructions(MF);
   else
