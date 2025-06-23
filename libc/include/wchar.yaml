@@ -189,3 +189,11 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcpncpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t
