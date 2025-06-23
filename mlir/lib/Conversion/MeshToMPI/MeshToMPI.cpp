@@ -521,21 +521,25 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
 
 static mpi::MPI_ReductionOpEnumAttr getMPIReductionOp(ReductionKindAttr kind) {
   auto ctx = kind.getContext();
+  auto getReductionOp = [ctx](mpi::MPI_ReductionOpEnum redOp) {
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, redOp);
+  };
+
   switch (kind.getValue()) {
   case ReductionKind::Sum:
-    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_SUM);
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_SUM);
   case ReductionKind::Product:
-    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_PROD);
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_PROD);
   case ReductionKind::Min:
-    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_MIN);
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_MIN);
   case ReductionKind::Max:
-    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_MAX);
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_MAX);
   case ReductionKind::BitwiseAnd:
-    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_BAND);
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_BAND);
   case ReductionKind::BitwiseOr:
-    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_BOR);
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_BOR);
   case ReductionKind::BitwiseXor:
-    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_BXOR);
+    return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_BXOR);
   default:
     assert(false && "Unknown/unsupported reduction kind");
   }
@@ -630,7 +634,8 @@ struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
 
     // If the destination is a memref, cast it to a tensor
     if (isa<RankedTensorType>(op.getType()))
-      buffer = iBuilder.create<bufferization::ToTensorOp>(buffer, true);
+      buffer = iBuilder.create<bufferization::ToTensorOp>(op.getType(), buffer,
+                                                          true);
 
     rewriter.replaceOp(op, buffer);
     return success();
@@ -908,7 +913,7 @@ struct ConvertMeshToMPIPass
 
     // No mesh dialect should left after conversion...
     target.addIllegalDialect<mesh::MeshDialect>();
-    // ...except the global MeshOp. MeshShapeOp which will get folded separately.
+    // ...except the global MeshOp. MeshShapeOp which will get folded later.
     target.addLegalOp<mesh::MeshOp, mesh::MeshShapeOp>();
     // Allow all the stuff that our patterns will convert to
     target.addLegalDialect<
