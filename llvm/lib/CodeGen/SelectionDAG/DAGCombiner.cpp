@@ -19448,12 +19448,12 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
     std::swap(BasePtr, Offset);
 
   // Replace other uses of BasePtr that can be updated to use Ptr
-  for (unsigned i = 0, e = OtherUses.size(); i != e; ++i) {
+  for (SDNode *OtherUse : OtherUses) {
     unsigned OffsetIdx = 1;
-    if (OtherUses[i]->getOperand(OffsetIdx).getNode() == BasePtr.getNode())
+    if (OtherUse->getOperand(OffsetIdx).getNode() == BasePtr.getNode())
       OffsetIdx = 0;
-    assert(OtherUses[i]->getOperand(!OffsetIdx).getNode() ==
-           BasePtr.getNode() && "Expected BasePtr operand");
+    assert(OtherUse->getOperand(!OffsetIdx).getNode() == BasePtr.getNode() &&
+           "Expected BasePtr operand");
 
     // We need to replace ptr0 in the following expression:
     //   x0 * offset0 + y0 * ptr0 = t0
@@ -19466,11 +19466,11 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
     // Therefore, we have:
     //   t0 = (x0 * offset0 - x1 * y0 * y1 *offset1) + (y0 * y1) * t1
 
-    auto *CN = cast<ConstantSDNode>(OtherUses[i]->getOperand(OffsetIdx));
+    auto *CN = cast<ConstantSDNode>(OtherUse->getOperand(OffsetIdx));
     const APInt &Offset0 = CN->getAPIntValue();
     const APInt &Offset1 = Offset->getAsAPIntVal();
-    int X0 = (OtherUses[i]->getOpcode() == ISD::SUB && OffsetIdx == 1) ? -1 : 1;
-    int Y0 = (OtherUses[i]->getOpcode() == ISD::SUB && OffsetIdx == 0) ? -1 : 1;
+    int X0 = (OtherUse->getOpcode() == ISD::SUB && OffsetIdx == 1) ? -1 : 1;
+    int Y0 = (OtherUse->getOpcode() == ISD::SUB && OffsetIdx == 0) ? -1 : 1;
     int X1 = (AM == ISD::PRE_DEC && !Swapped) ? -1 : 1;
     int Y1 = (AM == ISD::PRE_DEC && Swapped) ? -1 : 1;
 
@@ -19481,17 +19481,16 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
     if (X1 * Y0 * Y1 < 0) CNV = CNV + Offset1;
     else CNV = CNV - Offset1;
 
-    SDLoc DL(OtherUses[i]);
+    SDLoc DL(OtherUse);
 
     // We can now generate the new expression.
     SDValue NewOp1 = DAG.getConstant(CNV, DL, CN->getValueType(0));
     SDValue NewOp2 = Result.getValue(IsLoad ? 1 : 0);
 
-    SDValue NewUse = DAG.getNode(Opcode,
-                                 DL,
-                                 OtherUses[i]->getValueType(0), NewOp1, NewOp2);
-    DAG.ReplaceAllUsesOfValueWith(SDValue(OtherUses[i], 0), NewUse);
-    deleteAndRecombine(OtherUses[i]);
+    SDValue NewUse =
+        DAG.getNode(Opcode, DL, OtherUse->getValueType(0), NewOp1, NewOp2);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(OtherUse, 0), NewUse);
+    deleteAndRecombine(OtherUse);
   }
 
   // Replace the uses of Ptr with uses of the updated base value.
