@@ -1224,6 +1224,105 @@ struct FreeMemOpConversion : public fir::FIROpConversion<fir::FreeMemOp> {
 };
 } // namespace
 
+static mlir::LLVM::LLVMFuncOp getOmpTargetAlloc(mlir::Operation *op) {
+  auto module = op->getParentOfType<mlir::ModuleOp>();
+  if (mlir::LLVM::LLVMFuncOp mallocFunc =
+          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("omp_target_alloc"))
+    return mallocFunc;
+  mlir::OpBuilder moduleBuilder(module.getBodyRegion());
+  auto i64Ty = mlir::IntegerType::get(module->getContext(), 64);
+  auto i32Ty = mlir::IntegerType::get(module->getContext(), 32);
+  return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
+      moduleBuilder.getUnknownLoc(), "omp_target_alloc",
+      mlir::LLVM::LLVMFunctionType::get(
+          mlir::LLVM::LLVMPointerType::get(module->getContext()),
+          {i64Ty, i32Ty},
+          /*isVarArg=*/false));
+}
+
+namespace {
+struct OmpTargetAllocMemOpConversion
+    : public fir::FIROpConversion<fir::OmpTargetAllocMemOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::OmpTargetAllocMemOp heap, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type heapTy = heap.getType();
+    mlir::LLVM::LLVMFuncOp mallocFunc = getOmpTargetAlloc(heap);
+    mlir::Location loc = heap.getLoc();
+    auto ity = lowerTy().indexType();
+    mlir::Type dataTy = fir::unwrapRefType(heapTy);
+    mlir::Type llvmObjectTy = convertObjectType(dataTy);
+    if (fir::isRecordWithTypeParameters(fir::unwrapSequenceType(dataTy)))
+      TODO(loc, "fir.omp_target_allocmem codegen of derived type with length "
+                "parameters");
+    mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy);
+    if (auto scaleSize = genAllocationScaleSize(heap, ity, rewriter))
+      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+    for (mlir::Value opnd : adaptor.getOperands().drop_front())
+      size = rewriter.create<mlir::LLVM::MulOp>(
+          loc, ity, size, integerCast(loc, rewriter, ity, opnd));
+    auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
+    auto mallocTy =
+        mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
+    if (mallocTyWidth != ity.getIntOrFloatBitWidth())
+      size = integerCast(loc, rewriter, mallocTy, size);
+    heap->setAttr("callee", mlir::SymbolRefAttr::get(mallocFunc));
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        heap, ::getLlvmPtrType(heap.getContext()),
+        mlir::SmallVector<mlir::Value, 2>({size, heap.getDevice()}),
+        addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 2));
+    return mlir::success();
+  }
+
+  /// Compute the allocation size in bytes of the element type of
+  /// \p llTy pointer type. The result is returned as a value of \p idxTy
+  /// integer type.
+  mlir::Value genTypeSizeInBytes(mlir::Location loc, mlir::Type idxTy,
+                                 mlir::ConversionPatternRewriter &rewriter,
+                                 mlir::Type llTy) const {
+    return computeElementDistance(loc, llTy, idxTy, rewriter, getDataLayout());
+  }
+};
+} // namespace
+
+static mlir::LLVM::LLVMFuncOp getOmpTargetFree(mlir::Operation *op) {
+  auto module = op->getParentOfType<mlir::ModuleOp>();
+  if (mlir::LLVM::LLVMFuncOp freeFunc =
+          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("omp_target_free"))
+    return freeFunc;
+  mlir::OpBuilder moduleBuilder(module.getBodyRegion());
+  auto i32Ty = mlir::IntegerType::get(module->getContext(), 32);
+  return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
+      moduleBuilder.getUnknownLoc(), "omp_target_free",
+      mlir::LLVM::LLVMFunctionType::get(
+          mlir::LLVM::LLVMVoidType::get(module->getContext()),
+          {getLlvmPtrType(module->getContext()), i32Ty},
+          /*isVarArg=*/false));
+}
+
+namespace {
+struct OmpTargetFreeMemOpConversion
+    : public fir::FIROpConversion<fir::OmpTargetFreeMemOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::OmpTargetFreeMemOp freemem, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::LLVM::LLVMFuncOp freeFunc = getOmpTargetFree(freemem);
+    mlir::Location loc = freemem.getLoc();
+    freemem->setAttr("callee", mlir::SymbolRefAttr::get(freeFunc));
+    rewriter.create<mlir::LLVM::CallOp>(
+        loc, mlir::TypeRange{},
+        mlir::ValueRange{adaptor.getHeapref(), freemem.getDevice()},
+        addLLVMOpBundleAttrs(rewriter, freemem->getAttrs(), 2));
+    rewriter.eraseOp(freemem);
+    return mlir::success();
+  }
+};
+} // namespace
+
 // Convert subcomponent array indices from column-major to row-major ordering.
 static llvm::SmallVector<mlir::Value>
 convertSubcomponentIndices(mlir::Location loc, mlir::Type eleTy,
@@ -4364,22 +4463,21 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, VolatileCastOpConversion, ConvertOpConversion,
       CoordinateOpConversion, CopyOpConversion, DTEntryOpConversion,
-      DeclareOpConversion,
-      DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
-      DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
-      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
-      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
-      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
-      GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
-      LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
-      NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
-      SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-      ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-      SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-      SubcOpConversion, TypeDescOpConversion, TypeInfoOpConversion,
-      UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
-      UnreachableOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
-      XReboxOpConversion, ZeroOpConversion>(converter, options);
+      DeclareOpConversion, DivcOpConversion, EmboxOpConversion,
+      EmboxCharOpConversion, EmboxProcOpConversion, ExtractValueOpConversion,
+      FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
+      GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
+      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+      LocalitySpecifierOpConversion, MulcOpConversion, NegcOpConversion,
+      NoReassocOpConversion, OmpTargetAllocMemOpConversion,
+      OmpTargetFreeMemOpConversion, SelectCaseOpConversion, SelectOpConversion,
+      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
+      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
+      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+      ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.
