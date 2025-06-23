@@ -3814,7 +3814,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   // this value when we vectorize all of the instructions that use the PHI.
   BasicBlock *VectorPH =
       State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  bool ScalarPHI = State.VF.isScalar() || IsInLoop;
+  bool ScalarPHI = State.VF.isScalar() || isInLoop();
   Value *StartV = State.get(StartVPV, ScalarPHI);
   Type *VecTy = StartV->getType();
 
@@ -3823,7 +3823,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
          "recipe must be in the vector loop header");
   auto *Phi = PHINode::Create(VecTy, 2, "vec.phi");
   Phi->insertBefore(HeaderBB->getFirstInsertionPt());
-  State.set(this, Phi, IsInLoop);
+  State.set(this, Phi, isInLoop());
 
   Phi->addIncoming(StartV, VectorPH);
 }

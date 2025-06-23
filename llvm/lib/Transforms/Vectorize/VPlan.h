@@ -2180,36 +2180,37 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
   /// Descriptor for the reduction.
   const RecurrenceDescriptor &RdxDesc;
 
-  /// The phi is part of an in-loop reduction.
-  bool IsInLoop;
-
   /// The phi is part of an ordered reduction. Requires IsInLoop to be true.
   bool IsOrdered;
 
-  /// When expanding the reduction PHI, the plan's VF element count is divided
-  /// by this factor to form the reduction phi's VF.
+  /// The scaling factor, relative to the VF, that this recipe's output is
+  /// divided by.
+  /// For outer-loop reductions this is equal to 1.
+  /// For in-loop reductions this is equal to 0, to specify that this is equal
+  /// to the VF (which may not be known yet). For partial-reductions this is
+  /// equal to another scalar value.
   unsigned VFScaleFactor;
 
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi described by \p
   /// RdxDesc.
   VPReductionPHIRecipe(PHINode *Phi, const RecurrenceDescriptor &RdxDesc,
-                       VPValue &Start, bool IsInLoop = false,
-                       bool IsOrdered = false, unsigned VFScaleFactor = 1)
+                       VPValue &Start, bool IsOrdered = false,
+                       unsigned VFScaleFactor = 1)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start),
-        RdxDesc(RdxDesc), IsInLoop(IsInLoop), IsOrdered(IsOrdered),
-        VFScaleFactor(VFScaleFactor) {
-    assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
-    assert(((!IsInLoop && !IsOrdered) || VFScaleFactor == 0) &&
+        RdxDesc(RdxDesc), IsOrdered(IsOrdered), VFScaleFactor(VFScaleFactor) {
+    assert((!IsOrdered || isInLoop()) &&
+           "IsOrdered requires the reduction to be in-loop");
+    assert(((!isInLoop() && !IsOrdered) || isInLoop()) &&
            "Invalid VFScaleFactor");
   }
 
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
-    auto *R = new VPReductionPHIRecipe(cast<PHINode>(getUnderlyingInstr()),
-                                       RdxDesc, *getOperand(0), IsInLoop,
-                                       IsOrdered, VFScaleFactor);
+    auto *R =
+        new VPReductionPHIRecipe(cast<PHINode>(getUnderlyingInstr()), RdxDesc,
+                                 *getOperand(0), IsOrdered, VFScaleFactor);
     R->addOperand(getBackedgeValue());
     return R;
   }
@@ -2235,8 +2236,8 @@ public:
   /// Returns true, if the phi is part of an ordered reduction.
   bool isOrdered() const { return IsOrdered; }
 
-  /// Returns true, if the phi is part of an in-loop reduction.
-  bool isInLoop() const { return IsInLoop; }
+  /// Returns true if the phi is part of an in-loop reduction.
+  bool isInLoop() const { return VFScaleFactor == 0; }
 
   bool isPartialReduction() const { return VFScaleFactor > 1; }
 

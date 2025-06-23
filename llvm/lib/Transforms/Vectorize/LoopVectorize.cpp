@@ -8286,7 +8286,6 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
               ? 0
               : getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
       PhiRecipe = new VPReductionPHIRecipe(Phi, RdxDesc, *StartV,
-                                           CM.isInLoopReduction(Phi),
                                            UseOrderedReductions, ScaleFactor);
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
