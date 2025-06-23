@@ -92,9 +92,6 @@ class MockGDBServerResponder:
     class RESPONSE_DISCONNECT:
         pass
 
-    class RESPONSE_NONE:
-        pass
-
     def __init__(self):
         self.packetLog = []
 
@@ -184,8 +181,6 @@ class MockGDBServerResponder:
             return self.qQueryGDBServer()
         if packet == "qHostInfo":
             return self.qHostInfo()
-        if packet.startswith("qEcho"):
-            return self.qEcho(int(packet.split(":")[1]))
         if packet == "qGetWorkingDir":
             return self.qGetWorkingDir()
         if packet == "qOffsets":
@@ -241,9 +236,6 @@ class MockGDBServerResponder:
 
     def qHostInfo(self):
         return "ptrsize:8;endian:little;"
-
-    def qEcho(self):
-        return "E04"
 
     def qQueryGDBServer(self):
         return "E04"
@@ -663,8 +655,6 @@ class MockGDBServer:
         if not isinstance(response, list):
             response = [response]
         for part in response:
-            if part is MockGDBServerResponder.RESPONSE_NONE:
-                continue
             if part is MockGDBServerResponder.RESPONSE_DISCONNECT:
                 raise self.TerminateConnectionException()
             self._sendPacket(part)

@@ -354,9 +354,8 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
             disconnected = true;
             Disconnect();
           }
-        } else {
-          timed_out = true;
         }
+        timed_out = true;
         break;
       case eConnectionStatusSuccess:
         // printf ("status = success but error = %s\n",
