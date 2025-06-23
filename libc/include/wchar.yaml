@@ -38,6 +38,14 @@ functions:
       - type: const char *__restrict
       - type: size_t
       - type: mbstate_t *__restrict
+  - name: mbtowc
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
   - name: wmemset
     standards:
       - stdc
