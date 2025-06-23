@@ -1449,10 +1449,13 @@ void FunctionAnalysisContext::findUnsafeUses(
         continue;
 
       // Arbitrarily attach the report to the first instruction of BB.
-      Reports.push_back(
-          make_generic_report(MCInstReference::get(FirstInst, BF),
-                              "Warning: the function has unreachable basic "
-                              "blocks (possibly incomplete CFG)"));
+      // This is printed as "[message] in function [name], basic block ...,
+      // at address ..." when the issue is reported to the user.
+      Reports.push_back(make_generic_report(
+          MCInstReference::get(FirstInst, BF),
+          "Warning: possibly imprecise CFG, the analysis quality may be "
+          "degraded in this function. According to BOLT, unreachable code is "
+          "found" /* in function [name]... */));
       UnreachableBBReported = true;
       break; // One warning per function.
     }
