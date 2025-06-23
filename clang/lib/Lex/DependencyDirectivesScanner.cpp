@@ -258,7 +258,6 @@ static char previousChar(const char *First, const char *&Current) {
 
 static void skipRawString(const char *&First, const char *const End) {
   assert(First[0] == '"');
-  //assert(First[-1] == 'R');
 
   const char *Last = ++First;
   while (Last != End && *Last != '(')
