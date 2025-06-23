@@ -821,9 +821,35 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateOrReduce(A);
   }
   case VPInstruction::FirstActiveLane: {
-    Value *Mask = State.get(getOperand(0));
-    return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
-                                                true, Name);
+    if (getNumOperands() == 1) {
+      Value *Mask = State.get(getOperand(0));
+      return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
+                                                  true, Name);
+    }
+    // If there are multiple operands, create a chain of selects to pick the
+    // first operand with an active lane and add the number of lanes of the
+    // preceding operands.
+    Value *RuntimeVF =
+        getRuntimeVF(State.Builder, State.Builder.getInt64Ty(), State.VF);
+    Type *ElemTy = State.TypeAnalysis.inferScalarType(getOperand(0));
+    Value *RuntimeBitwidth = Builder.CreateMul(
+        Builder.getInt64(ElemTy->getScalarSizeInBits()), RuntimeVF);
+    unsigned LastOpIdx = getNumOperands() - 1;
+    Value *Res = nullptr;
+    for (int Idx = LastOpIdx; Idx >= 0; --Idx) {
+      Value *Current = Builder.CreateCountTrailingZeroElems(
+          Builder.getInt64Ty(), State.get(getOperand(Idx)), true, Name);
+      Current = Builder.CreateAdd(
+          Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), Current);
+      if (Res) {
+        Value *Cmp = Builder.CreateICmpNE(Current, RuntimeBitwidth);
+        Res = Builder.CreateSelect(Cmp, Current, Res);
+      } else {
+        Res = Current;
+      }
+    }
+
+    return Res;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
