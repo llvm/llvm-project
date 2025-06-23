@@ -99,8 +99,9 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   auto LoopExpr =
       [](const ast_matchers::internal::Matcher<Stmt> &InnerMatcher) {
-        return stmt(anyOf(forStmt(InnerMatcher), whileStmt(InnerMatcher),
-                          doStmt(InnerMatcher)));
+        return stmt(anyOf(forStmt(hasCondition(InnerMatcher)),
+                          whileStmt(hasCondition(InnerMatcher)),
+                          doStmt(hasCondition(InnerMatcher))));
       };
 
   const auto IntegerExpr = ignoringParenImpCasts(integerLiteral());
@@ -141,11 +142,11 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   if (WarnOnSizeOfInLoopTermination) {
-    Finder->addMatcher(LoopExpr(hasDescendant(binaryOperator(
-                                    allOf(has(SizeOfExpr.bind("sizeof-expr")),
-                                          isComparisonOperator()))))
-                           .bind("loop-expr"),
-                       this);
+    auto CondExpr = binaryOperator(
+        allOf(has(SizeOfExpr.bind("sizeof-expr")), isComparisonOperator()));
+    Finder->addMatcher(
+        LoopExpr(anyOf(CondExpr, hasDescendant(CondExpr))).bind("loop-expr"),
+        this);
   }
 
   // Detect sizeof(kPtr) where kPtr is 'const char* kPtr = "abc"';

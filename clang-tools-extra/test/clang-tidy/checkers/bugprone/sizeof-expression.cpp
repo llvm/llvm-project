@@ -191,11 +191,27 @@ void loop_access_elements(int num, struct B b) {
   // Should not warn here
   for(int i = 0; i < sizeof(arr)/sizeof(A); i++) {}
 
+  // Should not warn here
+  for (int i = 0; i < 10; i++) {
+    if (sizeof(arr) != 0) {
+
+    }
+  }
+
+  for (int i = 0; i < 10; i++) {
+    // CHECK-MESSAGES: :[[@LINE+1]]:25: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+    for (int j = 0; j < sizeof(arr); j++) {
+    }
+  }
+
   // CHECK-MESSAGES: :[[@LINE+1]]:22: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
   for(int j = 0; j < sizeof(b.a.array); j++) {}
   
   // Should not warn here
   for(int i = 0; i < sizeof(buf); i++) {} 
+
+  // Should not warn here
+  for(int i = 0; i < (sizeof(arr) << 3); i++) {}
   
   int i = 0;
   // CHECK-MESSAGES: :[[@LINE+1]]:14: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
