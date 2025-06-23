@@ -62,6 +62,16 @@ class XeVM_Op<string mnemonic, list<Trait> traits = []>
 
 def XeVM_ElemType : AnyTypeOf<[AnyI8, AnyI16, AnyI32, F32, TF32, F16, BF16]>;
 
+//===----------------------------------------------------------------------===//
+// XeVM Load Cache Control
+//   L1, L2, L3 - cache levels
+//   uc - uncached
+//   c - cached
+//   s - streaming
+//   ir - invalidated after read
+//   Default - default cache behavior for L1, L2 and L3 cache
+//===----------------------------------------------------------------------===//
+
 def LoadCacheControlDefault : I32EnumAttrCase<"DEFAULT", 0, "Default">;
 def LoadCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
@@ -109,6 +119,16 @@ def XeVM_LoadCacheControlAttr
   let summary = [{Describe the cache settings for load operators}];
   let assemblyFormat = "`<` $value `>`";
 }
+
+//===----------------------------------------------------------------------===//
+// XeVM Store Cache Control
+//   L1, L2, L3 - cache levels
+//   uc - uncached
+//   wb - write-back
+//   wt - write-through
+//   s - streaming
+//   Default - default cache behavior for L1, L2 and L3 cache
+//===----------------------------------------------------------------------===//
 
 def StoreCacheControlDefault : I32EnumAttrCase<"DEFAULT", 0, "Default">;
 def StoreCacheControl_L1uc_L2uc_L3uc
