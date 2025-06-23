@@ -385,7 +385,8 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
     // the memref must match. A dynamic memref dimension is considered
     // non-matching. The transfers from the dimensions to collapse must be
     // in-bounds (it follows the corresponding indices would be zero). This
-    // guarantees that the operation transfers a contiguous block.
+    // guarantees that the operation transfers a contiguous block
+    // and no padding is necessary.
     if (!llvm::equal(memTy.getShape().take_back(numCollapseDims - 1),
                      origVT.getShape().take_back(numCollapseDims - 1)))
       return rewriter.notifyMatchFailure(
@@ -427,7 +428,7 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
         readOp.getLoc(), collapsedVT, collapsedMem, indices,
         ArrayRef<bool>(origInBounds).drop_back(numCollapseDims - 1));
 
-    // Cast back to the orignal vector type.
+    // Cast back to the original vector type.
     auto toOrigShape = rewriter.create<vector::ShapeCastOp>(readOp.getLoc(),
                                                             origVT, newReadOp);
 

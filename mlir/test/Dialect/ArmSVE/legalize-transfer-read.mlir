@@ -9,21 +9,23 @@
 // This is the base case, unremarkable in any way, except that it's our main
 // motivating example and use case.
 
-// CHECK-LABEL:       @test_base_case
-// CHECK-SAME:          %[[I:arg0]]: index, %[[J:arg1]]: index, %[[M:arg2]]:
+// CHECK-LABEL:       @base_case
+// CHECK-SAME:          %[[I:.+]]: index, %[[J:.+]]: index, %[[M:.+]]:
+// CHECK:               %[[PAD:.+]] = arith.constant 0 : i8
+// CHECK:               %[[C0:.+]] = arith.constant 0 : index
 // CHECK:               %[[COLLAPSE:.+]] = memref.collapse_shape %[[M]]
 // CHECK-SAME{LITERAL}:   [[0], [1], [2, 3]]
 // CHECK-SAME:            : memref<?x?x?x8xi8> into memref<?x?x?xi8>
-// CHECK-NEXT:          %[[T0:.+]] = vector.transfer_read %[[COLLAPSE]][%[[I]], %[[J]], %c0], %c0_i8 {in_bounds = [true]}
+// CHECK-NEXT:          %[[T0:.+]] = vector.transfer_read %[[COLLAPSE]][%[[I]], %[[J]], %[[C0]]], %[[PAD]] {in_bounds = [true]}
 // CHECK-SAME:            : memref<?x?x?xi8>, vector<[32]xi8>
 // CHECK-NEXT:          %[[T1:.+]] = vector.shape_cast %[[T0]] : vector<[32]xi8> to vector<[4]x8xi8>
 // CHECK-NEXT:          return %[[T1]] : vector<[4]x8xi8>
 
-func.func @test_base_case(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<[4]x8xi8> {
+func.func @base_case(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<[4]x8xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<?x?x?x8xi8>, vector<[4]x8xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?x?x8xi8>, vector<[4]x8xi8>
 
   return %A : vector<[4]x8xi8>
 }
@@ -32,21 +34,22 @@ func.func @test_base_case(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> ve
 
 // Test the case where the scalable dimension is not the second-to-last.
 
-// CHECK-LABEL:       @test_3d_vector
-// CHECK-SAME:          %[[I:arg0]]: index, %[[J:arg1]]: index, %[[M:arg2]]
+// CHECK-LABEL:       @with_3d_vector
+// CHECK-SAME:          %[[I:.+]]: index, %[[J:.+]]: index, %[[M:.+]]:
+// CHECK:               %[[PAD:.+]] = arith.constant 0 : i8
 // CHECK:               %[[COLLAPSED:.+]] = memref.collapse_shape %[[M]]
 // CHECK-SAME{LITERAL}:   [[0], [1, 2, 3]]
 // CHECK-SAME:            : memref<?x?x2x8xi8> into memref<?x?xi8>
-// CHECK-NEXT:          %[[T0:.+]] = vector.transfer_read %[[COLLAPSED]][%[[I]], %[[J]]], %c0_i8 {in_bounds = [true]}
+// CHECK-NEXT:          %[[T0:.+]] = vector.transfer_read %[[COLLAPSED]][%[[I]], %[[J]]], %[[PAD]] {in_bounds = [true]}
 // CHECK-SAME:            : memref<?x?xi8>, vector<[64]xi8>
 // CHECK-NEXT:          %[[T1:.+]] = vector.shape_cast %[[T0]] : vector<[64]xi8> to vector<[4]x2x8xi8>
 // CHECK-NEXT:          return %[[T1]] : vector<[4]x2x8xi8>
 
-func.func @test_3d_vector(%i : index, %j : index, %M : memref<?x?x2x8xi8>) -> vector<[4]x2x8xi8> {
+func.func @with_3d_vector(%i : index, %j : index, %M : memref<?x?x2x8xi8>) -> vector<[4]x2x8xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true, true]} : memref<?x?x2x8xi8>, vector<[4]x2x8xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true, true]} : memref<?x?x2x8xi8>, vector<[4]x2x8xi8>
 
   return %A : vector<[4]x2x8xi8>
 }
@@ -55,14 +58,14 @@ func.func @test_3d_vector(%i : index, %j : index, %M : memref<?x?x2x8xi8>) -> ve
 
 // Test the case when the vector is already LLVM-legal (fixed).
 
-// CHECK-LABEL: @negative_test_vector_legal_fixed
+// CHECK-LABEL: @negative_vector_legal_fixed
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_vector_legal_fixed(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<8x8xi8> {
+func.func @negative_vector_legal_fixed(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<8x8xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<?x?x?x8xi8>, vector<8x8xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?x?x8xi8>, vector<8x8xi8>
 
   return %A : vector<8x8xi8>
 }
@@ -71,14 +74,14 @@ func.func @negative_test_vector_legal_fixed(%i : index, %j : index, %M : memref<
 
 // Test the case when the vector is already LLVM-legal (single-dimension scalable).
 
-// CHECK-LABEL: @negative_test_vector_legal_1d_scalable
+// CHECK-LABEL: @negative_vector_legal_1d_scalable
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_vector_legal_1d_scalable(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<[8]xi8> {
+func.func @negative_vector_legal_1d_scalable(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<[8]xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true]} : memref<?x?x?x8xi8>, vector<[8]xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true]} : memref<?x?x?x8xi8>, vector<[8]xi8>
 
   return %A : vector<[8]xi8>
 }
@@ -88,14 +91,14 @@ func.func @negative_test_vector_legal_1d_scalable(%i : index, %j : index, %M : m
 // Test the case when the vector is already LLVM-legal (single trailing
 // scalable dimension).
 
-// CHECK-LABEL: @negative_test_vector_legal_trailing_scalable_dim
+// CHECK-LABEL: @negative_vector_legal_trailing_scalable_dim
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_vector_legal_trailing_scalable_dim(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<8x[8]xi8> {
+func.func @negative_vector_legal_trailing_scalable_dim(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<8x[8]xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<?x?x?x8xi8>, vector<8x[8]xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?x?x8xi8>, vector<8x[8]xi8>
 
   return %A : vector<8x[8]xi8>
 }
@@ -104,14 +107,14 @@ func.func @negative_test_vector_legal_trailing_scalable_dim(%i : index, %j : ind
 
 // Test the case of unsupported vector type (more than one scalable dimension)
 
-// CHECK-LABEL: @negative_test_vector_type_not_supported
+// CHECK-LABEL: @negative_vector_type_two_scalable_dims
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_vector_type_not_supported(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<[8]x[8]x8xi8> {
+func.func @negative_vector_type_two_scalable_dims(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<[8]x[8]x8xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true, true]} : memref<?x?x?x8xi8>, vector<[8]x[8]x8xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true, true]} : memref<?x?x?x8xi8>, vector<[8]x[8]x8xi8>
 
   return %A : vector<[8]x[8]x8xi8>
 }
@@ -121,15 +124,14 @@ func.func @negative_test_vector_type_not_supported(%i : index, %j : index, %M : 
 // Test the case of reading from a tensor - not supported, since the
 // transform reasons about memory layouts.
 
-// CHECK-LABEL: @negative_test_tensor_transfer
-
+// CHECK-LABEL: @negative_tensor_transfer
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_tensor_transfer(%i : index, %j : index, %M : tensor<?x?x?x8xi8>) -> vector<[4]x8xi8> {
+func.func @negative_tensor_transfer(%i : index, %j : index, %M : tensor<?x?x?x8xi8>) -> vector<[4]x8xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true]} : tensor<?x?x?x8xi8>, vector<[4]x8xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true]} : tensor<?x?x?x8xi8>, vector<[4]x8xi8>
 
   return %A : vector<[4]x8xi8>
 }
@@ -143,16 +145,16 @@ func.func @negative_test_tensor_transfer(%i : index, %j : index, %M : tensor<?x?
 // only with the fact. Therefore there are no variations with the memref made
 // discontiguous by some other mechanism.
 
-// CHECK-LABEL: @negative_test_discontig_mem
+// CHECK-LABEL: @negative_discontig_mem
 // CHECK-NOT: memref.collapse
 
 #strides = strided<[?, ?, 16, 1]>
 
-func.func @negative_test_discontig_mem(%i : index, %j : index, %M : memref<?x?x?x8xi8, #strides>) -> vector<[4]x8xi8> {
+func.func @negative_discontig_mem(%i : index, %j : index, %M : memref<?x?x?x8xi8, #strides>) -> vector<[4]x8xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<?x?x?x8xi8, #strides>, vector<[4]x8xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?x?x8xi8, #strides>, vector<[4]x8xi8>
 
   return %A : vector<[4]x8xi8>
 }
@@ -162,16 +164,16 @@ func.func @negative_test_discontig_mem(%i : index, %j : index, %M : memref<?x?x?
 // Test the case when the transformation is not applied because of
 // a non-trivial permutation map (broadcast).
 
-// CHECK-LABEL: @negative_test_broadcast
+// CHECK-LABEL: @negative_broadcast
 // CHECK-NOT: memref.collapse
 
 #perm = affine_map<(i, j, k, p) -> (k, 0)>
 
-func.func @negative_test_broadcast(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<[4]x8xi8> {
+func.func @negative_broadcast(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<[4]x8xi8> {
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {permutation_map = #perm, in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x8xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {permutation_map = #perm, in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x8xi8>
 
   return %A : vector<[4]x8xi8>
 }
@@ -181,18 +183,18 @@ func.func @negative_test_broadcast(%i : index, %j : index, %M : memref<?x?x?x8xi
 // Test the case of a masked read - not supported right now.
 // (see mlir/lib/Dialect/ArmSVE/Transforms/LegalizeVectorStorage.cpp)
 
-// CHECK-LABEL: @negative_test_masked
+// CHECK-LABEL: @negative_masked
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_masked(
+func.func @negative_masked(
   %i : index, %j : index,
   %M : memref<?x?x?x8xi8>, %mask : vector<[4]x8xi1>) -> vector<[4]x8xi8> {
   
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
   %A = vector.mask %mask {
-    vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x8xi8>
+    vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x8xi8>
   } : vector<[4]x8xi1> -> vector<[4]x8xi8>
 
   return %A : vector<[4]x8xi8>
@@ -203,17 +205,17 @@ func.func @negative_test_masked(
 // Test case with a mask operand - not supported right now.
 // (see mlir/lib/Dialect/ArmSVE/Transforms/LegalizeVectorStorage.cpp)
 
-// CHECK-LABEL: @negative_test_with_mask
+// CHECK-LABEL: @negative_with_mask
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_with_mask(
+func.func @negative_with_mask(
   %i : index, %j : index,
   %M : memref<?x?x?x8xi8>, %mask : vector<[4]x8xi1>) -> vector<[4]x8xi8> {
   
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8, %mask {in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x8xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad, %mask {in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x8xi8>
 
   return %A : vector<[4]x8xi8>
 }
@@ -223,15 +225,15 @@ func.func @negative_test_with_mask(
 // Test the case when the dimensions to collapse (excluding the scalable one)
 // of the vector and the memref do not match (static non matching dimension).
 
-// CHECK-LABEL: @negative_test_non_matching_dim_static
+// CHECK-LABEL: @negative_non_matching_dim_static
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_non_matching_dim_static(%i : index, %j : index,  %M : memref<?x?x?x8xi8>) -> vector<[4]x4xi8> {
+func.func @negative_non_matching_dim_static(%i : index, %j : index,  %M : memref<?x?x?x8xi8>) -> vector<[4]x4xi8> {
   
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x4xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x4xi8>
 
   return %A : vector<[4]x4xi8>
 }
@@ -241,15 +243,15 @@ func.func @negative_test_non_matching_dim_static(%i : index, %j : index,  %M : m
 // Test the case when the dimensions to collapse (excluding the scalable one)
 // of the vector and the memref do not match (dynamic non matching dimension).
 
-// CHECK-LABEL: @negative_test_non_matching_dim_dynamic
+// CHECK-LABEL: @negative_non_matching_dim_dynamic
 // CHECK-NOT: memref.collapse
 
-func.func @negative_test_non_matching_dim_dynamic(%i : index, %j : index,  %M : memref<?x?x?x?xi8>) -> vector<[4]x4xi8> {
+func.func @negative_non_matching_dim_dynamic(%i : index, %j : index,  %M : memref<?x?x?x?xi8>) -> vector<[4]x4xi8> {
   
   %c0 = arith.constant 0 : index
-  %c0_i8 = arith.constant 0 : i8
+  %pad = arith.constant 123 : i8
 
-  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true] } : memref<?x?x?x?xi8>, vector<[4]x4xi8>
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %pad {in_bounds = [true, true] } : memref<?x?x?x?xi8>, vector<[4]x4xi8>
 
   return %A : vector<[4]x4xi8>
 }
