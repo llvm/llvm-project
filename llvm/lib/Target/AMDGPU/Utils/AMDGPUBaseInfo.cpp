@@ -2769,9 +2769,13 @@ bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 #if LLPC_BUILD_NPI
 bool isGFX1250Plus(const MCSubtargetInfo &STI) {
+#else /* LLPC_BUILD_NPI */
+bool isGFX1250(const MCSubtargetInfo &STI) {
+#endif /* LLPC_BUILD_NPI */
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts];
 }
 
+#if LLPC_BUILD_NPI
 bool isGFX1250Only(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13(STI);
 }

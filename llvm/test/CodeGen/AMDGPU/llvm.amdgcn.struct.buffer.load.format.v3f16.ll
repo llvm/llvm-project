@@ -227,7 +227,7 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v5.h
 ; GFX13-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v6
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX13-TRUE16-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:7 offset1:8
+; GFX13-TRUE16-NEXT:    ds_store_b64 v2, v[0:1] offset:28
 ;
 ; GFX13-FAKE16-LABEL: main:
 ; GFX13-FAKE16:       ; %bb.0: ; %bb
@@ -254,7 +254,7 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v0, 16, v5 :: v_dual_mov_b32 v2, 0
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v6
-; GFX13-FAKE16-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:7 offset1:8
+; GFX13-FAKE16-NEXT:    ds_store_b64 v2, v[0:1] offset:28
 bb:
   %i = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 poison)
   %i2 = call nsz arcp <3 x half> @llvm.amdgcn.struct.buffer.load.format.v3f16(<4 x i32> %arg, i32 %arg1, i32 0, i32 0, i32 0)

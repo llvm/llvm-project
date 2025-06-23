@@ -10410,13 +10410,11 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX11:
     return ST.isGFX1170() ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
-#if LLPC_BUILD_NPI
     return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
+#if LLPC_BUILD_NPI
   case AMDGPUSubtarget::GFX13:
     return SIEncodingFamily::GFX13;
-#else /* LLPC_BUILD_NPI */
-    return SIEncodingFamily::GFX12;
 #endif /* LLPC_BUILD_NPI */
   }
   llvm_unreachable("Unknown subtarget generation!");
@@ -10514,14 +10512,16 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   if (MCOp == (uint16_t)-1 && ST.isGFX1170())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
-#if LLPC_BUILD_NPI
   if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts())
+#if LLPC_BUILD_NPI
     MCOp =
         AMDGPU::getMCOpcode(Opcode, ST.getGeneration() == AMDGPUSubtarget::GFX13
                                         ? SIEncodingFamily::GFX1250
                                         : SIEncodingFamily::GFX12);
-
+#else /* LLPC_BUILD_NPI */
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
 #endif /* LLPC_BUILD_NPI */
+
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)
     return Opcode;

@@ -1345,8 +1345,19 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   // correct for the new instruction.  This should return true, because
   // this function should only be called on CombineInfo objects that
   // have already been confirmed to be mergeable.
+#if LLPC_BUILD_NPI
+  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE) {
+    if (STM->hasUnalignedDS2Bug() &&
+        (CI.I->memoperands_empty() ||
+         (*CI.I->memoperands_begin())->getAlign().value() < CI.Width * 4))
+      return nullptr;
+#else /* LLPC_BUILD_NPI */
   if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
+#endif /* LLPC_BUILD_NPI */
     offsetsCanBeCombined(CI, *STM, Paired, true);
+#if LLPC_BUILD_NPI
+  }
+#endif /* LLPC_BUILD_NPI */
   return Where;
 }
 

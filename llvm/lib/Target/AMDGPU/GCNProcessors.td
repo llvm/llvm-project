@@ -350,11 +350,11 @@ def : ProcessorModel<"gfx120E", GFX12SpeedModel,
 def : ProcessorModel<"gfx120F", GFX12SpeedModel,
   FeatureISAVersion12.Features
 >;
-#ifdef LLPC_BUILD_NPI
 
 def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
   FeatureISAVersion12_50.Features
 >;
+#ifdef LLPC_BUILD_NPI
 
 def : ProcessorModel<"gfx1251", GFX1251SpeedModel,
   FeatureISAVersion12_51.Features

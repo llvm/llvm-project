@@ -113,8 +113,8 @@ protected:
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
-#if LLPC_BUILD_NPI
   bool GFX1250Insts = false;
+#if LLPC_BUILD_NPI
   bool GFX13Insts = false;
 #endif /* LLPC_BUILD_NPI */
   bool GFX10_3Insts = false;
@@ -219,9 +219,7 @@ protected:
 
   bool HasNoSdstCMPX = false;
   bool HasVscnt = false;
-#if LLPC_BUILD_NPI
   bool HasWaitXcnt = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
@@ -325,8 +323,8 @@ protected:
   bool HasPointSampleAccel = false;
 #if LLPC_BUILD_NPI
   bool HasLdsBarrierArriveAtomic = false;
-  bool HasSetPrioIncWgInst = false;
 #endif /* LLPC_BUILD_NPI */
+  bool HasSetPrioIncWgInst = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1606,6 +1604,13 @@ public:
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1250.
+  bool hasWaitXCnt() const { return HasWaitXcnt; }
+
+#endif /* LLPC_BUILD_NPI */
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
 #if LLPC_BUILD_NPI
@@ -1699,9 +1704,9 @@ public:
   /// values.
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
-#if LLPC_BUILD_NPI
   bool hasGFX1250Insts() const { return GFX1250Insts; }
 
+#if LLPC_BUILD_NPI
   bool hasGFX13Insts() const { return GFX13Insts; }
 
   bool hasVOPD3() const { return GFX1250Insts; }
@@ -1734,10 +1739,10 @@ public:
   // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
   bool hasSGetShaderCyclesInst() const { return GFX1250Insts; }
 
+#endif /* LLPC_BUILD_NPI */
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
-#endif /* LLPC_BUILD_NPI */
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
 #if LLPC_BUILD_NPI
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
@@ -2015,6 +2020,11 @@ public:
   bool hasScratchBaseForwardingHazard() const {
     return GFX1250Insts && getGeneration() == GFX12;
   }
+
+  // TODO: Remove this when we replace all A0 GFX1250 with B0.
+  // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
+  // payload size.
+  bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
 
 #endif /* LLPC_BUILD_NPI */
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }

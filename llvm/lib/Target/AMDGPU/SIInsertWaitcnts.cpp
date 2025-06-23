@@ -932,6 +932,7 @@ public:
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
 #if LLPC_BUILD_NPI
+  bool isVmemAccess(const MachineInstr &MI) const;
 #else /* LLPC_BUILD_NPI */
   bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
 #endif /* LLPC_BUILD_NPI */
@@ -2612,6 +2613,12 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
       !ScoreBrackets.hasPendingEvent(VMEM_GROUP))
     Wait.XCnt = ~0u;
 
+  // Since the translation for VMEM addresses occur in-order, we can skip the
+  // XCnt if the current instruction is of VMEM type and has a memory dependency
+  // with another VMEM instruction in flight.
+  if (Wait.XCnt != ~0u && isVmemAccess(*It))
+    Wait.XCnt = ~0u;
+
 #endif /* LLPC_BUILD_NPI */
   if (WCG->createNewWaitcnt(Block, It, Wait))
     Modified = true;
@@ -2733,6 +2740,9 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
 }
 
 #if LLPC_BUILD_NPI
+bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
+  return (TII->isFLAT(MI) && mayAccessVMEMThroughFlat(MI)) ||
+         (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
 #else /* LLPC_BUILD_NPI */
 // This is a flat memory operation. Check to see if it has memory tokens for
 // either scratch or FLAT.
@@ -2758,9 +2768,9 @@ bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
     unsigned AS = Memop->getAddrSpace();
     return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
   });
+#endif /* LLPC_BUILD_NPI */
 }
 
-#endif /* LLPC_BUILD_NPI */
 static bool isGFX12CacheInvOrWBInst(MachineInstr &Inst) {
   auto Opc = Inst.getOpcode();
   return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
@@ -3465,13 +3475,13 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 #if LLPC_BUILD_NPI
         if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT || CT == X_CNT ||
             CT == SWC_CNT)
+#else /* LLPC_BUILD_NPI */
+        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT)
+#endif /* LLPC_BUILD_NPI */
           continue;
 
         if (!ST->hasImageInsts() &&
             (CT == EXP_CNT || CT == SAMPLE_CNT || CT == BVH_CNT))
-#else /* LLPC_BUILD_NPI */
-        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT)
-#endif /* LLPC_BUILD_NPI */
           continue;
 
         BuildMI(EntryBB, I, DebugLoc(),

@@ -2199,7 +2199,6 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv_multiload(ptr inreg %arg, ptr inre
 ; GFX1250-GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], 4, v[2:3]
 ; GFX1250-GISEL-NEXT:    flat_load_b32 v6, v[4:5] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_load_b32 v4, v[4:5] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x400, v2

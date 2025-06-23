@@ -1701,6 +1701,8 @@ bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
 bool supportsWGP(const MCSubtargetInfo &STI);
+#else /* LLPC_BUILD_NPI */
+bool isGFX1250(const MCSubtargetInfo &STI);
 #endif /* LLPC_BUILD_NPI */
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);

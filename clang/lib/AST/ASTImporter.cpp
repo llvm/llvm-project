@@ -1664,7 +1664,7 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
   if (!ToUnderlyingOrErr)
     return ToUnderlyingOrErr.takeError();
   return Importer.getToContext().getTemplateSpecializationType(
-      *ToTemplateOrErr, ToTemplateArgs, std::nullopt, *ToUnderlyingOrErr);
+      *ToTemplateOrErr, ToTemplateArgs, {}, *ToUnderlyingOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitElaboratedType(const ElaboratedType *T) {

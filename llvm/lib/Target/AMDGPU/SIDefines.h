@@ -46,8 +46,8 @@ enum {
   GFX11 = 10,
   GFX1170 = 11,
   GFX12 = 12,
-#if LLPC_BUILD_NPI
   GFX1250 = 13,
+#if LLPC_BUILD_NPI
   GFX13 = 14,
 #endif /* LLPC_BUILD_NPI */
 };

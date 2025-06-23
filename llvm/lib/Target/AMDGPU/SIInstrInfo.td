@@ -32,8 +32,8 @@ def SIEncodingFamily {
   int GFX11 = 10;
   int GFX1170 = 11;
   int GFX12 = 12;
-#ifdef LLPC_BUILD_NPI
   int GFX1250 = 13;
+#ifdef LLPC_BUILD_NPI
   int GFX13 = 14;
 #endif /* LLPC_BUILD_NPI */
 }
@@ -51,9 +51,9 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
 
 #ifdef LLPC_BUILD_NPI
 def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
+#endif /* LLPC_BUILD_NPI */
 def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-#endif /* LLPC_BUILD_NPI */
 def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX1170Gen       : GFXGen<isGFX1170Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX1170>;
 #ifdef LLPC_BUILD_NPI
@@ -3593,12 +3593,12 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX940)],
                    [!cast<string>(SIEncodingFamily.GFX11)],
                    [!cast<string>(SIEncodingFamily.GFX1170)],
-#ifdef LLPC_BUILD_NPI
                    [!cast<string>(SIEncodingFamily.GFX12)],
+#ifdef LLPC_BUILD_NPI
                    [!cast<string>(SIEncodingFamily.GFX1250)],
                    [!cast<string>(SIEncodingFamily.GFX13)]];
 #else /* LLPC_BUILD_NPI */
-                   [!cast<string>(SIEncodingFamily.GFX12)]];
+                   [!cast<string>(SIEncodingFamily.GFX1250)]];
 #endif /* LLPC_BUILD_NPI */
 }
 

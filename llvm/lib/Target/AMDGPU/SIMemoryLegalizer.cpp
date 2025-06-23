@@ -2550,15 +2550,10 @@ bool SIGfx12CacheControl::insertWaitsBeforeSystemScopeStore(
   const DebugLoc &DL = MI->getDebugLoc();
 
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_LOADCNT_soft)).addImm(0);
-#if LLPC_BUILD_NPI
   if (ST.hasImageInsts()) {
     BuildMI(MBB, MI, DL, TII->get(S_WAIT_SAMPLECNT_soft)).addImm(0);
     BuildMI(MBB, MI, DL, TII->get(S_WAIT_BVHCNT_soft)).addImm(0);
   }
-#else /* LLPC_BUILD_NPI */
-  BuildMI(MBB, MI, DL, TII->get(S_WAIT_SAMPLECNT_soft)).addImm(0);
-  BuildMI(MBB, MI, DL, TII->get(S_WAIT_BVHCNT_soft)).addImm(0);
-#endif /* LLPC_BUILD_NPI */
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_KMCNT_soft)).addImm(0);
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_STORECNT_soft)).addImm(0);
 
@@ -2799,14 +2794,14 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // gfx120x:
   //   global_wb is only necessary at system scope as stores
   //   can only report completion from L2 onwards.
+  //
+  //   Emitting it for lower scopes is a slow no-op, so we omit it
+  //   for performance.
 #else /* LLPC_BUILD_NPI */
   // global_wb is only necessary at system scope for gfx120x targets.
 #endif /* LLPC_BUILD_NPI */
   //
 #if LLPC_BUILD_NPI
-  //   Emitting it for lower scopes is a slow no-op, so we omit it
-  //   for performance.
-  //
   // gfx125x:
   //    stores can also report completion from CU$ so we must emit
   //    global_wb at device scope as well to ensure stores reached
@@ -2915,7 +2910,12 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
 #if LLPC_BUILD_NPI
   if (!CPol)
     return false;
+#else /* LLPC_BUILD_NPI */
+  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
+    return insertWaitsBeforeSystemScopeStore(MI);
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
   // No scope operand means SCOPE_CU.
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
@@ -2925,12 +2925,7 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
       return insertWaitsBeforeSystemScopeStore(MI);
     return false;
   }
-#else /* LLPC_BUILD_NPI */
-  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
-    return insertWaitsBeforeSystemScopeStore(MI);
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   // GFX1250 only: Require SCOPE_SE on stores that may hit the scratch address
   // space, or if the "cu-stores" target feature is disabled.
   if (Scope != CPol::SCOPE_CU)

@@ -253,6 +253,8 @@ public:
   bool isGFX1250Only() const;
   bool isGFX13() const;
   bool isGFX13Plus() const;
+#else /* LLPC_BUILD_NPI */
+  bool isGFX1250() const;
 #endif /* LLPC_BUILD_NPI */
 
   bool hasArchitectedFlatScratch() const;

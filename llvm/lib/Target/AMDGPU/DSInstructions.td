@@ -1101,10 +1101,21 @@ multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, vt, store_local_m0>;
   }
 
+#ifdef LLPC_BUILD_NPI
+  let OtherPredicates = [NotLDSRequiresM0Init, NotHasUnalignedDS2Bug] in {
+#else /* LLPC_BUILD_NPI */
   let OtherPredicates = [NotLDSRequiresM0Init] in {
+#endif /* LLPC_BUILD_NPI */
     def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32_gfx9, vt, load_local>;
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32_gfx9, vt, store_local>;
   }
+#ifdef LLPC_BUILD_NPI
+
+  let OtherPredicates = [NotLDSRequiresM0Init, HasUnalignedDS2Bug] in {
+    defm : DSReadPat_mc<DS_READ_B64, vt, "load_local">;
+    defm : DSWritePat_mc<DS_WRITE_B64, vt, "store_local">;
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass DS128Bit8ByteAlignedPat_mc<ValueType vt> {
@@ -1113,10 +1124,21 @@ multiclass DS128Bit8ByteAlignedPat_mc<ValueType vt> {
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64, vt, store_local_m0>;
   }
 
+#ifdef LLPC_BUILD_NPI
+  let OtherPredicates = [NotLDSRequiresM0Init, NotHasUnalignedDS2Bug] in {
+#else /* LLPC_BUILD_NPI */
   let OtherPredicates = [NotLDSRequiresM0Init] in {
+#endif /* LLPC_BUILD_NPI */
     def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64_gfx9, vt, load_local>;
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64_gfx9, vt, store_local>;
   }
+#ifdef LLPC_BUILD_NPI
+
+  let OtherPredicates = [NotLDSRequiresM0Init, HasUnalignedDS2Bug] in {
+    defm : DSReadPat_mc<DS_READ_B128, vt, "load_local">;
+    defm : DSWritePat_mc<DS_WRITE_B128, vt, "store_local">;
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 // v2i32 loads are split into i32 loads on SI during lowering, due to a bug

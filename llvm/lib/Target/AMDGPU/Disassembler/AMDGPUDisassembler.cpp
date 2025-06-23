@@ -58,7 +58,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
-    report_fatal_error("Disassembly not yet supported for subtarget");
+    reportFatalUsageError("disassembly not yet supported for subtarget");
 
   for (auto [Symbol, Code] : AMDGPU::UCVersion::getGFXVersions())
     createConstantSymbolExpr(Symbol, Code);
@@ -902,6 +902,16 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
                         Address, CS))
+        break;
+
+      // FIXME: Should use DecoderTableGFX1250_FAKE1632, but it is not generated
+      //        yet.
+#if LLPC_BUILD_NPI
+      if (isGFX1250Only() &&
+#else /* LLPC_BUILD_NPI */
+      if (isGFX1250() &&
+#endif /* LLPC_BUILD_NPI */
+          tryDecodeInst(DecoderTableGFX125032, MI, DW, Address, CS))
         break;
 
       if (isGFX12() &&
@@ -2456,8 +2466,10 @@ bool AMDGPUDisassembler::isGFX13() const {
 bool AMDGPUDisassembler::isGFX13Plus() const {
   return AMDGPU::isGFX13Plus(STI);
 }
-
+#else /* LLPC_BUILD_NPI */
+bool AMDGPUDisassembler::isGFX1250() const { return AMDGPU::isGFX1250(STI); }
 #endif /* LLPC_BUILD_NPI */
+
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
 }
