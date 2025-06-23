@@ -278,6 +278,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing false positives on member functions with an explicit object parameter.
 
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check by adding new option
+  `CountMemberInitAsStmt` that allows counting class member initializers in
+  constructors as statements.
+
 - Improved :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
   false negatives where math expressions are the operand of assignment operators
