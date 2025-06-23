@@ -2,7 +2,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=instcombine %s | FileCheck %s
 
 ; Check that `select B, true, C` isn't optimized to `or B, C`,
-; because the invalid addrspacecast %asc.shared may introduce poison.
+; because the invalid addrspacecast %asc.shared introduces poison.
 define i1 @not_fold_select(ptr addrspace(1) noundef %x) {
 ; CHECK-LABEL: define i1 @not_fold_select(
 ; CHECK-SAME: ptr addrspace(1) noundef [[X:%.*]]) {
