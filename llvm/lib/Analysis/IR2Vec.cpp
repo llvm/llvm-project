@@ -71,6 +71,14 @@ inline bool fromJSON(const llvm::json::Value &E, Embedding &Out,
 // Embedding
 //===----------------------------------------------------------------------===//
 
+Embedding Embedding::operator+(const Embedding &RHS) const {
+  assert(this->size() == RHS.size() && "Vectors must have the same dimension");
+  Embedding Result(*this);
+  std::transform(this->begin(), this->end(), RHS.begin(), Result.begin(),
+                 std::plus<double>());
+  return Result;
+}
+
 Embedding &Embedding::operator+=(const Embedding &RHS) {
   assert(this->size() == RHS.size() && "Vectors must have the same dimension");
   std::transform(this->begin(), this->end(), RHS.begin(), this->begin(),

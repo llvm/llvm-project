@@ -106,6 +106,7 @@ public:
   const std::vector<double> &getData() const { return Data; }
 
   /// Arithmetic operators
+  Embedding operator+(const Embedding &RHS) const;
   Embedding &operator+=(const Embedding &RHS);
   Embedding &operator-=(const Embedding &RHS);
   Embedding &operator*=(double Factor);
