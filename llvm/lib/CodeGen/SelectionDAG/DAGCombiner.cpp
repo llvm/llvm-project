@@ -18403,49 +18403,12 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FCOPYSIGN, DL, VT, {N0, N1}))
     return C;
 
-  if (ConstantFPSDNode *N1C = isConstOrConstSplatFP(N->getOperand(1))) {
-    const APFloat &V = N1C->getValueAPF();
-    // copysign(x, c1) -> fabs(x)       iff ispos(c1)
-    // copysign(x, c1) -> fneg(fabs(x)) iff isneg(c1)
-    if (!V.isNegative()) {
-      if (!LegalOperations || TLI.isOperationLegal(ISD::FABS, VT))
-        return DAG.getNode(ISD::FABS, DL, VT, N0);
-    } else {
-      if (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))
-        return DAG.getNode(ISD::FNEG, DL, VT,
-                           DAG.getNode(ISD::FABS, SDLoc(N0), VT, N0));
-    }
-  }
-
-  // copysign(fabs(x), y) -> copysign(x, y)
-  // copysign(fneg(x), y) -> copysign(x, y)
-  // copysign(copysign(x,z), y) -> copysign(x, y)
-  if (N0.getOpcode() == ISD::FABS || N0.getOpcode() == ISD::FNEG ||
-      N0.getOpcode() == ISD::FCOPYSIGN)
-    return DAG.getNode(ISD::FCOPYSIGN, DL, VT, N0.getOperand(0), N1);
-
-  // copysign(x, abs(y)) -> abs(x)
-  if (N1.getOpcode() == ISD::FABS)
-    return DAG.getNode(ISD::FABS, DL, VT, N0);
-
-  // copysign(x, copysign(y,z)) -> copysign(x, z)
-  if (N1.getOpcode() == ISD::FCOPYSIGN)
-    return DAG.getNode(ISD::FCOPYSIGN, DL, VT, N0, N1.getOperand(1));
-
   // copysign(x, fp_extend(y)) -> copysign(x, y)
   // copysign(x, fp_round(y)) -> copysign(x, y)
   if (CanCombineFCOPYSIGN_EXTEND_ROUND(N))
     return DAG.getNode(ISD::FCOPYSIGN, DL, VT, N0, N1.getOperand(0));
 
-  // We only take the sign bit from the sign operand.
-  EVT SignVT = N1.getValueType();
-  if (SimplifyDemandedBits(N1,
-                           APInt::getSignMask(SignVT.getScalarSizeInBits())))
-    return SDValue(N, 0);
-
-  // We only take the non-sign bits from the value operand
-  if (SimplifyDemandedBits(N0,
-                           APInt::getSignedMaxValue(VT.getScalarSizeInBits())))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   return SDValue();
@@ -18972,6 +18935,9 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
                        N0.getOperand(0));
   }
 
+  if (SimplifyDemandedBits(SDValue(N, 0)))
+    return SDValue(N, 0);
+
   if (SDValue Cast = foldSignChangeInBitcast(N))
     return Cast;
 
@@ -19045,14 +19011,8 @@ SDValue DAGCombiner::visitFABS(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FABS, DL, VT, {N0}))
     return C;
 
-  // fold (fabs (fabs x)) -> (fabs x)
-  if (N0.getOpcode() == ISD::FABS)
-    return N->getOperand(0);
-
-  // fold (fabs (fneg x)) -> (fabs x)
-  // fold (fabs (fcopysign x, y)) -> (fabs x)
-  if (N0.getOpcode() == ISD::FNEG || N0.getOpcode() == ISD::FCOPYSIGN)
-    return DAG.getNode(ISD::FABS, DL, VT, N0.getOperand(0));
+  if (SimplifyDemandedBits(SDValue(N, 0)))
+    return SDValue(N, 0);
 
   if (SDValue Cast = foldSignChangeInBitcast(N))
     return Cast;
