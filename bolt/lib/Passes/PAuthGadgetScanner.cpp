@@ -1460,6 +1460,8 @@ void FunctionAnalysisContext::findUnsafeUses(
       break; // One warning per function.
     }
   }
+  // FIXME: Warn the user about imprecise analysis when the function has no CFG
+  //        information at all.
 
   iterateOverInstrs(BF, [&](MCInstReference Inst) {
     if (BC.MIB->isCFI(Inst))
