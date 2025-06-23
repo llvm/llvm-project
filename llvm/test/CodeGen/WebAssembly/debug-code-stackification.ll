@@ -4,9 +4,9 @@ target triple = "wasm32-unknown-unknown"
 
 declare i32 @extern_func(i32, i32)
 
-; We want to produce local DW_OP_WASM_locations in debug code instead
-; of operand stack locations since local locations are more widely
-; supported and can cover the entirety of the method.
+; We want to produce WASM local "DW_OP_WASM_location 0x00 <local number>" locations
+; in debug code instead of operand stack ("DW_OP_WASM_location 0x02 <depth>") locations
+; since local locations are more widely supported and can cover the entirety of the method.
 ; DBG_USE: DW_TAG_subprogram
 ; DBG_USE:   DW_AT_name ("single_non_dbg_use")
 ; DBG_USE:   DW_TAG_variable
