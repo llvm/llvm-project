@@ -524,6 +524,24 @@ LogicalResult GatherToLDSOp::verify() {
   return success();
 }
 
+LogicalResult TransposeLoadOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+
+  if (!hasWorkgroupMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be Workgroup");
+
+  // TODO: support 6-bit element type vectors.
+  auto transferType = dyn_cast<VectorType>(getDst().getType());
+  if (!transferType)
+    return emitOpError("destination type must be a vector type");
+  size_t transferSize =
+      transferType.getNumElements() * transferType.getElementTypeBitWidth();
+  if (transferSize != 64)
+    return emitOpError("Transfering type size must be 64 bits");
+
+  return success();
+}
+
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
