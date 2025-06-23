@@ -506,25 +506,33 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
     ValInfo->RenamedOp = (RenameStack.end() - Start) == RenameStack.begin()
                              ? OrigOp
                              : (RenameStack.end() - Start - 1)->Def;
+    auto CreateSSACopy = [this](IRBuilderBase &B, Value *Op,
+                                const Twine &Name = "") {
+      auto It = PI.DeclarationCache.try_emplace(Op->getType());
+      if (It.second) {
+        // The number of named values is used to detect if a new declaration
+        // was added. If so, that declaration is tracked so that it can be
+        // removed when the analysis is done. The corner case were a new
+        // declaration results in a name clash and the old name being renamed
+        // is not considered as that represents an invalid module.
+        auto NumDecls = F.getParent()->getNumNamedValues();
+        Function *IF = Intrinsic::getOrInsertDeclaration(
+            F.getParent(), Intrinsic::ssa_copy, Op->getType());
+        if (NumDecls != F.getParent()->getNumNamedValues())
+          PI.CreatedDeclarations.insert(IF);
+        It.first->second = IF;
+      }
+      return B.CreateCall(It.first->second, Op, Name);
+    };
     // For edge predicates, we can just place the operand in the block before
     // the terminator. For assume, we have to place it right after the assume
     // to ensure we dominate all uses except assume itself. Always insert
     // right before the terminator or after the assume, so that we insert in
     // proper order in the case of multiple predicateinfo in the same block.
-    // The number of named values is used to detect if a new declaration was
-    // added. If so, that declaration is tracked so that it can be removed when
-    // the analysis is done. The corner case were a new declaration results in
-    // a name clash and the old name being renamed is not considered as that
-    // represents an invalid module.
     if (isa<PredicateWithEdge>(ValInfo)) {
       IRBuilder<> B(getBranchTerminator(ValInfo));
-      auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getOrInsertDeclaration(
-          F.getParent(), Intrinsic::ssa_copy, Op->getType());
-      if (NumDecls != F.getParent()->getNumNamedValues())
-        PI.CreatedDeclarations.insert(IF);
       CallInst *PIC =
-          B.CreateCall(IF, Op, Op->getName() + "." + Twine(Counter++));
+          CreateSSACopy(B, Op, Op->getName() + "." + Twine(Counter++));
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     } else {
@@ -534,12 +542,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       // Insert the predicate directly after the assume. While it also holds
       // directly before it, assume(i1 true) is not a useful fact.
       IRBuilder<> B(PAssume->AssumeInst->getNextNode());
-      auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getOrInsertDeclaration(
-          F.getParent(), Intrinsic::ssa_copy, Op->getType());
-      if (NumDecls != F.getParent()->getNumNamedValues())
-        PI.CreatedDeclarations.insert(IF);
-      CallInst *PIC = B.CreateCall(IF, Op);
+      CallInst *PIC = CreateSSACopy(B, Op);
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     }
