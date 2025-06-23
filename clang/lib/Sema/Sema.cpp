@@ -2270,6 +2270,21 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         }
       }
     }
+
+    if (auto *VT = Ty->getAs<VectorType>();
+        VT && FD &&
+        (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
+         VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)) {
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true)) {
+        Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function) << Ty << 0;
+      } else if (const auto *FTy = FD->getType()->getAs<FunctionProtoType>()) {
+        if (FTy->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask) {
+          Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function)
+              << Ty << 1;
+        }
+      }
+    }
   };
 
   CheckType(Ty);

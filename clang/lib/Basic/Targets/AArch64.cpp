@@ -825,13 +825,23 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
   if (IsArmStreamingFunction == ArmStreamingKind::NotStreaming &&
       (LangOpts.VScaleMin || LangOpts.VScaleMax))
     return std::pair<unsigned, unsigned>(
-        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
+        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax ? LangOpts.VScaleMax : 16);
 
   if (IsArmStreamingFunction == ArmStreamingKind::Streaming &&
       (LangOpts.VScaleStreamingMin || LangOpts.VScaleStreamingMax))
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleStreamingMin ? LangOpts.VScaleStreamingMin : 1,
-        LangOpts.VScaleStreamingMax);
+        LangOpts.VScaleStreamingMax ? LangOpts.VScaleStreamingMax : 16);
+
+  if (IsArmStreamingFunction == ArmStreamingKind::StreamingCompatible &&
+      ((LangOpts.VScaleMin && LangOpts.VScaleStreamingMin) ||
+       (LangOpts.VScaleMax && LangOpts.VScaleStreamingMax))) {
+    unsigned Min = std::min(LangOpts.VScaleMin ? LangOpts.VScaleMin : 1,
+                            LangOpts.VScaleStreamingMin ? LangOpts.VScaleStreamingMin : 1);
+    unsigned Max = std::max(LangOpts.VScaleMax ? LangOpts.VScaleMax : 16,
+                            LangOpts.VScaleStreamingMax ? LangOpts.VScaleStreamingMax : 16);
+    return std::pair(Min, Max);
+  }
 
   if (hasFeature("sve") || (FeatureMap && (FeatureMap->lookup("sve"))))
     return std::pair<unsigned, unsigned>(1, 16);

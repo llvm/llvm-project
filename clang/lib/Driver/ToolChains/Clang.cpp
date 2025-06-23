@@ -1666,7 +1666,8 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   }
 
   // Handle -msve_vector_bits=<bits>
-  auto HandleVectorBits = [&](Arg *A, bool Streaming) {
+  auto HandleVectorBits = [&](Arg *A, StringRef VScaleMin,
+                              StringRef VScaleMax) {
     StringRef Val = A->getValue();
     const Driver &D = getToolChain().getDriver();
     if (Val == "128" || Val == "256" || Val == "512" || Val == "1024" ||
@@ -1677,8 +1678,6 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
         bool Invalid = Val.getAsInteger(10, Bits);
         (void)Invalid;
         assert(!Invalid && "Failed to parse value");
-        StringRef VScaleMax =
-            Streaming ? "-mvscale-streaming-max=" : "-mvscale-max=";
         CmdArgs.push_back(
             Args.MakeArgString(VScaleMax + llvm::Twine(Bits / 128)));
       }
@@ -1687,8 +1686,6 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       (void)Invalid;
       assert(!Invalid && "Failed to parse value");
 
-      StringRef VScaleMin =
-          Streaming ? "-mvscale-streaming-min=" : "-mvscale-min=";
       CmdArgs.push_back(
           Args.MakeArgString(VScaleMin + llvm::Twine(Bits / 128)));
     } else if (Val == "scalable") {
@@ -1700,9 +1697,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
     }
   };
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ))
-    HandleVectorBits(A, /*Streaming*/ false);
+    HandleVectorBits(A, "-mvscale-min=", "-mvscale-max=");
   if (Arg *A = Args.getLastArg(options::OPT_msve_streaming_vector_bits_EQ))
-    HandleVectorBits(A, /*Streaming*/ true);
+    HandleVectorBits(A, "-mvscale-streaming-min=", "-mvscale-streaming-max=");
 
   AddAAPCSVolatileBitfieldArgs(Args, CmdArgs);
 
