@@ -5717,20 +5717,24 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
                TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
                int Index = 0, VectorType *SubTp = nullptr,
                ArrayRef<const Value *> Args = {}) {
+  VectorType *DstTy = Tp;
+  if (!Mask.empty())
+    DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
+
   if (Kind != TTI::SK_PermuteTwoSrc)
-    return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+    return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+                              Args);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
                              Mask, NumSrcElts, NumSubElts, Index)) {
     if (Index + NumSubElts > NumSrcElts &&
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
-      return TTI.getShuffleCost(
-          TTI::SK_InsertSubvector,
-          getWidenedType(Tp->getElementType(), Mask.size()), Mask,
-          TTI::TCK_RecipThroughput, Index, Tp);
+      return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, Mask,
+                                TTI::TCK_RecipThroughput, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+  return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+                            Args);
 }
 
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
@@ -12036,7 +12040,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         if (isa<FixedVectorType>(ScalarTy)) {
           assert(SLPReVec && "FixedVectorType is not expected.");
           return TTI.getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, {}, CostKind,
+              TTI::SK_InsertSubvector, VecTy, VecTy, {}, CostKind,
               std::distance(VL.begin(), It) * getNumElements(ScalarTy),
               cast<FixedVectorType>(ScalarTy));
         }
@@ -22995,7 +22999,10 @@ private:
             unsigned ScalarTyNumElements = VecTy->getNumElements();
             for (unsigned I : seq<unsigned>(ReducedVals.size())) {
               VectorCost += TTI->getShuffleCost(
-                  TTI::SK_PermuteSingleSrc, VectorTy,
+                  TTI::SK_PermuteSingleSrc,
+                  FixedVectorType::get(VecTy->getScalarType(),
+                                       ReducedVals.size()),
+                  VectorTy,
                   createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
               VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy,
                                                             FMF, CostKind);

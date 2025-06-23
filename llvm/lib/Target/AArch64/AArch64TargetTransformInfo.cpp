@@ -5468,19 +5468,25 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   return Cost;
 }
 
-InstructionCost AArch64TTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+InstructionCost
+AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                               VectorType *SrcTy, ArrayRef<int> Mask,
+                               TTI::TargetCostKind CostKind, int Index,
+                               VectorType *SubTp, ArrayRef<const Value *> Args,
+                               const Instruction *CxtI) const {
+  assert((Mask.empty() || DstTy->isScalableTy() ||
+          Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
+         "Expected the Mask to match the return size if given");
+  assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
+         "Expected the same scalar types");
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
   // into smaller vectors and sum the cost of each shuffle.
-  if (!Mask.empty() && isa<FixedVectorType>(Tp) && LT.second.isVector() &&
+  if (!Mask.empty() && isa<FixedVectorType>(SrcTy) && LT.second.isVector() &&
       LT.second.getScalarSizeInBits() * Mask.size() > 128 &&
-      Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
+      SrcTy->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
-
     // Check for LD3/LD4 instructions, which are represented in llvm IR as
     // deinterleaving-shuffle(load). The shuffle cost could potentially be free,
     // but we model it with a cost of LT.first so that LD3/LD4 have a higher
@@ -5496,16 +5502,16 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     // cost than just the store.
     if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
         (ShuffleVectorInst::isInterleaveMask(
-             Mask, 4, Tp->getElementCount().getKnownMinValue() * 2) ||
+             Mask, 4, SrcTy->getElementCount().getKnownMinValue() * 2) ||
          ShuffleVectorInst::isInterleaveMask(
-             Mask, 3, Tp->getElementCount().getKnownMinValue() * 2)))
+             Mask, 3, SrcTy->getElementCount().getKnownMinValue() * 2)))
       return LT.first;
 
     unsigned TpNumElts = Mask.size();
     unsigned LTNumElts = LT.second.getVectorNumElements();
     unsigned NumVecs = (TpNumElts + LTNumElts - 1) / LTNumElts;
-    VectorType *NTp =
-        VectorType::get(Tp->getScalarType(), LT.second.getVectorElementCount());
+    VectorType *NTp = VectorType::get(SrcTy->getScalarType(),
+                                      LT.second.getVectorElementCount());
     InstructionCost Cost;
     std::map<std::tuple<unsigned, unsigned, SmallVector<int>>, InstructionCost>
         PreviousCosts;
@@ -5513,7 +5519,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       SmallVector<int> NMask;
       // Split the existing mask into chunks of size LTNumElts. Track the source
       // sub-vectors to ensure the result has at most 2 inputs.
-      unsigned Source1 = 0, Source2 = 0;
+      unsigned Source1 = -1U, Source2 = -1U;
       unsigned NumSources = 0;
       for (unsigned E = 0; E < LTNumElts; E++) {
         int MaskElt = (N * LTNumElts + E < TpNumElts) ? Mask[N * LTNumElts + E]
@@ -5561,7 +5567,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
           NumSources <= 2
               ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NMask, CostKind, 0, nullptr, Args, CxtI)
+                               NTp, NTp, NMask, CostKind, 0, nullptr, Args,
+                               CxtI)
               : LTNumElts;
       Result.first->second = NCost;
       Cost += NCost;
@@ -5569,7 +5576,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     return Cost;
   }
 
-  Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
   // A subvector extract can be implemented with an ext (or trivial extract, if
   // from lane 0). This currently only handles low or high extracts to prevent
@@ -5585,6 +5592,12 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     }
     Kind = TTI::SK_PermuteSingleSrc;
   }
+  // FIXME: This was added to keep the costs equal when adding DstTys. Update
+  // the code to handle length-changing shuffles.
+  if (Kind == TTI::SK_InsertSubvector) {
+    LT = getTypeLegalizationCost(DstTy);
+    SrcTy = DstTy;
+  }
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
@@ -5596,15 +5609,17 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   if (CostKind == TTI::TCK_CodeSize && Kind == TTI::SK_Broadcast) {
     bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
     if (IsLoad && LT.second.isVector() &&
-        isLegalBroadcastLoad(Tp->getElementType(),
+        isLegalBroadcastLoad(SrcTy->getElementType(),
                              LT.second.getVectorElementCount()))
       return 0;
   }
 
   // If we have 4 elements for the shuffle and a Mask, get the cost straight
   // from the perfect shuffle tables.
-  if (Mask.size() == 4 && Tp->getElementCount() == ElementCount::getFixed(4) &&
-      (Tp->getScalarSizeInBits() == 16 || Tp->getScalarSizeInBits() == 32) &&
+  if (Mask.size() == 4 &&
+      SrcTy->getElementCount() == ElementCount::getFixed(4) &&
+      (SrcTy->getScalarSizeInBits() == 16 ||
+       SrcTy->getScalarSizeInBits() == 32) &&
       all_of(Mask, [](int E) { return E < 8; }))
     return getPerfectShuffleCost(Mask);
 
@@ -5764,8 +5779,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       return LT.first * Entry->Cost;
   }
 
-  if (Kind == TTI::SK_Splice && isa<ScalableVectorType>(Tp))
-    return getSpliceCost(Tp, Index, CostKind);
+  if (Kind == TTI::SK_Splice && isa<ScalableVectorType>(SrcTy))
+    return getSpliceCost(SrcTy, Index, CostKind);
 
   // Inserting a subvector can often be done with either a D, S or H register
   // move, so long as the inserted vector is "aligned".
@@ -5783,8 +5798,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   // Restore optimal kind.
   if (IsExtractSubvector)
     Kind = TTI::SK_ExtractSubvector;
-  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args,
-                               CxtI);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+                               Args, CxtI);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,

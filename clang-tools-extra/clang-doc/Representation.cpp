@@ -143,6 +143,8 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return reduce<FunctionInfo>(Values);
   case InfoType::IT_typedef:
     return reduce<TypedefInfo>(Values);
+  case InfoType::IT_concept:
+    return reduce<ConceptInfo>(Values);
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
@@ -288,6 +290,7 @@ void NamespaceInfo::merge(NamespaceInfo &&Other) {
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
   reduceChildren(Children.Enums, std::move(Other.Children.Enums));
   reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
+  reduceChildren(Children.Concepts, std::move(Other.Children.Concepts));
   mergeBase(std::move(Other));
 }
 
@@ -352,6 +355,19 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
   SymbolInfo::merge(std::move(Other));
 }
 
+void ConceptInfo::merge(ConceptInfo &&Other) {
+  assert(mergeable(Other));
+  if (!IsType)
+    IsType = Other.IsType;
+  if (ConstraintExpression.empty())
+    ConstraintExpression = std::move(Other.ConstraintExpression);
+  if (Template.Constraints.empty())
+    Template.Constraints = std::move(Other.Template.Constraints);
+  if (Template.Params.empty())
+    Template.Params = std::move(Other.Template.Params);
+  SymbolInfo::merge(std::move(Other));
+}
+
 BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
 
 BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
@@ -387,6 +403,9 @@ llvm::SmallString<16> Info::extractName() const {
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_function:
     return llvm::SmallString<16>("@nonymous_function_" +
+                                 toHex(llvm::toStringRef(USR)));
+  case InfoType::IT_concept:
+    return llvm::SmallString<16>("@nonymous_concept_" +
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_default:
     return llvm::SmallString<16>("@nonymous_" + toHex(llvm::toStringRef(USR)));
@@ -453,6 +472,7 @@ void ScopeChildren::sort() {
   llvm::sort(Functions.begin(), Functions.end());
   llvm::sort(Enums.begin(), Enums.end());
   llvm::sort(Typedefs.begin(), Typedefs.end());
+  llvm::sort(Concepts.begin(), Concepts.end());
 }
 } // namespace doc
 } // namespace clang

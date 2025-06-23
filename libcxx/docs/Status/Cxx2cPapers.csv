@@ -104,7 +104,7 @@
 "`P3137R3 <https://wg21.link/P3137R3>`__","``views::to_input``","2025-02 (Hagenberg)","","",""
 "`P0472R3 <https://wg21.link/P0472R3>`__","Put ``std::monostate`` in ``<utility>``","2025-02 (Hagenberg)","|Complete|","21",""
 "`P3349R1 <https://wg21.link/P3349R1>`__","Converting contiguous iterators to pointers","2025-02 (Hagenberg)","","",""
-"`P3372R3 <https://wg21.link/P3372R3>`__","constexpr containers and adaptors","2025-02 (Hagenberg)","","",""
+"`P3372R3 <https://wg21.link/P3372R3>`__","constexpr containers and adaptors","2025-02 (Hagenberg)","|In Progress|","",""
 "`P3378R2 <https://wg21.link/P3378R2>`__","constexpr exception types","2025-02 (Hagenberg)","","",""
 "`P3441R2 <https://wg21.link/P3441R2>`__","Rename ``simd_split`` to ``simd_chunk``","2025-02 (Hagenberg)","","",""
 "`P3287R3 <https://wg21.link/P3287R3>`__","Exploration of namespaces for ``std::simd``","2025-02 (Hagenberg)","","",""
