@@ -18,6 +18,13 @@ include "mlir/IR/EnumAttr.td"
 def XeVM_Dialect : Dialect {
   let name = "xevm";
   let cppNamespace = "::mlir::xevm";
+  let summary = "The XeVM dialect that extends LLVM dialect and models Intel GPU's hardware features.";
+  let description = [{
+    The XeVM dialect is extension to the LLVM dialect that models hardware
+    features of Intel GPUs. The dialect is designed to work with the Xe
+    architecture for Intel GPUs, supporting advanced operations like 2D block
+    loads, stores, prefetch and matrix multiply-add (MMA) operations.
+  }];
   let dependentDialects = ["LLVM::LLVMDialect"];
 
   let extraClassDeclaration = [{
