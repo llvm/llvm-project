@@ -610,9 +610,9 @@ HashRecognize::recognizeCRC() const {
     return VE.getError();
   KnownBits ResultBits = VE.KnownPhis.at(ConditionalRecurrence.Phi);
 
+  unsigned N = std::min(TC, ResultBits.getBitWidth());
   auto IsZero = [](const KnownBits &K) { return K.isZero(); };
-  if (!checkExtractBits(ResultBits, std::min(TC, ResultBits.getBitWidth()),
-                        IsZero, *ByteOrderSwapped))
+  if (!checkExtractBits(ResultBits, N, IsZero, *ByteOrderSwapped))
     return ErrBits(ResultBits, TC, *ByteOrderSwapped);
 
   return PolynomialInfo(TC, LHS, GenPoly, ComputedValue, *ByteOrderSwapped,
