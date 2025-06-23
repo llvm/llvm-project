@@ -52,8 +52,8 @@ cond.false:
   ret i16 %conv
 }
 
-define void @test_as_arg_neg(i8 %a, i8 %b) {
-; CHECK-LABEL: define void @test_as_arg_neg(
+define void @test_as_arg_wrong_icmp(i8 %a, i8 %b) {
+; CHECK-LABEL: define void @test_as_arg_wrong_icmp(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[COND_END:.*]], label %[[COND_FALSE:.*]]
@@ -78,8 +78,34 @@ cond.end:
   ret void
 }
 
-define i16 @test_as_retval_neg(i8 %a, i8 %b) {
-; CHECK-LABEL: define i16 @test_as_retval_neg(
+define void @test_as_arg_missing_nsw(i8 %a, i8 %b) {
+; CHECK-LABEL: define void @test_as_arg_missing_nsw(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[COND_END:.*]], label %[[COND_FALSE:.*]]
+; CHECK:       [[COND_FALSE]]:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[B]], [[A]]
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i16
+; CHECK-NEXT:    call void @subroutine(i16 [[CONV]])
+; CHECK-NEXT:    br label %[[COND_END]]
+; CHECK:       [[COND_END]]:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp sgt i8 %a, %b
+  br i1 %cmp, label %cond.end, label %cond.false
+
+cond.false:
+  %sub = sub i8 %b, %a
+  %conv = sext i8 %sub to i16
+  call void @subroutine(i16 %conv)
+  br label %cond.end
+
+cond.end:
+  ret void
+}
+
+define i16 @test_as_retval_wrong_icmp(i8 %a, i8 %b) {
+; CHECK-LABEL: define i16 @test_as_retval_wrong_icmp(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
@@ -98,6 +124,30 @@ cond.true:
 
 cond.false:
   %sub = sub nsw i8 %b, %a
+  %conv = sext i8 %sub to i16
+  ret i16 %conv
+}
+
+define i16 @test_as_retval_missing_nsw(i8 %a, i8 %b) {
+; CHECK-LABEL: define i16 @test_as_retval_missing_nsw(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+; CHECK:       [[COND_TRUE]]:
+; CHECK-NEXT:    ret i16 0
+; CHECK:       [[COND_FALSE]]:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[B]], [[A]]
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i16
+; CHECK-NEXT:    ret i16 [[CONV]]
+;
+  %cmp = icmp sgt i8 %a, %b
+  br i1 %cmp, label %cond.true, label %cond.false
+
+cond.true:
+  ret i16 0
+
+cond.false:
+  %sub = sub i8 %b, %a
   %conv = sext i8 %sub to i16
   ret i16 %conv
 }
