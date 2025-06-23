@@ -367,15 +367,20 @@ def PartialReductionOpInterface :
     OpInterface<"PartialReductionOpInterface", [TilingInterface]> {
   let description = [{
     Interface for allowing operations to expose information needed to
-    tile reductions using partial reduction followed by merge. This is
-    complementary to TilingInterface to tile reductions.
+    tile reductions using partial reduction followed by merge. This
+    extends the `TilingInterface` to allow splitting a reduction
+    dimension into a parallel dimension and reduction dimension.
+    The materialized inter-tile loop could either be the reduction dimension
+    (i.e. `ReductionTilingStrategy::PartialReductionOuterReduction`) or
+    the parallel dimension (i.e
+    `ReductionTilingStrategy::PartialReductionOuterReduction`).
   }];
   let cppNamespace = "::mlir";
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
           Method to generate a tensor initalized with the identity value of the
-          operation reduction. The tensor shape is equal to operation result
+          reduction operator. The tensor shape is equal to operation result
           shape with new dimension for each non zero tile size.
         }],
         /*retType=*/"::mlir::FailureOr<SmallVector<Value>>",
@@ -383,7 +388,7 @@ def PartialReductionOpInterface :
         /*args=*/(ins
             "::mlir::OpBuilder &":$b,
             "Location":$loc,
-            "::mlir::ArrayRef<::mlir::OpFoldResult>":$sizes,
+            "::mlir::ArrayRef<::mlir::OpFoldResult>":$tileSizes,
             "const ::mlir::SetVector<unsigned> &":$reductionDims),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
@@ -396,6 +401,11 @@ def PartialReductionOpInterface :
           reduction dimension are converted to parallel dimensions with a size
           less or equal to the tile size. This is meant to be used with
           `mergeReductions` method which will combine the partial reductions.
+          The method recieves the `offset` and `sizes` for all iteration space
+          dimensions, as well as the iteration number of the tiled reduction
+          dimensions (which is the induction variable of the inter-tile loop
+          for the reduction dimension divided by the step of the loop) in
+          `splitReductionIvs`.
         }],
         /*retType=*/"::mlir::FailureOr<TilingResult>",
         /*methodName=*/"tileToPartialReduction",
@@ -406,7 +416,8 @@ def PartialReductionOpInterface :
             "ValueRange":$init,
             "::mlir::ArrayRef<::mlir::OpFoldResult>":$offsets,
             "::mlir::ArrayRef<::mlir::OpFoldResult>":$sizes,
-            "const ::llvm::SetVector<unsigned> &":$reductionDims),
+            "const ::llvm::SetVector<unsigned> &":$reductionDims,
+            "::mlir::ArrayRef<::mlir::OpFoldResult>":$splitReductionIvs),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -436,15 +447,22 @@ def PartialReductionOpInterface :
           the tiled operation. This is same as
           TilingInterface:::getResultTilePosition, but determines the result
           tile position for partial reduction.
+          The method recieves the `offset` and `sizes` for all iteration space
+          dimensions, as well as the iteration number of the tiled reduction
+          dimensions (which is the induction variable of the inter-tile loop
+          for the reduction dimension divided by the tile size specified) in
+          `splitReductionIvs`.
         }],
         /*retType=*/"::llvm::LogicalResult",
         /*methodName=*/"getPartialResultTilePosition",
         /*args=*/(ins
             "::mlir::OpBuilder &":$b,
             "unsigned":$resultNumber,
+            "ReductionTilingStrategy":$tilingStrategy,
             "::mlir::ArrayRef<::mlir::OpFoldResult> ":$offsets,
             "::mlir::ArrayRef<::mlir::OpFoldResult> ":$sizes,
             "const ::mlir::SetVector<unsigned> &":$reductionDims,
+            "::mlir::ArrayRef<::mlir::OpFoldResult>":$splitReductionIvs,
             "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultOffsets,
             "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultSizes),
         /*methodBody=*/"",
