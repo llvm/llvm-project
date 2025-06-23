@@ -232,3 +232,13 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcscpy
 )
+
+add_libc_test(
+  wcpcpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcpcpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcpcpy
+)
