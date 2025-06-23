@@ -23,7 +23,12 @@ namespace __sanitizer {
 typedef CompactSizeClassMap InternalSizeClassMap;
 
 struct AP32 {
+// For AIX 64-bit, the mmap begin is at address 0x0a00000000000000ULL.
+#if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
+  static const uptr kSpaceBeg = 0x0a00000000000000ULL;
+#else
   static const uptr kSpaceBeg = 0;
+#endif
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = 0;
   typedef InternalSizeClassMap SizeClassMap;
