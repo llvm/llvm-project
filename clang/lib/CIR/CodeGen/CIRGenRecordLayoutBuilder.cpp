@@ -640,12 +640,54 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
 
   // Dump the layout, if requested.
   if (getASTContext().getLangOpts().DumpRecordLayouts) {
-    cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: dump layout");
+    llvm::outs() << "\n*** Dumping CIRgen Record Layout\n";
+    llvm::outs() << "Record: ";
+    rd->dump(llvm::outs());
+    llvm::outs() << "\nLayout: ";
+    rl->print(llvm::outs());
   }
 
   // TODO: implement verification
   return rl;
 }
+
+void CIRGenRecordLayout::print(raw_ostream &os) const {
+  os << "<CIRecordLayout\n";
+  os << "   CIR Type:" << completeObjectType << "\n";
+  if (baseSubobjectType)
+    os << "   NonVirtualBaseCIRType:" << baseSubobjectType << "\n";
+  os << "   IsZeroInitializable:" << zeroInitializable << "\n";
+  os << "   BitFields:[\n";
+  std::vector<std::pair<unsigned, const CIRGenBitFieldInfo *>> bitInfo;
+  for (auto &[decl, info] : bitFields) {
+    const RecordDecl *rd = decl->getParent();
+    unsigned index = 0;
+    for (RecordDecl::field_iterator it = rd->field_begin(); *it != decl; ++it)
+      ++index;
+    bitInfo.push_back(std::make_pair(index, &info));
+  }
+  llvm::array_pod_sort(bitInfo.begin(), bitInfo.end());
+  for (std::pair<unsigned, const CIRGenBitFieldInfo *> &info : bitInfo) {
+    os.indent(4);
+    info.second->print(os);
+    os << "\n";
+  }
+  os << "   ]>\n";
+}
+
+void CIRGenBitFieldInfo::print(raw_ostream &os) const {
+  os << "<CIRBitFieldInfo" << " name:" << name << " offset:" << offset
+     << " size:" << size << " isSigned:" << isSigned
+     << " storageSize:" << storageSize
+     << " storageOffset:" << storageOffset.getQuantity()
+     << " volatileOffset:" << volatileOffset
+     << " volatileStorageSize:" << volatileStorageSize
+     << " volatileStorageOffset:" << volatileStorageOffset.getQuantity() << ">";
+}
+
+void CIRGenRecordLayout::dump() const { print(llvm::errs()); }
+
+void CIRGenBitFieldInfo::dump() const { print(llvm::errs()); }
 
 void CIRRecordLowering::lowerUnion() {
   CharUnits layoutSize = astRecordLayout.getSize();
