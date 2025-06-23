@@ -14,10 +14,10 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSOURCELANGUAGE_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSOURCELANGUAGE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {

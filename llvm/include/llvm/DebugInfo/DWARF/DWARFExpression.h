@@ -187,7 +187,8 @@ public:
   /// \param OS to this stream
   /// \param GetNameForDWARFReg callback to return dwarf register name
   LLVM_ABI static void print(const DWARFExpression *E, raw_ostream &OS,
-                    DIDumpOptions DumpOpts, DWARFUnit *U, bool IsEH = false);
+                             DIDumpOptions DumpOpts, DWARFUnit *U,
+                             bool IsEH = false);
 
   /// Print the expression in a format intended to be compact and useful to a
   /// user, but not perfectly unambiguous, or capable of representing every
@@ -199,9 +200,10 @@ public:
   /// \param GetNameForDWARFReg callback to return dwarf register name
   ///
   /// \returns true if the expression was successfully printed
-  LLVM_ABI static bool printCompact(const DWARFExpression *E, raw_ostream &OS,
-                           std::function<StringRef(uint64_t RegNum, bool IsEH)>
-                               GetNameForDWARFReg = nullptr);
+  LLVM_ABI static bool printCompact(
+      const DWARFExpression *E, raw_ostream &OS,
+      std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg =
+          nullptr);
 
   /// Pretty print a register opcode and operands.
   /// \param U within the context of this Dwarf unit, if any.
@@ -212,8 +214,9 @@ public:
   ///
   /// returns true if the Op was successfully printed
   LLVM_ABI static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
-                                    DIDumpOptions DumpOpts, uint8_t Opcode,
-                                    ArrayRef<uint64_t> Operands);
+                                             DIDumpOptions DumpOpts,
+                                             uint8_t Opcode,
+                                             ArrayRef<uint64_t> Operands);
 
 private:
   static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
