@@ -66,7 +66,9 @@ enum BlockId {
   BI_TEMPLATE_BLOCK_ID,
   BI_TEMPLATE_SPECIALIZATION_BLOCK_ID,
   BI_TEMPLATE_PARAM_BLOCK_ID,
+  BI_CONSTRAINT_BLOCK_ID,
   BI_TYPEDEF_BLOCK_ID,
+  BI_CONCEPT_BLOCK_ID,
   BI_LAST,
   BI_FIRST = BI_VERSION_BLOCK_ID
 };
@@ -135,6 +137,11 @@ enum RecordId {
   TYPEDEF_NAME,
   TYPEDEF_DEFLOCATION,
   TYPEDEF_IS_USING,
+  CONCEPT_USR,
+  CONCEPT_NAME,
+  CONCEPT_IS_TYPE,
+  CONCEPT_CONSTRAINT_EXPRESSION,
+  CONSTRAINT_EXPRESSION,
   RI_LAST,
   RI_FIRST = VERSION
 };
@@ -150,7 +157,8 @@ enum class FieldId {
   F_vparent,
   F_type,
   F_child_namespace,
-  F_child_record
+  F_child_record,
+  F_concept
 };
 
 class ClangDocBitcodeWriter {
@@ -179,6 +187,8 @@ public:
   void emitBlock(const TemplateInfo &T);
   void emitBlock(const TemplateSpecializationInfo &T);
   void emitBlock(const TemplateParamInfo &T);
+  void emitBlock(const ConceptInfo &T);
+  void emitBlock(const ConstraintInfo &T);
   void emitBlock(const Reference &B, FieldId F);
 
 private:
