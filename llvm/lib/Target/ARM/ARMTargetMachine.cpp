@@ -121,29 +121,10 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<ARMElfTargetObjectFile>();
 }
 
-static ARMBaseTargetMachine::ARMABI
-computeTargetABI(const Triple &TT, StringRef CPU,
-                 const TargetOptions &Options) {
-  StringRef ABIName = Options.MCOptions.getABIName();
-
-  if (ABIName.empty())
-    ABIName = ARM::computeDefaultTargetABI(TT, CPU);
-
-  if (ABIName == "aapcs16")
-    return ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-  else if (ABIName.starts_with("aapcs"))
-    return ARMBaseTargetMachine::ARM_ABI_AAPCS;
-  else if (ABIName.starts_with("apcs"))
-    return ARMBaseTargetMachine::ARM_ABI_APCS;
-
-  llvm_unreachable("Unhandled/unknown ABI Name!");
-  return ARMBaseTargetMachine::ARM_ABI_UNKNOWN;
-}
-
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
                                      const TargetOptions &Options,
                                      bool isLittle) {
-  auto ABI = computeTargetABI(TT, CPU, Options);
+  auto ABI = ARM::computeTargetABI(TT, CPU, Options.MCOptions.ABIName);
   std::string Ret;
 
   if (isLittle)
@@ -163,19 +144,19 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   Ret += "-Fi8";
 
   // ABIs other than APCS have 64 bit integers with natural alignment.
-  if (ABI != ARMBaseTargetMachine::ARM_ABI_APCS)
+  if (ABI != ARM::ARM_ABI_APCS)
     Ret += "-i64:64";
 
   // We have 64 bits floats. The APCS ABI requires them to be aligned to 32
   // bits, others to 64 bits. We always try to align to 64 bits.
-  if (ABI == ARMBaseTargetMachine::ARM_ABI_APCS)
+  if (ABI == ARM::ARM_ABI_APCS)
     Ret += "-f64:32:64";
 
   // We have 128 and 64 bit vectors. The APCS ABI aligns them to 32 bits, others
   // to 64. We always ty to give them natural alignment.
-  if (ABI == ARMBaseTargetMachine::ARM_ABI_APCS)
+  if (ABI == ARM::ARM_ABI_APCS)
     Ret += "-v64:32:64-v128:32:128";
-  else if (ABI != ARMBaseTargetMachine::ARM_ABI_AAPCS16)
+  else if (ABI != ARM::ARM_ABI_AAPCS16)
     Ret += "-v128:64:128";
 
   // Try to align aggregates to 32 bits (the default is 64 bits, which has no
@@ -187,9 +168,9 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
 
   // The stack is 128 bit aligned on NaCl, 64 bit aligned on AAPCS and 32 bit
   // aligned everywhere else.
-  if (TT.isOSNaCl() || ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16)
+  if (TT.isOSNaCl() || ABI == ARM::ARM_ABI_AAPCS16)
     Ret += "-S128";
-  else if (ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS)
+  else if (ABI == ARM::ARM_ABI_AAPCS)
     Ret += "-S64";
   else
     Ret += "-S32";
@@ -226,7 +207,7 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(computeTargetABI(TT, CPU, Options)),
+      TargetABI(ARM::computeTargetABI(TT, CPU, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
 
   // Default to triple-appropriate float ABI

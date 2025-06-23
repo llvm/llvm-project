@@ -1800,9 +1800,9 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   Walk(std::get<parser::TypeSpec>(spec.t));
   auto &varName{std::get<parser::Name>(spec.t)};
   DeclareObjectEntity(varName);
+  EndDeclTypeSpec();
 
   Walk(clauses);
-  EndDeclTypeSpec();
   PopScope();
 }
 

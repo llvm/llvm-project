@@ -7767,7 +7767,9 @@ SDValue PPCTargetLowering::LowerCall_AIX(
           DAG.getConstant(VA.getLocMemOffset(), dl, StackPtr.getValueType());
       PtrOff = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
       MemOpChains.push_back(
-          DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
+          DAG.getStore(Chain, dl, Arg, PtrOff,
+                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset()),
+                       Subtarget.getFrameLowering()->getStackAlign()));
 
       continue;
     }
@@ -17982,8 +17984,7 @@ Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
 
   Register Reg = MatchRegisterName(RegName);
   if (!Reg)
-    report_fatal_error(
-        Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
+    return Reg;
 
   // FIXME: Unable to generate code for `-O2` but okay for `-O0`.
   // Need followup investigation as to why.
