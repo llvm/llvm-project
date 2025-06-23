@@ -6992,7 +6992,7 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       namespace N1 {
-      namespace N2
+      namespace N2 {
       function();
       }
       }

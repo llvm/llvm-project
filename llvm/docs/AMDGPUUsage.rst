@@ -531,6 +531,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1250``                 ``amdgcn``   APU                     - Architected                   *TBA*
+                                                                        flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      =========== =============== ============ ===== ================= =============== =============== ======================
 
 Generic processors allow execution of a single code object on any of the processors that
@@ -2265,7 +2272,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1101``          0x046      ``gfx1101``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1102``          0x047      ``gfx1102``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1200``          0x048      ``gfx1200``
-     *reserved*                                 0x049      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1250``          0x049      ``gfx1250``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1151``          0x04a      ``gfx1151``
      *reserved*                                 0x04b      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
