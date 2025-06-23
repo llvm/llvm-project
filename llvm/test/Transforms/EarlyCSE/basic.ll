@@ -137,7 +137,7 @@ declare i32 @func(ptr%P) readonly
 ;; Simple call CSE'ing.
 define i32 @test5(ptr%P) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[V1:%.*]] = call i32 @func(ptr [[P:%.*]]), !prof !0
+; CHECK-NEXT:    [[V1:%.*]] = call i32 @func(ptr [[P:%.*]]), !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 0
 ;
   %V1 = call i32 @func(ptr %P), !prof !0
@@ -212,10 +212,25 @@ define i32 @test9(ptr%P) {
   ret i32 %V1
 }
 
-;; Trivial DSE can be performed across a readnone call.
+;; Trivial DSE can be performed across a readnone nounwind call.
 define i32 @test10(ptr%P) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[V1:%.*]] = call i32 @func(ptr [[P:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    [[V1:%.*]] = call i32 @func(ptr [[P:%.*]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    store i32 5, ptr [[P]], align 4
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  store i32 4, ptr %P
+  %V1 = call i32 @func(ptr %P) readnone nounwind
+  store i32 5, ptr %P
+  ret i32 %V1
+}
+
+; Trivial DSE can't be performed across a potentially unwinding readnone
+; call, as the caller may read the memory on unwind.
+define i32 @test_readnone_missing_nounwind(ptr %P) {
+; CHECK-LABEL: @test_readnone_missing_nounwind(
+; CHECK-NEXT:    store i32 4, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = call i32 @func(ptr [[P]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 5, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[V1]]
 ;
