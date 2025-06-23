@@ -28312,10 +28312,7 @@ Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
 #endif
   }
 
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 SDValue X86TargetLowering::LowerFRAME_TO_ARGS_OFFSET(SDValue Op,
@@ -41266,7 +41263,7 @@ static SDValue combineX86ShufflesRecursively(
     resolveTargetShuffleFromZeroables(OpMask, OpUndef, OpZero,
                                       ResolveKnownZeros);
 
-    Mask = std::move(OpMask);
+    Mask = OpMask;
     Ops.append(OpInputs.begin(), OpInputs.end());
   } else {
     resolveTargetShuffleFromZeroables(OpMask, OpUndef, OpZero);

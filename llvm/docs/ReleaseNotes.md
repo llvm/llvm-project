@@ -251,6 +251,9 @@ Changes to the C API
 * Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
   debugging metadata of enumerators larger than 64 bits.
 
+* Added ``LLVMGetICmpSameSign`` and ``LLVMSetICmpSameSign`` for the `samesign`
+  flag on `icmp` instructions.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
