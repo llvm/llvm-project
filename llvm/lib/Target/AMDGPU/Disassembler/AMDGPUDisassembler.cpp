@@ -58,7 +58,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
-    report_fatal_error("Disassembly not yet supported for subtarget");
+    reportFatalUsageError("disassembly not yet supported for subtarget");
 
   for (auto [Symbol, Code] : AMDGPU::UCVersion::getGFXVersions())
     createConstantSymbolExpr(Symbol, Code);

@@ -273,4 +273,18 @@ namespace IncDec {
 #endif
 }
 
+#if __cplusplus >= 201402L
+const __int128_t a = ( (__int128_t)1 << 64 );
+const _BitInt(72) b = ( 1 << 72 ); // both-warning {{shift count >= width of type}}
+constexpr int shifts() { // both-error {{never produces a constant expression}}
+  (void)(2 >> a); // both-warning {{shift count >= width of type}} \
+                  // both-note {{shift count 18446744073709551616 >= width of type 'int' (32 bits)}}
+  (void)(2 >> b); // ref-warning {{shift count is negative}}
+  (void)(2 << a); // both-warning {{shift count >= width of type}}
+  (void)(2 << b); // ref-warning {{shift count is negative}}
+  return 1;
+}
+#endif
+
+
 #endif
