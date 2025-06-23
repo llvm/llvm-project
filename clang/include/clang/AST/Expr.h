@@ -1834,8 +1834,7 @@ class StringLiteral final
 
   /// Build a string literal.
   StringLiteral(const ASTContext &Ctx, StringRef Str, StringLiteralKind Kind,
-                bool Pascal, QualType Ty, const SourceLocation *Loc,
-                unsigned NumConcatenated);
+                bool Pascal, QualType Ty, ArrayRef<SourceLocation> Locs);
 
   /// Build an empty string literal.
   StringLiteral(EmptyShell Empty, unsigned NumConcatenated, unsigned Length,
@@ -1853,18 +1852,10 @@ class StringLiteral final
 
 public:
   /// This is the "fully general" constructor that allows representation of
-  /// strings formed from multiple concatenated tokens.
+  /// strings formed from one or more concatenated tokens.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
                                StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               const SourceLocation *Loc,
-                               unsigned NumConcatenated);
-
-  /// Simple constructor for string literals made from one token.
-  static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               SourceLocation Loc) {
-    return Create(Ctx, Str, Kind, Pascal, Ty, &Loc, 1);
-  }
+                               ArrayRef<SourceLocation> Locs);
 
   /// Construct an empty string literal.
   static StringLiteral *CreateEmpty(const ASTContext &Ctx,
