@@ -100,8 +100,7 @@ define i64 @andnot_sub_with_neg_i64(i64 %a0, i64 %a1) {
 define i32 @and_not_select_eq(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: and_not_select_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w1, w0
-; CHECK-NEXT:    cmp w8, w0
+; CHECK-NEXT:    bics wzr, w1, w0
 ; CHECK-NEXT:    csel w0, w0, w2, eq
 ; CHECK-NEXT:    ret
   %or = or i32 %b, %a
@@ -113,8 +112,7 @@ define i32 @and_not_select_eq(i32 %a, i32 %b, i32 %c) {
 define i32 @and_not_select_ne(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: and_not_select_ne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w1, w0
-; CHECK-NEXT:    cmp w8, w0
+; CHECK-NEXT:    bics wzr, w1, w0
 ; CHECK-NEXT:    csel w0, w0, w2, ne
 ; CHECK-NEXT:    ret
   %or = or i32 %b, %a
