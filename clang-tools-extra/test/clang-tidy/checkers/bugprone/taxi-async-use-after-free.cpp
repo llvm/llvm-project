@@ -39,7 +39,7 @@ void f_use_after_free() {
 void f_ref() {
   int xx = 1;
   std::vector<int> v;
-  int &x = x;
+  int &x = xx;
 
   v.push_back(engine::Async([&x]{ x = 2;}));
 }
