@@ -32,8 +32,8 @@ class COFFImportFileScanner {
 public:
   COFFImportFileScanner(std::set<std::string> &ImportedDynamicLibraries)
       : ImportedDynamicLibraries(ImportedDynamicLibraries) {}
-  LLVM_ABI Expected<bool> operator()(object::Archive &A, MemoryBufferRef MemberBuf,
-                            size_t Index) const;
+  LLVM_ABI Expected<bool>
+  operator()(object::Archive &A, MemoryBufferRef MemberBuf, size_t Index) const;
 
 private:
   std::set<std::string> &ImportedDynamicLibraries;
