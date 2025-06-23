@@ -9,6 +9,11 @@
 // This file contains a set of interfaces that can be used to define information
 // related to type inference.
 //
+// This interface is also used by ODS to create builders for operations that
+// do not require result type to be specified. Including this interface in
+// dialect op definitions is sufficient to result in such builders being
+// automatically generated for trivially buildable result types.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_INFERTYPEOPINTERFACE
@@ -37,6 +42,10 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       and the regions of the op. Be aware that this method is supposed to be
       called with valid arguments, e.g., operands are verified, or it may result
       in an undefined behavior.
+
+      The inferred result types may be less precise than what may be specified
+      directly or produced by refinement, but are required to be compatible
+      (as defined by the op's compatibility function).
       }],
       /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"inferReturnTypes",
@@ -67,10 +76,10 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       The return types may be elided or specific elements be null for elements
       that should just be returned but not verified.
 
-      Because this method can be called from within different stages of IR
-      verification, implementations should not assume the arguments to
-      represent fully valid IR and are responsible for checking inputs for
-      validity to the degree necessary to perform the return type inference.
+      This method may be called from within different stages of IR verification,
+      implementations should not assume the arguments to represent fully valid
+      IR and are responsible for checking inputs for validity to the degree
+      necessary to perform the return type inference.
       }],
       /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"refineReturnTypes",
@@ -100,8 +109,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
-      /*desc=*/"Returns whether two array of types are compatible result types"
-               " for an op.",
+      /*desc=*/"Returns whether two type ranges are compatible result types.",
       /*retTy=*/"bool",
       /*methodName=*/"isCompatibleReturnTypes",
       /*args=*/(ins "::mlir::TypeRange":$lhs, "::mlir::TypeRange":$rhs),

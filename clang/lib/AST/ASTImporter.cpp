@@ -1664,7 +1664,7 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
   if (!ToUnderlyingOrErr)
     return ToUnderlyingOrErr.takeError();
   return Importer.getToContext().getTemplateSpecializationType(
-      *ToTemplateOrErr, ToTemplateArgs, std::nullopt, *ToUnderlyingOrErr);
+      *ToTemplateOrErr, ToTemplateArgs, {}, *ToUnderlyingOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitElaboratedType(const ElaboratedType *T) {
@@ -4123,7 +4123,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         return std::move(Err);
       auto **Memory =
           new (Importer.getToContext()) CXXCtorInitializer *[NumInitializers];
-      std::copy(CtorInitializers.begin(), CtorInitializers.end(), Memory);
+      llvm::copy(CtorInitializers, Memory);
       auto *ToCtor = cast<CXXConstructorDecl>(ToFunction);
       ToCtor->setCtorInitializers(Memory);
       ToCtor->setNumCtorInitializers(NumInitializers);
@@ -4452,7 +4452,7 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   }
 
   SmallVector<TemplateParameterList *, 1> ToTPLists(D->NumTPLists);
-  auto **FromTPLists = D->getTrailingObjects<TemplateParameterList *>();
+  auto **FromTPLists = D->getTrailingObjects();
   for (unsigned I = 0; I < D->NumTPLists; I++) {
     if (auto ListOrErr = import(FromTPLists[I]))
       ToTPLists[I] = *ListOrErr;
@@ -7695,9 +7695,9 @@ ExpectedStmt ASTNodeImporter::VisitStringLiteral(StringLiteral *E) {
       E->tokloc_begin(), E->tokloc_end(), ToLocations.begin()))
     return std::move(Err);
 
-  return StringLiteral::Create(
-      Importer.getToContext(), E->getBytes(), E->getKind(), E->isPascal(),
-      *ToTypeOrErr, ToLocations.data(), ToLocations.size());
+  return StringLiteral::Create(Importer.getToContext(), E->getBytes(),
+                               E->getKind(), E->isPascal(), *ToTypeOrErr,
+                               ToLocations);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {

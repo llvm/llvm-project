@@ -206,6 +206,8 @@ private:
   DenseMap<const Value *, const PredicateBase *> PredicateMap;
   // The set of ssa_copy declarations we created with our custom mangling.
   SmallSet<AssertingVH<Function>, 20> CreatedDeclarations;
+  // Cache of ssa.copy declaration for a given type.
+  SmallDenseMap<Type *, Function *> DeclarationCache;
 };
 
 /// Printer pass for \c PredicateInfo.
