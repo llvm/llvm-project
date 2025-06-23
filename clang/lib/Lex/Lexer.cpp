@@ -174,6 +174,8 @@ void Lexer::InitLexer(const char *BufStart, const char *BufPtr,
   ExtendedTokenMode = 0;
 
   NewLinePtr = nullptr;
+
+  IsFirstPPToken = true;
 }
 
 /// Lexer constructor - Create a new lexer object for the specified buffer
@@ -3725,6 +3727,11 @@ bool Lexer::Lex(Token &Result) {
     HasLeadingEmptyMacro = false;
   }
 
+  if (IsFirstPPToken) {
+    Result.setFlag(Token::FirstPPToken);
+    IsFirstPPToken = false;
+  }
+
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
   IsAtPhysicalStartOfLine = false;
   bool isRawLex = isLexingRawMode();
@@ -3732,6 +3739,10 @@ bool Lexer::Lex(Token &Result) {
   bool returnedToken = LexTokenInternal(Result, atPhysicalStartOfLine);
   // (After the LexTokenInternal call, the lexer might be destroyed.)
   assert((returnedToken || !isRawLex) && "Raw lex must succeed");
+
+  if (returnedToken && Result.isFirstPPToken() && PP &&
+      !PP->hasSeenMainFileFirstPPToken())
+    PP->HandleMainFileFirstPPToken(Result);
   return returnedToken;
 }
 
@@ -4535,6 +4546,8 @@ const char *Lexer::convertDependencyDirectiveToken(
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
   Result.setLength(DDTok.Length);
   BufferPtr = TokPtr + DDTok.Length;
+  if (PP && !PP->hasSeenMainFileFirstPPToken() && Result.isFirstPPToken())
+    PP->HandleMainFileFirstPPToken(Result);
   return TokPtr;
 }
 
