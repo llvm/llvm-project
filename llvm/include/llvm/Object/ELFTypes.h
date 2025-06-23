@@ -831,8 +831,11 @@ struct BBAddrMap {
     bool BrProb : 1;
     bool MultiBBRange : 1;
     bool OmitBBEntries : 1;
+    bool DynamicInstCount : 1;
 
-    bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
+    bool hasPGOAnalysis() const {
+      return FuncEntryCount || BBFreq || BrProb || DynamicInstCount;
+    }
 
     bool hasPGOAnalysisBBData() const { return BBFreq || BrProb; }
 
@@ -842,7 +845,8 @@ struct BBAddrMap {
              (static_cast<uint8_t>(BBFreq) << 1) |
              (static_cast<uint8_t>(BrProb) << 2) |
              (static_cast<uint8_t>(MultiBBRange) << 3) |
-             (static_cast<uint8_t>(OmitBBEntries) << 4);
+             (static_cast<uint8_t>(OmitBBEntries) << 4) |
+             (static_cast<uint8_t>(DynamicInstCount) << 5);
     }
 
     // Decodes from minimum bit width representation and validates no
@@ -851,7 +855,7 @@ struct BBAddrMap {
       Features Feat{
           static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
           static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3)),
-          static_cast<bool>(Val & (1 << 4))};
+          static_cast<bool>(Val & (1 << 4)), static_cast<bool>(Val & (1 << 5))};
       if (Feat.encode() != Val)
         return createStringError(
             std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
@@ -861,9 +865,10 @@ struct BBAddrMap {
 
     bool operator==(const Features &Other) const {
       return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
-                      OmitBBEntries) ==
+                      OmitBBEntries, DynamicInstCount) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
-                      Other.MultiBBRange, Other.OmitBBEntries);
+                      Other.MultiBBRange, Other.OmitBBEntries,
+                      Other.DynamicInstCount);
     }
   };
 
@@ -1016,14 +1021,16 @@ struct PGOAnalysisMap {
   };
 
   uint64_t FuncEntryCount;           // Prof count from IR function
+  uint64_t DynamicInstCount;         // Dynamic instruction count
   std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
 
   // Flags to indicate if each PGO related info was enabled in this function
   BBAddrMap::Features FeatEnable;
 
   bool operator==(const PGOAnalysisMap &Other) const {
-    return std::tie(FuncEntryCount, BBEntries, FeatEnable) ==
-           std::tie(Other.FuncEntryCount, Other.BBEntries, Other.FeatEnable);
+    return std::tie(FuncEntryCount, DynamicInstCount, BBEntries, FeatEnable) ==
+           std::tie(Other.FuncEntryCount, Other.DynamicInstCount,
+                    Other.BBEntries, Other.FeatEnable);
   }
 };
 

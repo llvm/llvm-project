@@ -3,13 +3,14 @@
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=none | FileCheck %s --check-prefixes=CHECK,BASIC,PGO-NONE
 
 ;; Also verify this holds for all PGO features enabled
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=func-entry-count,bb-freq,br-prob | FileCheck %s --check-prefixes=CHECK,PGO-ALL,PGO-FEC,PGO-BBF,PGO-BRP
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=all | FileCheck %s --check-prefixes=CHECK,PGO-ALL,PGO-FEC,PGO-BBF,PGO-BRP
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=func-entry-count,bb-freq,br-prob,dyn-inst-count | FileCheck %s --check-prefixes=CHECK,PGO-ALL,PGO-FEC,PGO-BBF,PGO-BRP
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=all | FileCheck %s --check-prefixes=CHECK,PGO-ALL,PGO-FEC,PGO-BBF,PGO-BRP,PGO-DINST
 
 ;; Also verify that pgo extension only includes the enabled feature
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=func-entry-count | FileCheck %s --check-prefixes=CHECK,PGO-FEC,FEC-ONLY
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=bb-freq | FileCheck %s --check-prefixes=CHECK,PGO-BBF,BBF-ONLY
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=br-prob | FileCheck %s --check-prefixes=CHECK,PGO-BRP,BRP-ONLY
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=dyn-inst-count | FileCheck %s --check-prefixes=CHECK,PGO-DINST,DINST-ONLY
 
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=func-entry-count -basic-block-address-map-skip-bb-entries | FileCheck %s --check-prefixes=SKIP-BB-ENTRIES
 ; RUN: not llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=bb-freq -basic-block-address-map-skip-bb-entries 2>&1 | FileCheck %s --check-prefixes=SKIP-BB-ENTRIES-ERROR
@@ -71,8 +72,9 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3bazb{{$}}
 ; CHECK-NEXT:	.byte	2		# version
 ; BASIC-NEXT:	.byte	0		# feature
-; PGO-ALL-NEXT:	.byte	7		# feature
+; PGO-ALL-NEXT:	.byte	39 	 # feature
 ; FEC-ONLY-NEXT:.byte	1		# feature
+; DINST-ONLY-NEXT:.byte	32		# feature
 ; BBF-ONLY-NEXT:.byte	2		# feature
 ; BRP-ONLY-NEXT:.byte	4		# feature
 ; CHECK-NEXT:	.quad	.Lfunc_begin0	# function address
@@ -137,6 +139,8 @@ declare i32 @__gxx_personality_v0(...)
 ; PGO-BRP-NEXT:	.byte	1		# basic block successor count
 ; PGO-BRP-NEXT:	.byte	5		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\200\200\200\200\b"	# successor branch probability
+
+; PGO-DINST: .ascii	"\341\f"                        # Dynamic instruction count
 
 ; SKIP-BB-ENTRIES:      .byte	17                              # feature
 ; SKIP-BB-ENTRIES-NEXT:	.quad	.Lfunc_begin0                   # function address

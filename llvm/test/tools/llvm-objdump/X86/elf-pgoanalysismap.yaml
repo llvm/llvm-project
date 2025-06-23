@@ -43,9 +43,49 @@ Symbols:
 # ENTRYCOUNT: <foo>:
 # ENTRYCOUNT: <BB3> (Entry count: 1000):
 
+## Check the case where we only have dynamic instruction count.
+# RUN: yaml2obj --docnum=2 %s -o %t1
+# RUN: llvm-objdump %t1 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --check-prefix=DYNICNT
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text.foo
+    Type:    SHT_PROGBITS
+    Address: 0x0
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '50'
+  - Name:   .llvm_bb_addr_map.foo
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text.foo
+    Entries:
+      - Version: 2
+        Feature: 0x20
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            3
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x1
+    PGOAnalyses:
+      - DynamicInstCount: 1000
+Symbols:
+  - Name:    foo
+    Section: .text.foo
+    Value:   0x0
+
+# DYNICNT: <foo>:
+# DYNICNT: <BB3> (Dynamic instruction count: 1000):
+
 ## Check the case where we have entry points and block frequency information
 
-# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: yaml2obj %s --docnum=3 -o %t2
 # RUN: llvm-objdump %t2 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
 # RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRYCOUNT-BLOCKFREQ
 # RUN: llvm-objdump %t2 -d --symbolize-operands --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr | \
@@ -68,7 +108,7 @@ Sections:
     Link:   .text.foo
     Entries:
       - Version: 2
-        Feature: 0x3
+        Feature: 0x23
         BBRanges:
           - BaseAddress: 0x0
             BBEntries:
@@ -90,6 +130,7 @@ Sections:
                 Metadata:      0x2
     PGOAnalyses:
       - FuncEntryCount: 1000
+        DynamicInstCount: 2000
         PGOBBEntries:
           - BBFreq: 1000
           - BBFreq: 133
@@ -101,13 +142,13 @@ Symbols:
     Value:   0x0
 
 # ENTRYCOUNT-BLOCKFREQ:<foo>:
-# ENTRYCOUNT-BLOCKFREQ:<BB3> (Entry count: 1000, Frequency: 1000):
+# ENTRYCOUNT-BLOCKFREQ:<BB3> (Entry count: 1000, Dynamic instruction count: 2000, Frequency: 1000):
 # ENTRYCOUNT-BLOCKFREQ:<BB1> (Frequency: 133):
 # ENTRYCOUNT-BLOCKFREQ:<BB2> (Frequency: 18):
 # ENTRYCOUNT-BLOCKFREQ:<BB5> (Frequency: 1000):
 
 # ENTRYCOUNT-BLOCKFREQ-PRETTY:<foo>:
-# ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB3> (Entry count: 1000, Frequency: 1.0):
+# ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB3> (Entry count: 1000, Dynamic instruction count: 2000, Frequency: 1.0):
 # ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB1> (Frequency: 0.133):
 # ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB2> (Frequency: 0.018):
 # ENTRYCOUNT-BLOCKFREQ-PRETTY:<BB5> (Frequency: 1.0):
@@ -115,7 +156,7 @@ Symbols:
 ## Check the case where we have entry points, block frequency, and branch
 ## proabability information.
 
-# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: yaml2obj %s --docnum=4 -o %t3
 # RUN: llvm-objdump %t3 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
 # RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRY-FREQ-PROB
 # RUN: llvm-objdump %t3 -d --symbolize-operands --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr | \

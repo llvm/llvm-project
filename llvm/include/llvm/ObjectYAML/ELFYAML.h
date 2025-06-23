@@ -192,6 +192,7 @@ struct PGOAnalysisMapEntry {
     std::optional<std::vector<SuccessorEntry>> Successors;
   };
   std::optional<uint64_t> FuncEntryCount;
+  std::optional<uint64_t> DynamicInstCount;
   std::optional<std::vector<PGOBBEntry>> PGOBBEntries;
 };
 

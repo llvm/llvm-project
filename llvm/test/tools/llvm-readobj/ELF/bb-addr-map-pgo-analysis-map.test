@@ -15,7 +15,7 @@
 
 ## Check that a malformed section can be handled.
 # RUN: yaml2obj %s -DBITS=32 -DSIZE=24 -o %t2.o
-# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck --match-full-lines %s -DOFFSET=0x00000018 -DFILE=%t2.o --check-prefix=TRUNCATED
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck --match-full-lines %s -DOFFSET=0x00000014 -DFILE=%t2.o --check-prefix=TRUNCATED
 
 ## Check that missing features can be handled.
 # RUN: yaml2obj %s -DBITS=32 -DFEATURE=0x2 -o %t3.o
@@ -55,6 +55,7 @@
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     PGO analyses {
 # CHECK-NEXT:       FuncEntryCount: 100
+# CHECK-NEXT:       DynamicInstCount: 100
 # CHECK-NEXT:       PGO BB entries [
 # CHECK-NEXT:         {
 # RAW-NEXT:             Frequency: 100
@@ -98,6 +99,7 @@
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     PGO analyses {
 # CHECK-NEXT:       FuncEntryCount: 8888
+# CHECK-NEXT:       DynamicInstCount: 8888
 # CHECK-NEXT:       PGO BB entries [
 # CHECK-NEXT:         {
 # RAW-NEXT:             Frequency: 9000
@@ -173,7 +175,7 @@ Sections:
     Link:   .text
     Entries:
       - Version: 2
-        Feature: 0x7
+        Feature: 0x27
         BBRanges:
           - BaseAddress: [[ADDR=0x11111]]
             BBEntries:
@@ -186,7 +188,7 @@ Sections:
                 Size:          0x4
                 Metadata:      0x15
       - Version: 2
-        Feature: 0x3
+        Feature: 0x23
         BBRanges:
           - BaseAddress: 0x22222
             BBEntries:
@@ -196,6 +198,7 @@ Sections:
                 Metadata:      0x8
     PGOAnalyses:
       - FuncEntryCount: 100
+        DynamicInstCount: 100
         PGOBBEntries:
           - BBFreq:        100
             Successors:
@@ -204,6 +207,7 @@ Sections:
           - BBFreq:        100
             Successors:    []
       - FuncEntryCount: 8888
+        DynamicInstCount: 8888
         PGOBBEntries:
           - BBFreq:        9000
   - Name: dummy_section
@@ -237,4 +241,3 @@ Symbols:
     Section: .text.bar
     Type:    STT_FUNC
     Value:   0x33333
-
