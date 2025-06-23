@@ -19,8 +19,8 @@ cd build
 ```
 
 Each example can be built to use the libc in either
-[the overlay mode](https://libc.llvm.org/overlay_mode.html),
-[full host build mode](https://libc.llvm.org/full_host_build.html) or
+[the overlay mode](https://libc.llvm.org/overlay_mode.html), the
+[full host build mode](https://libc.llvm.org/full_host_build.html) or the
 [full cross build mode](https://libc.llvm.org/full_cross_build.html). The CMake
 configure step differs slightly depending on the mode you want to use the libc
 in.
