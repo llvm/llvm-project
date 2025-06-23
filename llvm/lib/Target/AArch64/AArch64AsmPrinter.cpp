@@ -2254,15 +2254,19 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   uint64_t KeyID = CPA.getKey()->getZExtValue();
   // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
   // AArch64AuthMCExpr::printImpl, so fail fast.
-  if (KeyID > AArch64PACKey::LAST)
-    report_fatal_error("AArch64 PAC Key ID '" + Twine(KeyID) +
-                       "' out of range [0, " +
-                       Twine((unsigned)AArch64PACKey::LAST) + "]");
+  if (KeyID > AArch64PACKey::LAST) {
+    CPA.getContext().emitError("AArch64 PAC Key ID '" + Twine(KeyID) +
+                               "' out of range [0, " +
+                               Twine((unsigned)AArch64PACKey::LAST) + "]");
+    KeyID = 0;
+  }
 
   uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
-  if (!isUInt<16>(Disc))
-    report_fatal_error("AArch64 PAC Discriminator '" + Twine(Disc) +
-                       "' out of range [0, 0xFFFF]");
+  if (!isUInt<16>(Disc)) {
+    CPA.getContext().emitError("AArch64 PAC Discriminator '" + Twine(Disc) +
+                               "' out of range [0, 0xFFFF]");
+    Disc = 0;
+  }
 
   // Finally build the complete @AUTH expr.
   return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),
