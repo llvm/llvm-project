@@ -863,11 +863,11 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     /// the distance in the number of elements between successive entries along
     /// a particular dimension.
     LogicalResult getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                      int64_t &offset);
+                                      int64_t &offset) const;
 
     /// Wrapper around getStridesAndOffset(SmallVectorImpl<int64_t>, int64_t)
     /// that will assert if the logical result is not succeeded.
-    std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset();
+    std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset() const;
 
     /// Return "true" if the layout is compatible with strided semantics.
     bool isStrided();
