@@ -4961,7 +4961,7 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     // (Dividend - (Quotient * Divisor).
     if (SDNode *RemNode = DAG.getNodeIfExists(ISD::SREM, N->getVTList(),
                                               { N0, N1 })) {
-      // If the udiv has the exact flag we shouldn't propagate it to the
+      // If the sdiv has the exact flag we shouldn't propagate it to the
       // remainder node.
       if (!N->getFlags().hasExact()) {
         SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, V, N1);

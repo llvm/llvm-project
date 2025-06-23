@@ -9403,6 +9403,8 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
     cast<LoadSDNode>(E)->refineAlignment(MMO);
+    if (cast<LoadSDNode>(E)->getMemOperand()->getRanges() && !MMO->getRanges())
+      cast<LoadSDNode>(E)->getMemOperand()->clearRanges();
     return SDValue(E, 0);
   }
   auto *N = newSDNode<LoadSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs, AM,
