@@ -3115,7 +3115,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
                           unsigned OpIdx, VPValue *OpV, unsigned Idx) {
   auto *DefR = OpV->getDefiningRecipe();
   if (!DefR)
-    return false;
+    return WideMember0->getOperand(OpIdx) == OpV;
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
     return !W->getMask() && WideMember0->getOperand(OpIdx) == OpV;
 
@@ -3251,7 +3251,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     return;
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
-  auto NarrowOp = [](VPRecipeBase *R) -> VPValue * {
+  auto NarrowOp = [](VPValue *V) -> VPValue * {
+    auto *R = V->getDefiningRecipe();
+    if (!R)
+      return V;
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
       // process one original iteration.
@@ -3280,11 +3283,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (auto *WideMember0 = dyn_cast<VPWidenRecipe>(
             StoreGroup->getStoredValues()[0]->getDefiningRecipe())) {
       for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
-        WideMember0->setOperand(
-            Idx, NarrowOp(WideMember0->getOperand(Idx)->getDefiningRecipe()));
+        WideMember0->setOperand(Idx, NarrowOp(WideMember0->getOperand(Idx)));
       Res = WideMember0;
     } else {
-      Res = NarrowOp(StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+      Res = NarrowOp(StoreGroup->getStoredValues()[0]);
     }
 
     auto *S = new VPWidenStoreRecipe(
