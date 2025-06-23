@@ -174,3 +174,10 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcpcpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
