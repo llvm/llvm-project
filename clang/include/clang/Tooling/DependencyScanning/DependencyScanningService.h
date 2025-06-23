@@ -108,7 +108,8 @@ public:
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
       bool EagerLoadModules = false, bool TraceVFS = false,
       std::time_t BuildSessionTimestamp =
-          llvm::sys::toTimeT(std::chrono::system_clock::now()));
+          llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      bool CacheNegativeStats = true);
 
   ScanningMode getMode() const { return Mode; }
 
@@ -119,6 +120,8 @@ public:
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
 
   bool shouldTraceVFS() const { return TraceVFS; }
+
+  bool shouldCacheNegativeStats() const { return CacheNegativeStats; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     assert(!SharedFS && "Expected not to have a CASFS");
@@ -151,6 +154,7 @@ private:
   const bool EagerLoadModules;
   /// Whether to trace VFS accesses.
   const bool TraceVFS;
+  const bool CacheNegativeStats;
   /// Shared CachingOnDiskFileSystem. Set to nullptr to not use CAS dependency
   /// scanning.
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS;
