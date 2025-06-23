@@ -814,7 +814,7 @@ public:
 
   llvm::StringRef backupStr(llvm::StringRef S) const {
     char *Buf = new (*this) char[S.size()];
-    std::copy(S.begin(), S.end(), Buf);
+    llvm::copy(S, Buf);
     return llvm::StringRef(Buf, S.size());
   }
 
