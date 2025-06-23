@@ -54,7 +54,13 @@ bool CanonicalizeDirectives(
 }
 
 static bool IsExecutionDirective(const parser::CompilerDirective &dir) {
-  return std::holds_alternative<parser::CompilerDirective::VectorAlways>(dir.u);
+  return std::holds_alternative<parser::CompilerDirective::VectorAlways>(
+             dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::Unroll>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoVector>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnroll>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(dir.u);
 }
 
 void CanonicalizationOfDirectives::Post(parser::SpecificationPart &spec) {
@@ -110,6 +116,21 @@ void CanonicalizationOfDirectives::Post(parser::Block &block) {
           common::visitors{[&](parser::CompilerDirective::VectorAlways &) {
                              CheckLoopDirective(*dir, block, it);
                            },
+              [&](parser::CompilerDirective::Unroll &) {
+                CheckLoopDirective(*dir, block, it);
+              },
+              [&](parser::CompilerDirective::UnrollAndJam &) {
+                CheckLoopDirective(*dir, block, it);
+              },
+              [&](parser::CompilerDirective::NoVector &) {
+                CheckLoopDirective(*dir, block, it);
+              },
+              [&](parser::CompilerDirective::NoUnroll &) {
+                CheckLoopDirective(*dir, block, it);
+              },
+              [&](parser::CompilerDirective::NoUnrollAndJam &) {
+                CheckLoopDirective(*dir, block, it);
+              },
               [&](auto &) {}},
           dir->u);
     }

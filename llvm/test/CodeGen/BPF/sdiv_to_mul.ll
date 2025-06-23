@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -mcpu=v1 < %s | FileCheck --check-prefix=CHECK-V1 %s
-; RUN: llc -march=bpfel -mcpu=v4 < %s | FileCheck --check-prefix=CHECK-V4 %s
+; RUN: llc -mtriple=bpfel -mcpu=v1 < %s | FileCheck --check-prefix=CHECK-V1 %s
+; RUN: llc -mtriple=bpfel -mcpu=v4 < %s | FileCheck --check-prefix=CHECK-V4 %s
 
 target triple = "bpf"
 

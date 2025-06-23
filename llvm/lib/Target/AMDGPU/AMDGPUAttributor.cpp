@@ -17,20 +17,13 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define DEBUG_TYPE "amdgpu-attributor"
 
-namespace llvm {
-void initializeCycleInfoWrapperPassPass(PassRegistry &);
-} // namespace llvm
-
 using namespace llvm;
-
-static cl::opt<unsigned> KernargPreloadCount(
-    "amdgpu-kernarg-preload-count",
-    cl::desc("How many kernel arguments to preload onto SGPRs"), cl::init(0));
 
 static cl::opt<unsigned> IndirectCallSpecializationThreshold(
     "amdgpu-indirect-call-specialization-threshold",
@@ -110,6 +103,8 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
                                                     : QUEUE_PTR;
   case Intrinsic::trap:
+  case Intrinsic::debugtrap:
+  case Intrinsic::ubsantrap:
     if (SupportsGetDoorBellID) // GetDoorbellID support implemented since V4.
       return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT
                                                       : QUEUE_PTR;
@@ -154,7 +149,14 @@ public:
 
   TargetMachine &TM;
 
-  enum ConstantStatus { DS_GLOBAL = 1 << 0, ADDR_SPACE_CAST = 1 << 1 };
+  enum ConstantStatus : uint8_t {
+    NONE = 0,
+    DS_GLOBAL = 1 << 0,
+    ADDR_SPACE_CAST_PRIVATE_TO_FLAT = 1 << 1,
+    ADDR_SPACE_CAST_LOCAL_TO_FLAT = 1 << 2,
+    ADDR_SPACE_CAST_BOTH_TO_FLAT =
+        ADDR_SPACE_CAST_PRIVATE_TO_FLAT | ADDR_SPACE_CAST_LOCAL_TO_FLAT
+  };
 
   /// Check if the subtarget has aperture regs.
   bool hasApertureRegs(Function &F) {
@@ -203,7 +205,7 @@ public:
   getWavesPerEU(const Function &F,
                 std::pair<unsigned, unsigned> FlatWorkGroupSize) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getWavesPerEU(F, FlatWorkGroupSize);
+    return ST.getWavesPerEU(FlatWorkGroupSize, getLDSSize(F), F);
   }
 
   std::optional<std::pair<unsigned, unsigned>>
@@ -224,7 +226,8 @@ public:
                          std::pair<unsigned, unsigned> WavesPerEU,
                          std::pair<unsigned, unsigned> FlatWorkGroupSize) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize);
+    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize,
+                                     getLDSSize(F));
   }
 
   unsigned getMaxWavesPerEU(const Function &F) {
@@ -233,13 +236,28 @@ public:
   }
 
 private:
-  /// Check if the ConstantExpr \p CE requires the queue pointer.
-  static bool visitConstExpr(const ConstantExpr *CE) {
+  /// Check if the ConstantExpr \p CE uses an addrspacecast from private or
+  /// local to flat. These casts may require the queue pointer.
+  static uint8_t visitConstExpr(const ConstantExpr *CE) {
+    uint8_t Status = NONE;
+
     if (CE->getOpcode() == Instruction::AddrSpaceCast) {
       unsigned SrcAS = CE->getOperand(0)->getType()->getPointerAddressSpace();
-      return castRequiresQueuePtr(SrcAS);
+      if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS)
+        Status |= ADDR_SPACE_CAST_PRIVATE_TO_FLAT;
+      else if (SrcAS == AMDGPUAS::LOCAL_ADDRESS)
+        Status |= ADDR_SPACE_CAST_LOCAL_TO_FLAT;
     }
-    return false;
+
+    return Status;
+  }
+
+  /// Returns the minimum amount of LDS space used by a workgroup running
+  /// function \p F.
+  static unsigned getLDSSize(const Function &F) {
+    return AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
+                                           {0, UINT32_MAX}, true)
+        .first;
   }
 
   /// Get the constant access bitmap for \p C.
@@ -254,8 +272,7 @@ private:
       Result = DS_GLOBAL;
 
     if (const auto *CE = dyn_cast<ConstantExpr>(C))
-      if (visitConstExpr(CE))
-        Result |= ADDR_SPACE_CAST;
+      Result |= visitConstExpr(CE);
 
     for (const Use &U : C->operands()) {
       const auto *OpC = dyn_cast<Constant>(U);
@@ -284,19 +301,13 @@ public:
     if (IsNonEntryFunc && (Access & DS_GLOBAL))
       return true;
 
-    return !HasAperture && (Access & ADDR_SPACE_CAST);
+    return !HasAperture && (Access & ADDR_SPACE_CAST_BOTH_TO_FLAT);
   }
 
   bool checkConstForAddrSpaceCastFromPrivate(const Constant *C) {
     SmallPtrSet<const Constant *, 8> Visited;
     uint8_t Access = getConstantAccess(C, Visited);
-
-    if (Access & ADDR_SPACE_CAST)
-      if (const auto *CE = dyn_cast<ConstantExpr>(C))
-        if (CE->getOperand(0)->getType()->getPointerAddressSpace() ==
-            AMDGPUAS::PRIVATE_ADDRESS)
-          return true;
-    return false;
+    return Access & ADDR_SPACE_CAST_PRIVATE_TO_FLAT;
   }
 
 private:
@@ -318,7 +329,7 @@ struct AAAMDAttributes
                                             Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAAMDAttributes"; }
+  StringRef getName() const override { return "AAAMDAttributes"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -344,9 +355,7 @@ struct AAUniformWorkGroupSize
                                                    Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override {
-    return "AAUniformWorkGroupSize";
-  }
+  StringRef getName() const override { return "AAUniformWorkGroupSize"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -926,9 +935,7 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override {
-    return "AAAMDFlatWorkGroupSize";
-  }
+  StringRef getName() const override { return "AAAMDFlatWorkGroupSize"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -1060,7 +1067,7 @@ struct AAAMDMaxNumWorkgroups
         /* ForceReplace= */ true);
   }
 
-  const std::string getName() const override { return "AAAMDMaxNumWorkgroups"; }
+  StringRef getName() const override { return "AAAMDMaxNumWorkgroups"; }
 
   const std::string getAsStr(Attributor *) const override {
     std::string Buffer = "AAAMDMaxNumWorkgroupsState[";
@@ -1102,47 +1109,25 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
-    auto TakeRange = [&](std::pair<unsigned, unsigned> R) {
-      auto [Min, Max] = R;
-      ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
-      IntegerRangeState RangeState(Range);
-      clampStateAndIndicateChange(this->getState(), RangeState);
-      indicateOptimisticFixpoint();
-    };
-
-    std::pair<unsigned, unsigned> MaxWavesPerEURange{
-        1U, InfoCache.getMaxWavesPerEU(*F)};
-
     // If the attribute exists, we will honor it if it is not the default.
     if (auto Attr = InfoCache.getWavesPerEUAttr(*F)) {
+      std::pair<unsigned, unsigned> MaxWavesPerEURange{
+          1U, InfoCache.getMaxWavesPerEU(*F)};
       if (*Attr != MaxWavesPerEURange) {
-        TakeRange(*Attr);
+        auto [Min, Max] = *Attr;
+        ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
+        IntegerRangeState RangeState(Range);
+        this->getState() = RangeState;
+        indicateOptimisticFixpoint();
         return;
       }
     }
 
-    // Unlike AAAMDFlatWorkGroupSize, it's getting trickier here. Since the
-    // calculation of waves per EU involves flat work group size, we can't
-    // simply use an assumed flat work group size as a start point, because the
-    // update of flat work group size is in an inverse direction of waves per
-    // EU. However, we can still do something if it is an entry function. Since
-    // an entry function is a terminal node, and flat work group size either
-    // from attribute or default will be used anyway, we can take that value and
-    // calculate the waves per EU based on it. This result can't be updated by
-    // no means, but that could still allow us to propagate it.
-    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
-      std::pair<unsigned, unsigned> FlatWorkGroupSize;
-      if (auto Attr = InfoCache.getFlatWorkGroupSizeAttr(*F))
-        FlatWorkGroupSize = *Attr;
-      else
-        FlatWorkGroupSize = InfoCache.getDefaultFlatWorkGroupSize(*F);
-      TakeRange(InfoCache.getEffectiveWavesPerEU(*F, MaxWavesPerEURange,
-                                                 FlatWorkGroupSize));
-    }
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
+      indicatePessimisticFixpoint();
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     ChangeStatus Change = ChangeStatus::UNCHANGED;
 
     auto CheckCallSite = [&](AbstractCallSite CS) {
@@ -1150,25 +1135,23 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
       Function *Func = getAssociatedFunction();
       LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
                         << "->" << Func->getName() << '\n');
+      (void)Func;
 
-      const auto *CallerInfo = A.getAAFor<AAAMDWavesPerEU>(
+      const auto *CallerAA = A.getAAFor<AAAMDWavesPerEU>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-      const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
-          *this, IRPosition::function(*Func), DepClassTy::REQUIRED);
-      if (!CallerInfo || !AssumedGroupSize || !CallerInfo->isValidState() ||
-          !AssumedGroupSize->isValidState())
+      if (!CallerAA || !CallerAA->isValidState())
         return false;
 
-      unsigned Min, Max;
-      std::tie(Min, Max) = InfoCache.getEffectiveWavesPerEU(
-          *Caller,
-          {CallerInfo->getAssumed().getLower().getZExtValue(),
-           CallerInfo->getAssumed().getUpper().getZExtValue() - 1},
-          {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
-           AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
-      ConstantRange CallerRange(APInt(32, Min), APInt(32, Max + 1));
-      IntegerRangeState CallerRangeState(CallerRange);
-      Change |= clampStateAndIndicateChange(this->getState(), CallerRangeState);
+      ConstantRange Assumed = getAssumed();
+      unsigned Min = std::max(Assumed.getLower().getZExtValue(),
+                              CallerAA->getAssumed().getLower().getZExtValue());
+      unsigned Max = std::max(Assumed.getUpper().getZExtValue(),
+                              CallerAA->getAssumed().getUpper().getZExtValue());
+      ConstantRange Range(APInt(32, Min), APInt(32, Max));
+      IntegerRangeState RangeState(Range);
+      getState() = RangeState;
+      Change |= getState() == Assumed ? ChangeStatus::UNCHANGED
+                                      : ChangeStatus::CHANGED;
 
       return true;
     };
@@ -1192,7 +1175,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAAMDWavesPerEU"; }
+  StringRef getName() const override { return "AAAMDWavesPerEU"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -1228,6 +1211,8 @@ static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
   return false;
 }
 
+// TODO: Migrate to range merge of amdgpu-agpr-alloc.
+// FIXME: Why is this using Attribute::NoUnwind?
 struct AAAMDGPUNoAGPR
     : public IRAttribute<Attribute::NoUnwind,
                          StateWrapper<BooleanState, AbstractAttribute>,
@@ -1243,7 +1228,10 @@ struct AAAMDGPUNoAGPR
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    if (F->hasFnAttribute("amdgpu-no-agpr"))
+    auto [MinNumAGPR, MaxNumAGPR] =
+        AMDGPU::getIntegerPairAttribute(*F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                        /*OnlyFirstRequired=*/true);
+    if (MinNumAGPR == 0)
       indicateOptimisticFixpoint();
   }
 
@@ -1290,10 +1278,10 @@ struct AAAMDGPUNoAGPR
       return ChangeStatus::UNCHANGED;
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
     return A.manifestAttrs(getIRPosition(),
-                           {Attribute::get(Ctx, "amdgpu-no-agpr")});
+                           {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
   }
 
-  const std::string getName() const override { return "AAAMDGPUNoAGPR"; }
+  StringRef getName() const override { return "AAAMDGPUNoAGPR"; }
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1307,23 +1295,77 @@ struct AAAMDGPUNoAGPR
 
 const char AAAMDGPUNoAGPR::ID = 0;
 
-static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  for (unsigned I = 0;
-       I < F.arg_size() &&
-       I < std::min(KernargPreloadCount.getValue(), ST.getMaxNumUserSGPRs());
-       ++I) {
-    Argument &Arg = *F.getArg(I);
-    // Check for incompatible attributes.
-    if (Arg.hasByRefAttr() || Arg.hasNestAttr())
-      break;
+/// Performs the final check and updates the 'amdgpu-waves-per-eu' attribute
+/// based on the finalized 'amdgpu-flat-work-group-size' attribute.
+/// Both attributes start with narrow ranges that expand during iteration.
+/// However, a narrower flat-workgroup-size leads to a wider waves-per-eu range,
+/// preventing optimal updates later. Therefore, waves-per-eu can't be updated
+/// with intermediate values during the attributor run. We defer the
+/// finalization of waves-per-eu until after the flat-workgroup-size is
+/// finalized.
+/// TODO: Remove this and move similar logic back into the attributor run once
+/// we have a better representation for waves-per-eu.
+static bool updateWavesPerEU(Module &M, TargetMachine &TM) {
+  bool Changed = false;
 
-    Arg.addAttr(Attribute::InReg);
+  LLVMContext &Ctx = M.getContext();
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+    std::optional<std::pair<unsigned, std::optional<unsigned>>>
+        FlatWgrpSizeAttr =
+            AMDGPU::getIntegerPairAttribute(F, "amdgpu-flat-work-group-size");
+
+    unsigned MinWavesPerEU = ST.getMinWavesPerEU();
+    unsigned MaxWavesPerEU = ST.getMaxWavesPerEU();
+
+    unsigned MinFlatWgrpSize = ST.getMinFlatWorkGroupSize();
+    unsigned MaxFlatWgrpSize = ST.getMaxFlatWorkGroupSize();
+    if (FlatWgrpSizeAttr.has_value()) {
+      MinFlatWgrpSize = FlatWgrpSizeAttr->first;
+      MaxFlatWgrpSize = *(FlatWgrpSizeAttr->second);
+    }
+
+    // Start with the "best" range.
+    unsigned Min = MinWavesPerEU;
+    unsigned Max = MinWavesPerEU;
+
+    // Compute the range from flat workgroup size. `getWavesPerEU` will also
+    // account for the 'amdgpu-waves-er-eu' attribute.
+    auto [MinFromFlatWgrpSize, MaxFromFlatWgrpSize] =
+        ST.getWavesPerEU(F, {MinFlatWgrpSize, MaxFlatWgrpSize});
+
+    // For the lower bound, we have to "tighten" it.
+    Min = std::max(Min, MinFromFlatWgrpSize);
+    // For the upper bound, we have to "extend" it.
+    Max = std::max(Max, MaxFromFlatWgrpSize);
+
+    // Clamp the range to the max range.
+    Min = std::max(Min, MinWavesPerEU);
+    Max = std::min(Max, MaxWavesPerEU);
+
+    // Update the attribute if it is not the max.
+    if (Min != MinWavesPerEU || Max != MaxWavesPerEU) {
+      SmallString<10> Buffer;
+      raw_svector_ostream OS(Buffer);
+      OS << Min << ',' << Max;
+      Attribute OldAttr = F.getFnAttribute("amdgpu-waves-per-eu");
+      Attribute NewAttr = Attribute::get(Ctx, "amdgpu-waves-per-eu", OS.str());
+      F.addFnAttr(NewAttr);
+      Changed |= OldAttr == NewAttr;
+    }
   }
+
+  return Changed;
 }
 
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
-                    AMDGPUAttributorOptions Options) {
+                    AMDGPUAttributorOptions Options,
+                    ThinOrFullLTOPhase LTOPhase) {
   SetVector<Function *> Functions;
   for (Function &F : M) {
     if (!F.isIntrinsic())
@@ -1358,9 +1400,13 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
-  LLVM_DEBUG(dbgs() << "[AMDGPUAttributor] Module " << M.getName() << " is "
-                    << (AC.IsClosedWorldModule ? "" : "not ")
-                    << "assumed to be a closed world.\n");
+  LLVM_DEBUG({
+    StringRef LTOPhaseStr = to_string(LTOPhase);
+    dbgs() << "[AMDGPUAttributor] Running at phase " << LTOPhaseStr << '\n'
+           << "[AMDGPUAttributor] Module " << M.getName() << " is "
+           << (AC.IsClosedWorldModule ? "" : "not ")
+           << "assumed to be a closed world.\n";
+  });
 
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
@@ -1371,8 +1417,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     if (!AMDGPU::isEntryFunctionCC(CC)) {
       A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
       A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
-    } else if (CC == CallingConv::AMDGPU_KERNEL) {
-      addPreloadKernArgHint(*F, TM);
     }
 
     for (auto &I : instructions(F)) {
@@ -1392,38 +1436,12 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     }
   }
 
-  ChangeStatus Change = A.run();
-  return Change == ChangeStatus::CHANGED;
+  bool Changed = A.run() == ChangeStatus::CHANGED;
+
+  Changed |= updateWavesPerEU(M, TM);
+
+  return Changed;
 }
-
-class AMDGPUAttributorLegacy : public ModulePass {
-public:
-  AMDGPUAttributorLegacy() : ModulePass(ID) {}
-
-  /// doInitialization - Virtual method overridden by subclasses to do
-  /// any necessary initialization before any pass is run.
-  bool doInitialization(Module &) override {
-    auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-    if (!TPC)
-      report_fatal_error("TargetMachine is required");
-
-    TM = &TPC->getTM<TargetMachine>();
-    return false;
-  }
-
-  bool runOnModule(Module &M) override {
-    AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM, /*Options=*/{});
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<CycleInfoWrapperPass>();
-  }
-
-  StringRef getPassName() const override { return "AMDGPU Attributor"; }
-  TargetMachine *TM;
-  static char ID;
-};
 } // namespace
 
 PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
@@ -1434,17 +1452,6 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   AnalysisGetter AG(FAM);
 
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM, Options) ? PreservedAnalyses::none()
-                                     : PreservedAnalyses::all();
+  return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
+                                               : PreservedAnalyses::all();
 }
-
-char AMDGPUAttributorLegacy::ID = 0;
-
-Pass *llvm::createAMDGPUAttributorLegacyPass() {
-  return new AMDGPUAttributorLegacy();
-}
-INITIALIZE_PASS_BEGIN(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
-INITIALIZE_PASS_END(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                    false, false)

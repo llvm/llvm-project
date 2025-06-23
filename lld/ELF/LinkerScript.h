@@ -186,7 +186,7 @@ public:
         sortOuter(SortSectionPolicy::Default),
         sortInner(SortSectionPolicy::Default) {}
 
-  bool excludesFile(const InputFile *file) const;
+  bool excludesFile(const InputFile &file) const;
 
   StringMatcher sectionPat;
   SortSectionPolicy sortOuter;
@@ -194,6 +194,7 @@ public:
 };
 
 class InputSectionDescription : public SectionCommand {
+  enum class MatchType { Trivial, WholeArchive, ArchivesExcluded } matchType;
   SingleStringMatcher filePat;
 
   // Cache of the most recent input argument and result of matchesFile().
@@ -202,17 +203,31 @@ class InputSectionDescription : public SectionCommand {
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
                           uint64_t withoutFlags = 0, StringRef classRef = {})
-      : SectionCommand(InputSectionKind), filePat(filePattern),
-        classRef(classRef), withFlags(withFlags), withoutFlags(withoutFlags) {
+      : SectionCommand(InputSectionKind), matchType(MatchType::Trivial),
+        filePat(filePattern), classRef(classRef), withFlags(withFlags),
+        withoutFlags(withoutFlags) {
     assert((filePattern.empty() || classRef.empty()) &&
            "file pattern and class reference are mutually exclusive");
+
+    // The matching syntax for whole archives and files outside of an archive
+    // can't be handled by SingleStringMatcher, and instead are handled
+    // manually within matchesFile()
+    if (!filePattern.empty()) {
+      if (filePattern.back() == ':') {
+        matchType = MatchType::WholeArchive;
+        filePat = filePattern.drop_back();
+      } else if (filePattern.front() == ':') {
+        matchType = MatchType::ArchivesExcluded;
+        filePat = filePattern.drop_front();
+      }
+    }
   }
 
   static bool classof(const SectionCommand *c) {
     return c->kind == InputSectionKind;
   }
 
-  bool matchesFile(const InputFile *file) const;
+  bool matchesFile(const InputFile &file) const;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
@@ -296,6 +311,7 @@ class LinkerScript final {
     MemoryRegion *lmaRegion = nullptr;
     uint64_t lmaOffset = 0;
     uint64_t tbssAddr = 0;
+    uint64_t overlaySize;
   };
 
   Ctx &ctx;

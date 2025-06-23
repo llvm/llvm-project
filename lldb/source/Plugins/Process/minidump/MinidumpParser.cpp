@@ -20,8 +20,8 @@
 #include <algorithm>
 #include <map>
 #include <optional>
-#include <vector>
 #include <utility>
+#include <vector>
 
 using namespace lldb_private;
 using namespace minidump;
@@ -49,6 +49,11 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetStream(StreamType stream_type) {
   return m_file->getRawStream(stream_type).value_or(llvm::ArrayRef<uint8_t>());
 }
 
+std::optional<llvm::ArrayRef<uint8_t>>
+MinidumpParser::GetRawStream(StreamType stream_type) {
+  return m_file->getRawStream(stream_type);
+}
+
 UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
   auto cv_record =
       GetData().slice(module->CvRecord.RVA, module->CvRecord.DataSize);
@@ -70,8 +75,7 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
     if (GetArchitecture().GetTriple().isOSBinFormatELF()) {
       if (pdb70_uuid->Age != 0)
         return UUID(pdb70_uuid, sizeof(*pdb70_uuid));
-      return UUID(&pdb70_uuid->Uuid,
-                                    sizeof(pdb70_uuid->Uuid));
+      return UUID(&pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
     }
     return UUID(*pdb70_uuid);
   } else if (cv_signature == CvSignature::ElfBuildId)
@@ -424,62 +428,65 @@ MinidumpParser::GetExceptionStreams() {
 
 std::optional<minidump::Range>
 MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
-  Log *log = GetLog(LLDBLog::Modules);
+  if (m_memory_ranges.IsEmpty())
+    PopulateMemoryRanges();
 
+  const MemoryRangeVector::Entry *entry =
+      m_memory_ranges.FindEntryThatContains(addr);
+  if (!entry)
+    return std::nullopt;
+
+  return entry->data;
+}
+
+void MinidumpParser::PopulateMemoryRanges() {
+  Log *log = GetLog(LLDBLog::Modules);
   auto ExpectedMemory = GetMinidumpFile().getMemoryList();
-  if (!ExpectedMemory) {
-    LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
-                   "Failed to read memory list: {0}");
-  } else {
+  if (ExpectedMemory) {
     for (const auto &memory_desc : *ExpectedMemory) {
       const LocationDescriptor &loc_desc = memory_desc.Memory;
       const lldb::addr_t range_start = memory_desc.StartOfMemoryRange;
       const size_t range_size = loc_desc.DataSize;
-
-      if (loc_desc.RVA + loc_desc.DataSize > GetData().size())
-        return std::nullopt;
-
-      if (range_start <= addr && addr < range_start + range_size) {
-        auto ExpectedSlice = GetMinidumpFile().getRawData(loc_desc);
-        if (!ExpectedSlice) {
-          LLDB_LOG_ERROR(log, ExpectedSlice.takeError(),
-                         "Failed to get memory slice: {0}");
-          return std::nullopt;
-        }
-        return minidump::Range(range_start, *ExpectedSlice);
+      auto ExpectedSlice = GetMinidumpFile().getRawData(loc_desc);
+      if (!ExpectedSlice) {
+        LLDB_LOG_ERROR(log, ExpectedSlice.takeError(),
+                       "Failed to get memory slice: {0}");
+        continue;
       }
+      m_memory_ranges.Append(MemoryRangeVector::Entry(
+          range_start, range_size,
+          minidump::Range(range_start, *ExpectedSlice)));
     }
+  } else {
+    LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
+                   "Failed to read memory list: {0}");
   }
 
   if (!GetStream(StreamType::Memory64List).empty()) {
     llvm::Error err = llvm::Error::success();
-    for (const auto &memory_desc :  GetMinidumpFile().getMemory64List(err)) {
-      if (memory_desc.first.StartOfMemoryRange <= addr 
-          && addr < memory_desc.first.StartOfMemoryRange + memory_desc.first.DataSize) {
-        return minidump::Range(memory_desc.first.StartOfMemoryRange, memory_desc.second);
-      }
+    for (const auto &memory_desc : GetMinidumpFile().getMemory64List(err)) {
+      m_memory_ranges.Append(MemoryRangeVector::Entry(
+          memory_desc.first.StartOfMemoryRange, memory_desc.first.DataSize,
+          minidump::Range(memory_desc.first.StartOfMemoryRange,
+                          memory_desc.second)));
     }
 
     if (err)
       LLDB_LOG_ERROR(log, std::move(err), "Failed to read memory64 list: {0}");
   }
 
-  return std::nullopt;
+  m_memory_ranges.Sort();
 }
 
 llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
                                                   size_t size) {
-  // I don't have a sense of how frequently this is called or how many memory
-  // ranges a Minidump typically has, so I'm not sure if searching for the
-  // appropriate range linearly each time is stupid.  Perhaps we should build
-  // an index for faster lookups.
   std::optional<minidump::Range> range = FindMemoryRange(addr);
   if (!range)
     return {};
 
   // There's at least some overlap between the beginning of the desired range
-  // (addr) and the current range.  Figure out where the overlap begins and how
-  // much overlap there is.
+  // (addr) and the current range.  Figure out where the overlap begins and
+  // how much overlap there is.
 
   const size_t offset = addr - range->start;
 
@@ -490,7 +497,8 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
   return range->range_ref.slice(offset, overlap);
 }
 
-llvm::iterator_range<FallibleMemory64Iterator> MinidumpParser::GetMemory64Iterator(llvm::Error &err) {
+llvm::iterator_range<FallibleMemory64Iterator>
+MinidumpParser::GetMemory64Iterator(llvm::Error &err) {
   llvm::ErrorAsOutParameter ErrAsOutParam(&err);
   return m_file->getMemory64List(err);
 }
@@ -602,8 +610,7 @@ std::pair<MemoryRegionInfos, bool> MinidumpParser::BuildMemoryRegions() {
   case StreamType::ST:                                                         \
     return #ST
 
-llvm::StringRef
-MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
+llvm::StringRef MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
   switch (stream_type) {
     ENUM_TO_CSTR(Unused);
     ENUM_TO_CSTR(ThreadList);
@@ -651,6 +658,7 @@ MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
     ENUM_TO_CSTR(FacebookAbortReason);
     ENUM_TO_CSTR(FacebookThreadName);
     ENUM_TO_CSTR(FacebookLogcat);
+    ENUM_TO_CSTR(LLDBGenerated);
   }
   return "unknown stream type";
 }

@@ -114,10 +114,14 @@ define <2 x float> @select_fcmp_fadd_vec(<2 x float> %x) {
 }
 
 
+; Should not fold, because the fmul by identity may produce a different NaN
+; value.
 define float @select_fcmp_fmul_nonrefinement(float %x, float %y) {
 ; CHECK-LABEL: @select_fcmp_fmul_nonrefinement(
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[FMUL]]
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[Y]], float [[FMUL]]
+; CHECK-NEXT:    ret float [[SEL]]
 ;
   %fcmp = fcmp oeq float %x, 1.0
   %fmul = fmul float %y, %x
@@ -137,8 +141,10 @@ define float @select_fcmp_fmul(float %x) {
 
 define float @select_fcmp_fdiv_nonrefinement(float %x, float %y) {
 ; CHECK-LABEL: @select_fcmp_fdiv_nonrefinement(
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[FDIV]]
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[Y]], float [[FDIV]]
+; CHECK-NEXT:    ret float [[SEL]]
 ;
   %fcmp = fcmp oeq float %x, 1.0
   %fdiv = fdiv float %y, %x

@@ -15,9 +15,11 @@
 #include "M68kISelLowering.h"
 #include "M68kCallingConv.h"
 #include "M68kMachineFunction.h"
+#include "M68kSelectionDAGInfo.h"
 #include "M68kSubtarget.h"
 #include "M68kTargetMachine.h"
 #include "M68kTargetObjectFile.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -1060,7 +1062,8 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 
 bool M68kTargetLowering::CanLowerReturn(
     CallingConv::ID CCID, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CCID, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_M68k);
@@ -1593,13 +1596,13 @@ static void lowerOverflowArithmetic(SDValue Op, SelectionDAG &DAG,
   case ISD::UMULO:
     PromoteMULO(ISD::ZERO_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::UMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::UMUL;
     CC = M68k::COND_VS;
     break;
   case ISD::SMULO:
     PromoteMULO(ISD::SIGN_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::SMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::SMUL;
     CC = M68k::COND_VS;
     break;
   }
@@ -1848,12 +1851,12 @@ static SDValue LowerTruncateToBTST(SDValue Op, ISD::CondCode CC,
 static bool hasNonFlagsUse(SDValue Op) {
   for (SDNode::use_iterator UI = Op->use_begin(), UE = Op->use_end(); UI != UE;
        ++UI) {
-    SDNode *User = *UI;
-    unsigned UOpNo = UI.getOperandNo();
+    SDNode *User = UI->getUser();
+    unsigned UOpNo = UI->getOperandNo();
     if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse()) {
-      // Look pass truncate.
-      UOpNo = User->use_begin().getOperandNo();
-      User = *User->use_begin();
+      // Look past truncate.
+      UOpNo = User->use_begin()->getOperandNo();
+      User = User->use_begin()->getUser();
     }
 
     if (User->getOpcode() != ISD::BRCOND && User->getOpcode() != ISD::SETCC &&
@@ -1990,7 +1993,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   case ISD::XOR:
     // Due to the ISEL shortcoming noted above, be conservative if this op is
     // likely to be selected as part of a load-modify-store instruction.
-    for (const auto *U : Op.getNode()->uses())
+    for (const auto *U : Op.getNode()->users())
       if (U->getOpcode() == ISD::STORE)
         goto default_case;
 
@@ -2542,7 +2545,7 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
               (M68k::CondCode)Cond.getOperand(0).getConstantOperandVal(0);
           CCode = M68k::GetOppositeBranchCondition(CCode);
           CC = DAG.getConstant(CCode, DL, MVT::i8);
-          SDNode *User = *Op.getNode()->use_begin();
+          SDNode *User = *Op.getNode()->user_begin();
           // Look for an unconditional branch following this conditional branch.
           // We need this because we need to reverse the successors in order
           // to implement FCMP_OEQ.
@@ -2830,8 +2833,7 @@ unsigned M68kTargetLowering::getJumpTableEncoding() const {
 const MCExpr *M68kTargetLowering::LowerCustomJumpTableEntry(
     const MachineJumpTableInfo *MJTI, const MachineBasicBlock *MBB,
     unsigned uid, MCContext &Ctx) const {
-  return MCSymbolRefExpr::create(MBB->getSymbol(), MCSymbolRefExpr::VK_GOTOFF,
-                                 Ctx);
+  return MCSymbolRefExpr::create(MBB->getSymbol(), M68k::S_GOTOFF, Ctx);
 }
 
 SDValue M68kTargetLowering::getPICJumpTableRelocBase(SDValue Table,
@@ -3638,64 +3640,6 @@ SDValue M68kTargetLowering::PerformDAGCombine(SDNode *N,
   }
 
   return SDValue();
-}
-
-//===----------------------------------------------------------------------===//
-// M68kISD Node Names
-//===----------------------------------------------------------------------===//
-const char *M68kTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case M68kISD::CALL:
-    return "M68kISD::CALL";
-  case M68kISD::TAIL_CALL:
-    return "M68kISD::TAIL_CALL";
-  case M68kISD::RET:
-    return "M68kISD::RET";
-  case M68kISD::TC_RETURN:
-    return "M68kISD::TC_RETURN";
-  case M68kISD::ADD:
-    return "M68kISD::ADD";
-  case M68kISD::SUB:
-    return "M68kISD::SUB";
-  case M68kISD::ADDX:
-    return "M68kISD::ADDX";
-  case M68kISD::SUBX:
-    return "M68kISD::SUBX";
-  case M68kISD::SMUL:
-    return "M68kISD::SMUL";
-  case M68kISD::UMUL:
-    return "M68kISD::UMUL";
-  case M68kISD::OR:
-    return "M68kISD::OR";
-  case M68kISD::XOR:
-    return "M68kISD::XOR";
-  case M68kISD::AND:
-    return "M68kISD::AND";
-  case M68kISD::CMP:
-    return "M68kISD::CMP";
-  case M68kISD::BTST:
-    return "M68kISD::BTST";
-  case M68kISD::SELECT:
-    return "M68kISD::SELECT";
-  case M68kISD::CMOV:
-    return "M68kISD::CMOV";
-  case M68kISD::BRCOND:
-    return "M68kISD::BRCOND";
-  case M68kISD::SETCC:
-    return "M68kISD::SETCC";
-  case M68kISD::SETCC_CARRY:
-    return "M68kISD::SETCC_CARRY";
-  case M68kISD::GLOBAL_BASE_REG:
-    return "M68kISD::GLOBAL_BASE_REG";
-  case M68kISD::Wrapper:
-    return "M68kISD::Wrapper";
-  case M68kISD::WrapperPC:
-    return "M68kISD::WrapperPC";
-  case M68kISD::SEG_ALLOCA:
-    return "M68kISD::SEG_ALLOCA";
-  default:
-    return NULL;
-  }
 }
 
 CCAssignFn *M68kTargetLowering::getCCAssignFn(CallingConv::ID CC, bool Return,

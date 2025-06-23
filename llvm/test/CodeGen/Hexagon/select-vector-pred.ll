@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv68 -mattr=+hvxv68,+hvx-length128b < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv68 -mattr=+hvxv68,+hvx-length128b < %s | FileCheck %s
 
 ; Do not generate selectI1,Q,Q.
 ; CHECK: q[[Q:[0-9]+]] = vsetq(r{{[0-9]+}})

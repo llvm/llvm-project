@@ -96,11 +96,10 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
   TypeSize Offset = TypeSize::getFixed(FixedOffset);
   ArrayRef<TypeSize> MemberOffsets = getMemberOffsets();
 
-  const auto *SI =
-      std::upper_bound(MemberOffsets.begin(), MemberOffsets.end(), Offset,
-                       [](TypeSize LHS, TypeSize RHS) -> bool {
-                         return TypeSize::isKnownLT(LHS, RHS);
-                       });
+  const auto *SI = llvm::upper_bound(MemberOffsets, Offset,
+                                     [](TypeSize LHS, TypeSize RHS) -> bool {
+                                       return TypeSize::isKnownLT(LHS, RHS);
+                                     });
   assert(SI != MemberOffsets.begin() && "Offset not in structure type!");
   --SI;
   assert(TypeSize::isKnownLE(*SI, Offset) && "upper_bound didn't work");
@@ -738,13 +737,6 @@ Align DataLayout::getPointerPrefAlignment(unsigned AS) const {
 
 unsigned DataLayout::getPointerSize(unsigned AS) const {
   return divideCeil(getPointerSpec(AS).BitWidth, 8);
-}
-
-unsigned DataLayout::getMaxIndexSizeInBits() const {
-  unsigned MaxIndexSize = 0;
-  for (const PointerSpec &Spec : PointerSpecs)
-    MaxIndexSize = std::max(MaxIndexSize, Spec.IndexBitWidth);
-  return MaxIndexSize;
 }
 
 unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {

@@ -308,8 +308,7 @@ namespace TypeId {
   static_assert(&B2().ti1 == &typeid(B));
   static_assert(&B2().ti2 == &typeid(B2));
   extern B2 extern_b2;
-  // expected-note@+1 {{typeid applied to object 'extern_b2' whose dynamic type is not constant}}
-  static_assert(&typeid(extern_b2) == &typeid(B2)); // expected-error {{constant expression}}
+  static_assert(&typeid(extern_b2) == &typeid(B2));
 
   constexpr B2 b2;
   constexpr const B &b1 = b2;

@@ -22,8 +22,9 @@ Macros:
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cerrno>
+#else
 #  include <__config>
 
 #  include <errno.h>
@@ -46,6 +47,6 @@ Macros:
 // deprecated in libc++ in https://github.com/llvm/llvm-project/pull/80542.
 // Based on the post commit feedback the macro are no longer deprecated.
 // Instead libc++ leaves the deprecation to the provider of errno.h.
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CERRNO

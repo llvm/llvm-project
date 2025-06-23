@@ -28,34 +28,40 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK: @_ZN4Name3fooEv = weak_odr ifunc i32 (), ptr @_ZN4Name3fooEv.resolver
 // CHECK: @_ZN3Foo3barEv = weak_odr ifunc i32 (), ptr @_ZN3Foo3barEv.resolver
 //.
-// CHECK-LABEL: define dso_local noundef i32 @_ZN4Name3fooEv._Msve(
+// CHECK-LABEL: define dso_local noundef i32 @_ZN4Name3fooEv.default(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: define dso_local noundef i32 @_ZN4Name3fooEv._Msve(
+// CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z3barv(
-// CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN4Name3fooEv()
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN9OtherName3fooEv._Msve(
-// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 2
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z3bazv(
-// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-SAME: ) #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN9OtherName3fooEv()
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN3Foo3barEv.default(
-// CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 0
 //
@@ -64,12 +70,6 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef i32 @_ZN4Name3fooEv.default(
-// CHECK-SAME: ) #[[ATTR3]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_ZN4Name3fooEv.resolver() comdat {

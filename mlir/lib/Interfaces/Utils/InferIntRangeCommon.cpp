@@ -14,6 +14,7 @@
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "mlir/Interfaces/ShapedOpInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -386,7 +387,15 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
     }
     return result;
   };
-  return inferDivSRange(lhs, rhs, ceilDivSIFix);
+  ConstantIntRanges result = inferDivSRange(lhs, rhs, ceilDivSIFix);
+  if (lhs.smin().isMinSignedValue() && lhs.smax().sgt(lhs.smin())) {
+    // If lhs range includes INT_MIN and lhs is not a single value, we can
+    // suddenly wrap to positive val, skipping entire negative range, add
+    // [INT_MIN + 1, smax()] range to the result to handle this.
+    auto newLhs = ConstantIntRanges::fromSigned(lhs.smin() + 1, lhs.smax());
+    result = result.rangeUnion(inferDivSRange(newLhs, rhs, ceilDivSIFix));
+  }
+  return result;
 }
 
 ConstantIntRanges
@@ -716,4 +725,47 @@ std::optional<bool> mlir::intrange::evaluatePred(CmpPredicate pred,
   if (isStaticallyTrue(invertPredicate(pred), lhs, rhs))
     return false;
   return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
+// Shaped type dimension accessors / ShapedDimOpInterface
+//===----------------------------------------------------------------------===//
+
+ConstantIntRanges
+mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
+                                          const IntegerValueRange &maybeDim) {
+  unsigned width =
+      ConstantIntRanges::getStorageBitwidth(op->getResult(0).getType());
+  APInt zero = APInt::getZero(width);
+  APInt typeMax = APInt::getSignedMaxValue(width);
+
+  auto shapedTy = cast<ShapedType>(op.getShapedValue().getType());
+  if (!shapedTy.hasRank())
+    return ConstantIntRanges::fromSigned(zero, typeMax);
+
+  int64_t rank = shapedTy.getRank();
+  int64_t minDim = 0;
+  int64_t maxDim = rank - 1;
+  if (!maybeDim.isUninitialized()) {
+    const ConstantIntRanges &dim = maybeDim.getValue();
+    minDim = std::max(minDim, dim.smin().getSExtValue());
+    maxDim = std::min(maxDim, dim.smax().getSExtValue());
+  }
+
+  std::optional<ConstantIntRanges> result;
+  auto joinResult = [&](const ConstantIntRanges &thisResult) {
+    if (!result.has_value())
+      result = thisResult;
+    else
+      result = result->rangeUnion(thisResult);
+  };
+  for (int64_t i = minDim; i <= maxDim; ++i) {
+    int64_t length = shapedTy.getDimSize(i);
+
+    if (ShapedType::isDynamic(length))
+      joinResult(ConstantIntRanges::fromSigned(zero, typeMax));
+    else
+      joinResult(ConstantIntRanges::constant(APInt(width, length)));
+  }
+  return result.value_or(ConstantIntRanges::fromSigned(zero, typeMax));
 }

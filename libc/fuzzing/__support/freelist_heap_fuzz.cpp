@@ -17,6 +17,15 @@
 #include "src/string/memory_utils/inline_memmove.h"
 #include "src/string/memory_utils/inline_memset.h"
 
+asm(R"(
+.globl _end, __llvm_libc_heap_limit
+
+.bss
+_end:
+  .fill 1024
+__llvm_libc_heap_limit:
+)";
+
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::inline_memset;
 using LIBC_NAMESPACE::cpp::nullopt;

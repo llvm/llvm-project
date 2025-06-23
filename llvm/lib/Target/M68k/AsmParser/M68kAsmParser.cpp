@@ -11,7 +11,7 @@
 #include "TargetInfo/M68kTargetInfo.h"
 
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
@@ -258,6 +258,7 @@ static inline unsigned getRegisterIndex(unsigned Register) {
   // We don't care about the indices of these registers.
   case M68k::PC:
   case M68k::CCR:
+  case M68k::SR:
   case M68k::FPC:
   case M68k::FPS:
   case M68k::FPIAR:
@@ -636,9 +637,12 @@ bool M68kAsmParser::parseRegisterName(MCRegister &RegNo, SMLoc Loc,
                                       StringRef RegisterName) {
   auto RegisterNameLower = RegisterName.lower();
 
-  // CCR register
+  // CCR and SR register
   if (RegisterNameLower == "ccr") {
     RegNo = M68k::CCR;
+    return true;
+  } else if (RegisterNameLower == "sr") {
+    RegNo = M68k::SR;
     return true;
   }
 

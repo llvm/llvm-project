@@ -237,12 +237,9 @@ define amdgpu_kernel void @uitofp_v2i16_to_v2f16(
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.h, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX11-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.h, v1.l
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -336,16 +333,13 @@ define amdgpu_kernel void @uitofp_v2i32_to_v2f16(
 ; GFX11-TRUE16-NEXT:    buffer_load_b64 v[0:1], off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f32_u32_e32 v2, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.h, v0.l
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -458,10 +452,9 @@ define amdgpu_kernel void @s_uint_to_fp_i1_to_f16(ptr addrspace(1) %out, ptr add
 ; GFX11-TRUE16-NEXT:    v_cmp_le_f32_e32 vcc_lo, 1.0, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cmp_le_f32_e64 s0, 0, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_xor_b32 s0, s0, vcc_lo
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
@@ -488,10 +481,9 @@ define amdgpu_kernel void @s_uint_to_fp_i1_to_f16(ptr addrspace(1) %out, ptr add
 ; GFX11-FAKE16-NEXT:    v_cmp_le_f32_e32 vcc_lo, 1.0, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_cmp_le_f32_e64 s0, 0, v1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_xor_b32 s0, s0, vcc_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    s_endpgm

@@ -42,7 +42,7 @@ program p
   ! CHECK:     %[[V_42:[0-9]+]] = fir.insert_value %[[V_39]], %[[V_41]], [0 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<i8>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_43:[0-9]+]] = fir.insert_value %[[V_42]], %c2{{.*}}, [1 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, i64) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_44:[0-9]+]] = fir.insert_value %[[V_43]], %[[V_24]], [2 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
-  ! CHECK:     %[[V_45:[0-9]+]] = fir.address_of(@default.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
+  ! CHECK:     %[[V_45:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
   ! CHECK:     %[[V_46:[0-9]+]] = fir.convert %[[V_45]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
   ! CHECK:     %[[V_47:[0-9]+]] = fir.insert_value %[[V_44]], %[[V_46]], [3 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<none>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     fir.store %[[V_47]] to %[[V_38]] : !fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>
@@ -100,7 +100,7 @@ subroutine sss
   ! CHECK:     %[[V_20:[0-9]+]] = fir.insert_value %[[V_17]], %[[V_19]], [0 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<i8>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_21:[0-9]+]] = fir.insert_value %[[V_20]], %c1{{.*}}, [1 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, i64) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_22:[0-9]+]] = fir.insert_value %[[V_21]], %[[V_8]], [2 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
-  ! CHECK:     %[[V_23:[0-9]+]] = fir.address_of(@default.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
+  ! CHECK:     %[[V_23:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
   ! CHECK:     %[[V_24:[0-9]+]] = fir.convert %[[V_23]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
   ! CHECK:     %[[V_25:[0-9]+]] = fir.insert_value %[[V_22]], %[[V_24]], [3 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<none>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     fir.store %[[V_25]] to %[[V_16]] : !fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>
@@ -130,15 +130,15 @@ end
 
 ! CHECK-LABEL: c.func @_QPrename_sub
 subroutine rename_sub
-  use mmm, bbb => aaa
+  use mmm, ggg => aaa
   rrr = 3.
   ! CHECK:     %[[V_4:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
   ! CHECK:     %[[V_5:[0-9]+]] = fir.address_of(@_QMmmmNaaa) : !fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>
   ! CHECK:     %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (!fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>) -> !fir.ref<tuple<>>
   ! CHECK:     %[[V_7:[0-9]+]] = fir.call @_FortranAioOutputNamelist(%[[V_4]], %[[V_6]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<tuple<>>) -> i1
   ! CHECK:     %[[V_8:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_4]]) fastmath<contract> : (!fir.ref<i8>) -> i32
-  write(*,bbb)
+  write(*,ggg)
 end
 
-! CHECK-NOT:   bbb
+! CHECK-NOT:   ggg
 ! CHECK:       fir.string_lit "aaa\00"(4) : !fir.char<1,4>

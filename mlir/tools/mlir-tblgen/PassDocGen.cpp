@@ -22,14 +22,14 @@ using llvm::RecordKeeper;
 
 /// Emit the documentation for the given pass.
 static void emitDoc(const Pass &pass, raw_ostream &os) {
-  os << llvm::formatv("### `-{0}`\n", pass.getArgument());
+  os << llvm::formatv("\n### `-{0}`\n", pass.getArgument());
   emitSummary(pass.getSummary(), os);
   emitDescription(pass.getDescription(), os);
 
   // Handle the options of the pass.
   ArrayRef<PassOption> options = pass.getOptions();
   if (!options.empty()) {
-    os << "\n#### Options\n```\n";
+    os << "\n#### Options\n\n```\n";
     size_t longestOption = 0;
     for (const PassOption &option : options)
       longestOption = std::max(option.getArgument().size(), longestOption);
@@ -44,7 +44,7 @@ static void emitDoc(const Pass &pass, raw_ostream &os) {
   // Handle the statistics of the pass.
   ArrayRef<PassStatistic> stats = pass.getStatistics();
   if (!stats.empty()) {
-    os << "\n#### Statistics\n```\n";
+    os << "\n#### Statistics\n\n```\n";
     size_t longestStat = 0;
     for (const PassStatistic &stat : stats)
       longestStat = std::max(stat.getName().size(), longestStat);

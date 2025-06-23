@@ -29,19 +29,22 @@ using ::testing::StartsWith;
 namespace {
 class CommandLineTest : public ::testing::Test {
 public:
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   SmallVector<const char *, 32> GeneratedArgs;
-  SmallVector<std::string, 32> GeneratedArgsStorage;
+  BumpPtrAllocator Alloc;
+  StringSaver StringPool;
   CompilerInvocation Invocation;
 
   const char *operator()(const Twine &Arg) {
-    return GeneratedArgsStorage.emplace_back(Arg.str()).c_str();
+    return StringPool.save(Arg).data();
   }
 
   CommandLineTest()
       : Diags(CompilerInstance::createDiagnostics(
-            *llvm::vfs::getRealFileSystem(), new DiagnosticOptions(),
-            new TextDiagnosticBuffer())) {}
+            *llvm::vfs::getRealFileSystem(), DiagOpts,
+            new TextDiagnosticBuffer())),
+        StringPool(Alloc) {}
 };
 
 template <typename M>

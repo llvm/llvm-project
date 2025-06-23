@@ -34,6 +34,7 @@
 
 namespace llvm {
 
+class ARMBaseTargetMachine;
 class ARMSubtarget;
 class DataLayout;
 class FastISel;
@@ -321,7 +322,8 @@ class VectorType;
     CSINC, // Conditional select increment.
 
     // Vector load N-element structure to all lanes:
-    VLD1DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    VLD1DUP = FIRST_MEMORY_OPCODE,
     VLD2DUP,
     VLD3DUP,
     VLD4DUP,
@@ -356,7 +358,8 @@ class VectorType;
 
     // Load/Store of dual registers
     LDRD,
-    STRD
+    STRD,
+    LAST_MEMORY_OPCODE = STRD,
   };
 
   } // end namespace ARMISD
@@ -411,6 +414,8 @@ class VectorType;
   public:
     explicit ARMTargetLowering(const TargetMachine &TM,
                                const ARMSubtarget &STI);
+
+    const ARMBaseTargetMachine &getTM() const;
 
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
@@ -714,6 +719,11 @@ class VectorType;
       return true;
     }
 
+    bool supportSplitCSR(MachineFunction *MF) const override {
+      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+             MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
+    }
+
     bool hasStandaloneRem(EVT VT) const override {
       return HasStandaloneRem;
     }
@@ -756,8 +766,9 @@ class VectorType;
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
 
-    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                              EVT VT) const override;
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                              unsigned SelectOpcode, SDValue X,
+                                              SDValue Y) const override;
 
     bool preferIncOfAddToSubOfNot(EVT VT) const override;
 
@@ -886,6 +897,7 @@ class VectorType;
     SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
     void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                    SelectionDAG &DAG) const;
+    SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
@@ -909,11 +921,6 @@ class VectorType;
                             const SDLoc &dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
                             SDValue ThisVal, bool isCmseNSCall) const;
-
-    bool supportSplitCSR(MachineFunction *MF) const override {
-      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
-          MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
-    }
 
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;
     void insertCopiesSplitCSR(
@@ -962,7 +969,7 @@ class VectorType;
     bool CanLowerReturn(CallingConv::ID CallConv,
                         MachineFunction &MF, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

@@ -100,7 +100,7 @@ using namespace llvm::X86Disassembler;
 // this information is known, we have narrowed down to a single instruction.
 struct ModRMDecision {
   uint8_t modrm_type;
-  uint32_t instructionIDs;
+  uint16_t instructionIDs;
 };
 
 // Specifies which set of ModR/M->instruction tables to look at

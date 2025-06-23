@@ -11,11 +11,11 @@
 
 #include "attr.h"
 #include "symbol.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Support/Fortran.h"
 #include <list>
 #include <map>
 #include <optional>

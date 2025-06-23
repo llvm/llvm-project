@@ -41,29 +41,29 @@ using testing::ElementsAre;
 class LexerTest : public ::testing::Test {
 protected:
   LexerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions)
-  {
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
-                                         TrivialModuleLoader &ModLoader) {
+                                         TrivialModuleLoader &ModLoader,
+                                         StringRef PreDefines = {}) {
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
+    HeaderSearchOptions HSOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    PreprocessorOptions PPOpts;
     std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
-        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
-        HeaderInfo, ModLoader,
+        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
+    if (!PreDefines.empty())
+      PP->setPredefines(PreDefines.str());
     PP->Initialize(*Target);
     PP->EnterMainSourceFile();
     return PP;
@@ -104,6 +104,7 @@ protected:
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
@@ -603,6 +604,7 @@ TEST_F(LexerTest, CharRangeOffByOne) {
 
 TEST_F(LexerTest, FindNextToken) {
   Lex("int abcd = 0;\n"
+      "// A comment.\n"
       "int xyz = abcd;\n");
   std::vector<std::string> GeneratedByNextToken;
   SourceLocation Loc =
@@ -617,6 +619,61 @@ TEST_F(LexerTest, FindNextToken) {
   }
   EXPECT_THAT(GeneratedByNextToken, ElementsAre("abcd", "=", "0", ";", "int",
                                                 "xyz", "=", "abcd", ";"));
+}
+
+TEST_F(LexerTest, FindNextTokenIncludingComments) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByNextToken;
+  SourceLocation Loc =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findNextToken(Loc, SourceMgr, LangOpts, true);
+    ASSERT_TRUE(T);
+    if (T->is(tok::eof))
+      break;
+    GeneratedByNextToken.push_back(getSourceText(*T, *T));
+    Loc = T->getLocation();
+  }
+  EXPECT_THAT(GeneratedByNextToken,
+              ElementsAre("abcd", "=", "0", ";", "// A comment.", "int", "xyz",
+                          "=", "abcd", ";"));
+}
+
+TEST_F(LexerTest, FindPreviousToken) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByPrevToken;
+  SourceLocation Loc = SourceMgr.getLocForEndOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findPreviousToken(Loc, SourceMgr, LangOpts, false);
+    if (!T.has_value())
+      break;
+    GeneratedByPrevToken.push_back(getSourceText(*T, *T));
+    Loc = Lexer::GetBeginningOfToken(T->getLocation(), SourceMgr, LangOpts);
+  }
+  EXPECT_THAT(GeneratedByPrevToken, ElementsAre(";", "abcd", "=", "xyz", "int",
+                                                ";", "0", "=", "abcd", "int"));
+}
+
+TEST_F(LexerTest, FindPreviousTokenIncludingComments) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByPrevToken;
+  SourceLocation Loc = SourceMgr.getLocForEndOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findPreviousToken(Loc, SourceMgr, LangOpts, true);
+    if (!T.has_value())
+      break;
+    GeneratedByPrevToken.push_back(getSourceText(*T, *T));
+    Loc = Lexer::GetBeginningOfToken(T->getLocation(), SourceMgr, LangOpts);
+  }
+  EXPECT_THAT(GeneratedByPrevToken,
+              ElementsAre(";", "abcd", "=", "xyz", "int", "// A comment.", ";",
+                          "0", "=", "abcd", "int"));
 }
 
 TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
@@ -715,4 +772,46 @@ TEST(LexerPreambleTest, PreambleBounds) {
   }
 }
 
+TEST_F(LexerTest, CheckFirstPPToken) {
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "int a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::kw_int));
+  }
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "#define FOO int\n"
+                       "FOO a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::hash));
+  }
+
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "FOO a;",
+                       ModLoader, "#define FOO int\n");
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::identifier));
+    EXPECT_TRUE(
+        PP->getMainFileFirstPPToken().getIdentifierInfo()->isStr("FOO"));
+  }
+}
 } // anonymous namespace

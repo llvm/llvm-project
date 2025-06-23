@@ -55,7 +55,7 @@ static bool isInsideLaunch(Operation *op) {
 static std::tuple<Value, OpFoldResult, SmallVector<OpFoldResult>>
 getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
                         ArrayRef<OpFoldResult> subOffsets,
-                        ArrayRef<OpFoldResult> subStrides = std::nullopt) {
+                        ArrayRef<OpFoldResult> subStrides = {}) {
   auto sourceType = cast<MemRefType>(source.getType());
   auto sourceRank = static_cast<unsigned>(sourceType.getRank());
 
@@ -67,7 +67,7 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
   }
 
-  auto &&[sourceStrides, sourceOffset] = getStridesAndOffset(sourceType);
+  auto &&[sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
 
   auto getDim = [&](int64_t dim, Value dimVal) -> OpFoldResult {
     return ShapedType::isDynamic(dim) ? getAsOpFoldResult(dimVal)
@@ -227,8 +227,7 @@ struct GpuDecomposeMemrefsPass
 
     populateGpuDecomposeMemrefsPatterns(patterns);
 
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };
@@ -238,8 +237,4 @@ struct GpuDecomposeMemrefsPass
 void mlir::populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns) {
   patterns.insert<FlattenLoad, FlattenStore, FlattenSubview>(
       patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createGpuDecomposeMemrefsPass() {
-  return std::make_unique<GpuDecomposeMemrefsPass>();
 }

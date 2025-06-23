@@ -58,6 +58,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include <functional>
 
@@ -78,8 +79,8 @@ class ScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
-extern cl::opt<bool> EnableLoopInterleaving;
-extern cl::opt<bool> EnableLoopVectorization;
+LLVM_ABI extern cl::opt<bool> EnableLoopInterleaving;
+LLVM_ABI extern cl::opt<bool> EnableLoopVectorization;
 
 struct LoopVectorizeOptions {
   /// If false, consider all loops for interleaving.
@@ -138,7 +139,7 @@ private:
   bool VectorizeOnlyWhenForced;
 
 public:
-  LoopVectorizePass(LoopVectorizeOptions Opts = {});
+  LLVM_ABI LoopVectorizePass(LoopVectorizeOptions Opts = {});
 
   ScalarEvolution *SE;
   LoopInfo *LI;
@@ -152,30 +153,40 @@ public:
   OptimizationRemarkEmitter *ORE;
   ProfileSummaryInfo *PSI;
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   // Shim for old PM.
-  LoopVectorizeResult runImpl(Function &F);
+  LLVM_ABI LoopVectorizeResult runImpl(Function &F);
 
-  bool processLoop(Loop *L);
+  LLVM_ABI bool processLoop(Loop *L);
 };
 
 /// Reports a vectorization failure: print \p DebugMsg for debugging
 /// purposes along with the corresponding optimization remark \p RemarkName.
 /// If \p I is passed, it is an instruction that prevents vectorization.
 /// Otherwise, the loop \p TheLoop is used for the location of the remark.
-void reportVectorizationFailure(const StringRef DebugMsg,
-    const StringRef OREMsg, const StringRef ORETag,
+LLVM_ABI void reportVectorizationFailure(
+    const StringRef DebugMsg, const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
+
+/// Same as above, but the debug message and optimization remark are identical
+inline void reportVectorizationFailure(const StringRef DebugMsg,
+                                       const StringRef ORETag,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop,
+                                       Instruction *I = nullptr) {
+  reportVectorizationFailure(DebugMsg, DebugMsg, ORETag, ORE, TheLoop, I);
+}
 
 /// A marker analysis to determine if extra passes should be run after loop
 /// vectorization.
 struct ShouldRunExtraVectorPasses
     : public ShouldRunExtraPasses<ShouldRunExtraVectorPasses>,
       public AnalysisInfoMixin<ShouldRunExtraVectorPasses> {
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 };
 } // end namespace llvm
 

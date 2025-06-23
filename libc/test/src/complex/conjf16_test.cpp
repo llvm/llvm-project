@@ -10,8 +10,4 @@
 
 #include "src/complex/conjf16.h"
 
-#if defined(LIBC_TYPES_HAS_CFLOAT16)
-
 LIST_CONJ_TESTS(cfloat16, float16, LIBC_NAMESPACE::conjf16)
-
-#endif // LIBC_TYPES_HAS_CFLOAT16

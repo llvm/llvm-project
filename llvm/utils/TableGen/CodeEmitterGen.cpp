@@ -142,7 +142,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   }
 
   std::pair<unsigned, unsigned> SO = CGI.Operands.getSubOperandNumber(OpIdx);
-  std::string &EncoderMethodName =
+  StringRef EncoderMethodName =
       CGI.Operands[SO.first].EncoderMethodNames[SO.second];
 
   if (UseAPInt)
@@ -152,13 +152,14 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
 
   // If the source operand has a custom encoder, use it.
   if (!EncoderMethodName.empty()) {
+    raw_string_ostream CaseOS(Case);
+    CaseOS << indent(6);
     if (UseAPInt) {
-      Case += "      " + EncoderMethodName + "(MI, " + utostr(OpIdx);
-      Case += ", op";
+      CaseOS << EncoderMethodName << "(MI, " + utostr(OpIdx) << ", op";
     } else {
-      Case += "      op = " + EncoderMethodName + "(MI, " + utostr(OpIdx);
+      CaseOS << "op = " << EncoderMethodName << "(MI, " << utostr(OpIdx);
     }
-    Case += ", Fixups, STI);\n";
+    CaseOS << ", Fixups, STI);\n";
   } else {
     if (UseAPInt) {
       Case +=
@@ -309,8 +310,7 @@ CodeEmitterGen::getInstructionCases(const Record *R,
               "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
         } else {
           Case += "      case " + itostr(ModeId) +
-                  ": InstBitsByHw = InstBits_" +
-                  std::string(HWM.getMode(ModeId).Name);
+                  ": InstBitsByHw = InstBits_" + HWM.getMode(ModeId).Name.str();
         }
         Case += "; break;\n";
       }
@@ -338,11 +338,11 @@ CodeEmitterGen::getInstructionCases(const Record *R,
         Append("      }\n");
       }
       Append("      }\n");
-      return std::pair(std::move(Case), std::move(BitOffsetCase));
+      return {std::move(Case), std::move(BitOffsetCase)};
     }
   }
   addInstructionCasesForEncoding(R, R, Target, Case, BitOffsetCase);
-  return std::pair(std::move(Case), std::move(BitOffsetCase));
+  return {std::move(Case), std::move(BitOffsetCase)};
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(
@@ -362,7 +362,7 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
     if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
       continue;
 
-    Success &= addCodeToMergeInOperand(R, BI, std::string(RV.getName()), Case,
+    Success &= addCodeToMergeInOperand(R, BI, RV.getName().str(), Case,
                                        BitOffsetCase, Target);
   }
   // Avoid empty switches.

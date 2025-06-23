@@ -512,7 +512,7 @@ function(add_mlir_python_common_capi_library name)
   )
   add_dependencies(${name} ${_header_sources_target})
 
-  if(MSVC)
+  if(WIN32)
     set_property(TARGET ${name} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
   set_target_properties(${name} PROPERTIES
@@ -605,7 +605,6 @@ function(add_mlir_python_sources_target name)
 
       add_custom_command(
         OUTPUT "${_dest_path}"
-        PRE_BUILD
         COMMENT "Copying python source ${_src_path} -> ${_dest_path}"
         DEPENDS "${_src_path}"
         COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
@@ -649,6 +648,15 @@ function(add_mlir_python_extension libname extname)
     message(FATAL_ERROR "Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
 
+  # The extension itself must be compiled with RTTI and exceptions enabled.
+  # Also, some warning classes triggered by pybind11 are disabled.
+  set(eh_rtti_enable)
+  if (MSVC)
+    set(eh_rtti_enable /EHsc /GR)
+  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
+    set(eh_rtti_enable -frtti -fexceptions)
+  endif ()
+
   # The actual extension library produces a shared-object or DLL and has
   # sources that must be compiled in accordance with pybind11 needs (RTTI and
   # exceptions).
@@ -658,19 +666,48 @@ function(add_mlir_python_extension libname extname)
     )
   elseif(ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "nanobind")
     nanobind_add_module(${libname}
-      NB_DOMAIN mlir
+      NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      FREE_THREADED
       ${ARG_SOURCES}
     )
+
+    if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
+        AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+      # Avoid some warnings from upstream nanobind.
+      # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
+      # the super project handle compile options as it wishes.
+      get_property(NB_LIBRARY_TARGET_NAME TARGET ${libname} PROPERTY LINK_LIBRARIES)
+      target_compile_options(${NB_LIBRARY_TARGET_NAME}
+	PRIVATE
+	  -Wall -Wextra -Wpedantic
+	  -Wno-c++98-compat-extra-semi
+	  -Wno-cast-qual
+	  -Wno-covered-switch-default
+	  -Wno-nested-anon-types
+	  -Wno-unused-parameter
+	  -Wno-zero-length-array
+	  ${eh_rtti_enable})
+
+      target_compile_options(${libname}
+	PRIVATE
+	  -Wall -Wextra -Wpedantic
+	  -Wno-c++98-compat-extra-semi
+	  -Wno-cast-qual
+	  -Wno-covered-switch-default
+	  -Wno-nested-anon-types
+	  -Wno-unused-parameter
+	  -Wno-zero-length-array
+	  ${eh_rtti_enable})
+    endif()
+
+    if(APPLE)
+      # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
+      # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
+      # for downstream users that do not do something like `-undefined dynamic_lookup`.
+      target_link_options(${libname} PUBLIC "LINKER:-U,_PyClassMethod_New")
+    endif()
   endif()
 
-  # The extension itself must be compiled with RTTI and exceptions enabled.
-  # Also, some warning classes triggered by pybind11 are disabled.
-  set(eh_rtti_enable)
-  if (MSVC)
-    set(eh_rtti_enable /EHsc /GR)
-  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    set(eh_rtti_enable -frtti -fexceptions)
-  endif ()
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
 
   # Configure the output to match python expectations.

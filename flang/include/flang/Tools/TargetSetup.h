@@ -24,36 +24,60 @@ namespace Fortran::tools {
     const std::string &compilerVersion, const std::string &compilerOptions) {
 
   const llvm::Triple &targetTriple{targetMachine.getTargetTriple()};
-  // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
-    targetCharacteristics.DisableType(
-        Fortran::common::TypeCategory::Real, /*kind=*/10);
-  }
+
   if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
+    // ieee_denorm exception support is nonstandard.
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/3);
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/4);
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/8);
+  }
+
+  if (targetTriple.isARM() || targetTriple.isAArch64()) {
+    targetCharacteristics.set_haltingSupportIsUnknownAtCompileTime();
+    targetCharacteristics.set_ieeeFeature(
+        evaluate::IeeeFeature::Halting, false);
+    targetCharacteristics.set_ieeeFeature(
+        evaluate::IeeeFeature::Standard, false);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
   }
 
-  // Figure out if we can support F128: see
-  // flang/runtime/Float128Math/math-entries.h
-  // TODO: this should be taken from TargetInfo::getLongDoubleFormat to support
-  // cross-compilation
+  switch (targetTriple.getArch()) {
+  case llvm::Triple::ArchType::amdgcn:
+  case llvm::Triple::ArchType::x86_64:
+    break;
+  default:
+    targetCharacteristics.DisableType(
+        Fortran::common::TypeCategory::Real, /*kind=*/10);
+    targetCharacteristics.DisableType(
+        Fortran::common::TypeCategory::Complex, /*kind=*/10);
+    break;
+  }
+
+  // Check for kind=16 support. See flang/runtime/Float128Math/math-entries.h.
+  // TODO: Take this from TargetInfo::getLongDoubleFormat for cross compilation.
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
-  // we can use libquadmath wrappers
-  constexpr bool f128Support = true;
+  constexpr bool f128Support = true; // use libquadmath wrappers
 #elif HAS_LDBL128
-  // we can use libm wrappers
-  constexpr bool f128Support = true;
+  constexpr bool f128Support = true; // use libm wrappers
 #else
   constexpr bool f128Support = false;
 #endif
 
-  if constexpr (!f128Support)
+  if constexpr (!f128Support) {
     targetCharacteristics.DisableType(Fortran::common::TypeCategory::Real, 16);
+    targetCharacteristics.DisableType(
+        Fortran::common::TypeCategory::Complex, 16);
+  }
 
-  for (auto realKind : targetOptions.disabledRealKinds)
+  for (auto realKind : targetOptions.disabledRealKinds) {
     targetCharacteristics.DisableType(common::TypeCategory::Real, realKind);
+    targetCharacteristics.DisableType(common::TypeCategory::Complex, realKind);
+  }
 
   for (auto intKind : targetOptions.disabledIntegerKinds)
     targetCharacteristics.DisableType(common::TypeCategory::Integer, intKind);
@@ -64,8 +88,15 @@ namespace Fortran::tools {
   if (targetTriple.isPPC())
     targetCharacteristics.set_isPPC(true);
 
+  if (targetTriple.isSPARC())
+    targetCharacteristics.set_isSPARC(true);
+
   if (targetTriple.isOSWindows())
     targetCharacteristics.set_isOSWindows(true);
+
+  // Currently the integer kind happens to be the same as the byte size
+  targetCharacteristics.set_integerKindForPointer(
+      targetTriple.getArchPointerBitWidth() / 8);
 
   // TODO: use target machine data layout to set-up the target characteristics
   // type size and alignment info.

@@ -21,7 +21,7 @@ def icmp_redundant_trunc_matchdata : GIDefMatchData<"Register">;
 def icmp_redundant_trunc : GICombineRule<
   (defs root:$root, icmp_redundant_trunc_matchdata:$matchinfo),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
-         [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getKnownBits(), ${matchinfo}); }]),
+         [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getValueTracking(), ${matchinfo}); }]),
   (apply [{ applyICmpRedundantTrunc(*${root}, MRI, B, Observer, ${matchinfo}); }])>;
 
 // AArch64-specific offset folding for G_GLOBAL_VALUE.
@@ -131,6 +131,15 @@ def ext: GICombineRule <
   (apply [{ applyEXT(*${root}, ${matchinfo}); }])
 >;
 
+def fullrev: GICombineRule <
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (G_IMPLICIT_DEF $src2),
+         (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
+         [{ return ShuffleVectorInst::isReverseMask(${mask}.getShuffleMask(),
+                                                    ${mask}.getShuffleMask().size()); }]),
+  (apply [{ applyFullRev(*${root}, MRI); }])
+>;
+
 def insertelt_nonconst: GICombineRule <
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
@@ -163,8 +172,23 @@ def form_duplane : GICombineRule <
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn,
-                                              form_duplane, shuf_to_ins]>;
+// Clean up G_UNMERGE(G_DUPLANE16) -> G_DUPLANE16
+class unmerge_duplane<Instruction Op> : GICombineRule <
+  (defs root:$root),
+  (match (Op $a, $src, $c),
+         (G_UNMERGE_VALUES $d1, $d2, $a):$root,
+         [{ return MRI.getType(${d1}.getReg()).getSizeInBits() == 64; }]),
+  (apply (GIReplaceReg $d2, $d1), (Op $d1, $src, $c))
+>;
+def unmerge_duplane8 : unmerge_duplane<G_DUPLANE8>;
+def unmerge_duplane16 : unmerge_duplane<G_DUPLANE16>;
+def unmerge_duplane32 : unmerge_duplane<G_DUPLANE32>;
+// G_DUPLANE64 is not included as the result in scalar.
+def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
+                                       unmerge_duplane32]>;
+
+def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
+                                              uzp, trn, fullrev, shuf_to_ins]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule <
@@ -208,11 +232,19 @@ def mul_const : GICombineRule<
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def lower_mull : GICombineRule<
+def mull_matchdata : GIDefMatchData<"std::tuple<bool, Register, Register>">;
+def extmultomull : GICombineRule<
+  (defs root:$root, mull_matchdata:$matchinfo),
+  (match (G_MUL $dst, $src1, $src2):$root,
+          [{ return matchExtMulToMULL(*${root}, MRI, VT, ${matchinfo}); }]),
+  (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
+def lower_mulv2s64 : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_MUL):$root,
-          [{ return matchExtMulToMULL(*${root}, MRI); }]),
-  (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer); }])
+  (match (G_MUL $dst, $src1, $src2):$root,
+          [{ return matchMulv2s64(*${root}, MRI); }]),
+  (apply [{ applyMulv2s64(*${root}, MRI, B, Observer); }])
 >;
 
 def build_vector_to_dup : GICombineRule<
@@ -307,8 +339,9 @@ def AArch64PostLegalizerLowering
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
-                        unmerge_ext_to_unmerge, lower_mull,
-                        vector_unmerge_lowering, insertelt_nonconst]> {
+                        unmerge_ext_to_unmerge, lower_mulv2s64,
+                        vector_unmerge_lowering, insertelt_nonconst,
+                        unmerge_duplanes]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
@@ -328,7 +361,7 @@ def AArch64PostLegalizerCombiner
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
-                        commute_constant_to_rhs,
+                        commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt, combine_use_vector_truncate]> {
+                        combine_mul_cmlt, combine_use_vector_truncate, extmultomull]> {
 }

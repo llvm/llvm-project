@@ -952,8 +952,7 @@ define <16 x i32> @testoutofbounds(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-NEXT:    [[A:%.*]] = add nsw <16 x i32> [[S1]], [[S2]]
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw <16 x i32> [[S1]], [[S2]]
 ; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i32> [[A]], <16 x i32> [[B]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
-; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i32> [[S3]], <16 x i32> poison, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
-; CHECK-NEXT:    [[ADD:%.*]] = add <16 x i32> [[S3]], [[S4]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <16 x i32> [[S3]], [[B]]
 ; CHECK-NEXT:    ret <16 x i32> [[ADD]]
 ;
   %s1 = shufflevector <16 x i32> %x, <16 x i32> %y, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
@@ -973,8 +972,7 @@ define <64 x i32> @testlargerextrashuffle2(i32 %call.i, <16 x i32> %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> [[TMP0]], i32 [[CALL_I]], i32 15
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <16 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <16 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i32> [[TMP3]], <16 x i32> [[TMP4]], <16 x i32> <i32 0, i32 17, i32 2, i32 3, i32 20, i32 5, i32 6, i32 23, i32 8, i32 9, i32 26, i32 11, i32 12, i32 29, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i32> [[TMP5]], <16 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i32> [[TMP3]], <16 x i32> [[TMP4]], <64 x i32> <i32 0, i32 17, i32 2, i32 3, i32 20, i32 5, i32 6, i32 23, i32 8, i32 9, i32 26, i32 11, i32 12, i32 29, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <64 x i32> [[TMP6]]
 ;
 entry:

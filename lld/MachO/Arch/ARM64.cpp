@@ -15,7 +15,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "mach-o/compact_unwind_encoding.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
@@ -43,8 +42,8 @@ struct ARM64 : ARM64Common {
   void applyOptimizationHints(uint8_t *, const ObjFile &) const override;
 
   void initICFSafeThunkBody(InputSection *thunk,
-                            InputSection *branchTarget) const override;
-  InputSection *getThunkBranchTarget(InputSection *thunk) const override;
+                            Symbol *targetSym) const override;
+  Symbol *getThunkBranchTarget(InputSection *thunk) const override;
   uint32_t getICFSafeThunkSize() const override;
 };
 
@@ -185,8 +184,7 @@ static constexpr uint32_t icfSafeThunkCode[] = {
     0x14000000, // 08: b    target
 };
 
-void ARM64::initICFSafeThunkBody(InputSection *thunk,
-                                 InputSection *branchTarget) const {
+void ARM64::initICFSafeThunkBody(InputSection *thunk, Symbol *targetSym) const {
   // The base data here will not be itself modified, we'll just be adding a
   // reloc below. So we can directly use the constexpr above as the data.
   thunk->data = {reinterpret_cast<const uint8_t *>(icfSafeThunkCode),
@@ -195,17 +193,17 @@ void ARM64::initICFSafeThunkBody(InputSection *thunk,
   thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_BRANCH26,
                              /*pcrel=*/true, /*length=*/2,
                              /*offset=*/0, /*addend=*/0,
-                             /*referent=*/branchTarget);
+                             /*referent=*/targetSym);
 }
 
-InputSection *ARM64::getThunkBranchTarget(InputSection *thunk) const {
+Symbol *ARM64::getThunkBranchTarget(InputSection *thunk) const {
   assert(thunk->relocs.size() == 1 &&
          "expected a single reloc on ARM64 ICF thunk");
   auto &reloc = thunk->relocs[0];
-  assert(reloc.referent.is<InputSection *>() &&
-         "ARM64 thunk reloc is expected to point to an InputSection");
+  assert(isa<Symbol *>(reloc.referent) &&
+         "ARM64 thunk reloc is expected to point to a Symbol");
 
-  return reloc.referent.dyn_cast<InputSection *>();
+  return cast<Symbol *>(reloc.referent);
 }
 
 uint32_t ARM64::getICFSafeThunkSize() const { return sizeof(icfSafeThunkCode); }
@@ -394,25 +392,26 @@ static void writeImmediateLdr(void *loc, const Ldr &ldr) {
 // ->
 //   adr  xM, _foo
 //   nop
-static void applyAdrpAdd(uint8_t *buf, const ConcatInputSection *isec,
+static bool applyAdrpAdd(uint8_t *buf, const ConcatInputSection *isec,
                          uint64_t offset1, uint64_t offset2) {
   uint32_t ins1 = read32le(buf + offset1);
   uint32_t ins2 = read32le(buf + offset2);
   Adrp adrp;
   Add add;
   if (!parseAdrp(ins1, adrp) || !parseAdd(ins2, add))
-    return;
+    return false;
   if (adrp.destRegister != add.srcRegister)
-    return;
+    return false;
 
   uint64_t addr1 = isec->getVA() + offset1;
   uint64_t referent = pageBits(addr1) + adrp.addend + add.addend;
   int64_t delta = referent - addr1;
   if (!isValidAdrOffset(delta))
-    return;
+    return false;
 
   writeAdr(buf + offset1, add.destRegister, delta);
   writeNop(buf + offset2);
+  return true;
 }
 
 // Transforms two adrp instructions into a single adrp if their referent
@@ -497,16 +496,12 @@ static void applyAdrpAddLdr(uint8_t *buf, const ConcatInputSection *isec,
                             uint64_t offset1, uint64_t offset2,
                             uint64_t offset3) {
   uint32_t ins1 = read32le(buf + offset1);
-  Adrp adrp;
-  if (!parseAdrp(ins1, adrp))
-    return;
   uint32_t ins2 = read32le(buf + offset2);
-  Add add;
-  if (!parseAdd(ins2, add))
-    return;
   uint32_t ins3 = read32le(buf + offset3);
+  Adrp adrp;
+  Add add;
   Ldr ldr;
-  if (!parseLdr(ins3, ldr))
+  if (!parseAdrp(ins1, adrp) || !parseAdd(ins2, add) || !parseLdr(ins3, ldr))
     return;
   if (adrp.destRegister != add.srcRegister)
     return;
@@ -529,18 +524,8 @@ static void applyAdrpAddLdr(uint8_t *buf, const ConcatInputSection *isec,
     return;
   }
 
-  // Load the target address into a register and load from there indirectly.
-  //   adr x1, _foo
-  //   nop
-  //   ldr x2, [x1, #off]
-  int64_t adrOffset = referent - addr1;
-  if (isValidAdrOffset(adrOffset)) {
-    writeAdr(buf + offset1, ldr.baseRegister, adrOffset);
-    // Note: ld64 moves the offset into the adr instruction for AdrpAddLdr, but
-    // not for AdrpLdrGotLdr. Its effect is the same either way.
-    writeNop(buf + offset2);
+  if (applyAdrpAdd(buf, isec, offset1, offset2))
     return;
-  }
 
   // Move the target's page offset into the ldr's immediate offset.
   //   adrp x0, _foo@PAGE
@@ -574,67 +559,45 @@ static void applyAdrpLdrGotLdr(uint8_t *buf, const ConcatInputSection *isec,
     // adrp x1, _foo@GOTPAGE
     // ldr  x2, [x1, _foo@GOTPAGEOFF]
     // ldr  x3, [x2, #off]
-
-    uint32_t ins1 = read32le(buf + offset1);
-    Adrp adrp;
-    if (!parseAdrp(ins1, adrp))
-      return;
     uint32_t ins3 = read32le(buf + offset3);
     Ldr ldr3;
     if (!parseLdr(ins3, ldr3))
-      return;
-
-    if (ldr2.baseRegister != adrp.destRegister)
       return;
     if (ldr3.baseRegister != ldr2.destRegister)
       return;
     // Loads from the GOT must be pointer sized.
     if (ldr2.p2Size != 3 || ldr2.isFloat)
       return;
-
-    uint64_t addr1 = isec->getVA() + offset1;
-    uint64_t addr2 = isec->getVA() + offset2;
-    uint64_t referent = pageBits(addr1) + adrp.addend + ldr2.offset;
-    // Load the GOT entry's address directly.
-    //   nop
-    //   ldr x2, _foo@GOTPAGE + _foo@GOTPAGEOFF
-    //   ldr x3, [x2, #off]
-    Ldr literalLdr = ldr2;
-    literalLdr.offset = referent - addr2;
-    if (isLiteralLdrEligible(literalLdr)) {
-      writeNop(buf + offset1);
-      writeLiteralLdr(buf + offset2, literalLdr);
-    }
+    applyAdrpLdr(buf, isec, offset1, offset2);
   }
-}
-
-static uint64_t readValue(const uint8_t *&ptr, const uint8_t *end) {
-  unsigned int n = 0;
-  uint64_t value = decodeULEB128(ptr, &n, end);
-  ptr += n;
-  return value;
 }
 
 template <typename Callback>
 static void forEachHint(ArrayRef<uint8_t> data, Callback callback) {
   std::array<uint64_t, 3> args;
 
-  for (const uint8_t *p = data.begin(), *end = data.end(); p < end;) {
-    uint64_t type = readValue(p, end);
+  auto readNext = [&]() -> uint64_t {
+    unsigned int n = 0;
+    uint64_t value = decodeULEB128(data.data(), &n, data.end());
+    data = data.drop_front(n);
+    return value;
+  };
+
+  while (!data.empty()) {
+    uint64_t type = readNext();
     if (type == 0)
       break;
 
-    uint64_t argCount = readValue(p, end);
-    // All known LOH types as of 2022-09 have 3 or fewer arguments; skip others.
-    if (argCount > 3) {
-      for (unsigned i = 0; i < argCount; ++i)
-        readValue(p, end);
-      continue;
+    uint64_t argCount = readNext();
+    for (unsigned i = 0; i < argCount; ++i) {
+      uint64_t arg = readNext();
+      if (i < 3)
+        args[i] = arg;
     }
-
-    for (unsigned i = 0; i < argCount; ++i)
-      args[i] = readValue(p, end);
-    callback(type, ArrayRef<uint64_t>(args.data(), argCount));
+    // All known LOH types as of 2022-09 have 3 or fewer arguments; skip others.
+    if (argCount > 3)
+      continue;
+    callback(type, ArrayRef(args.data(), argCount));
   }
 }
 

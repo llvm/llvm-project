@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the library calls simplifier. It does not implement
-// any pass, but can't be used by other passes to do simplifications.
+// any pass, but can be used by other passes to do simplifications.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
@@ -901,9 +903,8 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
     // Create a bigger, nul-padded array with the same length, SrcLen,
     // as the original string.
     SrcStr.resize(N, '\0');
-    Src = B.CreateGlobalString(
-        SrcStr, "str", /*AddressSpace=*/DL.getDefaultGlobalsAddressSpace(),
-        /*M=*/nullptr, /*AddNull=*/false);
+    Src = B.CreateGlobalString(SrcStr, "str", /*AddressSpace=*/0,
+                               /*M=*/nullptr, /*AddNull=*/false);
   }
 
   // st{p,r}ncpy(D, S, N) -> memcpy(align 1 D, align 1 S, N) when both
@@ -1000,7 +1001,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
       }
 
       Value *Offset = GEP->getOperand(2);
-      KnownBits Known = computeKnownBits(Offset, DL, 0, nullptr, CI, nullptr);
+      KnownBits Known = computeKnownBits(Offset, DL, nullptr, CI, nullptr);
       uint64_t ArrSize =
              cast<ArrayType>(GEP->getSourceElementType())->getNumElements();
 
@@ -1095,7 +1096,8 @@ Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
+                                                      CaptureInfo::none()));
   }
 
   return nullptr;
@@ -1707,8 +1709,7 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(CI->getArgOperand(0)))
-    return copyFlags(*CI, emitMalloc(CI->getArgOperand(0)->getType(),
-                                     CI->getArgOperand(1), B, DL, TLI));
+    return copyFlags(*CI, emitMalloc(CI->getArgOperand(1), B, DL, TLI));
 
   return nullptr;
 }
@@ -1743,124 +1744,122 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
                             LibFunc_Znwm12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znwm:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
                             LibFunc_Znwm12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znam12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
                             LibFunc_Znam12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znam:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
                             LibFunc_Znam12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAlignedNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
-          CI->getArgOperand(2), B, TLI,
-          LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAlignedNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
-          CI->getArgOperand(2), B, TLI,
-          LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAlignedNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
-          CI->getArgOperand(2), B, TLI,
-          LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAlignedNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
-          CI->getArgOperand(2), B, TLI,
-          LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
     break;
   case LibFunc_size_returning_new:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdSizeReturningNew(
-          CI->getType()->getStructElementType(0), CI->getArgOperand(0), B, TLI,
-          LibFunc_size_returning_new_hot_cold, HotCold);
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdSizeReturningNew(
-          CI->getType()->getStructElementType(0), CI->getArgOperand(0), B, TLI,
-          LibFunc_size_returning_new_hot_cold, HotCold);
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
     break;
   case LibFunc_size_returning_new_aligned:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdSizeReturningNewAligned(
-          CI->getType()->getStructElementType(0), CI->getArgOperand(0),
-          CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (OptimizeExistingHotColdNew)
       return emitHotColdSizeReturningNewAligned(
-          CI->getType()->getStructElementType(0), CI->getArgOperand(0),
-          CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   default:
@@ -1937,7 +1936,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   bool IsIntrinsic = CalleeFn->isIntrinsic();
   if (!IsIntrinsic) {
     StringRef CallerName = CI->getFunction()->getName();
-    if (!CallerName.empty() && CallerName.back() == 'f' &&
+    if (CallerName.ends_with('f') &&
         CallerName.size() == (CalleeName.size() + 1) &&
         CallerName.starts_with(CalleeName))
       return nullptr;
@@ -2009,28 +2008,21 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
         AbsOp = Real;
     }
 
-    if (AbsOp) {
-      IRBuilderBase::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-
+    if (AbsOp)
       return copyFlags(
-          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, nullptr, "cabs"));
-    }
+          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, CI, "cabs"));
 
     if (!CI->isFast())
       return nullptr;
   }
 
   // Propagate fast-math flags from the existing call to new instructions.
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(CI->getFastMathFlags());
-
-  Value *RealReal = B.CreateFMul(Real, Real);
-  Value *ImagImag = B.CreateFMul(Imag, Imag);
-
-  return copyFlags(*CI, B.CreateUnaryIntrinsic(Intrinsic::sqrt,
-                                               B.CreateFAdd(RealReal, ImagImag),
-                                               nullptr, "cabs"));
+  Value *RealReal = B.CreateFMulFMF(Real, Real, CI);
+  Value *ImagImag = B.CreateFMulFMF(Imag, Imag, CI);
+  return copyFlags(
+      *CI, B.CreateUnaryIntrinsic(Intrinsic::sqrt,
+                                  B.CreateFAddFMF(RealReal, ImagImag, CI), CI,
+                                  "cabs"));
 }
 
 // Return a properly extended integer (DstWidth bits wide) if the operation is
@@ -2270,7 +2262,7 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   // errno), but sqrt(-Inf) is required by various standards to set errno.
   if (!Pow->doesNotAccessMemory() && !Pow->hasNoInfs() &&
       !isKnownNeverInfinity(
-          Base, 0, SimplifyQuery(DL, TLI, DT, AC, Pow, true, true, DC)))
+          Base, SimplifyQuery(DL, TLI, DT, AC, Pow, true, true, DC)))
     return nullptr;
 
   Sqrt = getSqrtCall(Base, AttributeList(), Pow->doesNotAccessMemory(), Mod, B,
@@ -2484,15 +2476,13 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   // "Ideally, fmax would be sensitive to the sign of zero, for example
   // fmax(-0.0, +0.0) would return +0; however, implementation in software
   // might be impractical."
-  IRBuilderBase::FastMathFlagGuard Guard(B);
   FastMathFlags FMF = CI->getFastMathFlags();
   FMF.setNoSignedZeros();
-  B.setFastMathFlags(FMF);
 
   Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
                                                             : Intrinsic::maxnum;
   return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
-                                                CI->getArgOperand(1)));
+                                                CI->getArgOperand(1), FMF));
 }
 
 Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
@@ -2584,11 +2574,12 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
       SimplifyQuery SQ(DL, TLI, DT, AC, Log, true, true, DC);
       KnownFPClass Known = computeKnownFPClass(
           Log->getOperand(0),
-          KnownFPClass::OrderedLessThanZeroMask | fcSubnormal,
-          /*Depth=*/0, SQ);
+          KnownFPClass::OrderedLessThanZeroMask | fcSubnormal, SQ);
       Function *F = Log->getParent()->getParent();
-      IsKnownNoErrno = Known.cannotBeOrderedLessThanZero() &&
-                       Known.isKnownNeverLogicalZero(*F, Ty);
+      const fltSemantics &FltSem = Ty->getScalarType()->getFltSemantics();
+      IsKnownNoErrno =
+          Known.cannotBeOrderedLessThanZero() &&
+          Known.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
     if (IsKnownNoErrno) {
       auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
@@ -2787,20 +2778,18 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
   // Fast math flags for any created instructions should match the sqrt
   // and multiply.
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(I->getFastMathFlags());
 
   // If we found a repeated factor, hoist it out of the square root and
   // replace it with the fabs of that factor.
   Value *FabsCall =
-      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, nullptr, "fabs");
+      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, I, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out
     // of the square root calculation.
     Value *SqrtCall =
-        B.CreateUnaryIntrinsic(Intrinsic::sqrt, OtherOp, nullptr, "sqrt");
-    return copyFlags(*CI, B.CreateFMul(FabsCall, SqrtCall));
+        B.CreateUnaryIntrinsic(Intrinsic::sqrt, OtherOp, I, "sqrt");
+    return copyFlags(*CI, B.CreateFMulFMF(FabsCall, SqrtCall, I));
   }
   return copyFlags(*CI, FabsCall);
 }
@@ -2813,14 +2802,14 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
   bool IsNoNan = CI->hasNoNaNs();
   if (!IsNoNan) {
     SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
-    KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf,
-                                              /*Depth=*/0, SQ);
+    KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf, SQ);
     if (Known0.isKnownNeverInfinity()) {
       KnownFPClass Known1 =
-          computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
-                              /*Depth=*/0, SQ);
+          computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal, SQ);
       Function *F = CI->getParent()->getParent();
-      IsNoNan = Known1.isKnownNeverLogicalZero(*F, CI->getType());
+      const fltSemantics &FltSem =
+          CI->getType()->getScalarType()->getFltSemantics();
+      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
   }
 
@@ -2955,26 +2944,23 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *Src = CI->getArgOperand(0);
 
   if (match(Src, m_OneUse(m_FNeg(m_Value(X))))) {
-    IRBuilderBase::FastMathFlagGuard Guard(B);
-    B.setFastMathFlags(CI->getFastMathFlags());
-
-    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
+    Call->copyFastMathFlags(CI);
+    auto *CallInst = copyFlags(*CI, Call);
     if (IsEven) {
       // Even function: f(-x) = f(x)
       return CallInst;
     }
     // Odd function: f(-x) = -f(x)
-    return B.CreateFNeg(CallInst);
+    return B.CreateFNegFMF(CallInst, CI);
   }
 
   // Even function: f(abs(x)) = f(x), f(copysign(x, y)) = f(x)
   if (IsEven && (match(Src, m_FAbs(m_Value(X))) ||
                  match(Src, m_CopySign(m_Value(X), m_Value())))) {
-    IRBuilderBase::FastMathFlagGuard Guard(B);
-    B.setFastMathFlags(CI->getFastMathFlags());
-
-    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
-    return CallInst;
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
+    Call->copyFastMathFlags(CI);
+    return copyFlags(*CI, Call);
   }
 
   return nullptr;
@@ -3013,6 +2999,9 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
     return nullptr;
 
   Value *Arg = CI->getArgOperand(0);
+  if (isa<ConstantData>(Arg))
+    return nullptr;
+
   SmallVector<CallInst *, 1> SinCalls;
   SmallVector<CallInst *, 1> CosCalls;
   SmallVector<CallInst *, 1> SinCosCalls;
@@ -3209,8 +3198,6 @@ Value *LibCallSimplifier::optimizeToAscii(CallInst *CI, IRBuilderBase &B) {
 
 // Fold calls to atoi, atol, and atoll.
 Value *LibCallSimplifier::optimizeAtoi(CallInst *CI, IRBuilderBase &B) {
-  CI->addParamAttr(0, Attribute::NoCapture);
-
   StringRef Str;
   if (!getConstantStringInfo(CI->getArgOperand(0), Str))
     return nullptr;
@@ -3225,7 +3212,8 @@ Value *LibCallSimplifier::optimizeStrToInt(CallInst *CI, IRBuilderBase &B,
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
+                                                      CaptureInfo::none()));
     EndPtr = nullptr;
   } else if (!isKnownNonZero(EndPtr, DL))
     return nullptr;
@@ -3332,8 +3320,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     // printf("%s", str"\n") --> puts(str)
     if (OperandStr.back() == '\n') {
       OperandStr = OperandStr.drop_back();
-      Value *GV = B.CreateGlobalString(OperandStr, "str",
-                                       DL.getDefaultGlobalsAddressSpace());
+      Value *GV = B.CreateGlobalString(OperandStr, "str");
       return copyFlags(*CI, emitPutS(GV, B, TLI));
     }
     return nullptr;
@@ -3345,8 +3332,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.
     FormatStr = FormatStr.drop_back();
-    Value *GV = B.CreateGlobalString(FormatStr, "str",
-                                     DL.getDefaultGlobalsAddressSpace());
+    Value *GV = B.CreateGlobalString(FormatStr, "str");
     return copyFlags(*CI, emitPutS(GV, B, TLI));
   }
 
@@ -4147,6 +4133,11 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
       return optimizeMemCpy(CI, Builder);
     case Intrinsic::memmove:
       return optimizeMemMove(CI, Builder);
+    case Intrinsic::sin:
+    case Intrinsic::cos:
+      if (UnsafeFPShrink)
+        return optimizeUnaryDoubleFP(CI, Builder, TLI, /*isPrecise=*/true);
+      return nullptr;
     default:
       return nullptr;
     }

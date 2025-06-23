@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 ;
 ; Source:
 ;   extern void foo(void) __attribute__((nomerge));

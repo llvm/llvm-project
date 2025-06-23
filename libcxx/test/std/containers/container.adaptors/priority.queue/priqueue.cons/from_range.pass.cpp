@@ -22,7 +22,7 @@
 //   priority_queue(from_range_t, R&& rg, const Alloc&); // since C++23
 
 template <class Range>
-concept PriorityQueueHasFromRangeCtr = requires (Range&& range) {
+concept PriorityQueueHasFromRangeCtr = requires(Range&& range) {
   std::priority_queue<int>(std::from_range, std::forward<Range>(range));
   std::priority_queue<int>(std::from_range, std::forward<Range>(range), std::less<int>());
   std::priority_queue<int>(std::from_range, std::forward<Range>(range), std::less<int>(), std::allocator<int>());

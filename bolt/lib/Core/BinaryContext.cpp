@@ -46,9 +46,10 @@ using namespace llvm;
 
 namespace opts {
 
-cl::opt<bool> NoHugePages("no-huge-pages",
-                          cl::desc("use regular size pages for code alignment"),
-                          cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool>
+    NoHugePages("no-huge-pages",
+                cl::desc("use regular size pages for code alignment"),
+                cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
 PrintDebugInfo("print-debug-info",
@@ -200,7 +201,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   std::string Error;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(ArchName), TheTriple, Error);
+      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
   if (!TheTarget)
     return createStringError(make_error_code(std::errc::not_supported),
                              Twine("BOLT-ERROR: ", Error));
@@ -578,6 +579,21 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       TrimmedSize = EntriesAsAddress->size();
   };
 
+  auto printEntryDiagnostics = [&](raw_ostream &OS,
+                                   const BinaryFunction *TargetBF) {
+    OS << "FAIL: function doesn't contain this address\n";
+    if (!TargetBF)
+      return;
+    OS << "  ! function containing this address: " << *TargetBF << '\n';
+    if (!TargetBF->isFragment())
+      return;
+    OS << "  ! is a fragment with parents: ";
+    ListSeparator LS;
+    for (BinaryFunction *Parent : TargetBF->ParentFragments)
+      OS << LS << *Parent;
+    OS << '\n';
+  };
+
   ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
   if (!Section)
     return false;
@@ -645,25 +661,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
 
     // Function or one of its fragments.
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
-    const bool DoesBelongToFunction =
-        BF.containsAddress(Value) ||
-        (TargetBF && areRelatedFragments(TargetBF, &BF));
-    if (!DoesBelongToFunction) {
-      LLVM_DEBUG({
-        if (!BF.containsAddress(Value)) {
-          dbgs() << "FAIL: function doesn't contain this address\n";
-          if (TargetBF) {
-            dbgs() << "  ! function containing this address: "
-                   << TargetBF->getPrintName() << '\n';
-            if (TargetBF->isFragment()) {
-              dbgs() << "  ! is a fragment";
-              for (BinaryFunction *Parent : TargetBF->ParentFragments)
-                dbgs() << ", parent: " << Parent->getPrintName();
-              dbgs() << '\n';
-            }
-          }
-        }
-      });
+    if (!TargetBF || !areRelatedFragments(TargetBF, &BF)) {
+      LLVM_DEBUG(printEntryDiagnostics(dbgs(), TargetBF));
+      (void)printEntryDiagnostics;
       break;
     }
 
@@ -702,10 +702,7 @@ void BinaryContext::populateJumpTables() {
        ++JTI) {
     JumpTable *JT = JTI->second;
 
-    bool NonSimpleParent = false;
-    for (BinaryFunction *BF : JT->Parents)
-      NonSimpleParent |= !BF->isSimple();
-    if (NonSimpleParent)
+    if (!llvm::all_of(JT->Parents, std::mem_fn(&BinaryFunction::isSimple)))
       continue;
 
     uint64_t NextJTAddress = 0;
@@ -839,33 +836,26 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     assert(JT->Type == Type && "jump table types have to match");
     assert(Address == JT->getAddress() && "unexpected non-empty jump table");
 
-    // Prevent associating a jump table to a specific fragment twice.
-    if (!llvm::is_contained(JT->Parents, &Function)) {
-      assert(llvm::all_of(JT->Parents,
-                          [&](const BinaryFunction *BF) {
-                            return areRelatedFragments(&Function, BF);
-                          }) &&
-             "cannot re-use jump table of a different function");
-      // Duplicate the entry for the parent function for easy access
-      JT->Parents.push_back(&Function);
-      if (opts::Verbosity > 2) {
-        this->outs() << "BOLT-INFO: Multiple fragments access same jump table: "
-                     << JT->Parents[0]->getPrintName() << "; "
-                     << Function.getPrintName() << "\n";
-        JT->print(this->outs());
-      }
-      Function.JumpTables.emplace(Address, JT);
-      for (BinaryFunction *Parent : JT->Parents)
-        Parent->setHasIndirectTargetToSplitFragment(true);
-    }
+    if (llvm::is_contained(JT->Parents, &Function))
+      return JT->getFirstLabel();
 
-    bool IsJumpTableParent = false;
-    (void)IsJumpTableParent;
-    for (BinaryFunction *Frag : JT->Parents)
-      if (Frag == &Function)
-        IsJumpTableParent = true;
-    assert(IsJumpTableParent &&
+    // Prevent associating a jump table to a specific fragment twice.
+    auto isSibling = std::bind(&BinaryContext::areRelatedFragments, this,
+                               &Function, std::placeholders::_1);
+    assert(llvm::all_of(JT->Parents, isSibling) &&
            "cannot re-use jump table of a different function");
+    (void)isSibling;
+    if (opts::Verbosity > 2) {
+      this->outs() << "BOLT-INFO: multiple fragments access the same jump table"
+                   << ": " << *JT->Parents[0] << "; " << Function << '\n';
+      JT->print(this->outs());
+    }
+    if (JT->Parents.size() == 1)
+      JT->Parents.front()->setHasIndirectTargetToSplitFragment(true);
+    Function.setHasIndirectTargetToSplitFragment(true);
+    // Duplicate the entry for the parent function for easy access
+    JT->Parents.push_back(&Function);
+    Function.JumpTables.emplace(Address, JT);
     return JT->getFirstLabel();
   }
 
@@ -1042,10 +1032,8 @@ void BinaryContext::adjustCodePadding() {
 
     if (!hasValidCodePadding(BF)) {
       if (HasRelocations) {
-        if (opts::Verbosity >= 1) {
-          this->outs() << "BOLT-INFO: function " << BF
-                       << " has invalid padding. Ignoring the function.\n";
-        }
+        this->errs() << "BOLT-WARNING: function " << BF
+                     << " has invalid padding. Ignoring the function\n";
         BF.setIgnored();
       } else {
         BF.setMaxSize(BF.getSize());
@@ -1076,6 +1064,7 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     BD = GAI->second;
     if (!BD->hasName(Name)) {
       GlobalSymbols[Name] = BD;
+      BD->updateSize(Size);
       BD->Symbols.push_back(Symbol);
     }
   }
@@ -1758,7 +1747,11 @@ void BinaryContext::preprocessDebugInfo() {
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         auto Iter = DWOCUs.find(*DWOID);
-        assert(Iter != DWOCUs.end() && "DWO CU was not found.");
+        if (Iter == DWOCUs.end()) {
+          this->errs() << "BOLT-ERROR: DWO CU was not found for " << Name
+                       << '\n';
+          exit(1);
+        }
         Name = dwarf::toString(
             Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       }
@@ -1941,6 +1934,43 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
     OS << " discriminator:" << Row.Discriminator;
 }
 
+ArrayRef<uint8_t> BinaryContext::extractData(uint64_t Address,
+                                             uint64_t Size) const {
+  ArrayRef<uint8_t> Res;
+
+  const ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
+  if (!Section || Section->isVirtual())
+    return Res;
+
+  if (!Section->containsRange(Address, Size))
+    return Res;
+
+  auto *Bytes =
+      reinterpret_cast<const uint8_t *>(Section->getContents().data());
+  return ArrayRef<uint8_t>(Bytes + Address - Section->getAddress(), Size);
+}
+
+void BinaryContext::printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
+                              uint64_t Offset) const {
+  DataExtractor DE(Data, AsmInfo->isLittleEndian(),
+                   AsmInfo->getCodePointerSize());
+  uint64_t DataOffset = 0;
+  while (DataOffset + 4 <= Data.size()) {
+    OS << format("    %08" PRIx64 ": \t.word\t0x", Offset + DataOffset);
+    const auto Word = DE.getUnsigned(&DataOffset, 4);
+    OS << Twine::utohexstr(Word) << '\n';
+  }
+  if (DataOffset + 2 <= Data.size()) {
+    OS << format("    %08" PRIx64 ": \t.short\t0x", Offset + DataOffset);
+    const auto Short = DE.getUnsigned(&DataOffset, 2);
+    OS << Twine::utohexstr(Short) << '\n';
+  }
+  if (DataOffset + 1 == Data.size()) {
+    OS << format("    %08" PRIx64 ": \t.byte\t0x%x\n", Offset + DataOffset,
+                 Data[DataOffset]);
+  }
+}
+
 void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
                                      uint64_t Offset,
                                      const BinaryFunction *Function,
@@ -1961,7 +1991,15 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     OS << "\tjit\t" << MIB->getTargetSymbol(Instruction)->getName()
        << " # ID: " << DynamicID;
   } else {
-    InstPrinter->printInst(&Instruction, 0, "", *STI, OS);
+    // If there are annotations on the instruction, the MCInstPrinter will fail
+    // to print the preferred alias as it only does so when the number of
+    // operands is as expected. See
+    // https://github.com/llvm/llvm-project/blob/782f1a0d895646c364a53f9dcdd6d4ec1f3e5ea0/llvm/lib/MC/MCInstPrinter.cpp#L142
+    // Therefore, create a temporary copy of the Inst from which the annotations
+    // are removed, and print that Inst.
+    MCInst InstNoAnnot = Instruction;
+    MIB->stripAnnotations(InstNoAnnot);
+    InstPrinter->printInst(&InstNoAnnot, 0, "", *STI, OS);
   }
   if (MIB->isCall(Instruction)) {
     if (MIB->isTailCall(Instruction))
@@ -2233,7 +2271,7 @@ ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
 }
 
 void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
-                                  uint64_t Type, uint64_t Addend,
+                                  uint32_t Type, uint64_t Addend,
                                   uint64_t Value) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
@@ -2242,7 +2280,7 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 }
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
-                                         uint64_t Type, uint64_t Addend,
+                                         uint32_t Type, uint64_t Addend,
                                          uint64_t Value) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
@@ -2350,8 +2388,45 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   return BF;
 }
 
+BinaryFunction *
+BinaryContext::createInstructionPatch(uint64_t Address,
+                                      const InstructionListType &Instructions,
+                                      const Twine &Name) {
+  ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
+  assert(Section && "cannot get section for patching");
+  assert(Section->hasSectionRef() && Section->isText() &&
+         "can only patch input file code sections");
+
+  const uint64_t FileOffset =
+      Section->getInputFileOffset() + Address - Section->getAddress();
+
+  std::string PatchName = Name.str();
+  if (PatchName.empty()) {
+    // Assign unique name to the patch.
+    static uint64_t N = 0;
+    PatchName = "__BP_" + std::to_string(N++);
+  }
+
+  BinaryFunction *PBF = createInjectedBinaryFunction(PatchName);
+  PBF->setOutputAddress(Address);
+  PBF->setFileOffset(FileOffset);
+  PBF->setOriginSection(&Section.get());
+  PBF->addBasicBlock()->addInstructions(Instructions);
+  PBF->setIsPatch(true);
+
+  // Don't create symbol table entry if the name wasn't specified.
+  if (Name.str().empty())
+    PBF->setAnonymous(true);
+
+  return PBF;
+}
+
 std::pair<size_t, size_t>
 BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
+  // Use the original size for non-simple functions.
+  if (!BF.isSimple() || BF.isIgnored())
+    return std::make_pair(BF.getSize(), 0);
+
   // Adjust branch instruction to match the current layout.
   if (FixBranches)
     BF.fixBranches();

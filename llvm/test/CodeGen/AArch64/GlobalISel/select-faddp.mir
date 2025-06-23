@@ -16,10 +16,11 @@ body:             |
 
     ; CHECK-LABEL: name: f64_faddp
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FADDPv2i64p:%[0-9]+]]:fpr64 = nofpexcept FADDPv2i64p [[COPY]]
-    ; CHECK: $d0 = COPY [[FADDPv2i64p]]
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[FADDPv2i64p:%[0-9]+]]:fpr64 = nofpexcept FADDPv2i64p [[COPY]], implicit $fpcr
+    ; CHECK-NEXT: $d0 = COPY [[FADDPv2i64p]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s64>) = COPY $q0
     %6:gpr(s64) = G_CONSTANT i64 0
     %7:fpr(s64) = G_EXTRACT_VECTOR_ELT %0(<2 x s64>), %6(s64)
@@ -46,10 +47,11 @@ body:             |
 
     ; CHECK-LABEL: name: f32_faddp
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FADDPv2i32p:%[0-9]+]]:fpr32 = nofpexcept FADDPv2i32p [[COPY]]
-    ; CHECK: $s0 = COPY [[FADDPv2i32p]]
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[FADDPv2i32p:%[0-9]+]]:fpr32 = nofpexcept FADDPv2i32p [[COPY]], implicit $fpcr
+    ; CHECK-NEXT: $s0 = COPY [[FADDPv2i32p]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:fpr(<2 x s32>) = COPY $d0
     %6:gpr(s64) = G_CONSTANT i64 0
     %7:fpr(s32) = G_EXTRACT_VECTOR_ELT %0(<2 x s32>), %6(s64)

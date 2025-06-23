@@ -3,7 +3,6 @@
 # RUN: llvm-mc -triple s390x-linux-gnu -filetype=obj %s | \
 # RUN: llvm-objdump --mcpu=z14 -D - | FileCheck %s --check-prefix=OBJ
 
-#ASM:      .text
 #ASM:      .gnu_attribute 8, 2
 
 #OBJ:  0000000000000000 <.gnu.attributes>:

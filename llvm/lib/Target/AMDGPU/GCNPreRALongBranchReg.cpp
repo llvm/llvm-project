@@ -14,6 +14,7 @@
 // distrance threshold tuning of what is considered "long" is handled through
 // amdgpu-long-branch-factor cl argument which sets LongBranchFactor.
 //===----------------------------------------------------------------------===//
+#include "GCNPreRALongBranchReg.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -36,7 +37,7 @@ static cl::opt<double> LongBranchFactor(
              "reserved. We lean towards always reserving a register for  "
              "long jumps"));
 
-class GCNPreRALongBranchReg : public MachineFunctionPass {
+class GCNPreRALongBranchReg {
 
   struct BasicBlockInfo {
     // Offset - Distance from the beginning of the function to the beginning
@@ -49,26 +50,38 @@ class GCNPreRALongBranchReg : public MachineFunctionPass {
                          SmallVectorImpl<BasicBlockInfo> &BlockInfo);
 
 public:
+  GCNPreRALongBranchReg() = default;
+  bool run(MachineFunction &MF);
+};
+
+class GCNPreRALongBranchRegLegacy : public MachineFunctionPass {
+public:
   static char ID;
-  GCNPreRALongBranchReg() : MachineFunctionPass(ID) {
-    initializeGCNPreRALongBranchRegPass(*PassRegistry::getPassRegistry());
+  GCNPreRALongBranchRegLegacy() : MachineFunctionPass(ID) {
+    initializeGCNPreRALongBranchRegLegacyPass(*PassRegistry::getPassRegistry());
   }
-  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return GCNPreRALongBranchReg().run(MF);
+  }
+
   StringRef getPassName() const override {
     return "AMDGPU Pre-RA Long Branch Reg";
   }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 } // End anonymous namespace.
-char GCNPreRALongBranchReg::ID = 0;
 
-INITIALIZE_PASS(GCNPreRALongBranchReg, DEBUG_TYPE,
+char GCNPreRALongBranchRegLegacy::ID = 0;
+
+INITIALIZE_PASS(GCNPreRALongBranchRegLegacy, DEBUG_TYPE,
                 "AMDGPU Pre-RA Long Branch Reg", false, false)
 
-char &llvm::GCNPreRALongBranchRegID = GCNPreRALongBranchReg::ID;
+char &llvm::GCNPreRALongBranchRegID = GCNPreRALongBranchRegLegacy::ID;
 void GCNPreRALongBranchReg::generateBlockInfo(
     MachineFunction &MF, SmallVectorImpl<BasicBlockInfo> &BlockInfo) {
 
@@ -99,7 +112,8 @@ void GCNPreRALongBranchReg::generateBlockInfo(
     PrevNum = Num;
   }
 }
-bool GCNPreRALongBranchReg::runOnMachineFunction(MachineFunction &MF) {
+
+bool GCNPreRALongBranchReg::run(MachineFunction &MF) {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = STM.getInstrInfo();
   const SIRegisterInfo *TRI = STM.getRegisterInfo();
@@ -135,4 +149,11 @@ bool GCNPreRALongBranchReg::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   return false;
+}
+
+PreservedAnalyses
+GCNPreRALongBranchRegPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  GCNPreRALongBranchReg().run(MF);
+  return PreservedAnalyses::all();
 }

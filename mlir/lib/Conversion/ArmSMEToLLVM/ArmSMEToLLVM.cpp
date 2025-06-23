@@ -299,9 +299,9 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     auto sliceIndexI64 = rewriter.create<arith::IndexCastOp>(
         loc, rewriter.getI64Type(), sliceIndex);
     return getStridedElementPtr(
-        loc, llvm::cast<MemRefType>(tileMemory.getType()),
-        descriptor.getResult(0), {sliceIndexI64, zero},
-        static_cast<ConversionPatternRewriter &>(rewriter));
+        static_cast<ConversionPatternRewriter &>(rewriter), loc,
+        llvm::cast<MemRefType>(tileMemory.getType()), descriptor.getResult(0),
+        {sliceIndexI64, zero});
   }
 
   /// Emits an in-place swap of a slice of a tile in ZA and a slice of a
@@ -317,7 +317,7 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     auto allTruePredicate = rewriter.create<arith::ConstantOp>(
         loc, DenseElementsAttr::get(predicateType, true));
     // Create padding vector (never used due to all-true predicate).
-    auto padVector = rewriter.create<LLVM::UndefOp>(loc, sliceType);
+    auto padVector = rewriter.create<LLVM::PoisonOp>(loc, sliceType);
     // Get a pointer to the current slice.
     auto slicePtr =
         getInMemoryTileSlicePtr(rewriter, loc, tileAlloca, sliceIndex);
@@ -507,9 +507,9 @@ struct LoadTileSliceConversion
     if (!tileId)
       return failure();
 
-    Value ptr = this->getStridedElementPtr(loc, loadTileSliceOp.getMemRefType(),
-                                           adaptor.getBase(),
-                                           adaptor.getIndices(), rewriter);
+    Value ptr = this->getStridedElementPtr(
+        rewriter, loc, loadTileSliceOp.getMemRefType(), adaptor.getBase(),
+        adaptor.getIndices());
 
     auto tileSlice = loadTileSliceOp.getTileSliceIndex();
 
@@ -554,8 +554,8 @@ struct StoreTileSliceConversion
 
     // Create 'arm_sme.intr.st1*.horiz' intrinsic to store ZA tile slice.
     Value ptr = this->getStridedElementPtr(
-        loc, storeTileSliceOp.getMemRefType(), adaptor.getBase(),
-        adaptor.getIndices(), rewriter);
+        rewriter, loc, storeTileSliceOp.getMemRefType(), adaptor.getBase(),
+        adaptor.getIndices());
 
     auto tileSlice = storeTileSliceOp.getTileSliceIndex();
 

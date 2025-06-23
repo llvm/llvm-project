@@ -1,7 +1,5 @@
 # RUN: llvm-mc --disassemble %s -triple=wasm32-unknown-unknown | FileCheck %s
 
-# CHECK: .text
-
 # CHECK: nop
 0x01
 

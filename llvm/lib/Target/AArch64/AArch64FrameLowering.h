@@ -36,7 +36,9 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
-  bool enableCFIFixup(MachineFunction &MF) const override;
+  bool enableCFIFixup(const MachineFunction &MF) const override;
+
+  bool enableFullCFIFixup(const MachineFunction &MF) const override;
 
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
 
@@ -146,7 +148,7 @@ private:
                                       int &MinCSFrameIndex,
                                       int &MaxCSFrameIndex) const;
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
-                                                unsigned StackBumpBytes) const;
+                                                uint64_t StackBumpBytes) const;
   void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,

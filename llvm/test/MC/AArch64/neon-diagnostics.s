@@ -6914,6 +6914,9 @@
         tbl v0.8b, {v1.8b, v2.8b, v3.8b}, v2.8b
         tbl v0.8b, {v1.8b, v2.8b, v3.8b, v4.8b}, v2.8b
         tbl v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
+        tbl v0.8b, {v2.16b, v4.16b, v6.16b, v8.16b}, v10.8b
+        tbl.8b v0, {v2, v4, v6, v8}, v10
+        tbl.16b v0, {v2, v4, v6, v8}, v10
 
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        tbl v0.8b, {v1.8b}, v2.8b
@@ -6930,12 +6933,24 @@
 // CHECK-ERROR: error: invalid number of vectors
 // CHECK-ERROR:        tbl v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
 // CHECK-ERROR:                                                    ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbl v0.8b, {v2.16b, v4.16b, v6.16b, v8.16b}, v10.8b
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbl.8b v0, {v2, v4, v6, v8}, v10
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbl.16b v0, {v2, v4, v6, v8}, v10
+// CHECK-ERROR:                    ^
 
         tbx v0.8b, {v1.8b}, v2.8b
         tbx v0.8b, {v1.8b, v2.8b}, v2.8b
         tbx v0.8b, {v1.8b, v2.8b, v3.8b}, v2.8b
         tbx v0.8b, {v1.8b, v2.8b, v3.8b, v4.8b}, v2.8b
         tbx v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
+        tbx v0.8b, {v2.16b, v4.16b, v6.16b, v8.16b}, v10.8b
+        tbx.8b v0, {v2, v4, v6, v8}, v10
+        tbx.16b v0, {v2, v4, v6, v8}, v10
 
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        tbx v0.8b, {v1.8b}, v2.8b
@@ -6952,6 +6967,15 @@
 // CHECK-ERROR: error: invalid number of vectors
 // CHECK-ERROR:        tbx v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
 // CHECK-ERROR:                                                    ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbx v0.8b, {v2.16b, v4.16b, v6.16b, v8.16b}, v10.8b
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbx.8b v0, {v2, v4, v6, v8}, v10
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbx.16b v0, {v2, v4, v6, v8}, v10
+// CHECK-ERROR:                    ^
 
 //----------------------------------------------------------------------
 // Scalar Floating-point Convert To Lower Precision Narrow, Rounding To

@@ -437,6 +437,15 @@ that should never be entered if the program invariants hold:
       llvm_unreachable("X should be Foo or Bar here");
   }
 
+Additionally, ``reportFatalInternalError`` can be used to report invariant
+violations even in builds that do not enable assertions:
+
+.. code-block:: c++
+
+  if (VerifyFooAnalysis && !Foo.verify()) {
+    reportFatalInternalError("Analysis 'foo' not preserved");
+  }
+
 Recoverable Errors
 ^^^^^^^^^^^^^^^^^^
 
@@ -452,9 +461,9 @@ recovery.
    While it would be ideal to use this error handling scheme throughout
    LLVM, there are places where this hasn't been practical to apply. In
    situations where you absolutely must emit a non-programmatic error and
-   the ``Error`` model isn't workable you can call ``report_fatal_error``,
-   which will call installed error handlers, print a message, and abort the
-   program. The use of `report_fatal_error` in this case is discouraged.
+   the ``Error`` model isn't workable you can call ``reportFatalUsageError``,
+   which will call installed error handlers, print a message, and exit the
+   program. The use of `reportFatalUsageError` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer
@@ -590,14 +599,14 @@ semantics.  For example:
 
 This third form works with any type that can be assigned to from ``T&&``. This
 can be useful if the ``Expected<T>`` value needs to be stored an already-declared
-``Optional<T>``. For example:
+``std::optional<T>``. For example:
 
 .. code-block:: c++
 
   Expected<StringRef> extractClassName(StringRef Definition);
   struct ClassData {
     StringRef Definition;
-    Optional<StringRef> LazyName;
+    std::optional<StringRef> LazyName;
     ...
     Error initialize() {
       if (auto Err = extractClassName(Path).moveInto(LazyName))
@@ -3358,15 +3367,15 @@ the ``PassManager.h`` system, and there is a more detailed introduction to it
 by Sean Parent in several of his talks and papers:
 
 #. `Inheritance Is The Base Class of Evil
-   <http://channel9.msdn.com/Events/GoingNative/2013/Inheritance-Is-The-Base-Class-of-Evil>`_
+   <https://learn.microsoft.com/en-us/shows/goingnative-2013/inheritance-base-class-of-evil>`_
    - The GoingNative 2013 talk describing this technique, and probably the best
    place to start.
 #. `Value Semantics and Concepts-based Polymorphism
    <http://www.youtube.com/watch?v=_BpMYeUFXv8>`_ - The C++Now! 2012 talk
    describing this technique in more detail.
 #. `Sean Parent's Papers and Presentations
-   <http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations>`_
-   - A GitHub project full of links to slides, video, and sometimes code.
+   <https://sean-parent.stlab.cc/papers-and-presentations>`_
+   - Links to slides, videos, and sometimes code.
 
 When deciding between creating a type hierarchy (with either tagged or virtual
 dispatch) and using templates or concepts-based polymorphism, consider whether

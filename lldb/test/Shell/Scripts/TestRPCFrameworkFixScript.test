@@ -1,0 +1,14 @@
+# Create a temp dir for output and run the framework fix script on the truncated version of SBAddress.h in the inputs dir.
+RUN: mkdir -p %t/Outputs
+RUN: %python %p/../../../scripts/framework-header-fix.py -f lldb_rpc -i %p/Inputs/RPC/RPCSBAddress.h -o %t/Outputs/RPCSBAddress.h -p /usr/bin/unifdef USWIG
+
+# Check the output
+RUN: cat %t/Outputs/RPCSBAddress.h | FileCheck %s
+
+# Local includes must be changed to RPC framework level includes.
+# e.g. #include "SBDefines.h" -> #include <LLDBRPC/SBDefines.h>
+# Also, RPC common code includes must change to RPC framework level includes.
+# e.g. #include "lldb-rpc/common/RPCPublic.h" -> #include <LLDBRPC/RPCPublic.h>
+CHECK: #include <LLDBRPC/LLDBRPC.h>
+CHECK: #include <LLDBRPC/SBDefines.h>
+CHECK: #include <LLDBRPC/RPCPublic.h>

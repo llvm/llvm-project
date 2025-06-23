@@ -99,6 +99,9 @@ public:
   bool operator>=(Integral RHS) const { return V >= RHS.V; }
   bool operator==(Integral RHS) const { return V == RHS.V; }
   bool operator!=(Integral RHS) const { return V != RHS.V; }
+  bool operator>=(unsigned RHS) const {
+    return static_cast<unsigned>(V) >= RHS;
+  }
 
   bool operator>(unsigned RHS) const {
     return V >= 0 && static_cast<unsigned>(V) > RHS;
@@ -179,7 +182,10 @@ public:
   unsigned countLeadingZeros() const {
     if constexpr (!Signed)
       return llvm::countl_zero<ReprT>(V);
-    llvm_unreachable("Don't call countLeadingZeros() on signed types.");
+    if (isPositive())
+      return llvm::countl_zero<typename AsUnsigned::ReprT>(
+          static_cast<typename AsUnsigned::ReprT>(V));
+    llvm_unreachable("Don't call countLeadingZeros() on negative values.");
   }
 
   Integral truncate(unsigned TruncBits) const {
@@ -210,7 +216,7 @@ public:
     return Integral(Value.V);
   }
 
-  static Integral zero() { return from(0); }
+  static Integral zero(unsigned BitWidth = 0) { return from(0); }
 
   template <typename T> static Integral from(T Value, unsigned NumBits) {
     return Integral(Value);

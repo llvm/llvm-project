@@ -19,6 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 constexpr size_t N_EXCEPTS = 4;
 
 constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
@@ -28,6 +29,7 @@ constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
     {0x5cb0, 0xbbff, 0, 1, 0},
     {0x51f5, 0xb80f, 0, 1, 0},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -53,14 +55,14 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   //   	      = sin(k * pi/32) * cos(y * pi/32) +
   //   	        sin(y * pi/32) * cos(k * pi/32)
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Handle exceptional values
-  if (LIBC_UNLIKELY(x_abs == 0x585c || x_abs == 0x5cb0 || x_abs == 0x51f5 ||
-                    x_abs == 0x2b45)) {
-    bool x_sign = x_u >> 15;
-    if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
-        LIBC_UNLIKELY(r.has_value()))
-      return r.value();
-  }
+  bool x_sign = x_u >> 15;
+
+  if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
+      LIBC_UNLIKELY(r.has_value()))
+    return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   int rounding = fputil::quick_get_round();
 
@@ -85,6 +87,11 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   }
 
   if (xbits.is_inf_or_nan()) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+
     if (xbits.is_inf()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
@@ -99,8 +106,8 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   if (LIBC_UNLIKELY(sin_y == 0 && sin_k == 0))
     return FPBits::zero(xbits.sign()).get_val();
 
-  // Since, cosm1_y = cos_y - 1, therfore:
-  //    sin(x) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
+  // Since, cosm1_y = cos_y - 1, therefore:
+  //   sin(x) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
   return fputil::cast<float16>(fputil::multiply_add(
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }

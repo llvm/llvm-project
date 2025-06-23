@@ -76,11 +76,9 @@ entry:
 define bfloat @t7(bfloat %x)  {
 ; CHECK-LABEL: t7:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    fcvtzs w9, s0
 ; CHECK-NEXT:    scvtf d0, w9
 ; CHECK-NEXT:    fcvtxn s0, d0
@@ -101,11 +99,9 @@ entry:
 define bfloat @t8(bfloat %x)  {
 ; CHECK-LABEL: t8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    fcvtzu w9, s0
 ; CHECK-NEXT:    ucvtf d0, w9
 ; CHECK-NEXT:    fcvtxn s0, d0
@@ -198,11 +194,9 @@ entry:
 define bfloat @t7_strict(bfloat %x) #0 {
 ; CHECK-LABEL: t7_strict:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    fcvtzs w9, s0
 ; CHECK-NEXT:    scvtf d0, w9
 ; CHECK-NEXT:    fcvtxn s0, d0
@@ -223,11 +217,9 @@ entry:
 define bfloat @t8_strict(bfloat %x) #0 {
 ; CHECK-LABEL: t8_strict:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    fcvtzu w9, s0
 ; CHECK-NEXT:    ucvtf d0, w9
 ; CHECK-NEXT:    fcvtxn s0, d0

@@ -497,7 +497,7 @@ def Q30   : AArch64Reg<30, "q30", [D30, D30_HI], ["v30", ""]>, DwarfRegAlias<B30
 def Q31   : AArch64Reg<31, "q31", [D31, D31_HI], ["v31", ""]>, DwarfRegAlias<B31>;
 }
 
-def FPR8  : RegisterClass<"AArch64", [i8], 8, (sequence "B%u", 0, 31)> {
+def FPR8  : RegisterClass<"AArch64", [i8, aarch64mfp8], 8, (sequence "B%u", 0, 31)> {
   let Size = 8;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR8RegClassID, 0, 32>";
 }
@@ -646,7 +646,7 @@ class TypedVecListRegOperand<RegisterClass Reg, int lanes, string eltsize>
                                                    # eltsize # "'>">;
 
 multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
-  // With implicit types (probably on instruction instead). E.g. { v0, v1 }
+  // With implicit types (probably on instruction instead). E.g. { v0, v1 } or {v0, v2, v4}.
   def _64AsmOperand : AsmOperandClass {
     let Name = NAME # "64";
     let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ">";
@@ -665,6 +665,17 @@ multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
 
   def "128" : RegisterOperand<Reg128, "printImplicitlyTypedVectorList"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_128AsmOperand");
+  }
+
+  // With implicit types (probably on instruction instead), consecutive registers. E.g. { v0, v1, v2 }
+  def _Consecutive128AsmOperand : AsmOperandClass {
+    let Name = NAME # "Consecutive128";
+    let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ", true>";
+    let RenderMethod = "addVectorListOperands<AArch64Operand::VecListIdx_QReg, " # count # ", true>";
+  }
+
+  def "Consecutive128" : RegisterOperand<Reg128, "printImplicitlyTypedVectorList"> {
+    let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_Consecutive128AsmOperand");
   }
 
   // 64-bit register lists with explicit type.
@@ -968,10 +979,19 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 //******************************************************************************
 
 // SVE predicate register classes.
+
+// Note: This hardware mode is enabled in AArch64Subtarget::getHwModeSet()
+// (without the use of the table-gen'd predicates).
+def SMEWithZPRPredicateSpills : HwMode<"", [Predicate<"false">]>;
+
+def PPRSpillFillRI : RegInfoByHwMode<
+      [DefaultMode,              SMEWithZPRPredicateSpills],
+      [RegInfo<16,16,16>,        RegInfo<16,128,128>]>;
+
 class PPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                   [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
                                   (sequence "P%u", firstreg, lastreg, step)> {
-  let Size = 16;
+  let RegInfos = PPRSpillFillRI;
 }
 
 def PPR    : PPRClass<0, 15> {
@@ -1249,8 +1269,10 @@ def ZPRMul2AsmOp32_Hi : ZPRAsmOperand<"VectorS_Hi", 32, "Mul2_Hi">;
 def ZPRMul2AsmOp64_Lo : ZPRAsmOperand<"VectorD_Lo", 64, "Mul2_Lo">;
 def ZPRMul2AsmOp64_Hi : ZPRAsmOperand<"VectorD_Hi", 64, "Mul2_Hi">;
 
-def ZPR_K : RegisterClass<"AArch64", [untyped], 128,
-                          (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>;
+def ZPR_K : RegisterClass<"AArch64", [nxv16i8], 128,
+                          (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>{
+                             let Size = 128;
+}
 
 def ZK : RegisterOperand<ZPR_K, "printSVERegOp<>">{
   let EncoderMethod = "EncodeZK";
@@ -1827,7 +1849,7 @@ def ZTR : RegisterClass<"AArch64", [untyped], 512, (add ZT0)> {
 // * Tile vectors:
 //
 //   Their representation is similar to regular tiles, but they have an extra
-//   'h' or 'v' to tell how the vector at [reg+offset] is layed out in the tile,
+//   'h' or 'v' to tell how the vector at [reg+offset] is laid out in the tile,
 //   horizontally or vertically.
 //
 //   e.g. za1h.h or za15v.q, which corresponds to vectors in registers ZAH1 and

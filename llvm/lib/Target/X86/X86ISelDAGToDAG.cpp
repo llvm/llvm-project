@@ -184,8 +184,6 @@ namespace {
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
       OptForMinSize = MF.getFunction().hasMinSize();
-      assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
-             "OptForMinSize implies OptForSize");
       return SelectionDAGISel::runOnMachineFunction(MF);
     }
 
@@ -226,9 +224,8 @@ namespace {
     bool selectLEAAddr(SDValue N, SDValue &Base,
                        SDValue &Scale, SDValue &Index, SDValue &Disp,
                        SDValue &Segment);
-    bool selectLEA64_32Addr(SDValue N, SDValue &Base,
-                            SDValue &Scale, SDValue &Index, SDValue &Disp,
-                            SDValue &Segment);
+    bool selectLEA64_Addr(SDValue N, SDValue &Base, SDValue &Scale,
+                          SDValue &Index, SDValue &Disp, SDValue &Segment);
     bool selectTLSADDRAddr(SDValue N, SDValue &Base,
                            SDValue &Scale, SDValue &Index, SDValue &Disp,
                            SDValue &Segment);
@@ -278,8 +275,23 @@ namespace {
 #define GET_ND_IF_ENABLED(OPC) (Subtarget->hasNDD() ? OPC##_ND : OPC)
       // Negate the index if needed.
       if (AM.NegateIndex) {
-        unsigned NegOpc = VT == MVT::i64 ? GET_ND_IF_ENABLED(X86::NEG64r)
-                                         : GET_ND_IF_ENABLED(X86::NEG32r);
+        unsigned NegOpc;
+        switch (VT.SimpleTy) {
+        default:
+          llvm_unreachable("Unsupported VT!");
+        case MVT::i64:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG64r);
+          break;
+        case MVT::i32:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG32r);
+          break;
+        case MVT::i16:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG16r);
+          break;
+        case MVT::i8:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG8r);
+          break;
+        }
         SDValue Neg = SDValue(CurDAG->getMachineNode(NegOpc, DL, VT, MVT::i32,
                                                      AM.IndexReg), 0);
         AM.IndexReg = Neg;
@@ -370,7 +382,7 @@ namespace {
         return false;
 
       // Walk all the users of the immediate.
-      for (const SDNode *User : N->uses()) {
+      for (const SDNode *User : N->users()) {
         if (UseCount >= 2)
           break;
 
@@ -1095,7 +1107,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDNode *MaxLd = nullptr;
       SDValue Ptr = Ld->getBasePtr();
       SDValue Chain = Ld->getChain();
-      for (SDNode *User : Ptr->uses()) {
+      for (SDNode *User : Ptr->users()) {
         auto *UserLd = dyn_cast<LoadSDNode>(User);
         MVT UserVT = User->getSimpleValueType(0);
         if (User != N && UserLd && ISD::isNormalLoad(User) &&
@@ -1800,10 +1812,10 @@ void X86DAGToDAGISel::emitFunctionEntryCode() {
     emitSpecialCodeForMain();
 }
 
-static bool isDispSafeForFrameIndex(int64_t Val) {
-  // On 64-bit platforms, we can run into an issue where a frame index
+static bool isDispSafeForFrameIndexOrRegBase(int64_t Val) {
+  // We can run into an issue where a frame index or a register base
   // includes a displacement that, when added to the explicit displacement,
-  // will overflow the displacement field. Assuming that the frame index
+  // will overflow the displacement field. Assuming that the
   // displacement fits into a 31-bit integer  (which is only slightly more
   // aggressive than the current fundamental assumption that it fits into
   // a 32-bit integer), a 31-bit disp should always be safe.
@@ -1831,7 +1843,7 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
     // In addition to the checks required for a register base, check that
     // we do not try to use an unsafe Disp with a frame index.
     if (AM.BaseType == X86ISelAddressMode::FrameIndexBase &&
-        !isDispSafeForFrameIndex(Val))
+        !isDispSafeForFrameIndexOrRegBase(Val))
       return true;
     // In ILP32 (x32) mode, pointers are 32 bits and need to be zero-extended to
     // 64 bits. Instructions with 32-bit register addresses perform this zero
@@ -1849,10 +1861,14 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
     // to get an address size override to be emitted. However, this
     // pseudo-register is not part of any register class and therefore causes
     // MIR verification to fail.
-    if (Subtarget->isTarget64BitILP32() && !isUInt<31>(Val) &&
+    if (Subtarget->isTarget64BitILP32() &&
+        !isDispSafeForFrameIndexOrRegBase((uint32_t)Val) &&
         !AM.hasBaseOrIndexReg())
       return true;
-  }
+  } else if (AM.hasBaseOrIndexReg() && !isDispSafeForFrameIndexOrRegBase(Val))
+    // For 32-bit X86, make sure the displacement still isn't close to the
+    // expressible limit.
+    return true;
   AM.Disp = Val;
   return false;
 }
@@ -2496,7 +2512,6 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
 
 bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                               unsigned Depth) {
-  SDLoc dl(N);
   LLVM_DEBUG({
     dbgs() << "MatchAddress: ";
     AM.dump(CurDAG);
@@ -2553,7 +2568,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
   case ISD::FrameIndex:
     if (AM.BaseType == X86ISelAddressMode::RegBase &&
         AM.Base_Reg.getNode() == nullptr &&
-        (!Subtarget->is64Bit() || isDispSafeForFrameIndex(AM.Disp))) {
+        (!Subtarget->is64Bit() || isDispSafeForFrameIndexOrRegBase(AM.Disp))) {
       AM.BaseType = X86ISelAddressMode::FrameIndexBase;
       AM.Base_FrameIndex = cast<FrameIndexSDNode>(N)->getIndex();
       return false;
@@ -2887,7 +2902,6 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
 bool X86DAGToDAGISel::matchVectorAddressRecursively(SDValue N,
                                                     X86ISelAddressMode &AM,
                                                     unsigned Depth) {
-  SDLoc dl(N);
   LLVM_DEBUG({
     dbgs() << "MatchVectorAddress: ";
     AM.dump(CurDAG);
@@ -3054,36 +3068,46 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
   return !TM.isLargeGlobalValue(GV);
 }
 
-bool X86DAGToDAGISel::selectLEA64_32Addr(SDValue N, SDValue &Base,
-                                         SDValue &Scale, SDValue &Index,
-                                         SDValue &Disp, SDValue &Segment) {
+bool X86DAGToDAGISel::selectLEA64_Addr(SDValue N, SDValue &Base, SDValue &Scale,
+                                       SDValue &Index, SDValue &Disp,
+                                       SDValue &Segment) {
   // Save the debug loc before calling selectLEAAddr, in case it invalidates N.
   SDLoc DL(N);
 
   if (!selectLEAAddr(N, Base, Scale, Index, Disp, Segment))
     return false;
 
+  EVT BaseType = Base.getValueType();
+  unsigned SubReg;
+  if (BaseType == MVT::i8)
+    SubReg = X86::sub_8bit;
+  else if (BaseType == MVT::i16)
+    SubReg = X86::sub_16bit;
+  else
+    SubReg = X86::sub_32bit;
+
   auto *RN = dyn_cast<RegisterSDNode>(Base);
   if (RN && RN->getReg() == 0)
     Base = CurDAG->getRegister(0, MVT::i64);
-  else if (Base.getValueType() == MVT::i32 && !isa<FrameIndexSDNode>(Base)) {
+  else if ((BaseType == MVT::i8 || BaseType == MVT::i16 ||
+            BaseType == MVT::i32) &&
+           !isa<FrameIndexSDNode>(Base)) {
     // Base could already be %rip, particularly in the x32 ABI.
     SDValue ImplDef = SDValue(CurDAG->getMachineNode(X86::IMPLICIT_DEF, DL,
                                                      MVT::i64), 0);
-    Base = CurDAG->getTargetInsertSubreg(X86::sub_32bit, DL, MVT::i64, ImplDef,
-                                         Base);
+    Base = CurDAG->getTargetInsertSubreg(SubReg, DL, MVT::i64, ImplDef, Base);
   }
 
+  [[maybe_unused]] EVT IndexType = Index.getValueType();
   RN = dyn_cast<RegisterSDNode>(Index);
   if (RN && RN->getReg() == 0)
     Index = CurDAG->getRegister(0, MVT::i64);
   else {
-    assert(Index.getValueType() == MVT::i32 &&
-           "Expect to be extending 32-bit registers for use in LEA");
+    assert((IndexType == BaseType) &&
+           "Expect to be extending 8/16/32-bit registers for use in LEA");
     SDValue ImplDef = SDValue(CurDAG->getMachineNode(X86::IMPLICIT_DEF, DL,
                                                      MVT::i64), 0);
-    Index = CurDAG->getTargetInsertSubreg(X86::sub_32bit, DL, MVT::i64, ImplDef,
-                                          Index);
+    Index = CurDAG->getTargetInsertSubreg(SubReg, DL, MVT::i64, ImplDef, Index);
   }
 
   return true;
@@ -3276,7 +3300,7 @@ bool X86DAGToDAGISel::tryFoldBroadcast(SDNode *Root, SDNode *P, SDValue N,
 /// Output instructions required to initialize the global base register,
 /// if necessary.
 SDNode *X86DAGToDAGISel::getGlobalBaseReg() {
-  unsigned GlobalBaseReg = getInstrInfo()->getGlobalBaseReg(MF);
+  Register GlobalBaseReg = getInstrInfo()->getGlobalBaseReg(MF);
   auto &DL = MF->getDataLayout();
   return CurDAG->getRegister(GlobalBaseReg, TLI->getPointerTy(DL)).getNode();
 }
@@ -3318,24 +3342,25 @@ X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {
 /// other than ZF.
 bool X86DAGToDAGISel::onlyUsesZeroFlag(SDValue Flags) const {
   // Examine each user of the node.
-  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
-         UI != UE; ++UI) {
+  for (SDUse &Use : Flags->uses()) {
     // Only check things that use the flags.
-    if (UI.getUse().getResNo() != Flags.getResNo())
+    if (Use.getResNo() != Flags.getResNo())
       continue;
+    SDNode *User = Use.getUser();
     // Only examine CopyToReg uses that copy to EFLAGS.
-    if (UI->getOpcode() != ISD::CopyToReg ||
-        cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
+    if (User->getOpcode() != ISD::CopyToReg ||
+        cast<RegisterSDNode>(User->getOperand(1))->getReg() != X86::EFLAGS)
       return false;
     // Examine each user of the CopyToReg use.
-    for (SDNode::use_iterator FlagUI = UI->use_begin(),
-           FlagUE = UI->use_end(); FlagUI != FlagUE; ++FlagUI) {
+    for (SDUse &FlagUse : User->uses()) {
       // Only examine the Flag result.
-      if (FlagUI.getUse().getResNo() != 1) continue;
+      if (FlagUse.getResNo() != 1)
+        continue;
       // Anything unusual: assume conservatively.
-      if (!FlagUI->isMachineOpcode()) return false;
+      if (!FlagUse.getUser()->isMachineOpcode())
+        return false;
       // Examine the condition code of the user.
-      X86::CondCode CC = getCondFromNode(*FlagUI);
+      X86::CondCode CC = getCondFromNode(FlagUse.getUser());
 
       switch (CC) {
       // Comparisons which only use the zero flag.
@@ -3354,24 +3379,25 @@ bool X86DAGToDAGISel::onlyUsesZeroFlag(SDValue Flags) const {
 /// flag to be accurate.
 bool X86DAGToDAGISel::hasNoSignFlagUses(SDValue Flags) const {
   // Examine each user of the node.
-  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
-         UI != UE; ++UI) {
+  for (SDUse &Use : Flags->uses()) {
     // Only check things that use the flags.
-    if (UI.getUse().getResNo() != Flags.getResNo())
+    if (Use.getResNo() != Flags.getResNo())
       continue;
+    SDNode *User = Use.getUser();
     // Only examine CopyToReg uses that copy to EFLAGS.
-    if (UI->getOpcode() != ISD::CopyToReg ||
-        cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
+    if (User->getOpcode() != ISD::CopyToReg ||
+        cast<RegisterSDNode>(User->getOperand(1))->getReg() != X86::EFLAGS)
       return false;
     // Examine each user of the CopyToReg use.
-    for (SDNode::use_iterator FlagUI = UI->use_begin(),
-           FlagUE = UI->use_end(); FlagUI != FlagUE; ++FlagUI) {
+    for (SDUse &FlagUse : User->uses()) {
       // Only examine the Flag result.
-      if (FlagUI.getUse().getResNo() != 1) continue;
+      if (FlagUse.getResNo() != 1)
+        continue;
       // Anything unusual: assume conservatively.
-      if (!FlagUI->isMachineOpcode()) return false;
+      if (!FlagUse.getUser()->isMachineOpcode())
+        return false;
       // Examine the condition code of the user.
-      X86::CondCode CC = getCondFromNode(*FlagUI);
+      X86::CondCode CC = getCondFromNode(FlagUse.getUser());
 
       switch (CC) {
       // Comparisons which don't examine the SF flag.
@@ -3410,29 +3436,28 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
 /// CF flag to be accurate.
  bool X86DAGToDAGISel::hasNoCarryFlagUses(SDValue Flags) const {
   // Examine each user of the node.
-  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
-         UI != UE; ++UI) {
+  for (SDUse &Use : Flags->uses()) {
     // Only check things that use the flags.
-    if (UI.getUse().getResNo() != Flags.getResNo())
+    if (Use.getResNo() != Flags.getResNo())
       continue;
 
-    unsigned UIOpc = UI->getOpcode();
+    SDNode *User = Use.getUser();
+    unsigned UserOpc = User->getOpcode();
 
-    if (UIOpc == ISD::CopyToReg) {
+    if (UserOpc == ISD::CopyToReg) {
       // Only examine CopyToReg uses that copy to EFLAGS.
-      if (cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
+      if (cast<RegisterSDNode>(User->getOperand(1))->getReg() != X86::EFLAGS)
         return false;
       // Examine each user of the CopyToReg use.
-      for (SDNode::use_iterator FlagUI = UI->use_begin(), FlagUE = UI->use_end();
-           FlagUI != FlagUE; ++FlagUI) {
+      for (SDUse &FlagUse : User->uses()) {
         // Only examine the Flag result.
-        if (FlagUI.getUse().getResNo() != 1)
+        if (FlagUse.getResNo() != 1)
           continue;
         // Anything unusual: assume conservatively.
-        if (!FlagUI->isMachineOpcode())
+        if (!FlagUse.getUser()->isMachineOpcode())
           return false;
         // Examine the condition code of the user.
-        X86::CondCode CC = getCondFromNode(*FlagUI);
+        X86::CondCode CC = getCondFromNode(FlagUse.getUser());
 
         if (mayUseCarryFlag(CC))
           return false;
@@ -3445,7 +3470,7 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
     // This might be an unselected node. So look for the pre-isel opcodes that
     // use flags.
     unsigned CCOpNo;
-    switch (UIOpc) {
+    switch (UserOpc) {
     default:
       // Something unusual. Be conservative.
       return false;
@@ -3455,7 +3480,7 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
     case X86ISD::BRCOND:      CCOpNo = 2; break;
     }
 
-    X86::CondCode CC = (X86::CondCode)UI->getConstantOperandVal(CCOpNo);
+    X86::CondCode CC = (X86::CondCode)User->getConstantOperandVal(CCOpNo);
     if (mayUseCarryFlag(CC))
       return false;
   }
@@ -6710,6 +6735,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         {Base, Scale, Index, Disp, Segment, Chain, Chain.getValue(1)});
     CurDAG->setNodeMemRefs(Res, cast<MemSDNode>(Node)->getMemOperand());
     ReplaceNode(Node, Res);
+    return;
+  }
+  case X86ISD::POP_FROM_X87_REG: {
+    SDValue Chain = Node->getOperand(0);
+    Register Reg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
+    SDValue Glue;
+    if (Node->getNumValues() == 3)
+      Glue = Node->getOperand(2);
+    SDValue Copy =
+        CurDAG->getCopyFromReg(Chain, dl, Reg, Node->getValueType(0), Glue);
+    ReplaceNode(Node, Copy.getNode());
     return;
   }
   }

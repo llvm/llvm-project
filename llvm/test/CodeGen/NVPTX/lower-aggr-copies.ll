@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -O0 | FileCheck %s --check-prefix PTX
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 | FileCheck %s --check-prefix PTX
 ; RUN: opt < %s -S -nvptx-lower-aggr-copies | FileCheck %s --check-prefix IR
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 -O0 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 | %ptxas-verify %}
 
 ; Verify that the NVPTXLowerAggrCopies pass works as expected - calls to
 ; llvm.mem* intrinsics get lowered to loops.
@@ -37,8 +37,8 @@ entry:
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memcpy_caller
 ; PTX:        $L__BB[[LABEL:[_0-9]+]]:
-; PTX:        ld.u8 %rs[[REG:[0-9]+]]
-; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[REG]]
+; PTX:        ld.b8 %rs[[REG:[0-9]+]]
+; PTX:        st.b8 [%rd{{[0-9]+}}], %rs[[REG]]
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
 ; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
 ; PTX:        @%p[[PRED]] bra $L__BB[[LABEL]]
@@ -71,8 +71,8 @@ entry:
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memcpy_volatile_caller
 ; PTX:        $L__BB[[LABEL:[_0-9]+]]:
-; PTX:        ld.volatile.u8 %rs[[REG:[0-9]+]]
-; PTX:        st.volatile.u8 [%rd{{[0-9]+}}], %rs[[REG]]
+; PTX:        ld.volatile.b8 %rs[[REG:[0-9]+]]
+; PTX:        st.volatile.b8 [%rd{{[0-9]+}}], %rs[[REG]]
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
 ; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
 ; PTX:        @%p[[PRED]] bra $L__BB[[LABEL]]
@@ -124,10 +124,10 @@ entry:
 ; IR-NEXT:    store i8 [[VAL]], ptr [[STOREPTR]]
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memset_caller(
-; PTX:        ld.param.u32 %r[[C:[0-9]+]]
+; PTX:        ld.param.b32 %r[[C:[0-9]+]]
 ; PTX:        cvt.u16.u32  %rs[[REG:[0-9]+]], %r[[C]];
 ; PTX:        $L__BB[[LABEL:[_0-9]+]]:
-; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[REG]]
+; PTX:        st.b8 [%rd{{[0-9]+}}], %rs[[REG]]
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
 ; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
 ; PTX:        @%p[[PRED]] bra $L__BB[[LABEL]]
@@ -159,20 +159,20 @@ entry:
 ; IR:         {{%[0-9a-zA-Z_]+}} = add i64 [[FWDPHIVAL]], 1
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memmove_caller(
-; PTX:        ld.param.u64 %rd[[N:[0-9]+]]
+; PTX:        ld.param.b64 %rd[[N:[0-9]+]]
 ; PTX-DAG:    setp.eq.s64 %p[[NEQ0:[0-9]+]], %rd[[N]], 0
 ; PTX-DAG:    setp.ge.u64 %p[[SRC_GT_THAN_DST:[0-9]+]], %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; PTX-NEXT:   @%p[[SRC_GT_THAN_DST]] bra $L__BB[[FORWARD_BB:[0-9_]+]]
 ; -- this is the backwards copying BB
 ; PTX:        @%p[[NEQ0]] bra $L__BB[[EXIT:[0-9_]+]]
 ; PTX:        add.s64 %rd{{[0-9]}}, %rd{{[0-9]}}, -1
-; PTX:        ld.u8 %rs[[ELEMENT:[0-9]+]]
-; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[ELEMENT]]
+; PTX:        ld.b8 %rs[[ELEMENT:[0-9]+]]
+; PTX:        st.b8 [%rd{{[0-9]+}}], %rs[[ELEMENT]]
 ; -- this is the forwards copying BB
 ; PTX:        $L__BB[[FORWARD_BB]]:
 ; PTX:        @%p[[NEQ0]] bra $L__BB[[EXIT]]
-; PTX:        ld.u8 %rs[[ELEMENT2:[0-9]+]]
-; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[ELEMENT2]]
+; PTX:        ld.b8 %rs[[ELEMENT2:[0-9]+]]
+; PTX:        st.b8 [%rd{{[0-9]+}}], %rs[[ELEMENT2]]
 ; PTX:        add.s64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, 1
 ; -- exit block
 ; PTX:        $L__BB[[EXIT]]:

@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='function(rtsan),module(rtsan-module)' -S | FileCheck %s
+; RUN: opt < %s -passes='rtsan' -S | FileCheck %s
 
 define void @violation() #0 {
   %1 = alloca ptr, align 8

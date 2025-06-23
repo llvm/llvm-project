@@ -207,16 +207,15 @@ bool operator<(const SourceLoc lhs, const SourceLoc rhs) {
 void BreakpointResolver::SetSCMatchesByLine(
     SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue,
     llvm::StringRef log_ident, uint32_t line, std::optional<uint16_t> column) {
-  llvm::SmallVector<SymbolContext, 16> all_scs;
+  llvm::SmallVector<SymbolContext, 16> all_scs(sc_list.begin(), sc_list.end());
 
-  for (const auto &sc : sc_list) {
-    if (Language::GetGlobalLanguageProperties()
-            .GetEnableFilterForLineBreakpoints())
-      if (Language *lang = Language::FindPlugin(sc.GetLanguage());
-          lang && lang->IgnoreForLineBreakpoints(sc))
-        continue;
-    all_scs.push_back(sc);
-  }
+  // Let the language plugin filter `sc_list`. Because all symbol contexts in
+  // sc_list are assumed to belong to the same File, Line and CU, the code below
+  // assumes they have the same language.
+  if (!sc_list.IsEmpty() && Language::GetGlobalLanguageProperties()
+                                .GetEnableFilterForLineBreakpoints())
+    if (Language *lang = Language::FindPlugin(sc_list[0].GetLanguage()))
+      lang->FilterForLineBreakpoints(all_scs);
 
   while (all_scs.size()) {
     uint32_t closest_line = UINT32_MAX;
@@ -325,7 +324,7 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
   // If the line number is before the prologue end, move it there...
   bool skipped_prologue = false;
   if (skip_prologue && sc.function) {
-    Address prologue_addr(sc.function->GetAddressRange().GetBaseAddress());
+    Address prologue_addr = sc.function->GetAddress();
     if (prologue_addr.IsValid() && (line_start == prologue_addr)) {
       const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
       if (prologue_byte_size) {

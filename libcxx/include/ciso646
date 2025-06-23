@@ -15,8 +15,9 @@
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/ciso646>
+#else
 #  include <__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -25,10 +26,11 @@
 
 #  if _LIBCPP_STD_VER >= 20
 
-using __standard_header_ciso646 _LIBCPP_DEPRECATED_("removed in C++20. Include <version> instead.") = void;
-using __use_standard_header_ciso646 = __standard_header_ciso646;
+using __standard_header_ciso646
+    _LIBCPP_DEPRECATED_("removed in C++20. Include <version> instead.") _LIBCPP_NODEBUG = void;
+using __use_standard_header_ciso646 _LIBCPP_NODEBUG                                     = __standard_header_ciso646;
 
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CISO646

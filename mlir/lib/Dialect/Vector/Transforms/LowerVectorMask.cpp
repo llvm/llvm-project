@@ -222,7 +222,7 @@ public:
 
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<TransferReadOp>(
-        maskingOp.getOperation(), readOp.getVectorType(), readOp.getSource(),
+        maskingOp.getOperation(), readOp.getVectorType(), readOp.getBase(),
         readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
         maskingOp.getMask(), readOp.getInBounds());
     return success();
@@ -245,7 +245,7 @@ public:
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
-        writeOp.getSource(), writeOp.getIndices(), writeOp.getPermutationMap(),
+        writeOp.getBase(), writeOp.getIndices(), writeOp.getPermutationMap(),
         maskingOp.getMask(), writeOp.getInBounds());
     return success();
   }
@@ -286,7 +286,7 @@ struct LowerVectorMaskPass
     populateVectorMaskLoweringPatternsForSideEffectingOps(loweringPatterns);
     MaskOp::getCanonicalizationPatterns(loweringPatterns, context);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
+    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 

@@ -56,14 +56,14 @@ define amdgpu_kernel void @v6i16_arg(<6 x i16> %in) nounwind {
 }
 
 ; FUNC-LABEL: {{^}}v5i32_arg:
-; GCN: s_load_dwordx8 s[0:7], s[8:9], 0x0
+; GCN: s_load_dwordx4 s[0:3], s[8:9], 0x0
 define amdgpu_kernel void @v5i32_arg(<5 x i32> %in) nounwind {
   store <5 x i32> %in, ptr addrspace(1) null
   ret void
 }
 
 ; FUNC-LABEL: {{^}}v6i32_arg:
-; GCN: s_load_dwordx8 s[0:7], s[8:9], 0x0
+; GCN: s_load_dwordx4 s[0:3], s[8:9], 0x0
 define amdgpu_kernel void @v6i32_arg(<6 x i32> %in) nounwind {
   store <6 x i32> %in, ptr addrspace(1) null
   ret void
@@ -160,16 +160,16 @@ define amdgpu_kernel void @struct_argument_alignment_after({i32, i64} %arg0, i8,
 ; GCN-LABEL: {{^}}array_3xi32:
 ; HSA-VI: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[8:9], 0x0
 define amdgpu_kernel void @array_3xi32(i16 %arg0, [3 x i32] %arg1) {
-  store volatile i16 %arg0, ptr addrspace(1) undef
-  store volatile [3 x i32] %arg1, ptr addrspace(1) undef
+  store volatile i16 %arg0, ptr addrspace(1) poison
+  store volatile [3 x i32] %arg1, ptr addrspace(1) poison
   ret void
 }
 
 ; GCN-LABEL: {{^}}array_3xi16:
 ; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[8:9], 0x0
 define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
-  store volatile i8 %arg0, ptr addrspace(1) undef
-  store volatile [3 x i16] %arg1, ptr addrspace(1) undef
+  store volatile i8 %arg0, ptr addrspace(1) poison
+  store volatile [3 x i16] %arg1, ptr addrspace(1) poison
   ret void
 }
 
@@ -317,7 +317,7 @@ define amdgpu_kernel void @multi_byref_constant_i32_arg(ptr addrspace(1) nocaptu
 ; GCN: .amdhsa_kernarg_size 4
 define amdgpu_kernel void @byref_constant_i32_arg_offset0(ptr addrspace(4) byref(i32) %in.byref) #0 {
   %in = load i32, ptr addrspace(4) %in.byref
-  store i32 %in, ptr addrspace(1) undef, align 4
+  store i32 %in, ptr addrspace(1) poison, align 4
   ret void
 }
 

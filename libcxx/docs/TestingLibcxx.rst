@@ -116,6 +116,7 @@ Additional tools
 The libc++ test suite uses a few optional tools to improve the code quality.
 
 These tools are:
+
 - clang-tidy (you might need additional dev packages to compile libc++-specific clang-tidy checks)
 
 Reproducing CI issues locally
@@ -291,7 +292,7 @@ tests using exceptions. The code to write a test manually would be:
 
 .. code-block:: cpp
 
-  void test_excption([[maybe_unused]] int arg) {
+  void test_exception([[maybe_unused]] int arg) {
   #ifndef TEST_HAS_NO_EXCEPTIONS // do nothing when tests are disabled
     try {
       foo(arg);
@@ -308,7 +309,7 @@ The same test using a macro:
 
 .. code-block:: cpp
 
-  void test_excption([[maybe_unused]] int arg) {
+  void test_exception([[maybe_unused]] int arg) {
     TEST_VALIDATE_EXCEPTION(bar,
                             [](const bar& e) {
                               LIBCPP_ASSERT(e.what() == what);
@@ -435,15 +436,44 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
        extension.)
 
 
+C++ Standard version tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Historically libc++ tests used to filter the tests for C++ Standard versions
+with lit directives like:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+
+With C++ Standards released every 3 years, this solution is not scalable.
+Instead use:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: std-at-least-c++26
+
+There is no corresponding ``std-at-most-c++23``. This could be useful when
+tests are only valid for a small set of standard versions. For example, a
+deprecation test is only valid when the feature is deprecated until it is
+removed from the Standard. These tests should be written like:
+
+.. code-block:: cpp
+
+   // REQUIRES: c++17 || c++20 || c++23
+
+.. note::
+
+   There are a lot of tests with the first style, these can remain as they are.
+   The new style is only intended to be used for new tests.
+
+
 Benchmarks
 ==========
 
-Libc++ contains benchmark tests separately from the test of the test suite.
-The benchmarks are written using the `Google Benchmark`_ library, a copy of which
-is stored in the libc++ repository.
-
-For more information about using the Google Benchmark library, see the
-`official documentation <https://github.com/google/benchmark>`_.
+Libc++'s test suite also contains benchmarks. The benchmarks are written using the `Google Benchmark`_
+library, a copy of which is stored in the LLVM monorepo. For more information about using the Google
+Benchmark library, see the `official documentation <https://github.com/google/benchmark>`_.
 
 The benchmarks are located under ``libcxx/test/benchmarks``. Running a benchmark
 works in the same way as running a test. Both the benchmarks and the tests share
@@ -458,6 +488,29 @@ Note that benchmarks are only dry-run when run via the ``check-cxx`` target sinc
 we only want to make sure they don't rot. Do not rely on the results of benchmarks
 run through ``check-cxx`` for anything, instead run the benchmarks manually using
 the instructions for running individual tests.
+
+If you want to compare the results of different benchmark runs, we recommend using the
+``libcxx-compare-benchmarks`` helper tool. First, configure CMake in a build directory
+and run the benchmark:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build1> [...]
+  $ libcxx/utils/libcxx-lit <build1> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Then, do the same for the second configuration you want to test. Use a different build
+directory for that configuration:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build2> [...]
+  $ libcxx/utils/libcxx-lit <build2> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Finally, use ``libcxx-compare-benchmarks`` to compare both:
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-compare-benchmarks <build1> <build2> libcxx/test/benchmarks/string.bench.cpp
 
 .. _`Google Benchmark`: https://github.com/google/benchmark
 

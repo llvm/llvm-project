@@ -206,11 +206,13 @@ public:
     computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
                       &Fractional);
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
-    Str->append(
-        "Stats: MapAllocatorCache: EntriesCount: %zu, "
-        "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsIntervalMs = %d\n",
-        LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
-        atomic_load_relaxed(&MaxEntrySize), Interval >= 0 ? Interval : -1);
+    Str->append("Stats: MapAllocatorCache: EntriesCount: %zu, "
+                "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsSkips: "
+                "%zu, ReleaseToOsIntervalMs = %d\n",
+                LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
+                atomic_load_relaxed(&MaxEntrySize),
+                atomic_load_relaxed(&ReleaseToOsSkips),
+                Interval >= 0 ? Interval : -1);
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
@@ -343,8 +345,15 @@ public:
       unmapCallBack(EvictMemMap);
 
     if (Interval >= 0) {
-      // TODO: Add ReleaseToOS logic to LRU algorithm
-      releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+      // It is very likely that multiple threads trying to do a release at the
+      // same time will not actually release any extra elements. Therefore,
+      // let any other thread continue, skipping the release.
+      if (Mutex.tryLock()) {
+        // TODO: Add ReleaseToOS logic to LRU algorithm
+        releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+        Mutex.unlock();
+      } else
+        atomic_fetch_add(&ReleaseToOsSkips, 1U, memory_order_relaxed);
     }
   }
 
@@ -488,7 +497,12 @@ public:
     return true;
   }
 
-  void releaseToOS() { releaseOlderThan(UINT64_MAX); }
+  void releaseToOS() EXCLUDES(Mutex) {
+    // Since this is a request to release everything, always wait for the
+    // lock so that we guarantee all entries are released after this call.
+    ScopedLock L(Mutex);
+    releaseOlderThan(UINT64_MAX);
+  }
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
@@ -554,8 +568,7 @@ private:
     Entry.Time = 0;
   }
 
-  void releaseOlderThan(u64 Time) EXCLUDES(Mutex) {
-    ScopedLock L(Mutex);
+  void releaseOlderThan(u64 Time) REQUIRES(Mutex) {
     if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
@@ -573,6 +586,7 @@ private:
   atomic_s32 ReleaseToOsIntervalMs = {};
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;
+  atomic_uptr ReleaseToOsSkips = {};
 
   CachedBlock Entries[Config::getEntriesArraySize()] GUARDED_BY(Mutex) = {};
   NonZeroLengthArray<CachedBlock, Config::getQuarantineSize()>
@@ -612,6 +626,12 @@ public:
 
   static uptr getBlockSize(void *Ptr) {
     return getBlockEnd(Ptr) - reinterpret_cast<uptr>(Ptr);
+  }
+
+  static uptr getGuardPageSize() {
+    if (Config::getEnableGuardPages())
+      return getPageSizeCached();
+    return 0U;
   }
 
   static constexpr uptr getHeadersSize() {
@@ -763,11 +783,11 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
 
   uptr RoundedSize =
       roundUp(roundUp(Size, Alignment) + getHeadersSize(), PageSize);
-  if (Alignment > PageSize)
+  if (UNLIKELY(Alignment > PageSize))
     RoundedSize += Alignment - PageSize;
 
   ReservedMemoryT ReservedMemory;
-  const uptr MapSize = RoundedSize + 2 * PageSize;
+  const uptr MapSize = RoundedSize + 2 * getGuardPageSize();
   if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, MapSize, nullptr,
                                       MAP_ALLOWNOMEM))) {
     return nullptr;
@@ -777,7 +797,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
   MemMapT MemMap = ReservedMemory.dispatch(ReservedMemory.getBase(),
                                            ReservedMemory.getCapacity());
   uptr MapBase = MemMap.getBase();
-  uptr CommitBase = MapBase + PageSize;
+  uptr CommitBase = MapBase + getGuardPageSize();
   uptr MapEnd = MapBase + MapSize;
 
   // In the unlikely event of alignments larger than a page, adjust the amount
@@ -786,25 +806,30 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
     // For alignments greater than or equal to a page, the user pointer (eg:
     // the pointer that is returned by the C or C++ allocation APIs) ends up
     // on a page boundary , and our headers will live in the preceding page.
-    CommitBase = roundUp(MapBase + PageSize + 1, Alignment) - PageSize;
-    const uptr NewMapBase = CommitBase - PageSize;
-    DCHECK_GE(NewMapBase, MapBase);
+    CommitBase =
+        roundUp(MapBase + getGuardPageSize() + 1, Alignment) - PageSize;
     // We only trim the extra memory on 32-bit platforms: 64-bit platforms
     // are less constrained memory wise, and that saves us two syscalls.
-    if (SCUDO_WORDSIZE == 32U && NewMapBase != MapBase) {
-      MemMap.unmap(MapBase, NewMapBase - MapBase);
-      MapBase = NewMapBase;
-    }
-    const uptr NewMapEnd =
-        CommitBase + PageSize + roundUp(Size, PageSize) + PageSize;
-    DCHECK_LE(NewMapEnd, MapEnd);
-    if (SCUDO_WORDSIZE == 32U && NewMapEnd != MapEnd) {
-      MemMap.unmap(NewMapEnd, MapEnd - NewMapEnd);
-      MapEnd = NewMapEnd;
+    if (SCUDO_WORDSIZE == 32U) {
+      const uptr NewMapBase = CommitBase - getGuardPageSize();
+      DCHECK_GE(NewMapBase, MapBase);
+      if (NewMapBase != MapBase) {
+        MemMap.unmap(MapBase, NewMapBase - MapBase);
+        MapBase = NewMapBase;
+      }
+      // CommitBase is past the first guard page, but this computation needs
+      // to include a page where the header lives.
+      const uptr NewMapEnd =
+          CommitBase + PageSize + roundUp(Size, PageSize) + getGuardPageSize();
+      DCHECK_LE(NewMapEnd, MapEnd);
+      if (NewMapEnd != MapEnd) {
+        MemMap.unmap(NewMapEnd, MapEnd - NewMapEnd);
+        MapEnd = NewMapEnd;
+      }
     }
   }
 
-  const uptr CommitSize = MapEnd - PageSize - CommitBase;
+  const uptr CommitSize = MapEnd - getGuardPageSize() - CommitBase;
   const uptr AllocPos = roundDown(CommitBase + CommitSize - Size, Alignment);
   if (!mapSecondary<Config>(Options, CommitBase, CommitSize, AllocPos, 0,
                             MemMap)) {
@@ -812,6 +837,8 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
     return nullptr;
   }
   const uptr HeaderPos = AllocPos - getHeadersSize();
+  // Make sure that the header is not in the guard page or before the base.
+  DCHECK_GE(HeaderPos, MapBase + getGuardPageSize());
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(HeaderPos));
   if (useMemoryTagging<Config>(Options))

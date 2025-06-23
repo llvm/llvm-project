@@ -117,7 +117,7 @@ class PPCBoolRetToInt : public FunctionPass {
 
   // A PHINode is Promotable if:
   // 1. Its type is i1 AND
-  // 2. All of its uses are ReturnInt, CallInst, PHINode, or DbgInfoIntrinsic
+  // 2. All of its uses are ReturnInt, CallInst, or PHINode
   // AND
   // 3. All of its operands are Constant or Argument or
   //    CallInst or PHINode AND
@@ -136,8 +136,7 @@ class PPCBoolRetToInt : public FunctionPass {
     for (const PHINode *P : Promotable) {
       // Condition 2 and 3
       auto IsValidUser = [] (const Value *V) -> bool {
-        return isa<ReturnInst>(V) || isa<CallInst>(V) || isa<PHINode>(V) ||
-        isa<DbgInfoIntrinsic>(V);
+        return isa<ReturnInst>(V) || isa<CallInst>(V) || isa<PHINode>(V);
       };
       auto IsValidOperand = [] (const Value *V) -> bool {
         return isa<Constant>(V) || isa<Argument>(V) || isa<CallInst>(V) ||
@@ -178,9 +177,7 @@ class PPCBoolRetToInt : public FunctionPass {
  public:
   static char ID;
 
-  PPCBoolRetToInt() : FunctionPass(ID) {
-    initializePPCBoolRetToIntPass(*PassRegistry::getPassRegistry());
-  }
+  PPCBoolRetToInt() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
@@ -241,9 +238,11 @@ class PPCBoolRetToInt : public FunctionPass {
       ++NumBoolCallPromotion;
     ++NumBoolToIntPromotion;
 
-    for (Value *V : Defs)
-      if (!BoolToIntMap.count(V))
-        BoolToIntMap[V] = translate(V);
+    for (Value *V : Defs) {
+      auto [It, Inserted] = BoolToIntMap.try_emplace(V);
+      if (Inserted)
+        It->second = translate(V);
+    }
 
     // Replace the operands of the translated instructions. They were set to
     // zero in the translate function.

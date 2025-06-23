@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
 
 ; Check that the parsing succeeded.
 ; CHECK: r{{[0-9]+:[0-9]+}} = xor(r{{[0-9]+:[0-9]+}},r{{[0-9]+:[0-9]+}})

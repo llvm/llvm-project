@@ -1677,8 +1677,9 @@ class piecewise_linear_distribution
 } // std
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/random>
+#else
 #  include <__config>
 #  include <__random/bernoulli_distribution.h>
 #  include <__random/binomial_distribution.h>
@@ -1740,6 +1741,6 @@ class piecewise_linear_distribution
 #    include <type_traits>
 #    include <vector>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_RANDOM

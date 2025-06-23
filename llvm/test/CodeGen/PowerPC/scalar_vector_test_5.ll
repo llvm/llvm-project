@@ -11,24 +11,35 @@
 define i8 @scalar_to_vector_half(ptr nocapture readonly %ad) {
 ; P9LE-LABEL: scalar_to_vector_half:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    lhz r3, 0(r3)
+; P9LE-NEXT:    lxsihzx v2, 0, r3
+; P9LE-NEXT:    li r3, 0
+; P9LE-NEXT:    vsplth v2, v2, 3
+; P9LE-NEXT:    vextubrx r3, r3, v2
 ; P9LE-NEXT:    blr
 ;
 ; P9BE-LABEL: scalar_to_vector_half:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    lhz r3, 0(r3)
-; P9BE-NEXT:    srwi r3, r3, 24
+; P9BE-NEXT:    lxsihzx v2, 0, r3
+; P9BE-NEXT:    li r3, 0
+; P9BE-NEXT:    vsplth v2, v2, 3
+; P9BE-NEXT:    vextublx r3, r3, v2
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: scalar_to_vector_half:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lhz r3, 0(r3)
+; P8LE-NEXT:    mtfprd f0, r3
+; P8LE-NEXT:    mffprd r3, f0
+; P8LE-NEXT:    clrldi r3, r3, 56
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: scalar_to_vector_half:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    lhz r3, 0(r3)
-; P8BE-NEXT:    srwi r3, r3, 24
+; P8BE-NEXT:    sldi r3, r3, 48
+; P8BE-NEXT:    mtfprd f0, r3
+; P8BE-NEXT:    mffprd r3, f0
+; P8BE-NEXT:    rldicl r3, r3, 8, 56
 ; P8BE-NEXT:    blr
 entry:
     %0 = load <2 x i8>, ptr %ad, align 1

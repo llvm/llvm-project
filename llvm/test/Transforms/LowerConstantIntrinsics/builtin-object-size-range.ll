@@ -78,7 +78,8 @@ define i64 @select_neg_oob_offset(i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i8, i64 10, align 1
 ; CHECK-NEXT:    [[OFFSET:%.*]] = select i1 [[C0:%.*]], i64 -3, i64 -4
 ; CHECK-NEXT:    [[PTR_SLIDE:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[OFFSET]]
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1:%.*]], i64 -1, i64 0
+; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %ptr = alloca i8, i64 10
   %offset = select i1 %c0, i64 -3, i64 -4
@@ -105,5 +106,26 @@ define i64 @select_gep_offsets(i1 %cond) {
   %res = select i1 %cond, i64 %objsize_max, i64 %objsize_min
   ret i64 %res
 }
+
+define i64 @select_gep_oob_overapproximated_offsets(i1 %cond) {
+; CHECK-LABEL: @select_gep_oob_overapproximated_offsets(
+; CHECK-NEXT:    [[BASE1:%.*]] = alloca [288 x i8], align 16
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[COND:%.*]], i64 -4, i64 -64
+; CHECK-NEXT:    [[SELECT1:%.*]] = select i1 [[COND]], i64 16, i64 64
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE1]], i64 [[SELECT1]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[GEP0]], i64 [[SELECT0]]
+; CHECK-NEXT:    ret i64 -1
+;
+  %base1 = alloca [288 x i8], align 16
+  %select0 = select i1 %cond, i64 -4, i64 -64
+  %select1 = select i1 %cond, i64 16, i64 64
+; This never actually goes oob, but because we approximate each select
+; independently, this actually ranges in [16 - 64 ; 64 - 4] instead of [64 - 64; 16 - 4]
+  %gep0 = getelementptr inbounds nuw i8, ptr %base1, i64 %select1
+  %gep1 = getelementptr inbounds i8, ptr %gep0, i64 %select0
+  %call = call i64 @llvm.objectsize.i64.p0(ptr %gep1, i1 false, i1 true, i1 false)
+  ret i64 %call
+}
+
 
 attributes #0 = { nounwind allocsize(0) }

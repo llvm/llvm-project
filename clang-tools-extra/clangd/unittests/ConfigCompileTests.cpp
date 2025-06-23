@@ -298,20 +298,42 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "unreachable-code", "unused-variable",
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
-      diag::warn_unreachable, Conf.Diagnostics.Suppress, LangOptions()));
+  clang::DiagnosticOptions DiagOpts;
+  clang::DiagnosticsEngine DiagEngine(new DiagnosticIDs, DiagOpts,
+                                      new clang::IgnoringDiagConsumer);
+
+  using Diag = clang::Diagnostic;
+  {
+    auto D = DiagEngine.Report(diag::warn_unreachable);
+    EXPECT_TRUE(isDiagnosticSuppressed(
+        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
+  }
   // Subcategory not respected/suppressed.
-  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(
-      diag::warn_unreachable_break, Conf.Diagnostics.Suppress, LangOptions()));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
-      diag::warn_unused_variable, Conf.Diagnostics.Suppress, LangOptions()));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_typecheck_bool_condition,
-                                            Conf.Diagnostics.Suppress,
-                                            LangOptions()));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
-      diag::err_unexpected_friend, Conf.Diagnostics.Suppress, LangOptions()));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
-      diag::warn_alloca, Conf.Diagnostics.Suppress, LangOptions()));
+  {
+    auto D = DiagEngine.Report(diag::warn_unreachable_break);
+    EXPECT_FALSE(isDiagnosticSuppressed(
+        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
+  }
+  {
+    auto D = DiagEngine.Report(diag::warn_unused_variable);
+    EXPECT_TRUE(isDiagnosticSuppressed(
+        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
+  }
+  {
+    auto D = DiagEngine.Report(diag::err_typecheck_bool_condition);
+    EXPECT_TRUE(isDiagnosticSuppressed(
+        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
+  }
+  {
+    auto D = DiagEngine.Report(diag::err_unexpected_friend);
+    EXPECT_TRUE(isDiagnosticSuppressed(
+        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
+  }
+  {
+    auto D = DiagEngine.Report(diag::warn_alloca);
+    EXPECT_TRUE(isDiagnosticSuppressed(
+        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
+  }
 
   Frag.Diagnostics.Suppress.emplace_back("*");
   EXPECT_TRUE(compileAndApply());
@@ -545,6 +567,44 @@ TEST_F(ConfigCompileTests, Style) {
   Frag.Style.FullyQualifiedNamespaces.push_back(std::string("bar"));
   EXPECT_TRUE(compileAndApply());
   EXPECT_THAT(Conf.Style.FullyQualifiedNamespaces, ElementsAre("foo", "bar"));
+
+  {
+    Frag = {};
+    EXPECT_TRUE(Conf.Style.QuotedHeaders.empty())
+        << Conf.Style.QuotedHeaders.size();
+    Frag.Style.QuotedHeaders.push_back(Located<std::string>("foo.h"));
+    Frag.Style.QuotedHeaders.push_back(Located<std::string>(".*inc"));
+    EXPECT_TRUE(compileAndApply());
+    auto HeaderFilter = [this](llvm::StringRef Path) {
+      for (auto &Filter : Conf.Style.QuotedHeaders) {
+        if (Filter(Path))
+          return true;
+      }
+      return false;
+    };
+    EXPECT_TRUE(HeaderFilter("foo.h"));
+    EXPECT_TRUE(HeaderFilter("prefix/foo.h"));
+    EXPECT_FALSE(HeaderFilter("bar.h"));
+    EXPECT_FALSE(HeaderFilter("foo.h/bar.h"));
+  }
+
+  {
+    Frag = {};
+    EXPECT_TRUE(Conf.Style.AngledHeaders.empty())
+        << Conf.Style.AngledHeaders.size();
+    Frag.Style.AngledHeaders.push_back(Located<std::string>("foo.h"));
+    Frag.Style.AngledHeaders.push_back(Located<std::string>(".*inc"));
+    EXPECT_TRUE(compileAndApply());
+    auto HeaderFilter = [this](llvm::StringRef Path) {
+      for (auto &Filter : Conf.Style.AngledHeaders) {
+        if (Filter(Path))
+          return true;
+      }
+      return false;
+    };
+    EXPECT_TRUE(HeaderFilter("foo.h"));
+    EXPECT_FALSE(HeaderFilter("bar.h"));
+  }
 }
 } // namespace
 } // namespace config

@@ -454,12 +454,19 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; SSE-NEXT:    divps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: v8f32_no_estimate:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtps %ymm0, %ymm0
-; AVX-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX-NEXT:    vdivps %ymm0, %ymm1, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: v8f32_no_estimate:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vsqrtps %ymm0, %ymm0
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX1-NEXT:    vdivps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: v8f32_no_estimate:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vsqrtps %ymm0, %ymm0
+; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512-NEXT:    vdivps %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    retq
   %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <8 x float> %div
@@ -530,7 +537,7 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vsqrtps %ymm1, %ymm1
 ; AVX1-NEXT:    vsqrtps %ymm0, %ymm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX1-NEXT:    vdivps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vdivps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
@@ -580,11 +587,11 @@ define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; AVX1-LABEL: v16f32_estimate:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vrsqrtps %ymm0, %ymm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX1-NEXT:    vmulps %ymm3, %ymm2, %ymm4
 ; AVX1-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vmulps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
 ; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vrsqrtps %ymm1, %ymm5
 ; AVX1-NEXT:    vmulps %ymm0, %ymm4, %ymm0

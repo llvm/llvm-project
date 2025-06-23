@@ -148,16 +148,22 @@
 # define TEST_IS_CONSTANT_EVALUATED false
 #endif
 
+#if TEST_STD_VER >= 20
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+
 #if TEST_STD_VER >= 23
 #  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED true
 #else
 #  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
 #endif
 
-#if TEST_STD_VER >= 20
-#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#if TEST_STD_VER >= 26
+#  define TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED true
 #else
-#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#  define TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
 #endif
 
 #if TEST_STD_VER >= 14
@@ -214,7 +220,11 @@
 #define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
-#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  ifdef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#    define TEST_HAS_NO_ALIGNED_ALLOCATION
+#  endif
+#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
 #elif TEST_STD_VER < 17 && (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L)
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
@@ -262,7 +272,9 @@
 
 #define TEST_IGNORE_NODISCARD (void)
 
-#if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+// from-chars is a C++17 feature, so it's never available anyways
+#elif !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT
 #  define TEST_HAS_FROM_CHARS_FLOATING_POINT
 #endif
 
@@ -401,11 +413,19 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_UNICODE
 #endif
 
-#if defined(_LIBCPP_VERSION) && _LIBCPP_HAS_OPEN_WITH_WCHAR
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
+#    define TEST_HAS_OPEN_WITH_WCHAR
+#  endif
+#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_OPEN_WITH_WCHAR
 #  define TEST_HAS_OPEN_WITH_WCHAR
 #endif
 
-#if (defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_INT128) || defined(_MSVC_STL_VERSION)
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  ifdef _LIBCPP_HAS_NO_INT128
+#    define TEST_HAS_NO_INT128
+#  endif
+#elif (defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_INT128) || defined(_MSVC_STL_VERSION)
 #  define TEST_HAS_NO_INT128
 #endif
 
@@ -425,7 +445,11 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_FILESYSTEM
 #endif
 
-#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_C8RTOMB_MBRTOC8
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  ifdef _LIBCPP_HAS_NO_C8RTOMB_MBRTOC8
+#    define TEST_HAS_NO_C8RTOMB_MBRTOC8
+#  endif
+#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_C8RTOMB_MBRTOC8
 #  define TEST_HAS_NO_C8RTOMB_MBRTOC8
 #endif
 
@@ -433,7 +457,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_RANDOM_DEVICE
 #endif
 
-#if defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+// This is a C++20 feature, so it's never available anyways
+#  define TEST_HAS_NO_EXPERIMENTAL_TZDB
+#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_EXPERIMENTAL_TZDB
 #  define TEST_HAS_NO_EXPERIMENTAL_TZDB
 #endif
 
@@ -499,7 +526,9 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #endif
 
 // Clang-18 has support for deducing this, but it does not set the FTM.
-#if defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+// This is a C++20 featue, so we don't care whether the compiler could support it
+#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 
@@ -513,6 +542,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 
 #if defined(_MSC_VER) || __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
 #  define TEST_LONG_DOUBLE_IS_DOUBLE
+#endif
+
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+#  define TEST_LONG_DOUBLE_IS_80_BIT
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

@@ -29,10 +29,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -347,6 +344,9 @@ void SourceManager::clearIDTables() {
   NextLocalOffset = 0;
   CurrentLoadedOffset = MaxLoadedOffset;
   createExpansionLoc(SourceLocation(), SourceLocation(), SourceLocation(), 1);
+  // Diagnostics engine keeps some references to fileids, mostly for dealing
+  // with diagnostic pragmas, make sure they're reset as well.
+  Diag.ResetPragmas();
 }
 
 bool SourceManager::isMainFile(const FileEntry &SourceFile) {
@@ -1222,7 +1222,7 @@ unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
   return PLoc.getColumn();
 }
 
-// Check if mutli-byte word x has bytes between m and n, included. This may also
+// Check if multi-byte word x has bytes between m and n, included. This may also
 // catch bytes equal to n + 1.
 // The returned value holds a 0x80 at each byte position that holds a match.
 // see http://graphics.stanford.edu/~seander/bithacks.html#HasBetweenInWord
@@ -1729,7 +1729,7 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
   assert(FID.isValid());
 
   // Initially no macro argument chunk is present.
-  MacroArgsCache.insert(std::make_pair(0, SourceLocation()));
+  MacroArgsCache.try_emplace(0);
 
   int ID = FID.ID;
   while (true) {
@@ -2394,11 +2394,11 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
   // in `Environment` so that `FileMgr` can out-live this function scope.
   FileMgr =
       std::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
   Diagnostics = std::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      new DiagnosticOptions);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =

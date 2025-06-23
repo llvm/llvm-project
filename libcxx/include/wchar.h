@@ -7,17 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__need_wint_t) || defined(__need_mbstate_t)
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
-
-#  include_next <wchar.h>
-
-#elif !defined(_LIBCPP_WCHAR_H)
-#  define _LIBCPP_WCHAR_H
-
 /*
     wchar.h synopsis
 
@@ -105,26 +94,33 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 */
 
-#  if 0
-#  else // 0
-#    include <__config>
-#    include <stddef.h>
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/wchar.h>
+#else
+#  include <__config>
 
-#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#      pragma GCC system_header
-#    endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 // We define this here to support older versions of glibc <wchar.h> that do
 // not define this for clang.
-#    ifdef __cplusplus
-#      define __CORRECT_ISO_CPP_WCHAR_H_PROTO
-#    endif
+#  if defined(__cplusplus) && !defined(__CORRECT_ISO_CPP_WCHAR_H_PROTO)
+#    define __CORRECT_ISO_CPP_WCHAR_H_PROTO
+#  endif
 
-#    if __has_include_next(<wchar.h>)
-#      include_next <wchar.h>
-#    else
-#      include <__mbstate_t.h> // make sure we have mbstate_t regardless of the existence of <wchar.h>
-#    endif
+// The inclusion of the system's <wchar.h> is intentionally done once outside of any include
+// guards because some code expects to be able to include the underlying system header multiple
+// times to get different definitions based on the macros that are set before inclusion.
+#  if __has_include_next(<wchar.h>)
+#    include_next <wchar.h>
+#  endif
+
+#  ifndef _LIBCPP_WCHAR_H
+#    define _LIBCPP_WCHAR_H
+
+#    include <__mbstate_t.h> // provide mbstate_t
+#    include <stddef.h>      // provide size_t
 
 // Determine whether we have const-correct overloads for wcschr and friends.
 #    if defined(_WCHAR_H_CPLUSPLUS_98_CONFORMANCE_)
@@ -206,6 +202,6 @@ size_t wcsnrtombs(
 } // extern "C"
 #      endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
 #    endif   // _LIBCPP_HAS_WIDE_CHARACTERS
-#  endif     // 0
+#  endif     // _LIBCPP_WCHAR_H
 
-#endif // _LIBCPP_WCHAR_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

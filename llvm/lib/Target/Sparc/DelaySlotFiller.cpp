@@ -58,8 +58,7 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     void insertCallDefsUses(MachineBasicBlock::iterator MI,
@@ -309,7 +308,8 @@ void Filler::insertCallDefsUses(MachineBasicBlock::iterator MI,
 
   switch(MI->getOpcode()) {
   default: llvm_unreachable("Unknown opcode.");
-  case SP::CALL: break;
+  case SP::CALL:
+    break;
   case SP::CALLrr:
   case SP::CALLri:
     assert(MI->getNumOperands() >= 2);
@@ -371,9 +371,13 @@ bool Filler::needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize)
   unsigned structSizeOpNum = 0;
   switch (I->getOpcode()) {
   default: llvm_unreachable("Unknown call opcode.");
-  case SP::CALL: structSizeOpNum = 1; break;
+  case SP::CALL:
+    structSizeOpNum = 1;
+    break;
   case SP::CALLrr:
-  case SP::CALLri: structSizeOpNum = 2; break;
+  case SP::CALLri:
+    structSizeOpNum = 2;
+    break;
   case SP::TLS_CALL: return false;
   case SP::TAIL_CALLri:
   case SP::TAIL_CALL: return false;

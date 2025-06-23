@@ -52,7 +52,7 @@ public:
   /// Returns the underlying declaration.
   const RecordDecl *getDecl() const { return Decl; }
   /// Returns the name of the underlying declaration.
-  const std::string getName() const;
+  std::string getName() const;
   /// Checks if the record is a union.
   bool isUnion() const { return IsUnion; }
   /// Checks if the record is an anonymous union.

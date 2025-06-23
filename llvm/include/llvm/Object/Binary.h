@@ -16,6 +16,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Triple.h"
@@ -29,7 +30,7 @@ class StringRef;
 
 namespace object {
 
-class Binary {
+class LLVM_ABI Binary {
 private:
   unsigned int TypeID;
 
@@ -189,9 +190,9 @@ DEFINE_ISA_CONVERSION_FUNCTIONS(Binary, LLVMBinaryRef)
 /// Create a Binary from Source, autodetecting the file type.
 ///
 /// @param Source The data to create the Binary from.
-Expected<std::unique_ptr<Binary>> createBinary(MemoryBufferRef Source,
-                                               LLVMContext *Context = nullptr,
-                                               bool InitContent = true);
+LLVM_ABI Expected<std::unique_ptr<Binary>>
+createBinary(MemoryBufferRef Source, LLVMContext *Context = nullptr,
+             bool InitContent = true);
 
 template <typename T> class OwningBinary {
   std::unique_ptr<T> Bin;
@@ -241,9 +242,9 @@ template <typename T> const T* OwningBinary<T>::getBinary() const {
   return Bin.get();
 }
 
-Expected<OwningBinary<Binary>> createBinary(StringRef Path,
-                                            LLVMContext *Context = nullptr,
-                                            bool InitContent = true);
+LLVM_ABI Expected<OwningBinary<Binary>>
+createBinary(StringRef Path, LLVMContext *Context = nullptr,
+             bool InitContent = true);
 
 } // end namespace object
 

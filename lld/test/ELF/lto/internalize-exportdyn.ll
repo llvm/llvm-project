@@ -3,7 +3,7 @@
 ; RUN: llvm-as a.ll -o a.bc
 ; RUN: llvm-as %p/Inputs/internalize-exportdyn.ll -o b.bc
 ; RUN: llvm-mc -filetype=obj -triple=x86_64 lib.s -o lib.o
-; RUN: ld.lld a.bc b.bc lib.o -o out --export-dynamic -save-temps
+; RUN: ld.lld a.bc b.bc lib.o -o out --export-dynamic -save-temps -pie
 ; RUN: llvm-dis < out.0.2.internalize.bc | FileCheck %s
 ; RUN: ld.lld a.bc b.bc lib.o -o out2 -shared -save-temps
 ; RUN: llvm-dis < out2.0.2.internalize.bc | FileCheck %s --check-prefix=DSO

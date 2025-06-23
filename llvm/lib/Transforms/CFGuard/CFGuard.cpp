@@ -31,6 +31,9 @@ using OperandBundleDef = OperandBundleDefT<Value *>;
 
 STATISTIC(CFGuardCounter, "Number of Control Flow Guard checks added");
 
+constexpr StringRef GuardCheckFunctionName = "__guard_check_icall_fptr";
+constexpr StringRef GuardDispatchFunctionName = "__guard_dispatch_icall_fptr";
+
 namespace {
 
 /// Adds Control Flow Guard (CFG) checks on indirect function calls/invokes.
@@ -45,10 +48,10 @@ public:
     // Get or insert the guard check or dispatch global symbols.
     switch (GuardMechanism) {
     case Mechanism::Check:
-      GuardFnName = "__guard_check_icall_fptr";
+      GuardFnName = GuardCheckFunctionName;
       break;
     case Mechanism::Dispatch:
-      GuardFnName = "__guard_dispatch_icall_fptr";
+      GuardFnName = GuardDispatchFunctionName;
       break;
     }
   }
@@ -171,7 +174,7 @@ public:
 
 void CFGuardImpl::insertCFGuardCheck(CallBase *CB) {
 
-  assert(Triple(CB->getModule()->getTargetTriple()).isOSWindows() &&
+  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
   assert(CB->isIndirectCall() &&
          "Control Flow Guard checks can only be added to indirect calls");
@@ -200,7 +203,7 @@ void CFGuardImpl::insertCFGuardCheck(CallBase *CB) {
 
 void CFGuardImpl::insertCFGuardDispatch(CallBase *CB) {
 
-  assert(Triple(CB->getModule()->getTargetTriple()).isOSWindows() &&
+  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
   assert(CB->isIndirectCall() &&
          "Control Flow Guard checks can only be added to indirect calls");
@@ -247,7 +250,7 @@ bool CFGuardImpl::doInitialization(Module &M) {
   GuardFnType =
       FunctionType::get(Type::getVoidTy(M.getContext()),
                         {PointerType::getUnqual(M.getContext())}, false);
-  GuardFnPtrType = PointerType::get(GuardFnType, 0);
+  GuardFnPtrType = PointerType::get(M.getContext(), 0);
 
   GuardFnGlobal = M.getOrInsertGlobal(GuardFnName, GuardFnPtrType, [&] {
     auto *Var = new GlobalVariable(M, GuardFnPtrType, false,
@@ -317,4 +320,12 @@ FunctionPass *llvm::createCFGuardCheckPass() {
 
 FunctionPass *llvm::createCFGuardDispatchPass() {
   return new CFGuard(CFGuardPass::Mechanism::Dispatch);
+}
+
+bool llvm::isCFGuardFunction(const GlobalValue *GV) {
+  if (GV->getLinkage() != GlobalValue::ExternalLinkage)
+    return false;
+
+  StringRef Name = GV->getName();
+  return Name == GuardCheckFunctionName || Name == GuardDispatchFunctionName;
 }

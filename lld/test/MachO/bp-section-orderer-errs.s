@@ -14,6 +14,7 @@
 # RUN: not %lld -o /dev/null --bp-compression-sort-startup-functions 2>&1 | FileCheck %s --check-prefix=STARTUP
 # STARTUP: --bp-compression-sort-startup-functions must be used with --bp-startup-sort=function
 
+# RUN: not %lld -o /dev/null --irpgo-profile %s --bp-startup-sort=function --call-graph-profile-sort 2>&1 | FileCheck %s --check-prefix=IRPGO-STARTUP
 # RUN: not %lld -o /dev/null --irpgo-profile=%s --bp-startup-sort=function --call-graph-profile-sort 2>&1 | FileCheck %s --check-prefix=IRPGO-STARTUP
 # IRPGO-STARTUP: --bp-startup-sort= is incompatible with --call-graph-profile-sort
 

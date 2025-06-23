@@ -580,15 +580,13 @@ AffineMap AffineMap::compose(AffineMap map) const {
 SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) const {
   assert(getNumSymbols() == 0 && "Expected symbol-less map");
   SmallVector<AffineExpr, 4> exprs;
-  exprs.reserve(values.size());
   MLIRContext *ctx = getContext();
-  for (auto v : values)
-    exprs.push_back(getAffineConstantExpr(v, ctx));
-  auto resMap = compose(AffineMap::get(0, 0, exprs, ctx));
+  for (int64_t value : values)
+    exprs.push_back(getAffineConstantExpr(value, ctx));
   SmallVector<int64_t, 4> res;
-  res.reserve(resMap.getNumResults());
-  for (auto e : resMap.getResults())
-    res.push_back(cast<AffineConstantExpr>(e).getValue());
+  res.reserve(getNumResults());
+  for (auto e : getResults())
+    res.push_back(cast<AffineConstantExpr>(e.replaceDims(exprs)).getValue());
   return res;
 }
 
@@ -604,7 +602,6 @@ size_t AffineMap::getNumOfZeroResults() const {
 }
 
 AffineMap AffineMap::dropZeroResults() {
-  auto exprs = llvm::to_vector(getResults());
   SmallVector<AffineExpr> newExprs;
 
   for (auto expr : getResults()) {
@@ -748,22 +745,22 @@ AffineMap mlir::foldAttributesIntoMap(Builder &b, AffineMap map,
   SmallVector<AffineExpr> dimReplacements, symReplacements;
   int64_t numDims = 0;
   for (int64_t i = 0; i < map.getNumDims(); ++i) {
-    if (auto attr = operands[i].dyn_cast<Attribute>()) {
+    if (auto attr = dyn_cast<Attribute>(operands[i])) {
       dimReplacements.push_back(
           b.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt()));
     } else {
       dimReplacements.push_back(b.getAffineDimExpr(numDims++));
-      remainingValues.push_back(operands[i].get<Value>());
+      remainingValues.push_back(cast<Value>(operands[i]));
     }
   }
   int64_t numSymbols = 0;
   for (int64_t i = 0; i < map.getNumSymbols(); ++i) {
-    if (auto attr = operands[i + map.getNumDims()].dyn_cast<Attribute>()) {
+    if (auto attr = dyn_cast<Attribute>(operands[i + map.getNumDims()])) {
       symReplacements.push_back(
           b.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt()));
     } else {
       symReplacements.push_back(b.getAffineSymbolExpr(numSymbols++));
-      remainingValues.push_back(operands[i + map.getNumDims()].get<Value>());
+      remainingValues.push_back(cast<Value>(operands[i + map.getNumDims()]));
     }
   }
   return map.replaceDimsAndSymbols(dimReplacements, symReplacements, numDims,

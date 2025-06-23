@@ -27,18 +27,18 @@ InputSection *Reloc::getReferentInputSection() const {
       return d->isec();
     return nullptr;
   } else {
-    return referent.get<InputSection *>();
+    return cast<InputSection *>(referent);
   }
 }
 
 StringRef Reloc::getReferentString() const {
-  if (auto *isec = referent.dyn_cast<InputSection *>()) {
+  if (auto *isec = dyn_cast<InputSection *>(referent)) {
     const auto *cisec = dyn_cast<CStringInputSection>(isec);
     assert(cisec && "referent must be a CStringInputSection");
     return cisec->getStringRefAtOffset(addend);
   }
 
-  auto *sym = dyn_cast<Defined>(referent.get<Symbol *>());
+  auto *sym = dyn_cast<Defined>(cast<Symbol *>(referent));
   assert(sym && "referent must be a Defined symbol");
 
   auto *symIsec = sym->isec();

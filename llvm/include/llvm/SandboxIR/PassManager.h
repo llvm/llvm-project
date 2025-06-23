@@ -18,6 +18,7 @@
 #ifndef LLVM_SANDBOXIR_PASSMANAGER_H
 #define LLVM_SANDBOXIR_PASSMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 #include "llvm/ADT/DenseMap.h"
@@ -58,6 +59,11 @@ public:
     Passes.push_back(std::move(Pass));
   }
 
+  static constexpr const char EndToken = '\0';
+  static constexpr const char BeginArgsToken = '<';
+  static constexpr const char EndArgsToken = '>';
+  static constexpr const char PassDelimToken = ',';
+
   /// Parses \p Pipeline as a comma-separated sequence of pass names and sets
   /// the pass pipeline, using \p CreatePass to instantiate passes by name.
   ///
@@ -74,11 +80,6 @@ public:
   /// An empty args string is treated the same as no args, so "pass" and
   /// "pass<>" are equivalent.
   void setPassPipeline(StringRef Pipeline, CreatePassFunc CreatePass) {
-    static constexpr const char EndToken = '\0';
-    static constexpr const char BeginArgsToken = '<';
-    static constexpr const char EndArgsToken = '>';
-    static constexpr const char PassDelimToken = ',';
-
     assert(Passes.empty() &&
            "setPassPipeline called on a non-empty sandboxir::PassManager");
 
@@ -183,10 +184,10 @@ public:
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
     OS << this->getName();
-    OS << "(";
-    // TODO: This should call Pass->print(OS) because Pass may be a PM.
-    interleave(Passes, OS, [&OS](auto &Pass) { OS << Pass->getName(); }, ",");
-    OS << ")";
+    OS << BeginArgsToken;
+    std::string Delim(1, PassDelimToken);
+    interleave(Passes, OS, [&OS](auto &Pass) { Pass->print(OS); }, Delim);
+    OS << EndArgsToken;
   }
   LLVM_DUMP_METHOD void dump() const override {
     print(dbgs());
@@ -201,7 +202,7 @@ public:
   }
 };
 
-class FunctionPassManager final
+class LLVM_ABI FunctionPassManager final
     : public PassManager<FunctionPass, FunctionPass> {
 public:
   FunctionPassManager(StringRef Name) : PassManager(Name) {}
@@ -211,7 +212,8 @@ public:
   bool runOnFunction(Function &F, const Analyses &A) final;
 };
 
-class RegionPassManager final : public PassManager<RegionPass, RegionPass> {
+class LLVM_ABI RegionPassManager final
+    : public PassManager<RegionPass, RegionPass> {
 public:
   RegionPassManager(StringRef Name) : PassManager(Name) {}
   RegionPassManager(StringRef Name, StringRef Pipeline,

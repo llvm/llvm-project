@@ -80,6 +80,18 @@ define void @fp_atomics(ptr %x) {
   ; CHECK: atomicrmw volatile fmin ptr %x, float 1.000000e+00 seq_cst
   atomicrmw volatile fmin ptr %x, float 1.0 seq_cst
 
+  ; CHECK: atomicrmw fmaximum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw fmaximum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fmaximum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fmaximum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw fminimum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw fminimum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fminimum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fminimum ptr %x, float 1.0 seq_cst
+
   ret void
 }
 
@@ -95,6 +107,12 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
 
   ; CHECK: %atomic.fmin = atomicrmw fmin ptr %x, <2 x half> %val seq_cst
   %atomic.fmin = atomicrmw fmin ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fmaximum = atomicrmw fmaximum ptr %x, <2 x half> %val seq_cst
+  %atomic.fmaximum = atomicrmw fmaximum ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fminimum = atomicrmw fminimum ptr %x, <2 x half> %val seq_cst
+  %atomic.fminimum = atomicrmw fminimum ptr %x, <2 x half> %val seq_cst
 
   ret void
 }

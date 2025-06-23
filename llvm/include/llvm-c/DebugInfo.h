@@ -158,6 +158,8 @@ typedef enum {
 /**
  * The kind of metadata nodes.
  */
+// NOTE: New entries should always be appended instead of matching the order
+// in Metadata.def.
 enum {
   LLVMMDStringMetadataKind,
   LLVMConstantAsMetadataMetadataKind,
@@ -195,6 +197,8 @@ enum {
   LLVMDIGenericSubrangeMetadataKind,
   LLVMDIArgListMetadataKind,
   LLVMDIAssignIDMetadataKind,
+  LLVMDISubrangeTypeMetadataKind,
+  LLVMDIFixedPointTypeMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 
@@ -626,6 +630,19 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               LLVMBool IsUnsigned);
 
 /**
+ * Create debugging information entry for an enumerator of arbitrary precision.
+ * @param Builder        The DIBuilder.
+ * @param Name           Enumerator name.
+ * @param NameLen        Length of enumerator name.
+ * @param SizeInBits     Number of bits of the value.
+ * @param Words          The words that make up the value.
+ * @param IsUnsigned     True if the value is unsigned.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    uint64_t SizeInBits, const uint64_t Words[], LLVMBool IsUnsigned);
+
+/**
  * Create debugging information entry for an enumeration.
  * \param Builder        The DIBuilder.
  * \param Scope          Scope in which this enumeration is defined.
@@ -870,13 +887,16 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
                                 LLVMMetadataRef Ty);
 
 /**
- * Create a uniqued DIType* clone with FlagObjectPointer and FlagArtificial set.
+ * Create a uniqued DIType* clone with FlagObjectPointer. If \c Implicit
+ * is true, then also set FlagArtificial.
  * \param Builder   The DIBuilder.
  * \param Type      The underlying type to which this pointer points.
+ * \param Implicit  Indicates whether this pointer was implicitly generated
+ *                  (i.e., not spelled out in source).
  */
-LLVMMetadataRef
-LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
-                                     LLVMMetadataRef Type);
+LLVMMetadataRef LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
+                                                     LLVMMetadataRef Type,
+                                                     LLVMBool Implicit);
 
 /**
  * Create debugging information entry for a qualified

@@ -16,7 +16,7 @@ func.func @test_copy_in(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.
 // CHECK:           } else {
 // CHECK:             %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:             %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
-// CHECK:             %[[VAL_11:.*]] = fir.call @_FortranACopyInAssign(%[[VAL_8]], %[[VAL_9]],
+// CHECK:             fir.call @_FortranACopyInAssign(%[[VAL_8]], %[[VAL_9]],
 // CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK:             %[[VAL_13:.*]] = fir.rebox %[[VAL_12]] : (!fir.box<!fir.heap<!fir.array<?xf64>>>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:             fir.result %[[VAL_13]] : !fir.box<!fir.array<?xf64>>
@@ -42,7 +42,7 @@ func.func @test_copy_in_optional(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.
 // CHECK:             } else {
 // CHECK:               %[[VAL_10:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_11:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
-// CHECK:               %[[VAL_13:.*]] = fir.call @_FortranACopyInAssign(%[[VAL_10]], %[[VAL_11]],
+// CHECK:               fir.call @_FortranACopyInAssign(%[[VAL_10]], %[[VAL_11]],
 // CHECK:               %[[VAL_14:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK:               %[[VAL_15:.*]] = fir.rebox %[[VAL_14]] : (!fir.box<!fir.heap<!fir.array<?xf64>>>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:               fir.result %[[VAL_15]] : !fir.box<!fir.array<?xf64>>
@@ -68,7 +68,7 @@ func.func @test_copy_out_no_copy_back(%temp: !fir.ref<!fir.box<!fir.heap<!fir.ar
 // CHECK:             %[[VAL_2:.*]] = fir.zero_bits !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK:             %[[VAL_6:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:             %[[VAL_7:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK:             %[[VAL_9:.*]] = fir.call @_FortranACopyOutAssign(%[[VAL_6]], %[[VAL_7]],
+// CHECK:             fir.call @_FortranACopyOutAssign(%[[VAL_6]], %[[VAL_7]],
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
@@ -86,7 +86,7 @@ func.func @test_copy_out_copy_back(%box: !fir.box<!fir.array<?xf64>>, %temp: !fi
 // CHECK:             fir.store %[[VAL_0]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
 // CHECK:             %[[VAL_7:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:             %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK:             %[[VAL_10:.*]] = fir.call @_FortranACopyOutAssign(%[[VAL_7]], %[[VAL_8]],
+// CHECK:             fir.call @_FortranACopyOutAssign(%[[VAL_7]], %[[VAL_8]],
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
@@ -105,7 +105,7 @@ func.func @test_copy_in_poly(%poly : !fir.class<!fir.array<?x!fir.type<test_copy
 // CHECK:           } else {
 // CHECK:             %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:             %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) -> !fir.box<none>
-// CHECK:             %[[VAL_11:.*]] = fir.call @_FortranACopyInAssign(%[[VAL_8]], %[[VAL_9]],
+// CHECK:             fir.call @_FortranACopyInAssign(%[[VAL_8]], %[[VAL_9]],
 // CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>
 // CHECK:             %[[VAL_13:.*]] = fir.rebox %[[VAL_12]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>) -> !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>
 // CHECK:             fir.result %[[VAL_13]] : !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>

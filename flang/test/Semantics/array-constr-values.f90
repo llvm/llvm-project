@@ -2,9 +2,10 @@
 ! Confirm enforcement of constraints and restrictions in 7.8
 ! C7110, C7111, C7112, C7113, C7114, C7115
 
-subroutine arrayconstructorvalues()
+subroutine arrayconstructorvalues(asize)
   integer :: intarray(4)
   integer(KIND=8) :: k8 = 20
+  integer, intent(in) :: asize(*)
 
   TYPE EMPLOYEE
     INTEGER AGE
@@ -55,6 +56,9 @@ subroutine arrayconstructorvalues()
 
   !ERROR: Item is not suitable for use in an array constructor
   intarray(1:1) = [ arrayconstructorvalues ]
+
+  !ERROR: Whole assumed-size array 'asize' may not appear here without subscripts
+  intarray = [ asize ]
 end subroutine arrayconstructorvalues
 subroutine checkC7115()
   real, dimension(10), parameter :: good1 = [(99.9, i = 1, 10)]

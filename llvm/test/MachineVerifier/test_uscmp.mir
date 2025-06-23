@@ -19,13 +19,17 @@ body:             |
     %23:_(<2 x s32>) = G_IMPLICIT_DEF
     %24:_(<2 x s32>) = G_IMPLICIT_DEF
     ; CHECK: Generic vector scmp/ucmp must preserve number of lanes
-    %5:_(s1) = G_UCMP  %23, %24
+    %5:_(s2) = G_UCMP  %23, %24
 
     %15:_(s32) = G_CONSTANT i32 0
     %16:_(s64) = G_CONSTANT i64 2
-    ; CHECK: Generic scmp/ucmp must have same input types
-    %17:_(s1) = G_SCMP %15, %16
+    ; CHECK: Type mismatch in generic instruction
+    %17:_(s2) = G_SCMP %15, %16
 
+    %18:_(s32) = G_CONSTANT i32 0
+    %19:_(s32) = G_CONSTANT i32 2
+    ; CHECK: Result type must be at least 2 bits wide
+    %20:_(s1) = G_SCMP %18, %19
 
 
 ...

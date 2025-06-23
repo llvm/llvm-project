@@ -762,6 +762,7 @@ LogicalResult Parser::convertTupleExpressionTo(
 
 //===----------------------------------------------------------------------===//
 // Directives
+//===----------------------------------------------------------------------===//
 
 LogicalResult Parser::parseDirective(SmallVectorImpl<ast::Decl *> &decls) {
   StringRef directive = curToken.getSpelling();
@@ -1021,6 +1022,7 @@ Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
 
 //===----------------------------------------------------------------------===//
 // Decls
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::Decl *> Parser::parseTopLevelDecl() {
   FailureOr<ast::Decl *> decl;
@@ -1786,6 +1788,7 @@ FailureOr<ast::ConstraintRef> Parser::parseArgOrResultConstraint() {
 
 //===----------------------------------------------------------------------===//
 // Exprs
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::Expr *> Parser::parseExpr() {
   if (curToken.is(Token::underscore))
@@ -2249,6 +2252,7 @@ FailureOr<ast::Expr *> Parser::parseUnderscoreExpr() {
 
 //===----------------------------------------------------------------------===//
 // Stmts
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::Stmt *> Parser::parseStmt(bool expectTerminalSemicolon) {
   FailureOr<ast::Stmt *> stmt;
@@ -2482,6 +2486,7 @@ FailureOr<ast::RewriteStmt *> Parser::parseRewriteStmt() {
 
 //===----------------------------------------------------------------------===//
 // Decls
+//===----------------------------------------------------------------------===//
 
 ast::CallableDecl *Parser::tryExtractCallableDecl(ast::Node *node) {
   // Unwrap reference expressions.
@@ -2681,6 +2686,7 @@ Parser::validateTypeRangeConstraintExpr(const ast::Expr *typeExpr) {
 
 //===----------------------------------------------------------------------===//
 // Exprs
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::CallExpr *>
 Parser::createCallExpr(SMRange loc, ast::Expr *parentExpr,
@@ -2877,8 +2883,9 @@ Parser::validateOperationOperands(SMRange loc, std::optional<StringRef> name,
                                   SmallVectorImpl<ast::Expr *> &operands) {
   return validateOperationOperandsOrResults(
       "operand", loc, odsOp ? odsOp->getLoc() : std::optional<SMRange>(), name,
-      operands, odsOp ? odsOp->getOperands() : std::nullopt, valueTy,
-      valueRangeTy);
+      operands,
+      odsOp ? odsOp->getOperands() : ArrayRef<pdll::ods::OperandOrResult>(),
+      valueTy, valueRangeTy);
 }
 
 LogicalResult
@@ -2887,7 +2894,9 @@ Parser::validateOperationResults(SMRange loc, std::optional<StringRef> name,
                                  SmallVectorImpl<ast::Expr *> &results) {
   return validateOperationOperandsOrResults(
       "result", loc, odsOp ? odsOp->getLoc() : std::optional<SMRange>(), name,
-      results, odsOp ? odsOp->getResults() : std::nullopt, typeTy, typeRangeTy);
+      results,
+      odsOp ? odsOp->getResults() : ArrayRef<pdll::ods::OperandOrResult>(),
+      typeTy, typeRangeTy);
 }
 
 void Parser::checkOperationResultTypeInferrence(SMRange loc, StringRef opName,
@@ -3057,6 +3066,7 @@ Parser::createTupleExpr(SMRange loc, ArrayRef<ast::Expr *> elements,
 
 //===----------------------------------------------------------------------===//
 // Stmts
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::EraseStmt *> Parser::createEraseStmt(SMRange loc,
                                                     ast::Expr *rootOp) {

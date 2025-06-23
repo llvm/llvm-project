@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Analysis/SliceWalk.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -642,9 +643,9 @@ static Value handleByValArgument(OpBuilder &builder, Operation *callable,
       return argument;
   }
   uint64_t targetAlignment = std::max(requestedAlignment, minimumAlignment);
-  return handleByValArgumentInit(builder, func.getLoc(), argument, elementType,
-                                 dataLayout.getTypeSize(elementType),
-                                 targetAlignment);
+  return handleByValArgumentInit(
+      builder, argument.getLoc(), argument, elementType,
+      dataLayout.getTypeSize(elementType), targetAlignment);
 }
 
 namespace {
@@ -663,11 +664,14 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
-    if (!wouldBeCloned)
-      return false;
-    if (!isa<LLVM::CallOp>(call)) {
+    auto callOp = dyn_cast<LLVM::CallOp>(call);
+    if (!callOp) {
       LLVM_DEBUG(llvm::dbgs() << "Cannot inline: call is not an '"
                               << LLVM::CallOp::getOperationName() << "' op\n");
+      return false;
+    }
+    if (callOp.getNoInline()) {
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline: call is marked no_inline\n");
       return false;
     }
     auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
@@ -727,8 +731,10 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   }
 
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
-    // The inliner cannot handle variadic function arguments.
-    return !isa<LLVM::VaStartOp>(op);
+    // The inliner cannot handle variadic function arguments and blocktag
+    // operations prevent inlining since they the blockaddress operations
+    // reference them via the callee symbol.
+    return !(isa<LLVM::VaStartOp>(op) || isa<LLVM::BlockTagOp>(op));
   }
 
   /// Handle the given inlined return by replacing it with a branch. This
@@ -743,6 +749,14 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     OpBuilder builder(op);
     builder.create<LLVM::BrOp>(op->getLoc(), returnOp.getOperands(), newDest);
     op->erase();
+  }
+
+  bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const final {
+    if (!inlinedBlocks.empty() &&
+        isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()))
+      return false;
+    return true;
   }
 
   /// Handle the given inlined return by replacing the uses of the call with the
@@ -814,6 +828,12 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
 void mlir::LLVM::registerInlinerInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
+    dialect->addInterfaces<LLVMInlinerInterface>();
+  });
+}
+
+void mlir::NVVM::registerInlinerInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
     dialect->addInterfaces<LLVMInlinerInterface>();
   });
 }

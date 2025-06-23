@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 target triple = "hexagon-unknown--elf"
 
 ; CHECK-DAG: vpacke

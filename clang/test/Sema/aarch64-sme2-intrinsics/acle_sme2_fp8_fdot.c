@@ -14,6 +14,22 @@ void test_features(uint32_t slice, svmfloat8_t f8, svmfloat8x2_t f8x2,
   svdot_lane_za16_mf8_vg1x2_fpm(slice, f8x2, f8, 3, fpmr);
   // expected-error@+1 {{'svdot_lane_za16_mf8_vg1x4_fpm' needs target feature sme,sme-f8f16}}
   svdot_lane_za16_mf8_vg1x4_fpm(slice, f8x4, f8, 3, fpmr);
+  // expected-error@+1 {{'svdot_single_za32_mf8_vg1x2_fpm' needs target feature sme,sme-f8f32}}
+  svdot_single_za32_mf8_vg1x2_fpm(slice, f8x2, f8, fpmr);
+  // expected-error@+1 {{'svdot_single_za32_mf8_vg1x4_fpm' needs target feature sme,sme-f8f32}}
+  svdot_single_za32_mf8_vg1x4_fpm(slice, f8x4, f8, fpmr);
+  // expected-error@+1 {{'svdot_za32_mf8_vg1x2_fpm' needs target feature sme,sme-f8f32}}
+  svdot_za32_mf8_vg1x2_fpm(slice, f8x2, f8x2, fpmr);
+  // expected-error@+1 {{'svdot_za32_mf8_vg1x4_fpm' needs target feature sme,sme-f8f32}}
+  svdot_za32_mf8_vg1x4_fpm(slice, f8x4, f8x4, fpmr);
+  // expected-error@+1 {{'svdot_single_za16_mf8_vg1x2_fpm' needs target feature sme,sme-f8f16}}
+  svdot_single_za16_mf8_vg1x2_fpm(slice, f8x2, f8, fpmr);
+  // expected-error@+1 {{'svdot_single_za16_mf8_vg1x4_fpm' needs target feature sme,sme-f8f16}}
+  svdot_single_za16_mf8_vg1x4_fpm(slice, f8x4, f8, fpmr);
+  // expected-error@+1 {{'svdot_za16_mf8_vg1x2_fpm' needs target feature sme,sme-f8f16}}
+  svdot_za16_mf8_vg1x2_fpm(slice, f8x2, f8x2, fpmr);
+  // expected-error@+1 {{'svdot_za16_mf8_vg1x4_fpm' needs target feature sme,sme-f8f16}}
+  svdot_za16_mf8_vg1x4_fpm(slice, f8x4, f8x4, fpmr);
 }
 
 void test_imm(uint32_t slice, svmfloat8_t f8, svmfloat8x2_t f8x2,

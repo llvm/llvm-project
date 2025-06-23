@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparc | FileCheck %s
+; RUN: llc < %s -mtriple=sparc | FileCheck %s
 
 ; Verify that we correctly handle vector types that appear directly
 ; during call lowering. These may cause issue as v2i32 is a legal type

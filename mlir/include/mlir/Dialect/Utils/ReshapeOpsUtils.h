@@ -57,7 +57,7 @@ getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation);
 
 /// Wraps a list of reassociations in an ArrayAttr.
 ArrayAttr
-getReassociationIndicesAttribute(OpBuilder &b,
+getReassociationIndicesAttribute(Builder &b,
                                  ArrayRef<ReassociationIndices> reassociation);
 
 /// Convert Array<Array<AffineExpr>> to Array<Array<int64_t>>.
@@ -387,11 +387,14 @@ private:
       auto resultSubShape =
           resultShape.slice(resultIndices.front(), resultIndices.size());
 
+      if (llvm::count_if(srcSubShape, ShapedType::isDynamic) >= 2 &&
+          llvm::count_if(resultSubShape, ShapedType::isDynamic) >= 2)
+        return std::nullopt;
+
       if (srcSubShape.size() == resultSubShape.size()) {
-        if (srcSubShape != resultSubShape ||
-            llvm::count_if(srcSubShape, ShapedType::isDynamic) >= 2) {
+        if (srcSubShape != resultSubShape)
           return std::nullopt;
-        }
+
         for (auto index : llvm::seq<int64_t>(0, srcSubShape.size())) {
           composedReassociation.emplace_back(1, srcIndices.front() + index);
         }
@@ -568,6 +571,13 @@ struct PackingMetadata {
 // repeated N^2 counts).
 PackingMetadata computePackingMetadata(int64_t packedRank,
                                        ArrayRef<int64_t> innerDimPos);
+
+/// Try to remove a tensor operation if it would only reshape a constant.
+/// Removes the op and replaces the constant with a new constant of the result
+/// shape. When an optional cst attribute is passed, it is reshaped only if the
+/// splat value matches the value in the attribute.
+OpFoldResult reshapeConstantSource(DenseElementsAttr source, TensorType result,
+                                   std::optional<Attribute> cst = std::nullopt);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H

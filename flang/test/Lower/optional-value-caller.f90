@@ -333,7 +333,7 @@ subroutine test_array_ptr(i)
 ! CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK:             %[[VAL_23:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_19]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:             fir.call @_FortranAAssignTemporary(%[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_19]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:             fir.result %[[VAL_15]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:           }
 ! CHECK:           fir.result %[[VAL_24:.*]] : !fir.heap<!fir.array<?xi32>>
@@ -365,9 +365,9 @@ subroutine test_char(c)
 ! CHECK:  %[[VAL_4:.*]] = arith.select %[[VAL_2]], %[[VAL_1]]#1, %[[VAL_3]] : index
 ! CHECK:  %[[VAL_5:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_4]] : index) {adapt.valuebyref}
 ! CHECK:  %[[VAL_6:.*]] = fir.if %[[VAL_2]] -> (!fir.ref<!fir.char<1,?>>) {
-! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:    %[[VAL_14:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_13]], %[[VAL_14]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+! CHECK:    %[[VAL_14:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+! CHECK:    "llvm.intr.memmove"(%[[VAL_13]], %[[VAL_14]], %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 ! CHECK:    fir.result %[[VAL_5]] : !fir.ref<!fir.char<1,?>>
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_24:.*]] = fir.absent !fir.ref<!fir.char<1,?>>
@@ -394,9 +394,9 @@ subroutine test_char_ptr(c)
 ! CHECK:  %[[VAL_10:.*]] = arith.select %[[VAL_5]], %[[VAL_7]], %[[VAL_9]] : index
 ! CHECK:  %[[VAL_11:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_10]] : index) {adapt.valuebyref}
 ! CHECK:  %[[VAL_12:.*]] = fir.if %[[VAL_5]] -> (!fir.ref<!fir.char<1,?>>) {
-! CHECK:    %[[VAL_19:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:    %[[VAL_20:.*]] = fir.convert %[[VAL_8]] : (!fir.ptr<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:    %[[VAL_19:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+! CHECK:    %[[VAL_20:.*]] = fir.convert %[[VAL_8]] : (!fir.ptr<!fir.char<1,?>>) -> !llvm.ptr
+! CHECK:    "llvm.intr.memmove"(%[[VAL_19]], %[[VAL_20]], %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 ! CHECK:    fir.result %[[VAL_11]] : !fir.ref<!fir.char<1,?>>
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_30:.*]] = fir.absent !fir.ref<!fir.char<1,?>>
@@ -440,7 +440,7 @@ subroutine test_char_array(c)
 ! CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK:             %[[VAL_26:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:             fir.call @_FortranAAssignTemporary(%[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:             fir.result %[[VAL_18]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           }
 ! CHECK:           fir.result %[[VAL_27:.*]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>

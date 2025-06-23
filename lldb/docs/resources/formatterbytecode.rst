@@ -58,7 +58,7 @@ These instructions manipulate the data stack directly.
  0x03      `over`      `(x y -> x y x)`
  0x04      `swap`      `(x y -> y x)`
  0x05      `rot`       `(x y z -> z x y)`
-=======  ==========  ===========================
+========  ==========  ===========================
 
 Control flow
 ~~~~~~~~~~~~
@@ -75,6 +75,7 @@ These manipulate the control stack and program counter. Both `if` and `ifelse` e
  0x12      `ifelse`    `(UInt -> )` pop two blocks from the control stack, if
                        the top of the data stack is nonzero, execute the first,
                        otherwise the second.
+ 0x13      `return`    pop the entire control stack and return
 ========  ==========  ============================================================
 
 Literals for basic types
