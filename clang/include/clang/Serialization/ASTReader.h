@@ -1455,12 +1455,6 @@ private:
     const StringRef &operator*() && = delete;
   };
 
-  /// VarDecls with initializers containing side effects must be emitted,
-  /// but DeclMustBeEmitted is not allowed to deserialize the intializer.
-  /// FIXME: Lower memory usage by removing VarDecls once the initializer
-  /// is deserialized.
-  llvm::SmallPtrSet<Decl *, 16> InitSideEffectVars;
-
 public:
   /// Get the buffer for resolving paths.
   SmallString<0> &getPathBuf() { return PathBuf; }
@@ -2411,8 +2405,6 @@ public:
   ExtKind hasExternalDefinitions(const Decl *D) override;
 
   bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
-
-  bool hasInitializerWithSideEffects(const VarDecl *VD) const override;
 
   /// Retrieve a selector from the given module with its local ID
   /// number.

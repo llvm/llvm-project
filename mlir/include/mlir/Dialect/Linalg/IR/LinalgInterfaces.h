@@ -142,6 +142,9 @@ bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
 bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
+/// Supports two patterns:
+/// 1. External: linalg.generic ins(%scalar) outs(%tensor) { yield %scalar }
+/// 2. Inlined: linalg.generic outs(%tensor) { yield %constant }
 /// Returns the scalar fill value if true.
 std::optional<Value> isaFillOpInterface(GenericOp genericOp);
 
