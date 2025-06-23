@@ -2224,6 +2224,8 @@ def nvvm_move_sym64 : NVPTXInst<(outs B64:$r), (ins ADDR_base:$s),
 
 def texsurf_handles
   : BasicNVPTXInst<(outs B64:$result), (ins ADDR_base:$src), "mov.u64">;
+def : Pat<(int_nvvm_texsurf_handle_internal globaladdr:$src),
+          (texsurf_handles (to_tglobaladdr $src))>;
 
 //-----------------------------------
 // Compiler Error Warn

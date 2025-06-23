@@ -702,9 +702,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
 
-  setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
-  setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
-
   // We want to legalize constant related memmove and memcopy
   // intrinsics.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -1055,14 +1052,10 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case NVPTXISD::FIRST_NUMBER:
     break;
 
-    MAKE_CASE(NVPTXISD::CALL)
     MAKE_CASE(NVPTXISD::RET_GLUE)
-    MAKE_CASE(NVPTXISD::LOAD_PARAM)
-    MAKE_CASE(NVPTXISD::Wrapper)
     MAKE_CASE(NVPTXISD::DeclareParam)
     MAKE_CASE(NVPTXISD::DeclareScalarParam)
     MAKE_CASE(NVPTXISD::DeclareRet)
-    MAKE_CASE(NVPTXISD::DeclareScalarRet)
     MAKE_CASE(NVPTXISD::DeclareRetParam)
     MAKE_CASE(NVPTXISD::PrintCall)
     MAKE_CASE(NVPTXISD::PrintConvergentCall)
@@ -1074,24 +1067,18 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::StoreParam)
     MAKE_CASE(NVPTXISD::StoreParamV2)
     MAKE_CASE(NVPTXISD::StoreParamV4)
-    MAKE_CASE(NVPTXISD::StoreParamS32)
-    MAKE_CASE(NVPTXISD::StoreParamU32)
     MAKE_CASE(NVPTXISD::CallArgBegin)
     MAKE_CASE(NVPTXISD::CallArg)
     MAKE_CASE(NVPTXISD::LastCallArg)
     MAKE_CASE(NVPTXISD::CallArgEnd)
     MAKE_CASE(NVPTXISD::CallVoid)
-    MAKE_CASE(NVPTXISD::CallVal)
-    MAKE_CASE(NVPTXISD::CallSymbol)
     MAKE_CASE(NVPTXISD::Prototype)
     MAKE_CASE(NVPTXISD::MoveParam)
     MAKE_CASE(NVPTXISD::StoreRetval)
     MAKE_CASE(NVPTXISD::StoreRetvalV2)
     MAKE_CASE(NVPTXISD::StoreRetvalV4)
-    MAKE_CASE(NVPTXISD::PseudoUseParam)
     MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
     MAKE_CASE(NVPTXISD::BUILD_VECTOR)
-    MAKE_CASE(NVPTXISD::RETURN)
     MAKE_CASE(NVPTXISD::CallSeqBegin)
     MAKE_CASE(NVPTXISD::CallSeqEnd)
     MAKE_CASE(NVPTXISD::CallPrototype)
@@ -1115,7 +1102,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::STACKSAVE)
     MAKE_CASE(NVPTXISD::SETP_F16X2)
     MAKE_CASE(NVPTXISD::SETP_BF16X2)
-    MAKE_CASE(NVPTXISD::Dummy)
     MAKE_CASE(NVPTXISD::MUL_WIDE_SIGNED)
     MAKE_CASE(NVPTXISD::MUL_WIDE_UNSIGNED)
     MAKE_CASE(NVPTXISD::BrxEnd)
@@ -1187,15 +1173,6 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
           MakeIntrinsicCall(Intrinsic::nvvm_rsqrt_approx_d));
     }
   }
-}
-
-SDValue
-NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc dl(Op);
-  const GlobalAddressSDNode *GAN = cast<GlobalAddressSDNode>(Op);
-  auto PtrVT = getPointerTy(DAG.getDataLayout(), GAN->getAddressSpace());
-  Op = DAG.getTargetGlobalAddress(GAN->getGlobal(), dl, PtrVT);
-  return DAG.getNode(NVPTXISD::Wrapper, dl, PtrVT, Op);
 }
 
 std::string NVPTXTargetLowering::getPrototype(
@@ -2919,8 +2896,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
   case ISD::ADDRSPACECAST:
     return LowerADDRSPACECAST(Op, DAG);
-  case ISD::GlobalAddress:
-    return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return Op;
   case ISD::INTRINSIC_WO_CHAIN:
@@ -3129,8 +3104,7 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   EVT PtrVT = TLI->getPointerTy(DAG.getDataLayout());
 
   // Store the address of unsized array <function>_vararg[] in the ap object.
-  SDValue Arg = getParamSymbol(DAG, /* vararg */ -1, PtrVT);
-  SDValue VAReg = DAG.getNode(NVPTXISD::Wrapper, DL, PtrVT, Arg);
+  SDValue VAReg = getParamSymbol(DAG, /* vararg */ -1, PtrVT);
 
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   return DAG.getStore(Op.getOperand(0), DL, VAReg, Op.getOperand(1),
@@ -3370,7 +3344,7 @@ SDValue NVPTXTargetLowering::getParamSymbol(SelectionDAG &DAG, int idx,
                                             EVT v) const {
   StringRef SavedStr = nvTM->getStrPool().save(
       getParamName(&DAG.getMachineFunction().getFunction(), idx));
-  return DAG.getTargetExternalSymbol(SavedStr.data(), v);
+  return DAG.getExternalSymbol(SavedStr.data(), v);
 }
 
 SDValue NVPTXTargetLowering::LowerFormalArguments(
@@ -3438,7 +3412,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
       SDValue P;
       if (isKernelFunction(*F)) {
-        P = DAG.getNode(NVPTXISD::Wrapper, dl, ByvalIn.VT, ArgSymbol);
+        P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
         P = DAG.getNode(NVPTXISD::MoveParam, dl, ByvalIn.VT, ArgSymbol);
