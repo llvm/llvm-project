@@ -16,6 +16,9 @@
 // TSAN_FLAG(Type, Name, DefaultValue, Description)
 // See COMMON_FLAG in sanitizer_flags.inc for more details.
 
+TSAN_FLAG(bool, enable_robustness, false,
+          "Enable robustness verification.")
+
 TSAN_FLAG(bool, enable_annotations, true,
           "Enable dynamic annotations, otherwise they are no-ops.")
 // Suppress a race report if we've already output another race report

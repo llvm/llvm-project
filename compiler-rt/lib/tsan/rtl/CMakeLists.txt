@@ -49,6 +49,9 @@ set(TSAN_SOURCES
   tsan_symbolize.cpp
   tsan_sync.cpp
   tsan_vector_clock.cpp
+  rsan.cpp
+  rsan_report.cpp
+  rsan_stacktrace.cpp
   )
 
 set(TSAN_CXX_SOURCES
@@ -58,6 +61,10 @@ set(TSAN_CXX_SOURCES
 set(TSAN_PREINIT_SOURCES
   tsan_preinit.cpp
   )
+
+set_source_files_properties(tsan_interface_atomic.cpp PROPERTIES COMPILE_FLAGS -std=c++20)
+set_source_files_properties(tsan_mman.cpp PROPERTIES COMPILE_FLAGS -std=c++20)
+set_source_files_properties(tsan_rtl_mutex.cpp PROPERTIES COMPILE_FLAGS -std=c++20)
 
 if(APPLE)
   list(APPEND TSAN_SOURCES

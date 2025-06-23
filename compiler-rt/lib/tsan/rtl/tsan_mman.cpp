@@ -23,6 +23,8 @@
 #include "tsan_report.h"
 #include "tsan_rtl.h"
 
+#include "rsan_instrument.hpp"
+
 namespace __tsan {
 
 struct MapUnmapCallback {
@@ -276,13 +278,19 @@ void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
 }
 
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write) {
+ Robustness::DebugInfo dbg = { .thr = thr, .pc = pc };
   CHECK_NE(p, (void*)0);
   if (!thr->slot) {
     // Very early/late in thread lifetime, or during fork.
     UNUSED uptr sz = ctx->metamap.FreeBlock(thr->proc(), p, false);
+	if (Robustness::isRobustness())
+	  Robustness::ins.freeMemory(Robustness::Action::Free{.tid = thr->tid, .addr = p, .size = sz, .dbg = dbg});
     DPrintf("#%d: free(0x%zx, %zu) (no slot)\n", thr->tid, p, sz);
     return;
   }
+  uptr size = ctx->metamap.FreeBlock(thr->proc(), p, true);
+  if (Robustness::isRobustness())
+    Robustness::ins.freeMemory(Robustness::Action::Free{.tid = thr->tid, .addr = p, .size = size, .dbg = dbg});
   SlotLocker locker(thr);
   uptr sz = ctx->metamap.FreeBlock(thr->proc(), p, true);
   DPrintf("#%d: free(0x%zx, %zu)\n", thr->tid, p, sz);
