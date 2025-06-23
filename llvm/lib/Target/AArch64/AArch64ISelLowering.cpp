@@ -30003,7 +30003,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     }
 
     if (Subtarget->hasSVE2p1() ||
-        (Subtarget->hasSME2p1() && Subtarget->isSVEorStreamingSVEAvailable())) {
+        (Subtarget->hasSME2p1() && Subtarget->isStreaming())) {
       assert(VT.getFixedSizeInBits() % AArch64::SVEBitsPerBlock == 0 &&
              "Unsupported SVE vector size");
 
