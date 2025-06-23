@@ -589,18 +589,18 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, VT, IsOpSupported ? Action : NoI16x2Action);
   };
 
-  addRegisterClass(MVT::i1, &NVPTX::Int1RegsRegClass);
-  addRegisterClass(MVT::i16, &NVPTX::Int16RegsRegClass);
-  addRegisterClass(MVT::v2i16, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::v4i8, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::i32, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::i64, &NVPTX::Int64RegsRegClass);
-  addRegisterClass(MVT::f32, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::f64, &NVPTX::Int64RegsRegClass);
-  addRegisterClass(MVT::f16, &NVPTX::Int16RegsRegClass);
-  addRegisterClass(MVT::v2f16, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::bf16, &NVPTX::Int16RegsRegClass);
-  addRegisterClass(MVT::v2bf16, &NVPTX::Int32RegsRegClass);
+  addRegisterClass(MVT::i1, &NVPTX::B1RegClass);
+  addRegisterClass(MVT::i16, &NVPTX::B16RegClass);
+  addRegisterClass(MVT::v2i16, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::v4i8, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::i32, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::i64, &NVPTX::B64RegClass);
+  addRegisterClass(MVT::f32, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::f64, &NVPTX::B64RegClass);
+  addRegisterClass(MVT::f16, &NVPTX::B16RegClass);
+  addRegisterClass(MVT::v2f16, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::bf16, &NVPTX::B16RegClass);
+  addRegisterClass(MVT::v2bf16, &NVPTX::B32RegClass);
 
   // Conversion to/from FP16/FP16x2 is always legal.
   setOperationAction(ISD::BUILD_VECTOR, MVT::v2f16, Custom);
@@ -4866,22 +4866,22 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'b':
-      return std::make_pair(0U, &NVPTX::Int1RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B1RegClass);
     case 'c':
     case 'h':
-      return std::make_pair(0U, &NVPTX::Int16RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B16RegClass);
     case 'r':
     case 'f':
-      return std::make_pair(0U, &NVPTX::Int32RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B32RegClass);
     case 'l':
     case 'N':
     case 'd':
-      return std::make_pair(0U, &NVPTX::Int64RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B64RegClass);
     case 'q': {
       if (STI.getSmVersion() < 70)
         report_fatal_error("Inline asm with 128 bit operands is only "
                            "supported for sm_70 and higher!");
-      return std::make_pair(0U, &NVPTX::Int128RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B128RegClass);
     }
     }
   }
