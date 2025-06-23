@@ -176,6 +176,8 @@ public:
 
   LLVM_ABI void removeAttrs(const AttributeMask &AM);
 
+  LLVM_ABI void removeAttr(StringRef Kind);
+
   /// Check if an argument has a given attribute.
   LLVM_ABI bool hasAttribute(Attribute::AttrKind Kind) const;
 

@@ -8,7 +8,7 @@
 
 define internal fastcc void @foo(ptr %kg) {
 ; CHECK-LABEL: define internal fastcc void @foo(
-; CHECK-SAME: ptr [[KG:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr inreg [[KG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CLOSURE_I25_I:%.*]] = getelementptr i8, ptr [[KG]], i64 336
 ; CHECK-NEXT:    [[NUM_CLOSURE_I26_I:%.*]] = getelementptr i8, ptr [[KG]], i64 276
@@ -80,7 +80,8 @@ define amdgpu_kernel void @kernel() #0 {
 ; CHECK-NEXT:    [[KGLOBALS_ASCAST1:%.*]] = addrspacecast ptr addrspace(5) [[SD]] to ptr
 ; CHECK-NEXT:    [[NUM_CLOSURE_I_I:%.*]] = getelementptr i8, ptr addrspace(5) [[SD]], i32 276
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(5) [[NUM_CLOSURE_I_I]], align 4
-; CHECK-NEXT:    call fastcc void @foo(ptr [[KGLOBALS_ASCAST1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.amdgcn.readfirstlane.p0(ptr [[KGLOBALS_ASCAST1]])
+; CHECK-NEXT:    call fastcc void @foo(ptr [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

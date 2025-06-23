@@ -90,7 +90,7 @@ define void @call_volatile_load_store_as_4(ptr addrspace(4) %p1, ptr addrspace(4
 
 define internal void @can_infer_cmpxchg(ptr %word) {
 ; CHECK-LABEL: define internal void @can_infer_cmpxchg(
-; CHECK-SAME: ptr [[WORD:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr inreg [[WORD:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[CMPXCHG_0:%.*]] = cmpxchg ptr addrspace(1) [[TMP1]], i32 0, i32 4 monotonic monotonic, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
@@ -144,7 +144,7 @@ define internal void @can_not_infer_cmpxchg(ptr %word) {
 
 define internal void @can_infer_atomicrmw(ptr %word) {
 ; CHECK-LABEL: define internal void @can_infer_atomicrmw(
-; CHECK-SAME: ptr [[WORD:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr inreg [[WORD:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[ATOMICRMW_XCHG:%.*]] = atomicrmw xchg ptr addrspace(1) [[TMP1]], i32 12 monotonic, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
@@ -215,13 +215,17 @@ define void @foo(ptr addrspace(3) %val) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr addrspace(3) [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[VAL_CAST:%.*]] = addrspacecast ptr addrspace(3) [[VAL]] to ptr
-; CHECK-NEXT:    call void @can_infer_cmpxchg(ptr addrspacecast (ptr addrspace(1) @g1 to ptr))
-; CHECK-NEXT:    call void @can_infer_cmpxchg(ptr addrspacecast (ptr addrspace(1) @g2 to ptr))
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.readfirstlane.p0(ptr addrspacecast (ptr addrspace(1) @g1 to ptr))
+; CHECK-NEXT:    call void @can_infer_cmpxchg(ptr [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.amdgcn.readfirstlane.p0(ptr addrspacecast (ptr addrspace(1) @g2 to ptr))
+; CHECK-NEXT:    call void @can_infer_cmpxchg(ptr [[TMP2]])
 ; CHECK-NEXT:    call void @can_not_infer_cmpxchg(ptr addrspacecast (ptr addrspace(1) @g1 to ptr))
 ; CHECK-NEXT:    call void @can_not_infer_cmpxchg(ptr addrspacecast (ptr addrspace(1) @g2 to ptr))
 ; CHECK-NEXT:    call void @can_not_infer_cmpxchg(ptr [[VAL_CAST]])
-; CHECK-NEXT:    call void @can_infer_atomicrmw(ptr addrspacecast (ptr addrspace(1) @g1 to ptr))
-; CHECK-NEXT:    call void @can_infer_atomicrmw(ptr addrspacecast (ptr addrspace(1) @g2 to ptr))
+; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @llvm.amdgcn.readfirstlane.p0(ptr addrspacecast (ptr addrspace(1) @g1 to ptr))
+; CHECK-NEXT:    call void @can_infer_atomicrmw(ptr [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.amdgcn.readfirstlane.p0(ptr addrspacecast (ptr addrspace(1) @g2 to ptr))
+; CHECK-NEXT:    call void @can_infer_atomicrmw(ptr [[TMP4]])
 ; CHECK-NEXT:    call void @can_not_infer_atomicrmw(ptr addrspacecast (ptr addrspace(1) @g1 to ptr))
 ; CHECK-NEXT:    call void @can_not_infer_atomicrmw(ptr addrspacecast (ptr addrspace(1) @g2 to ptr))
 ; CHECK-NEXT:    call void @can_not_infer_atomicrmw(ptr [[VAL_CAST]])
