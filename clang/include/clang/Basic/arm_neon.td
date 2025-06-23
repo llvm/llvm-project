@@ -2120,6 +2120,26 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
+  def VST1_MF8 : WInst<"vst1", "v*(.!)", "mQm">;
+  def VST2_MF8 : WInst<"vst2", "v*(2!)", "mQm">;
+  def VST3_MF8 : WInst<"vst3", "v*(3!)", "mQm">;
+  def VST4_MF8 : WInst<"vst4", "v*(4!)", "mQm">;
+
+  def VST1_X2_MF8 : WInst<"vst1_x2", "v*(2!)", "mQm">;
+  def VST1_X3_MF8 : WInst<"vst1_x3", "v*(3!)", "mQm">;
+  def VST1_X4_MF8 : WInst<"vst1_x4", "v*(4!)", "mQm">;
+
+  def VST1_LANE_MF8 : WInst<"vst1_lane", "v*(.!)I", "mQm",
+                           [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+  def VST2_LANE_MF8 : WInst<"vst2_lane", "v*(2!)I", "mQm",
+                           [ImmCheck<3, ImmCheckLaneIndex, 1>]>;
+  def VST3_LANE_MF8 : WInst<"vst3_lane", "v*(3!)I", "mQm",
+                           [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
+  def VST4_LANE_MF8 : WInst<"vst4_lane", "v*(4!)I", "mQm",
+                           [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
   def VBF1CVT_BF16_MF8        : VInst<"vcvt1_bf16_mf8_fpm",      "(QB).V", "m">;
   def VBF1CVT_LOW_BF16_MF8    : VInst<"vcvt1_low_bf16_mf8_fpm",  "B.V",    "Hm">;
   def VBF2CVTL_BF16_MF8       : VInst<"vcvt2_bf16_mf8_fpm",      "(QB).V", "m">;
