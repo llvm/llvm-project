@@ -37,7 +37,6 @@ endif()
 
 include(LLDBConfig)
 include(AddLLDB)
-include(LLDBLayeringCheck)
 
 set(LLDB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -127,8 +126,6 @@ add_subdirectory(utils/TableGen)
 add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(docs)
-
-check_lldb_plugin_layering()
 
 if (LLDB_ENABLE_PYTHON)
   if(LLDB_BUILD_FRAMEWORK)
