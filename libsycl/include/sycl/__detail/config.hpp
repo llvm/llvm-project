@@ -41,8 +41,8 @@
 
 #    else // _WIN32
 
-#      define _LIBSYCL_DLL_LOCAL [[gnu::visibility("hidden")]]
-#      define _LIBSYCL_EXPORT [[gnu::visibility("default")]]
+#      define _LIBSYCL_DLL_LOCAL [[__gnu__::__visibility__("hidden")]]
+#      define _LIBSYCL_EXPORT [[__gnu__::__visibility__("default")]]
 
 #    endif // _WIN32
 #  endif   // _LIBSYCL_EXPORT

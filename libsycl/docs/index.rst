@@ -53,7 +53,7 @@ This requires at least partial support of the following functionality on the lib
   * Unified shared memory allocation/deallocation
   * Program manager, an internal component for retrieving and using device images from the multi-architectural binaries
 
-Builds steps
+Build steps
 ========
 
 To build LLVM with libsycl runtime enabled the following script can be used.
