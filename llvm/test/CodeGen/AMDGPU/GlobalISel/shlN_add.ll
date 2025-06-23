@@ -476,7 +476,7 @@ define amdgpu_ps { i32, i32 } @s_shl4_add_u32_multi_use(i32 inreg %src0, i32 inr
 ; GCN-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 4
   %add = add i32 %shl, %src1
-  %insert0 = insertvalue { i32, i32 } undef, i32 %shl, 0
+  %insert0 = insertvalue { i32, i32 } poison, i32 %shl, 0
   %insert1 = insertvalue { i32, i32 } %insert0, i32 %add, 1
   ret { i32, i32 } %insert1
 }
@@ -489,7 +489,7 @@ define amdgpu_ps { i32, i32 } @s_shl3_add_u32_multi_use(i32 inreg %src0, i32 inr
 ; GCN-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 3
   %add = add i32 %shl, %src1
-  %insert0 = insertvalue { i32, i32 } undef, i32 %shl, 0
+  %insert0 = insertvalue { i32, i32 } poison, i32 %shl, 0
   %insert1 = insertvalue { i32, i32 } %insert0, i32 %add, 1
   ret { i32, i32 } %insert1
 }
@@ -502,7 +502,7 @@ define amdgpu_ps { i32, i32 } @s_shl2_add_u32_multi_use(i32 inreg %src0, i32 inr
 ; GCN-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 2
   %add = add i32 %shl, %src1
-  %insert0 = insertvalue { i32, i32 } undef, i32 %shl, 0
+  %insert0 = insertvalue { i32, i32 } poison, i32 %shl, 0
   %insert1 = insertvalue { i32, i32 } %insert0, i32 %add, 1
   ret { i32, i32 } %insert1
 }
@@ -516,7 +516,7 @@ define amdgpu_ps { i32, i32 } @s_shl1_add_u32_multi_use(i32 inreg %src0, i32 inr
 ; GCN-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 1
   %add = add i32 %shl, %src1
-  %insert0 = insertvalue { i32, i32 } undef, i32 %shl, 0
+  %insert0 = insertvalue { i32, i32 } poison, i32 %shl, 0
   %insert1 = insertvalue { i32, i32 } %insert0, i32 %add, 1
   ret { i32, i32 } %insert1
 }

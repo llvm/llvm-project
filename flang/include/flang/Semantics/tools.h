@@ -12,7 +12,6 @@
 // Simple predicates and look-up functions that are best defined
 // canonically for use in semantic checking.
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
@@ -23,6 +22,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran.h"
 #include <functional>
 
 namespace Fortran::semantics {
@@ -42,17 +42,13 @@ const Scope &GetProgramUnitOrBlockConstructContaining(const Scope &);
 const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &);
 
 const Scope *FindModuleContaining(const Scope &);
+const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
 
-const Symbol *FindPointerComponent(const Scope &);
-const Symbol *FindPointerComponent(const DerivedTypeSpec &);
-const Symbol *FindPointerComponent(const DeclTypeSpec &);
-const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
-const Symbol *FindFunctionResult(const Symbol &);
 const Symbol *FindOverriddenBinding(
     const Symbol &, bool &isInaccessibleDeferred);
 const Symbol *FindGlobal(const Symbol &);
@@ -87,6 +83,7 @@ bool IsIntrinsicConcat(
 bool IsGenericDefinedOp(const Symbol &);
 bool IsDefinedOperator(SourceName);
 std::string MakeOpName(SourceName);
+bool IsCommonBlockContaining(const Symbol &, const Symbol &);
 
 // Returns true if maybeAncestor exists and is a proper ancestor of a
 // descendent scope (or symbol owner).  Will be false, unlike Scope::Contains(),
@@ -185,9 +182,12 @@ const Symbol *HasImpureFinal(
     const Symbol &, std::optional<int> rank = std::nullopt);
 // Is this type finalizable or does it contain any polymorphic allocatable
 // ultimate components?
-bool MayRequireFinalization(const DerivedTypeSpec &derived);
+bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
-bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have any defined assignment at any level (or any polymorphic
+// allocatable)?
+bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
 
 bool IsInBlankCommon(const Symbol &);
 bool IsAssumedLengthCharacter(const Symbol &);
@@ -221,8 +221,17 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   return false;
 }
 
+inline bool IsCUDAShared(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared) {
+      return true;
+    }
+  }
+  return false;
+}
+
 inline bool NeedCUDAAlloc(const Symbol &sym) {
-  bool inDeviceSubprogram{IsCUDADeviceContext(&sym.owner())};
   if (IsDummy(sym)) {
     return false;
   }
@@ -230,11 +239,9 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
     if (details->cudaDataAttr() &&
         (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
             *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
-            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
-      // Descriptor is allocated on host when in host context.
-      if (IsAllocatable(sym)) {
-        return inDeviceSubprogram;
-      }
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Pinned)) {
       return true;
     }
   }
@@ -243,6 +250,8 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
 
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
+
+bool IsAccessible(const Symbol &, const Scope &);
 
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
@@ -265,7 +274,7 @@ std::optional<parser::MessageFixedText> GetImageControlStmtCoarrayMsg(
 SymbolVector OrderParameterDeclarations(const Symbol &);
 // Returns the complete list of derived type parameter names in the
 // order defined by 7.5.3.2.
-std::list<SourceName> OrderParameterNames(const Symbol &);
+SymbolVector OrderParameterNames(const Symbol &);
 
 // Return an existing or new derived type instance
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,
@@ -446,6 +455,18 @@ std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &);
 //     closure of its components (including POINTERs) and the
 //     PotentialAndPointer subobject components of its non-POINTER derived type
 //     components.
+//
+// type t1                     ultimate components:  x, a, p
+//  real x                     direct components:    x, a, p
+//  real, allocatable :: a     potential components: x, a
+//  real, pointer :: p         potential & pointers: x, a, p
+// end type
+// type t2                     ultimate components:  y, c%x, c%a, c%p, b
+//  real y                     direct components:    y, c, c%x, c%a, c%p, b
+//  type(t1) :: c              potential components: y, c, c%x, c%a, b, b%x, b%a
+//  type(t1), allocatable :: b potential & pointers: potentials + c%p + b%p
+// end type
+//
 // Parent and procedure components are considered against these definitions.
 // For this kind of iterator, the component tree is recursively visited in the
 // following order:
@@ -517,6 +538,9 @@ public:
     // bool() operator indicates if the iterator can be dereferenced without
     // having to check against an end() iterator.
     explicit operator bool() const { return !componentPath_.empty(); }
+
+    // Returns the current sequence of components, including parent components.
+    SymbolVector GetComponentPath() const;
 
     // Builds a designator name of the referenced component for messages.
     // The designator helps when the component referred to by the iterator
@@ -615,7 +639,11 @@ using PotentialAndPointerComponentIterator =
 // is returned. Otherwise, the returned iterator casts to true and can be
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
     const DerivedTypeSpec &);
+PotentialAndPointerComponentIterator::const_iterator
+FindPointerPotentialComponent(const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(
@@ -624,8 +652,8 @@ UltimateComponentIterator::const_iterator FindAllocatableUltimateComponent(
     const DerivedTypeSpec &);
 DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
     const DerivedTypeSpec &);
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &);
+PotentialComponentIterator::const_iterator
+FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &);
 
 // The LabelEnforce class (given a set of labels) provides an error message if
 // there is a branch to a label which is not in the given set.
@@ -728,5 +756,154 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
+// Checks whether the symbol on the LHS is present in the RHS expression.
+bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs);
+
+namespace operation {
+
+enum class Operator {
+  Unknown,
+  Add,
+  And,
+  Associated,
+  Call,
+  Constant,
+  Convert,
+  Div,
+  Eq,
+  Eqv,
+  False,
+  Ge,
+  Gt,
+  Identity,
+  Intrinsic,
+  Le,
+  Lt,
+  Max,
+  Min,
+  Mul,
+  Ne,
+  Neqv,
+  Not,
+  Or,
+  Pow,
+  Resize, // Convert within the same TypeCategory
+  Sub,
+  True,
+};
+
+std::string ToString(Operator op);
+
+template <typename... Ts, int Kind>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::LogicalOperation<Kind>, Ts...> &op) {
+  switch (op.derived().logicalOperator) {
+  case common::LogicalOperator::And:
+    return Operator::And;
+  case common::LogicalOperator::Or:
+    return Operator::Or;
+  case common::LogicalOperator::Eqv:
+    return Operator::Eqv;
+  case common::LogicalOperator::Neqv:
+    return Operator::Neqv;
+  case common::LogicalOperator::Not:
+    return Operator::Not;
+  }
+  return Operator::Unknown;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Relational<T>, Ts...> &op) {
+  switch (op.derived().opr) {
+  case common::RelationalOperator::LT:
+    return Operator::Lt;
+  case common::RelationalOperator::LE:
+    return Operator::Le;
+  case common::RelationalOperator::EQ:
+    return Operator::Eq;
+  case common::RelationalOperator::NE:
+    return Operator::Ne;
+  case common::RelationalOperator::GE:
+    return Operator::Ge;
+  case common::RelationalOperator::GT:
+    return Operator::Gt;
+  }
+  return Operator::Unknown;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(const evaluate::Operation<evaluate::Add<T>, Ts...> &op) {
+  return Operator::Add;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Subtract<T>, Ts...> &op) {
+  return Operator::Sub;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Multiply<T>, Ts...> &op) {
+  return Operator::Mul;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Divide<T>, Ts...> &op) {
+  return Operator::Div;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Power<T>, Ts...> &op) {
+  return Operator::Pow;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::RealToIntPower<T>, Ts...> &op) {
+  return Operator::Pow;
+}
+
+template <typename T, common::TypeCategory C, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Convert<T, C>, Ts...> &op) {
+  if constexpr (C == T::category) {
+    return Operator::Resize;
+  } else {
+    return Operator::Convert;
+  }
+}
+
+template <typename T> //
+Operator OperationCode(const evaluate::Constant<T> &x) {
+  return Operator::Constant;
+}
+
+template <typename T> //
+Operator OperationCode(const T &) {
+  return Operator::Unknown;
+}
+
+Operator OperationCode(const evaluate::ProcedureDesignator &proc);
+
+} // namespace operation
+
+/// Return information about the top-level operation (ignoring parentheses):
+/// the operation code and the list of arguments.
+std::pair<operation::Operator, std::vector<SomeExpr>> GetTopLevelOperation(
+    const SomeExpr &expr);
+
+/// Check if expr is same as x, or a sequence of Convert operations on x.
+bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x);
+
+/// Strip away any top-level Convert operations (if any exist) and return
+/// the input value. A ComplexConstructor(x, 0) is also considered as a
+/// convert operation.
+/// If the input is not Operation, Designator, FunctionRef or Constant,
+/// it returns std::nullopt.
+MaybeExpr GetConvertInput(const SomeExpr &x);
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

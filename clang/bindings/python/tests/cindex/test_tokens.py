@@ -1,18 +1,13 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import Config, CursorKind, SourceLocation, SourceRange, TokenKind
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-from clang.cindex import CursorKind
-from clang.cindex import Index
-from clang.cindex import SourceLocation
-from clang.cindex import SourceRange
-from clang.cindex import TokenKind
+import unittest
 
 from .util import get_tu
-
-import unittest
 
 
 class TestTokens(unittest.TestCase):

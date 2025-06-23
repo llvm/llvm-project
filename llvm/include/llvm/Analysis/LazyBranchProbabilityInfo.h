@@ -20,7 +20,6 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-class AnalysisUsage;
 class Function;
 class LoopInfo;
 class TargetLibraryInfo;
@@ -119,5 +118,5 @@ template <> struct BPIPassTrait<LazyBranchProbabilityInfoPass> {
     return P->getBPI();
   }
 };
-}
+} // namespace llvm
 #endif

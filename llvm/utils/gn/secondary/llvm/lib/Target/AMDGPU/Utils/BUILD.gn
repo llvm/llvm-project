@@ -33,7 +33,7 @@ static_library("Utils") {
   sources = [
     "AMDGPUAsmUtils.cpp",
     "AMDGPUBaseInfo.cpp",
-    "AMDGPUMemoryUtils.cpp",
+    "AMDGPUDelayedMCExpr.cpp",
     "AMDGPUPALMetadata.cpp",
     "AMDKernelCodeTUtils.cpp",
   ]

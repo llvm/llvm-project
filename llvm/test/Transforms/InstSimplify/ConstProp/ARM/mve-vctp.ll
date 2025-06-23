@@ -46,7 +46,7 @@ entry:
 define <16 x i1> @vctp8_16() {
 ; CHECK-LABEL: @vctp8_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <16 x i1> splat (i1 true)
 ;
 entry:
   %int = call <16 x i1> @llvm.arm.mve.vctp8(i32 16)
@@ -56,7 +56,7 @@ entry:
 define <16 x i1> @vctp8_100() {
 ; CHECK-LABEL: @vctp8_100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <16 x i1> splat (i1 true)
 ;
 entry:
   %int = call <16 x i1> @llvm.arm.mve.vctp8(i32 100)
@@ -66,7 +66,7 @@ entry:
 define <16 x i1> @vctp8_m1() {
 ; CHECK-LABEL: @vctp8_m1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <16 x i1> splat (i1 true)
 ;
 entry:
   %int = call <16 x i1> @llvm.arm.mve.vctp8(i32 -1)
@@ -118,7 +118,7 @@ entry:
 define <8 x i1> @vctp16_8() {
 ; CHECK-LABEL: @vctp16_8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <8 x i1> splat (i1 true)
 ;
 entry:
   %int = call <8 x i1> @llvm.arm.mve.vctp16(i32 8)
@@ -128,7 +128,7 @@ entry:
 define <8 x i1> @vctp16_100() {
 ; CHECK-LABEL: @vctp16_100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <8 x i1> splat (i1 true)
 ;
 entry:
   %int = call <8 x i1> @llvm.arm.mve.vctp16(i32 100)
@@ -138,7 +138,7 @@ entry:
 define <8 x i1> @vctp16_m1() {
 ; CHECK-LABEL: @vctp16_m1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <8 x i1> splat (i1 true)
 ;
 entry:
   %int = call <8 x i1> @llvm.arm.mve.vctp16(i32 -1)
@@ -180,7 +180,7 @@ entry:
 define <4 x i1> @vctp32_4() {
 ; CHECK-LABEL: @vctp32_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %int = call <4 x i1> @llvm.arm.mve.vctp32(i32 4)
@@ -190,7 +190,7 @@ entry:
 define <4 x i1> @vctp32_100() {
 ; CHECK-LABEL: @vctp32_100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %int = call <4 x i1> @llvm.arm.mve.vctp32(i32 100)
@@ -200,7 +200,7 @@ entry:
 define <4 x i1> @vctp32_m1() {
 ; CHECK-LABEL: @vctp32_m1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %int = call <4 x i1> @llvm.arm.mve.vctp32(i32 -1)
@@ -232,7 +232,7 @@ entry:
 define <2 x i1> @vctp64_2() {
 ; CHECK-LABEL: @vctp64_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
 entry:
   %int = call <2 x i1> @llvm.arm.mve.vctp64(i32 2)
@@ -242,7 +242,7 @@ entry:
 define <2 x i1> @vctp64_100() {
 ; CHECK-LABEL: @vctp64_100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
 entry:
   %int = call <2 x i1> @llvm.arm.mve.vctp64(i32 100)
@@ -252,7 +252,7 @@ entry:
 define <2 x i1> @vctp64_m1() {
 ; CHECK-LABEL: @vctp64_m1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
 entry:
   %int = call <2 x i1> @llvm.arm.mve.vctp64(i32 -1)
@@ -260,6 +260,12 @@ entry:
 }
 
 define <4 x float> @poisonc(<4 x float> %a) {
+; CHECK-LABEL: @poisonc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR27:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 poison)
+; CHECK-NEXT:    [[VAR33:%.*]] = select <4 x i1> [[VAR27]], <4 x float> [[A:%.*]], <4 x float> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[VAR33]]
+;
 entry:
   %new0 = shl i1 0, 1
   %last = zext i1 %new0 to i32

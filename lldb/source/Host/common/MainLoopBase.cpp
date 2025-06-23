@@ -7,27 +7,43 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/MainLoopBase.h"
+#include <chrono>
 
 using namespace lldb;
 using namespace lldb_private;
 
-void MainLoopBase::AddPendingCallback(const Callback &callback) {
+void MainLoopBase::AddCallback(const Callback &callback, TimePoint point) {
+  bool interrupt_needed;
   {
     std::lock_guard<std::mutex> lock{m_callback_mutex};
-    m_pending_callbacks.push_back(callback);
+    // We need to interrupt the main thread if this callback is scheduled to
+    // execute at an earlier time than the earliest callback registered so far.
+    interrupt_needed = m_callbacks.empty() || point < m_callbacks.top().first;
+    m_callbacks.emplace(point, callback);
   }
-  TriggerPendingCallbacks();
+  if (interrupt_needed)
+    Interrupt();
 }
 
-void MainLoopBase::ProcessPendingCallbacks() {
-  // Move the callbacks to a local vector to avoid keeping m_pending_callbacks
-  // locked throughout the calls.
-  std::vector<Callback> pending_callbacks;
-  {
-    std::lock_guard<std::mutex> lock{m_callback_mutex};
-    pending_callbacks = std::move(m_pending_callbacks);
-  }
+void MainLoopBase::ProcessCallbacks() {
+  while (true) {
+    Callback callback;
+    {
+      std::lock_guard<std::mutex> lock{m_callback_mutex};
+      if (m_callbacks.empty() ||
+          std::chrono::steady_clock::now() < m_callbacks.top().first)
+        return;
+      callback = std::move(m_callbacks.top().second);
+      m_callbacks.pop();
+    }
 
-  for (const Callback &callback : pending_callbacks)
     callback(*this);
+  }
+}
+
+std::optional<MainLoopBase::TimePoint> MainLoopBase::GetNextWakeupTime() {
+  std::lock_guard<std::mutex> lock(m_callback_mutex);
+  if (m_callbacks.empty())
+    return std::nullopt;
+  return m_callbacks.top().first;
 }

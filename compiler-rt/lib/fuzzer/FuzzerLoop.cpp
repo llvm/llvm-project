@@ -579,6 +579,9 @@ void Fuzzer::CrashOnOverwrittenData() {
 // Compare two arrays, but not all bytes if the arrays are large.
 static bool LooseMemeq(const uint8_t *A, const uint8_t *B, size_t Size) {
   const size_t Limit = 64;
+  // memcmp cannot take null pointer arguments even if Size is 0.
+  if (!Size)
+    return true;
   if (Size <= 64)
     return !memcmp(A, B, Size);
   // Compare first and last Limit/2 bytes.
@@ -596,7 +599,9 @@ ATTRIBUTE_NOINLINE bool Fuzzer::ExecuteCallback(const uint8_t *Data,
   // We copy the contents of Unit into a separate heap buffer
   // so that we reliably find buffer overflows in it.
   uint8_t *DataCopy = new uint8_t[Size];
-  memcpy(DataCopy, Data, Size);
+  // memcpy cannot take null pointer arguments even if Size is 0.
+  if (Size)
+    memcpy(DataCopy, Data, Size);
   if (EF->__msan_unpoison)
     EF->__msan_unpoison(DataCopy, Size);
   if (EF->__msan_unpoison_param)

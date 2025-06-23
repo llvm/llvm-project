@@ -13,9 +13,11 @@
 #include "TestInterfaces.h"
 #include "TestTypes.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/DLTI/Traits.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Traits.h"
@@ -70,7 +72,7 @@ struct PropertiesWithCustomPrint {
   }
 };
 
-mlir::LogicalResult setPropertiesFromAttribute(
+llvm::LogicalResult setPropertiesFromAttribute(
     PropertiesWithCustomPrint &prop, mlir::Attribute attr,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
 mlir::DictionaryAttr
@@ -85,14 +87,14 @@ mlir::ParseResult customParseProperties(mlir::OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 // MyPropStruct
 //===----------------------------------------------------------------------===//
-
+namespace test_properties {
 class MyPropStruct {
 public:
   std::string content;
   // These three methods are invoked through the  `MyStructProperty` wrapper
   // defined in TestOps.td
   mlir::Attribute asAttribute(mlir::MLIRContext *ctx) const;
-  static mlir::LogicalResult
+  static llvm::LogicalResult
   setFromAttr(MyPropStruct &prop, mlir::Attribute attr,
               llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
   llvm::hash_code hash() const;
@@ -100,8 +102,11 @@ public:
     return content == rhs.content;
   }
 };
+inline llvm::hash_code hash_value(const MyPropStruct &S) { return S.hash(); }
+} // namespace test_properties
+using test_properties::MyPropStruct;
 
-mlir::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
+llvm::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
                                          MyPropStruct &prop);
 void writeToMlirBytecode(mlir::DialectBytecodeWriter &writer,
                          MyPropStruct &prop);
@@ -122,7 +127,7 @@ struct VersionedProperties {
   }
 };
 
-mlir::LogicalResult setPropertiesFromAttribute(
+llvm::LogicalResult setPropertiesFromAttribute(
     VersionedProperties &prop, mlir::Attribute attr,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
 mlir::DictionaryAttr getPropertiesAsAttribute(mlir::MLIRContext *ctx,
@@ -137,7 +142,7 @@ mlir::ParseResult customParseProperties(mlir::OpAsmParser &parser,
 // Bytecode Support
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
+llvm::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
                                          llvm::MutableArrayRef<int64_t> prop);
 void writeToMlirBytecode(mlir::DialectBytecodeWriter &writer,
                          llvm::ArrayRef<int64_t> prop);

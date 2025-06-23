@@ -6,12 +6,12 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32"
 target triple = "i386-apple-darwin10.0"
 
-define void @foo() personality ptr @__gxx_personality_v0 {
+define void @foo(i1 %arg) personality ptr @__gxx_personality_v0 {
 invcont5:
   br label %bb15
 
 .noexc3:                                          ; preds = %bb15
-  br i1 undef, label %bb18.i5.i, label %bb15
+  br i1 %arg, label %bb18.i5.i, label %bb15
 
 .noexc6.i.i:                                      ; preds = %bb18.i5.i
   %tmp2021 = invoke float @cosf(float 0.000000e+00) readonly

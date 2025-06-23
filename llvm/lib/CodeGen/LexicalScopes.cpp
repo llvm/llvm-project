@@ -287,8 +287,7 @@ void LexicalScopes::getMachineBasicBlocks(
     return;
 
   if (Scope == CurrentFnLexicalScope) {
-    for (const auto &MBB : *MF)
-      MBBs.insert(&MBB);
+    MBBs.insert_range(llvm::make_pointer_range(*MF));
     return;
   }
 
@@ -340,8 +339,8 @@ LLVM_DUMP_METHOD void LexicalScope::dump(unsigned Indent) const {
 
   if (!Children.empty())
     err << std::string(Indent + 2, ' ') << "Children ...\n";
-  for (unsigned i = 0, e = Children.size(); i != e; ++i)
-    if (Children[i] != this)
-      Children[i]->dump(Indent + 2);
+  for (const LexicalScope *Child : Children)
+    if (Child != this)
+      Child->dump(Indent + 2);
 }
 #endif

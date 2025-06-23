@@ -94,6 +94,16 @@ def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops"> {
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
+def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops"> {
+  let summary = "Convert generic ops back to named ops";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
+def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
+  let summary = "Fold transform, broadcast and other ops into elementwise";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
 def LinalgDetensorizePass : InterfacePass<"linalg-detensorize", "FunctionOpInterface"> {
   let summary = "Detensorize linalg ops";
   let dependentDialects = [];

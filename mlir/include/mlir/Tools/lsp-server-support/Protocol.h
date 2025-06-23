@@ -28,15 +28,12 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace mlir {
-struct LogicalResult;
-
 namespace lsp {
 
 enum class ErrorCode {
@@ -161,6 +158,12 @@ struct ClientCapabilities {
   /// Client supports CodeAction return value for textDocument/codeAction.
   /// textDocument.codeAction.codeActionLiteralSupport.
   bool codeActionStructure = false;
+
+  /// Client supports server-initiated progress via the
+  /// window/workDoneProgress/create method.
+  ///
+  /// window.workDoneProgress
+  bool workDoneProgress = false;
 };
 
 /// Add support for JSON serialization.

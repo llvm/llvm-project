@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -O3 < %s | FileCheck %s
 
 ; Test that we do not generate a hardware loop due to a potential underflow.
 

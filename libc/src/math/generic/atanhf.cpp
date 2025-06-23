@@ -8,10 +8,11 @@
 
 #include "src/math/atanhf.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/explogxf.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -23,6 +24,10 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   // |x| >= 1.0
   if (LIBC_UNLIKELY(x_abs >= 0x3F80'0000U)) {
     if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       return x;
     }
     // |x| == 1.0
@@ -58,4 +63,4 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   return static_cast<float>(0.5 * log_eval((xdbl + 1.0) / (xdbl - 1.0)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

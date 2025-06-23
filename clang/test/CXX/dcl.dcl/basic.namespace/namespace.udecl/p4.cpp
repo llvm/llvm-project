@@ -210,7 +210,7 @@ namespace test4 {
     using Subclass::foo; // legal in C++03
 #if __cplusplus >= 201103L
     // expected-error@-3 {{refers to its own class}}
-    // expected-error@-3 {{refers into 'Subclass::', which is not a base class}}
+    // expected-error@-3 {{refers into 'Subclass', which is not a base class}}
 #endif
 
     int bar();

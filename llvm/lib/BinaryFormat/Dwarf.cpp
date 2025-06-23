@@ -139,7 +139,7 @@ StringRef llvm::dwarf::OperationEncodingString(unsigned Encoding) {
   switch (Encoding) {
   default:
     return StringRef();
-#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR)                                \
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, ARITY, VERSION, VENDOR)               \
   case DW_OP_##NAME:                                                           \
     return "DW_OP_" #NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -164,7 +164,7 @@ StringRef llvm::dwarf::OperationEncodingString(unsigned Encoding) {
 
 unsigned llvm::dwarf::getOperationEncoding(StringRef OperationEncodingString) {
   return StringSwitch<unsigned>(OperationEncodingString)
-#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR)                                \
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, ARITY, VERSION, VENDOR)               \
   .Case("DW_OP_" #NAME, DW_OP_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
       .Case("DW_OP_LLVM_convert", DW_OP_LLVM_convert)
@@ -216,9 +216,35 @@ unsigned llvm::dwarf::OperationVersion(dwarf::LocationAtom Op) {
   switch (Op) {
   default:
     return 0;
-#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR)                                \
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, ARITY, VERSION, VENDOR)               \
   case DW_OP_##NAME:                                                           \
     return VERSION;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
+std::optional<unsigned> llvm::dwarf::OperationOperands(dwarf::LocationAtom Op) {
+  switch (Op) {
+  default:
+    return std::nullopt;
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, ARITY, VERSION, VENDOR)               \
+  case DW_OP_##NAME:                                                           \
+    if (OPERANDS == -1)                                                        \
+      return std::nullopt;                                                     \
+    return OPERANDS;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
+std::optional<unsigned> llvm::dwarf::OperationArity(dwarf::LocationAtom Op) {
+  switch (Op) {
+  default:
+    return std::nullopt;
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, ARITY, VERSION, VENDOR)               \
+  case DW_OP_##NAME:                                                           \
+    if (ARITY == -1)                                                           \
+      return std::nullopt;                                                     \
+    return ARITY;
 #include "llvm/BinaryFormat/Dwarf.def"
   }
 }
@@ -227,7 +253,7 @@ unsigned llvm::dwarf::OperationVendor(dwarf::LocationAtom Op) {
   switch (Op) {
   default:
     return 0;
-#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR)                                \
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, ARITY, VERSION, VENDOR)               \
   case DW_OP_##NAME:                                                           \
     return DWARF_VENDOR_##VENDOR;
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -362,6 +388,25 @@ unsigned llvm::dwarf::getVirtuality(StringRef VirtualityString) {
   .Case("DW_VIRTUALITY_" #NAME, DW_VIRTUALITY_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
       .Default(DW_VIRTUALITY_invalid);
+}
+
+StringRef llvm::dwarf::EnumKindString(unsigned EnumKind) {
+  switch (EnumKind) {
+  default:
+    return StringRef();
+#define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)                                    \
+  case DW_APPLE_ENUM_KIND_##NAME:                                              \
+    return "DW_APPLE_ENUM_KIND_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::getEnumKind(StringRef EnumKindString) {
+  return StringSwitch<unsigned>(EnumKindString)
+#define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)                                    \
+  .Case("DW_APPLE_ENUM_KIND_" #NAME, DW_APPLE_ENUM_KIND_##NAME)
+#include "llvm/BinaryFormat/Dwarf.def"
+      .Default(DW_APPLE_ENUM_KIND_invalid);
 }
 
 StringRef llvm::dwarf::LanguageString(unsigned Language) {
@@ -715,6 +760,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return LanguageString(Val);
   case DW_AT_defaulted:
     return DefaultedMemberString(Val);
+  case DW_AT_APPLE_enum_kind:
+    return EnumKindString(Val);
   }
 
   return StringRef();
@@ -863,6 +910,18 @@ StringRef llvm::dwarf::RLEString(unsigned RLE) {
 #include "llvm/BinaryFormat/Dwarf.def"
   }
 }
+
+StringRef (*const llvm::dwarf::EnumTraits<Tag>::StringFn)(unsigned) = TagString;
+StringRef (*const llvm::dwarf::EnumTraits<Attribute>::StringFn)(unsigned) =
+    AttributeString;
+StringRef (*const llvm::dwarf::EnumTraits<Form>::StringFn)(unsigned) =
+    FormEncodingString;
+StringRef (*const llvm::dwarf::EnumTraits<LocationAtom>::StringFn)(unsigned) =
+    OperationEncodingString;
+StringRef (*const llvm::dwarf::EnumTraits<LineNumberOps>::StringFn)(unsigned) =
+    LNStandardString;
+StringRef (*const llvm::dwarf::EnumTraits<Index>::StringFn)(unsigned) =
+    IndexString;
 
 constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Form>::Type[];

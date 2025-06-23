@@ -1,10 +1,10 @@
 // RUN: %check_clang_tidy \
 // RUN:   -std=c++23 %s modernize-use-std-print %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: true}}" \
+// RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: true}}" \
 // RUN:   -- -isystem %clang_tidy_headers
 // RUN: %check_clang_tidy \
 // RUN:   -std=c++23 %s modernize-use-std-print %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: false}}" \
+// RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: false}}" \
 // RUN:   -- -isystem %clang_tidy_headers
 
 #include <cstdio>

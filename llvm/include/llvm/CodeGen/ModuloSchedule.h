@@ -160,10 +160,10 @@ public:
 /// rewriting the old loop and inserting prologs and epilogs as required.
 class ModuloScheduleExpander {
 public:
-  using InstrChangesTy = DenseMap<MachineInstr *, std::pair<unsigned, int64_t>>;
+  using InstrChangesTy = DenseMap<MachineInstr *, std::pair<Register, int64_t>>;
 
 private:
-  using ValueMapTy = DenseMap<unsigned, unsigned>;
+  using ValueMapTy = DenseMap<Register, Register>;
   using MBBVectorTy = SmallVectorImpl<MachineBasicBlock *>;
   using InstrMapTy = DenseMap<MachineInstr *, MachineInstr *>;
 
@@ -183,7 +183,7 @@ private:
   /// The first element in the pair is the max difference in stages. The
   /// second is true if the register defines a Phi value and loop value is
   /// scheduled before the Phi.
-  std::map<unsigned, std::pair<unsigned, bool>> RegToStageDiff;
+  std::map<Register, std::pair<unsigned, bool>> RegToStageDiff;
 
   /// Instructions to change when emitting the final schedule.
   InstrChangesTy InstrChanges;
@@ -221,21 +221,21 @@ private:
   void updateInstruction(MachineInstr *NewMI, bool LastDef,
                          unsigned CurStageNum, unsigned InstrStageNum,
                          ValueMapTy *VRMap);
-  MachineInstr *findDefInLoop(unsigned Reg);
-  unsigned getPrevMapVal(unsigned StageNum, unsigned PhiStage, unsigned LoopVal,
+  MachineInstr *findDefInLoop(Register Reg);
+  Register getPrevMapVal(unsigned StageNum, unsigned PhiStage, Register LoopVal,
                          unsigned LoopStage, ValueMapTy *VRMap,
                          MachineBasicBlock *BB);
   void rewritePhiValues(MachineBasicBlock *NewBB, unsigned StageNum,
                         ValueMapTy *VRMap, InstrMapTy &InstrMap);
   void rewriteScheduledInstr(MachineBasicBlock *BB, InstrMapTy &InstrMap,
                              unsigned CurStageNum, unsigned PhiNum,
-                             MachineInstr *Phi, unsigned OldReg,
-                             unsigned NewReg, unsigned PrevReg = 0);
+                             MachineInstr *Phi, Register OldReg,
+                             Register NewReg, Register PrevReg = Register());
   bool isLoopCarried(MachineInstr &Phi);
 
   /// Return the max. number of stages/iterations that can occur between a
   /// register definition and its uses.
-  unsigned getStagesForReg(int Reg, unsigned CurStage) {
+  unsigned getStagesForReg(Register Reg, unsigned CurStage) {
     std::pair<unsigned, bool> Stages = RegToStageDiff[Reg];
     if ((int)CurStage > Schedule.getNumStages() - 1 && Stages.first == 0 &&
         Stages.second)
@@ -249,7 +249,7 @@ private:
   /// This is not the case if the loop value is scheduled prior to the
   /// Phi in the same stage.  This function returns the number of stages
   /// or iterations needed between the Phi definition and any uses.
-  unsigned getStagesForPhi(int Reg) {
+  unsigned getStagesForPhi(Register Reg) {
     std::pair<unsigned, bool> Stages = RegToStageDiff[Reg];
     if (Stages.second)
       return Stages.first;
@@ -359,8 +359,8 @@ protected:
   MachineBasicBlock *CreateLCSSAExitingBlock();
   /// Helper to get the stage of an instruction in the schedule.
   unsigned getStage(MachineInstr *MI) {
-    if (CanonicalMIs.count(MI))
-      MI = CanonicalMIs[MI];
+    if (auto It = CanonicalMIs.find(MI); It != CanonicalMIs.end())
+      MI = It->second;
     return Schedule.getStage(MI);
   }
   /// Helper function to find the right canonical register for a phi instruction
@@ -368,6 +368,78 @@ protected:
   Register getPhiCanonicalReg(MachineInstr* CanonicalPhi, MachineInstr* Phi);
   /// Target loop info before kernel peeling.
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopInfo;
+};
+
+/// Expand the kernel using modulo variable expansion algorithm (MVE).
+/// It unrolls the kernel enough to avoid overlap of register lifetime.
+class ModuloScheduleExpanderMVE {
+private:
+  using ValueMapTy = DenseMap<Register, Register>;
+  using MBBVectorTy = SmallVectorImpl<MachineBasicBlock *>;
+  using InstrMapTy = DenseMap<MachineInstr *, MachineInstr *>;
+
+  ModuloSchedule &Schedule;
+  MachineFunction &MF;
+  const TargetSubtargetInfo &ST;
+  MachineRegisterInfo &MRI;
+  const TargetInstrInfo *TII = nullptr;
+  LiveIntervals &LIS;
+
+  MachineBasicBlock *OrigKernel = nullptr;
+  MachineBasicBlock *OrigPreheader = nullptr;
+  MachineBasicBlock *OrigExit = nullptr;
+  MachineBasicBlock *Check = nullptr;
+  MachineBasicBlock *Prolog = nullptr;
+  MachineBasicBlock *NewKernel = nullptr;
+  MachineBasicBlock *Epilog = nullptr;
+  MachineBasicBlock *NewPreheader = nullptr;
+  MachineBasicBlock *NewExit = nullptr;
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopInfo;
+
+  /// The number of unroll required to avoid overlap of live ranges.
+  /// NumUnroll = 1 means no unrolling.
+  int NumUnroll;
+
+  void calcNumUnroll();
+  void generatePipelinedLoop();
+  void generateProlog(SmallVectorImpl<ValueMapTy> &VRMap);
+  void generatePhi(MachineInstr *OrigMI, int UnrollNum,
+                   SmallVectorImpl<ValueMapTy> &PrologVRMap,
+                   SmallVectorImpl<ValueMapTy> &KernelVRMap,
+                   SmallVectorImpl<ValueMapTy> &PhiVRMap);
+  void generateKernel(SmallVectorImpl<ValueMapTy> &PrologVRMap,
+                      SmallVectorImpl<ValueMapTy> &KernelVRMap,
+                      InstrMapTy &LastStage0Insts);
+  void generateEpilog(SmallVectorImpl<ValueMapTy> &KernelVRMap,
+                      SmallVectorImpl<ValueMapTy> &EpilogVRMap,
+                      InstrMapTy &LastStage0Insts);
+  void mergeRegUsesAfterPipeline(Register OrigReg, Register NewReg);
+
+  MachineInstr *cloneInstr(MachineInstr *OldMI);
+
+  void updateInstrDef(MachineInstr *NewMI, ValueMapTy &VRMap, bool LastDef);
+
+  void generateKernelPhi(Register OrigLoopVal, Register NewLoopVal,
+                         unsigned UnrollNum,
+                         SmallVectorImpl<ValueMapTy> &VRMapProlog,
+                         SmallVectorImpl<ValueMapTy> &VRMapPhi);
+  void updateInstrUse(MachineInstr *MI, int StageNum, int PhaseNum,
+                      SmallVectorImpl<ValueMapTy> &CurVRMap,
+                      SmallVectorImpl<ValueMapTy> *PrevVRMap);
+
+  void insertCondBranch(MachineBasicBlock &MBB, int RequiredTC,
+                        InstrMapTy &LastStage0Insts,
+                        MachineBasicBlock &GreaterThan,
+                        MachineBasicBlock &Otherwise);
+
+public:
+  ModuloScheduleExpanderMVE(MachineFunction &MF, ModuloSchedule &S,
+                            LiveIntervals &LIS)
+      : Schedule(S), MF(MF), ST(MF.getSubtarget()), MRI(MF.getRegInfo()),
+        TII(ST.getInstrInfo()), LIS(LIS) {}
+
+  void expand();
+  static bool canApply(MachineLoop &L);
 };
 
 /// Expander that simply annotates each scheduled instruction with a post-instr

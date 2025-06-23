@@ -19,6 +19,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/APSInt.h"
 
@@ -61,6 +62,9 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_bpermd:
   case PPC::BI__builtin_pdepd:
   case PPC::BI__builtin_pextd:
+  case PPC::BI__builtin_ppc_cdtbcd:
+  case PPC::BI__builtin_ppc_cbcdtd:
+  case PPC::BI__builtin_ppc_addg6s:
   case PPC::BI__builtin_ppc_ldarx:
   case PPC::BI__builtin_ppc_stdcx:
   case PPC::BI__builtin_ppc_tdw:
@@ -93,9 +97,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
                                           unsigned BuiltinID,
                                           CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
-  unsigned i = 0, l = 0, u = 0;
   bool IsTarget64Bit = TI.getTypeWidth(TI.getIntPtrType()) == 64;
-  llvm::APSInt Result;
 
   if (isPPC_64Builtin(BuiltinID) && !IsTarget64Bit)
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
@@ -248,7 +250,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinPPCMMACall(TheCall, BuiltinID, Types);
 #include "clang/Basic/BuiltinsPPC.def"
   }
-  return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u);
+  llvm_unreachable("must return from switch");
 }
 
 // Check if the given type is a non-pointer PPC MMA type. This function is used

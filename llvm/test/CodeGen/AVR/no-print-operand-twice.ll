@@ -1,4 +1,4 @@
-; RUN: llc -no-integrated-as -march=avr < %s | FileCheck %s
+; RUN: llc -no-integrated-as -mtriple=avr < %s | FileCheck %s
 
 define void @test() {
 entry:

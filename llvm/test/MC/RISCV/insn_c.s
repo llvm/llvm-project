@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+f,+c -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+f,+c -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefix=CHECK-ASM %s
-# RUN: llvm-mc %s -triple riscv64 -mattr=+f,+c -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple riscv64 -mattr=+f,+c -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefix=CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+f,+c < %s \
 # RUN:     | llvm-objdump --mattr=+f,+c -M no-aliases -d -r - \
@@ -30,6 +30,16 @@ target:
 # CHECK-ASM: encoding: [0x35,0x05]
 # CHECK-OBJ: c.addi a0, 0xd
 .insn ci C1, 0, a0, 13
+
+# CHECK-ASM: .insn ci  1, 0, a6, 13
+# CHECK-ASM: encoding: [0x35,0x08]
+# CHECK-OBJ: c.addi a6, 0xd
+.insn ci  1, 0, a6, 13
+
+# CHECK-ASM: .insn ci  1, 0, a6, 13
+# CHECK-ASM: encoding: [0x35,0x08]
+# CHECK-OBJ: c.addi a6, 0xd
+.insn ci C1, 0, a6, 13
 
 # CHECK-ASM: .insn ciw  0, 0, a0, 13
 # CHECK-ASM: encoding: [0xa8,0x01]
@@ -80,3 +90,13 @@ target:
 # CHECK-ASM: encoding: [0bAAAAAA01,0b101AAAAA]
 # CHECK-OBJ: c.j 0x0 <target>
 .insn cj  1, 5, target
+
+# CHECK-ASM: .insn 0x2, 1
+# CHECK-ASM: encoding: [0x01,0x00]
+# CHECK-OBJ: c.nop
+.insn 0x0001
+
+# CHECK-ASM: .insn 0x2, 1
+# CHECK-ASM: encoding: [0x01,0x00]
+# CHECK-OBJ: c.nop
+.insn 0x2, 0x0001

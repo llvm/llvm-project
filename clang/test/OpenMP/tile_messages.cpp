@@ -161,3 +161,12 @@ void template_inst() {
   // expected-note@+1 {{in instantiation of function template specialization 'templated_func_type_dependent<int>' requested here}}
   templated_func_type_dependent<int>();
 }
+
+namespace GH139073 {
+void f(void) {
+  // Clang would previously crash on this because of the invalid DeclRefExpr.
+#pragma omp tile sizes(a) // expected-error {{use of undeclared identifier 'a'}}
+  for (int i = 0; i < 10; i++)
+    ;
+}
+} // namespace GH139073

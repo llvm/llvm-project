@@ -16,12 +16,6 @@
 
 namespace lldb_private {
 
-namespace plugin {
-namespace dwarf {
-class DWARFUnit;
-} // namespace dwarf
-} // namespace plugin
-
 /// \class DWARFExpressionList DWARFExpressionList.h
 /// "lldb/Expression/DWARFExpressionList.h" Encapsulates a range map from file
 /// address range to a single DWARF location expression.
@@ -30,13 +24,13 @@ public:
   DWARFExpressionList() = default;
 
   DWARFExpressionList(lldb::ModuleSP module_sp,
-                      const plugin::dwarf::DWARFUnit *dwarf_cu,
+                      const DWARFExpression::Delegate *dwarf_cu,
                       lldb::addr_t func_file_addr)
       : m_module_wp(module_sp), m_dwarf_cu(dwarf_cu),
         m_func_file_addr(func_file_addr) {}
 
   DWARFExpressionList(lldb::ModuleSP module_sp, DWARFExpression expr,
-                      const plugin::dwarf::DWARFUnit *dwarf_cu)
+                      const DWARFExpression::Delegate *dwarf_cu)
       : m_module_wp(module_sp), m_dwarf_cu(dwarf_cu) {
     AddExpression(0, LLDB_INVALID_ADDRESS, expr);
   }
@@ -92,7 +86,7 @@ public:
                      lldb::addr_t func_load_addr, lldb::addr_t file_addr,
                      ABI *abi) const;
 
-  /// Dump all locaitons with each seperated by new line.
+  /// Dump all locaitons with each separated by new line.
   void GetDescription(Stream *s, lldb::DescriptionLevel level, ABI *abi) const;
 
   /// Search for a load address in the dwarf location list
@@ -106,10 +100,6 @@ public:
   /// \return
   ///     True if IsLocationList() is true and the address was found;
   ///     false otherwise.
-  //    bool
-  //    LocationListContainsLoadAddress (Process* process, const Address &addr)
-  //    const;
-  //
   bool ContainsAddress(lldb::addr_t func_load_addr, lldb::addr_t addr) const;
 
   void SetModule(const lldb::ModuleSP &module) { m_module_wp = module; }
@@ -143,7 +133,7 @@ private:
   /// The DWARF compile unit this expression belongs to. It is used to evaluate
   /// values indexing into the .debug_addr section (e.g. DW_OP_GNU_addr_index,
   /// DW_OP_GNU_const_index)
-  const plugin::dwarf::DWARFUnit *m_dwarf_cu = nullptr;
+  const DWARFExpression::Delegate *m_dwarf_cu = nullptr;
 
   // Function base file address.
   lldb::addr_t m_func_file_addr = LLDB_INVALID_ADDRESS;

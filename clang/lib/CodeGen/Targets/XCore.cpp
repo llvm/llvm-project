@@ -113,8 +113,8 @@ public:
 class XCoreABIInfo : public DefaultABIInfo {
 public:
   XCoreABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class XCoreTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -134,8 +134,8 @@ public:
 
 // TODO: this implementation is likely now redundant with the default
 // EmitVAArg.
-Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                QualType Ty) const {
+RValue XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                               QualType Ty, AggValueSlot Slot) const {
   CGBuilderTy &Builder = CGF.Builder;
 
   // Get the VAList.
@@ -149,7 +149,7 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   llvm::Type *ArgTy = CGT.ConvertType(Ty);
   if (AI.canHaveCoerceToType() && !AI.getCoerceToType())
     AI.setCoerceToType(ArgTy);
-  llvm::Type *ArgPtrTy = llvm::PointerType::getUnqual(ArgTy);
+  llvm::Type *ArgPtrTy = llvm::PointerType::getUnqual(ArgTy->getContext());
 
   Address Val = Address::invalid();
   CharUnits ArgSize = CharUnits::Zero();
@@ -183,7 +183,7 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Builder.CreateStore(APN.emitRawPointer(CGF), VAListAddr);
   }
 
-  return Val;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Val, Ty), Slot);
 }
 
 /// During the expansion of a RecordType, an incomplete TypeString is placed
@@ -343,7 +343,7 @@ static bool extractFieldType(SmallVectorImpl<FieldEncoding> &FE,
     if (Field->isBitField()) {
       Enc += "b(";
       llvm::raw_svector_ostream OS(Enc);
-      OS << Field->getBitWidthValue(CGM.getContext());
+      OS << Field->getBitWidthValue();
       Enc += ':';
     }
     if (!appendType(Enc, Field->getType(), CGM, TSC))

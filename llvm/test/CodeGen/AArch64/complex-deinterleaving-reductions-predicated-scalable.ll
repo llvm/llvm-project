@@ -14,7 +14,7 @@ target triple = "aarch64"
 define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    whilelo p1.d, xzr, x8
@@ -111,7 +111,7 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_predicated_v2f64(ptr %a, ptr %b, ptr %cond) {
 ; CHECK-LABEL: complex_mul_predicated_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    mov w11, #100 // =0x64
 ; CHECK-NEXT:    neg x10, x9
@@ -213,7 +213,7 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, ptr %cond) {
 ; CHECK-LABEL: complex_mul_predicated_x2_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    whilelo p1.d, xzr, x8
@@ -229,6 +229,7 @@ define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, pt
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    mov z7.d, z0.d
 ; CHECK-NEXT:    add x2, x2, x11
+; CHECK-NEXT:    and z2.d, z2.d, #0xffffffff
 ; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; CHECK-NEXT:    zip2 p2.d, p1.d, p1.d
 ; CHECK-NEXT:    zip1 p1.d, p1.d, p1.d

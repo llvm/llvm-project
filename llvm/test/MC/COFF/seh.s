@@ -144,9 +144,11 @@ func:
     .seh_startchained
     .seh_endprologue
     .seh_endchained
+    .seh_startepilogue
     lea (%rbx), %rsp
     pop %rbx
     addq $24, %rsp
+    .seh_endepilogue
     ret
     .seh_endproc
 

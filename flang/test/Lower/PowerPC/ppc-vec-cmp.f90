@@ -1,4 +1,5 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !----------------------
@@ -14,7 +15,7 @@ subroutine vec_cmpge_test_i8(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <2 x i64> @llvm.ppc.altivec.vcmpgtsd(<2 x i64> %[[arg2]], <2 x i64> %[[arg1]])
-! LLVMIR: %{{[0-9]+}} = xor <2 x i64> %[[res]], <i64 -1, i64 -1>
+! LLVMIR: %{{[0-9]+}} = xor <2 x i64> %[[res]], splat (i64 -1)
 end subroutine vec_cmpge_test_i8
 
 ! CHECK-LABEL: vec_cmpge_test_i4
@@ -26,7 +27,7 @@ subroutine vec_cmpge_test_i4(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <4 x i32>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <4 x i32> @llvm.ppc.altivec.vcmpgtsw(<4 x i32> %[[arg2]], <4 x i32> %[[arg1]])
-! LLVMIR: %{{[0-9]+}} = xor <4 x i32> %[[res]], <i32 -1, i32 -1, i32 -1, i32 -1>
+! LLVMIR: %{{[0-9]+}} = xor <4 x i32> %[[res]], splat (i32 -1)
 end subroutine vec_cmpge_test_i4
 
 ! CHECK-LABEL: vec_cmpge_test_i2
@@ -38,7 +39,7 @@ subroutine vec_cmpge_test_i2(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <8 x i16>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <8 x i16>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <8 x i16> @llvm.ppc.altivec.vcmpgtsh(<8 x i16> %[[arg2]], <8 x i16> %[[arg1]])
-! LLVMIR: %{{[0-9]+}} = xor <8 x i16> %[[res]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+! LLVMIR: %{{[0-9]+}} = xor <8 x i16> %[[res]], splat (i16 -1)
 end subroutine vec_cmpge_test_i2
 
 ! CHECK-LABEL: vec_cmpge_test_i1
@@ -50,7 +51,7 @@ subroutine vec_cmpge_test_i1(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <16 x i8>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <16 x i8>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <16 x i8> @llvm.ppc.altivec.vcmpgtsb(<16 x i8> %[[arg2]], <16 x i8> %[[arg1]])
-! LLVMIR: %{{[0-9]+}} = xor <16 x i8> %[[res]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+! LLVMIR: %{{[0-9]+}} = xor <16 x i8> %[[res]], splat (i8 -1)
 end subroutine vec_cmpge_test_i1
 
 ! CHECK-LABEL: vec_cmpge_test_u8
@@ -62,7 +63,7 @@ subroutine vec_cmpge_test_u8(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %[[arg2]], <2 x i64> %[[arg1]])
-! LLVMIR: %{{[0-9]+}} = xor <2 x i64> %[[res]], <i64 -1, i64 -1>
+! LLVMIR: %{{[0-9]+}} = xor <2 x i64> %[[res]], splat (i64 -1)
 end subroutine vec_cmpge_test_u8
 
 ! CHECK-LABEL: vec_cmpge_test_u4
@@ -74,7 +75,7 @@ subroutine vec_cmpge_test_u4(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <4 x i32>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <4 x i32> @llvm.ppc.altivec.vcmpgtuw(<4 x i32> %[[arg2]], <4 x i32> %[[arg1]])
-! LLVMIR: %{{[0-9]+}} = xor <4 x i32> %[[res]], <i32 -1, i32 -1, i32 -1, i32 -1>
+! LLVMIR: %{{[0-9]+}} = xor <4 x i32> %[[res]], splat (i32 -1)
 end subroutine vec_cmpge_test_u4
 
 ! CHECK-LABEL: vec_cmpge_test_u2
@@ -86,7 +87,7 @@ subroutine vec_cmpge_test_u2(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <8 x i16>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <8 x i16>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <8 x i16> @llvm.ppc.altivec.vcmpgtuh(<8 x i16> %[[arg2]], <8 x i16> %[[arg1]])
-! LLVMIR: %{{[0-9]+}} = xor <8 x i16> %[[res]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+! LLVMIR: %{{[0-9]+}} = xor <8 x i16> %[[res]], splat (i16 -1)
 end subroutine vec_cmpge_test_u2
 
 ! CHECK-LABEL: vec_cmpge_test_u1
@@ -98,7 +99,7 @@ subroutine vec_cmpge_test_u1(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <16 x i8>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <16 x i8>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <16 x i8> @llvm.ppc.altivec.vcmpgtub(<16 x i8> %[[arg2]], <16 x i8> %[[arg1]])
-! LLVMIR: %{{[0-9]+}} = xor <16 x i8> %[[res]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+! LLVMIR: %{{[0-9]+}} = xor <16 x i8> %[[res]], splat (i8 -1)
 end subroutine vec_cmpge_test_u1
 
 subroutine vec_cmpge_test_r4(arg1, arg2)
@@ -248,7 +249,7 @@ subroutine vec_cmple_test_i8(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <2 x i64> @llvm.ppc.altivec.vcmpgtsd(<2 x i64> %[[arg1]], <2 x i64> %[[arg2]])
-! LLVMIR: %{{[0-9]+}} = xor <2 x i64> %[[res]], <i64 -1, i64 -1>
+! LLVMIR: %{{[0-9]+}} = xor <2 x i64> %[[res]], splat (i64 -1)
 end subroutine vec_cmple_test_i8
 
 ! CHECK-LABEL: vec_cmple_test_i4
@@ -260,7 +261,7 @@ subroutine vec_cmple_test_i4(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <4 x i32>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <4 x i32> @llvm.ppc.altivec.vcmpgtsw(<4 x i32> %[[arg1]], <4 x i32> %[[arg2]])
-! LLVMIR: %{{[0-9]+}} = xor <4 x i32> %[[res]], <i32 -1, i32 -1, i32 -1, i32 -1>
+! LLVMIR: %{{[0-9]+}} = xor <4 x i32> %[[res]], splat (i32 -1)
 end subroutine vec_cmple_test_i4
 
 ! CHECK-LABEL: vec_cmple_test_i2
@@ -272,7 +273,7 @@ subroutine vec_cmple_test_i2(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <8 x i16>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <8 x i16>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <8 x i16> @llvm.ppc.altivec.vcmpgtsh(<8 x i16> %[[arg1]], <8 x i16> %[[arg2]])
-! LLVMIR: %{{[0-9]+}} = xor <8 x i16> %[[res]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+! LLVMIR: %{{[0-9]+}} = xor <8 x i16> %[[res]], splat (i16 -1)
 end subroutine vec_cmple_test_i2
 
 ! CHECK-LABEL: vec_cmple_test_i1
@@ -284,7 +285,7 @@ subroutine vec_cmple_test_i1(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <16 x i8>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <16 x i8>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <16 x i8> @llvm.ppc.altivec.vcmpgtsb(<16 x i8> %[[arg1]], <16 x i8> %[[arg2]])
-! LLVMIR: %{{[0-9]+}} = xor <16 x i8> %[[res]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+! LLVMIR: %{{[0-9]+}} = xor <16 x i8> %[[res]], splat (i8 -1)
 end subroutine vec_cmple_test_i1
 
 ! CHECK-LABEL: vec_cmple_test_u8
@@ -296,7 +297,7 @@ subroutine vec_cmple_test_u8(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %[[arg1]], <2 x i64> %[[arg2]])
-! LLVMIR: %{{[0-9]+}} = xor <2 x i64> %[[res]], <i64 -1, i64 -1>
+! LLVMIR: %{{[0-9]+}} = xor <2 x i64> %[[res]], splat (i64 -1)
 end subroutine vec_cmple_test_u8
 
 ! CHECK-LABEL: vec_cmple_test_u4
@@ -308,7 +309,7 @@ subroutine vec_cmple_test_u4(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <4 x i32>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <4 x i32> @llvm.ppc.altivec.vcmpgtuw(<4 x i32> %[[arg1]], <4 x i32> %[[arg2]])
-! LLVMIR: %{{[0-9]+}} = xor <4 x i32> %[[res]], <i32 -1, i32 -1, i32 -1, i32 -1>
+! LLVMIR: %{{[0-9]+}} = xor <4 x i32> %[[res]], splat (i32 -1)
 end subroutine vec_cmple_test_u4
 
 ! CHECK-LABEL: vec_cmple_test_u2
@@ -320,7 +321,7 @@ subroutine vec_cmple_test_u2(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <8 x i16>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <8 x i16>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <8 x i16> @llvm.ppc.altivec.vcmpgtuh(<8 x i16> %[[arg1]], <8 x i16> %[[arg2]])
-! LLVMIR: %{{[0-9]+}} = xor <8 x i16> %[[res]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+! LLVMIR: %{{[0-9]+}} = xor <8 x i16> %[[res]], splat (i16 -1)
 end subroutine vec_cmple_test_u2
 
 ! CHECK-LABEL: vec_cmple_test_u1
@@ -332,7 +333,7 @@ subroutine vec_cmple_test_u1(arg1, arg2)
 ! LLVMIR: %[[arg1:.*]] = load <16 x i8>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <16 x i8>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[res:.*]] = call <16 x i8> @llvm.ppc.altivec.vcmpgtub(<16 x i8> %[[arg1]], <16 x i8> %[[arg2]])
-! LLVMIR: %{{[0-9]+}} = xor <16 x i8> %[[res]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+! LLVMIR: %{{[0-9]+}} = xor <16 x i8> %[[res]], splat (i8 -1)
 end subroutine vec_cmple_test_u1
 
 ! CHECK-LABEL: vec_cmple_test_r4

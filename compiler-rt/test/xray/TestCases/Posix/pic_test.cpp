@@ -3,7 +3,7 @@
 // RUN: %clangxx_xray -fxray-instrument -std=c++11 -ffunction-sections \
 // RUN:     -fdata-sections -fpic -fpie -Wl,--gc-sections %s -o %t
 // RUN: rm -f pic-test-logging-*
-// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_mode=xray-basic \
+// RUN: env XRAY_OPTIONS="patch_premain=true verbosity=1 xray_mode=xray-basic \
 // RUN:     xray_logfile_base=pic-test-logging-" %run %t 2>&1 | FileCheck %s
 // After all that, clean up the output xray log.
 //

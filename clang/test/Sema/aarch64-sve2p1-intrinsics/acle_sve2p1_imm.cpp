@@ -138,9 +138,47 @@ void test_svbfmul_lane(svbfloat16_t zn, svbfloat16_t zm, uint64_t idx){
 }
 
 __attribute__((target("+sve2p1")))
-void test_svextq_lane(svint16_t zn_i16, svint16_t zm_i16, svfloat16_t zn_f16, svfloat16_t zm_f16){
-  svextq_s16(zn_i16, zm_i16, -1); // expected-error {{argument value -1 is outside the valid range [0, 15]}}
-  svextq_f16(zn_f16, zm_f16, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+void test_svextq_8b_offset(svint8_t s8, svuint8_t u8){
+  svextq_s8(s8, s8, -1);  // expected-error {{argument value -1 is outside the valid range [0, 15]}}
+  svextq_u8(u8, u8, -1);  // expected-error {{argument value -1 is outside the valid range [0, 15]}}
+
+  svextq_s8(s8, s8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svextq_u8(u8, u8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+}
+
+__attribute__((target("+sve2p1")))
+void test_svextq_16b_offset(svint16_t s16, svuint16_t u16, svfloat16_t f16, svbfloat16_t bf16){
+  svextq_s16(s16, s16, -1);     // expected-error {{argument value -1 is outside the valid range [0, 7]}}
+  svextq_u16(u16, u16, -1);     // expected-error {{argument value -1 is outside the valid range [0, 7]}}
+  svextq_f16(f16, f16, -1);     // expected-error {{argument value -1 is outside the valid range [0, 7]}}
+  svextq_bf16(bf16, bf16, -1);  // expected-error {{argument value -1 is outside the valid range [0, 7]}}
+
+  svextq_s16(s16, s16, 8);     // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svextq_u16(u16, u16, 8);     // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svextq_f16(f16, f16, 8);     // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svextq_bf16(bf16, bf16, 8);  // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+}
+
+__attribute__((target("+sve2p1")))
+void test_svextq_32b_offset(svint32_t s32, svuint32_t u32, svfloat32_t f32){
+  svextq_s32(s32, s32, -1);   // expected-error {{argument value -1 is outside the valid range [0, 3]}}
+  svextq_u32(u32, u32, -1);   // expected-error {{argument value -1 is outside the valid range [0, 3]}}
+  svextq_f32(f32, f32, -1);   // expected-error {{argument value -1 is outside the valid range [0, 3]}}
+
+  svextq_s32(s32, s32, 4);   // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svextq_u32(u32, u32, 4);   // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svextq_f32(f32, f32, 4);   // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+}
+
+__attribute__((target("+sve2p1")))
+void test_svextq_64b_offset(svint64_t s64, svuint64_t u64, svfloat64_t f64){
+  svextq_s64(s64, s64, -1);   // expected-error {{argument value -1 is outside the valid range [0, 1]}}
+  svextq_u64(u64, u64, -1);   // expected-error {{argument value -1 is outside the valid range [0, 1]}}
+  svextq_f64(f64, f64, -1);   // expected-error {{argument value -1 is outside the valid range [0, 1]}}
+
+  svextq_s64(s64, s64, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  svextq_u64(u64, u64, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  svextq_f64(f64, f64, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
 }
 
 __attribute__((target("+sve2p1")))

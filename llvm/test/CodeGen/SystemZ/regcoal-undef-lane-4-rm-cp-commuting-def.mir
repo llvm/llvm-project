@@ -15,56 +15,70 @@
 # only partial defined before being fully copied.
 #
 # PR40215.
+
+
+# The coalescer should have been able to swap the operands of
+# the OR, hence eliminating the copy of %20 and %18.
+# This is also visible here because the ROSBG operand was LHS
+# before the coalescer, now it is RHS.
 ---
 name:            main
 alignment:       16
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: main
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[LGHI:%[0-9]+]]:addr64bit = LGHI -30
-  ; CHECK:   [[LHIMux:%[0-9]+]]:grx32bit = LHIMux 1
-  ; CHECK:   [[LHIMux1:%[0-9]+]]:grx32bit = LHIMux 0
-  ; CHECK:   undef %20.subreg_l32:gr64bit = IMPLICIT_DEF
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.3(0x00000001), %bb.4(0x7fffffff)
-  ; CHECK:   CHIMux [[LHIMux]], 0, implicit-def $cc
-  ; CHECK:   BRC 14, 6, %bb.3, implicit killed $cc
-  ; CHECK:   J %bb.4
-  ; CHECK: bb.2:
-  ; CHECK:   successors:
-  ; CHECK:   STMux %20.subreg_l32, undef %8:addr64bit, 0, $noreg :: (store (s32) into `ptr undef`)
-  ; CHECK: bb.3:
-  ; CHECK:   successors:
-  ; CHECK: bb.4:
-  ; CHECK:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
-  ; CHECK:   [[LAY:%[0-9]+]]:gr64bit = LAY [[LGHI]], 19838, $noreg
-  ; CHECK:   [[LAY1:%[0-9]+]]:gr64bit = LAY [[LGHI]], 19840, $noreg
-  ; CHECK:   [[LAY2:%[0-9]+]]:gr64bit = LAY [[LGHI]], 19844, $noreg
-  ; CHECK:   [[OGR:%[0-9]+]]:gr64bit = OGR [[OGR]], [[LAY]], implicit-def dead $cc
-  ; CHECK:   undef %19.subreg_l32:gr64bit = AHIMuxK [[LGHI]].subreg_l32, 19843, implicit-def dead $cc
-  ; CHECK:   [[ROSBG:%[0-9]+]]:gr64bit = ROSBG [[ROSBG]], [[OGR]], 32, 63, 0, implicit-def dead $cc
-  ; The coalescer should have been able to swap the operands of
-  ; the OR, hence eliminating the copy of %20 and %18.
-  ; This is also visible here because the ROSBG operand was LHS
-  ; before the coalescer, now it is RHS.
-  ; CHECK:   %20.subreg_l32:gr64bit = OR %20.subreg_l32, [[ROSBG]].subreg_l32, implicit-def dead $cc
-  ; CHECK:   [[ROSBG1:%[0-9]+]]:gr64bit = ROSBG [[ROSBG1]], [[LAY1]], 32, 63, 0, implicit-def dead $cc
-  ; CHECK:   CHIMux [[LHIMux1]], 0, implicit-def $cc
-  ; CHECK:   BRC 14, 6, %bb.6, implicit killed $cc
-  ; CHECK:   J %bb.5
-  ; CHECK: bb.5:
-  ; CHECK:   successors: %bb.6(0x80000000)
-  ; CHECK: bb.6:
-  ; CHECK:   successors: %bb.2(0x00000001), %bb.7(0x7fffffff)
-  ; CHECK:   [[LGHI]]:addr64bit = nuw nsw LA [[LGHI]], 6, $noreg
-  ; CHECK:   CGHI [[LGHI]], 0, implicit-def $cc
-  ; CHECK:   BRC 14, 8, %bb.2, implicit killed $cc
-  ; CHECK: bb.7:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   J %bb.1
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[LGHI:%[0-9]+]]:addr64bit = LGHI -30
+  ; CHECK-NEXT:   [[LHIMux:%[0-9]+]]:grx32bit = LHIMux 1
+  ; CHECK-NEXT:   [[LHIMux1:%[0-9]+]]:grx32bit = LHIMux 0
+  ; CHECK-NEXT:   undef [[DEF:%[0-9]+]].subreg_l32:gr64bit = IMPLICIT_DEF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x00000001), %bb.4(0x7fffffff)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CHIMux [[LHIMux]], 0, implicit-def $cc
+  ; CHECK-NEXT:   BRC 14, 6, %bb.3, implicit killed $cc
+  ; CHECK-NEXT:   J %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   STMux [[DEF]].subreg_l32, undef %8:addr64bit, 0, $noreg :: (store (s32) into `ptr undef`)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[LAY:%[0-9]+]]:gr64bit = LAY [[LGHI]], 19838, $noreg
+  ; CHECK-NEXT:   [[LAY1:%[0-9]+]]:gr64bit = LAY [[LGHI]], 19840, $noreg
+  ; CHECK-NEXT:   [[LAY2:%[0-9]+]]:gr64bit = LAY [[LGHI]], 19844, $noreg
+  ; CHECK-NEXT:   [[LAY2:%[0-9]+]]:gr64bit = OGR [[LAY2]], [[LAY]], implicit-def dead $cc
+  ; CHECK-NEXT:   undef [[AHIMuxK:%[0-9]+]].subreg_l32:gr64bit = AHIMuxK [[LGHI]].subreg_l32, 19843, implicit-def dead $cc
+  ; CHECK-NEXT:   [[AHIMuxK:%[0-9]+]]:gr64bit = ROSBG [[AHIMuxK]], [[LAY2]], 32, 63, 0, implicit-def dead $cc
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]].subreg_l32:gr64bit = OR [[DEF]].subreg_l32, [[AHIMuxK]].subreg_l32, implicit-def dead $cc
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gr64bit = ROSBG [[DEF]], [[LAY1]], 32, 63, 0, implicit-def dead $cc
+  ; CHECK-NEXT:   CHIMux [[LHIMux1]], 0, implicit-def $cc
+  ; CHECK-NEXT:   BRC 14, 6, %bb.6, implicit killed $cc
+  ; CHECK-NEXT:   J %bb.5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   successors: %bb.6(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.6:
+  ; CHECK-NEXT:   successors: %bb.2(0x00000001), %bb.7(0x7fffffff)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[LGHI:%[0-9]+]]:addr64bit = nuw nsw LA [[LGHI]], 6, $noreg
+  ; CHECK-NEXT:   CGHI [[LGHI]], 0, implicit-def $cc
+  ; CHECK-NEXT:   BRC 14, 8, %bb.2, implicit killed $cc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.7:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   J %bb.1
   bb.0:
     %6:gr64bit = LGHI -30
     %8:grx32bit = LHIMux 1

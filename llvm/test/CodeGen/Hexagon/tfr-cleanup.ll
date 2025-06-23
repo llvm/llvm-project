@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -hexagon-eif=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 -hexagon-eif=0 < %s | FileCheck %s
 ; Without TFR cleanup, the last block contained
 ; {
 ;   r3 = xor(r1, r2)

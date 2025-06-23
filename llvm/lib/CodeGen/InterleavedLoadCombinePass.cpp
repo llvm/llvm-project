@@ -33,7 +33,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -1256,7 +1255,7 @@ bool InterleavedLoadCombineImpl::run() {
   bool changed = false;
   unsigned MaxFactor = TLI.getMaxSupportedInterleaveFactor();
 
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   // Start with the highest factor to avoid combining and recombining.
   for (unsigned Factor = MaxFactor; Factor >= 2; Factor--) {

@@ -197,12 +197,6 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("plugin load ", [])
 
     def test_log_enable(self):
-        self.complete_from_to("log enable ll", ["lldb"])
-        self.complete_from_to("log enable dw", ["dwarf"])
-        self.complete_from_to("log enable lldb al", ["all"])
-        self.complete_from_to("log enable lldb sym", ["symbol"])
-
-    def test_log_enable(self):
         self.complete_from_to("log disable ll", ["lldb"])
         self.complete_from_to("log disable dw", ["dwarf"])
         self.complete_from_to("log disable lldb al", ["all"])
@@ -340,14 +334,23 @@ class CommandLineCompletionTestCase(TestBase):
             "settings replace target.ru", "settings replace target.run-args"
         )
 
-    def test_settings_show_term(self):
-        self.complete_from_to("settings show term-", "settings show term-width")
+    def test_settings_show_term_width(self):
+        self.complete_from_to("settings show term-w", "settings show term-width")
 
-    def test_settings_list_term(self):
-        self.complete_from_to("settings list term-", "settings list term-width")
+    def test_settings_list_term_width(self):
+        self.complete_from_to("settings list term-w", "settings list term-width")
 
-    def test_settings_remove_term(self):
-        self.complete_from_to("settings remove term-", "settings remove term-width")
+    def test_settings_show_term_height(self):
+        self.complete_from_to("settings show term-h", "settings show term-height")
+
+    def test_settings_list_term_height(self):
+        self.complete_from_to("settings list term-h", "settings list term-height")
+
+    def test_settings_remove_term_width(self):
+        self.complete_from_to("settings remove term-w", "settings remove term-width")
+
+    def test_settings_remove_term_height(self):
+        self.complete_from_to("settings remove term-h", "settings remove term-height")
 
     def test_settings_s(self):
         """Test that 'settings s' completes to ['set', 'show']."""
@@ -714,7 +717,7 @@ class CommandLineCompletionTestCase(TestBase):
         )
         self.check_completion_with_desc(
             "frame recognizer delete ",
-            [["0", "py_class, module module_name, symbol recognizer_name"]],
+            [["0", "py_class, module module_name, demangled symbol recognizer_name"]],
         )
 
     def test_platform_install_local_file(self):

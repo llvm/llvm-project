@@ -13,6 +13,8 @@ list(INSERT CMAKE_MODULE_PATH 0
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(openmp C CXX ASM)
+else()
+  set(OPENMP_STANDALONE_BUILD FALSE)
 endif()
 
 # Must go below project(..)
@@ -67,9 +69,9 @@ else()
 
   # Check for flang
   if (NOT MSVC)
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
   else()
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new.exe)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang.exe)
   endif()
 
   # Set fortran test compiler if flang is found

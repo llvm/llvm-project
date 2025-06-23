@@ -42,7 +42,6 @@ public:
                      ArrayRef<const MemRegion *> ExplicitRegions,
                      ArrayRef<const MemRegion *> Regions,
                      const LocationContext *LCtx, const CallEvent *Call) const;
-  void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const;
 
   /// Indicates if a read (load) of \c errno is allowed in a non-condition part
   /// of \c if, \c switch, loop and conditional statements when the errno
@@ -232,7 +231,7 @@ ProgramStateRef ErrnoChecker::checkRegionChanges(
 
   // Always reset errno state when the system memory space is invalidated.
   // The ErrnoRegion is not always found in the list in this case.
-  if (llvm::is_contained(Regions, ErrnoRegion->getMemorySpace()))
+  if (llvm::is_contained(Regions, ErrnoRegion->getMemorySpace(State)))
     return clearErrnoState(State);
 
   return State;

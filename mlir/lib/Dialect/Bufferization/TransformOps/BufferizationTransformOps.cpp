@@ -36,7 +36,7 @@ DiagnosedSilenceableFailure transform::BufferLoopHoistingOp::applyToOne(
 
 void transform::BufferLoopHoistingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -83,6 +83,8 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
   }
 
   auto payloadOps = state.getPayloadOps(getTarget());
+  BufferizationState bufferizationState;
+
   for (Operation *target : payloadOps) {
     if (!isa<ModuleOp, FunctionOpInterface>(target))
       return emitSilenceableError() << "expected module or function target";
@@ -90,10 +92,12 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
     if (options.bufferizeFunctionBoundaries) {
       if (!moduleOp)
         return emitSilenceableError() << "expected module target";
-      if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options)))
+      if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options,
+                                                          bufferizationState)))
         return emitSilenceableError() << "bufferization failed";
     } else {
-      if (failed(bufferization::runOneShotBufferize(target, options)))
+      if (failed(bufferization::runOneShotBufferize(target, options,
+                                                    bufferizationState)))
         return emitSilenceableError() << "bufferization failed";
     }
   }
@@ -110,7 +114,7 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::EliminateEmptyTensorsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -150,6 +154,9 @@ class BufferizationTransformDialectExtension
     : public transform::TransformDialectExtension<
           BufferizationTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      BufferizationTransformDialectExtension)
+
   using Base::Base;
 
   void init() {
@@ -159,6 +166,7 @@ public:
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.cpp.inc"
+
         >();
   }
 };

@@ -247,13 +247,13 @@ public:
                                        lldb::SBStringList &matches,
                                        lldb::SBStringList &descriptions);
 
-  /// Returns whether an interrupt flag was raised either by the SBDebugger - 
+  /// Returns whether an interrupt flag was raised either by the SBDebugger -
   /// when the function is not running on the RunCommandInterpreter thread, or
   /// by SBCommandInterpreter::InterruptCommand if it is.  If your code is doing
-  /// interruptible work, check this API periodically, and interrupt if it 
+  /// interruptible work, check this API periodically, and interrupt if it
   /// returns true.
   bool WasInterrupted() const;
-  
+
   /// Interrupts the command currently executing in the RunCommandInterpreter
   /// thread.
   ///
@@ -265,11 +265,9 @@ public:
   // Catch commands before they execute by registering a callback that will get
   // called when the command gets executed. This allows GUI or command line
   // interfaces to intercept a command and stop it from happening
-#ifndef SWIG
   bool SetCommandOverrideCallback(const char *command_name,
                                   lldb::CommandOverrideCallback callback,
                                   void *baton);
-#endif
 
   /// Return true if the command interpreter is the active IO handler.
   ///
@@ -332,6 +330,8 @@ public:
   /// Turn on settings `interpreter.save-transcript` for LLDB to populate
   /// this list. Otherwise this list is empty.
   SBStructuredData GetTranscript();
+
+  void SetPrintCallback(lldb::SBCommandPrintCallback callback, void *baton);
 
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;

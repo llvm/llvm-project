@@ -14,26 +14,28 @@ define float @frem4(float %x) {
 ;
 ; CHECK-FP-LABEL: frem4:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.f32 s0, #4.000000e+00
-; CHECK-FP-NEXT:    vmov s2, r0
+; CHECK-FP-NEXT:    vmov.f32 s0, #2.500000e-01
+; CHECK-FP-NEXT:    vmov.f32 s2, #-4.000000e+00
+; CHECK-FP-NEXT:    vmov s4, r0
 ; CHECK-FP-NEXT:    lsrs r0, r0, #31
-; CHECK-FP-NEXT:    vdiv.f32 s4, s2, s0
-; CHECK-FP-NEXT:    vrintz.f32 s4, s4
-; CHECK-FP-NEXT:    vfms.f32 s2, s4, s0
-; CHECK-FP-NEXT:    vmov r1, s2
+; CHECK-FP-NEXT:    vmul.f32 s0, s4, s0
+; CHECK-FP-NEXT:    vrintz.f32 s0, s0
+; CHECK-FP-NEXT:    vfma.f32 s4, s0, s2
+; CHECK-FP-NEXT:    vmov r1, s4
 ; CHECK-FP-NEXT:    bfi r1, r0, #31, #1
 ; CHECK-FP-NEXT:    mov r0, r1
 ; CHECK-FP-NEXT:    bx lr
 ;
 ; CHECK-M33-LABEL: frem4:
 ; CHECK-M33:       @ %bb.0: @ %entry
-; CHECK-M33-NEXT:    vmov.f32 s0, #4.000000e+00
-; CHECK-M33-NEXT:    vmov s2, r0
+; CHECK-M33-NEXT:    vmov.f32 s0, #2.500000e-01
+; CHECK-M33-NEXT:    vmov.f32 s2, #-4.000000e+00
+; CHECK-M33-NEXT:    vmov s4, r0
 ; CHECK-M33-NEXT:    lsrs r0, r0, #31
-; CHECK-M33-NEXT:    vdiv.f32 s4, s2, s0
-; CHECK-M33-NEXT:    vrintz.f32 s4, s4
-; CHECK-M33-NEXT:    vmls.f32 s2, s4, s0
-; CHECK-M33-NEXT:    vmov r1, s2
+; CHECK-M33-NEXT:    vmul.f32 s0, s4, s0
+; CHECK-M33-NEXT:    vrintz.f32 s0, s0
+; CHECK-M33-NEXT:    vmla.f32 s4, s0, s2
+; CHECK-M33-NEXT:    vmov r1, s4
 ; CHECK-M33-NEXT:    bfi r1, r0, #31, #1
 ; CHECK-M33-NEXT:    mov r0, r1
 ; CHECK-M33-NEXT:    bx lr
@@ -53,22 +55,24 @@ define float @frem4_nsz(float %x) {
 ;
 ; CHECK-FP-LABEL: frem4_nsz:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.f32 s0, #4.000000e+00
-; CHECK-FP-NEXT:    vmov s2, r0
-; CHECK-FP-NEXT:    vdiv.f32 s4, s2, s0
-; CHECK-FP-NEXT:    vrintz.f32 s4, s4
-; CHECK-FP-NEXT:    vfms.f32 s2, s4, s0
-; CHECK-FP-NEXT:    vmov r0, s2
+; CHECK-FP-NEXT:    vmov.f32 s0, #2.500000e-01
+; CHECK-FP-NEXT:    vmov.f32 s2, #-4.000000e+00
+; CHECK-FP-NEXT:    vmov s4, r0
+; CHECK-FP-NEXT:    vmul.f32 s0, s4, s0
+; CHECK-FP-NEXT:    vrintz.f32 s0, s0
+; CHECK-FP-NEXT:    vfma.f32 s4, s0, s2
+; CHECK-FP-NEXT:    vmov r0, s4
 ; CHECK-FP-NEXT:    bx lr
 ;
 ; CHECK-M33-LABEL: frem4_nsz:
 ; CHECK-M33:       @ %bb.0: @ %entry
-; CHECK-M33-NEXT:    vmov.f32 s0, #4.000000e+00
-; CHECK-M33-NEXT:    vmov s2, r0
-; CHECK-M33-NEXT:    vdiv.f32 s4, s2, s0
-; CHECK-M33-NEXT:    vrintz.f32 s4, s4
-; CHECK-M33-NEXT:    vmls.f32 s2, s4, s0
-; CHECK-M33-NEXT:    vmov r0, s2
+; CHECK-M33-NEXT:    vmov.f32 s0, #2.500000e-01
+; CHECK-M33-NEXT:    vmov.f32 s2, #-4.000000e+00
+; CHECK-M33-NEXT:    vmov s4, r0
+; CHECK-M33-NEXT:    vmul.f32 s0, s4, s0
+; CHECK-M33-NEXT:    vrintz.f32 s0, s0
+; CHECK-M33-NEXT:    vmla.f32 s4, s0, s2
+; CHECK-M33-NEXT:    vmov r0, s4
 ; CHECK-M33-NEXT:    bx lr
 entry:
   %fmod = frem nsz float %x, 4.0

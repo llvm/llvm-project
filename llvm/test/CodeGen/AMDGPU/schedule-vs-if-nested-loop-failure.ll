@@ -18,11 +18,11 @@ main_body:
   br i1 %8, label %LOOP, label %ENDIF
 
 Flow1:                                            ; preds = %ENDIF19, %ENDIF16
-  %9 = phi float [ %115, %ENDIF19 ], [ undef, %ENDIF16 ]
-  %10 = phi float [ %114, %ENDIF19 ], [ undef, %ENDIF16 ]
-  %11 = phi float [ %113, %ENDIF19 ], [ undef, %ENDIF16 ]
-  %12 = phi float [ %112, %ENDIF19 ], [ undef, %ENDIF16 ]
-  %13 = phi float [ %111, %ENDIF19 ], [ undef, %ENDIF16 ]
+  %9 = phi float [ %115, %ENDIF19 ], [ poison, %ENDIF16 ]
+  %10 = phi float [ %114, %ENDIF19 ], [ poison, %ENDIF16 ]
+  %11 = phi float [ %113, %ENDIF19 ], [ poison, %ENDIF16 ]
+  %12 = phi float [ %112, %ENDIF19 ], [ poison, %ENDIF16 ]
+  %13 = phi float [ %111, %ENDIF19 ], [ poison, %ENDIF16 ]
   %14 = phi i1 [ false, %ENDIF19 ], [ true, %ENDIF16 ]
   br label %Flow
 
@@ -96,12 +96,12 @@ ENDIF:                                            ; preds = %main_body, %Flow2
   %74 = extractelement <4 x float> %73, i32 3
   %75 = fmul float %74, %16
   %76 = fadd float %75, %60
-  %77 = insertelement <4 x float> undef, float %64, i32 0
+  %77 = insertelement <4 x float> poison, float %64, i32 0
   %78 = insertelement <4 x float> %77, float %68, i32 1
   %79 = insertelement <4 x float> %78, float %72, i32 2
   %80 = insertelement <4 x float> %79, float %76, i32 3
   call void @llvm.amdgcn.s.barrier()
-  %81 = insertelement <4 x float> undef, float %temp.0, i32 0
+  %81 = insertelement <4 x float> poison, float %temp.0, i32 0
   %82 = insertelement <4 x float> %81, float %temp1.0, i32 1
   %83 = insertelement <4 x float> %82, float %temp2.0, i32 2
   %84 = insertelement <4 x float> %83, float %temp3.0, i32 3
@@ -140,11 +140,11 @@ Flow:                                             ; preds = %Flow1, %LOOP
   %102 = phi float [ %temp2.1, %Flow1 ], [ %temp2.1, %LOOP ]
   %103 = phi float [ %temp1.1, %Flow1 ], [ %temp1.1, %LOOP ]
   %104 = phi float [ %temp.1, %Flow1 ], [ %temp.1, %LOOP ]
-  %105 = phi float [ %9, %Flow1 ], [ undef, %LOOP ]
-  %106 = phi float [ %10, %Flow1 ], [ undef, %LOOP ]
-  %107 = phi float [ %11, %Flow1 ], [ undef, %LOOP ]
-  %108 = phi float [ %12, %Flow1 ], [ undef, %LOOP ]
-  %109 = phi float [ %13, %Flow1 ], [ undef, %LOOP ]
+  %105 = phi float [ %9, %Flow1 ], [ poison, %LOOP ]
+  %106 = phi float [ %10, %Flow1 ], [ poison, %LOOP ]
+  %107 = phi float [ %11, %Flow1 ], [ poison, %LOOP ]
+  %108 = phi float [ %12, %Flow1 ], [ poison, %LOOP ]
+  %109 = phi float [ %13, %Flow1 ], [ poison, %LOOP ]
   %110 = phi i1 [ %14, %Flow1 ], [ true, %LOOP ]
   br i1 %110, label %Flow2, label %LOOP
 

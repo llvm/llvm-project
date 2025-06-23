@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 //===----------------------------------------------------------------------===//
 // ENC_SMEM.
@@ -280,6 +280,22 @@ s_load_dwordx16 s[20:35], s[2:3], 0x1234 glc dlc
 
 s_load_dwordx16 s[20:35], s[2:3], s0 offset:0x12345 glc dlc
 // GFX10: encoding: [0x01,0x45,0x11,0xf4,0x45,0x23,0x01,0x00]
+
+// null as dst
+s_load_dword null, s[2:3], s0
+// GFX10: encoding: [0x41,0x1f,0x00,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_dwordx2 null, s[2:3], s0
+// GFX10: encoding: [0x41,0x1f,0x04,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_dwordx4 null, s[2:3], s0
+// GFX10: encoding: [0x41,0x1f,0x08,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_dwordx8 null, s[2:3], s0
+// GFX10: encoding: [0x41,0x1f,0x0c,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_dwordx16 null, s[2:3], s0
+// GFX10: encoding: [0x41,0x1f,0x10,0xf4,0x00,0x00,0x00,0x00]
 
 s_buffer_load_dword s5, s[4:7], s0
 // GFX10: encoding: [0x42,0x01,0x20,0xf4,0x00,0x00,0x00,0x00]

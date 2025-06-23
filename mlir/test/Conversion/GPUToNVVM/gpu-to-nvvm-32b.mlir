@@ -58,7 +58,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.vector.vector_to_llvm
       transform.apply_conversion_patterns.func.func_to_llvm
       transform.apply_conversion_patterns.dialect_to_llvm "memref"
-      transform.apply_conversion_patterns.gpu.gpu_to_nvvm
+      transform.apply_conversion_patterns.gpu.gpu_to_nvvm {benefit = 10 : i16}
       transform.apply_conversion_patterns.gpu.gpu_wmma_to_nvvm
       transform.apply_conversion_patterns.gpu.gpu_subgroup_reduce_to_nvvm {has_redux = true}
       transform.apply_conversion_patterns.nvgpu.nvgpu_to_nvvm
@@ -67,7 +67,7 @@ module attributes {transform.with_named_sequence} {
         {index_bitwidth = 32, use_opaque_pointers = true}
     } {
       legal_dialects = ["llvm", "memref", "nvvm"],
-      legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],
+      legal_ops = ["func.func", "gpu.module", "gpu.yield"],
       illegal_dialects = ["gpu"],
       illegal_ops = ["llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
                     "llvm.ffloor", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",

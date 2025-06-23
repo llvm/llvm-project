@@ -4,14 +4,14 @@
 ; not create an Add Reccurence Expression if not all
 ; its operands are loop invariants.
 
-define void @add_rec_expr() {
+define void @add_rec_expr(i1 %arg) {
 entry:
   br label %loop0
 
 loop0:
   %c.0 = phi i32 [ 0, %entry ], [ %inc.0, %loop0 ]
   %inc.0 = add nuw i32 %c.0, 1
-  br i1 undef, label %loop0, label %bb1
+  br i1 %arg, label %loop0, label %bb1
 
 bb1:
   %mul.0 = mul i32 %c.0, %c.0

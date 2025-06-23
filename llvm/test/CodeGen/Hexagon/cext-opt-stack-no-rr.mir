@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-cext-opt -hexagon-cext-threshold=1 -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt -hexagon-cext-threshold=1 -o - %s | FileCheck %s
 
 # Make sure that the stores to the stack slot are not converted into rr forms.
 # CHECK: %[[REG:[0-9]+]]:intregs = PS_fi %stack.0, 267

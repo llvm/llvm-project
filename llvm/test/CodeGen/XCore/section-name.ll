@@ -1,4 +1,4 @@
-; RUN: not llc < %s -march=xcore -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=xcore -o /dev/null 2>&1 | FileCheck %s
 
 @bar = internal global i32 zeroinitializer
 

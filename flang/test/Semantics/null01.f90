@@ -112,7 +112,10 @@ subroutine test
   dt4x = dt4(null(dt2x%pps0))
   call canbenull(null(), null()) ! fine
   call canbenull(null(mold=ip0), null(mold=rp0)) ! fine
-  call optionalAllocatable(null(mold=ip0)) ! fine
+  !ERROR: ALLOCATABLE dummy argument 'x=' must be associated with an ALLOCATABLE actual argument
+  call optionalAllocatable(null(mold=ip0))
+  call optionalAllocatable(null(mold=ia0)) ! fine
+  call optionalAllocatable(null()) ! fine
   !ERROR: Null pointer argument requires an explicit interface
   call implicit(null())
   !ERROR: Null pointer argument requires an explicit interface
@@ -151,10 +154,16 @@ module m
   subroutine s2(x)
     type(pdt(*)), pointer, intent(in) :: x
   end
-  subroutine test
+  subroutine s3(ar)
+    real, pointer :: ar(..)
+  end
+  subroutine test(ar)
+    real, pointer :: ar(..)
     !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a character length
     call s1(null())
     !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a value for the assumed type parameter 'n'
     call s2(null())
+    !ERROR: MOLD= argument to NULL() must not be assumed-rank
+    call s3(null(ar))
   end
 end

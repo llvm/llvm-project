@@ -1,4 +1,4 @@
-; RUN: llc -mattr=+hvxv60,hvx-length64b -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mattr=+hvxv60,hvx-length64b -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; CHECK-LABEL: V6_vmaskedstoreq
 ; CHECK: if (q{{[0-3]+}}) vmem(r{{[0-9]+}}+#0) = v{{[0-9]+}}

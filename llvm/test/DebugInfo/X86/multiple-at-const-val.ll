@@ -2,7 +2,7 @@
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; rdar://13071590
-; Check we are not emitting mutliple AT_const_value for a single member.
+; Check we are not emitting multiple AT_const_value for a single member.
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_class_type

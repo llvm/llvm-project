@@ -44,17 +44,15 @@ foreach(arch ${MEMPROF_TEST_ARCH})
 endforeach()
 
 # Add unit tests.
-if(COMPILER_RT_INCLUDE_TESTS)
-  foreach(arch ${MEMPROF_TEST_ARCH})
-    string(TOUPPER ${arch} ARCH_UPPER_CASE)
-    set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
-    configure_lit_site_cfg(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-      ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME}/lit.site.cfg.py)
-    list(APPEND MEMPROF_TEST_DEPS MemProfUnitTests)
-    list(APPEND MEMPROF_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME})
-  endforeach()
-endif()
+foreach(arch ${MEMPROF_TEST_ARCH})
+  string(TOUPPER ${arch} ARCH_UPPER_CASE)
+  set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME}/lit.site.cfg.py)
+  list(APPEND MEMPROF_TEST_DEPS MemProfUnitTests)
+  list(APPEND MEMPROF_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME})
+endforeach()
 
 add_lit_testsuite(check-memprof "Running the MemProfiler tests"
   ${MEMPROF_TESTSUITES}

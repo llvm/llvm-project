@@ -36,13 +36,13 @@
   %"class.llvm::Loop" = type opaque
   %"struct.std::_Deque_iterator" = type { ptr, ptr, ptr, ptr }
 
-  define linkonce_odr void @_ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_(ptr %this, ptr %__pos, i64 %__n) local_unnamed_addr align 2 !dbg !3 {
+  define linkonce_odr void @_ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_(ptr %this, ptr %__pos, i64 %__n, i1 %arg) local_unnamed_addr align 2 !dbg !3 {
   entry:
     %0 = load ptr, ptr undef, align 8, !dbg !7
     %_M_cur6.i = getelementptr inbounds %"class.std::deque", ptr %this, i64 0, i32 0, i32 0, i32 2, i32 0, !dbg !7
     %1 = load ptr, ptr %_M_cur6.i, align 8, !dbg !7
     %2 = load ptr, ptr undef, align 8, !dbg !7
-    br i1 undef, label %if.then.i851, label %if.end.i856, !dbg !7
+    br i1 %arg, label %if.then.i851, label %if.end.i856, !dbg !7
 
   if.then.i851:                                     ; preds = %entry
     %.pre1038 = load ptr, ptr undef, align 8, !dbg !7
@@ -71,7 +71,7 @@
     %sunkaddr3 = getelementptr inbounds i8, ptr %13, i64 40, !dbg !7
     %14 = bitcast ptr %sunkaddr3 to ptr, !dbg !7
     %15 = load ptr, ptr %14, align 8, !dbg !7
-    br i1 undef, label %if.then.i.i775, label %cond.true.i.i777, !dbg !7
+    br i1 %arg, label %if.then.i.i775, label %cond.true.i.i777, !dbg !7
 
   if.then.i.i775:                                   ; preds = %if.end.i856
     %add.ptr.i.i774 = getelementptr inbounds ptr, ptr %11, i64 %__n, !dbg !7

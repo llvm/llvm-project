@@ -12,6 +12,7 @@
 // This is defined as a simple macro in test.h so that it exists for platforms
 // that don't use our test infrastructure. It's defined as a proper function
 // below.
+#include "src/__support/macros/config.h"
 #ifdef libc_make_test_file_path
 #undef libc_make_test_file_path
 #endif // libc_make_test_file_path
@@ -32,7 +33,7 @@
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // Only the following conditions are supported. Notice that we do not have
@@ -159,6 +160,14 @@ protected:
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, (unsigned long long)LHS,
                           (unsigned long long)RHS, LHSStr, RHSStr, Loc);
+  }
+
+  // Helper to allow macro invocations like `ASSERT_EQ(foo, nullptr)`.
+  template <typename ValType,
+            cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
+  bool test(TestCond Cond, ValType LHS, cpp::nullptr_t, const char *LHSStr,
+            const char *RHSStr, internal::Location Loc) {
+    return test(Cond, LHS, static_cast<ValType>(nullptr), LHSStr, RHSStr, Loc);
   }
 
   template <
@@ -312,7 +321,7 @@ template <typename... Types> using TypeList = internal::TypeList<Types...>;
 CString libc_make_test_file_path_func(const char *file_name);
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 // For TYPED_TEST and TYPED_TEST_F below we need to display which type was used
 // to run the test. The default will return the fully qualified canonical type
@@ -391,6 +400,14 @@ CString libc_make_test_file_path_func(const char *file_name);
   SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
   void SuiteClass##_##TestName::Run()
 
+// Helper to trick the compiler into ignoring lack of braces on the else
+// branch.  We cannot introduce braces at this point, since it would prevent
+// using `<< ...` after the test macro for additional failure output.
+#define LIBC_TEST_DISABLE_DANGLING_ELSE                                        \
+  switch (0)                                                                   \
+  case 0:                                                                      \
+  default: // NOLINT
+
 // If RET_OR_EMPTY is the 'return' keyword we perform an early return which
 // corresponds to an assert. If it is empty the execution continues, this
 // corresponds to an expect.
@@ -402,6 +419,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 // returning a boolean. This expression is responsible for logging the
 // diagnostic in case of failure.
 #define LIBC_TEST_SCAFFOLDING_(TEST, RET_OR_EMPTY)                             \
+  LIBC_TEST_DISABLE_DANGLING_ELSE                                              \
   if (TEST)                                                                    \
     ;                                                                          \
   else                                                                         \

@@ -268,6 +268,29 @@ struct PartialOrder {
   }
 };
 
-#endif
+template <typename T1, typename T2 = T1>
+concept HasOperatorEqual = requires(T1 t1, T2 t2) { t1 == t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorSpaceship = requires(T1 t1, T2 t2) { t1 <=> t2; };
+
+struct NonComparable {};
+static_assert(!std::equality_comparable<NonComparable>);
+static_assert(!HasOperatorEqual<NonComparable>);
+static_assert(!HasOperatorSpaceship<NonComparable>);
+
+class EqualityComparable {
+public:
+  constexpr EqualityComparable(int value) : value_{value} {};
+
+  friend constexpr bool operator==(const EqualityComparable&, const EqualityComparable&) noexcept = default;
+
+private:
+  int value_;
+};
+static_assert(std::equality_comparable<EqualityComparable>);
+static_assert(HasOperatorEqual<EqualityComparable>);
+
+#endif // TEST_STD_VER >= 20
 
 #endif // TEST_COMPARISONS_H

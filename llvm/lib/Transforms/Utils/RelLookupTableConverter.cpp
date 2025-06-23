@@ -108,8 +108,24 @@ static GlobalVariable *createRelLookupTable(Function &Func,
   uint64_t Idx = 0;
   SmallVector<Constant *, 64> RelLookupTableContents(NumElts);
 
+  Triple TT = M.getTargetTriple();
+  // FIXME: This should be removed in the future.
+  bool ShouldDropUnnamedAddr =
+      // Drop unnamed_addr to avoid matching pattern in
+      // `handleIndirectSymViaGOTPCRel`, which generates GOTPCREL relocations
+      // not supported by the GNU linker and LLD versions below 18 on aarch64.
+      TT.isAArch64()
+      // Apple's ld64 (and ld-prime on Xcode 15.2) miscompile something on
+      // x86_64-apple-darwin. See
+      // https://github.com/rust-lang/rust/issues/140686 and
+      // https://github.com/rust-lang/rust/issues/141306.
+      || (TT.isX86() && TT.isOSDarwin());
+
   for (Use &Operand : LookupTableArr->operands()) {
     Constant *Element = cast<Constant>(Operand);
+    if (ShouldDropUnnamedAddr)
+      if (auto *GlobalElement = dyn_cast<GlobalValue>(Element))
+        GlobalElement->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
     Type *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
     Constant *Base = llvm::ConstantExpr::getPtrToInt(RelLookupTable, IntPtrTy);
     Constant *Target = llvm::ConstantExpr::getPtrToInt(Element, IntPtrTy);
@@ -151,7 +167,7 @@ static void convertToRelLookupTable(GlobalVariable &LookupTable) {
   // GEP might not be immediately followed by a LOAD, like it can be hoisted
   // outside the loop or another instruction might be inserted them in between.
   Builder.SetInsertPoint(Load);
-  Function *LoadRelIntrinsic = llvm::Intrinsic::getDeclaration(
+  Function *LoadRelIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(
       &M, Intrinsic::load_relative, {Index->getType()});
 
   // Create a call to load.relative intrinsic that computes the target address

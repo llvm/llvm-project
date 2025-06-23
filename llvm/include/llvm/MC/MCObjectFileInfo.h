@@ -15,6 +15,7 @@
 
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -25,7 +26,7 @@ namespace llvm {
 class MCContext;
 class MCSection;
 
-class MCObjectFileInfo {
+class LLVM_ABI MCObjectFileInfo {
 protected:
   /// True if target object file supports a weak_definition of constant 0 for an
   /// omitted EH frame.
@@ -72,6 +73,10 @@ protected:
   /// support a compact representation of the CIE and FDE, this is the section
   /// to emit them into.
   MCSection *CompactUnwindSection = nullptr;
+
+  /// If import call optimization is supported by the target, this is the
+  /// section to emit import call data to.
+  MCSection *ImportCallSection = nullptr;
 
   // Dwarf sections for debug info.  If a target supports debug info, these must
   // be set.
@@ -269,6 +274,7 @@ public:
   MCSection *getBSSSection() const { return BSSSection; }
   MCSection *getReadOnlySection() const { return ReadOnlySection; }
   MCSection *getLSDASection() const { return LSDASection; }
+  MCSection *getImportCallSection() const { return ImportCallSection; }
   MCSection *getCompactUnwindSection() const { return CompactUnwindSection; }
   MCSection *getDwarfAbbrevSection() const { return DwarfAbbrevSection; }
   MCSection *getDwarfInfoSection() const { return DwarfInfoSection; }
@@ -458,9 +464,6 @@ public:
 private:
   bool PositionIndependent = false;
   MCContext *Ctx = nullptr;
-  VersionTuple SDKVersion;
-  std::optional<Triple> DarwinTargetVariantTriple;
-  VersionTuple DarwinTargetVariantSDKVersion;
 
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
@@ -471,29 +474,6 @@ private:
   void initXCOFFMCObjectFileInfo(const Triple &T);
   void initDXContainerObjectFileInfo(const Triple &T);
   MCSection *getDwarfComdatSection(const char *Name, uint64_t Hash) const;
-
-public:
-  void setSDKVersion(const VersionTuple &TheSDKVersion) {
-    SDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getSDKVersion() const { return SDKVersion; }
-
-  void setDarwinTargetVariantTriple(const Triple &T) {
-    DarwinTargetVariantTriple = T;
-  }
-
-  const Triple *getDarwinTargetVariantTriple() const {
-    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
-  }
-
-  void setDarwinTargetVariantSDKVersion(const VersionTuple &TheSDKVersion) {
-    DarwinTargetVariantSDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getDarwinTargetVariantSDKVersion() const {
-    return DarwinTargetVariantSDKVersion;
-  }
 };
 
 } // end namespace llvm

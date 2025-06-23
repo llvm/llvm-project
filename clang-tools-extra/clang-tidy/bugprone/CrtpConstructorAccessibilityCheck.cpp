@@ -157,7 +157,7 @@ void CrtpConstructorAccessibilityCheck::check(
   }
 
   for (auto &&Ctor : CRTPDeclaration->ctors()) {
-    if (Ctor->getAccess() == AS_private)
+    if (Ctor->getAccess() == AS_private || Ctor->isDeleted())
       continue;
 
     const bool IsPublic = Ctor->getAccess() == AS_public;
@@ -165,7 +165,7 @@ void CrtpConstructorAccessibilityCheck::check(
 
     WithFriendHintIfNeeded(
         diag(Ctor->getLocation(),
-             "%0 contructor allows the CRTP to be %select{inherited "
+             "%0 constructor allows the CRTP to be %select{inherited "
              "from|constructed}1 as a regular template class; consider making "
              "it private%select{| and declaring the derived class as friend}2")
             << Access << IsPublic << NeedsFriend

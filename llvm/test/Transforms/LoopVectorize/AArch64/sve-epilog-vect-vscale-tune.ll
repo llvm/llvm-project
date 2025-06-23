@@ -1,7 +1,7 @@
 ; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-v1 -sve-tail-folding=disabled < %s | FileCheck %s --check-prefix=CHECK-EPILOG
 ; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
-; RUN:   -mcpu=neoverse-v2 < %s | FileCheck %s --check-prefix=CHECK-NO-EPILOG
+; RUN:   -mcpu=neoverse-v2 < %s | FileCheck %s --check-prefix=CHECK-EPILOG-V2
 ; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
 ; RUN:   -mcpu=cortex-x2 < %s | FileCheck %s --check-prefix=CHECK-NO-EPILOG
 
@@ -11,6 +11,11 @@ define void @foo(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i6
 ; CHECK-EPILOG:      vec.epilog.ph:
 ; CHECK-EPILOG:      vec.epilog.vector.body:
 ; CHECK-EPILOG:        load <vscale x 4 x i16>
+
+; The epilogue loop gets vectorised vscale x 2 x i16 wide.
+; CHECK-EPILOG-V2:      vec.epilog.ph:
+; CHECK-EPILOG-V2:      vec.epilog.vector.body:
+; CHECK-EPILOG-V2:        load <vscale x 2 x i16>
 
 ; CHECK-NO-EPILOG-NOT:  vec.epilog.vector.ph:
 ; CHECK-NO-EPILOG-NOT:  vec.epilog.vector.body:

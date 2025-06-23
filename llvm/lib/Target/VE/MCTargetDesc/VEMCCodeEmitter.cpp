@@ -26,7 +26,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 
@@ -99,8 +98,8 @@ unsigned VEMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   assert(MO.isExpr());
 
   const MCExpr *Expr = MO.getExpr();
-  if (const VEMCExpr *SExpr = dyn_cast<VEMCExpr>(Expr)) {
-    MCFixupKind Kind = (MCFixupKind)SExpr->getFixupKind();
+  if (const auto *SExpr = dyn_cast<MCSpecifierExpr>(Expr)) {
+    auto Kind = VE::getFixupKind(SExpr->getSpecifier());
     Fixups.push_back(MCFixup::create(0, Expr, Kind));
     return 0;
   }

@@ -128,9 +128,11 @@ void test() {
   a += 0;
   a -= 0;
 
+#if TEST_STD_VER >= 20
   a.wait(v);
   a.notify_one();
   a.notify_all();
+#endif
 }
 
 void test() {

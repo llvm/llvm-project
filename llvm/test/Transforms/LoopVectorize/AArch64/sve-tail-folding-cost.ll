@@ -1,4 +1,7 @@
-; RUN: opt -S -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue <%s | FileCheck %s
+; REQUIRES: asserts
+; RUN: opt -S -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN:   -debug-only=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN: cat %t | FileCheck --check-prefix=COST %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -30,6 +33,31 @@ for.body:                                         ; preds = %entry, %for.body
 
 for.end:                                          ; preds = %for.body
   ret i32 0
+}
+
+; COST: LV: Checking a loop in 'simple_memset'
+; COST: Cost of 4 for VF 2: EMIT{{.*}}active lane mask
+; COST: Cost of 8 for VF 4: EMIT{{.*}}active lane mask
+; COST: Cost of Invalid for VF vscale x 1: EMIT{{.*}}active lane mask
+; COST: Cost of 1 for VF vscale x 2: EMIT{{.*}}active lane mask
+; COST: Cost of 1 for VF vscale x 4: EMIT{{.*}}active lane mask
+
+define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
+; CHECK-LABEL: @simple_memset(
+; CHECK: call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32>
+entry:
+  br label %while.body
+
+while.body:                                       ; preds = %while.body, %entry
+  %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
+  %gep = getelementptr i32, ptr %ptr, i64 %index
+  store i32 %val, ptr %gep
+  %index.next = add nsw i64 %index, 1
+  %cmp10 = icmp ult i64 %index.next, %n
+  br i1 %cmp10, label %while.body, label %while.end.loopexit
+
+while.end.loopexit:                               ; preds = %while.body
+  ret void
 }
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }

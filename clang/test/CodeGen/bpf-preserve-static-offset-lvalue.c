@@ -18,7 +18,7 @@ struct foo {
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.preserve.static.offset(ptr [[TMP0]])
-// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[TMP1]], i32 0, i32 0
+// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    store i32 42, ptr [[A]], align 4
 // CHECK-NEXT:    ret void
 //

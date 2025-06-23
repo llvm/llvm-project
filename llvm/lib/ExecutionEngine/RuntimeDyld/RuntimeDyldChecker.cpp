@@ -8,7 +8,6 @@
 
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "RuntimeDyldCheckerImpl.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -21,9 +20,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include <cctype>
 #include <memory>
 #include <utility>
@@ -304,10 +301,10 @@ private:
       if (auto E = TI.takeError()) {
         errs() << "Error obtaining instruction printer: "
                << toString(std::move(E)) << "\n";
-        return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+        return;
       }
       Inst.dump_pretty(ErrMsgStream, TI->InstPrinter.get());
-      return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+      return;
     };
 
     if (OpIdx >= Inst.getNumOperands()) {
@@ -319,7 +316,8 @@ private:
                    << format("%i", Inst.getNumOperands())
                    << " operands.\nInstruction is:\n  ";
 
-      return printInst(Symbol, Inst, ErrMsgStream);
+      printInst(Symbol, Inst, ErrMsgStream);
+      return {EvalResult(std::move(ErrMsg)), ""};
     }
 
     const MCOperand &Op = Inst.getOperand(OpIdx);
@@ -329,7 +327,8 @@ private:
       ErrMsgStream << "Operand '" << format("%i", OpIdx) << "' of instruction '"
                    << Symbol << "' is not an immediate.\nInstruction is:\n  ";
 
-      return printInst(Symbol, Inst, ErrMsgStream);
+      printInst(Symbol, Inst, ErrMsgStream);
+      return {EvalResult(std::move(ErrMsg)), ""};
     }
 
     return std::make_pair(EvalResult(Op.getImm()), RemainingExpr);

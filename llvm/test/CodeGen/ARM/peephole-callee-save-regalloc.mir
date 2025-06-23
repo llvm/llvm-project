@@ -5,7 +5,7 @@
 # the register class of the consumer.
 #
 # Check that register class for %5 is unchanged as 'tcgpr'
-# CHECK: { id: 5, class: tcgpr, preferred-register: '' }
+# CHECK: { id: 5, class: tcgpr, preferred-register: '', flags: [  ] }
 # CHECK: TCRETURNri killed %5
 
 --- |

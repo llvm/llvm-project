@@ -1,7 +1,7 @@
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -dr %t.o | FileCheck --check-prefix=OBJ32 %s
 
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -dr %t.o | FileCheck --check-prefix=OBJ64 %s
 
 ; Function Attrs: noinline nounwind optnone

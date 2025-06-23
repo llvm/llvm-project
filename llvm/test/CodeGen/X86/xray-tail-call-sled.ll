@@ -2,12 +2,12 @@
 ; RUN: llc -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MACOS
 
 define dso_local i32 @callee() nounwind noinline uwtable "function-instrument"="xray-always" {
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_0:
 ; CHECK:       .ascii "\353\t"
 ; CHECK-NEXT:  nopw 512(%rax,%rax)
   ret i32 0
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_1:
 ; CHECK:       retq
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)
@@ -34,11 +34,11 @@ define dso_local i32 @callee() nounwind noinline uwtable "function-instrument"="
 ; CHECK-MACOS-NEXT:    .quad 2
 
 define dso_local i32 @caller() nounwind noinline uwtable "function-instrument"="xray-always" {
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_2:
 ; CHECK:       .ascii "\353\t"
 ; CHECK-NEXT:  nopw 512(%rax,%rax)
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_3:
 ; CHECK-NEXT:  .ascii "\353\t"
 ; CHECK-NEXT:  nopw 512(%rax,%rax)
@@ -69,13 +69,13 @@ define dso_local i32 @caller() nounwind noinline uwtable "function-instrument"="
 
 define dso_local i32 @conditional_tail_call(i32 %cond) nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK-LABEL: conditional_tail_call:
-; CHECK:         .p2align 1, 0x90
+; CHECK:         .p2align 1
 ; CHECK-LABEL: Lxray_sled_4:
 ; CHECK:         .ascii "\353\t"
 ; CHECK-NEXT:    nopw 512(%rax,%rax)
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je {{\.?Ltmp5}}
-; CHECK:         .p2align 1, 0x90
+; CHECK:         .p2align 1
 ; CHECK-LABEL: Lxray_sled_5:
 ; CHECK-NEXT:    .ascii "\353\t"
 ; CHECK-NEXT:    nopw 512(%rax,%rax)
@@ -83,7 +83,7 @@ define dso_local i32 @conditional_tail_call(i32 %cond) nounwind noinline uwtable
 ; CHECK-NEXT:    jmp {{.*}}callee {{.*}}# TAILCALL
 ; CHECK-LABEL: Ltmp5:
 ; CHECK:         xorl %eax, %eax
-; CHECK-NEXT:   .p2align  1, 0x90
+; CHECK-NEXT:   .p2align  1
 ; CHECK-LABEL: Lxray_sled_6:
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    nopw %cs:512(%rax,%rax)

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-NOT: r{{[0-9]+}}:{{[0-9]+}} = insert(r{{[0-9]+}},r{{[0-9]+}}:{{[0-9]+}})
 
 @g0 = common global [512 x i16] zeroinitializer, align 8

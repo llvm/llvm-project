@@ -119,7 +119,8 @@ template<typename T> requires 0
 
 template<typename T> requires foo<T>
 (int) bar() { };
-// expected-error@-1{{expected '(' for function-style cast or type construction}}
+// expected-error@-1{{expected '(' for function-style cast or type construction}} \
+// expected-error@-2{{parentheses are required around this expression in a requires clause}}
 
 template<typename T>
 void bar() requires foo<T>();
@@ -195,3 +196,12 @@ void F() {
 int a = []<int=0> requires requires { [](auto){}; } { return 0; }();
 
 } // namespace GH78524
+
+
+namespace GH51868 {
+template<auto L>
+concept C = requires {
+  typename decltype(L)::template operator()<int>;
+  // expected-error@-1 {{template name refers to non-type template 'decltype(L)::template operator ()'}}
+};
+}

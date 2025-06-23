@@ -50,8 +50,8 @@ func.func @trivial_ops(%a: index, %b: index) {
 // CHECK-LABEL: @ceildivs
 // CHECK-SAME: %[[NI:.*]]: index, %[[MI:.*]]: index
 func.func @ceildivs(%n: index, %m: index) -> index {
-  // CHECK: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
-  // CHECK: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
+  // CHECK-DAG: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
+  // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 :
   // CHECK: %[[POS_ONE:.*]] = llvm.mlir.constant(1 :
   // CHECK: %[[NEG_ONE:.*]] = llvm.mlir.constant(-1 :
@@ -82,8 +82,8 @@ func.func @ceildivs(%n: index, %m: index) -> index {
 // CHECK-LABEL: @ceildivu
 // CHECK-SAME: %[[NI:.*]]: index, %[[MI:.*]]: index
 func.func @ceildivu(%n: index, %m: index) -> index {
-  // CHECK: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
-  // CHECK: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
+  // CHECK-DAG: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
+  // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 :
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 :
 
@@ -103,11 +103,11 @@ func.func @ceildivu(%n: index, %m: index) -> index {
 // CHECK-LABEL: @floordivs
 // CHECK-SAME: %[[NI:.*]]: index, %[[MI:.*]]: index
 func.func @floordivs(%n: index, %m: index) -> index {
-  // CHECK: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
-  // CHECK: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
-  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 :
-  // CHECK: %[[POS_ONE:.*]] = llvm.mlir.constant(1 :
-  // CHECK: %[[NEG_ONE:.*]] = llvm.mlir.constant(-1 :
+  // CHECK-DAG: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
+  // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
+  // CHECK-DAG: %[[ZERO:.*]] = llvm.mlir.constant(0 :
+  // CHECK-DAG: %[[POS_ONE:.*]] = llvm.mlir.constant(1 :
+  // CHECK-DAG: %[[NEG_ONE:.*]] = llvm.mlir.constant(-1 :
 
   // CHECK: %[[M_NEG:.*]] = llvm.icmp "slt" %[[M]], %[[ZERO]]
   // CHECK: %[[X:.*]] = llvm.select %[[M_NEG]], %[[POS_ONE]], %[[NEG_ONE]]

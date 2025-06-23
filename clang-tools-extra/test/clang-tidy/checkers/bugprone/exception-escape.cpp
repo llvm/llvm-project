@@ -665,6 +665,7 @@ int indirectly_recursive(int n) noexcept;
 
 int recursion_helper(int n) {
   indirectly_recursive(n);
+  return 0;
 }
 
 int indirectly_recursive(int n) noexcept {
@@ -756,3 +757,21 @@ struct test_implicit_throw {
 };
 
 }}
+
+void pointer_exception_can_not_escape_with_const_void_handler() noexcept {
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'pointer_exception_can_not_escape_with_const_void_handler' which should not throw exceptions
+  const int value = 42;
+  try {
+    throw &value;
+  } catch (const void *) {
+  }
+}
+
+void pointer_exception_can_not_escape_with_void_handler() noexcept {
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'pointer_exception_can_not_escape_with_void_handler' which should not throw exceptions
+  int value = 42;
+  try {
+    throw &value;
+  } catch (void *) {
+  }
+}

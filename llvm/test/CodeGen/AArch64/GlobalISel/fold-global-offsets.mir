@@ -151,9 +151,9 @@ body:             |
     ; CHECK-LABEL: name: ptr_add_chain
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; CHECK-NEXT: %dont_fold_me:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
+    ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 4
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %dont_fold_me:_(p0) = G_PTR_ADD [[GV]], %offset(s64)
     ; CHECK-NEXT: $x0 = COPY %dont_fold_me(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g

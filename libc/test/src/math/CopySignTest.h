@@ -39,13 +39,13 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x))
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
 
-      double res1 = func(x, -x);
+      T res1 = func(x, -x);
       ASSERT_FP_EQ(res1, -x);
 
-      double res2 = func(x, x);
+      T res2 = func(x, x);
       ASSERT_FP_EQ(res2, x);
     }
   }

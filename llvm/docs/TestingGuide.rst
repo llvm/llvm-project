@@ -23,7 +23,7 @@ Requirements
 ============
 
 In order to use the LLVM testing infrastructure, you will need all of the
-software required to build LLVM, as well as `Python <http://python.org>`_ 3.6 or
+software required to build LLVM, as well as `Python <http://python.org>`_ 3.8 or
 later.
 
 LLVM Testing Infrastructure Organization
@@ -167,13 +167,17 @@ script which is built as part of LLVM. For example, to run the
 
 .. code-block:: bash
 
-    % llvm-lit ~/llvm/test/Integer/BitPacked.ll
+    % llvm-lit <path to llvm-project>/llvm/test/Integer/BitPacked.ll
 
-or to run all of the ARM CodeGen tests:
+.. note::
+   The test files are in the ``llvm-project`` directory, not the directory you
+   are building LLVM in.
+
+Or you can run a whole folder of tests. To run all of the ARM CodeGen tests:
 
 .. code-block:: bash
 
-    % llvm-lit ~/llvm/test/CodeGen/ARM
+    % llvm-lit <path to llvm-project>/llvm/test/CodeGen/ARM
 
 The regression tests will use the Python psutil module only if installed in a
 **non-user** location. Under Linux, install with sudo or within a virtual
@@ -741,16 +745,16 @@ RUN lines:
 
    Expands to the path separator, i.e. ``:`` (or ``;`` on Windows).
 
-``${fs-src-root}``
+``%{fs-src-root}``
    Expands to the root component of file system paths for the source directory,
    i.e. ``/`` on Unix systems or ``C:\`` (or another drive) on Windows.
 
-``${fs-tmp-root}``
+``%{fs-tmp-root}``
    Expands to the root component of file system paths for the test's temporary
    directory, i.e. ``/`` on Unix systems or ``C:\`` (or another drive) on
    Windows.
 
-``${fs-sep}``
+``%{fs-sep}``
    Expands to the file system separator, i.e. ``/`` or ``\`` on Windows.
 
 ``%/s, %/S, %/t, %/T``
@@ -864,8 +868,9 @@ Additional substitutions can be defined as follows:
 - Lit configuration files (e.g., ``lit.cfg`` or ``lit.local.cfg``) can define
   substitutions for all tests in a test directory.  They do so by extending the
   substitution list, ``config.substitutions``.  Each item in the list is a tuple
-  consisting of a pattern and its replacement, which lit applies using python's
-  ``re.sub`` function.
+  consisting of a pattern and its replacement, which lit applies as plain text
+  (even if it contains sequences that python's ``re.sub`` considers to be
+  escape sequences).
 - To define substitutions within a single test file, lit supports the
   ``DEFINE:`` and ``REDEFINE:`` directives, described in detail below.  So that
   they have no effect on other test files, these directives modify a copy of the

@@ -283,6 +283,15 @@ namespace lldb_private {
 //  report_run_vote argument to the constructor works like report_stop_vote, and
 //  is a way for a plan to instruct a sub-plan on how to respond to
 //  ShouldReportStop.
+//
+//  Reverse execution:
+//
+//  Every thread plan has an associated RunDirection (forward or backward).
+//  For ThreadPlanBase, this direction is the Process's base direction.
+//  Whenever we resume the target, we need to ensure that the topmost thread
+//  plans for each runnable thread all agree on their direction. This is
+//  ensured in ThreadList::WillResume(), which chooses a direction and then
+//  discards thread plans incompatible with that direction.
 
 class ThreadPlan : public std::enable_shared_from_this<ThreadPlan>,
                    public UserID {
@@ -302,7 +311,8 @@ public:
     eKindStepInRange,
     eKindRunToAddress,
     eKindStepThrough,
-    eKindStepUntil
+    eKindStepUntil,
+    eKindSingleThreadTimeout,
   };
 
   virtual ~ThreadPlan();
@@ -384,7 +394,13 @@ public:
   virtual void SetStopOthers(bool new_value);
 
   virtual bool StopOthers();
-  
+
+  // Returns true if the thread plan supports ThreadPlanSingleThreadTimeout to
+  // resume other threads after timeout. If the thread plan returns false it
+  // will prevent ThreadPlanSingleThreadTimeout from being created when this
+  // thread plan is alive.
+  virtual bool SupportsResumeOthers() { return true; }
+
   virtual bool ShouldRunBeforePublicStop() { return false; }
 
   // This is the wrapper for DoWillResume that does generic ThreadPlan logic,
@@ -394,6 +410,11 @@ public:
   virtual bool WillStop() = 0;
 
   bool IsControllingPlan() { return m_is_controlling_plan; }
+
+  // Returns true if this plan is a leaf plan, meaning the plan will be popped
+  // during each stop if it does not explain the stop and re-pushed before
+  // resuming to stay at the top of the stack.
+  virtual bool IsLeafPlan() { return false; }
 
   bool SetIsControllingPlan(bool value) {
     bool old_value = m_is_controlling_plan;
@@ -483,6 +504,12 @@ public:
     return m_takes_iteration_count;
   }
 
+  virtual lldb::StateType GetPlanRunState() = 0;
+
+  virtual lldb::RunDirection GetDirection() const {
+    return lldb::RunDirection::eRunForward;
+  }
+
 protected:
   // Constructors and Destructors
   ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
@@ -521,8 +548,6 @@ protected:
   void SetStopInfo(lldb::StopInfoSP stop_reason_sp) {
     GetThread().SetStopInfo(stop_reason_sp);
   }
-
-  virtual lldb::StateType GetPlanRunState() = 0;
 
   bool IsUsuallyUnexplainedStopReason(lldb::StopReason);
 

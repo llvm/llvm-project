@@ -43,18 +43,21 @@ class IncrementalExecutor {
   llvm::DenseMap<const PartialTranslationUnit *, llvm::orc::ResourceTrackerSP>
       ResourceTrackers;
 
+protected:
+  IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC);
+
 public:
   enum SymbolNameKind { IRName, LinkerName };
 
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                       llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
-  ~IncrementalExecutor();
+  virtual ~IncrementalExecutor();
 
-  llvm::Error addModule(PartialTranslationUnit &PTU);
-  llvm::Error removeModule(PartialTranslationUnit &PTU);
-  llvm::Error runCtors() const;
-  llvm::Error cleanUp();
-  llvm::Expected<llvm::orc::ExecutorAddr>
+  virtual llvm::Error addModule(PartialTranslationUnit &PTU);
+  virtual llvm::Error removeModule(PartialTranslationUnit &PTU);
+  virtual llvm::Error runCtors() const;
+  virtual llvm::Error cleanUp();
+  virtual llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
 
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }

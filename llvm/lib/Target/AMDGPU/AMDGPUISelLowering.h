@@ -97,6 +97,9 @@ protected:
   SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerF64ToF16Safe(SDValue Src, const SDLoc &DL,
+                            SelectionDAG &DAG) const;
+
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
@@ -201,7 +204,7 @@ public:
                                NegatibleCost &Cost,
                                unsigned Depth) const override;
 
-  bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override;
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
@@ -209,15 +212,14 @@ public:
   EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                           ISD::NodeType ExtendKind) const override;
 
-  MVT getVectorIdxTy(const DataLayout &) const override;
+  unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
-  bool shouldReduceLoadWidth(SDNode *Load,
-                             ISD::LoadExtType ExtType,
-                             EVT ExtVT) const override;
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtType, EVT ExtVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
@@ -315,15 +317,14 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
-  unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
+  unsigned computeNumSignBitsForTargetInstr(GISelValueTracking &Analysis,
                                             Register R,
                                             const APInt &DemandedElts,
                                             const MachineRegisterInfo &MRI,
                                             unsigned Depth = 0) const override;
 
-  bool isKnownNeverNaNForTargetNode(SDValue Op,
-                                    const SelectionDAG &DAG,
-                                    bool SNaN = false,
+  bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                    const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
 
   bool isReassocProfitable(MachineRegisterInfo &MRI, Register N0,
@@ -387,11 +388,6 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
-
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
-
-  bool shouldSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override;
 };
 
 namespace AMDGPUISD {
@@ -399,7 +395,6 @@ namespace AMDGPUISD {
 enum NodeType : unsigned {
   // AMDIL ISD Opcodes
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  UMUL, // 32bit unsigned multiplication
   BRANCH_COND,
   // End AMDIL ISD Opcodes
 
@@ -408,6 +403,7 @@ enum NodeType : unsigned {
   TC_RETURN,
   TC_RETURN_GFX,
   TC_RETURN_CHAIN,
+  TC_RETURN_CHAIN_DVGPR,
   TRAP,
 
   // Masked control flow nodes.
@@ -444,7 +440,6 @@ enum NodeType : unsigned {
   // This is SETCC with the full mask result which is used for a compare with a
   // result bit per item in the wavefront.
   SETCC,
-  SETREG,
 
   DENORM_MODE,
 
@@ -519,10 +514,6 @@ enum NodeType : unsigned {
   CONST_ADDRESS,
   REGISTER_LOAD,
   REGISTER_STORE,
-  SAMPLE,
-  SAMPLEB,
-  SAMPLED,
-  SAMPLEL,
 
   // These cvt_f32_ubyte* nodes need to remain consecutive and in order.
   CVT_F32_UBYTE0,
@@ -555,12 +546,11 @@ enum NodeType : unsigned {
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
   LDS,
-  FPTRUNC_ROUND_UPWARD,
-  FPTRUNC_ROUND_DOWNWARD,
 
   DUMMY_CHAIN,
-  FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
-  LOAD_D16_HI,
+
+  FIRST_MEMORY_OPCODE,
+  LOAD_D16_HI = FIRST_MEMORY_OPCODE,
   LOAD_D16_LO,
   LOAD_D16_HI_I8,
   LOAD_D16_HI_U8,
@@ -568,15 +558,12 @@ enum NodeType : unsigned {
   LOAD_D16_LO_U8,
 
   STORE_MSKOR,
-  LOAD_CONSTANT,
   TBUFFER_STORE_FORMAT,
   TBUFFER_STORE_FORMAT_D16,
   TBUFFER_LOAD_FORMAT,
   TBUFFER_LOAD_FORMAT_D16,
   DS_ORDERED_COUNT,
   ATOMIC_CMP_SWAP,
-  ATOMIC_LOAD_FMIN,
-  ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,
   BUFFER_LOAD_UBYTE,
   BUFFER_LOAD_USHORT,
@@ -595,6 +582,7 @@ enum NodeType : unsigned {
   SBUFFER_LOAD_UBYTE,
   SBUFFER_LOAD_SHORT,
   SBUFFER_LOAD_USHORT,
+  SBUFFER_PREFETCH_DATA,
   BUFFER_STORE,
   BUFFER_STORE_BYTE,
   BUFFER_STORE_SHORT,
@@ -615,12 +603,10 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_CMPSWAP,
   BUFFER_ATOMIC_CSUB,
   BUFFER_ATOMIC_FADD,
-  BUFFER_ATOMIC_FADD_BF16,
   BUFFER_ATOMIC_FMIN,
   BUFFER_ATOMIC_FMAX,
   BUFFER_ATOMIC_COND_SUB_U32,
-
-  LAST_AMDGPU_ISD_NUMBER
+  LAST_MEMORY_OPCODE = BUFFER_ATOMIC_COND_SUB_U32,
 };
 
 } // End namespace AMDGPUISD

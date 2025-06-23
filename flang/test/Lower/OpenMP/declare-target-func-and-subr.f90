@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s --check-prefixes ALL,HOST
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-is-device %s -o - | FileCheck %s --check-prefixes ALL,DEVICE
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s --check-prefixes ALL,HOST
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -fopenmp-is-device %s -o - | FileCheck %s --check-prefixes ALL,DEVICE
 
 ! Check specification valid forms of declare target with functions 
 ! utilising device_type and to clauses as well as the default 
@@ -84,6 +84,13 @@ FUNCTION FUNC_DEFAULT_EXTENDEDLIST() RESULT(I)
     INTEGER :: I
     I = 1
 END FUNCTION FUNC_DEFAULT_EXTENDEDLIST
+
+! ALL-LABEL: func.func @_QPfunc_name_as_result()
+! ALL-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>{{.*}}
+FUNCTION FUNC_NAME_AS_RESULT()
+!$omp declare target(FUNC_NAME_AS_RESULT)
+  FUNC_NAME_AS_RESULT = 1.0
+END FUNCTION FUNC_NAME_AS_RESULT
 
 !! -----
 

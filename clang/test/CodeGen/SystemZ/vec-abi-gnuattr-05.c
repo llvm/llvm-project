@@ -11,7 +11,7 @@ typedef __attribute__((vector_size(16))) int v4i32;
 v4i32 (*bar)(int);
 
 static int foo() {
-  (*bar)(0)[0];
+  return (*bar)(0)[0];
 }
 
 int fun() { return foo(); }

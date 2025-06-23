@@ -92,7 +92,17 @@ TEST(LlvmLibcFixedVectorTest, ForwardIteration) {
   LIBC_NAMESPACE::FixedVector<int, 5> vec(arr.begin(), arr.end());
   ASSERT_EQ(vec.size(), arr.size());
   for (auto it = vec.begin(); it != vec.end(); ++it) {
-    auto idx = it - vec.begin();
+    auto idx = static_cast<size_t>(it - vec.begin());
+    ASSERT_EQ(*it, arr[idx]);
+  }
+}
+
+TEST(LlvmLibcFixedVectorTest, ConstForwardIteration) {
+  const LIBC_NAMESPACE::cpp::array<int, 4> arr{1, 2, 3, 4};
+  const LIBC_NAMESPACE::FixedVector<int, 5> vec(arr.begin(), arr.end());
+  ASSERT_EQ(vec.size(), arr.size());
+  for (auto it = vec.begin(); it != vec.end(); ++it) {
+    auto idx = static_cast<size_t>(it - vec.begin());
     ASSERT_EQ(*it, arr[idx]);
   }
 }

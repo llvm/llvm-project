@@ -12,8 +12,8 @@
 // UNSUPPORTED: availability-filesystem-missing
 
 // The string reported on errors changed, which makes those tests fail when run
-// against already-released libc++'s.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
+// against a built library that doesn't contain 0aa637b2037d.
+// XFAIL: using-built-library-before-llvm-13
 
 // <filesystem>
 
@@ -300,7 +300,7 @@ static const bool SupportsMinRoundTrip = [] {
   return min_val == file_time_type::min();
 }();
 
-} // end namespace
+} // namespace
 
 static bool CompareTime(TimeSpec t1, TimeSpec t2) {
   if (SupportsNanosecondRoundTrip)

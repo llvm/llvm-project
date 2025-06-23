@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++11 -Wno-deprecated-literal-operator -verify %s
 
 using size_t = decltype(sizeof(int));
 void operator "" wibble(const char *); // expected-warning {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}

@@ -1,7 +1,11 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Shape conformance checks on assignments
 program test
+  type t
+    integer n
+  end type
   real :: a0, a1a(2), a1b(3), a2a(2,3), a2b(3,2)
+  type(t) c(10)
   a0 = 0. ! ok
   !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar REAL(4) and rank 1 array of REAL(4)
   a0 = [0.]
@@ -20,4 +24,6 @@ program test
   a2a(1,:) = a1a
   !ERROR: Dimension 1 of left-hand side has extent 2, but right-hand side has extent 3
   a2a = a2b
+  !ERROR: Dimension 1 of left-hand side has extent 10, but right-hand side has extent 0
+  c(1:10) = c(10:1)
 end

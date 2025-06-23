@@ -759,35 +759,6 @@ static int ConnectRemote(RNBRemote *remote, const char *host, int port,
   return 1;
 }
 
-// ASL Logging callback that can be registered with DNBLogSetLogCallback
-void ASLLogCallback(void *baton, uint32_t flags, const char *format,
-                    va_list args) {
-  if (format == NULL)
-    return;
-  static aslmsg g_aslmsg = NULL;
-  if (g_aslmsg == NULL) {
-    g_aslmsg = ::asl_new(ASL_TYPE_MSG);
-    char asl_key_sender[PATH_MAX];
-    snprintf(asl_key_sender, sizeof(asl_key_sender), "com.apple.%s-%s",
-             DEBUGSERVER_PROGRAM_NAME, DEBUGSERVER_VERSION_STR);
-    ::asl_set(g_aslmsg, ASL_KEY_SENDER, asl_key_sender);
-  }
-
-  int asl_level;
-  if (flags & DNBLOG_FLAG_FATAL)
-    asl_level = ASL_LEVEL_CRIT;
-  else if (flags & DNBLOG_FLAG_ERROR)
-    asl_level = ASL_LEVEL_ERR;
-  else if (flags & DNBLOG_FLAG_WARNING)
-    asl_level = ASL_LEVEL_WARNING;
-  else if (flags & DNBLOG_FLAG_VERBOSE)
-    asl_level = ASL_LEVEL_WARNING; // ASL_LEVEL_INFO;
-  else
-    asl_level = ASL_LEVEL_WARNING; // ASL_LEVEL_DEBUG;
-
-  ::asl_vlog(NULL, g_aslmsg, asl_level, format, args);
-}
-
 // FILE based Logging callback that can be registered with
 // DNBLogSetLogCallback
 void FileLogCallback(void *baton, uint32_t flags, const char *format,
@@ -948,16 +919,8 @@ int main(int argc, char *argv[]) {
   // Set up DNB logging by default. If the user passes different log flags or a
   // log file, these settings will be modified after processing the command line
   // arguments.
-  auto log_callback = OsLogger::GetLogFunction();
-  if (log_callback) {
-    // if os_log() support is available, log through that.
+  if (auto log_callback = OsLogger::GetLogFunction())
     DNBLogSetLogCallback(log_callback, nullptr);
-    DNBLog("debugserver will use os_log for internal logging.");
-  } else {
-    // Fall back to ASL support.
-    DNBLogSetLogCallback(ASLLogCallback, nullptr);
-    DNBLog("debugserver will use ASL for internal logging.");
-  }
   DNBLogSetLogMask(/*log_flags*/ 0);
 
   g_remoteSP = std::make_shared<RNBRemote>();

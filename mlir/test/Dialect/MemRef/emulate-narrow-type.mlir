@@ -6,11 +6,13 @@ func.func @memref_i8() -> i8 {
     %c3 = arith.constant 3 : index
     %m = memref.alloc() : memref<4xi8, 1>
     %v = memref.load %m[%c3] : memref<4xi8, 1>
+    memref.dealloc %m : memref<4xi8, 1>
     return %v : i8
 }
 // CHECK-LABEL: func @memref_i8()
 //       CHECK:   %[[M:.+]] = memref.alloc() : memref<4xi8, 1>
 //  CHECK-NEXT:   %[[V:.+]] = memref.load %[[M]][%{{.+}}] : memref<4xi8, 1>
+//  CHECK-NEXT:   memref.dealloc %[[M]]
 //  CHECK-NEXT:   return %[[V]]
 
 // CHECK32-LABEL: func @memref_i8()
@@ -21,6 +23,7 @@ func.func @memref_i8() -> i8 {
 //       CHECK32:   %[[CAST:.+]] = arith.index_cast %[[C24]] : index to i32
 //       CHECK32:   %[[SHIFTRT:.+]] = arith.shrsi %[[V]], %[[CAST]]
 //       CHECK32:   %[[TRUNC:.+]] = arith.trunci %[[SHIFTRT]] : i32 to i8
+//  CHECK32-NEXT:   memref.dealloc %[[M]]
 //  CHECK32-NEXT:   return %[[TRUNC]]
 
 // -----
@@ -60,8 +63,8 @@ func.func @memref_load_i4(%arg0: index) -> i4 {
 
 func.func @memref_load_i4_rank2(%arg0: index, %arg1: index) -> i4 {
     %0 = memref.alloc() : memref<3x125xi4>
-    memref.assume_alignment %0, 64 : memref<3x125xi4>
-    %1 = memref.load %0[%arg0,%arg1] : memref<3x125xi4>
+    %align0 = memref.assume_alignment %0, 64 : memref<3x125xi4>
+    %1 = memref.load %align0[%arg0,%arg1] : memref<3x125xi4>
     return %1 : i4
 }
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * 125 + s1) floordiv 2)>
@@ -70,9 +73,9 @@ func.func @memref_load_i4_rank2(%arg0: index, %arg1: index) -> i4 {
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: index
 //      CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<188xi8>
-//      CHECK:   memref.assume_alignment %[[ALLOC]], 64 : memref<188xi8>
+//      CHECK:   %[[ASSUME:.+]] = memref.assume_alignment %[[ALLOC]], 64 : memref<188xi8>
 //      CHECK:   %[[INDEX:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]], %[[ARG1]]]
-//      CHECK:   %[[LOAD:.+]] = memref.load %[[ALLOC]][%[[INDEX]]]
+//      CHECK:   %[[LOAD:.+]] = memref.load %[[ASSUME]][%[[INDEX]]]
 //      CHECK:   %[[BITOFFSET:.+]] = affine.apply #[[MAP1]]()[%[[ARG0]], %[[ARG1]]]
 //      CHECK:   %[[CAST:.+]] = arith.index_cast %[[BITOFFSET]] : index to i8
 //      CHECK:   %[[SHIFTRT:.+]] = arith.shrsi %[[LOAD]], %[[CAST]]
@@ -85,9 +88,9 @@ func.func @memref_load_i4_rank2(%arg0: index, %arg1: index) -> i4 {
 // CHECK32-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: index
 // CHECK32-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: index
 //      CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<47xi32>
-//      CHECK32:   memref.assume_alignment %[[ALLOC]], 64 : memref<47xi32>
+//      CHECK32:   %[[ASSUME:.+]] = memref.assume_alignment %[[ALLOC]], 64 : memref<47xi32>
 //      CHECK32:   %[[INDEX:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]], %[[ARG1]]]
-//      CHECK32:   %[[LOAD:.+]] = memref.load %[[ALLOC]][%[[INDEX]]]
+//      CHECK32:   %[[LOAD:.+]] = memref.load %[[ASSUME]][%[[INDEX]]]
 //      CHECK32:   %[[BITOFFSET:.+]] = affine.apply #[[MAP1]]()[%[[ARG0]], %[[ARG1]]]
 //      CHECK32:   %[[CAST:.+]] = arith.index_cast %[[BITOFFSET]] : index to i32
 //      CHECK32:   %[[SHIFTRT:.+]] = arith.shrsi %[[LOAD]], %[[CAST]]
@@ -101,7 +104,7 @@ func.func @memref_load_i4_dynamic(%arg0: index, %arg1 : index, %arg2 : index, %a
   %1 = memref.load %0[%arg2, %arg3] : memref<?x?xi4>
   return %1 : i4
 }
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 2)>
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 2, s0 floordiv 2)>
 //  CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> ((s2 + s0 * s1) floordiv 2)>
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<()[s0, s1, s2] -> ((s0 * s1) * 4 + s2 * 4 - ((s2 + s0 * s1) floordiv 2) * 8)>
 //      CHECK: func @memref_load_i4_dynamic(
@@ -109,7 +112,7 @@ func.func @memref_load_i4_dynamic(%arg0: index, %arg1 : index, %arg2 : index, %a
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index
 // CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index
 // CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index
-//      CHECK:   %[[SIZE:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]], %[[ARG1]]]
+//      CHECK:   %[[SIZE:.+]] = affine.max #[[MAP0]]()[%[[ARG1]], %[[ARG0]]]
 //      CHECK:   %[[ALLOC:.+]] = memref.alloc(%[[SIZE]])
 //      CHECK:   %[[INDEX:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG1]], %[[ARG3]]]
 //      CHECK:   %[[LOAD:.+]] = memref.load %[[ALLOC]][%[[INDEX]]]
@@ -119,7 +122,7 @@ func.func @memref_load_i4_dynamic(%arg0: index, %arg1 : index, %arg2 : index, %a
 //      CHECK:   %[[TRUNC:.+]] = arith.trunci %[[SHIFTRT]] : i8 to i4
 //      CHECK:   return %[[TRUNC]]
 
-//  CHECK32-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 8)>
+//  CHECK32-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 8, s0 floordiv 8)>
 //  CHECK32-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> ((s2 + s0 * s1) floordiv 8)>
 //  CHECK32-DAG: #[[MAP2:.+]] = affine_map<()[s0, s1, s2] -> ((s0 * s1) * 4 + s2 * 4 - ((s2 + s0 * s1) floordiv 8) * 32)>
 //      CHECK32: func @memref_load_i4_dynamic(
@@ -127,7 +130,7 @@ func.func @memref_load_i4_dynamic(%arg0: index, %arg1 : index, %arg2 : index, %a
 // CHECK32-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index
 // CHECK32-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index
 // CHECK32-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index
-//      CHECK32:   %[[SIZE:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]], %[[ARG1]]]
+//      CHECK32:   %[[SIZE:.+]] = affine.max #[[MAP0]]()[%[[ARG1]], %[[ARG0]]]
 //      CHECK32:   %[[ALLOC:.+]] = memref.alloc(%[[SIZE]])
 //      CHECK32:   %[[INDEX:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG1]], %[[ARG3]]]
 //      CHECK32:   %[[LOAD:.+]] = memref.load %[[ALLOC]][%[[INDEX]]]
@@ -199,7 +202,6 @@ func.func @memref_subview_dynamic_offset_i4(%idx : index) -> i4 {
 // CHECK32:           memref.load %[[SUBVIEW]]
 
 // -----
-
 
 func.func @negative_memref_subview_non_contiguous(%idx : index) -> i4 {
   %c0 = arith.constant 0 : index
@@ -348,8 +350,8 @@ func.func @memref_store_i4(%arg0: index, %arg1: i4) -> () {
 
 func.func @memref_store_i4_rank2(%arg0: index, %arg1: index, %arg2: i4) -> () {
     %0 = memref.alloc() : memref<3x125xi4>
-    memref.assume_alignment %0, 64 : memref<3x125xi4>
-    memref.store %arg2, %0[%arg0,%arg1] : memref<3x125xi4>
+    %align0 = memref.assume_alignment %0, 64 : memref<3x125xi4>
+    memref.store %arg2, %align0[%arg0,%arg1] : memref<3x125xi4>
     return
 }
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * 125 + s1) floordiv 2)>
@@ -357,7 +359,7 @@ func.func @memref_store_i4_rank2(%arg0: index, %arg1: index, %arg2: i4) -> () {
 //      CHECK: func @memref_store_i4_rank2(
 // CHECK-SAME:     %[[ARG0:.+]]: index, %[[ARG1:.+]]: index, %[[ARG2:.+]]: i4
 //  CHECK-DAG:   %[[ALLOC:.+]] = memref.alloc() : memref<188xi8>
-//  CHECK-DAG:   memref.assume_alignment %[[ALLOC]], 64 : memref<188xi8>
+//  CHECK-DAG:   %[[ASSUME:.+]] = memref.assume_alignment %[[ALLOC]], 64 : memref<188xi8>
 //  CHECK-DAG:   %[[EXTUI:.+]] = arith.extui %[[ARG2]] : i4 to i8
 //  CHECK-DAG:   %[[INDEX:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]], %[[ARG1]]]
 //  CHECK-DAG:   %[[BITOFFSET:.+]] = affine.apply #[[MAP1]]()[%[[ARG0]], %[[ARG1]]]
@@ -367,8 +369,8 @@ func.func @memref_store_i4_rank2(%arg0: index, %arg1: index, %arg2: i4) -> () {
 //  CHECK-DAG:   %[[CST_NEG_ONE:.+]] = arith.constant -1 : i8
 //  CHECK-DAG:   %[[MASK:.+]] = arith.xori %[[MASK_SHIFTED]], %[[CST_NEG_ONE]] : i8
 //  CHECK-DAG:   %[[SHIFTED_VAL:.+]] = arith.shli %[[EXTUI]], %[[BITOFFSET_I8]] : i8
-//      CHECK:   %[[CLEAR_RMW:.+]] = memref.atomic_rmw andi %[[MASK]], %[[ALLOC]][%[[INDEX]]] : (i8, memref<188xi8>) -> i8
-//      CHECK:   %[[WRITE_RMW:.+]] = memref.atomic_rmw ori %[[SHIFTED_VAL]], %[[ALLOC]][%[[INDEX]]] : (i8, memref<188xi8>) -> i8
+//      CHECK:   %[[CLEAR_RMW:.+]] = memref.atomic_rmw andi %[[MASK]], %[[ASSUME]][%[[INDEX]]] : (i8, memref<188xi8>) -> i8
+//      CHECK:   %[[WRITE_RMW:.+]] = memref.atomic_rmw ori %[[SHIFTED_VAL]], %[[ASSUME]][%[[INDEX]]] : (i8, memref<188xi8>) -> i8
 //      CHECK:   return
 
 //  CHECK32-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * 125 + s1) floordiv 8)>
@@ -376,7 +378,7 @@ func.func @memref_store_i4_rank2(%arg0: index, %arg1: index, %arg2: i4) -> () {
 //      CHECK32: func @memref_store_i4_rank2(
 // CHECK32-SAME:     %[[ARG0:.+]]: index, %[[ARG1:.+]]: index, %[[ARG2:.+]]: i4
 //  CHECK32-DAG:   %[[ALLOC:.+]] = memref.alloc() : memref<47xi32>
-//  CHECK32-DAG:   memref.assume_alignment %[[ALLOC]], 64 : memref<47xi32>
+//  CHECK32-DAG:   %[[ASSUME:.+]] = memref.assume_alignment %[[ALLOC]], 64 : memref<47xi32>
 //  CHECK32-DAG:   %[[EXTUI:.+]] = arith.extui %[[ARG2]] : i4 to i32
 //  CHECK32-DAG:   %[[INDEX:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]], %[[ARG1]]]
 //  CHECK32-DAG:   %[[BITOFFSET:.+]] = affine.apply #[[MAP1]]()[%[[ARG0]], %[[ARG1]]]
@@ -386,8 +388,8 @@ func.func @memref_store_i4_rank2(%arg0: index, %arg1: index, %arg2: i4) -> () {
 //  CHECK32-DAG:   %[[CST_NEG_ONE:.+]] = arith.constant -1 : i32
 //  CHECK32-DAG:   %[[MASK:.+]] = arith.xori %[[MASK_SHIFTED]], %[[CST_NEG_ONE]] : i32
 //  CHECK32-DAG:   %[[SHIFTED_VAL:.+]] = arith.shli %[[EXTUI]], %[[BITOFFSET_I32]] : i32
-//      CHECK32:   %[[CLEAR_RMW:.+]] = memref.atomic_rmw andi %[[MASK]], %[[ALLOC]][%[[INDEX]]] : (i32, memref<47xi32>) -> i32
-//      CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw ori %[[SHIFTED_VAL]], %[[ALLOC]][%[[INDEX]]] : (i32, memref<47xi32>) -> i32
+//      CHECK32:   %[[CLEAR_RMW:.+]] = memref.atomic_rmw andi %[[MASK]], %[[ASSUME]][%[[INDEX]]] : (i32, memref<47xi32>) -> i32
+//      CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw ori %[[SHIFTED_VAL]], %[[ASSUME]][%[[INDEX]]] : (i32, memref<47xi32>) -> i32
 //      CHECK32:   return
 
 // -----
@@ -397,7 +399,7 @@ func.func @memref_store_i4_dynamic(%arg0: index, %arg1 : index, %arg2 : index, %
   memref.store %arg4, %0[%arg2, %arg3] : memref<?x?xi4>
   return
 }
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 2)>
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 2, s0 floordiv 2)>
 //  CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> ((s2 + s0 * s1) floordiv 2)>
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<()[s0, s1, s2] -> ((s0 * s1) * 4 + s2 * 4 - ((s2 + s0 * s1) floordiv 2) * 8)>
 //      CHECK: func @memref_store_i4_dynamic(
@@ -406,7 +408,7 @@ func.func @memref_store_i4_dynamic(%arg0: index, %arg1 : index, %arg2 : index, %
 // CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index
 // CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index
 // CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: i4
-//  CHECK-DAG:   %[[SIZE:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]], %[[ARG1]]]
+//  CHECK-DAG:   %[[SIZE:.+]] = affine.max #[[MAP0]]()[%[[ARG1]], %[[ARG0]]]
 //  CHECK-DAG:   %[[ALLOC:.+]] = memref.alloc(%[[SIZE]]) : memref<?xi8>
 //  CHECK-DAG:   %[[EXTUI:.+]] = arith.extui %[[ARG4]] : i4 to i8
 //  CHECK-DAG:   %[[INDEX:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG1]], %[[ARG3]]]
@@ -421,7 +423,7 @@ func.func @memref_store_i4_dynamic(%arg0: index, %arg1 : index, %arg2 : index, %
 //      CHECK:   %[[WRITE_RMW:.+]] = memref.atomic_rmw ori %[[SHIFTED_VAL]], %[[ALLOC]][%[[INDEX]]] : (i8, memref<?xi8>) -> i8
 //      CHECK:   return
 
-//  CHECK32-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 8)>
+//  CHECK32-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 8, s0 floordiv 8)>
 //  CHECK32-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> ((s2 + s0 * s1) floordiv 8)>
 //  CHECK32-DAG: #[[MAP2:.+]] = affine_map<()[s0, s1, s2] -> ((s0 * s1) * 4 + s2 * 4 - ((s2 + s0 * s1) floordiv 8) * 32)>
 //      CHECK32: func @memref_store_i4_dynamic(
@@ -430,7 +432,7 @@ func.func @memref_store_i4_dynamic(%arg0: index, %arg1 : index, %arg2 : index, %
 // CHECK32-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index
 // CHECK32-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index
 // CHECK32-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: i4
-//  CHECK32-DAG:   %[[SIZE:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]], %[[ARG1]]]
+//  CHECK32-DAG:   %[[SIZE:.+]] = affine.max #[[MAP0]]()[%[[ARG1]], %[[ARG0]]]
 //  CHECK32-DAG:   %[[ALLOC:.+]] = memref.alloc(%[[SIZE]]) : memref<?xi32>
 //  CHECK32-DAG:   %[[EXTUI:.+]] = arith.extui %[[ARG4]] : i4 to i32
 //  CHECK32-DAG:   %[[INDEX:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG1]], %[[ARG3]]]
@@ -485,3 +487,70 @@ func.func @memref_collapse_shape_i4(%idx0 : index, %idx1 : index) -> i4 {
 //   CHECK32-NOT:     memref.collapse_shape
 //       CHECK32:     memref.load %[[ALLOC]][%{{.*}}] : memref<4096xi32>
 
+// -----
+
+func.func @memref_expand_shape_i4(%idx0 : index, %idx1 : index, %idx2 : index) -> i4 {
+  %arr = memref.alloc() : memref<256x128xi4>
+  %expand = memref.expand_shape %arr[[0, 1], [2]] output_shape [32, 8, 128] : memref<256x128xi4> into memref<32x8x128xi4>
+  %1 = memref.load %expand[%idx0, %idx1, %idx2] : memref<32x8x128xi4>
+  return %1 : i4
+}
+
+// CHECK-LABEL:   func.func @memref_expand_shape_i4(
+//       CHECK:     %[[ALLOC:.*]] = memref.alloc() : memref<16384xi8>
+//   CHECK-NOT:     memref.expand_shape
+//       CHECK:     memref.load %[[ALLOC]][%{{.*}}] : memref<16384xi8>
+
+// CHECK32-LABEL:   func.func @memref_expand_shape_i4(
+//       CHECK32:     %[[ALLOC:.*]] = memref.alloc() : memref<4096xi32>
+//   CHECK32-NOT:     memref.expand_shape
+//       CHECK32:     memref.load %[[ALLOC]][%{{.*}}] : memref<4096xi32>
+
+// -----
+
+func.func @memref_memory_space_cast_i4(%arg0: memref<32x128xi4, 1>) -> memref<32x128xi4> {
+  %cast = memref.memory_space_cast %arg0 : memref<32x128xi4, 1> to memref<32x128xi4>
+  return %cast : memref<32x128xi4>
+}
+
+// CHECK-LABEL:   func.func @memref_memory_space_cast_i4(
+//  CHECK-SAME:   %[[ARG0:.*]]: memref<2048xi8, 1>
+//       CHECK:     %[[CAST:.*]] = memref.memory_space_cast %[[ARG0]] : memref<2048xi8, 1> to memref<2048xi8>
+//       CHECK:     return %[[CAST]]
+
+// CHECK32-LABEL:   func.func @memref_memory_space_cast_i4(
+//  CHECK32-SAME:   %[[ARG0:.*]]: memref<512xi32, 1>
+//       CHECK32:     %[[CAST:.*]] = memref.memory_space_cast %[[ARG0]] : memref<512xi32, 1> to memref<512xi32>
+//       CHECK32:     return %[[CAST]]
+
+// -----
+
+func.func @memref_copy_i4(%arg0: memref<32x128xi4, 1>, %arg1: memref<32x128xi4>) {
+  memref.copy %arg0, %arg1 : memref<32x128xi4, 1> to memref<32x128xi4>
+  return
+}
+
+// CHECK-LABEL:   func.func @memref_copy_i4(
+//  CHECK-SAME:   %[[ARG0:.*]]: memref<2048xi8, 1>, %[[ARG1:.*]]: memref<2048xi8>
+//       CHECK:     memref.copy %[[ARG0]], %[[ARG1]]
+//       CHECK:     return
+
+// CHECK32-LABEL:   func.func @memref_copy_i4(
+//  CHECK32-SAME:   %[[ARG0:.*]]: memref<512xi32, 1>, %[[ARG1:.*]]: memref<512xi32>
+//       CHECK32:     memref.copy %[[ARG0]], %[[ARG1]]
+//       CHECK32:     return
+
+// -----
+
+func.func @alloc_non_contiguous() {
+  // expected-error @+1 {{failed to legalize operation 'memref.alloc' that was explicitly marked illegal}}
+  %arr = memref.alloc() : memref<8x8xi4, strided<[1, 8]>>
+  return
+}
+
+// -----
+
+// expected-error @+1 {{failed to legalize operation 'func.func' that was explicitly marked illegal}}
+func.func @argument_non_contiguous(%arg0 : memref<8x8xi4, strided<[1, 8]>>) {
+  return
+}

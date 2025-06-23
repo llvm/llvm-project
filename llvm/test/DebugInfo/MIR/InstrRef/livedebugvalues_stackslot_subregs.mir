@@ -1,4 +1,4 @@
-# RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -experimental-debug-variable-locations -o - 2>&1 | FileCheck %s
+# RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -experimental-debug-variable-locations -o - 2>&1 | FileCheck %s
 #
 # Test that we can spill and restore through subregisters too. In this test,
 # eax is def'd and then spilt, but as part of a larger register.

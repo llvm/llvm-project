@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -22,8 +23,8 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-extern cl::opt<bool> PrintRelocations;
 extern cl::opt<bool> HotData;
+extern cl::opt<bool> PrintRelocations;
 } // namespace opts
 
 uint64_t BinarySection::Count = 0;
@@ -142,6 +143,15 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
     Streamer.emitLabel(BC.Ctx->getOrCreateSymbol("__hot_data_end"));
 }
 
+uint64_t BinarySection::write(raw_ostream &OS) const {
+  const uint64_t NumValidContentBytes =
+      std::min<uint64_t>(getOutputContents().size(), getOutputSize());
+  OS.write(getOutputContents().data(), NumValidContentBytes);
+  if (getOutputSize() > NumValidContentBytes)
+    OS.write_zeros(getOutputSize() - NumValidContentBytes);
+  return getOutputSize();
+}
+
 void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
                                             SymbolResolverFuncTy Resolver) {
   if (PendingRelocations.empty() && Patches.empty())
@@ -165,11 +175,20 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
     OS.pwrite(Patch.Bytes.data(), Patch.Bytes.size(),
               SectionFileOffset + Patch.Offset);
 
+  uint64_t SkippedPendingRelocations = 0;
   for (Relocation &Reloc : PendingRelocations) {
     uint64_t Value = Reloc.Addend;
     if (Reloc.Symbol)
       Value += Resolver(Reloc.Symbol);
 
+    // Safely skip any optional pending relocation that cannot be encoded.
+    if (Reloc.isOptional() &&
+        !Relocation::canEncodeValue(Reloc.Type, Value,
+                                    SectionAddress + Reloc.Offset)) {
+
+      ++SkippedPendingRelocations;
+      continue;
+    }
     Value = Relocation::encodeValue(Reloc.Type, Value,
                                     SectionAddress + Reloc.Offset);
 
@@ -188,6 +207,11 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   }
 
   clearList(PendingRelocations);
+
+  if (SkippedPendingRelocations > 0 && opts::Verbosity >= 1) {
+    BC.outs() << "BOLT-INFO: skipped " << SkippedPendingRelocations
+              << " out-of-range optional relocations\n";
+  }
 }
 
 BinarySection::~BinarySection() { updateContents(nullptr, 0); }

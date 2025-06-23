@@ -6,7 +6,7 @@
 .globl obtain_funcref_from_table_index
 
 obtain_funcref_from_table_index:
-  .functype obtain_funcref_from_table_index(i32) -> (funcref)
+  .functype obtain_funcref_from_table_index (i32) -> (funcref)
   local.get 0
   table.get __indirect_function_table
   end_function

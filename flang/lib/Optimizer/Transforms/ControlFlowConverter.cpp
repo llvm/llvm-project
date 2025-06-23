@@ -47,7 +47,7 @@ public:
       : mlir::OpRewritePattern<fir::DoLoopOp>(ctx),
         forceLoopToExecuteOnce(forceLoopToExecuteOnce), setNSW(setNSW) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(DoLoopOp loop,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = loop.getLoc();
@@ -123,8 +123,13 @@ public:
                                       : terminator->operand_begin();
     loopCarried.append(begin, terminator->operand_end());
     loopCarried.push_back(itersMinusOne);
-    rewriter.create<mlir::cf::BranchOp>(loc, conditionalBlock, loopCarried);
+    auto backEdge =
+        rewriter.create<mlir::cf::BranchOp>(loc, conditionalBlock, loopCarried);
     rewriter.eraseOp(terminator);
+
+    // Copy loop annotations from the do loop to the loop back edge.
+    if (auto ann = loop.getLoopAnnotation())
+      backEdge->setAttr("loop_annotation", *ann);
 
     // Conditional block
     rewriter.setInsertionPointToEnd(conditionalBlock);
@@ -158,7 +163,7 @@ public:
   CfgIfConv(mlir::MLIRContext *ctx, bool forceLoopToExecuteOnce, bool setNSW)
       : mlir::OpRewritePattern<fir::IfOp>(ctx) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(IfOp ifOp, mlir::PatternRewriter &rewriter) const override {
     auto loc = ifOp.getLoc();
 
@@ -207,9 +212,12 @@ public:
     }
 
     rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<mlir::cf::CondBranchOp>(
+    auto branchOp = rewriter.create<mlir::cf::CondBranchOp>(
         loc, ifOp.getCondition(), ifOpBlock, llvm::ArrayRef<mlir::Value>(),
         otherwiseBlock, llvm::ArrayRef<mlir::Value>());
+    llvm::ArrayRef<int32_t> weights = ifOp.getWeights();
+    if (!weights.empty())
+      branchOp.setWeights(weights);
     rewriter.replaceOp(ifOp, continueBlock->getArguments());
     return success();
   }
@@ -224,7 +232,7 @@ public:
                    bool setNSW)
       : mlir::OpRewritePattern<fir::IterWhileOp>(ctx), setNSW(setNSW) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::IterWhileOp whileOp,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = whileOp.getLoc();
@@ -328,8 +336,6 @@ class CfgConversion : public fir::impl::CFGConversionBase<CfgConversion> {
 public:
   using CFGConversionBase<CfgConversion>::CFGConversionBase;
 
-  CfgConversion(bool setNSW) { this->setNSW = setNSW; }
-
   void runOnOperation() override {
     auto *context = &this->getContext();
     mlir::RewritePatternSet patterns(context);
@@ -360,8 +366,4 @@ void fir::populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                         bool setNSW) {
   patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
       patterns.getContext(), forceLoopToExecuteOnce, setNSW);
-}
-
-std::unique_ptr<mlir::Pass> fir::createCFGConversionPassWithNSW() {
-  return std::make_unique<CfgConversion>(true);
 }

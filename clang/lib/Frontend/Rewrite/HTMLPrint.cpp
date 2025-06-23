@@ -14,14 +14,15 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/ASTConsumers.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
+using llvm::RewriteBuffer;
 
 //===----------------------------------------------------------------------===//
 // Functional HTML pretty-printing.

@@ -1,15 +1,15 @@
 # REQUIRES: asserts
 # RUN: llvm-mc -triple=riscv32 -mattr=+relax -filetype=obj -o %t.rv32 %s
-# RUN: llvm-jitlink -noexec \
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0x1000 -slab-page-size 4096 \
-# RUN:     -debug-only=jitlink -check %s %t.rv32 \
-# RUN:    2>&1 | FileCheck %s
+# RUN:     -check %s %t.rv32 2>&1 \
+# RUN:     | FileCheck %s
 
 # RUN: llvm-mc -triple=riscv64 -mattr=+relax -filetype=obj -o %t.rv64 %s
-# RUN: llvm-jitlink -noexec \
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0x1000 -slab-page-size 4096 \
-# RUN:     -debug-only=jitlink -check %s %t.rv64 \
-# RUN:    2>&1 | FileCheck %s
+# RUN:     -check %s %t.rv64 2>&1 \
+# RUN:     | FileCheck %s
 
         .text
 

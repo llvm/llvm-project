@@ -1,18 +1,22 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 
-# Empty SECTIONS command.
-# RUN: echo "SECTIONS {}" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump --section-headers %t1 | \
+#--- empty.lds
+SECTIONS {}
+
+# RUN: ld.lld -o empty -T empty.lds a.o
+# RUN: llvm-objdump --section-headers empty | \
 # RUN:   FileCheck -check-prefix=SEC-DEFAULT %s
 
+#--- 1.lds
 # SECTIONS command with the same order as default.
-# RUN: echo "SECTIONS { \
-# RUN:          .text : { *(.text) } \
-# RUN:          .data : { *(.data) } }" > %t.script
-# RUN: ld.lld -o %t2 --script %t.script %t
-# RUN: llvm-objdump --section-headers %t2 | \
+SECTIONS {
+   .text : { *(.text) }
+   .data : { *(.data) } }
+
+# RUN: ld.lld -o 1 -T 1.lds a.o
+# RUN: llvm-objdump --section-headers 1 | \
 # RUN:   FileCheck -check-prefix=SEC-DEFAULT %s
 
 #             Idx Name          Size
@@ -28,8 +32,8 @@
 # .text and .data have swapped names but proper sizes and types.
 # RUN: echo "SECTIONS { \
 # RUN:          .data : { *(.text) } \
-# RUN:          .text : { *(.data) } }" > %t.script
-# RUN: ld.lld -o %t4 --script %t.script %t
+# RUN:          .text : { *(.data) } }" > t.lds
+# RUN: ld.lld -o %t4 --script t.lds a.o
 # RUN: llvm-objdump --section-headers %t4 | \
 # RUN:   FileCheck -check-prefix=SEC-SWAP-NAMES %s
 
@@ -50,8 +54,8 @@
 # RUN:          .text : { *(.text) } \
 # RUN:          .data : { *(.data) } } \
 # RUN:       SECTIONS { \
-# RUN:          .data : { *(other) } }" > %t.script
-# RUN: ld.lld -o %t6 --script %t.script %t
+# RUN:          .data : { *(other) } }" > t.lds
+# RUN: ld.lld -o %t6 --script t.lds a.o
 # RUN: llvm-objdump --section-headers %t6 | \
 # RUN:   FileCheck -check-prefix=SEC-MULTI %s
 
@@ -72,7 +76,7 @@
 # RUN:          .data : { *(.data) } \
 # RUN:          .comment : { *(.comment) } \
 # RUN:          other : { *(other) } }' > %t5.lds
-# RUN: ld.lld -o %t5 -T %t5.lds %t
+# RUN: ld.lld -o %t5 -T %t5.lds a.o
 # RUN: llvm-readelf -S -l %t5 | FileCheck --check-prefix=SEP-BY-NONALLOC %s
 
 # SEP-BY-NONALLOC:      [Nr] Name      Type     Address          Off    Size   ES Flg
@@ -87,11 +91,26 @@
 # SEP-BY-NONALLOC-NEXT: LOAD      0x00100e 0x000000000000000e 0x000000000000000e 0x000023 0x000025 RW  0x1000
 # SEP-BY-NONALLOC-NEXT: GNU_STACK 0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
 
+#--- semi.lds
 # Input section pattern contains additional semicolon.
 # Case found in linux kernel script. Check we are able to parse it.
-# RUN: echo "SECTIONS { .text : { ;;*(.text);;S = 0;; } }" > %t.script
-# RUN: ld.lld -o /dev/null --script %t.script %t
+SECTIONS { .text : { ;;*(.text);;S = 0;; } }
 
+# RUN: ld.lld -T semi.lds a.o
+
+#--- unclosed.lds
+SECTIONS {
+   .text : { *(.text) }
+
+# RUN: not ld.lld -T unclosed.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED %s
+#     UNCLOSED:error: unclosed.lds:2: unexpected EOF
+# UNCLOSED-NOT:{{.}}
+
+#--- unclosed-out.lds
+SECTIONS {
+   .text : { *(.text)
+
+#--- a.s
 .globl _start
 _start:
     mov $60, %rax

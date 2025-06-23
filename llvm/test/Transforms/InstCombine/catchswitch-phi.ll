@@ -22,11 +22,11 @@ define void @test0(i1 %c1) personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_BLAM:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i32 4
 ; CHECK-NEXT:    invoke void @foo()
 ; CHECK-NEXT:            to label [[BB3:%.*]] unwind label [[BB4:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i32 4
 ; CHECK-NEXT:    invoke void @foo()
 ; CHECK-NEXT:            to label [[BB3]] unwind label [[BB4]]
 ; CHECK:       bb3:
@@ -120,10 +120,10 @@ define void @test1() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = catchswitch within none [label %catch.start1] unwind to caller
 ; CHECK:       catch.start1:
 ; CHECK-NEXT:    [[TMP3:%.*]] = catchpad within [[TMP2]] [ptr null]
-; CHECK-NEXT:    [[TOBOOL1_NOT:%.*]] = trunc i8 [[AP_2]] to i1
-; CHECK-NEXT:    br i1 [[TOBOOL1_NOT]], label [[IF_END1:%.*]], label [[IF_THEN1:%.*]]
+; CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc i8 [[AP_2]] to i1
+; CHECK-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN1:%.*]], label [[IF_END1:%.*]]
 ; CHECK:       if.then1:
-; CHECK-NEXT:    br label [[IF_THEN1]]
+; CHECK-NEXT:    br label [[IF_END1]]
 ; CHECK:       if.end1:
 ; CHECK-NEXT:    catchret from [[TMP3]] to label [[TRY_CONT]]
 ; CHECK:       try.cont:

@@ -724,7 +724,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   ///
   /// Negative FileIDs are indexes into this table. To get from ID to an index,
   /// use (-ID - 2).
-  llvm::PagedVector<SrcMgr::SLocEntry> LoadedSLocEntryTable;
+  llvm::PagedVector<SrcMgr::SLocEntry, 32> LoadedSLocEntryTable;
 
   /// For each allocation in LoadedSLocEntryTable, we keep the first FileID.
   /// We assume exactly one allocation per AST file, and use that to determine
@@ -1529,6 +1529,15 @@ public:
     return Filename == "<scratch space>";
   }
 
+  /// Returns whether \p Loc is located in a built-in or command line source.
+  bool isInPredefinedFile(SourceLocation Loc) const {
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
+    return Filename == "<built-in>" || Filename == "<command line>";
+  }
+
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {
     if (Loc.isInvalid())
@@ -1675,6 +1684,11 @@ public:
   std::pair<bool, bool>
   isInTheSameTranslationUnit(std::pair<FileID, unsigned> &LOffs,
                              std::pair<FileID, unsigned> &ROffs) const;
+
+  /// \param Loc a source location in a loaded AST (of a PCH/Module file).
+  /// \returns a FileID uniquely identifies the AST of a loaded
+  /// module/PCH where `Loc` is at.
+  FileID getUniqueLoadedASTFileID(SourceLocation Loc) const;
 
   /// Determines whether the two decomposed source location is in the same TU.
   bool isInTheSameTranslationUnitImpl(
@@ -1976,6 +1990,7 @@ private:
                                          SourceLocation SpellLoc,
                                          SourceLocation ExpansionLoc,
                                          unsigned ExpansionLength) const;
+  void updateSlocUsageStats() const;
 };
 
 /// Comparison function object.
@@ -2026,6 +2041,7 @@ private:
   // as they are created in `createSourceManagerForFile` so that they can be
   // deleted in the reverse order as they are created.
   std::unique_ptr<FileManager> FileMgr;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
   std::unique_ptr<DiagnosticsEngine> Diagnostics;
   std::unique_ptr<SourceManager> SourceMgr;
 };
