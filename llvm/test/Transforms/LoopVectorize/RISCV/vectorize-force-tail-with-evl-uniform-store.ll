@@ -36,13 +36,10 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[SPEC_SELECT]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub nuw nsw i64 1, [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 0, [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 1, [[TMP15]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[TMP18]], i64 [[TMP17]]
-; CHECK-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_REVERSE]], ptr align 8 [[TMP19]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 1, [[TMP11]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[TMP13]], i32 [[TMP14]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[TMP15]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
