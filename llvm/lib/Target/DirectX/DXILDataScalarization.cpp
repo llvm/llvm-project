@@ -298,7 +298,7 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   Value *PtrOperand = GEPI.getPointerOperand();
-  Type *OrigGEPType = GEPI.getPointerOperandType();
+  Type *OrigGEPType = GEPI.getSourceElementType();
   Type *NewGEPType = OrigGEPType;
   bool NeedsTransform = false;
 
@@ -314,6 +314,12 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
       NewGEPType = AllocatedType;
       NeedsTransform = true;
     }
+  }
+
+  // The new GEP type will be the flattened type unless the original GEP is
+  // an i8 GEP which will be handled by the DXIL legalization pass instead
+  if (OrigGEPType->isIntegerTy(8)) {
+    NewGEPType = OrigGEPType;
   }
 
   // Note: We bail if this isn't a gep touched via alloca or global
