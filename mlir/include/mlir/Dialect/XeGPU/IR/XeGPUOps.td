@@ -609,12 +609,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
   let description = [{ It (aka. load) load data per each work-item. The output
     describes the data being loaded at the subgroup level, so its size is
     consistent with the number of work-items in a subgroup. When the chunk size
-    is larger than 2, the output vector is a 2D vector, with dim-1 correspoding
-    to work-items, and dim-0 corresponding to the chunk size loaded by each work-item.
-    Specially, there is a transpose effect on the result (as compared to the TensorDesc)
-    due to the hardware implementation. Therefore, a transpose attribute is introduced
-    on purpose, making sure users are aware of this implicit transformation.
-
+    is larger than 2, the output vector is a 2D vector, with dim-0 correspoding
+    to work-items, and dim-1 corresponding to the chunk size loaded by each work-item.
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
@@ -634,8 +630,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 
   Example 2:
   ```mlir
-    %2 = xegpu.load %1, %0 {transpose,
-                            l1_hint = #xegpu.cache_hint<cached>,
+    %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
@@ -643,20 +638,18 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
   ```
   Example 3 (SIMT mode):
   ```mlir
-    %2 = xegpu.load %1, %0 {transpose,
-                            l1_hint = #xegpu.cache_hint<cached>,
+    %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>,
             !xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
-            vector<16xi1> -> vector<8x1xf32>
+            vector<16xi1> -> vector<8xf32>
   ```
 
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        XeGPU_MaskType: $mask,
-                       OptionalAttr<UnitAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
@@ -714,19 +707,17 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
 
   Example 2:
   ```mlir
-    xegpu.store %0, %1, %2 {transpose,
-                                 l1_hint = #xegpu.cache_hint<uncached>,
-                                 l2_hint = #xegpu.cache_hint<write_back>,
-                                 l3_hint = #xegpu.cache_hint<write_through>}
+    xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
+                            l2_hint = #xegpu.cache_hint<write_back>,
+                            l3_hint = #xegpu.cache_hint<write_through>}
           : vector<8x16xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
   ```
   Example 3 (SIMT mode):
   ```mlir
-    xegpu.store %0, %1, %2 {transpose,
-                                 l1_hint = #xegpu.cache_hint<uncached>,
-                                 l2_hint = #xegpu.cache_hint<write_back>,
-                                 l3_hint = #xegpu.cache_hint<write_through>}
-          : vector<8x1xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>,
+    xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
+                            l2_hint = #xegpu.cache_hint<write_back>,
+                            l3_hint = #xegpu.cache_hint<write_through>}
+          : vector<8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>,
             !xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>> vector<16xi1>
   ```
 
@@ -736,7 +727,6 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
     XeGPU_ValueType: $value,
     XeGPU_TensorDesc: $TensorDesc,
     XeGPU_MaskType: $mask,
-    OptionalAttr<UnitAttr>: $transpose,
     OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
