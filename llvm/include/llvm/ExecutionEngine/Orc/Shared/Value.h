@@ -22,15 +22,15 @@ namespace orc {
 #define BUILTIN_TYPES                                                          \
   X(bool, Bool)                                                                \
   X(char, Char_S)                                                              \
-  X(signed char, SChar)                                                        \
-  X(unsigned char, Char_U)                                                     \
-  X(unsigned char, UChar)                                                      \
-  X(short, Short)                                                              \
-  X(unsigned short, UShort)                                                    \
-  X(int, Int)                                                                  \
-  X(unsigned int, UInt)                                                        \
-  X(long long, LongLong)                                                       \
-  X(unsigned long long, ULongLong)                                             \
+  X(int8_t, SChar)                                                             \
+  X(uint8_t, Char_U)                                                           \
+  X(uint8_t, UChar)                                                            \
+  X(int16_t, Short)                                                            \
+  X(uint16_t, UShort)                                                          \
+  X(int32_t, Int)                                                              \
+  X(uint32_t, UInt)                                                            \
+  X(int64_t, LongLong)                                                         \
+  X(uint64_t, ULongLong)                                                       \
   // X(long, Long)                                                                \
   // X(unsigned long, ULong)                                                      \
   // X(float, Float)                                                              \

@@ -41,26 +41,32 @@ template <typename T> Value Value::from(ExecutorAddr Ty, T result) {
   return Val;
 }
 
+template <typename T, typename I32, typename I64> struct MapToFixedWidth {
+  static_assert(sizeof(T) == 4 || sizeof(T) == 8,
+                "Unsupported size for integer type (must be 4 or 8 bytes)");
+  using type = std::conditional_t<sizeof(T) == 4, I32, I64>;
+};
+
 template <typename T> struct LongEquivalentType {
   static_assert(
       sizeof(T) == 0,
-      "LongEquivalentType is only defined for long and unsigned long");
+      "LongEquivalentType is only defined for specific integral types");
 };
 
-template <> struct LongEquivalentType<long> {
-  static_assert(sizeof(long) == 4 || sizeof(long) == 8,
-                "'long' must be either 4 or 8 bytes");
+template <>
+struct LongEquivalentType<long> : MapToFixedWidth<long, int32_t, int64_t> {};
 
-  using type = std::conditional_t<sizeof(long) == 4, int32_t, int64_t>;
-};
+template <>
+struct LongEquivalentType<unsigned long>
+    : MapToFixedWidth<unsigned long, uint32_t, uint64_t> {};
 
-template <> struct LongEquivalentType<unsigned long> {
-  static_assert(sizeof(unsigned long) == 4 || sizeof(unsigned long) == 8,
-                "'unsigned long' must be either 4 or 8 bytes");
+template <>
+struct LongEquivalentType<long long>
+    : MapToFixedWidth<long long, int32_t, int64_t> {};
 
-  using type =
-      std::conditional_t<sizeof(unsigned long) == 4, uint32_t, uint64_t>;
-};
+template <>
+struct LongEquivalentType<unsigned long long>
+    : MapToFixedWidth<unsigned long long, uint32_t, uint64_t> {};
 
 template <typename T>
 using NormalizedIntType = typename LongEquivalentType<T>::type;
@@ -69,9 +75,11 @@ template <typename T> void Value::setValue(T Val) {
   using DecayedT = std::decay_t<T>;
 
   if constexpr (std::is_same_v<DecayedT, long> ||
-                std::is_same_v<DecayedT, unsigned long>) {
-    using CanonicalType = typename LongEquivalentType<DecayedT>::type;
-    setValue(static_cast<CanonicalType>(Val));
+                std::is_same_v<DecayedT, unsigned long> ||
+                std::is_same_v<DecayedT, long long> ||
+                std::is_same_v<DecayedT, unsigned long long>) {
+    using CanonicalType = NormalizedIntType<DecayedT>;
+    setValue<CanonicalType>(static_cast<CanonicalType>(Val));
     return;
   }
 #define X(type, name)                                                          \
