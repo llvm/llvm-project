@@ -1008,7 +1008,7 @@ struct TestPassthroughInvalidOp : public ConversionPattern {
                                   op->getOperand(it.index()).getType(), range)
               .getResult());
     }
-    rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, flattened,
+    rewriter.replaceOpWithNewOp<TestValidOp>(op, TypeRange(), flattened,
                                              std::nullopt);
     return success();
   }
@@ -1024,7 +1024,7 @@ struct TestDropAndReplaceInvalidOp : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, ValueRange(),
+    rewriter.replaceOpWithNewOp<TestValidOp>(op, TypeRange(), ValueRange(),
                                              std::nullopt);
     return success();
   }
