@@ -138,16 +138,17 @@ class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
 }
 
 // Common class of scheduling definitions for n-ary instructions.
-// The scheudling resources are relevant to LMUL and may be relevant to SEW.
+// The scheduling resources are relevant to LMUL and may be relevant to SEW.
 class SchedNary<string write, list<string> reads, string mx, int sew = 0,
                 bit forceMasked = 0, bit forcePassthruRead = 0>
     : SchedCommon<[!cast<SchedWrite>(
-                      !if(sew,
-                          write # "_" # mx # "_E" # sew,
-                          write # "_" # mx))],
+                       !if(sew,
+                           write # "_" # mx # "_E" # sew,
+                           write # "_" # mx))],
                   !foreach(read, reads,
-                           !cast<SchedRead>(!if(sew, read #"_" #mx #"_E" #sew,
-                                                 read #"_" #mx))),
+                           !cast<SchedRead>(!if(sew,
+                                                read # "_" # mx # "_E" #sew,
+                                                read # "_" # mx))),
                   mx, sew, forceMasked, forcePassthruRead>;
 
 // Classes with postfix "MC" are only used in MC layer.
