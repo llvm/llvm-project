@@ -2551,7 +2551,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Print information about the device.
-  Error obtainInfoImpl(InfoQueueTy &Info) override {
+  Expected<InfoTreeNode> obtainInfoImpl() override {
     char TmpChar[1000];
     const char *TmpCharPtr = "Unknown";
     uint16_t Major, Minor;
@@ -2562,6 +2562,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     uint16_t WorkgrpMaxDim[3];
     hsa_dim3_t GridMaxDim;
     hsa_status_t Status, Status2;
+    InfoTreeNode Info;
 
     Status = hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MAJOR, &Major);
     Status2 = hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MINOR, &Minor);
@@ -2617,11 +2618,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // runtime.
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_CACHE_SIZE, CacheSize);
     if (Status == HSA_STATUS_SUCCESS) {
-      Info.add("Cache");
+      auto &Cache = *Info.add("Cache");
 
       for (int I = 0; I < 4; I++)
         if (CacheSize[I])
-          Info.add<InfoLevel2>("L" + std::to_string(I), CacheSize[I]);
+          Cache.add("L" + std::to_string(I), CacheSize[I]);
     }
 
     Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_CACHELINE_SIZE, TmpUInt);
@@ -2654,10 +2655,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_DIM, WorkgrpMaxDim);
     if (Status == HSA_STATUS_SUCCESS) {
-      Info.add("Workgroup Max Size per Dimension");
-      Info.add<InfoLevel2>("x", WorkgrpMaxDim[0]);
-      Info.add<InfoLevel2>("y", WorkgrpMaxDim[1]);
-      Info.add<InfoLevel2>("z", WorkgrpMaxDim[2]);
+      auto &MaxSize = *Info.add("Workgroup Max Size per Dimension");
+      MaxSize.add("x", WorkgrpMaxDim[0]);
+      MaxSize.add("y", WorkgrpMaxDim[1]);
+      MaxSize.add("z", WorkgrpMaxDim[2]);
     }
 
     Status = getDeviceAttrRaw(
@@ -2673,17 +2674,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_GRID_MAX_DIM, GridMaxDim);
     if (Status == HSA_STATUS_SUCCESS) {
-      Info.add("Grid Max Size per Dimension");
-      Info.add<InfoLevel2>("x", GridMaxDim.x);
-      Info.add<InfoLevel2>("y", GridMaxDim.y);
-      Info.add<InfoLevel2>("z", GridMaxDim.z);
+      auto &MaxDim = *Info.add("Grid Max Size per Dimension");
+      MaxDim.add("x", GridMaxDim.x);
+      MaxDim.add("y", GridMaxDim.y);
+      MaxDim.add("z", GridMaxDim.z);
     }
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_FBARRIER_MAX_SIZE, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
       Info.add("Max fbarriers/Workgrp", TmpUInt);
 
-    Info.add("Memory Pools");
+    auto &RootPool = *Info.add("Memory Pools");
     for (AMDGPUMemoryPoolTy *Pool : AllMemoryPools) {
       std::string TmpStr, TmpStr2;
 
@@ -2698,7 +2699,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       else
         TmpStr = "Unknown";
 
-      Info.add<InfoLevel2>(std::string("Pool ") + TmpStr);
+      auto &PoolNode = *RootPool.add(std::string("Pool ") + TmpStr);
 
       if (Pool->isGlobal()) {
         if (Pool->isFineGrained())
@@ -2708,39 +2709,39 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         if (Pool->supportsKernelArgs())
           TmpStr2 += "Kernarg ";
 
-        Info.add<InfoLevel3>("Flags", TmpStr2);
+        PoolNode.add("Flags", TmpStr2);
       }
 
       Status = Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_SIZE, TmpSt);
       if (Status == HSA_STATUS_SUCCESS)
-        Info.add<InfoLevel3>("Size", TmpSt, "bytes");
+        PoolNode.add("Size", TmpSt, "bytes");
 
       Status = Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
                                 TmpBool);
       if (Status == HSA_STATUS_SUCCESS)
-        Info.add<InfoLevel3>("Allocatable", TmpBool);
+        PoolNode.add("Allocatable", TmpBool);
 
       Status = Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE,
                                 TmpSt);
       if (Status == HSA_STATUS_SUCCESS)
-        Info.add<InfoLevel3>("Runtime Alloc Granule", TmpSt, "bytes");
+        PoolNode.add("Runtime Alloc Granule", TmpSt, "bytes");
 
       Status = Pool->getAttrRaw(
           HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALIGNMENT, TmpSt);
       if (Status == HSA_STATUS_SUCCESS)
-        Info.add<InfoLevel3>("Runtime Alloc Alignment", TmpSt, "bytes");
+        PoolNode.add("Runtime Alloc Alignment", TmpSt, "bytes");
 
       Status =
           Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_ACCESSIBLE_BY_ALL, TmpBool);
       if (Status == HSA_STATUS_SUCCESS)
-        Info.add<InfoLevel3>("Accessible by all", TmpBool);
+        PoolNode.add("Accessible by all", TmpBool);
     }
 
-    Info.add("ISAs");
+    auto &ISAs = *Info.add("ISAs");
     auto Err = hsa_utils::iterateAgentISAs(getAgent(), [&](hsa_isa_t ISA) {
       Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, TmpChar);
       if (Status == HSA_STATUS_SUCCESS)
-        Info.add<InfoLevel2>("Name", TmpChar);
+        ISAs.add("Name", TmpChar);
 
       return Status;
     });
@@ -2749,7 +2750,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (Err)
       consumeError(std::move(Err));
 
-    return Plugin::success();
+    return Info;
   }
 
   /// Returns true if auto zero-copy the best configuration for the current

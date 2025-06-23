@@ -17,7 +17,6 @@
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
-#include "CGPointerAuthInfo.h"
 #include "CGRecordLayout.h"
 #include "CGValue.h"
 #include "CodeGenFunction.h"
@@ -2033,7 +2032,7 @@ Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
       std::make_pair(ArgValue, CheckOrdinal), CheckHandler,
       {EmitCheckSourceLocation(E->getExprLoc()),
        llvm::ConstantInt::get(Builder.getInt8Ty(), BCK_AssumePassedFalse)},
-      std::nullopt);
+      {});
   return ArgValue;
 }
 

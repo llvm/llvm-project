@@ -925,9 +925,12 @@ EvaluateExpression(llvm::StringRef expression, StackFrame &frame,
   ValueObjectSP result_sp;
   auto status =
       process.GetTarget().EvaluateExpression(expression, &frame, result_sp);
-  if (status != eExpressionCompleted || !result_sp)
+  if (!result_sp)
     return llvm::createStringError(
-        "expression evaluation failed. pass a string instead");
+        "No result returned from expression. Exit status: %d", status);
+
+  if (status != eExpressionCompleted)
+    return result_sp->GetError().ToError();
 
   result_sp = result_sp->GetQualifiedRepresentationIfAvailable(
       result_sp->GetDynamicValueType(), /*synthValue=*/true);
@@ -1082,6 +1085,7 @@ protected:
           m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(""),
           m_exe_ctx.GetFrameRef(), *process);
       if (!result_or_err) {
+        result.AppendError("Expression evaluation failed: ");
         result.AppendError(llvm::toString(result_or_err.takeError()));
         return;
       }

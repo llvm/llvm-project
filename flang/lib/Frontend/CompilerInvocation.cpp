@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -439,6 +440,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.PICLevel = picLevel;
     if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
       opts.IsPIE = 1;
+  }
+
+  if (args.hasArg(clang::driver::options::OPT_fprofile_generate)) {
+    opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+  }
+
+  if (auto A = args.getLastArg(clang::driver::options::OPT_fprofile_use_EQ)) {
+    opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+    opts.ProfileInstrumentUsePath = A->getValue();
   }
 
   // -mcmodel option.
@@ -1001,7 +1011,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -W(no-)<feature>
-      } else if (!features.ApplyCliOption(wArg)) {
+      } else if (!features.EnableWarning(wArg)) {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;
