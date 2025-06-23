@@ -21062,7 +21062,7 @@ RISCVTargetLowering::getTargetConstantFromLoad(LoadSDNode *Ld) const {
 
   // Simple case, LLA.
   if (Ptr.getOpcode() == RISCVISD::LLA) {
-    auto *CNode = GetSupportedConstantPool(Ptr.getOperand(0));
+    auto *CNode = GetSupportedConstantPool(Ptr);
     if (!CNode || CNode->getTargetFlags() != 0)
       return nullptr;
 
