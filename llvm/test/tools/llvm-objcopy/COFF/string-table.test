@@ -1,0 +1,24 @@
+# RUN: yaml2obj %s -o %t
+# RUN: touch %t.sec
+# RUN: llvm-objcopy --add-section=.debug_str=%t.sec %t %t1
+# RUN: llvm-readobj --string-table %t1 | FileCheck %s
+
+# CHECK:      StringTable {
+# CHECK-NEXT:   Length: 26
+# CHECK-NEXT:   [     4] symbol_zzz
+# CHECK-NEXT:   [     f] .debug_str
+# CHECK-NEXT: }
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+symbols:
+  - Name:            symbol_zzz
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
