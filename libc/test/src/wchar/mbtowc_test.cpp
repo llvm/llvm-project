@@ -12,7 +12,9 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcMBToWC, OneByte) {
+using LlvmLibcMBToWCTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcMBToWCTest, OneByte) {
   const char *ch = "A";
   wchar_t dest[2];
   int n = LIBC_NAMESPACE::mbtowc(dest, ch, 1);
@@ -25,7 +27,7 @@ TEST(LlvmLibcMBToWC, OneByte) {
   ASSERT_ERRNO_EQ(EILSEQ);
 }
 
-TEST(LlvmLibcMBToWC, TwoByte) {
+TEST_F(LlvmLibcMBToWCTest, TwoByte) {
   const char ch[2] = {static_cast<char>(0xC2),
                       static_cast<char>(0x8E)}; //  car symbol
   wchar_t dest[2];
@@ -42,7 +44,7 @@ TEST(LlvmLibcMBToWC, TwoByte) {
   ASSERT_ERRNO_EQ(EILSEQ);
 }
 
-TEST(LlvmLibcMBToWC, ThreeByte) {
+TEST_F(LlvmLibcMBToWCTest, ThreeByte) {
   const char ch[3] = {static_cast<char>(0xE2), static_cast<char>(0x88),
                       static_cast<char>(0x91)}; // ∑ sigma symbol
   wchar_t dest[2];
@@ -56,7 +58,7 @@ TEST(LlvmLibcMBToWC, ThreeByte) {
   ASSERT_ERRNO_EQ(EILSEQ);
 }
 
-TEST(LlvmLibcMBToWC, FourByte) {
+TEST_F(LlvmLibcMBToWCTest, FourByte) {
   const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
                       static_cast<char>(0xA4),
                       static_cast<char>(0xA1)}; // 🤡 clown emoji
@@ -71,7 +73,7 @@ TEST(LlvmLibcMBToWC, FourByte) {
   ASSERT_ERRNO_EQ(EILSEQ);
 }
 
-TEST(LlvmLibcMBToWC, InvalidByte) {
+TEST_F(LlvmLibcMBToWCTest, InvalidByte) {
   const char ch[1] = {static_cast<char>(0x80)};
   wchar_t dest[2];
   int n = LIBC_NAMESPACE::mbtowc(dest, ch, 1);
@@ -79,7 +81,7 @@ TEST(LlvmLibcMBToWC, InvalidByte) {
   ASSERT_ERRNO_EQ(EILSEQ);
 }
 
-TEST(LlvmLibcMBToWC, InvalidMultiByte) {
+TEST_F(LlvmLibcMBToWCTest, InvalidMultiByte) {
   const char ch[4] = {static_cast<char>(0x80), static_cast<char>(0x00),
                       static_cast<char>(0x80),
                       static_cast<char>(0x00)}; // invalid sequence of bytes
@@ -95,7 +97,7 @@ TEST(LlvmLibcMBToWC, InvalidMultiByte) {
   ASSERT_TRUE(*dest == L'\0');
 }
 
-TEST(LlvmLibcMBToWC, InvalidLastByte) {
+TEST_F(LlvmLibcMBToWCTest, InvalidLastByte) {
   // Last byte is invalid since it does not have correct starting sequence.
   // 0xC0 --> 11000000 starting sequence should be 10xxxxxx
   const char ch[4] = {static_cast<char>(0xF1), static_cast<char>(0x80),
@@ -107,7 +109,7 @@ TEST(LlvmLibcMBToWC, InvalidLastByte) {
   ASSERT_ERRNO_EQ(EILSEQ);
 }
 
-TEST(LlvmLibcMBToWC, ValidTwoByteWithExtraRead) {
+TEST_F(LlvmLibcMBToWCTest, ValidTwoByteWithExtraRead) {
   const char ch[3] = {static_cast<char>(0xC2), static_cast<char>(0x8E),
                       static_cast<char>(0x80)};
   wchar_t dest[2];
@@ -117,7 +119,7 @@ TEST(LlvmLibcMBToWC, ValidTwoByteWithExtraRead) {
   ASSERT_EQ(static_cast<int>(*dest), 142);
 }
 
-TEST(LlvmLibcMBToWC, TwoValidTwoBytes) {
+TEST_F(LlvmLibcMBToWCTest, TwoValidTwoBytes) {
   const char ch[4] = {static_cast<char>(0xC2), static_cast<char>(0x8E),
                       static_cast<char>(0xC7), static_cast<char>(0x8C)};
   wchar_t dest[2];
@@ -129,7 +131,7 @@ TEST(LlvmLibcMBToWC, TwoValidTwoBytes) {
   ASSERT_EQ(static_cast<int>(*(dest + 1)), 460);
 }
 
-TEST(LlvmLibcMBToWC, NullString) {
+TEST_F(LlvmLibcMBToWCTest, NullString) {
   wchar_t dest[2] = {L'O', L'K'};
   // reading on nullptr should return 0
   int n = LIBC_NAMESPACE::mbtowc(dest, nullptr, 2);
@@ -141,7 +143,7 @@ TEST(LlvmLibcMBToWC, NullString) {
   ASSERT_EQ(n, 0);
 }
 
-TEST(LlvmLibcMBToWC, NullWCPtr) {
+TEST_F(LlvmLibcMBToWCTest, NullWCPtr) {
   const char ch[2] = {
       static_cast<char>(0xC2),
       static_cast<char>(0x8E),
