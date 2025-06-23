@@ -52,8 +52,19 @@ DEPENDENTS_TO_TEST = {
     "clang": {"clang-tools-extra", "cross-project-tests"},
     "mlir": {"flang"},
     # Test everything if ci scripts are changed.
-    # FIXME: Figure out what is missing and add here.
-    ".ci": {"llvm", "clang", "lld", "lldb"},
+    ".ci": {
+        "llvm",
+        "clang",
+        "lld",
+        "lldb",
+        "bolt",
+        "clang-tools-extra",
+        "mlir",
+        "polly",
+        "flang",
+        "libclc",
+        "openmp",
+    },
 }
 
 # This mapping describes runtimes that should be enabled for a specific project,
@@ -66,6 +77,7 @@ DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
 DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
     "clang-tools-extra": {"libc"},
+    ".ci": {"compiler-rt", "libc"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
