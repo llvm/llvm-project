@@ -195,15 +195,7 @@ entry:
 ; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
 ; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
 ; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
-; CHECK-SEC-COFF-COUNT-3: Section {
-; CHECK-SEC-COFF-NEXT:      Number: 12
-; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe (2F 32 37 00 00 00 00 00)
-; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
-; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
-; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-COUNT-4: Section {
 ; CHECK-SEC-COFF-NEXT:      Number: 13
 ; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe (2F 32 37 00 00 00 00 00)
 ; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
@@ -213,6 +205,14 @@ entry:
 ; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
 ; CHECK-SEC-COFF:         Section {
 ; CHECK-SEC-COFF-NEXT:      Number: 14
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe (2F 32 37 00 00 00 00 00)
+; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
+; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-NEXT:      Number: 15
 ; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe (2F 32 37 00 00 00 00 00)
 ; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
 ; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
@@ -242,21 +242,21 @@ entry:
 ; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (9)
 ; CHECK-SEC-COFF:           StorageClass: Static (0x3)
 ; Section symbols
-; CHECK-SEC-COFF-COUNT-2: Symbol {
+; CHECK-SEC-COFF-COUNT-3: Symbol {
 ; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe
-; CHECK-SEC-COFF:           Section: .pseudo_probe (12)
+; CHECK-SEC-COFF:           Section: .pseudo_probe (13)
 ; CHECK-SEC-COFF:           AuxSectionDef {
 ; CHECK-SEC-COFF:             Selection: Associative (0x5)
 ; CHECK-SEC-COFF-NEXT:        AssocSection: .text (4)
 ; CHECK-SEC-COFF:         Symbol {
 ; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe
-; CHECK-SEC-COFF:           Section: .pseudo_probe (13)
+; CHECK-SEC-COFF:           Section: .pseudo_probe (14)
 ; CHECK-SEC-COFF:           AuxSectionDef {
 ; CHECK-SEC-COFF:             Selection: Associative (0x5)
 ; CHECK-SEC-COFF-NEXT:        AssocSection: .text (5)
 ; CHECK-SEC-COFF:         Symbol {
 ; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe
-; CHECK-SEC-COFF:           Section: .pseudo_probe (14)
+; CHECK-SEC-COFF:           Section: .pseudo_probe (15)
 ; CHECK-SEC-COFF:           AuxSectionDef {
 ; CHECK-SEC-COFF:             Selection: Associative (0x5)
 ; CHECK-SEC-COFF-NEXT:        AssocSection: .text (6)
