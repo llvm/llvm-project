@@ -68,7 +68,8 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
 }
 
 static LogicalResult
-isValidGatherScatterParams(Type maskTy, VectorType valueTy, TensorDescType tdescTy,
+isValidGatherScatterParams(Type maskTy, VectorType valueTy,
+                           TensorDescType tdescTy,
                            function_ref<InFlightDiagnostic()> emitError) {
 
   if (!tdescTy.isScattered())

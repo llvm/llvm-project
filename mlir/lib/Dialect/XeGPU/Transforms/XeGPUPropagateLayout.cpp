@@ -228,12 +228,16 @@ static LayoutInfo getDefaultSIMTLayoutInfo(xegpu::TensorDescType tdescTy) {
   unsigned bitwidth = tdescTy.getElementType().getIntOrFloatBitWidth();
 
   if (tdescTy.isScattered()) {
-    int packingFactor = xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth;
+    int packingFactor =
+        xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth;
     return LayoutInfo(LaneLayout({xegpu::targetinfo::subgroupSize, 1}),
                       LaneData({1, packingFactor}));
   }
 
-  int packingFactor = (bitwidth < xegpu::targetinfo::packedSizeInBitsForDefault) ? xegpu::targetinfo::packedSizeInBitsForDefault / bitwidth: 1;
+  int packingFactor =
+      (bitwidth < xegpu::targetinfo::packedSizeInBitsForDefault)
+          ? xegpu::targetinfo::packedSizeInBitsForDefault / bitwidth
+          : 1;
   return LayoutInfo(LaneLayout({1, xegpu::targetinfo::subgroupSize}),
                     LaneData({1, packingFactor}));
 }
