@@ -60,6 +60,60 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
   ret i32 %ret
 }
 
+; Make sure we don't crash if there's only one use for %active.
+define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %b) {
+; DAGISEL-LABEL: single_use_of_active:
+; DAGISEL:       ; %bb.0:
+; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL-NEXT:    s_wait_expcnt 0x0
+; DAGISEL-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
+; DAGISEL-NEXT:    s_clause 0x1
+; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    v_cndmask_b32_e32 v1, 17, v1, vcc_lo
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAGISEL-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
+; DAGISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1
+; DAGISEL-NEXT:    s_clause 0x1
+; DAGISEL-NEXT:    scratch_load_b32 v0, off, s32
+; DAGISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; DAGISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
+; DAGISEL-NEXT:    s_wait_loadcnt 0x0
+; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: single_use_of_active:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    v_cndmask_b32_e32 v1, 17, v1, vcc_lo
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
+; GISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32
+; GISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; GISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %y = select i1 %active, i32 %b, i32 17
+  %ret = call i32 @llvm.amdgcn.update.dpp.i32(i32 %a, i32 %y, i32 1, i32 1, i32 1, i1 false)
+  ret i32 %ret
+}
+
 ; Make sure we don't crash if %active is not used at all.
 define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-LABEL: unused_active:
