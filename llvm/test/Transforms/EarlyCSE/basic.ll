@@ -151,7 +151,6 @@ declare void @void_func()
 define void @void_func_cse_readonly(ptr %P) {
 ; CHECK-LABEL: @void_func_cse_readonly(
 ; CHECK-NEXT:    call void @void_func(ptr [[P:%.*]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    call void @void_func(ptr [[P]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   call void @void_func(ptr %P) memory(read)
@@ -162,7 +161,6 @@ define void @void_func_cse_readonly(ptr %P) {
 define void @void_func_cse_readnone(ptr %P) {
 ; CHECK-LABEL: @void_func_cse_readnone(
 ; CHECK-NEXT:    call void @void_func(ptr [[P:%.*]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    call void @void_func(ptr [[P]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   call void @void_func(ptr %P) memory(none)
