@@ -137,7 +137,7 @@ private:
   std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
   /// Pre-populated addresses of returns, coming from pre-aggregated data or
   /// disassembly. Used to disambiguate call-continuation fall-throughs.
-  std::unordered_set<uint64_t> Returns;
+  std::unordered_map<uint64_t, bool> Returns;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
 
@@ -513,6 +513,38 @@ private:
   void printBranchSamplesDiagnostics() const;
   void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) const;
   void printBranchStacksDiagnostics(uint64_t IgnoredSamples) const;
+
+  template <typename T>
+  std::optional<T>
+  testInstructionAt(const uint64_t Addr,
+                    std::function<T(const MCInst &)> Callback) const {
+    BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
+    if (!Func)
+      return std::nullopt;
+    const uint64_t Offset = Addr - Func->getAddress();
+    if (Func->hasInstructions()) {
+      if (auto *MI = Func->getInstructionAtOffset(Offset))
+        return Callback(*MI);
+    } else {
+      if (auto MI = Func->disassembleInstructionAtOffset(Offset))
+        return Callback(*MI);
+    }
+    return std::nullopt;
+  }
+
+  template <typename T>
+  std::optional<T> testAndSet(const uint64_t Addr,
+                              std::function<T(const MCInst &)> Callback,
+                              std::unordered_map<uint64_t, T> &Map) {
+    auto It = Map.find(Addr);
+    if (It != Map.end())
+      return It->second;
+    if (std::optional<T> Res = testInstructionAt<T>(Addr, Callback)) {
+      Map.emplace(Addr, *Res);
+      return *Res;
+    }
+    return std::nullopt;
+  }
 
 public:
   /// If perf.data was collected without build ids, the buildid-list may contain

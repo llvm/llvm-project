@@ -546,23 +546,10 @@ void DataAggregator::imputeFallThroughs() {
   // Helper map with whether the instruction is a call/ret/unconditional branch
   std::unordered_map<uint64_t, bool> IsUncondJumpMap;
   auto checkUncondJump = [&](const uint64_t Addr) {
-    auto isUncondJump = [&](auto MI) {
-      return MI && BC->MIB->IsUnconditionalJump(*MI);
+    auto isUncondJump = [&](const MCInst &MI) -> bool {
+      return BC->MIB->IsUnconditionalJump(MI);
     };
-    auto It = IsUncondJumpMap.find(Addr);
-    if (It != IsUncondJumpMap.end())
-      return It->second;
-    BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
-    if (!Func)
-      return false;
-    const uint64_t Offset = Addr - Func->getAddress();
-    if (Func->hasInstructions()
-            ? isUncondJump(Func->getInstructionAtOffset(Offset))
-            : isUncondJump(Func->disassembleInstructionAtOffset(Offset))) {
-      IsUncondJumpMap.emplace(Addr, true);
-      return true;
-    }
-    return false;
+    return testAndSet<bool>(Addr, isUncondJump, IsUncondJumpMap).value_or(true);
   };
 
   for (auto &[Trace, Info] : Traces) {
@@ -574,7 +561,8 @@ void DataAggregator::imputeFallThroughs() {
                                    ? AggregateFallthroughSize / AggregateCount
                                    : !checkUncondJump(Trace.From);
       Trace.To = Trace.From + InferredBytes;
-      outs() << "Inferred " << Trace << " " << InferredBytes << '\n';
+      LLVM_DEBUG(dbgs() << "imputed " << Trace << " (" << InferredBytes
+                        << " bytes)\n");
       ++InferredTraces;
     } else {
       if (CurrentBranch != PrevBranch)
@@ -585,7 +573,8 @@ void DataAggregator::imputeFallThroughs() {
     }
     PrevBranch = CurrentBranch;
   }
-  outs() << "Inferred " << InferredTraces << " traces\n";
+  if (opts::Verbosity >= 1)
+    outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
 }
 
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
@@ -804,22 +793,10 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::checkReturn(uint64_t Addr) {
-  auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
-  if (llvm::is_contained(Returns, Addr))
-    return true;
-
-  BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
-  if (!Func)
-    return false;
-
-  const uint64_t Offset = Addr - Func->getAddress();
-  if (Func->hasInstructions()
-          ? isReturn(Func->getInstructionAtOffset(Offset))
-          : isReturn(Func->disassembleInstructionAtOffset(Offset))) {
-    Returns.emplace(Addr);
-    return true;
-  }
-  return false;
+  auto isReturn = [&](const MCInst &MI) -> bool {
+    return BC->MIB->isReturn(MI);
+  };
+  return testAndSet<bool>(Addr, isReturn, Returns).value_or(false);
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
@@ -1409,7 +1386,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     if (!Addr[0]->Offset)
       Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
     else
-      Returns.emplace(Addr[0]->Offset);
+      Returns.emplace(Addr[0]->Offset, true);
   }
 
   /// Record a trace.
@@ -1670,7 +1647,7 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  Returns.emplace(Trace::FT_EXTERNAL_RETURN);
+  Returns.emplace(Trace::FT_EXTERNAL_RETURN, true);
   for (const auto &[Trace, Info] : Traces) {
     bool IsReturn = checkReturn(Trace.Branch);
     // Ignore returns.
