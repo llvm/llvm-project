@@ -27,9 +27,9 @@ using namespace lldb_private;
 
 /// ReadFull attempts to read the specified number of bytes. If EOF is
 /// encountered, an empty string is returned.
-static Expected<std::string>
-ReadFull(IOObject &descriptor, size_t length,
-         std::optional<std::chrono::microseconds> timeout = std::nullopt) {
+Expected<std::string> JSONTransport::ReadFull(
+    IOObject &descriptor, size_t length,
+    std::optional<std::chrono::microseconds> timeout) const {
   if (!descriptor.IsValid())
     return llvm::make_error<TransportInvalidError>();
 
@@ -67,19 +67,22 @@ ReadFull(IOObject &descriptor, size_t length,
   return data.substr(0, length);
 }
 
-static Expected<std::string>
-ReadUntil(IOObject &descriptor, StringRef delimiter,
-          std::optional<std::chrono::microseconds> timeout = std::nullopt) {
-  std::string buffer;
-  buffer.reserve(delimiter.size() + 1);
-  while (!llvm::StringRef(buffer).ends_with(delimiter)) {
+Expected<std::string>
+JSONTransport::ReadUntil(IOObject &descriptor, StringRef delimiter,
+                         std::optional<std::chrono::microseconds> timeout) {
+  if (!timeout || *timeout != std::chrono::microseconds::zero()) {
+    m_buffer.clear();
+    m_buffer.reserve(delimiter.size() + 1);
+  }
+
+  while (!llvm::StringRef(m_buffer).ends_with(delimiter)) {
     Expected<std::string> next =
-        ReadFull(descriptor, buffer.empty() ? delimiter.size() : 1, timeout);
+        ReadFull(descriptor, m_buffer.empty() ? delimiter.size() : 1, timeout);
     if (auto Err = next.takeError())
       return std::move(Err);
-    buffer += *next;
+    m_buffer += *next;
   }
-  return buffer.substr(0, buffer.size() - delimiter.size());
+  return m_buffer.substr(0, m_buffer.size() - delimiter.size());
 }
 
 JSONTransport::JSONTransport(IOObjectSP input, IOObjectSP output)
@@ -89,10 +92,14 @@ void JSONTransport::Log(llvm::StringRef message) {
   LLDB_LOG(GetLog(LLDBLog::Host), "{0}", message);
 }
 
-Expected<std::string>
-HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
+Expected<std::string> HTTPDelimitedJSONTransport::ReadImpl(
+    std::optional<std::chrono::microseconds> timeout) {
   if (!m_input || !m_input->IsValid())
     return llvm::make_error<TransportInvalidError>();
+
+  if (timeout && *timeout == std::chrono::microseconds::zero())
+    return llvm::createStringError(
+        "HTTPDelimitedJSONTransport does not support non-blocking reads");
 
   IOObject *input = m_input.get();
   Expected<std::string> message_header =
@@ -104,7 +111,8 @@ HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
                                      kHeaderContentLength, *message_header)
                                  .str());
 
-  Expected<std::string> raw_length = ReadUntil(*input, kHeaderSeparator);
+  Expected<std::string> raw_length =
+      ReadUntil(*input, kHeaderSeparator, timeout);
   if (!raw_length)
     return handleErrors(raw_length.takeError(),
                         [&](const TransportEOFError &E) -> llvm::Error {
@@ -117,7 +125,7 @@ HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
     return createStringError(
         formatv("invalid content length {0}", *raw_length).str());
 
-  Expected<std::string> raw_json = ReadFull(*input, length);
+  Expected<std::string> raw_json = ReadFull(*input, length, timeout);
   if (!raw_json)
     return handleErrors(
         raw_json.takeError(), [&](const TransportEOFError &E) -> llvm::Error {
@@ -143,7 +151,7 @@ Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
 }
 
 Expected<std::string>
-JSONRPCTransport::ReadImpl(const std::chrono::microseconds &timeout) {
+JSONRPCTransport::ReadImpl(std::optional<std::chrono::microseconds> timeout) {
   if (!m_input || !m_input->IsValid())
     return make_error<TransportInvalidError>();
 
