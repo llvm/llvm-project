@@ -105,6 +105,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcpncpy
+  SRCS
+    wcpncpy.cpp
+  HDRS
+    wcpncpy.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.__support.macros.null_check
+)   
+
+add_entrypoint_object(
   wcschr
   SRCS
     wcschr.cpp

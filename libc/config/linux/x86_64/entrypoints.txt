@@ -385,6 +385,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcscpy
     libc.src.wchar.wmemchr
     libc.src.wchar.wcpcpy
+    libc.src.wchar.wcpncpy
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
