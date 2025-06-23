@@ -77,6 +77,11 @@ FilterPID("pid",
   cl::Optional,
   cl::cat(AggregatorCategory));
 
+static cl::opt<bool> ImputeTraceFallthrough(
+    "impute-trace-fall-through",
+    cl::desc("impute missing fall-throughs for branch-only traces"),
+    cl::Optional, cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
   cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
@@ -466,9 +471,7 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   return PI.ReturnCode;
 }
 
-Error DataAggregator::preprocessProfile(BinaryContext &BC) {
-  this->BC = &BC;
-
+void DataAggregator::parsePerfData(BinaryContext &BC) {
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -480,11 +483,6 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     if (!NoData.match(ErrBuf))
       ErrorCallback(ReturnCode, ErrBuf);
   };
-
-  if (opts::ReadPreAggregated) {
-    parsePreAggregated();
-    goto heatmap;
-  }
 
   if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
     outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
@@ -534,22 +532,85 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
              << '\n';
 
   deleteTempFiles();
+}
 
-heatmap:
+void DataAggregator::imputeFallThroughs() {
+  if (Traces.empty())
+    return;
+
+  std::pair PrevBranch(Trace::EXTERNAL, Trace::EXTERNAL);
+  uint64_t AggregateCount = 0;
+  uint64_t AggregateFallthroughSize = 0;
+  uint64_t InferredTraces = 0;
+
+  // Helper map with whether the instruction is a call/ret/unconditional branch
+  std::unordered_map<uint64_t, bool> IsUncondJumpMap;
+  auto checkUncondJump = [&](const uint64_t Addr) {
+    auto isUncondJump = [&](auto MI) {
+      return MI && BC->MIB->IsUnconditionalJump(*MI);
+    };
+    auto It = IsUncondJumpMap.find(Addr);
+    if (It != IsUncondJumpMap.end())
+      return It->second;
+    BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
+    if (!Func)
+      return false;
+    const uint64_t Offset = Addr - Func->getAddress();
+    if (Func->hasInstructions()
+            ? isUncondJump(Func->getInstructionAtOffset(Offset))
+            : isUncondJump(Func->disassembleInstructionAtOffset(Offset))) {
+      IsUncondJumpMap.emplace(Addr, true);
+      return true;
+    }
+    return false;
+  };
+
+  for (auto &[Trace, Info] : Traces) {
+    if (Trace.From == Trace::EXTERNAL)
+      continue;
+    std::pair CurrentBranch(Trace.Branch, Trace.From);
+    if (Trace.To == Trace::BR_ONLY) {
+      uint64_t InferredBytes = PrevBranch == CurrentBranch
+                                   ? AggregateFallthroughSize / AggregateCount
+                                   : !checkUncondJump(Trace.From);
+      Trace.To = Trace.From + InferredBytes;
+      outs() << "Inferred " << Trace << " " << InferredBytes << '\n';
+      ++InferredTraces;
+    } else {
+      if (CurrentBranch != PrevBranch)
+        AggregateCount = AggregateFallthroughSize = 0;
+      if (Trace.To != Trace::EXTERNAL)
+        AggregateFallthroughSize += (Trace.To - Trace.From) * Info.TakenCount;
+      AggregateCount += Info.TakenCount;
+    }
+    PrevBranch = CurrentBranch;
+  }
+  outs() << "Inferred " << InferredTraces << " traces\n";
+}
+
+Error DataAggregator::preprocessProfile(BinaryContext &BC) {
+  this->BC = &BC;
+
+  if (opts::ReadPreAggregated) {
+    parsePreAggregated();
+  } else {
+    parsePerfData(BC);
+  }
+
   // Sort parsed traces for faster processing.
   llvm::sort(Traces, llvm::less_first());
 
-  if (!opts::HeatmapMode)
-    return Error::success();
+  if (opts::ImputeTraceFallthrough)
+    imputeFallThroughs();
 
-  if (std::error_code EC = printLBRHeatMap())
-    return errorCodeToError(EC);
+  if (opts::HeatmapMode) {
+    if (std::error_code EC = printLBRHeatMap())
+      return errorCodeToError(EC);
+    if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
+      exit(0);
+  }
 
-  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Optional)
-    return Error::success();
-
-  assert(opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive);
-  exit(0);
+  return Error::success();
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {

@@ -374,6 +374,9 @@ private:
   /// Parse a single pair of binary full path and associated build-id
   std::optional<std::pair<StringRef, StringRef>> parseNameBuildIDPair();
 
+  /// Coordinate reading and parsing of perf.data file
+  void parsePerfData(BinaryContext &BC);
+
   /// Coordinate reading and parsing of pre-aggregated file
   ///
   /// The regular perf2bolt aggregation job is to read perf output directly.
@@ -495,6 +498,10 @@ private:
   /// to get the proper name in perf data when build-ids are available.
   /// If \p FileBuildID has no match, then issue an error and exit.
   void processFileBuildID(StringRef FileBuildID);
+
+  /// Infer missing fall-throughs for branch-only traces (LBR top-of-stack
+  /// entries).
+  void imputeFallThroughs();
 
   /// Debugging dump methods
   void dump() const;
