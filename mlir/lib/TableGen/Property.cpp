@@ -112,3 +112,11 @@ Property Property::getBaseProperty() const {
   }
   return *this;
 }
+
+bool Property::isSubClassOf(StringRef className) const {
+  return def && def->isSubClassOf(className);
+}
+
+StringRef ConstantProp::getValue() const {
+  return def->getValueAsString("value");
+}
