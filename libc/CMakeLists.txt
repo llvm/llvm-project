@@ -4,7 +4,7 @@ set(LLVM_SUBPROJECT_TITLE "libc")
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "Builds rooted in the libc directory are not supported. "
     "Builds should be rooted in the runtimes directory instead. "
-    "Please see the documentation at https://libc.llvm.org/usage_modes.html for more info.")
+    "Please see the documentation at https://libc.llvm.org/build_and_test.html for more info.")
 endif()
 
 # Include LLVM's cmake policies.
