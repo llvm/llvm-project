@@ -332,12 +332,12 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
 
   // We have a pointer to a pointer to the buffer, and a pointer to the size.
   // We want what they point at.
-  auto LinePtrValOpt = getPointeeVal(LinePtrPtrSVal, State);
+  const auto LinePtrValOpt = getPointeeVal(LinePtrPtrSVal, State);
   if (!LinePtrValOpt)
     return nullptr;
 
-  auto LinePtrSVal = LinePtrValOpt->getAs<DefinedSVal>();
-  auto NSVal = getPointeeVal(SizePtrSVal, State);
+  const auto LinePtrSVal = LinePtrValOpt->getAs<DefinedSVal>();
+  const auto NSVal = getPointeeVal(SizePtrSVal, State);
   if (!LinePtrSVal || !NSVal || NSVal->isUnknown())
     return nullptr;
 
