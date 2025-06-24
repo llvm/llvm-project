@@ -840,8 +840,15 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     Offset = I->getOperand(OffsetIdx).getImm();
   }
 
-  if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE)
+  if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
     Format = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::format)->getImm();
+    const auto *Info = AMDGPU::getGcnBufferFormatInfo(Format, *LSO.STM);
+
+    // TODO: Support merging 8-bit tbuffer load/store instructions
+    // Use 2-byte element size if both tbuffer formats are 16-bit.
+    if (Info && Info->BitsPerComp == 16)
+      EltSize = 2;
+  }
 
   Width = getOpcodeWidth(*I, *LSO.TII);
 
@@ -1041,25 +1048,13 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   if (CI.Offset == Paired.Offset)
     return false;
 
-  // Use 2-byte element size if both tbuffer formats are 16-bit.
   unsigned EltSize = CI.EltSize;
-  auto Has16BitComponents = [&](unsigned Format) -> bool {
-    const auto *Info = AMDGPU::getGcnBufferFormatInfo(Format, STI);
-    return Info && Info->BitsPerComp == 16;
-  };
-
-  if ((CI.InstClass == TBUFFER_LOAD || CI.InstClass == TBUFFER_STORE)) {
-    // TODO: Support merging 8-bit tbuffer load/store instructions
-    if (Has16BitComponents(CI.Format) && Has16BitComponents(Paired.Format))
-      EltSize = 2;
-  }
 
   // This won't be valid if the offset isn't aligned.
   if ((CI.Offset % EltSize != 0) || (Paired.Offset % EltSize != 0))
     return false;
 
   if (CI.InstClass == TBUFFER_LOAD || CI.InstClass == TBUFFER_STORE) {
-
     const AMDGPU::GcnBufferFormatInfo *Info0 =
         AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
     if (!Info0)
@@ -1090,6 +1085,15 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     unsigned ElemIndex1 = Paired.Offset / BytePerComp;
     if (!(ElemIndex0 + CI.Width == ElemIndex1 ||
           ElemIndex1 + Paired.Width == ElemIndex0))
+      return false;
+
+    // 1-byte formats require 1-byte alignment.
+    // 2-byte formats require 2-byte alignment.
+    // 4-byte and larger formats require 4-byte alignment.
+    unsigned MergedBytes = BytePerComp * NumCombinedComponents;
+    unsigned RequiredAlign = (MergedBytes >= 4) ? 4 : MergedBytes;
+    unsigned MinOff = std::min(CI.Offset, Paired.Offset);
+    if (MinOff % RequiredAlign != 0)
       return false;
 
     return true;
