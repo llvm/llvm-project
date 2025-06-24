@@ -5307,15 +5307,13 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue Cond = N0.getOperand(0);
     SDValue LHS = N0.getOperand(1);
     SDValue RHS = N0.getOperand(2);
-    EVT LHVT = LHS.getValueType();
-    EVT RHVT = RHS.getValueType();
-    // The regression was limited to i32 v2/i32.
-    if (RHVT != MVT::i32 && LHVT != MVT::i32)
+    EVT VT = LHS.getValueType();
+    if (VT != MVT::i32)
       return SDValue();
 
-    SDValue LFNeg = DAG.getNode(ISD::FNEG, SL, LHVT, LHS);
-    SDValue RFNeg = DAG.getNode(ISD::FNEG, SL, RHVT, RHS);
-    SDValue Op = DAG.getNode(Opc, SL, LHVT, Cond, LFNeg, RFNeg);
+    SDValue LFNeg = DAG.getNode(ISD::FNEG, SL, VT, LHS);
+    SDValue RFNeg = DAG.getNode(ISD::FNEG, SL, VT, RHS);
+    SDValue Op = DAG.getNode(Opc, SL, VT, Cond, LFNeg, RFNeg);
     return Op;
   }
   case ISD::BITCAST: {
