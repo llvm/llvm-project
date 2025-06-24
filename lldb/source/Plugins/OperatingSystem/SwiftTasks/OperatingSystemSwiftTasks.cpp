@@ -100,8 +100,10 @@ ThreadSP OperatingSystemSwiftTasks::FindOrCreateSwiftThread(
                                                      name);
 }
 
-static std::optional<addr_t> FindTaskAddress(Thread &thread) {
-  llvm::Expected<addr_t> task_addr = GetTaskAddrFromThreadLocalStorage(thread);
+static std::optional<addr_t> FindTaskAddress(TaskInspector &task_inspector,
+                                             Thread &thread) {
+  llvm::Expected<addr_t> task_addr =
+      task_inspector.GetTaskAddrFromThreadLocalStorage(thread);
   if (!task_addr) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::OS), task_addr.takeError(),
                    "OperatingSystemSwiftTasks: failed to find task address in "
@@ -150,7 +152,8 @@ bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
   LLDB_LOG(log, "OperatingSystemSwiftTasks: Updating thread list");
 
   for (const ThreadSP &real_thread : core_thread_list.Threads()) {
-    std::optional<addr_t> task_addr = FindTaskAddress(*real_thread);
+    std::optional<addr_t> task_addr =
+        FindTaskAddress(m_task_inspector, *real_thread);
 
     // If this is not a thread running a Task, add it to the list as is.
     if (!task_addr) {

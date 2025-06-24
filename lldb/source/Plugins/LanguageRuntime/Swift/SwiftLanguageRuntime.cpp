@@ -2325,8 +2325,9 @@ private:
         return;
       }
 
-      auto task_addr_or_err =
-          GetTaskAddrFromThreadLocalStorage(m_exe_ctx.GetThreadRef());
+      TaskInspector task_inspector;
+      auto task_addr_or_err = task_inspector.GetTaskAddrFromThreadLocalStorage(
+          m_exe_ctx.GetThreadRef());
       if (auto error = task_addr_or_err.takeError()) {
         result.AppendError(toString(std::move(error)));
         return;
@@ -2938,7 +2939,23 @@ std::optional<lldb::addr_t> SwiftLanguageRuntime::TrySkipVirtualParentProlog(
   return pc_value + prologue_size;
 }
 
-llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
+/// Attempts to read the memory location at `task_addr_location`, producing
+/// the Task pointer if possible.
+static llvm::Expected<lldb::addr_t>
+ReadTaskAddr(lldb::addr_t task_addr_location, Process &process) {
+  Status status;
+  addr_t task_addr = process.ReadPointerFromMemory(task_addr_location, status);
+  if (status.Fail())
+    return llvm::joinErrors(
+        llvm::createStringError("could not get current task from thread"),
+        status.takeError());
+  return task_addr;
+}
+
+/// Compute the location where the Task pointer for `real_thread` is stored by
+/// the runtime.
+static llvm::Expected<lldb::addr_t>
+ComputeTaskAddrLocationFromThreadLocalStorage(Thread &real_thread) {
 #if !SWIFT_THREADING_USE_RESERVED_TLS_KEYS
   return llvm::createStringError(
       "getting the current task from a thread is not supported");
@@ -2946,9 +2963,6 @@ llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
   // Compute the thread local storage address for this thread.
   addr_t tsd_addr = LLDB_INVALID_ADDRESS;
 
-  // Look through backing threads when inspecting TLS.
-  Thread &real_thread =
-      thread.GetBackingThread() ? *thread.GetBackingThread() : thread;
   if (auto info_sp = real_thread.GetExtendedInfo())
     if (auto *info_dict = info_sp->GetAsDictionary())
       info_dict->GetValueForKeyAsInteger("tsd_address", tsd_addr);
@@ -2957,18 +2971,55 @@ llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
     return llvm::createStringError("could not read current task from thread");
 
   // Offset of the Task pointer in a Thread's local storage.
-  Process &process = *thread.GetProcess();
+  Process &process = *real_thread.GetProcess();
   size_t ptr_size = process.GetAddressByteSize();
   uint64_t task_ptr_offset_in_tls =
       swift::tls_get_key(swift::tls_key::concurrency_task) * ptr_size;
-  addr_t task_addr_location = tsd_addr + task_ptr_offset_in_tls;
-  Status status;
-  addr_t task_addr = process.ReadPointerFromMemory(task_addr_location, status);
-  if (status.Fail())
-    return llvm::createStringError("could not get current task from thread: %s",
-                                   status.AsCString());
-  return task_addr;
+  return tsd_addr + task_ptr_offset_in_tls;
 #endif
+}
+
+llvm::Expected<lldb::addr_t>
+TaskInspector::GetTaskAddrFromThreadLocalStorage(Thread &thread) {
+  // Look through backing threads when inspecting TLS.
+  Thread &real_thread =
+      thread.GetBackingThread() ? *thread.GetBackingThread() : thread;
+
+  if (auto it = m_tid_to_task_addr_location.find(real_thread.GetID());
+      it != m_tid_to_task_addr_location.end()) {
+#ifndef NDEBUG
+    // In assert builds, check that caching did not produce incorrect results.
+    llvm::Expected<lldb::addr_t> task_addr_location =
+        ComputeTaskAddrLocationFromThreadLocalStorage(real_thread);
+    assert(task_addr_location);
+    assert(it->second == *task_addr_location);
+#endif
+    llvm::Expected<lldb::addr_t> task_addr =
+        ReadTaskAddr(it->second, *thread.GetProcess());
+    if (task_addr)
+      return task_addr;
+    // If the cached task addr location became invalid, invalidate the cache.
+    m_tid_to_task_addr_location.erase(it);
+    LLDB_LOG_ERROR(GetLog(LLDBLog::OS), task_addr.takeError(),
+                   "TaskInspector: evicted task location address due to "
+                   "invalid memory read: {0}");
+  }
+
+  llvm::Expected<lldb::addr_t> task_addr_location =
+      ComputeTaskAddrLocationFromThreadLocalStorage(real_thread);
+  if (!task_addr_location)
+    return task_addr_location;
+
+  llvm::Expected<lldb::addr_t> task_addr =
+      ReadTaskAddr(*task_addr_location, *thread.GetProcess());
+
+  // If the read from this TLS address is successful, cache the TLS address.
+  // Caching without a valid read is dangerous: earlier in the thread
+  // lifetime, the result of GetExtendedInfo can be invalid.
+  if (task_addr)
+    m_tid_to_task_addr_location.try_emplace(real_thread.GetID(),
+                                            *task_addr_location);
+  return task_addr;
 }
 
 namespace {
