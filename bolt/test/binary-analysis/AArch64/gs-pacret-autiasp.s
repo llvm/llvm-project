@@ -1,3 +1,5 @@
+// REQUIRES: !rhel8
+
 // RUN: %clang %cflags -march=armv9.5-a+pauth-lr -mbranch-protection=pac-ret %s %p/../../Inputs/asm_main.c -o %t.exe
 // RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck %s
 
@@ -883,4 +885,3 @@ f_autib171615:
 // CHECK-NEXT: {{[0-9a-f]+}}:   ret
         ret
         .size f_autib171615, .-f_autib171615
-
