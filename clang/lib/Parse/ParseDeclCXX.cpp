@@ -17,7 +17,6 @@
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticParse.h"
-#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -30,7 +29,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "llvm/ADT/SmallString.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -762,6 +761,10 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
     Decl *AD = ParseAliasDeclarationAfterDeclarator(
         TemplateInfo, UsingLoc, D, DeclEnd, AS, Attrs, &DeclFromDeclSpec);
+
+    if (!AD)
+      return nullptr;
+
     return Actions.ConvertDeclToDeclGroup(AD, DeclFromDeclSpec);
   }
 
@@ -1073,10 +1076,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
           Sema::ExpressionEvaluationContextRecord::EK_Decltype);
-      Result = Actions.CorrectDelayedTyposInExpr(
-          ParseExpression(), /*InitDecl=*/nullptr,
-          /*RecoverUncorrectedTypos=*/false,
-          [](Expr *E) { return E->hasPlaceholderType() ? ExprError() : E; });
+      Result = ParseExpression();
       if (Result.isInvalid()) {
         DS.SetTypeSpecError();
         if (SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch)) {
@@ -1435,7 +1435,7 @@ void Parser::ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     auto Kind = Tok.getKind();
     SourceLocation AttrNameLoc = ConsumeToken();
-    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0, Kind);
+    attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0, Kind);
   }
 }
 
@@ -1444,7 +1444,7 @@ void Parser::ParseNullabilityClassAttributes(ParsedAttributes &attrs) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     auto Kind = Tok.getKind();
     SourceLocation AttrNameLoc = ConsumeToken();
-    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0, Kind);
+    attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0, Kind);
   }
 }
 
@@ -2651,9 +2651,9 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
   // handled by the caller.  Diagnose everything else.
   ParseTypeQualifierListOpt(
       DS, AR_NoAttributesParsed, /*AtomicOrPtrauthAllowed=*/false,
-      /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
+      /*IdentifierRequired=*/false, [&]() {
         Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D, &VS);
-      }));
+      });
   D.ExtendWithDeclSpec(DS);
 
   if (D.isFunctionDeclarator()) {
@@ -4454,11 +4454,10 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   }
 }
 
-bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
-                                        IdentifierInfo *AttrName,
-                                        SourceLocation AttrNameLoc,
-                                        SourceLocation *EndLoc,
-                                        ParsedAttr::Form Form) {
+bool Parser::ParseCXXAssumeAttributeArg(
+    ParsedAttributes &Attrs, IdentifierInfo *AttrName,
+    SourceLocation AttrNameLoc, IdentifierInfo *ScopeName,
+    SourceLocation ScopeLoc, SourceLocation *EndLoc, ParsedAttr::Form Form) {
   assert(Tok.is(tok::l_paren) && "Not a C++11 attribute argument list");
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
@@ -4468,8 +4467,7 @@ bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
   TentativeParsingAction TPA(*this);
-  ExprResult Res(
-      Actions.CorrectDelayedTyposInExpr(ParseConditionalExpression()));
+  ExprResult Res = ParseConditionalExpression();
   if (Res.isInvalid()) {
     TPA.Commit();
     SkipUntil(tok::r_paren, tok::r_square, StopAtSemi | StopBeforeMatch);
@@ -4500,8 +4498,8 @@ bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
   ArgsUnion Assumption = Res.get();
   auto RParen = Tok.getLocation();
   T.consumeClose();
-  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), nullptr,
-               SourceLocation(), &Assumption, 1, Form);
+  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
+               AttributeScopeInfo(ScopeName, ScopeLoc), &Assumption, 1, Form);
 
   if (EndLoc)
     *EndLoc = RParen;
@@ -4567,7 +4565,8 @@ bool Parser::ParseCXX11AttributeArgs(
                                       ScopeName, ScopeLoc, Form);
   // So does C++23's assume() attribute.
   else if (!ScopeName && AttrName->isStr("assume")) {
-    if (ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form))
+    if (ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, nullptr,
+                                   SourceLocation{}, EndLoc, Form))
       return true;
     NumArgs = 1;
   } else
@@ -4580,7 +4579,7 @@ bool Parser::ParseCXX11AttributeArgs(
 
     // Ignore attributes that don't exist for the target.
     if (!Attr.existsInTarget(getTargetInfo())) {
-      Diag(LParenLoc, diag::warn_unknown_attribute_ignored) << AttrName;
+      Actions.DiagnoseUnknownAttribute(Attr);
       Attr.setInvalid(true);
       return true;
     }
@@ -4635,7 +4634,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                  /*ScopeName*/ nullptr,
                                  /*ScopeLoc*/ Loc, Form);
     } else
-      Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Form);
+      Attrs.addNew(AttrName, Loc, AttributeScopeInfo(), nullptr, 0, Form);
     return;
   }
 
@@ -4730,12 +4729,15 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                            ScopeName, ScopeLoc, OpenMPTokens);
 
     if (!AttrParsed) {
-      Attrs.addNew(
-          AttrName,
-          SourceRange(ScopeLoc.isValid() ? ScopeLoc : AttrLoc, AttrLoc),
-          ScopeName, ScopeLoc, nullptr, 0,
-          getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
-                                  : ParsedAttr::Form::C23());
+      Attrs.addNew(AttrName,
+                   SourceRange(ScopeLoc.isValid() && CommonScopeLoc.isInvalid()
+                                   ? ScopeLoc
+                                   : AttrLoc,
+                               AttrLoc),
+                   AttributeScopeInfo(ScopeName, ScopeLoc, CommonScopeLoc),
+                   nullptr, 0,
+                   getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
+                                           : ParsedAttr::Form::C23());
       AttrParsed = true;
     }
 
@@ -4896,13 +4898,13 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   }
 
   if (!T.consumeClose()) {
-    Attrs.addNew(UuidIdent, SourceRange(UuidLoc, T.getCloseLocation()), nullptr,
-                 SourceLocation(), ArgExprs.data(), ArgExprs.size(),
+    Attrs.addNew(UuidIdent, SourceRange(UuidLoc, T.getCloseLocation()),
+                 AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(),
                  ParsedAttr::Form::Microsoft());
   }
 }
 
-void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
+void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   assert(Tok.is(tok::identifier) &&
          "Expected an identifier to denote which MS attribute to consider");
   IdentifierInfo *RootSignatureIdent = Tok.getIdentifierInfo();
@@ -4944,18 +4946,14 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
   // Construct our identifier
   StringRef Signature = StrLiteral.value()->getString();
-  auto Hash = llvm::hash_value(Signature);
-  std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
-  IdentifierInfo *DeclIdent = &(Actions.getASTContext().Idents.get(IdStr));
-
-  LookupResult R(Actions, DeclIdent, SourceLocation(),
-                 Sema::LookupOrdinaryName);
-  // Check if we have already found a decl of the same name, if we haven't
-  // then parse the root signature string and construct the in-memory elements
-  if (!Actions.LookupQualifiedName(R, Actions.CurContext)) {
+  auto [DeclIdent, Found] =
+      Actions.HLSL().ActOnStartRootSignatureDecl(Signature);
+  // If we haven't found an already defined DeclIdent then parse the root
+  // signature string and construct the in-memory elements
+  if (!Found) {
+    // Offset location 1 to account for '"'
     SourceLocation SignatureLoc =
-        StrLiteral.value()->getExprLoc().getLocWithOffset(
-            1); // offset 1 for '"'
+        StrLiteral.value()->getExprLoc().getLocWithOffset(1);
     // Invoke the root signature parser to construct the in-memory constructs
     hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
     SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
@@ -4965,12 +4963,9 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
       return;
     }
 
-    // Create the Root Signature
-    auto *SignatureDecl = HLSLRootSignatureDecl::Create(
-        Actions.getASTContext(), /*DeclContext=*/Actions.CurContext,
-        RootSignatureLoc, DeclIdent, RootElements);
-    SignatureDecl->setImplicit();
-    Actions.PushOnScopeChains(SignatureDecl, getCurScope());
+    // Construct the declaration.
+    Actions.HLSL().ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
+                                                RootElements);
   }
 
   // Create the arg for the ParsedAttr
@@ -4981,8 +4976,8 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
   if (!T.consumeClose())
     Attrs.addNew(RootSignatureIdent,
-                 SourceRange(RootSignatureLoc, T.getCloseLocation()), nullptr,
-                 SourceLocation(), Args.data(), Args.size(),
+                 SourceRange(RootSignatureLoc, T.getCloseLocation()),
+                 AttributeScopeInfo(), Args.data(), Args.size(),
                  ParsedAttr::Form::Microsoft());
 }
 
@@ -5013,7 +5008,7 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
       if (Tok.getIdentifierInfo()->getName() == "uuid")
         ParseMicrosoftUuidAttributeArgs(Attrs);
       else if (Tok.getIdentifierInfo()->getName() == "RootSignature")
-        ParseMicrosoftRootSignatureAttributeArgs(Attrs);
+        ParseHLSLRootSignatureAttributeArgs(Attrs);
       else {
         IdentifierInfo *II = Tok.getIdentifierInfo();
         SourceLocation NameLoc = Tok.getLocation();
@@ -5032,7 +5027,7 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
             ReplayOpenMPAttributeTokens(OpenMPTokens);
           }
           if (!AttrParsed) {
-            Attrs.addNew(II, NameLoc, nullptr, SourceLocation(), nullptr, 0,
+            Attrs.addNew(II, NameLoc, AttributeScopeInfo(), nullptr, 0,
                          ParsedAttr::Form::Microsoft());
           }
         }

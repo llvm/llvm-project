@@ -2365,6 +2365,21 @@ llvm::LogicalResult fir::InsertOnRangeOp::verify() {
   return mlir::success();
 }
 
+bool fir::InsertOnRangeOp::isFullRange() {
+  auto extents = getType().getShape();
+  mlir::DenseIntElementsAttr indexes = getCoor();
+  if (indexes.size() / 2 != static_cast<int64_t>(extents.size()))
+    return false;
+  auto cur_index = indexes.value_begin<int64_t>();
+  for (unsigned i = 0; i < indexes.size(); i += 2) {
+    if (*(cur_index++) != 0)
+      return false;
+    if (*(cur_index++) != extents[i / 2] - 1)
+      return false;
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // InsertValueOp
 //===----------------------------------------------------------------------===//
@@ -4403,6 +4418,19 @@ mlir::ParseResult fir::IfOp::parse(mlir::OpAsmParser &parser,
       parser.resolveOperand(cond, i1Type, result.operands))
     return mlir::failure();
 
+  if (mlir::succeeded(
+          parser.parseOptionalKeyword(getWeightsAttrAssemblyName()))) {
+    if (parser.parseLParen())
+      return mlir::failure();
+    mlir::DenseI32ArrayAttr weights;
+    if (parser.parseCustomAttributeWithFallback(weights, mlir::Type{}))
+      return mlir::failure();
+    if (weights)
+      result.addAttribute(getRegionWeightsAttrName(result.name), weights);
+    if (parser.parseRParen())
+      return mlir::failure();
+  }
+
   if (parser.parseOptionalArrowTypeList(result.types))
     return mlir::failure();
 
@@ -4434,6 +4462,11 @@ llvm::LogicalResult fir::IfOp::verify() {
 void fir::IfOp::print(mlir::OpAsmPrinter &p) {
   bool printBlockTerminators = false;
   p << ' ' << getCondition();
+  if (auto weights = getRegionWeightsAttr()) {
+    p << ' ' << getWeightsAttrAssemblyName() << '(';
+    p.printStrippedAttrOrType(weights);
+    p << ')';
+  }
   if (!getResults().empty()) {
     p << " -> (" << getResultTypes() << ')';
     printBlockTerminators = true;
@@ -4449,7 +4482,8 @@ void fir::IfOp::print(mlir::OpAsmPrinter &p) {
     p.printRegion(otherReg, /*printEntryBlockArgs=*/false,
                   printBlockTerminators);
   }
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          /*elideAttrs=*/{getRegionWeightsAttrName()});
 }
 
 void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
@@ -4469,15 +4503,24 @@ void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
 llvm::LogicalResult fir::BoxOffsetOp::verify() {
   auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(
       fir::dyn_cast_ptrEleTy(getBoxRef().getType()));
-  if (!boxType)
-    return emitOpError("box_ref operand must have !fir.ref<!fir.box<T>> type");
+  mlir::Type boxCharType;
+  if (!boxType) {
+    boxCharType = mlir::dyn_cast_or_null<fir::BoxCharType>(
+        fir::dyn_cast_ptrEleTy(getBoxRef().getType()));
+    if (!boxCharType)
+      return emitOpError("box_ref operand must have !fir.ref<!fir.box<T>> or "
+                         "!fir.ref<!fir.boxchar<k>> type");
+    if (getField() == fir::BoxFieldAttr::derived_type)
+      return emitOpError("cannot address derived_type field of a fir.boxchar");
+  }
   if (getField() != fir::BoxFieldAttr::base_addr &&
       getField() != fir::BoxFieldAttr::derived_type)
     return emitOpError("cannot address provided field");
-  if (getField() == fir::BoxFieldAttr::derived_type)
+  if (getField() == fir::BoxFieldAttr::derived_type) {
     if (!fir::boxHasAddendum(boxType))
       return emitOpError("can only address derived_type field of derived type "
                          "or unlimited polymorphic fir.box");
+  }
   return mlir::success();
 }
 
@@ -4787,6 +4830,19 @@ bool fir::reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole) {
     }
   }
   return false;
+}
+
+std::optional<int64_t> fir::getAllocaByteSize(fir::AllocaOp alloca,
+                                              const mlir::DataLayout &dl,
+                                              const fir::KindMapping &kindMap) {
+  mlir::Type type = alloca.getInType();
+  // TODO: should use the constant operands when all info is not available in
+  // the type.
+  if (!alloca.isDynamic())
+    if (auto sizeAndAlignment =
+            getTypeSizeAndAlignment(alloca.getLoc(), type, dl, kindMap))
+      return sizeAndAlignment->first;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

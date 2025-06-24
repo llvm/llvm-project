@@ -927,6 +927,12 @@ namespace llvm {
       return true;
     }
 
+    Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
+                          AtomicOrdering Ord) const override;
+
+    Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
+                                AtomicOrdering Ord) const override;
+
     Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                   AtomicOrdering Ord) const override;
     Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
@@ -1441,7 +1447,7 @@ namespace llvm {
     SDValue combineStoreFPToInt(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineFPToIntToFP(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSHL(SDNode *N, DAGCombinerInfo &DCI) const;
-    SDValue combineVectorSHL(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue combineVectorShift(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSRA(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSRL(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;

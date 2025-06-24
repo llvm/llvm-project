@@ -149,9 +149,6 @@ public:
 
   void DumpHistory(Stream &strm);
 
-  static llvm::Error ConnectLocally(GDBRemoteCommunication &client,
-                                    GDBRemoteCommunication &server);
-
   /// Expand GDB run-length encoding.
   static std::optional<std::string> ExpandRLE(std::string);
 

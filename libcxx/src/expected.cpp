@@ -9,9 +9,5 @@
 #include <expected>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
-
 const char* bad_expected_access<void>::what() const noexcept { return "bad access to std::expected"; }
-
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

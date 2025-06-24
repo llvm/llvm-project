@@ -9,7 +9,6 @@
 #include <valarray>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // These two symbols are part of the v1 ABI but not part of the >=v2 ABI.
 #if _LIBCPP_ABI_VERSION == 1
@@ -47,5 +46,4 @@ void gslice::__init(size_t __start) {
   }
 }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

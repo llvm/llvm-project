@@ -369,7 +369,11 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
     Alignment = InAlign;
 
   // If the GV has a specified alignment, take it into account.
-  const MaybeAlign GVAlign(GV->getAlign());
+  MaybeAlign GVAlign;
+  if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+    GVAlign = GVar->getAlign();
+  else if (auto *F = dyn_cast<Function>(GV))
+    GVAlign = F->getAlign();
   if (!GVAlign)
     return Alignment;
 
@@ -561,8 +565,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView &&
-        (TM.getTargetTriple().isOSWindows() || TM.getTargetTriple().isUEFI()))
+    // On Windows targets, emit minimal CodeView compiler info even when debug
+    // info is disabled.
+    if ((TM.getTargetTriple().isOSWindows() &&
+         M.getNamedMetadata("llvm.dbg.cu")) ||
+        (TM.getTargetTriple().isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -1074,13 +1081,6 @@ void AsmPrinter::emitFunctionHeader() {
 /// function.  This can be overridden by targets as required to do custom stuff.
 void AsmPrinter::emitFunctionEntryLabel() {
   CurrentFnSym->redefineIfPossible();
-
-  // The function label could have already been emitted if two symbols end up
-  // conflicting due to asm renaming.  Detect this and emit an error.
-  if (CurrentFnSym->isVariable())
-    report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
-                       "' is a protected alias");
-
   OutStreamer->emitLabel(CurrentFnSym);
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
@@ -1419,9 +1419,12 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
-  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
+  return {FuncEntryCountEnabled,
+          BBFreqEnabled,
+          BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
+          false};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -2322,7 +2325,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   }
 
   if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
-    llvm::report_fatal_error("IFuncs are not supported on this platform");
+    reportFatalUsageError("IFuncs are not supported on this platform");
 
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
   // implements the symbol resolution duties of the IFunc.
@@ -2376,6 +2379,15 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   if (!RS.needsSection())
     return;
 
+  MCSection *RemarksSection =
+      OutContext.getObjectFileInfo()->getRemarksSection();
+  if (!RemarksSection) {
+    OutContext.reportWarning(SMLoc(), "Current object file format does not "
+                                      "support remarks sections. Use the yaml "
+                                      "remark format instead.");
+    return;
+  }
+
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
   std::optional<SmallString<128>> Filename;
@@ -2393,10 +2405,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   MetaSerializer->emit();
 
   // Switch to the remarks section.
-  MCSection *RemarksSection =
-      OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->switchSection(RemarksSection);
-
   OutStreamer->emitBinaryData(Buf);
 }
 
@@ -2878,17 +2887,16 @@ void AsmPrinter::emitConstantPool() {
   // Now print stuff into the calculated sections.
   const MCSection *CurSection = nullptr;
   unsigned Offset = 0;
-  for (unsigned i = 0, e = CPSections.size(); i != e; ++i) {
-    for (unsigned j = 0, ee = CPSections[i].CPEs.size(); j != ee; ++j) {
-      unsigned CPI = CPSections[i].CPEs[j];
+  for (const SectionCPs &CPSection : CPSections) {
+    for (unsigned CPI : CPSection.CPEs) {
       MCSymbol *Sym = GetCPISymbol(CPI);
       if (!Sym->isUndefined())
         continue;
 
-      if (CurSection != CPSections[i].S) {
-        OutStreamer->switchSection(CPSections[i].S);
-        emitAlignment(Align(CPSections[i].Alignment));
-        CurSection = CPSections[i].S;
+      if (CurSection != CPSection.S) {
+        OutStreamer->switchSection(CPSection.S);
+        emitAlignment(Align(CPSection.Alignment));
+        CurSection = CPSection.S;
         Offset = 0;
       }
 
@@ -3195,7 +3203,10 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     return true;
   }
 
-  report_fatal_error("unknown special variable with appending linkage");
+  GV->getContext().emitError(
+      "unknown special variable with appending linkage: " +
+      GV->getNameOrAsOperand());
+  return true;
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each
@@ -3231,9 +3242,11 @@ void AsmPrinter::preprocessXXStructorList(const DataLayout &DL,
     S.Priority = Priority->getLimitedValue(65535);
     S.Func = CS->getOperand(1);
     if (!CS->getOperand(2)->isNullValue()) {
-      if (TM.getTargetTriple().isOSAIX())
-        llvm::report_fatal_error(
+      if (TM.getTargetTriple().isOSAIX()) {
+        CS->getContext().emitError(
             "associated data of XXStructor list is not yet supported on AIX");
+      }
+
       S.ComdatKey =
           dyn_cast<GlobalValue>(CS->getOperand(2)->stripPointerCasts());
     }
@@ -3591,10 +3604,11 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
   // Otherwise report the problem to the user.
   std::string S;
   raw_string_ostream OS(S);
-  OS << "Unsupported expression in static initializer: ";
+  OS << "unsupported expression in static initializer: ";
   CE->printAsOperand(OS, /*PrintType=*/false,
                      !MF ? nullptr : MF->getFunction().getParent());
-  report_fatal_error(Twine(S));
+  CE->getContext().emitError(S);
+  return MCConstantExpr::create(0, Ctx);
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
@@ -4331,6 +4345,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
       OutStreamer->emitLabel(Sym);
   } else if (isVerbose() && MBB.isMachineBlockAddressTaken()) {
     OutStreamer->AddComment("Block address taken");
+  } else if (isVerbose() && MBB.isInlineAsmBrIndirectTarget()) {
+    OutStreamer->AddComment("Inline asm indirect target");
   }
 
   // Print some verbose block comments.
@@ -4471,7 +4487,7 @@ GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
 
-  auto [GCPI, Inserted] = GCMetadataPrinters.insert({&S, nullptr});
+  auto [GCPI, Inserted] = GCMetadataPrinters.try_emplace(&S);
   if (!Inserted)
     return GCPI->second.get();
 

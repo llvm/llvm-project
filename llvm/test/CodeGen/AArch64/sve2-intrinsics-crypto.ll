@@ -16,6 +16,17 @@ define <vscale x 16 x i8> @aesd_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
 }
 
+define <vscale x 16 x i8> @aesd_i8_commuted(<vscale x 16 x i8> %a,
+; CHECK-LABEL: aesd_i8_commuted:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    aesd z0.b, z0.b, z1.b
+; CHECK-NEXT:    ret
+                                            <vscale x 16 x i8> %b) {
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.aesd(<vscale x 16 x i8> %b,
+                                                        <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i8> %out
+}
+
 ;
 ; AESIMC
 ;
@@ -40,6 +51,17 @@ define <vscale x 16 x i8> @aese_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.aese(<vscale x 16 x i8> %a,
                                                         <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 16 x i8> @aese_i8_commuted(<vscale x 16 x i8> %a,
+; CHECK-LABEL: aese_i8_commuted:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    aese z0.b, z0.b, z1.b
+; CHECK-NEXT:    ret
+                                            <vscale x 16 x i8> %b) {
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.aese(<vscale x 16 x i8> %b,
+                                                        <vscale x 16 x i8> %a)
   ret <vscale x 16 x i8> %out
 }
 

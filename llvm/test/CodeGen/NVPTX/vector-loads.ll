@@ -4,13 +4,13 @@
 ; Even though general vector types are not supported in PTX, we can still
 ; optimize loads/stores with pseudo-vector instructions of the form:
 ;
-; ld.v2.f32 {%f0, %f1}, [%r0]
+; ld.v2.f32 {%r0, %r1}, [%r0]
 ;
 ; which will load two floats at once into scalar registers.
 
 ; CHECK-LABEL: foo
 define void @foo(ptr %a) {
-; CHECK: ld.v2.b32 {%f{{[0-9]+}}, %f{{[0-9]+}}}
+; CHECK: ld.v2.b32 {%r{{[0-9]+}}, %r{{[0-9]+}}}
   %t1 = load <2 x float>, ptr %a
   %t2 = fmul <2 x float> %t1, %t1
   store <2 x float> %t2, ptr %a
@@ -19,7 +19,7 @@ define void @foo(ptr %a) {
 
 ; CHECK-LABEL: foo2
 define void @foo2(ptr %a) {
-; CHECK: ld.v4.b32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
+; CHECK: ld.v4.b32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
   %t1 = load <4 x float>, ptr %a
   %t2 = fmul <4 x float> %t1, %t1
   store <4 x float> %t2, ptr %a
@@ -28,8 +28,8 @@ define void @foo2(ptr %a) {
 
 ; CHECK-LABEL: foo3
 define void @foo3(ptr %a) {
-; CHECK: ld.v4.b32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
-; CHECK-NEXT: ld.v4.b32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
+; CHECK: ld.v4.b32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
+; CHECK-NEXT: ld.v4.b32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
   %t1 = load <8 x float>, ptr %a
   %t2 = fmul <8 x float> %t1, %t1
   store <8 x float> %t2, ptr %a
@@ -105,14 +105,14 @@ define void @extv8f16_global_a16(ptr addrspace(1) noalias readonly align 16 %dst
 ; CHECK: mov.b32 {%rs
 ; CHECK: mov.b32 {%rs
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.global.v4.b32
 ; CHECK: st.global.v4.b32
@@ -128,17 +128,17 @@ define void @extv8f16_global_a4(ptr addrspace(1) noalias readonly align 16 %dst,
 ; CHECK: ld.global.b32 %r
   %v = load <8 x half>, ptr addrspace(1) %src, align 4
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.global.v4.b32
 ; CHECK: st.global.v4.b32
@@ -155,14 +155,14 @@ define void @extv8f16_generic_a16(ptr noalias readonly align 16 %dst, ptr noalia
 ; CHECK: mov.b32 {%rs
 ; CHECK: mov.b32 {%rs
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.v4.b32
 ; CHECK: st.v4.b32
@@ -178,17 +178,17 @@ define void @extv8f16_generic_a4(ptr noalias readonly align 16 %dst, ptr noalias
 ; CHECK: ld.b32 %r
   %v = load <8 x half>, ptr %src, align 4
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
 ; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK: cvt.f32.f16 %r{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.v4.b32
 ; CHECK: st.v4.b32

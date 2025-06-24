@@ -15,14 +15,9 @@
 
 namespace mlir {
 
-bool isZeroIndex(OpFoldResult v) {
-  if (!v)
-    return false;
-  std::optional<int64_t> constint = getConstantIntValue(v);
-  if (!constint)
-    return false;
-  return *constint == 0;
-}
+bool isZeroInteger(OpFoldResult v) { return isConstantIntValue(v, 0); }
+
+bool isOneInteger(OpFoldResult v) { return isConstantIntValue(v, 1); }
 
 std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
            SmallVector<OpFoldResult>>
@@ -147,8 +142,7 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
 }
 
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
-  auto val = getConstantIntValue(ofr);
-  return val && *val == value;
+  return getConstantIntValue(ofr) == value;
 }
 
 bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
@@ -214,7 +208,7 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
 /// Decompose a vector of mixed static or dynamic values into the corresponding
 /// pair of arrays. This is the inverse function of `getMixedValues`.
 std::pair<SmallVector<int64_t>, SmallVector<Value>>
-decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues) {
+decomposeMixedValues(ArrayRef<OpFoldResult> mixedValues) {
   SmallVector<int64_t> staticValues;
   SmallVector<Value> dynamicValues;
   for (const auto &it : mixedValues) {

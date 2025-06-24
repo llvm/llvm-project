@@ -15,7 +15,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Common/DWARF.h"
-#include "llvm-c/lto.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -33,14 +32,11 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
 #include <optional>
-#include <system_error>
 #include <utility>
 
 using namespace llvm;
@@ -1490,6 +1486,17 @@ void DLLFile::parse() {
     symtab.addLazyDLLSymbol(this, s, impName);
     if (code)
       symtab.addLazyDLLSymbol(this, s, symbolName);
+    if (symtab.isEC()) {
+      StringRef impAuxName = saver().save("__imp_aux_" + symbolName);
+      symtab.addLazyDLLSymbol(this, s, impAuxName);
+
+      if (code) {
+        std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(symbolName);
+        if (mangledName)
+          symtab.addLazyDLLSymbol(this, s, *mangledName);
+      }
+    }
   }
 }
 

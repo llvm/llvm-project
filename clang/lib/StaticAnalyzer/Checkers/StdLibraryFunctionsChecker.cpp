@@ -537,7 +537,7 @@ class StdLibraryFunctionsChecker
     /// a later bug report created by ErrnoChecker.
     /// Empty return value means that 'errno' related bug may not happen from
     /// the current analyzed function.
-    virtual const std::string describe(CheckerContext &C) const { return ""; }
+    virtual std::string describe(CheckerContext &C) const { return ""; }
 
     virtual ~ErrnoConstraintBase() {}
 
@@ -604,7 +604,7 @@ class StdLibraryFunctionsChecker
       return errno_modeling::setErrnoForStdSuccess(State, C);
     }
 
-    const std::string describe(CheckerContext &C) const override {
+    std::string describe(CheckerContext &C) const override {
       return "'errno' becomes undefined after the call";
     }
   };
@@ -622,7 +622,7 @@ class StdLibraryFunctionsChecker
                                                       Call.getCFGElementRef());
     }
 
-    const std::string describe(CheckerContext &C) const override {
+    std::string describe(CheckerContext &C) const override {
       return "reading 'errno' is required to find out if the call has failed";
     }
   };
@@ -2651,16 +2651,22 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "getcwd", Signature(ArgTypes{CharPtrTy, SizeTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+            .Case({NotNull(0),
+                   ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
                    ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
-            .Case({ArgumentCondition(1, WithinRange, SingleValue(0)),
+            .Case({NotNull(0),
+                   ArgumentCondition(1, WithinRange, SingleValue(0)),
                    IsNull(Ret)},
                   ErrnoNEZeroIrrelevant, "Assuming that argument 'size' is 0")
-            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+            .Case({NotNull(0),
+                   ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
                    IsNull(Ret)},
                   ErrnoNEZeroIrrelevant, GenericFailureMsg)
-            .ArgConstraint(NotNull(ArgNo(0)))
+            .Case({IsNull(0), NotNull(Ret)}, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case({IsNull(0), IsNull(Ret)}, ErrnoNEZeroIrrelevant,
+                  GenericFailureMsg)
             .ArgConstraint(
                 BufferSize(/*Buffer*/ ArgNo(0), /*BufSize*/ ArgNo(1)))
             .ArgConstraint(

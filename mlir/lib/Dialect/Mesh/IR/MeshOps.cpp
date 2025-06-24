@@ -75,6 +75,29 @@ static DimensionSize operator*(DimensionSize lhs, DimensionSize rhs) {
   return lhs.value() * rhs.value();
 }
 
+SmallVector<Value> mlir::mesh::getMixedAsValues(OpBuilder b,
+                                                const Location &loc,
+                                                llvm::ArrayRef<int64_t> statics,
+                                                ValueRange dynamics,
+                                                Type type) {
+  SmallVector<Value> values;
+  auto dyn = dynamics.begin();
+  Type i64 = b.getI64Type();
+  if (!type)
+    type = i64;
+  assert((i64 == type || b.getIndexType() == type) &&
+         "expected an i64 or an intex type");
+  for (auto s : statics) {
+    if (s == ShapedType::kDynamic) {
+      values.emplace_back(*(dyn++));
+    } else {
+      TypedAttr val = type == i64 ? b.getI64IntegerAttr(s) : b.getIndexAttr(s);
+      values.emplace_back(b.create<arith::ConstantOp>(loc, type, val));
+    }
+  }
+  return values;
+}
+
 //===----------------------------------------------------------------------===//
 // Inliner
 //===----------------------------------------------------------------------===//
@@ -275,13 +298,12 @@ Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
   return type;
 }
 
-void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
-                                                     OpOperand &operand,
-                                                     OpBuilder &builder,
-                                                     ShardOp &newShardOp) {
+static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
+                                                    Value &operandValue,
+                                                    Operation *operandOp,
+                                                    OpBuilder &builder,
+                                                    ShardOp &newShardOp) {
   OpBuilder::InsertionGuard insertionGuard(builder);
-  Value operandValue = operand.get();
-  Operation *operandOp = operand.getOwner();
   builder.setInsertionPointAfterValue(operandValue);
   ShardOp shardOp = dyn_cast<ShardOp>(operandOp);
   if (shardOp && sharding == shardOp.getSharding() &&
@@ -300,9 +322,8 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
         builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
                                 /*annotate_for_users*/ false);
   }
-  IRRewriter rewriter(builder);
-  rewriter.replaceUsesWithIf(
-      operandValue, newShardOp, [operandOp, operandValue](OpOperand &use) {
+  operandValue.replaceUsesWithIf(
+      newShardOp, [operandOp, operandValue](OpOperand &use) {
         return use.getOwner() == operandOp && use.get() == operandValue;
       });
 
@@ -313,16 +334,20 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
   auto newShardOp2 = builder.create<ShardOp>(operandValue.getLoc(), newShardOp,
                                              newShardOp.getSharding(),
                                              /*annotate_for_users*/ true);
-  rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
-  return;
+  newShardOp.getResult().replaceAllUsesExcept(newShardOp2, newShardOp2);
 }
 
 void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                                      OpResult result,
                                                      OpBuilder &builder) {
   ShardOp newShardOp;
-  for (auto &use : llvm::make_early_inc_range(result.getUses())) {
-    maybeInsertTargetShardingAnnotation(sharding, use, builder, newShardOp);
+  SmallVector<std::pair<Value, Operation *>> uses;
+  for (auto &use : result.getUses()) {
+    uses.emplace_back(use.get(), use.getOwner());
+  }
+  for (auto &[operandValue, operandOp] : uses) {
+    maybeInsertTargetShardingAnnotationImpl(sharding, operandValue, operandOp,
+                                            builder, newShardOp);
   }
 }
 

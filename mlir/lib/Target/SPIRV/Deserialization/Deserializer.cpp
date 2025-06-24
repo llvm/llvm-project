@@ -49,9 +49,10 @@ static inline bool isFnEntryBlock(Block *block) {
 //===----------------------------------------------------------------------===//
 
 spirv::Deserializer::Deserializer(ArrayRef<uint32_t> binary,
-                                  MLIRContext *context)
+                                  MLIRContext *context,
+                                  const spirv::DeserializationOptions &options)
     : binary(binary), context(context), unknownLoc(UnknownLoc::get(context)),
-      module(createModuleOp()), opBuilder(module->getRegion())
+      module(createModuleOp()), opBuilder(module->getRegion()), options(options)
 #ifndef NDEBUG
       ,
       logger(llvm::dbgs())
@@ -866,11 +867,15 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     typeMap[operands[0]] = IntegerType::get(context, operands[1], sign);
   } break;
   case spirv::Opcode::OpTypeFloat: {
-    if (operands.size() != 2)
-      return emitError(unknownLoc, "OpTypeFloat must have bitwidth parameter");
+    if (operands.size() != 2 && operands.size() != 3)
+      return emitError(unknownLoc,
+                       "OpTypeFloat expects either 2 operands (type, bitwidth) "
+                       "or 3 operands (type, bitwidth, encoding), but got ")
+             << operands.size();
+    uint32_t bitWidth = operands[1];
 
     Type floatTy;
-    switch (operands[1]) {
+    switch (bitWidth) {
     case 16:
       floatTy = opBuilder.getF16Type();
       break;
@@ -882,8 +887,20 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
       break;
     default:
       return emitError(unknownLoc, "unsupported OpTypeFloat bitwidth: ")
-             << operands[1];
+             << bitWidth;
     }
+
+    if (operands.size() == 3) {
+      if (spirv::FPEncoding(operands[2]) != spirv::FPEncoding::BFloat16KHR)
+        return emitError(unknownLoc, "unsupported OpTypeFloat FP encoding: ")
+               << operands[2];
+      if (bitWidth != 16)
+        return emitError(unknownLoc,
+                         "invalid OpTypeFloat bitwidth for bfloat16 encoding: ")
+               << bitWidth << " (expected 16)";
+      floatTy = opBuilder.getBF16Type();
+    }
+
     typeMap[operands[0]] = floatTy;
   } break;
   case spirv::Opcode::OpTypeVector: {
@@ -1061,12 +1078,30 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
            << operands[2];
   }
 
-  unsigned rows = getConstantInt(operands[3]).getInt();
-  unsigned columns = getConstantInt(operands[4]).getInt();
+  IntegerAttr rowsAttr = getConstantInt(operands[3]);
+  IntegerAttr columnsAttr = getConstantInt(operands[4]);
+  IntegerAttr useAttr = getConstantInt(operands[5]);
+
+  if (!rowsAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Rows` references "
+                                 "undefined constant <id> ")
+           << operands[3];
+
+  if (!columnsAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Columns` "
+                                 "references undefined constant <id> ")
+           << operands[4];
+
+  if (!useAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Use` references "
+                                 "undefined constant <id> ")
+           << operands[5];
+
+  unsigned rows = rowsAttr.getInt();
+  unsigned columns = columnsAttr.getInt();
 
   std::optional<spirv::CooperativeMatrixUseKHR> use =
-      spirv::symbolizeCooperativeMatrixUseKHR(
-          getConstantInt(operands[5]).getInt());
+      spirv::symbolizeCooperativeMatrixUseKHR(useAttr.getInt());
   if (!use) {
     return emitError(
                unknownLoc,
@@ -1380,6 +1415,9 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     } else if (floatType.isF16()) {
       APInt data(16, operands[2]);
       value = APFloat(APFloat::IEEEhalf(), data);
+    } else if (floatType.isBF16()) {
+      APInt data(16, operands[2]);
+      value = APFloat(APFloat::BFloat(), data);
     }
 
     auto attr = opBuilder.getFloatAttr(floatType, value);
@@ -1449,11 +1487,11 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto vectorType = dyn_cast<VectorType>(resultType)) {
-    auto attr = DenseElementsAttr::get(vectorType, elements);
+  if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
+    auto attr = DenseElementsAttr::get(shapedType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
-    constantMap.try_emplace(resultID, attr, resultType);
+    constantMap.try_emplace(resultID, attr, shapedType);
   } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
@@ -2361,6 +2399,16 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
 }
 
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
+  if (!options.enableControlFlowStructurization) {
+    LLVM_DEBUG(
+        {
+          logger.startLine()
+              << "//----- [cf] skip structurizing control flow -----//\n";
+          logger.indent();
+        });
+    return success();
+  }
+
   LLVM_DEBUG({
     logger.startLine()
         << "//----- [cf] start structurizing control flow -----//\n";

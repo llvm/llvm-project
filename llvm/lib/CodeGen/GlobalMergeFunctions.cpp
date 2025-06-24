@@ -14,6 +14,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/CGData/CodeGenData.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/InitializePasses.h"
@@ -526,7 +527,10 @@ void GlobalMergeFunc::emitFunctionMap(Module &M) {
   SmallVector<char> Buf;
   raw_svector_ostream OS(Buf);
 
-  StableFunctionMapRecord::serialize(OS, LocalFunctionMap.get());
+  std::vector<CGDataPatchItem> PatchItems;
+  StableFunctionMapRecord::serialize(OS, LocalFunctionMap.get(), PatchItems);
+  CGDataOStream COS(OS);
+  COS.patch(PatchItems);
 
   std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
       OS.str(), "in-memory stable function map", false);

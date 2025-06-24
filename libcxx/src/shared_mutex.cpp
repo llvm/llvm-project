@@ -13,7 +13,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // Shared Mutex Base
 __shared_mutex_base::__shared_mutex_base() : __state_(0) {}
@@ -97,5 +96,4 @@ void shared_timed_mutex::lock_shared() { return __base_.lock_shared(); }
 bool shared_timed_mutex::try_lock_shared() { return __base_.try_lock_shared(); }
 void shared_timed_mutex::unlock_shared() { return __base_.unlock_shared(); }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

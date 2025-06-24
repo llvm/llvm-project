@@ -142,7 +142,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   }
 
   std::pair<unsigned, unsigned> SO = CGI.Operands.getSubOperandNumber(OpIdx);
-  std::string &EncoderMethodName =
+  StringRef EncoderMethodName =
       CGI.Operands[SO.first].EncoderMethodNames[SO.second];
 
   if (UseAPInt)
@@ -152,13 +152,14 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
 
   // If the source operand has a custom encoder, use it.
   if (!EncoderMethodName.empty()) {
+    raw_string_ostream CaseOS(Case);
+    CaseOS << indent(6);
     if (UseAPInt) {
-      Case += "      " + EncoderMethodName + "(MI, " + utostr(OpIdx);
-      Case += ", op";
+      CaseOS << EncoderMethodName << "(MI, " + utostr(OpIdx) << ", op";
     } else {
-      Case += "      op = " + EncoderMethodName + "(MI, " + utostr(OpIdx);
+      CaseOS << "op = " << EncoderMethodName << "(MI, " << utostr(OpIdx);
     }
-    Case += ", Fixups, STI);\n";
+    CaseOS << ", Fixups, STI);\n";
   } else {
     if (UseAPInt) {
       Case +=

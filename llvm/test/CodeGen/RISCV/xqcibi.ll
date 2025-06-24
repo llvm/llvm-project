@@ -355,5 +355,32 @@ t:
   ret i32 1
 }
 
+define i1 @selectcc(i64 %0) {
+; RV32I-LABEL: selectcc:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    li a2, 512
+; RV32I-NEXT:    beq a1, a2, .LBB12_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    sltiu a0, a1, 513
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB12_2:
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBI-LABEL: selectcc:
+; RV32IXQCIBI:       # %bb.0: # %entry
+; RV32IXQCIBI-NEXT:    qc.e.beqi a1, 512, .LBB12_2
+; RV32IXQCIBI-NEXT:  # %bb.1: # %entry
+; RV32IXQCIBI-NEXT:    sltiu a0, a1, 513
+; RV32IXQCIBI-NEXT:    xori a0, a0, 1
+; RV32IXQCIBI-NEXT:    ret
+; RV32IXQCIBI-NEXT:  .LBB12_2:
+; RV32IXQCIBI-NEXT:    snez a0, a0
+; RV32IXQCIBI-NEXT:    ret
+entry:
+  %cmp10.i = icmp ugt i64 %0, 2199023255552
+  ret i1 %cmp10.i
+}
 
 !0 = !{!"branch_weights", i32 1, i32 99}

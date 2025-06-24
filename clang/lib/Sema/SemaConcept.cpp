@@ -792,7 +792,7 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
                                     bool ForOverloadResolution) {
   // Don't check constraints if the function is dependent. Also don't check if
   // this is a function template specialization, as the call to
-  // CheckinstantiatedFunctionTemplateConstraints after this will check it
+  // CheckFunctionTemplateConstraints after this will check it
   // better.
   if (FD->isDependentContext() ||
       FD->getTemplatedKind() ==
@@ -907,7 +907,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
 
-  Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/false);
+  Sema::SFINAETrap SFINAE(S);
 
   Sema::InstantiatingTemplate Inst(
       S, DeclInfo.getLocation(),
@@ -1060,12 +1060,55 @@ bool Sema::EnsureTemplateArgumentListConstraints(
   return false;
 }
 
-bool Sema::CheckInstantiatedFunctionTemplateConstraints(
+static bool CheckFunctionConstraintsWithoutInstantiation(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
+    FunctionTemplateDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
+    ConstraintSatisfaction &Satisfaction) {
+  SmallVector<AssociatedConstraint, 3> TemplateAC;
+  Template->getAssociatedConstraints(TemplateAC);
+  if (TemplateAC.empty()) {
+    Satisfaction.IsSatisfied = true;
+    return false;
+  }
+
+  LocalInstantiationScope Scope(SemaRef);
+
+  FunctionDecl *FD = Template->getTemplatedDecl();
+  // Collect the list of template arguments relative to the 'primary'
+  // template. We need the entire list, since the constraint is completely
+  // uninstantiated at this point.
+
+  // FIXME: Add TemplateArgs through the 'Innermost' parameter once
+  // the refactoring of getTemplateInstantiationArgs() relands.
+  MultiLevelTemplateArgumentList MLTAL;
+  MLTAL.addOuterTemplateArguments(Template, {}, /*Final=*/false);
+  SemaRef.getTemplateInstantiationArgs(
+      MLTAL, /*D=*/FD, FD,
+      /*Final=*/false, /*Innermost=*/{}, /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
+  MLTAL.replaceInnermostTemplateArguments(Template, TemplateArgs);
+
+  Sema::ContextRAII SavedContext(SemaRef, FD);
+  std::optional<Sema::CXXThisScopeRAII> ThisScope;
+  if (auto *Method = dyn_cast<CXXMethodDecl>(FD))
+    ThisScope.emplace(SemaRef, /*Record=*/Method->getParent(),
+                      /*ThisQuals=*/Method->getMethodQualifiers());
+  return SemaRef.CheckConstraintSatisfaction(
+      Template, TemplateAC, MLTAL, PointOfInstantiation, Satisfaction);
+}
+
+bool Sema::CheckFunctionTemplateConstraints(
     SourceLocation PointOfInstantiation, FunctionDecl *Decl,
     ArrayRef<TemplateArgument> TemplateArgs,
     ConstraintSatisfaction &Satisfaction) {
   // In most cases we're not going to have constraints, so check for that first.
   FunctionTemplateDecl *Template = Decl->getPrimaryTemplate();
+
+  if (!Template)
+    return ::CheckFunctionConstraintsWithoutInstantiation(
+        *this, PointOfInstantiation, Decl->getDescribedFunctionTemplate(),
+        TemplateArgs, Satisfaction);
+
   // Note - code synthesis context for the constraints check is created
   // inside CheckConstraintsSatisfaction.
   SmallVector<AssociatedConstraint, 3> TemplateAC;
@@ -1320,6 +1363,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
   S.Diag(SubstExpr->getSourceRange().getBegin(),
          diag::note_atomic_constraint_evaluated_to_false)
       << (int)First << SubstExpr;
+  S.DiagnoseTypeTraitDetails(SubstExpr);
 }
 
 template <typename SubstitutionDiagnostic>
@@ -1781,64 +1825,6 @@ bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
       << AmbiguousAtomic2->getSourceRange();
   return true;
 }
-
-concepts::ExprRequirement::ExprRequirement(
-    Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
-    ReturnTypeRequirement Req, SatisfactionStatus Status,
-    ConceptSpecializationExpr *SubstitutedConstraintExpr) :
-    Requirement(IsSimple ? RK_Simple : RK_Compound, Status == SS_Dependent,
-                Status == SS_Dependent &&
-                (E->containsUnexpandedParameterPack() ||
-                 Req.containsUnexpandedParameterPack()),
-                Status == SS_Satisfied), Value(E), NoexceptLoc(NoexceptLoc),
-    TypeReq(Req), SubstitutedConstraintExpr(SubstitutedConstraintExpr),
-    Status(Status) {
-  assert((!IsSimple || (Req.isEmpty() && NoexceptLoc.isInvalid())) &&
-         "Simple requirement must not have a return type requirement or a "
-         "noexcept specification");
-  assert((Status > SS_TypeRequirementSubstitutionFailure && Req.isTypeConstraint()) ==
-         (SubstitutedConstraintExpr != nullptr));
-}
-
-concepts::ExprRequirement::ExprRequirement(
-    SubstitutionDiagnostic *ExprSubstDiag, bool IsSimple,
-    SourceLocation NoexceptLoc, ReturnTypeRequirement Req) :
-    Requirement(IsSimple ? RK_Simple : RK_Compound, Req.isDependent(),
-                Req.containsUnexpandedParameterPack(), /*IsSatisfied=*/false),
-    Value(ExprSubstDiag), NoexceptLoc(NoexceptLoc), TypeReq(Req),
-    Status(SS_ExprSubstitutionFailure) {
-  assert((!IsSimple || (Req.isEmpty() && NoexceptLoc.isInvalid())) &&
-         "Simple requirement must not have a return type requirement or a "
-         "noexcept specification");
-}
-
-concepts::ExprRequirement::ReturnTypeRequirement::
-ReturnTypeRequirement(TemplateParameterList *TPL) :
-    TypeConstraintInfo(TPL, false) {
-  assert(TPL->size() == 1);
-  const TypeConstraint *TC =
-      cast<TemplateTypeParmDecl>(TPL->getParam(0))->getTypeConstraint();
-  assert(TC &&
-         "TPL must have a template type parameter with a type constraint");
-  auto *Constraint =
-      cast<ConceptSpecializationExpr>(TC->getImmediatelyDeclaredConstraint());
-  bool Dependent =
-      Constraint->getTemplateArgsAsWritten() &&
-      TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
-          Constraint->getTemplateArgsAsWritten()->arguments().drop_front(1));
-  TypeConstraintInfo.setInt(Dependent ? true : false);
-}
-
-concepts::TypeRequirement::TypeRequirement(TypeSourceInfo *T) :
-    Requirement(RK_Type, T->getType()->isInstantiationDependentType(),
-                T->getType()->containsUnexpandedParameterPack(),
-                // We reach this ctor with either dependent types (in which
-                // IsSatisfied doesn't matter) or with non-dependent type in
-                // which the existence of the type indicates satisfaction.
-                /*IsSatisfied=*/true),
-    Value(T),
-    Status(T->getType()->isInstantiationDependentType() ? SS_Dependent
-                                                        : SS_Satisfied) {}
 
 NormalizedConstraint::CompoundConstraintKind
 NormalizedConstraint::getCompoundKind() const {

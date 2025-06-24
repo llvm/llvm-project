@@ -58,11 +58,8 @@ std::string FormatExtensionFlags(int64_t Flags) {
 
   // The target parser also includes every extension you don't have.
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
-  Features.erase(std::remove_if(Features.begin(), Features.end(),
-                                [](StringRef extension) {
-                                  return extension.starts_with("-");
-                                }),
-                 Features.end());
+  llvm::erase_if(
+      Features, [](StringRef extension) { return extension.starts_with("-"); });
 
   return llvm::join(Features, ", ");
 }
@@ -1832,6 +1829,22 @@ TEST_P(AArch64ExtensionDependenciesBaseCPUTestFixture,
     // Features default to off, so the negative string is not expected in many
     // cases.
   }
+}
+
+TEST(TargetParserTest, testAArch64ReconstructFromParsedFeatures) {
+  AArch64::ExtensionSet Extensions;
+  std::vector<std::string> FeatureOptions = {
+      "-sve2", "-Baz", "+sve", "+FooBar", "+sve2", "+neon", "-sve",
+  };
+  std::vector<std::string> NonExtensions;
+  Extensions.reconstructFromParsedFeatures(FeatureOptions, NonExtensions);
+
+  std::vector<std::string> NonExtensionsExpected = {"-Baz", "+FooBar"};
+  ASSERT_THAT(NonExtensions, testing::ContainerEq(NonExtensionsExpected));
+  std::vector<StringRef> Features;
+  Extensions.toLLVMFeatureList(Features);
+  std::vector<StringRef> FeaturesExpected = {"+neon", "-sve", "+sve2"};
+  ASSERT_THAT(Features, testing::ContainerEq(FeaturesExpected));
 }
 
 AArch64ExtensionDependenciesBaseArchTestParams

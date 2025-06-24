@@ -47,6 +47,10 @@ Implemented Papers
 - P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
 - P2897R7: ``aligned_accessor``: An mdspan accessor expressing pointer over-alignment (`Github <https://github.com/llvm/llvm-project/issues/118372>`__)
 - P3247R2: Deprecate the notion of trivial types (`Github <https://github.com/llvm/llvm-project/issues/118387>`__)
+- P3372R3: ``constexpr`` containers and adaptors (`Github <https://github.com/llvm/llvm-project/issues/128673>`__) (Only ``constexpr flat_map`` is implemented)
+- P2441R2: ``views::join_with`` (`Github <https://github.com/llvm/llvm-project/issues/105185>`__)
+- P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
+- P2770R0: Stashing stashing ``iterators`` for proper flattening (`Github <https://github.com/llvm/llvm-project/issues/105250>`__)
 
 Improvements and New Features
 -----------------------------
@@ -70,6 +74,13 @@ Improvements and New Features
 - The segmented iterator optimization for ``std::for_each`` has been backported to C++11. Previously it was only available
   in C++23 and later.
 
+- The ``std::for_each_n``, ``std::ranges::for_each`` and ``std::ranges::for_each_n`` algorithms have been optimized for
+  segmented iterators, resulting in a performance improvement of up to 17.7x for ``std::deque<short>`` iterators, and up
+  to 13.9x for ``std::join_view<vector<vector<short>>>`` iterators.
+
+- The ``bitset::to_string`` function has been optimized, resulting in a performance improvement of up to 8.3x for bitsets
+  with uniformly distributed zeros and ones, and up to 13.5x and 16.1x for sparse and dense bitsets, respectively.
+
 Deprecations and Removals
 -------------------------
 
@@ -90,6 +101,13 @@ Potentially breaking changes
 
 - The implementation of ``num_put::do_put`` has been replaced to improve the performance, which can lead to different
   output when printing pointers.
+
+- User-defined specializations of ``std::common_reference`` are diagnosed now. To customize the common reference type, ``std::basic_common_reference`` should be specialized instead.
+
+- ``std::function`` used to have allocator support, which was removed from the Standard by `http://wg21.link/p0302r1`
+  due to issues with its design and inconsistent support from implementations. Previously, libc++ would provide
+  allocator-aware APIs in ``std::function`` in C++11 and C++14, but ignores the allocator argument in all places but
+  one. Starting in this release, the allocator argument is always ignored.
 
 Announcements About Future Releases
 -----------------------------------

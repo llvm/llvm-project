@@ -162,7 +162,7 @@ let TargetPrefix = "riscv" in {
   // Input: (pointer, vl)
   class RISCVUSMLoad
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                    [llvm_ptr_ty, llvm_anyint_ty],
+                    [llvm_anyptr_ty, llvm_anyint_ty],
                     [NoCapture<ArgIndex<0>>, IntrReadMem, IntrArgMemOnly]>,
           RISCVVIntrinsic {
     let VLOperand = 1;
@@ -171,7 +171,7 @@ let TargetPrefix = "riscv" in {
   // Input: (passthru, pointer, vl)
   class RISCVUSLoad
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, llvm_anyptr_ty, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrReadMem, IntrArgMemOnly]>,
           RISCVVIntrinsic {
     let VLOperand = 2;
@@ -183,7 +183,7 @@ let TargetPrefix = "riscv" in {
   // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
   class RISCVUSLoadFF
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty, llvm_anyint_ty],
-                    [LLVMMatchType<0>, llvm_ptr_ty, LLVMMatchType<1>],
+                    [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>],
                     [NoCapture<ArgIndex<1>>]>,
                     RISCVVIntrinsic {
     let VLOperand = 2;
@@ -192,9 +192,9 @@ let TargetPrefix = "riscv" in {
   // Input: (maskedoff, pointer, mask, vl, policy)
   class RISCVUSLoadMasked
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty ],
-                    [LLVMMatchType<0>, llvm_ptr_ty,
+                    [LLVMMatchType<0>, llvm_anyptr_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                     llvm_anyint_ty, LLVMMatchType<1>],
+                     llvm_anyint_ty, LLVMMatchType<2>],
                     [NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<4>>, IntrReadMem,
                      IntrArgMemOnly]>,
                     RISCVVIntrinsic {
@@ -207,7 +207,7 @@ let TargetPrefix = "riscv" in {
   // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
   class RISCVUSLoadFFMasked
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty, llvm_anyint_ty],
-                    [LLVMMatchType<0>, llvm_ptr_ty,
+                    [LLVMMatchType<0>, llvm_anyptr_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      LLVMMatchType<1>, LLVMMatchType<1>],
                     [NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<4>>]>, RISCVVIntrinsic {
@@ -217,8 +217,8 @@ let TargetPrefix = "riscv" in {
   // Input: (passthru, pointer, stride, vl)
   class RISCVSLoad
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_ptr_ty,
-                     llvm_anyint_ty, LLVMMatchType<1>],
+                    [LLVMMatchType<0>, llvm_anyptr_ty,
+                     llvm_anyint_ty, LLVMMatchType<2>],
                     [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
@@ -226,9 +226,9 @@ let TargetPrefix = "riscv" in {
   // Input: (maskedoff, pointer, stride, mask, vl, policy)
   class RISCVSLoadMasked
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty ],
-                    [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyint_ty,
-                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<1>,
-                     LLVMMatchType<1>],
+                    [LLVMMatchType<0>, llvm_anyptr_ty, llvm_anyint_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<2>,
+                     LLVMMatchType<2>],
                     [NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<5>>, IntrReadMem]>,
                     RISCVVIntrinsic {
     let VLOperand = 4;
@@ -237,7 +237,7 @@ let TargetPrefix = "riscv" in {
   // Input: (passthru, pointer, index, vl)
   class RISCVILoad
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_ptr_ty,
+                    [LLVMMatchType<0>, llvm_anyptr_ty,
                      llvm_anyvector_ty, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
@@ -246,9 +246,9 @@ let TargetPrefix = "riscv" in {
   // Input: (maskedoff, pointer, index, mask, vl, policy)
   class RISCVILoadMasked
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty ],
-                    [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyvector_ty,
+                    [LLVMMatchType<0>, llvm_anyptr_ty, llvm_anyvector_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
-                     LLVMMatchType<2>],
+                     LLVMMatchType<3>],
                     [NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<5>>, IntrReadMem]>,
                     RISCVVIntrinsic {
     let VLOperand = 4;
@@ -257,7 +257,7 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, pointer, vl)
   class RISCVUSStore
         : DefaultAttrsIntrinsic<[],
-                    [llvm_anyvector_ty, llvm_ptr_ty, llvm_anyint_ty],
+                    [llvm_anyvector_ty, llvm_anyptr_ty, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem, IntrArgMemOnly]>,
           RISCVVIntrinsic {
     let VLOperand = 2;
@@ -266,7 +266,7 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, pointer, mask, vl)
   class RISCVUSStoreMasked
         : DefaultAttrsIntrinsic<[],
-                    [llvm_anyvector_ty, llvm_ptr_ty,
+                    [llvm_anyvector_ty, llvm_anyptr_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem, IntrArgMemOnly]>,
@@ -277,8 +277,8 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, pointer, stride, vl)
   class RISCVSStore
         : DefaultAttrsIntrinsic<[],
-                    [llvm_anyvector_ty, llvm_ptr_ty,
-                     llvm_anyint_ty, LLVMMatchType<1>],
+                    [llvm_anyvector_ty, llvm_anyptr_ty,
+                     llvm_anyint_ty, LLVMMatchType<2>],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
@@ -286,8 +286,8 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, pointer, stirde, mask, vl)
   class RISCVSStoreMasked
         : DefaultAttrsIntrinsic<[],
-                    [llvm_anyvector_ty, llvm_ptr_ty, llvm_anyint_ty,
-                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<1>],
+                    [llvm_anyvector_ty, llvm_anyptr_ty, llvm_anyint_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<2>],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic {
     let VLOperand = 4;
   }
@@ -295,7 +295,7 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, pointer, index, vl)
   class RISCVIStore
         : DefaultAttrsIntrinsic<[],
-                    [llvm_anyvector_ty, llvm_ptr_ty,
+                    [llvm_anyvector_ty, llvm_anyptr_ty,
                      llvm_anyint_ty, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
@@ -304,7 +304,7 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, pointer, index, mask, vl)
   class RISCVIStoreMasked
         : DefaultAttrsIntrinsic<[],
-                    [llvm_anyvector_ty, llvm_ptr_ty, llvm_anyvector_ty,
+                    [llvm_anyvector_ty, llvm_anyptr_ty, llvm_anyvector_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic {
     let VLOperand = 4;
@@ -1009,8 +1009,8 @@ let TargetPrefix = "riscv" in {
   // Input: (passthru, pointer, vl, sew)
   class RISCVUSSegLoad
         : DefaultAttrsIntrinsic<[llvm_any_ty],
-                                [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyint_ty,
-                                 LLVMMatchType<1>],
+                                [LLVMMatchType<0>, llvm_anyptr_ty, llvm_anyint_ty,
+                                 LLVMMatchType<2>],
                     [NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<3>>, IntrReadMem,
                      IntrArgMemOnly]>,
           RISCVVIntrinsic {
@@ -1020,8 +1020,8 @@ let TargetPrefix = "riscv" in {
   // Input: (maskedoff, pointer, mask, vl, policy, sew)
   class RISCVUSSegLoadMasked
         : DefaultAttrsIntrinsic<[llvm_any_ty],
-                                [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyvector_ty,
-                                 llvm_anyint_ty, LLVMMatchType<2>, LLVMMatchType<2>],
+                                [LLVMMatchType<0>, llvm_anyptr_ty, llvm_anyvector_ty,
+                                 llvm_anyint_ty, LLVMMatchType<3>, LLVMMatchType<3>],
                     [ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>,
                      NoCapture<ArgIndex<1>>, IntrReadMem, IntrArgMemOnly]>,
           RISCVVIntrinsic {
@@ -1035,7 +1035,7 @@ let TargetPrefix = "riscv" in {
   // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
   class RISCVUSSegLoadFF
         : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_anyint_ty],
-                    [LLVMMatchType<0>, llvm_ptr_ty, LLVMMatchType<1>, LLVMMatchType<1>],
+                    [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, LLVMMatchType<1>],
                     [ImmArg<ArgIndex<3>>, NoCapture<ArgIndex<1>>]>, RISCVVIntrinsic {
     let VLOperand = 2;
   }
@@ -1046,7 +1046,7 @@ let TargetPrefix = "riscv" in {
   // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
   class RISCVUSSegLoadFFMasked
         : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_anyint_ty],
-                     [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyvector_ty,
+                     [LLVMMatchType<0>, llvm_anyptr_ty, llvm_anyvector_ty,
                       LLVMMatchType<1>, LLVMMatchType<1>, LLVMMatchType<1>],
                     [ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, NoCapture<ArgIndex<1>>]>,
                     RISCVVIntrinsic {
@@ -1057,8 +1057,8 @@ let TargetPrefix = "riscv" in {
   // Input: (passthru, pointer, offset, vl, sew)
   class RISCVSSegLoad
         : DefaultAttrsIntrinsic<[llvm_any_ty],
-                    [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyint_ty,
-                     LLVMMatchType<1>, LLVMMatchType<1>],
+                    [LLVMMatchType<0>, llvm_anyptr_ty, llvm_anyint_ty,
+                     LLVMMatchType<2>, LLVMMatchType<2>],
                     [ImmArg<ArgIndex<4>>, NoCapture<ArgIndex<1>>, IntrReadMem]>,
           RISCVVIntrinsic {
     let VLOperand = 3;
@@ -1067,10 +1067,10 @@ let TargetPrefix = "riscv" in {
   // Input: (maskedoff, pointer, offset, mask, vl, policy, sew)
   class RISCVSSegLoadMasked
         : DefaultAttrsIntrinsic<[llvm_any_ty],
-                                [LLVMMatchType<0>, llvm_ptr_ty,
+                                [LLVMMatchType<0>, llvm_anyptr_ty,
                                  llvm_anyint_ty, llvm_anyvector_ty,
-                                 LLVMMatchType<1>, LLVMMatchType<1>,
-                                 LLVMMatchType<1>],
+                                 LLVMMatchType<2>, LLVMMatchType<2>,
+                                 LLVMMatchType<2>],
                     [ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
                      NoCapture<ArgIndex<1>>, IntrReadMem]>,
                     RISCVVIntrinsic {
@@ -1081,8 +1081,8 @@ let TargetPrefix = "riscv" in {
   // Input: (passthru, pointer, index, vl, sew)
   class RISCVISegLoad
         : DefaultAttrsIntrinsic<[llvm_any_ty],
-                    [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyvector_ty,
-                     llvm_anyint_ty, LLVMMatchType<2>],
+                    [LLVMMatchType<0>, llvm_anyptr_ty, llvm_anyvector_ty,
+                     llvm_anyint_ty, LLVMMatchType<3>],
                     [ImmArg<ArgIndex<4>>, NoCapture<ArgIndex<1>>, IntrReadMem]>,
           RISCVVIntrinsic {
     let VLOperand = 3;
@@ -1091,9 +1091,9 @@ let TargetPrefix = "riscv" in {
   // Input: (maskedoff, pointer, index, mask, vl, policy, sew)
   class RISCVISegLoadMasked
         : DefaultAttrsIntrinsic<[llvm_any_ty],
-                                [LLVMMatchType<0>, llvm_ptr_ty,
+                                [LLVMMatchType<0>, llvm_anyptr_ty,
                                  llvm_anyvector_ty, llvm_anyvector_ty,
-                                 llvm_anyint_ty, LLVMMatchType<3>, LLVMMatchType<3>],
+                                 llvm_anyint_ty, LLVMMatchType<4>, LLVMMatchType<4>],
                     [ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
                      NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic {
     let VLOperand = 4;
@@ -1103,8 +1103,8 @@ let TargetPrefix = "riscv" in {
   // Input: (value, pointer, vl, sew)
   class RISCVUSSegStore
         : DefaultAttrsIntrinsic<[],
-                                [llvm_any_ty, llvm_ptr_ty, llvm_anyint_ty,
-                                 LLVMMatchType<1>],
+                                [llvm_any_ty, llvm_anyptr_ty, llvm_anyint_ty,
+                                 LLVMMatchType<2>],
                     [ImmArg<ArgIndex<3>>, NoCapture<ArgIndex<1>>, IntrWriteMem,
                      IntrArgMemOnly]>,
           RISCVVIntrinsic {
@@ -1114,8 +1114,8 @@ let TargetPrefix = "riscv" in {
   // Input: (value, pointer, mask, vl, sew)
   class RISCVUSSegStoreMasked
         : DefaultAttrsIntrinsic<[],
-                                [llvm_any_ty, llvm_ptr_ty,
-                                 llvm_anyvector_ty, llvm_anyint_ty, LLVMMatchType<2>],
+                                [llvm_any_ty, llvm_anyptr_ty,
+                                 llvm_anyvector_ty, llvm_anyint_ty, LLVMMatchType<3>],
                     [ImmArg<ArgIndex<4>>, NoCapture<ArgIndex<1>>, IntrWriteMem,
                      IntrArgMemOnly]>,
           RISCVVIntrinsic {
@@ -1126,8 +1126,8 @@ let TargetPrefix = "riscv" in {
   // Input: (value, pointer, offset, vl, sew)
   class RISCVSSegStore
         : DefaultAttrsIntrinsic<[],
-                                [llvm_any_ty, llvm_ptr_ty, llvm_anyint_ty,
-                                 LLVMMatchType<1>, LLVMMatchType<1>],
+                                [llvm_any_ty, llvm_anyptr_ty, llvm_anyint_ty,
+                                 LLVMMatchType<2>, LLVMMatchType<2>],
                     [ImmArg<ArgIndex<4>>, NoCapture<ArgIndex<1>>, IntrWriteMem]>,
           RISCVVIntrinsic {
     let VLOperand = 3;
@@ -1136,9 +1136,9 @@ let TargetPrefix = "riscv" in {
   // Input: (value, pointer, offset, mask, vl, sew)
   class RISCVSSegStoreMasked
         : DefaultAttrsIntrinsic<[],
-                                [llvm_any_ty, llvm_ptr_ty, llvm_anyint_ty,
-                                 llvm_anyvector_ty, LLVMMatchType<1>,
-                                 LLVMMatchType<1>],
+                                [llvm_any_ty, llvm_anyptr_ty, llvm_anyint_ty,
+                                 llvm_anyvector_ty, LLVMMatchType<2>,
+                                 LLVMMatchType<2>],
                     [ImmArg<ArgIndex<5>>, NoCapture<ArgIndex<1>>, IntrWriteMem]>,
           RISCVVIntrinsic {
     let VLOperand = 4;
@@ -1148,8 +1148,8 @@ let TargetPrefix = "riscv" in {
   // Input: (value, pointer, offset, vl, sew)
   class RISCVISegStore
         : DefaultAttrsIntrinsic<[],
-                                [llvm_any_ty, llvm_ptr_ty, llvm_anyvector_ty,
-                                 llvm_anyint_ty, LLVMMatchType<2>],
+                                [llvm_any_ty, llvm_anyptr_ty, llvm_anyvector_ty,
+                                 llvm_anyint_ty, LLVMMatchType<3>],
                     [ImmArg<ArgIndex<4>>, NoCapture<ArgIndex<1>>, IntrWriteMem]>,
           RISCVVIntrinsic {
     let VLOperand = 3;
@@ -1158,9 +1158,9 @@ let TargetPrefix = "riscv" in {
   // Input: (value, pointer, offset, mask, vl, sew)
   class RISCVISegStoreMasked
         : DefaultAttrsIntrinsic<[],
-                                [llvm_any_ty, llvm_ptr_ty, llvm_anyvector_ty,
+                                [llvm_any_ty, llvm_anyptr_ty, llvm_anyvector_ty,
                                  llvm_anyvector_ty, llvm_anyint_ty,
-                                 LLVMMatchType<3>],
+                                 LLVMMatchType<4>],
                     [ImmArg<ArgIndex<5>>, NoCapture<ArgIndex<1>>, IntrWriteMem]>,
           RISCVVIntrinsic {
     let VLOperand = 4;
@@ -1713,7 +1713,7 @@ let TargetPrefix = "riscv" in {
           : DefaultAttrsIntrinsic<!listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
                                               !add(nf, -1))),
-                                  [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                  [llvm_anyptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                    llvm_anyint_ty],
                                   [NoCapture<ArgIndex<0>>, IntrReadMem]>;
 
@@ -1723,7 +1723,7 @@ let TargetPrefix = "riscv" in {
                                   !listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
                                                           !add(nf, -1)),
-                                              [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                              [llvm_anyptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                                llvm_anyint_ty]),
                                   [NoCapture<ArgIndex<nf>>, IntrWriteMem]>;
   }

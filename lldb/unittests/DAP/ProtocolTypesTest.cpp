@@ -7,20 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolTypes.h"
+#include "Protocol/ProtocolEvents.h"
+#include "Protocol/ProtocolRequests.h"
+#include "TestingSupport/TestUtilities.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
+using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using lldb_private::roundtripJSON;
+using llvm::json::parse;
+using llvm::json::Value;
 
-template <typename T> static llvm::Expected<T> roundtrip(const T &input) {
-  llvm::json::Value value = toJSON(input);
-  llvm::json::Path::Root root;
-  T output;
-  if (!fromJSON(value, output, root))
-    return root.getError();
-  return output;
+/// Returns a pretty printed json string of a `llvm::json::Value`.
+static std::string pp(const json::Value &E) {
+  return formatv("{0:2}", E).str();
 }
 
 TEST(ProtocolTypesTest, ExceptionBreakpointsFilter) {
@@ -33,7 +40,7 @@ TEST(ProtocolTypesTest, ExceptionBreakpointsFilter) {
   filter.conditionDescription = "Condition for test filter";
 
   llvm::Expected<ExceptionBreakpointsFilter> deserialized_filter =
-      roundtrip(filter);
+      roundtripJSON(filter);
   ASSERT_THAT_EXPECTED(deserialized_filter, llvm::Succeeded());
 
   EXPECT_EQ(filter.filter, deserialized_filter->filter);
@@ -52,7 +59,7 @@ TEST(ProtocolTypesTest, Source) {
   source.sourceReference = 12345;
   source.presentationHint = Source::eSourcePresentationHintEmphasize;
 
-  llvm::Expected<Source> deserialized_source = roundtrip(source);
+  llvm::Expected<Source> deserialized_source = roundtripJSON(source);
   ASSERT_THAT_EXPECTED(deserialized_source, llvm::Succeeded());
 
   EXPECT_EQ(source.name, deserialized_source->name);
@@ -69,7 +76,7 @@ TEST(ProtocolTypesTest, ColumnDescriptor) {
   column.type = eColumnTypeString;
   column.width = 20;
 
-  llvm::Expected<ColumnDescriptor> deserialized_column = roundtrip(column);
+  llvm::Expected<ColumnDescriptor> deserialized_column = roundtripJSON(column);
   ASSERT_THAT_EXPECTED(deserialized_column, llvm::Succeeded());
 
   EXPECT_EQ(column.attributeName, deserialized_column->attributeName);
@@ -87,7 +94,7 @@ TEST(ProtocolTypesTest, BreakpointMode) {
   mode.appliesTo = {eBreakpointModeApplicabilitySource,
                     eBreakpointModeApplicabilityException};
 
-  llvm::Expected<BreakpointMode> deserialized_mode = roundtrip(mode);
+  llvm::Expected<BreakpointMode> deserialized_mode = roundtripJSON(mode);
   ASSERT_THAT_EXPECTED(deserialized_mode, llvm::Succeeded());
 
   EXPECT_EQ(mode.mode, deserialized_mode->mode);
@@ -111,7 +118,8 @@ TEST(ProtocolTypesTest, Breakpoint) {
   breakpoint.offset = 4;
   breakpoint.reason = BreakpointReason::eBreakpointReasonPending;
 
-  llvm::Expected<Breakpoint> deserialized_breakpoint = roundtrip(breakpoint);
+  llvm::Expected<Breakpoint> deserialized_breakpoint =
+      roundtripJSON(breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(breakpoint.id, deserialized_breakpoint->id);
@@ -143,7 +151,7 @@ TEST(ProtocolTypesTest, SourceBreakpoint) {
   source_breakpoint.mode = "hardware";
 
   llvm::Expected<SourceBreakpoint> deserialized_source_breakpoint =
-      roundtrip(source_breakpoint);
+      roundtripJSON(source_breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_source_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(source_breakpoint.line, deserialized_source_breakpoint->line);
@@ -164,7 +172,7 @@ TEST(ProtocolTypesTest, FunctionBreakpoint) {
   function_breakpoint.hitCondition = "3";
 
   llvm::Expected<FunctionBreakpoint> deserialized_function_breakpoint =
-      roundtrip(function_breakpoint);
+      roundtripJSON(function_breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_function_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(function_breakpoint.name, deserialized_function_breakpoint->name);
@@ -182,7 +190,7 @@ TEST(ProtocolTypesTest, DataBreakpoint) {
   data_breakpoint_info.hitCondition = "10";
 
   llvm::Expected<DataBreakpoint> deserialized_data_breakpoint_info =
-      roundtrip(data_breakpoint_info);
+      roundtripJSON(data_breakpoint_info);
   ASSERT_THAT_EXPECTED(deserialized_data_breakpoint_info, llvm::Succeeded());
 
   EXPECT_EQ(data_breakpoint_info.dataId,
@@ -219,9 +227,9 @@ TEST(ProtocolTypesTest, Capabilities) {
                                    {eBreakpointModeApplicabilitySource}}};
   capabilities.lldbExtVersion = "1.0.0";
 
-  // Perform roundtrip serialization and deserialization.
+  // Perform roundtripJSON serialization and deserialization.
   llvm::Expected<Capabilities> deserialized_capabilities =
-      roundtrip(capabilities);
+      roundtripJSON(capabilities);
   ASSERT_THAT_EXPECTED(deserialized_capabilities, llvm::Succeeded());
 
   // Verify supported features.
@@ -229,14 +237,12 @@ TEST(ProtocolTypesTest, Capabilities) {
             deserialized_capabilities->supportedFeatures);
 
   // Verify exception breakpoint filters.
-  ASSERT_TRUE(
-      deserialized_capabilities->exceptionBreakpointFilters.has_value());
-  EXPECT_EQ(capabilities.exceptionBreakpointFilters->size(),
-            deserialized_capabilities->exceptionBreakpointFilters->size());
-  for (size_t i = 0; i < capabilities.exceptionBreakpointFilters->size(); ++i) {
-    const auto &original = capabilities.exceptionBreakpointFilters->at(i);
+  EXPECT_EQ(capabilities.exceptionBreakpointFilters.size(),
+            deserialized_capabilities->exceptionBreakpointFilters.size());
+  for (size_t i = 0; i < capabilities.exceptionBreakpointFilters.size(); ++i) {
+    const auto &original = capabilities.exceptionBreakpointFilters.at(i);
     const auto &deserialized =
-        deserialized_capabilities->exceptionBreakpointFilters->at(i);
+        deserialized_capabilities->exceptionBreakpointFilters.at(i);
     EXPECT_EQ(original.filter, deserialized.filter);
     EXPECT_EQ(original.label, deserialized.label);
     EXPECT_EQ(original.description, deserialized.description);
@@ -246,19 +252,16 @@ TEST(ProtocolTypesTest, Capabilities) {
   }
 
   // Verify completion trigger characters.
-  ASSERT_TRUE(
-      deserialized_capabilities->completionTriggerCharacters.has_value());
   EXPECT_EQ(capabilities.completionTriggerCharacters,
             deserialized_capabilities->completionTriggerCharacters);
 
   // Verify additional module columns.
-  ASSERT_TRUE(deserialized_capabilities->additionalModuleColumns.has_value());
-  EXPECT_EQ(capabilities.additionalModuleColumns->size(),
-            deserialized_capabilities->additionalModuleColumns->size());
-  for (size_t i = 0; i < capabilities.additionalModuleColumns->size(); ++i) {
-    const auto &original = capabilities.additionalModuleColumns->at(i);
+  EXPECT_EQ(capabilities.additionalModuleColumns.size(),
+            deserialized_capabilities->additionalModuleColumns.size());
+  for (size_t i = 0; i < capabilities.additionalModuleColumns.size(); ++i) {
+    const auto &original = capabilities.additionalModuleColumns.at(i);
     const auto &deserialized =
-        deserialized_capabilities->additionalModuleColumns->at(i);
+        deserialized_capabilities->additionalModuleColumns.at(i);
     EXPECT_EQ(original.attributeName, deserialized.attributeName);
     EXPECT_EQ(original.label, deserialized.label);
     EXPECT_EQ(original.format, deserialized.format);
@@ -267,19 +270,15 @@ TEST(ProtocolTypesTest, Capabilities) {
   }
 
   // Verify supported checksum algorithms.
-  ASSERT_TRUE(
-      deserialized_capabilities->supportedChecksumAlgorithms.has_value());
   EXPECT_EQ(capabilities.supportedChecksumAlgorithms,
             deserialized_capabilities->supportedChecksumAlgorithms);
 
   // Verify breakpoint modes.
-  ASSERT_TRUE(deserialized_capabilities->breakpointModes.has_value());
-  EXPECT_EQ(capabilities.breakpointModes->size(),
-            deserialized_capabilities->breakpointModes->size());
-  for (size_t i = 0; i < capabilities.breakpointModes->size(); ++i) {
-    const auto &original = capabilities.breakpointModes->at(i);
-    const auto &deserialized =
-        deserialized_capabilities->breakpointModes->at(i);
+  EXPECT_EQ(capabilities.breakpointModes.size(),
+            deserialized_capabilities->breakpointModes.size());
+  for (size_t i = 0; i < capabilities.breakpointModes.size(); ++i) {
+    const auto &original = capabilities.breakpointModes.at(i);
+    const auto &deserialized = deserialized_capabilities->breakpointModes.at(i);
     EXPECT_EQ(original.mode, deserialized.mode);
     EXPECT_EQ(original.label, deserialized.label);
     EXPECT_EQ(original.description, deserialized.description);
@@ -287,7 +286,6 @@ TEST(ProtocolTypesTest, Capabilities) {
   }
 
   // Verify lldb extension version.
-  ASSERT_TRUE(deserialized_capabilities->lldbExtVersion.has_value());
   EXPECT_EQ(capabilities.lldbExtVersion,
             deserialized_capabilities->lldbExtVersion);
 }
@@ -312,7 +310,7 @@ TEST(ProtocolTypesTest, Scope) {
   source.presentationHint = Source::eSourcePresentationHintNormal;
   scope.source = source;
 
-  llvm::Expected<Scope> deserialized_scope = roundtrip(scope);
+  llvm::Expected<Scope> deserialized_scope = roundtripJSON(scope);
   ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
   EXPECT_EQ(scope.name, deserialized_scope->name);
   EXPECT_EQ(scope.presentationHint, deserialized_scope->presentationHint);
@@ -578,27 +576,219 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
   instruction.presentationHint =
       DisassembledInstruction::eDisassembledInstructionPresentationHintNormal;
 
-  llvm::Expected<DisassembledInstruction> deserialized_instruction =
-      roundtrip(instruction);
-  ASSERT_THAT_EXPECTED(deserialized_instruction, llvm::Succeeded());
+  StringLiteral json = R"({
+  "address": "0x12345678",
+  "column": 5,
+  "endColumn": 10,
+  "endLine": 15,
+  "instruction": "mov eax, ebx",
+  "instructionBytes": "0F 1F 00",
+  "line": 10,
+  "location": {
+    "name": "test.cpp",
+    "path": "/path/to/test.cpp",
+    "presentationHint": "normal",
+    "sourceReference": 123
+  },
+  "presentationHint": "normal",
+  "symbol": "main"
+})";
 
-  EXPECT_EQ(instruction.address, deserialized_instruction->address);
-  EXPECT_EQ(instruction.instructionBytes,
-            deserialized_instruction->instructionBytes);
-  EXPECT_EQ(instruction.instruction, deserialized_instruction->instruction);
-  EXPECT_EQ(instruction.symbol, deserialized_instruction->symbol);
-  EXPECT_EQ(instruction.location->name,
-            deserialized_instruction->location->name);
-  EXPECT_EQ(instruction.location->path,
-            deserialized_instruction->location->path);
-  EXPECT_EQ(instruction.location->sourceReference,
-            deserialized_instruction->location->sourceReference);
-  EXPECT_EQ(instruction.location->presentationHint,
-            deserialized_instruction->location->presentationHint);
-  EXPECT_EQ(instruction.line, deserialized_instruction->line);
-  EXPECT_EQ(instruction.column, deserialized_instruction->column);
-  EXPECT_EQ(instruction.endLine, deserialized_instruction->endLine);
-  EXPECT_EQ(instruction.endColumn, deserialized_instruction->endColumn);
-  EXPECT_EQ(instruction.presentationHint,
-            deserialized_instruction->presentationHint);
+  // Validate toJSON
+  EXPECT_EQ(json, pp(instruction));
+
+  // Validate fromJSON
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(json),
+                       HasValue(Value(instruction)));
+  // Validate parsing errors
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(R"({"address":1})",
+                                     "disassemblyInstruction"),
+      FailedWithMessage("expected string at disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(R"({"address":"-1"})",
+                                                      "disassemblyInstruction"),
+                       FailedWithMessage("expected string encoded uint64_t at "
+                                         "disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(
+                           R"({"address":"0xfffffffffffffffffffffffffff"})",
+                           "disassemblyInstruction"),
+                       FailedWithMessage("expected string encoded uint64_t at "
+                                         "disassemblyInstruction.address"));
+}
+
+TEST(ProtocolTypesTest, Thread) {
+  const Thread thread{1, "thr1"};
+  const StringRef json = R"({
+  "id": 1,
+  "name": "thr1"
+})";
+  // Validate toJSON
+  EXPECT_EQ(json, pp(thread));
+  // Validate fromJSON
+  EXPECT_THAT_EXPECTED(parse<Thread>(json), HasValue(Value(thread)));
+  // Validate parsing errors
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":1})", "thread"),
+                       FailedWithMessage("missing value at thread.name"));
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":"one"})", "thread"),
+                       FailedWithMessage("expected uint64_t at thread.id"));
+  EXPECT_THAT_EXPECTED(parse<Thread>(R"({"id":1,"name":false})", "thread"),
+                       FailedWithMessage("expected string at thread.name"));
+}
+
+TEST(ProtocolTypesTest, ThreadResponseBody) {
+  const ThreadsResponseBody body{{{1, "thr1"}, {2, "thr2"}}};
+  const StringRef json = R"({
+  "threads": [
+    {
+      "id": 1,
+      "name": "thr1"
+    },
+    {
+      "id": 2,
+      "name": "thr2"
+    }
+  ]
+})";
+  // Validate toJSON
+  EXPECT_EQ(json, pp(body));
+}
+
+TEST(ProtocolTypesTest, CapabilitiesEventBody) {
+  Capabilities capabilities;
+  capabilities.supportedFeatures = {
+      eAdapterFeatureANSIStyling,
+      eAdapterFeatureBreakpointLocationsRequest,
+  };
+  CapabilitiesEventBody body;
+  body.capabilities = capabilities;
+  StringRef json = R"({
+  "capabilities": {
+    "supportsANSIStyling": true,
+    "supportsBreakpointLocationsRequest": true
+  }
+})";
+  // Validate toJSON
+  EXPECT_EQ(json, pp(body));
+}
+
+TEST(ProtocolTypesTest, ExceptionFilterOptions) {
+  EXPECT_THAT_EXPECTED(parse<ExceptionFilterOptions>(R"({"filterId":"id"})"),
+                       HasValue(Value(ExceptionFilterOptions{
+                           /*filterId=*/"id", /*condition=*/"", /*mode*/ ""})));
+  EXPECT_THAT_EXPECTED(
+      parse<ExceptionFilterOptions>(R"({"filterId":"id","condition":"1+2"})"),
+      HasValue(Value(ExceptionFilterOptions{
+          /*filterId=*/"id", /*condition=*/"1+2", /*mode*/ ""})));
+  EXPECT_THAT_EXPECTED(
+      parse<ExceptionFilterOptions>(
+          R"({"filterId":"id","condition":"1+2","mode":"m"})"),
+      HasValue(Value(ExceptionFilterOptions{
+          /*filterId=*/"id", /*condition=*/"1+2", /*mode*/ "m"})));
+
+  // Validate parsing errors
+  EXPECT_THAT_EXPECTED(
+      parse<ExceptionFilterOptions>(R"({})", "exceptionFilterOptions"),
+      FailedWithMessage("missing value at exceptionFilterOptions.filterId"));
+  EXPECT_THAT_EXPECTED(
+      parse<ExceptionFilterOptions>(R"({"filterId":"id","condition":42})",
+                                    "exceptionFilterOptions"),
+      FailedWithMessage("expected string at exceptionFilterOptions.condition"));
+  EXPECT_THAT_EXPECTED(
+      parse<ExceptionFilterOptions>(R"({"filterId":"id","mode":42})",
+                                    "exceptionFilterOptions"),
+      FailedWithMessage("expected string at exceptionFilterOptions.mode"));
+}
+
+TEST(ProtocolTypesTest, SetExceptionBreakpointsArguments) {
+  EXPECT_THAT_EXPECTED(
+      parse<SetExceptionBreakpointsArguments>(R"({"filters":[]})"),
+      HasValue(testing::FieldsAre(/*filters=*/testing::IsEmpty(),
+                                  /*filterOptions=*/testing::IsEmpty())));
+  EXPECT_THAT_EXPECTED(
+      parse<SetExceptionBreakpointsArguments>(R"({"filters":["abc"]})"),
+      HasValue(testing::FieldsAre(/*filters=*/std::vector<std::string>{"abc"},
+                                  /*filterOptions=*/testing::IsEmpty())));
+  EXPECT_THAT_EXPECTED(
+      parse<SetExceptionBreakpointsArguments>(
+          R"({"filters":[],"filterOptions":[{"filterId":"abc"}]})"),
+      HasValue(testing::FieldsAre(
+          /*filters=*/testing::IsEmpty(),
+          /*filterOptions=*/testing::Contains(testing::FieldsAre(
+              /*filterId=*/"abc", /*condition=*/"", /*mode=*/"")))));
+
+  // Validate parse errors
+  EXPECT_THAT_EXPECTED(parse<SetExceptionBreakpointsArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).filters"));
+  EXPECT_THAT_EXPECTED(
+      parse<SetExceptionBreakpointsArguments>(R"({"filters":false})"),
+      FailedWithMessage("expected array at (root).filters"));
+}
+
+TEST(ProtocolTypesTest, SetExceptionBreakpointsResponseBody) {
+  SetExceptionBreakpointsResponseBody body;
+  Breakpoint bp;
+  bp.id = 12, bp.verified = true;
+  body.breakpoints = {bp};
+  EXPECT_EQ(R"({
+  "breakpoints": [
+    {
+      "id": 12,
+      "verified": true
+    }
+  ]
+})",
+            pp(body));
+}
+
+TEST(ProtocolTypesTest, StepInTarget) {
+  StepInTarget target;
+  target.id = 230;
+  target.label = "the_function_name";
+  target.line = 2;
+  target.column = 320;
+  target.endLine = 32;
+  target.endColumn = 23;
+
+  llvm::Expected<StepInTarget> deserialized_target = roundtripJSON(target);
+  ASSERT_THAT_EXPECTED(deserialized_target, llvm::Succeeded());
+
+  EXPECT_EQ(target.id, deserialized_target->id);
+  EXPECT_EQ(target.label, deserialized_target->label);
+  EXPECT_EQ(target.line, deserialized_target->line);
+  EXPECT_EQ(target.column, deserialized_target->column);
+  EXPECT_EQ(target.endLine, deserialized_target->endLine);
+  EXPECT_EQ(target.endColumn, deserialized_target->endColumn);
+}
+
+TEST(ProtocolTypesTest, ReadMemoryArguments) {
+  ReadMemoryArguments args;
+  args.count = 20;
+  args.memoryReference = 43962;
+  args.offset = 0;
+
+  llvm::Expected<ReadMemoryArguments> expected =
+      parse<ReadMemoryArguments>(R"({"memoryReference":"-4000", "count": 20})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Failed());
+  expected = parse<ReadMemoryArguments>(
+      R"({"memoryReference":"0xabba", "count": 20})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+
+  EXPECT_EQ(args.count, expected->count);
+  EXPECT_EQ(args.memoryReference, expected->memoryReference);
+  EXPECT_EQ(args.offset, expected->offset);
+}
+
+TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
+  ReadMemoryResponseBody response;
+  response.address = "0xdeadbeef";
+  const std::string data_str = "hello world!";
+  std::transform(data_str.begin(), data_str.end(),
+                 std::back_inserter(response.data),
+                 [](char letter) { return std::byte(letter); });
+  response.unreadableBytes = 1;
+
+  Expected<Value> expected = json::parse(
+      R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
 }

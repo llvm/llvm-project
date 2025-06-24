@@ -335,9 +335,9 @@ class SourceLocation(Structure):
         return conf.lib.clang_Location_isInSystemHeader(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other):
-        if not isinstance(other, SourceLocation):
-            return False
-        return conf.lib.clang_equalLocations(self, other)  # type: ignore [no-any-return]
+        return isinstance(other, SourceLocation) and conf.lib.clang_equalLocations(
+            self, other
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -395,9 +395,9 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other):
-        if not isinstance(other, SourceRange):
-            return False
-        return conf.lib.clang_equalRanges(self, other)  # type: ignore [no-any-return]
+        return isinstance(other, SourceRange) and conf.lib.clang_equalRanges(
+            self, other
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -1599,9 +1599,7 @@ class Cursor(Structure):
 
     # This function is not null-guarded because it is used in cursor_null_guard itself
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Cursor):
-            return False
-        return conf.lib.clang_equalCursors(self, other)  # type: ignore [no-any-return]
+        return isinstance(other, Cursor) and conf.lib.clang_equalCursors(self, other)
 
     # Not null-guarded for consistency with __eq__
     def __ne__(self, other: object) -> bool:
@@ -2483,6 +2481,7 @@ class TypeKind(BaseEnumeration):
     OBJCSEL = 29
     FLOAT128 = 30
     HALF = 31
+    FLOAT16 = 32
     IBM128 = 40
     COMPLEX = 100
     POINTER = 101

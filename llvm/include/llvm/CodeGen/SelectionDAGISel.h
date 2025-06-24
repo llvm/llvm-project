@@ -47,7 +47,7 @@ public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
-  SwiftErrorValueTracking *SwiftError;
+  std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
   MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;

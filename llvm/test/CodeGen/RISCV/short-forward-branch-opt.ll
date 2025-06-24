@@ -173,14 +173,21 @@ define signext i32 @test6(i32 signext %x, i32 signext %z) {
 ; NOSFB-NEXT:    or a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
-; SFB-LABEL: test6:
-; SFB:       # %bb.0:
-; SFB-NEXT:    li a2, -1
-; SFB-NEXT:    beqz a1, .LBB5_2
-; SFB-NEXT:  # %bb.1:
-; SFB-NEXT:    mv a0, a2
-; SFB-NEXT:  .LBB5_2:
-; SFB-NEXT:    ret
+; NOZICOND-LABEL: test6:
+; NOZICOND:       # %bb.0:
+; NOZICOND-NEXT:    li a2, -1
+; NOZICOND-NEXT:    beqz a1, .LBB5_2
+; NOZICOND-NEXT:  # %bb.1:
+; NOZICOND-NEXT:    mv a0, a2
+; NOZICOND-NEXT:  .LBB5_2:
+; NOZICOND-NEXT:    ret
+;
+; ZICOND-LABEL: test6:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    addi a0, a0, 1
+; ZICOND-NEXT:    czero.nez a0, a0, a1
+; ZICOND-NEXT:    addi a0, a0, -1
+; ZICOND-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %b = select i1 %c, i32 %x, i32 -1
   ret i32 %b
@@ -195,14 +202,21 @@ define signext i32 @test7(i32 signext %x, i32 signext %z) {
 ; NOSFB-NEXT:    or a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
-; SFB-LABEL: test7:
-; SFB:       # %bb.0:
-; SFB-NEXT:    li a2, -1
-; SFB-NEXT:    bnez a1, .LBB6_2
-; SFB-NEXT:  # %bb.1:
-; SFB-NEXT:    mv a0, a2
-; SFB-NEXT:  .LBB6_2:
-; SFB-NEXT:    ret
+; NOZICOND-LABEL: test7:
+; NOZICOND:       # %bb.0:
+; NOZICOND-NEXT:    li a2, -1
+; NOZICOND-NEXT:    bnez a1, .LBB6_2
+; NOZICOND-NEXT:  # %bb.1:
+; NOZICOND-NEXT:    mv a0, a2
+; NOZICOND-NEXT:  .LBB6_2:
+; NOZICOND-NEXT:    ret
+;
+; ZICOND-LABEL: test7:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    addi a0, a0, 1
+; ZICOND-NEXT:    czero.eqz a0, a0, a1
+; ZICOND-NEXT:    addi a0, a0, -1
+; ZICOND-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %b = select i1 %c, i32 -1, i32 %x
   ret i32 %b

@@ -44,6 +44,7 @@
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
@@ -313,6 +314,7 @@
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:

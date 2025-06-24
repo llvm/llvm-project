@@ -1,3 +1,6 @@
+# TODO: Clean up this directory and its dependencies
+set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND ProcessUtility)
+
 add_lldb_library(lldbPluginProcessUtility
   AuxVector.cpp
   FreeBSDSignals.cpp
@@ -63,6 +66,9 @@ add_lldb_library(lldbPluginProcessUtility
   StopInfoMachException.cpp
   ThreadMemory.cpp
 
+  LINK_COMPONENTS
+    Support
+    TargetParser
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -73,7 +79,4 @@ add_lldb_library(lldbPluginProcessUtility
     lldbTarget
     lldbUtility
     lldbValueObject
-  LINK_COMPONENTS
-    Support
-    TargetParser
   )

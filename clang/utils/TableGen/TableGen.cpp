@@ -73,6 +73,7 @@ enum ActionType {
   GenClangOpenCLBuiltinHeader,
   GenClangOpenCLBuiltinTests,
   GenCXX11AttributeInfo,
+  GenAttributeSpellingList,
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
@@ -243,6 +244,8 @@ cl::opt<ActionType> Action(
                    "Generate OpenCL builtin declaration tests"),
         clEnumValN(GenCXX11AttributeInfo, "gen-cxx11-attribute-info",
                    "Generate CXX11 attributes info"),
+        clEnumValN(GenAttributeSpellingList, "gen-attribute-spelling-list",
+                   "Generate attribute spelling list"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
@@ -362,6 +365,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenCXX11AttributeInfo:
     EmitCXX11AttributeInfo(Records, OS);
+    break;
+  case GenAttributeSpellingList:
+    EmitAttributeSpellingList(Records, OS);
     break;
   case GenClangAttrImpl:
     EmitClangAttrImpl(Records, OS);

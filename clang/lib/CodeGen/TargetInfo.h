@@ -298,8 +298,8 @@ public:
                                        llvm::StringRef Value,
                                        llvm::SmallString<32> &Opt) const {}
 
-  /// Get LLVM calling convention for OpenCL kernel.
-  virtual unsigned getOpenCLKernelCallingConv() const;
+  /// Get LLVM calling convention for device kernels.
+  virtual unsigned getDeviceKernelCallingConv() const;
 
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.
@@ -458,6 +458,15 @@ public:
   static void
   initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                    llvm::AttrBuilder &FuncAttrs);
+
+  // Set the ptrauth-* attributes of the Function accordingly to the Opts.
+  // Remove attributes that contradict with current Opts.
+  static void setPointerAuthFnAttributes(const PointerAuthOptions &Opts,
+                                         llvm::Function &F);
+
+  // Add the ptrauth-* Attributes to the FuncAttrs.
+  static void initPointerAuthFnAttributes(const PointerAuthOptions &Opts,
+                                          llvm::AttrBuilder &FuncAttrs);
 
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);

@@ -16,7 +16,6 @@
 #include <fibersapi.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 static_assert(sizeof(__libcpp_mutex_t) == sizeof(SRWLOCK), "");
 static_assert(alignof(__libcpp_mutex_t) == alignof(SRWLOCK), "");
@@ -212,5 +211,4 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void* __p) {
   return 0;
 }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

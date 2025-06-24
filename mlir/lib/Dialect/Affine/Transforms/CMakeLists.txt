@@ -17,6 +17,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   ReifyValueBounds.cpp
   SuperVectorize.cpp
   SimplifyAffineStructures.cpp
+  SimplifyAffineMinMax.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Affine
