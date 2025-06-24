@@ -2983,7 +2983,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // For vector geps, use the generic demanded vector support.
   // Skip if GEP return type is scalable. The number of elements is unknown at
   // compile-time.
-  // TODO: exploit undef elements to decrease demanded bits
   if (auto *GEPFVTy = dyn_cast<FixedVectorType>(GEPType)) {
     auto VWidth = GEPFVTy->getNumElements();
     APInt PoisonElts(VWidth, 0);
