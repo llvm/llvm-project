@@ -70,7 +70,6 @@ void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
                       ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
                       llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
-  IRBuilder<> Builder(Ctx);
 
   llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
   MDNode *RootSignature = RSBuilder.BuildRootSignature();
