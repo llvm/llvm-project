@@ -7,10 +7,7 @@ Unified Runtime
 
 .. _unified runtime:
 
-Overview
-========
-
-The Unified Runtime project serves as an interface layer between the SYCL
+The Unified Runtime (UR) project serves as an interface layer between the SYCL
 runtime and the device-specific runtime layers which control execution on
 devices. The parts of it primarily utilized by SYCL RT are its C API, loader
 library, and the adapter libraries that implement the API for various backends.
