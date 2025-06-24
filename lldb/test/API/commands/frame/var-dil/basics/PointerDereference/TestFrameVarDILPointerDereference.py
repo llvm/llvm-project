@@ -37,9 +37,12 @@ class TestFrameVarDILPointerDereference(TestBase):
         pp_void0_2_got = self.expect_var_path("&pp_void0[2]", type="void **")
         # Initialized in C++ code to point to the same value
         pp_void0_2_exp = self.expect_var_path("pp_void0_2", type="void **")
-        self.assertEqual(pp_void0_2_got.GetValueAsAddress(),
-                         pp_void0_2_exp.GetValueAsAddress())
+        self.assertEqual(
+            pp_void0_2_got.GetValueAsAddress(), pp_void0_2_exp.GetValueAsAddress()
+        )
         pp_int0_2stars_got = self.expect_var_path("&**pp_int0", type="int *")
         pp_int0_2stars_exp = self.expect_var_path("pp_int0_2stars", type="int *")
-        self.assertEqual(pp_int0_2stars_got.GetValueAsAddress(),
-                         pp_int0_2stars_exp.GetValueAsAddress())
+        self.assertEqual(
+            pp_int0_2stars_got.GetValueAsAddress(),
+            pp_int0_2stars_exp.GetValueAsAddress(),
+        )
