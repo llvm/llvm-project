@@ -62,13 +62,24 @@ foreach IntTy = ["I32", "I64", "I128"] in {
 
 foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def ADD_#FPTy : RuntimeLibcall;
+  def FAST_ADD_#FPTy : RuntimeLibcall;
+
   def SUB_#FPTy : RuntimeLibcall;
+  def FAST_SUB_#FPTy : RuntimeLibcall;
+
   def MUL_#FPTy : RuntimeLibcall;
+  def FAST_MUL_#FPTy : RuntimeLibcall;
+
   def DIV_#FPTy : RuntimeLibcall;
+  def FAST_DIV_#FPTy : RuntimeLibcall;
+
   def REM_#FPTy : RuntimeLibcall;
   def FMA_#FPTy : RuntimeLibcall;
   def POWI_#FPTy : RuntimeLibcall;
+
   def SQRT_#FPTy : RuntimeLibcall;
+  def FAST_SQRT_#FPTy : RuntimeLibcall;
+
   def CBRT_#FPTy : RuntimeLibcall;
   def LOG_#FPTy : RuntimeLibcall;
   def LOG_FINITE_#FPTy : RuntimeLibcall;
@@ -1470,27 +1481,26 @@ def __hexagon_moddi3 : RuntimeLibcallImpl<SREM_I64>;
 def __hexagon_umodsi3 : RuntimeLibcallImpl<UREM_I32>;
 def __hexagon_umoddi3 : RuntimeLibcallImpl<UREM_I64>;
 
-// FIXME: "Fast" versions should be treated as a separate RTLIB::FAST_* function
 def __hexagon_adddf3 : RuntimeLibcallImpl<ADD_F64>;
-def __hexagon_fast_adddf3 : RuntimeLibcallImpl<ADD_F64>;
+def __hexagon_fast_adddf3 : RuntimeLibcallImpl<FAST_ADD_F64>;
 
 def __hexagon_subdf3 : RuntimeLibcallImpl<SUB_F64>;
-def __hexagon_fast_subdf3 : RuntimeLibcallImpl<SUB_F64>;
+def __hexagon_fast_subdf3 : RuntimeLibcallImpl<FAST_SUB_F64>;
 
 def __hexagon_muldf3 : RuntimeLibcallImpl<MUL_F64>;
-def __hexagon_fast_muldf3 : RuntimeLibcallImpl<MUL_F64>;
+def __hexagon_fast_muldf3 : RuntimeLibcallImpl<FAST_MUL_F64>;
 
 def __hexagon_divdf3 : RuntimeLibcallImpl<DIV_F64>;
-def __hexagon_fast_divdf3 : RuntimeLibcallImpl<DIV_F64>;
+def __hexagon_fast_divdf3 : RuntimeLibcallImpl<FAST_DIV_F64>;
 
 def __hexagon_divsf3 : RuntimeLibcallImpl<DIV_F32>;
-def __hexagon_fast_divsf3 : RuntimeLibcallImpl<DIV_F32>;
+def __hexagon_fast_divsf3 : RuntimeLibcallImpl<FAST_DIV_F32>;
 
 def __hexagon_sqrtf : RuntimeLibcallImpl<SQRT_F32>;
-def __hexagon_fast2_sqrtf : RuntimeLibcallImpl<SQRT_F32>;
+def __hexagon_fast2_sqrtf : RuntimeLibcallImpl<FAST_SQRT_F32>;
 
 // This is the only fast library function for sqrtd.
-def __hexagon_fast2_sqrtdf2 : RuntimeLibcallImpl<SQRT_F64>;
+def __hexagon_fast2_sqrtdf2 : RuntimeLibcallImpl<FAST_SQRT_F64>;
 
 def __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
     : RuntimeLibcallImpl<HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES>;
