@@ -678,11 +678,6 @@ private:
 
   AtomicOptions AtomicOpts;
 
-  // A set of functions which should be hot-patched; see
-  // -fms-hotpatch-functions-file (and -list). This will nearly always be empty.
-  // The list is sorted for binary-searching.
-  std::vector<std::string> MSHotPatchFunctions;
-
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,

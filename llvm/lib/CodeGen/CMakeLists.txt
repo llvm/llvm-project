@@ -250,7 +250,6 @@ add_llvm_component_library(LLVMCodeGen
   VirtRegMap.cpp
   WasmEHPrepare.cpp
   WindowScheduler.cpp
-  WindowsSecureHotPatching.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
   ${GeneratedMLSources}
