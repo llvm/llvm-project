@@ -854,17 +854,23 @@ LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 /// to work (these are checked by the vectorizer itself).
 bool hasVectorizationImpl(Operation *);
 
-/// Emit a suitable vector form for an operation. If provided,
-/// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
-/// must match the rank of the iteration space of the operation and the sizes
-/// must be smaller or equal than their counterpart interation space sizes, if
-/// static. `inputVectorShapes` also allows the vectorization of operations with
-/// dynamic shapes.
-LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
-                        ArrayRef<int64_t> inputVectorSizes = {},
-                        ArrayRef<bool> inputScalableVecDims = {},
-                        bool vectorizeNDExtract = false,
-                        bool flatten1DDepthwiseConv = false);
+/// Transformation information returned after vectorizing.
+struct VectorizationResult {
+  /// Results of the vectorization transform to replace the original operation.
+  SmallVector<Value> replacements;
+};
+/// Returns a `VectorizationResult` containing the results of the vectorized op,
+/// or failure if the transformation fails. If provided, `inputVectorSizes` are
+/// used to vectorize this operation. `inputVectorSizes` must match the rank of
+/// the iteration space of the operation and the input vector sizes must be
+/// greater than or equal to their counterpart iteration space sizes, if static.
+/// `inputVectorShapes` also allows the vectorization of operations with dynamic
+/// shapes.
+FailureOr<VectorizationResult>
+vectorize(RewriterBase &rewriter, Operation *op,
+          ArrayRef<int64_t> inputVectorSizes = {},
+          ArrayRef<bool> inputScalableVecDims = {},
+          bool vectorizeNDExtract = false, bool flatten1DDepthwiseConv = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);

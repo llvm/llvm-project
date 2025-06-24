@@ -85,7 +85,6 @@ static ScanningOutputFormat Format = ScanningOutputFormat::Make;
 static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
 static bool EagerLoadModules;
-static bool CacheNegativeStats = true;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
 static std::optional<std::string> ModuleName;
@@ -191,8 +190,6 @@ static void ParseArgs(int argc, char **argv) {
     OutputFileName = A->getValue();
 
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
-
-  CacheNegativeStats = !Args.hasArg(OPT_no_cache_negative_stats);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
     StringRef S{A->getValue()};
@@ -1083,9 +1080,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     });
   };
 
-  DependencyScanningService Service(
-      ScanMode, Format, OptimizeArgs, EagerLoadModules, /*TraceVFS=*/Verbose,
-      llvm::sys::toTimeT(std::chrono::system_clock::now()), CacheNegativeStats);
+  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
+                                    EagerLoadModules, /*TraceVFS=*/Verbose);
 
   llvm::Timer T;
   T.startTimer();
