@@ -28,8 +28,8 @@ namespace Robustness {
 		};
 		//! Location component
 		struct Location{
-			timestamp_t stamp = 0;
-			timestamp_t stampu = 0;
+			timestamp_t stamp = kEpochZero;
+			timestamp_t stampu = kEpochZero;
 			VectorClock m, w;
 			VectorClock mu, wu;
 		};
@@ -53,12 +53,12 @@ namespace Robustness {
 		 * Memory order is ignored for SC
 		 */
 		void updateStoreStatement(ThreadId , LocationId a, Thread &ts, Location &ls, morder, u64 val){
-			ls.m |= timestamp(a, ++ls.stamp);
+			ls.m |= timestamp(a, EpochInc(ls.stamp));
 			ts.v |= ls.m;
 			ls.w = ts.v;
 			ls.m = ts.v;
 
-			ls.mu |= timestamp(a, ++ls.stampu);
+			ls.mu |= timestamp(a, EpochInc(ls.stampu));
 			ts.vu |= ls.mu;
 			ls.wu = ts.vu;
 			ls.mu = ts.vu;
@@ -71,7 +71,7 @@ namespace Robustness {
 		 */
 		void updateRmwStatement(ThreadId t, LocationId a, Thread &ts, Location &ls, morder mo, u64 val){
 			//return updateStoreStatement(t, a, ts, ls, mo);
-			ls.m |= timestamp(a, ++ls.stamp);
+			ls.m |= timestamp(a, EpochInc(ls.stamp));
 			ts.v |= ls.m;
 			ls.w = ts.v;
 			ls.m = ts.v;
@@ -90,12 +90,6 @@ namespace Robustness {
 		}
 		timestamp_t getLastTimeStampU(ThreadId , LocationId l, Thread &ts, Location &ls) const{
 			return ts.vu[l].ts;
-		}
-		timestamp_t getLastTimeStampV(ThreadId , LocationId l, Thread &ts, Location &ls, u64 val) const{
-			return ts.v[l].ts - 1;
-		}
-		timestamp_t getLastTimeStampUV(ThreadId , LocationId l, Thread &ts, Location &ls, u64 val) const{
-			return ts.vu[l].ts - 1;
 		}
 
 		//! Remove locations when freeing memory
@@ -138,7 +132,7 @@ namespace Robustness {
 		};
 		//! Location component
 		struct Location{
-			timestamp_t writeStamp = 0, writeStampU = 0;
+			timestamp_t writeStamp = kEpochZero, writeStampU = kEpochZero;
 			VectorClock w;
 			VectorClock wu;
 		};
@@ -162,8 +156,8 @@ namespace Robustness {
 
 		//! Update store statement
 		void updateStoreStatement(ThreadId t, LocationId a, Thread &ts, Location &ls, morder mo, uint64_t oldValue){
-			const auto timestampV =  timestamp(a, ++ls.writeStamp);
-			const auto timestampVU = timestamp(a, ++ls.writeStampU);
+			const auto timestampV =  timestamp(a, EpochInc(ls.writeStamp));
+			const auto timestampVU = timestamp(a, EpochInc(ls.writeStampU));
 			ls.w  |= timestampV;
 			ls.wu |= timestampVU;
 			ts.va |= timestampV;
@@ -185,7 +179,7 @@ namespace Robustness {
 
 		//! Update RMW statement
 		void updateRmwStatement(ThreadId t, LocationId a, Thread &ts, Location &ls, morder mo, uint64_t oldValue){
-			const auto timestampV =  timestamp(a, ++ls.writeStamp);
+			const auto timestampV =  timestamp(a, EpochInc(ls.writeStamp));
 			ls.w  |= timestampV;
 			ts.va |= timestampV;
 			ts.vc |= timestampV;

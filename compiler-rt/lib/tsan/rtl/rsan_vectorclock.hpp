@@ -13,7 +13,7 @@ template <typename T>
 class Timestamp{
 	public:
 	T key{};
-	timestamp_t ts = 0;
+	timestamp_t ts = kEpochZero;
 
 	/// Check if the timestamp is newer than rhs
 	public:
@@ -50,7 +50,7 @@ class VectorClock {
 		/// Increment a timestamp t in the vector
 		auto inc(LocationId t){
 			impl.ensureSize(t+1);
-			timestamp(t, ++impl[t]);
+			timestamp(t, EpochInc(impl[t]));
 		}
 		/// Reset the vector clock
 		void reset(){
@@ -96,7 +96,7 @@ class VectorClock {
 				if (impl[i] < rhs.impl[i])
 					return false;
 			for (; i < S2; ++i)
-				if (rhs.impl[i] > 0)
+				if (rhs.impl[i] > kEpochZero)
 					return false;
 			return true;
 		}
@@ -105,7 +105,7 @@ class VectorClock {
 			if (t < impl.size()) {
 				return timestamp(t, impl[t]);
 			}
-			return timestamp(t, 0);
+			return timestamp(t, kEpochZero);
 		}
 
 		bool contains(const Timestamp<LocationId> &rhs) const{

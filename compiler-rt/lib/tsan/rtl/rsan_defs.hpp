@@ -16,7 +16,13 @@ namespace Robustness{
 	using __tsan::s64;
 	using __tsan::u64;
 	using __tsan::uptr;
-	typedef s64 timestamp_t;
+	using __tsan::Epoch;
+	using __tsan::EpochInc;
+	using __tsan::EpochOverflow;
+	using __tsan::kEpochZero;
+	using __tsan::kEpochOver;
+	using __tsan::kEpochLast;
+	typedef __tsan::Epoch timestamp_t;
 	typedef s64 ssize_t;
 	typedef u64 uint64_t;
 	typedef s64 int64_t;
