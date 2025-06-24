@@ -541,7 +541,7 @@ LogicalResult TransposeLoadOp::verify() {
   // ElementSize -> NumElements
   const llvm::SmallDenseMap<size_t, size_t> KValidLoadSizeMap = {
       {4, 16},
-      {32, 3}, // 6-bit element loads use casted vector<3xi32>
+      {6, 16},
       {8, 8},
       {16, 4},
   };

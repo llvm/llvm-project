@@ -1130,10 +1130,10 @@ struct TransposeLoadOpLowering
       rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr4_b64>(op, resultType,
                                                           srcPtr);
       break;
-    case 32:
+    case 6:
       // To use ds_read_tr6_b96, the load size is vector<3xi32>.
       // TODO: support native 6-bit data types.
-      assert(numElements == 3);
+      assert(numElements == 16);
       rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr6_b96>(op, resultType,
                                                           srcPtr);
       break;
