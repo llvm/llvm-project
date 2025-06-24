@@ -13,6 +13,7 @@
 // canonically for use in semantic checking.
 
 #include "flang/Common/visit.h"
+#include "flang/Evaluate/common.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
@@ -862,6 +863,16 @@ template <typename T, typename... Ts>
 Operator OperationCode(
     const evaluate::Operation<evaluate::RealToIntPower<T>, Ts...> &op) {
   return Operator::Pow;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Extremum<T>, Ts...> &op) {
+  if (op.derived().ordering == evaluate::Ordering::Greater) {
+    return Operator::Max;
+  } else {
+    return Operator::Min;
+  }
 }
 
 template <typename T, common::TypeCategory C, typename... Ts>
