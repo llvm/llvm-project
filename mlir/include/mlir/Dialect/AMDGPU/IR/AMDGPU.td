@@ -907,17 +907,11 @@ def F8Types : AnyTypeOf<[
   F8E4M3B11FNUZ,  // 4 exponent, 3 mantissa (with bias 11)
   F8E3M4          // 3 exponent, 4 mantissa
 ]>;
-def F6Types : AnyTypeOf<[F6E2M3FN, F6E3M2FN]>;
-def TrLoadTypes : AnyTypeOf<[VectorOfLengthAndType<[4], [F16, AnyI<16>]>,
-                             VectorOfLengthAndType<[8], [F8Types, AnyI<8>]>,
-                             VectorOfLengthAndType<[16], [AnyI<4>, F6Types]>,
-                             VectorOfLengthAndType<[3], [I32]>,
-                           ]>;
 
 def AMDGPU_TransposeLoadOp :
     AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
-    Results<(outs TrLoadTypes:$result)> {
+    Results<(outs AnyTypeOf<[AnyVectorOfNonZeroRank]>:$result)> {
   let summary = "MLIR wrapper for CDNA Transpose Load instructions";
   let description = [{
     The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions.
