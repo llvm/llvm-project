@@ -2598,7 +2598,7 @@ InstructionCost VPBundleRecipe::computeCost(ElementCount VF,
   auto *SrcVecTy = cast<VectorType>(
       toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
   assert(RedTy->isIntegerTy() &&
-         "ExtendedReduction only support integer type currently.");
+         "VPBundleRecipe only supports integer types currently.");
   switch (BundleType) {
   case BundleTypes::ExtendedReduction: {
     unsigned Opcode = RecurrenceDescriptor::getOpcode(
