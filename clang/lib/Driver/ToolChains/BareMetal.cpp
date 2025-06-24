@@ -8,8 +8,8 @@
 
 #include "BareMetal.h"
 
-#include "CommonArgs.h"
 #include "Gnu.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/InputInfo.h"
 
 #include "Arch/ARM.h"

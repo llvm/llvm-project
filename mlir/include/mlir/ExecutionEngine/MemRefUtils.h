@@ -48,7 +48,8 @@ inline std::array<int64_t, N> makeStrides(ArrayRef<int64_t> shape) {
   std::array<int64_t, N> res;
   int64_t running = 1;
   for (int64_t idx = N - 1; idx >= 0; --idx) {
-    assert(shape[idx] && "size must be non-negative for all shape dimensions");
+    assert(shape[idx] >= 0 &&
+           "size must be non-negative for all shape dimensions");
     res[idx] = running;
     running *= shape[idx];
   }

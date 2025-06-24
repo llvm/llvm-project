@@ -113,6 +113,7 @@ protected:
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
+  bool GFX1250Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
   bool SGPRInitBug = false;
@@ -201,6 +202,7 @@ protected:
 
   bool HasNoSdstCMPX = false;
   bool HasVscnt = false;
+  bool HasWaitXcnt = false;
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
@@ -260,6 +262,7 @@ protected:
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
   bool HasPointSampleAccel = false;
+  bool HasSetPrioIncWgInst = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1367,6 +1370,10 @@ public:
     return HasMinimum3Maximum3PKF16;
   }
 
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1250.
+  bool hasWaitXCnt() const { return HasWaitXcnt; }
+
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
@@ -1458,6 +1465,11 @@ public:
   /// \returns true if VADDR and SADDR fields in VSCRATCH can use negative
   /// values.
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
+
+  bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  // \returns true if target has S_SETPRIO_INC_WG instruction.
+  bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending.

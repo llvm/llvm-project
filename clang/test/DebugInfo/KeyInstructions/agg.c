@@ -24,6 +24,8 @@ void fun(Struct a) {
 // CHECK: %matins = insertelement <25 x float> %3, float 0.000000e+00, i64 0, !dbg [[G4R2:!.*]]
 // CHECK: store <25 x float> %matins, ptr @m{{.*}}, !dbg [[G4R1:!.*]]
   m[0][0] = 0;
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
@@ -32,3 +34,4 @@ void fun(Struct a) {
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)

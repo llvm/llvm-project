@@ -21,6 +21,17 @@ namespace clang {
 namespace doc {
 namespace serialize {
 
+namespace {
+static SmallString<16> exprToString(const clang::Expr *E) {
+  clang::LangOptions Opts;
+  clang::PrintingPolicy Policy(Opts);
+  SmallString<16> Result;
+  llvm::raw_svector_ostream OS(Result);
+  E->printPretty(OS, nullptr, Policy);
+  return Result;
+}
+} // namespace
+
 SymbolID hashUSR(llvm::StringRef USR) {
   return llvm::SHA1::hash(arrayRefFromStringRef(USR));
 }
@@ -270,7 +281,7 @@ private:
 };
 
 void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
-  CurrentCI.Kind = C->getCommentKindName();
+  CurrentCI.Kind = stringToCommentKind(C->getCommentKindName());
   ConstCommentVisitor<ClangDocCommentVisitor>::visit(C);
   for (comments::Comment *Child :
        llvm::make_range(C->child_begin(), C->child_end())) {
@@ -388,9 +399,13 @@ std::string serialize(std::unique_ptr<Info> &I) {
     return serialize(*static_cast<EnumInfo *>(I.get()));
   case InfoType::IT_function:
     return serialize(*static_cast<FunctionInfo *>(I.get()));
-  default:
+  case InfoType::IT_concept:
+    return serialize(*static_cast<ConceptInfo *>(I.get()));
+  case InfoType::IT_typedef:
+  case InfoType::IT_default:
     return "";
   }
+  llvm_unreachable("unhandled enumerator");
 }
 
 static void parseFullComment(const FullComment *C, CommentInfo &CI) {
@@ -489,6 +504,10 @@ static void InsertChild(ScopeChildren &Scope, TypedefInfo Info) {
   Scope.Typedefs.push_back(std::move(Info));
 }
 
+static void InsertChild(ScopeChildren &Scope, ConceptInfo Info) {
+  Scope.Concepts.push_back(std::move(Info));
+}
+
 // Creates a parent of the correct type for the given child and inserts it into
 // that parent.
 //
@@ -525,9 +544,14 @@ static std::unique_ptr<Info> makeAndInsertIntoParent(ChildType Child) {
     InsertChild(ParentRec->Children, std::forward<ChildType>(Child));
     return ParentRec;
   }
-  default:
-    llvm_unreachable("Invalid reference type for parent namespace");
+  case InfoType::IT_default:
+  case InfoType::IT_enum:
+  case InfoType::IT_function:
+  case InfoType::IT_typedef:
+  case InfoType::IT_concept:
+    break;
   }
+  llvm_unreachable("Invalid reference type for parent namespace");
 }
 
 // There are two uses for this function.
@@ -734,6 +758,50 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     I.Loc.emplace_back(Loc);
 }
 
+static void
+handleCompoundConstraints(const Expr *Constraint,
+                          std::vector<ConstraintInfo> &ConstraintInfos) {
+  if (Constraint->getStmtClass() == Stmt::ParenExprClass) {
+    handleCompoundConstraints(dyn_cast<ParenExpr>(Constraint)->getSubExpr(),
+                              ConstraintInfos);
+  } else if (Constraint->getStmtClass() == Stmt::BinaryOperatorClass) {
+    auto *BinaryOpExpr = dyn_cast<BinaryOperator>(Constraint);
+    handleCompoundConstraints(BinaryOpExpr->getLHS(), ConstraintInfos);
+    handleCompoundConstraints(BinaryOpExpr->getRHS(), ConstraintInfos);
+  } else if (Constraint->getStmtClass() ==
+             Stmt::ConceptSpecializationExprClass) {
+    auto *Concept = dyn_cast<ConceptSpecializationExpr>(Constraint);
+    ConstraintInfo CI(getUSRForDecl(Concept->getNamedConcept()),
+                      Concept->getNamedConcept()->getNameAsString());
+    CI.ConstraintExpr = exprToString(Concept);
+    ConstraintInfos.push_back(CI);
+  }
+}
+
+static void populateConstraints(TemplateInfo &I, const TemplateDecl *D) {
+  if (!D || !D->hasAssociatedConstraints())
+    return;
+
+  SmallVector<AssociatedConstraint> AssociatedConstraints;
+  D->getAssociatedConstraints(AssociatedConstraints);
+  for (const auto &Constraint : AssociatedConstraints) {
+    if (!Constraint)
+      continue;
+
+    // TODO: Investigate if atomic constraints need to be handled specifically.
+    if (const auto *ConstraintExpr =
+            dyn_cast_or_null<ConceptSpecializationExpr>(
+                Constraint.ConstraintExpr)) {
+      ConstraintInfo CI(getUSRForDecl(ConstraintExpr->getNamedConcept()),
+                        ConstraintExpr->getNamedConcept()->getNameAsString());
+      CI.ConstraintExpr = exprToString(ConstraintExpr);
+      I.Constraints.push_back(std::move(CI));
+    } else {
+      handleCompoundConstraints(Constraint.ConstraintExpr, I.Constraints);
+    }
+  }
+}
+
 static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
                                  const FullComment *FC, Location Loc,
                                  bool &IsInAnonymousNamespace) {
@@ -742,8 +810,11 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   I.ReturnType = getTypeInfoForType(D->getReturnType(), LO);
   I.Prototype = getFunctionPrototype(D);
   parseParameters(I, D);
+  I.IsStatic = D->isStatic();
 
   populateTemplateParameters(I.Template, D);
+  if (I.Template)
+    populateConstraints(I.Template.value(), D->getDescribedFunctionTemplate());
 
   // Handle function template specializations.
   if (const FunctionTemplateSpecializationInfo *FTSI =
@@ -896,6 +967,8 @@ emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
   RI->Path = getInfoRelativePath(RI->Namespace);
 
   populateTemplateParameters(RI->Template, D);
+  if (RI->Template)
+    populateConstraints(RI->Template.value(), D->getDescribedTemplate());
 
   // Full and partial specializations.
   if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
@@ -1065,6 +1138,30 @@ emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
 
   // Info is wrapped in its parent scope so is returned in the second position.
   return {nullptr, makeAndInsertIntoParent<EnumInfo &&>(std::move(Enum))};
+}
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly) {
+  ConceptInfo Concept;
+
+  bool IsInAnonymousNamespace = false;
+  populateInfo(Concept, D, FC, IsInAnonymousNamespace);
+  Concept.IsType = D->isTypeConcept();
+  Concept.DefLoc = Loc;
+  Concept.ConstraintExpression = exprToString(D->getConstraintExpr());
+
+  if (auto *ConceptParams = D->getTemplateParameters()) {
+    for (const auto *Param : ConceptParams->asArray()) {
+      Concept.Template.Params.emplace_back(
+          getSourceCode(Param, Param->getSourceRange()));
+    }
+  }
+
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  return {nullptr, makeAndInsertIntoParent<ConceptInfo &&>(std::move(Concept))};
 }
 
 } // namespace serialize

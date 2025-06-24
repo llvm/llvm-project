@@ -1532,7 +1532,7 @@ bool ASTReader::ReadSpecializations(ModuleFile &M, BitstreamCursor &Cursor,
 }
 
 void ASTReader::Error(StringRef Msg) const {
-  Error(diag::err_fe_pch_malformed, Msg);
+  Error(diag::err_fe_ast_file_malformed, Msg);
   if (PP.getLangOpts().Modules &&
       !PP.getHeaderSearchInfo().getModuleCachePath().empty()) {
     Diag(diag::note_module_cache_path)
@@ -4097,8 +4097,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         uint64_t TULocalOffset =
             TULocalLocalOffset ? BaseOffset + TULocalLocalOffset : 0;
 
-        DelayedNamespaceOffsetMap[ID] = {LexicalOffset, VisibleOffset,
-                                         ModuleLocalOffset, TULocalOffset};
+        DelayedNamespaceOffsetMap[ID] = {
+            {VisibleOffset, TULocalOffset, ModuleLocalOffset}, LexicalOffset};
 
         assert(!GetExistingDecl(ID) &&
                "We shouldn't load the namespace in the front of delayed "
@@ -4953,20 +4953,21 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
 
 static ASTFileSignature readASTFileSignature(StringRef PCH);
 
-/// Whether \p Stream doesn't start with the AST/PCH file magic number 'CPCH'.
+/// Whether \p Stream doesn't start with the AST file magic number 'CPCH'.
 static llvm::Error doesntStartWithASTFileMagic(BitstreamCursor &Stream) {
   // FIXME checking magic headers is done in other places such as
   // SerializedDiagnosticReader and GlobalModuleIndex, but error handling isn't
   // always done the same. Unify it all with a helper.
   if (!Stream.canSkipToPos(4))
-    return llvm::createStringError(std::errc::illegal_byte_sequence,
-                                   "file too small to contain AST file magic");
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "file too small to contain precompiled file magic");
   for (unsigned C : {'C', 'P', 'C', 'H'})
     if (Expected<llvm::SimpleBitstreamCursor::word_t> Res = Stream.Read(8)) {
       if (Res.get() != C)
         return llvm::createStringError(
             std::errc::illegal_byte_sequence,
-            "file doesn't start with AST file magic");
+            "file doesn't start with precompiled file magic");
     } else
       return Res.takeError();
   return llvm::Error::success();
@@ -8543,17 +8544,21 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
   SmallVector<NamedDecl *, 64> Decls;
   llvm::SmallPtrSet<NamedDecl *, 8> Found;
 
+  auto Find = [&, this](auto &&Table, auto &&Key) {
+    for (GlobalDeclID ID : Table.find(Key)) {
+      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
+      if (ND->getDeclName() == Name && Found.insert(ND).second)
+        Decls.push_back(ND);
+    }
+  };
+
   Deserializing LookupResults(this);
 
   // FIXME: Clear the redundancy with templated lambda in C++20 when that's
   // available.
   if (auto It = Lookups.find(DC); It != Lookups.end()) {
     ++NumVisibleDeclContextsRead;
-    for (GlobalDeclID ID : It->second.Table.find(Name)) {
-      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() == Name && Found.insert(ND).second)
-        Decls.push_back(ND);
-    }
+    Find(It->second.Table, Name);
   }
 
   if (auto *NamedModule =
@@ -8561,21 +8566,13 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
                      : nullptr) {
     if (auto It = ModuleLocalLookups.find(DC); It != ModuleLocalLookups.end()) {
       ++NumModuleLocalVisibleDeclContexts;
-      for (GlobalDeclID ID : It->second.Table.find({Name, NamedModule})) {
-        NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-        if (ND->getDeclName() == Name && Found.insert(ND).second)
-          Decls.push_back(ND);
-      }
+      Find(It->second.Table, std::make_pair(Name, NamedModule));
     }
   }
 
   if (auto It = TULocalLookups.find(DC); It != TULocalLookups.end()) {
     ++NumTULocalVisibleDeclContexts;
-    for (GlobalDeclID ID : It->second.Table.find(Name)) {
-      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() == Name && Found.insert(ND).second)
-        Decls.push_back(ND);
-    }
+    Find(It->second.Table, Name);
   }
 
   SetExternalVisibleDeclsForName(DC, Name, Decls);
@@ -9723,6 +9720,10 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
 
 bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
   return ThisDeclarationWasADefinitionSet.contains(FD);
+}
+
+bool ASTReader::hasInitializerWithSideEffects(const VarDecl *VD) const {
+  return InitSideEffectVars.count(VD);
 }
 
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {

@@ -43,6 +43,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasDQI = Subtarget.hasAVX512() && Subtarget.hasDQI();
   bool HasBWI = Subtarget.hasAVX512() && Subtarget.hasBWI();
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
+  bool HasPOPCNT = Subtarget.hasPOPCNT();
+  bool HasLZCNT = Subtarget.hasLZCNT();
+  bool HasBMI = Subtarget.hasBMI();
 
   const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
@@ -55,7 +58,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT sMaxScalar = Subtarget.is64Bit() ? s64 : s32;
   const LLT v2s32 = LLT::fixed_vector(2, 32);
   const LLT v4s8 = LLT::fixed_vector(4, 8);
-
 
   const LLT v16s8 = LLT::fixed_vector(16, 8);
   const LLT v8s16 = LLT::fixed_vector(8, 16);
@@ -82,20 +84,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // todo: AVX512 bool vector predicate types
 
   // implicit/constants
+  // 32/64-bits needs support for s64/s128 to handle cases:
+  // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
+  // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        // 32/64-bits needs support for s64/s128 to handle cases:
-        // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
-        // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
-        return typeInSet(0, {p0, s1, s8, s16, s32, s64})(Query) ||
-               (Is64Bit && typeInSet(0, {s128})(Query));
-      });
+      .legalFor({p0, s1, s8, s16, s32, s64})
+      .legalFor(Is64Bit, {s128});
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {p0, s8, s16, s32})(Query) ||
-               (Is64Bit && typeInSet(0, {s64})(Query));
-      })
+      .legalFor({p0, s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
@@ -147,21 +145,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // integer addition/subtraction
   getActionDefinitionsBuilder({G_ADD, G_SUB})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        if (typeInSet(0, {s8, s16, s32})(Query))
-          return true;
-        if (Is64Bit && typeInSet(0, {s64})(Query))
-          return true;
-        if (HasSSE2 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query))
-          return true;
-        if (HasAVX2 && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query))
-          return true;
-        if (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query))
-          return true;
-        if (HasBWI && typeInSet(0, {v64s8, v32s16})(Query))
-          return true;
-        return false;
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
+      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX2, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v16s32, v8s64})
+      .legalFor(HasBWI, {v64s8, v32s16})
       .clampMinNumElements(0, s8, 16)
       .clampMinNumElements(0, s16, 8)
       .clampMinNumElements(0, s32, 4)
@@ -175,10 +164,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_UADDE, G_UADDO, G_USUBE, G_USUBO})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typePairInSet(0, 1, {{s8, s1}, {s16, s1}, {s32, s1}})(Query) ||
-               (Is64Bit && typePairInSet(0, 1, {{s64, s1}})(Query));
-      })
+      .legalFor({{s8, s1}, {s16, s1}, {s32, s1}})
+      .legalFor(Is64Bit, {{s64, s1}})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s8, sMaxScalar)
       .clampScalar(1, s1, s1)
@@ -186,27 +173,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // integer multiply
   getActionDefinitionsBuilder(G_MUL)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        if (typeInSet(0, {s8, s16, s32})(Query))
-          return true;
-        if (Is64Bit && typeInSet(0, {s64})(Query))
-          return true;
-        if (HasSSE2 && typeInSet(0, {v8s16})(Query))
-          return true;
-        if (HasSSE41 && typeInSet(0, {v4s32})(Query))
-          return true;
-        if (HasAVX2 && typeInSet(0, {v16s16, v8s32})(Query))
-          return true;
-        if (HasAVX512 && typeInSet(0, {v16s32})(Query))
-          return true;
-        if (HasDQI && typeInSet(0, {v8s64})(Query))
-          return true;
-        if (HasDQI && HasVLX && typeInSet(0, {v2s64, v4s64})(Query))
-          return true;
-        if (HasBWI && typeInSet(0, {v32s16})(Query))
-          return true;
-        return false;
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
+      .legalFor(HasSSE2, {v8s16})
+      .legalFor(HasSSE41, {v4s32})
+      .legalFor(HasAVX2, {v16s16, v8s32})
+      .legalFor(HasAVX512, {v16s32})
+      .legalFor(HasDQI, {v8s64})
+      .legalFor(HasDQI && HasVLX, {v2s64, v4s64})
+      .legalFor(HasBWI, {v32s16})
       .clampMinNumElements(0, s16, 8)
       .clampMinNumElements(0, s32, 4)
       .clampMinNumElements(0, s64, HasVLX ? 2 : 8)
@@ -218,47 +193,33 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {s8, s16, s32})(Query) ||
-               (Is64Bit && typeInSet(0, {s64})(Query));
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
   // integer divisions
   getActionDefinitionsBuilder({G_SDIV, G_SREM, G_UDIV, G_UREM})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {s8, s16, s32})(Query) ||
-               (Is64Bit && typeInSet(0, {s64})(Query));
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .libcallFor({s64})
       .clampScalar(0, s8, sMaxScalar);
 
   // integer shifts
   getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typePairInSet(0, 1, {{s8, s8}, {s16, s8}, {s32, s8}})(Query) ||
-               (Is64Bit && typePairInSet(0, 1, {{s64, s8}})(Query));
-      })
+      .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
+      .legalFor(Is64Bit, {{s64, s8}})
       .clampScalar(0, s8, sMaxScalar)
       .clampScalar(1, s8, s8);
 
   // integer logic
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        if (typeInSet(0, {s8, s16, s32})(Query))
-          return true;
-        if (Is64Bit && typeInSet(0, {s64})(Query))
-          return true;
-        if (HasSSE2 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query))
-          return true;
-        if (HasAVX && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query))
-          return true;
-        if (HasAVX512 && typeInSet(0, {v64s8, v32s16, v16s32, v8s64})(Query))
-          return true;
-        return false;
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
+      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
       .clampMinNumElements(0, s8, 16)
       .clampMinNumElements(0, s16, 8)
       .clampMinNumElements(0, s32, 4)
@@ -282,57 +243,50 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // bswap
   getActionDefinitionsBuilder(G_BSWAP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return Query.Types[0] == s32 ||
-               (Subtarget.is64Bit() && Query.Types[0] == s64);
-      })
+      .legalFor({s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s32, sMaxScalar);
 
   // popcount
   getActionDefinitionsBuilder(G_CTPOP)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return Subtarget.hasPOPCNT() &&
-               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
-                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
-      })
+      .legalFor(HasPOPCNT, {{s16, s16}, {s32, s32}})
+      .legalFor(HasPOPCNT && Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
   // count leading zeros (LZCNT)
   getActionDefinitionsBuilder(G_CTLZ)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return Subtarget.hasLZCNT() &&
-               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
-                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
-      })
+      .legalFor(HasLZCNT, {{s16, s16}, {s32, s32}})
+      .legalFor(HasLZCNT && Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
   // count trailing zeros
-  getActionDefinitionsBuilder({G_CTTZ_ZERO_UNDEF, G_CTTZ})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return (Query.Opcode == G_CTTZ_ZERO_UNDEF || Subtarget.hasBMI()) &&
-               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
-                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
-      })
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+      .legalFor({{s16, s16}, {s32, s32}})
+      .legalFor(Is64Bit, {{s64, s64}})
+      .widenScalarToNextPow2(1, /*Min=*/16)
+      .clampScalar(1, s16, sMaxScalar)
+      .scalarSameSizeAs(0, 1);
+
+  getActionDefinitionsBuilder(G_CTTZ)
+      .legalFor(HasBMI, {{s16, s16}, {s32, s32}})
+      .legalFor(HasBMI && Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
   // control flow
   getActionDefinitionsBuilder(G_PHI)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {s8, s16, s32, p0})(Query) ||
-               (UseX87 && typeIs(0, s80)(Query)) ||
-               (Is64Bit && typeIs(0, s64)(Query)) ||
-               (HasSSE1 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query)) ||
-               (HasAVX && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query)) ||
-               (HasAVX512 &&
-                typeInSet(0, {v64s8, v32s16, v16s32, v8s64})(Query));
-      })
+      .legalFor({s8, s16, s32, p0})
+      .legalFor(UseX87, {s80})
+      .legalFor(Is64Bit, {s64})
+      .legalFor(HasSSE1, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
       .clampMinNumElements(0, s8, 16)
       .clampMinNumElements(0, s16, 8)
       .clampMinNumElements(0, s32, 4)
@@ -361,10 +315,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PTR_ADD)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typePairInSet(0, 1, {{p0, s32}})(Query) ||
-               (Is64Bit && typePairInSet(0, 1, {{p0, s64}})(Query));
-      })
+      .legalFor({{p0, s32}})
+      .legalFor(Is64Bit, {{p0, s64}})
       .widenScalarToNextPow2(1, /*Min*/ 32)
       .clampScalar(1, s32, sMaxScalar);
 
@@ -423,23 +375,27 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   for (unsigned Op : {G_SEXTLOAD, G_ZEXTLOAD}) {
     auto &Action = getActionDefinitionsBuilder(Op);
-    Action.legalForTypesWithMemDesc({{s16, p0, s8, 1},
-                                     {s32, p0, s8, 1},
-                                     {s32, p0, s16, 1}});
+    Action.legalForTypesWithMemDesc(
+        {{s16, p0, s8, 1}, {s32, p0, s8, 1}, {s32, p0, s16, 1}});
     if (Is64Bit)
-      Action.legalForTypesWithMemDesc({{s64, p0, s8, 1},
-                                       {s64, p0, s16, 1},
-                                       {s64, p0, s32, 1}});
+      Action.legalForTypesWithMemDesc(
+          {{s64, p0, s8, 1}, {s64, p0, s16, 1}, {s64, p0, s32, 1}});
     // TODO - SSE41/AVX2/AVX512F/AVX512BW vector extensions
   }
 
   // sext, zext, and anyext
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
-      .legalIf([=](const LegalityQuery &Query) {
-        return typeInSet(0, {s8, s16, s32})(Query) ||
-          (Query.Opcode == G_ANYEXT && Query.Types[0] == s128) ||
-          (Is64Bit && Query.Types[0] == s64);
-      })
+  getActionDefinitionsBuilder(G_ANYEXT)
+      .legalFor({s8, s16, s32, s128})
+      .legalFor(Is64Bit, {s64})
+      .widenScalarToNextPow2(0, /*Min=*/8)
+      .clampScalar(0, s8, sMaxScalar)
+      .widenScalarToNextPow2(1, /*Min=*/8)
+      .clampScalar(1, s8, sMaxScalar)
+      .scalarize(0);
+
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT})
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar)
       .widenScalarToNextPow2(1, /*Min=*/8)
@@ -450,21 +406,17 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // fp constants
   getActionDefinitionsBuilder(G_FCONSTANT)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return (typeInSet(0, {s32, s64})(Query)) ||
-               (UseX87 && typeInSet(0, {s80})(Query));
-      });
+      .legalFor({s32, s64})
+      .legalFor(UseX87, {s80});
 
   // fp arithmetic
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
-      .legalIf([=](const LegalityQuery &Query) {
-        return (typeInSet(0, {s32, s64})(Query)) ||
-               (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
-               (HasSSE2 && typeInSet(0, {v2s64})(Query)) ||
-               (HasAVX && typeInSet(0, {v8s32, v4s64})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query)) ||
-               (UseX87 && typeInSet(0, {s80})(Query));
-      });
+      .legalFor({s32, s64})
+      .legalFor(HasSSE1, {v4s32})
+      .legalFor(HasSSE2, {v2s64})
+      .legalFor(HasAVX, {v8s32, v4s64})
+      .legalFor(HasAVX512, {v16s32, v8s64})
+      .legalFor(UseX87, {s80});
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
@@ -476,18 +428,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1);
 
   // fp conversions
-  getActionDefinitionsBuilder(G_FPEXT).legalIf([=](const LegalityQuery &Query) {
-    return (HasSSE2 && typePairInSet(0, 1, {{s64, s32}})(Query)) ||
-           (HasAVX && typePairInSet(0, 1, {{v4s64, v4s32}})(Query)) ||
-           (HasAVX512 && typePairInSet(0, 1, {{v8s64, v8s32}})(Query));
-  });
+  getActionDefinitionsBuilder(G_FPEXT)
+      .legalFor(HasSSE2, {{s64, s32}})
+      .legalFor(HasAVX, {{v4s64, v4s32}})
+      .legalFor(HasAVX512, {{v8s64, v8s32}});
 
-  getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
-      [=](const LegalityQuery &Query) {
-        return (HasSSE2 && typePairInSet(0, 1, {{s32, s64}})(Query)) ||
-               (HasAVX && typePairInSet(0, 1, {{v4s32, v4s64}})(Query)) ||
-               (HasAVX512 && typePairInSet(0, 1, {{v8s32, v8s64}})(Query));
-      });
+  getActionDefinitionsBuilder(G_FPTRUNC)
+      .legalFor(HasSSE2, {{s32, s64}})
+      .legalFor(HasAVX, {{v4s32, v4s64}})
+      .legalFor(HasAVX512, {{v8s32, v8s64}});
 
   getActionDefinitionsBuilder(G_SITOFP)
       .legalFor(HasSSE1, {{s32, s32}})
@@ -519,10 +468,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // For AVX512 we simply widen types as there is direct mapping from opcodes
   // to asm instructions.
   getActionDefinitionsBuilder(G_UITOFP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
-               typeInSet(1, {s32, s64})(Query);
-      })
+      .legalFor(HasAVX512, {{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
       .customIf([=](const LegalityQuery &Query) {
         return !HasAVX512 &&
                ((HasSSE1 && typeIs(0, s32)(Query)) ||
@@ -542,10 +488,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1);
 
   getActionDefinitionsBuilder(G_FPTOUI)
-      .legalIf([=](const LegalityQuery &Query) {
-        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
-               typeInSet(1, {s32, s64})(Query);
-      })
+      .legalFor(HasAVX512, {{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
       .customIf([=](const LegalityQuery &Query) {
         return !HasAVX512 &&
                ((HasSSE1 && typeIs(1, s32)(Query)) ||
@@ -603,22 +546,17 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // todo: only permit dst types up to max legal vector register size?
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 && typePairInSet(1, 0,
-                                         {{v16s8, v32s8},
-                                          {v8s16, v16s16},
-                                          {v4s32, v8s32},
-                                          {v2s64, v4s64}})(Query)) ||
-               (HasAVX && typePairInSet(1, 0,
-                                        {{v16s8, v64s8},
-                                         {v32s8, v64s8},
-                                         {v8s16, v32s16},
-                                         {v16s16, v32s16},
-                                         {v4s32, v16s32},
-                                         {v8s32, v16s32},
-                                         {v2s64, v8s64},
-                                         {v4s64, v8s64}})(Query));
-      });
+      .legalFor(
+          HasSSE1,
+          {{v32s8, v16s8}, {v16s16, v8s16}, {v8s32, v4s32}, {v4s64, v2s64}})
+      .legalFor(HasAVX, {{v64s8, v16s8},
+                         {v64s8, v32s8},
+                         {v32s16, v8s16},
+                         {v32s16, v16s16},
+                         {v16s32, v4s32},
+                         {v16s32, v8s32},
+                         {v8s64, v2s64},
+                         {v8s64, v4s64}});
 
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
@@ -630,9 +568,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // memory intrinsics
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
-  getActionDefinitionsBuilder({G_DYN_STACKALLOC,
-                               G_STACKSAVE,
-                               G_STACKRESTORE}).lower();
+  getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
+      .lower();
 
   // fp intrinsics
   getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
@@ -641,9 +578,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .libcall();
 
   getActionDefinitionsBuilder({G_FREEZE, G_CONSTANT_FOLD_BARRIER})
-    .legalFor({s8, s16, s32, s64, p0})
-    .widenScalarToNextPow2(0, /*Min=*/8)
-    .clampScalar(0, s8, sMaxScalar);
+      .legalFor({s8, s16, s32, s64, p0})
+      .widenScalarToNextPow2(0, /*Min=*/8)
+      .clampScalar(0, s8, sMaxScalar);
 
   getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());

@@ -2181,25 +2181,22 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
 }
 
 CompilerType TypeSystemClang::CreateFunctionType(
-    const CompilerType &result_type, const CompilerType *args,
-    unsigned num_args, bool is_variadic, unsigned type_quals,
-    clang::CallingConv cc, clang::RefQualifierKind ref_qual) {
+    const CompilerType &result_type, llvm::ArrayRef<CompilerType> args,
+    bool is_variadic, unsigned type_quals, clang::CallingConv cc,
+    clang::RefQualifierKind ref_qual) {
   if (!result_type || !ClangUtil::IsClangType(result_type))
     return CompilerType(); // invalid return type
 
   std::vector<QualType> qual_type_args;
-  if (num_args > 0 && args == nullptr)
-    return CompilerType(); // invalid argument array passed in
-
   // Verify that all arguments are valid and the right type
-  for (unsigned i = 0; i < num_args; ++i) {
-    if (args[i]) {
+  for (const auto &arg : args) {
+    if (arg) {
       // Make sure we have a clang type in args[i] and not a type from another
       // language whose name might match
-      const bool is_clang_type = ClangUtil::IsClangType(args[i]);
+      const bool is_clang_type = ClangUtil::IsClangType(arg);
       lldbassert(is_clang_type);
       if (is_clang_type)
-        qual_type_args.push_back(ClangUtil::GetQualType(args[i]));
+        qual_type_args.push_back(ClangUtil::GetQualType(arg));
       else
         return CompilerType(); //  invalid argument type (must be a clang type)
     } else
@@ -5027,6 +5024,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     // PowerPC -- Matrix Multiply Assist
     case clang::BuiltinType::VectorPair:
     case clang::BuiltinType::VectorQuad:
+    case clang::BuiltinType::DMR1024:
       break;
 
     // ARM -- Scalable Vector Extension

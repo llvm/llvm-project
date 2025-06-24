@@ -2,7 +2,7 @@
 // RUN: rm -rf %t && touch %t
 // RUN: not clang-doc %s -output=%t/subdir 2>&1 | FileCheck %s --check-prefix=OUTPUT-FAIL
 // OUTPUT-FAIL: clang-doc error:
-// OUTPUT-FAIL: {{(Not a directory|no such file or directory)}}
+// OUTPUT-FAIL-SAME: failed to create directory.
 
 /// Invalid format option.
 // RUN: rm -rf %t && mkdir %t && touch %t/file

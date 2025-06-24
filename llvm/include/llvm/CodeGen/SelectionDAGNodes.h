@@ -724,6 +724,19 @@ public:
     }
   }
 
+  /// Test if this node is an assert operation.
+  bool isAssert() const {
+    switch (NodeType) {
+    default:
+      return false;
+    case ISD::AssertAlign:
+    case ISD::AssertNoFPClass:
+    case ISD::AssertSext:
+    case ISD::AssertZext:
+      return true;
+    }
+  }
+
   /// Test if this node is a vector predication operation.
   bool isVPOpcode() const { return ISD::isVPOpcode(getOpcode()); }
 
@@ -1687,9 +1700,9 @@ public:
 
   static int getSplatMaskIndex(ArrayRef<int> Mask) {
     assert(isSplatMask(Mask) && "Cannot get splat index for non-splat!");
-    for (unsigned i = 0, e = Mask.size(); i != e; ++i)
-      if (Mask[i] >= 0)
-        return Mask[i];
+    for (int Elem : Mask)
+      if (Elem >= 0)
+        return Elem;
 
     // We can choose any index value here and be correct because all elements
     // are undefined. Return 0 for better potential for callers to simplify.

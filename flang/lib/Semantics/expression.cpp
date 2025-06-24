@@ -2907,7 +2907,7 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
                 continue;
               }
               // Matching distance is smaller than the previously matched
-              // specific. Let it go thourgh so the current procedure is picked.
+              // specific. Let it go through so the current procedure is picked.
             } else {
               // 16.9.144(6): a bare NULL() is not allowed as an actual
               // argument to a generic procedure if the specific procedure
@@ -4824,31 +4824,41 @@ bool ArgumentAnalyzer::OkLogicalIntegerAssignment(
 
 std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
   const Symbol *proc{nullptr};
+  bool isProcElemental{false};
   std::optional<int> passedObjectIndex;
   std::string oprNameString{"assignment(=)"};
   parser::CharBlock oprName{oprNameString};
   const auto &scope{context_.context().FindScope(source_)};
-  // If multiple resolutions were possible, they will have been already
-  // diagnosed.
   {
     auto restorer{context_.GetContextualMessages().DiscardMessages()};
     if (const Symbol *symbol{scope.FindSymbol(oprName)}) {
       ExpressionAnalyzer::AdjustActuals noAdjustment;
       proc =
           context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true).first;
+      if (proc) {
+        isProcElemental = IsElementalProcedure(*proc);
+      }
     }
-    for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
+    for (std::size_t i{0}; (!proc || isProcElemental) && i < actuals_.size();
+        ++i) {
       const Symbol *generic{nullptr};
       if (const Symbol *
           binding{FindBoundOp(oprName, i, generic, /*isSubroutine=*/true)}) {
-        if (CheckAccessibleSymbol(scope, DEREF(generic))) {
-          // ignore inaccessible type-bound ASSIGNMENT(=) generic
-        } else if (const Symbol *
-            resolution{GetBindingResolution(GetType(i), *binding)}) {
-          proc = resolution;
-        } else {
-          proc = binding;
-          passedObjectIndex = i;
+        // ignore inaccessible type-bound ASSIGNMENT(=) generic
+        if (!CheckAccessibleSymbol(scope, DEREF(generic))) {
+          const Symbol *resolution{GetBindingResolution(GetType(i), *binding)};
+          const Symbol &newProc{*(resolution ? resolution : binding)};
+          bool isElemental{IsElementalProcedure(newProc)};
+          if (!proc || !isElemental) {
+            // Non-elemental resolution overrides elemental
+            proc = &newProc;
+            isProcElemental = isElemental;
+            if (resolution) {
+              passedObjectIndex.reset();
+            } else {
+              passedObjectIndex = i;
+            }
+          }
         }
       }
     }

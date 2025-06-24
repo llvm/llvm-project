@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Address.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -97,9 +98,14 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: derived-to-base cast");
-      return Address::invalid();
+      assert(!cir::MissingFeatures::opTBAA());
+      assert(!cir::MissingFeatures::addressIsKnownNonNull());
+      Address addr = emitPointerWithAlignment(ce->getSubExpr(), baseInfo);
+      const CXXRecordDecl *derived =
+          ce->getSubExpr()->getType()->getPointeeCXXRecordDecl();
+      return getAddressOfBaseClass(addr, derived, ce->path(),
+                                   shouldNullCheckClassCastValue(ce),
+                                   ce->getExprLoc());
     }
 
     case CK_AnyPointerToBlockPointerCast:
@@ -213,7 +219,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       const mlir::Value vector =
           builder.createLoad(loc, dst.getVectorAddress());
       const mlir::Value newVector = builder.create<cir::VecInsertOp>(
-          loc, vector, src.getScalarVal(), dst.getVectorIdx());
+          loc, vector, src.getValue(), dst.getVectorIdx());
       builder.createStore(loc, newVector, dst.getVectorAddress());
       return;
     }
@@ -226,7 +232,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   assert(!cir::MissingFeatures::opLoadStoreObjC());
 
   assert(src.isScalar() && "Can't emit an aggregate store with this method");
-  emitStoreOfScalar(src.getScalarVal(), dst, isInit);
+  emitStoreOfScalar(src.getValue(), dst, isInit);
 }
 
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
@@ -823,8 +829,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
   case CK_Dynamic:
-  case CK_UncheckedDerivedToBase:
-  case CK_DerivedToBase:
   case CK_ToUnion:
   case CK_BaseToDerived:
   case CK_LValueBitCast:
@@ -861,6 +865,27 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
       }
     }
     return lv;
+  }
+
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
+    const auto *derivedClassTy =
+        e->getSubExpr()->getType()->castAs<clang::RecordType>();
+    auto *derivedClassDecl = cast<CXXRecordDecl>(derivedClassTy->getDecl());
+
+    LValue lv = emitLValue(e->getSubExpr());
+    Address thisAddr = lv.getAddress();
+
+    // Perform the derived-to-base conversion
+    Address baseAddr =
+        getAddressOfBaseClass(thisAddr, derivedClassDecl, e->path(),
+                              /*NullCheckValue=*/false, e->getExprLoc());
+
+    // TODO: Support accesses to members of base classes in TBAA. For now, we
+    // conservatively pretend that the complete object is of the base class
+    // type.
+    assert(!cir::MissingFeatures::opTBAA());
+    return makeAddrLValue(baseAddr, e->getType(), lv.getBaseInfo());
   }
 
   case CK_ZeroToOCLOpaqueType:
@@ -924,7 +949,7 @@ LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
          "Can't have a scalar return unless the return type is a "
          "reference type!");
 
-  return makeNaturalAlignPointeeAddrLValue(rv.getScalarVal(), e->getType());
+  return makeNaturalAlignPointeeAddrLValue(rv.getValue(), e->getType());
 }
 
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
@@ -972,10 +997,9 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   }
 
   case cir::TEK_Complex: {
-    assert(!cir::MissingFeatures::complexType());
-    cgm.errorNYI(e->getSourceRange(), "complex l-values");
-    return {};
+    return emitComplexAssignmentLValue(e);
   }
+
   case cir::TEK_Aggregate:
     cgm.errorNYI(e->getSourceRange(), "aggregate lvalues");
     return {};
@@ -985,16 +1009,20 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
 
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
-RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
+RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot) {
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar:
     return RValue::get(emitScalarExpr(e));
   case cir::TEK_Complex:
     cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: complex type");
     return RValue::get(nullptr);
-  case cir::TEK_Aggregate:
-    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: aggregate type");
-    return RValue::get(nullptr);
+  case cir::TEK_Aggregate: {
+    if (aggSlot.isIgnored())
+      aggSlot = createAggTemp(e->getType(), getLoc(e->getSourceRange()),
+                              getCounterAggTmpAsString());
+    emitAggExpr(e, aggSlot);
+    return aggSlot.asRValue();
+  }
   }
   llvm_unreachable("bad evaluation kind");
 }
@@ -1004,8 +1032,49 @@ static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
   return cgm.getAddrOfFunction(gd);
 }
 
-static CIRGenCallee emitDirectCallee(CIRGenModule &cgm, GlobalDecl gd) {
-  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+// Detect the unusual situation where an inline version is shadowed by a
+// non-inline version. In that case we should pick the external one
+// everywhere. That's GCC behavior too.
+static bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *fd) {
+  for (const FunctionDecl *pd = fd; pd; pd = pd->getPreviousDecl())
+    if (!pd->isInlineBuiltinDeclaration())
+      return false;
+  return true;
+}
+
+CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+
+  if (unsigned builtinID = fd->getBuiltinID()) {
+    if (fd->getAttr<AsmLabelAttr>()) {
+      cgm.errorNYI("AsmLabelAttr");
+    }
+
+    StringRef ident = fd->getName();
+    std::string fdInlineName = (ident + ".inline").str();
+
+    bool isPredefinedLibFunction =
+        cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
+    // Assume nobuiltins everywhere until we actually read the attributes.
+    bool hasAttributeNoBuiltin = true;
+    assert(!cir::MissingFeatures::attributeNoBuiltin());
+
+    // When directing calling an inline builtin, call it through it's mangled
+    // name to make it clear it's not the actual builtin.
+    auto fn = cast<cir::FuncOp>(curFn);
+    if (fn.getName() != fdInlineName && onlyHasInlineBuiltinDeclaration(fd)) {
+      cgm.errorNYI("Inline only builtin function calls");
+    }
+
+    // Replaceable builtins provide their own implementation of a builtin. If we
+    // are in an inline builtin implementation, avoid trivial infinite
+    // recursion. Honor __attribute__((no_builtin("foo"))) or
+    // __attribute__((no_builtin)) on the current function unless foo is
+    // not a predefined library function which means we must generate the
+    // builtin no matter what.
+    else if (!isPredefinedLibFunction || !hasAttributeNoBuiltin)
+      return CIRGenCallee::forBuiltin(builtinID, fd);
+  }
 
   cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
 
@@ -1081,7 +1150,7 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
   } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
     // Resolve direct calls.
     const auto *funcDecl = cast<FunctionDecl>(declRef->getDecl());
-    return emitDirectCallee(cgm, funcDecl);
+    return emitDirectCallee(funcDecl);
   } else if (isa<MemberExpr>(e)) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitCallee: call to member function is NYI");
@@ -1137,10 +1206,9 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
 
   CIRGenCallee callee = emitCallee(e->getCallee());
 
-  if (e->getBuiltinCallee()) {
-    cgm.errorNYI(e->getSourceRange(), "call to builtin functions");
-  }
-  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+  if (callee.isBuiltin())
+    return emitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), e,
+                           returnValue);
 
   if (isa<CXXPseudoDestructorExpr>(e->getCallee())) {
     cgm.errorNYI(e->getSourceRange(), "call to pseudo destructor");
@@ -1195,6 +1263,23 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
       cgm.getLoc(e->getSourceRange()), addr.getPointer(),
       convertTypeForMem(eltType));
   return Address(ptr, addr.getAlignment());
+}
+
+/// Given the address of a temporary variable, produce an r-value of its type.
+RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
+                                           clang::SourceLocation loc) {
+  LValue lvalue = makeAddrLValue(addr, type, AlignmentSource::Decl);
+  switch (getEvaluationKind(type)) {
+  case cir::TEK_Complex:
+    cgm.errorNYI(loc, "convertTempToRValue: complex type");
+    return RValue::get(nullptr);
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(loc, "convertTempToRValue: aggregate type");
+    return RValue::get(nullptr);
+  case cir::TEK_Scalar:
+    return RValue::get(emitLoadOfScalar(lvalue, loc));
+  }
+  llvm_unreachable("bad evaluation kind");
 }
 
 /// Emit an `if` on a boolean condition, filling `then` and `else` into
@@ -1368,6 +1453,61 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
       ce, md, returnValue, hasQualifier, qualifier, isArrow, base);
 }
 
+void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
+                                          AggValueSlot dest) {
+  assert(!dest.isIgnored() && "Must have a destination!");
+  const CXXConstructorDecl *cd = e->getConstructor();
+
+  // If we require zero initialization before (or instead of) calling the
+  // constructor, as can be the case with a non-user-provided default
+  // constructor, emit the zero initialization now, unless destination is
+  // already zeroed.
+  if (e->requiresZeroInitialization() && !dest.isZeroed()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXConstructExpr: requires initialization");
+    return;
+  }
+
+  // If this is a call to a trivial default constructor:
+  // In LLVM: do nothing.
+  // In CIR: emit as a regular call, other later passes should lower the
+  // ctor call into trivial initialization.
+
+  // Elide the constructor if we're constructing from a temporary
+  if (getLangOpts().ElideConstructors && e->isElidable()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXConstructExpr: elidable constructor");
+    return;
+  }
+
+  if (getContext().getAsArrayType(e->getType())) {
+    cgm.errorNYI(e->getSourceRange(), "emitCXXConstructExpr: array type");
+    return;
+  }
+
+  clang::CXXCtorType type = Ctor_Complete;
+  bool forVirtualBase = false;
+  bool delegating = false;
+
+  switch (e->getConstructionKind()) {
+  case CXXConstructionKind::Complete:
+    type = Ctor_Complete;
+    break;
+  case CXXConstructionKind::Delegating:
+    // We should be emitting a constructor; GlobalDecl will assert this
+    type = curGD.getCtorType();
+    delegating = true;
+    break;
+  case CXXConstructionKind::VirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXConstructExpr: other construction kind");
+    return;
+  }
+
+  emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
+}
+
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
   // Emit the expression as an lvalue.
   LValue lv = emitLValue(e);
@@ -1494,4 +1634,69 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
   return cast<cir::AllocaOp>(
       emitAlloca(name.str(), ty, loc, CharUnits(), ip, arraySize)
           .getDefiningOp());
+}
+
+/// Try to emit a reference to the given value without producing it as
+/// an l-value.  For many cases, this is just an optimization, but it avoids
+/// us needing to emit global copies of variables if they're named without
+/// triggering a formal use in a context where we can't emit a direct
+/// reference to them, for instance if a block or lambda or a member of a
+/// local class uses a const int variable or constexpr variable from an
+/// enclosing function.
+///
+/// For named members of enums, this is the only way they are emitted.
+CIRGenFunction::ConstantEmission
+CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
+  ValueDecl *value = refExpr->getDecl();
+
+  // There is a lot more to do here, but for now only EnumConstantDecl is
+  // supported.
+  assert(!cir::MissingFeatures::tryEmitAsConstant());
+
+  // The value needs to be an enum constant or a constant variable.
+  if (!isa<EnumConstantDecl>(value))
+    return ConstantEmission();
+
+  Expr::EvalResult result;
+  if (!refExpr->EvaluateAsRValue(result, getContext()))
+    return ConstantEmission();
+
+  QualType resultType = refExpr->getType();
+
+  // As long as we're only handling EnumConstantDecl, there should be no
+  // side-effects.
+  assert(!result.HasSideEffects);
+
+  // Emit as a constant.
+  // FIXME(cir): have emitAbstract build a TypedAttr instead (this requires
+  // somewhat heavy refactoring...)
+  mlir::Attribute c = ConstantEmitter(*this).emitAbstract(
+      refExpr->getLocation(), result.Val, resultType);
+  mlir::TypedAttr cstToEmit = mlir::dyn_cast_if_present<mlir::TypedAttr>(c);
+  assert(cstToEmit && "expected a typed attribute");
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  return ConstantEmission::forValue(cstToEmit);
+}
+
+mlir::Value CIRGenFunction::emitScalarConstant(
+    const CIRGenFunction::ConstantEmission &constant, Expr *e) {
+  assert(constant && "not a constant");
+  if (constant.isReference()) {
+    cgm.errorNYI(e->getSourceRange(), "emitScalarConstant: reference");
+    return {};
+  }
+  return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
+}
+
+/// An LValue is a candidate for having its loads and stores be made atomic if
+/// we are operating under /volatile:ms *and* the LValue itself is volatile and
+/// performing such an operation can be performed without a libcall.
+bool CIRGenFunction::isLValueSuitableForInlineAtomic(LValue lv) {
+  if (!cgm.getLangOpts().MSVolatile)
+    return false;
+
+  cgm.errorNYI("LValueSuitableForInlineAtomic LangOpts MSVolatile");
+  return false;
 }

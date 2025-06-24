@@ -15,6 +15,7 @@ class LetDummies {
   bit isConvertibleToThreeAddress;
   bit isMoveImm;
   bit isReMaterializable;
+  bit isConvergent;
   bit isAsCheapAsAMove;
   bit FPDPRounding;
   Predicate SubtargetPredicate;
@@ -112,9 +113,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   bit HasFP8DstByteSel = P.HasFP8DstByteSel;
   bit HasFP4DstByteSel = P.HasFP4DstByteSel;
 
-  let AsmOperands = !if(!and(!not(P.IsTrue16), isVop3OpSel),
-                        P.AsmVOP3OpSel,
-                        !if(!and(isVOP3P, P.IsPacked), P.AsmVOP3P, P.Asm64));
+  let AsmOperands = !if(!and(isVOP3P, P.IsPacked), P.AsmVOP3P, P.Asm64);
 
   let Size = 8;
   let mayLoad = 0;
@@ -1478,10 +1477,13 @@ class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VO
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
-           !or(Features.IsPacked, Features.HasOpSel, P.HasModifiers));
+           !or(Features.IsPacked, P.HasModifiers));
 }
 
 class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_Base<P, Features> {
@@ -1494,6 +1496,9 @@ class VOP3_Profile_True16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1506,6 +1511,9 @@ class VOP3_Profile_Fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,

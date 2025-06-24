@@ -61,6 +61,14 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
+static cl::opt<bool> UseSelectionDAGPTRADD(
+    "amdgpu-use-sdag-ptradd", cl::Hidden,
+    cl::desc("Generate ISD::PTRADD nodes for 64-bit pointer arithmetic in the "
+             "SelectionDAG ISel"),
+    cl::init(false));
+
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -523,8 +531,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, {MVT::i16, MVT::i32},
                        Legal);
 
-  setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, {MVT::f32, MVT::f64},
-                     Custom);
+  setOperationAction(
+      {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+      {MVT::f32, MVT::f64}, Custom);
 
   // These are really only legal for ieee_mode functions. We should be avoiding
   // them for functions that don't have ieee_mode enabled, so just say they are
@@ -751,10 +760,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
                        Subtarget->hasVOP3PInsts() ? Legal : Custom);
 
-    setOperationAction(ISD::FNEG, MVT::v2f16, Legal);
+    setOperationAction(ISD::FNEG, {MVT::v2f16, MVT::v2bf16}, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
     // allows matching fneg (fabs x) patterns)
-    setOperationAction(ISD::FABS, MVT::v2f16, Legal);
+    setOperationAction(ISD::FABS, {MVT::v2f16, MVT::v2bf16}, Legal);
 
     // Can do this in one BFI plus a constant materialize.
     setOperationAction(ISD::FCOPYSIGN,
@@ -763,7 +772,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         MVT::v32f16, MVT::v32bf16},
                        Custom);
 
-    setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, MVT::f16, Custom);
+    setOperationAction(
+        {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+        MVT::f16, Custom);
     setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
 
     setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::FMINIMUMNUM,
@@ -817,8 +828,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
                          VT, Custom);
 
-    setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, {MVT::v2f16, MVT::v4f16},
-                       Custom);
+    setOperationAction(
+        {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+        {MVT::v2f16, MVT::v4f16}, Custom);
 
     setOperationAction(ISD::FEXP, MVT::v2f16, Custom);
     setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v4f16, MVT::v4bf16},
@@ -926,8 +938,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
-  if (Subtarget->hasCvtPkF16F32Inst())
-    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Custom);
+  if (Subtarget->hasCvtPkF16F32Inst()) {
+    setOperationAction(ISD::FP_ROUND,
+                       {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16},
+                       Custom);
+  }
 
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
@@ -2444,7 +2459,7 @@ void SITargetLowering::allocateSpecialInputVGPRsFixed(
     SIMachineFunctionInfo &Info) const {
   Register Reg = CCInfo.AllocateReg(AMDGPU::VGPR31);
   if (!Reg)
-    report_fatal_error("failed to allocated VGPR for implicit arguments");
+    report_fatal_error("failed to allocate VGPR for implicit arguments");
 
   const unsigned Mask = 0x3ff;
   Info.setWorkItemIDX(ArgDescriptor::createRegister(Reg, Mask));
@@ -3574,21 +3589,6 @@ void SITargetLowering::passSpecialInputs(
   }
 }
 
-static bool canGuaranteeTCO(CallingConv::ID CC) {
-  return CC == CallingConv::Fast;
-}
-
-/// Return true if we might ever do TCO for calls with this calling convention.
-static bool mayTailCallThisCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::C:
-  case CallingConv::AMDGPU_Gfx:
-    return true;
-  default:
-    return canGuaranteeTCO(CC);
-  }
-}
-
 bool SITargetLowering::isEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -3597,7 +3597,7 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   if (AMDGPU::isChainCC(CalleeCC))
     return true;
 
-  if (!mayTailCallThisCC(CalleeCC))
+  if (!AMDGPU::mayTailCallThisCC(CalleeCC))
     return false;
 
   // For a divergent call target, we need to do a waterfall loop over the
@@ -3619,7 +3619,7 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   bool CCMatch = CallerCC == CalleeCC;
 
   if (DAG.getTarget().Options.GuaranteedTailCallOpt) {
-    if (canGuaranteeTCO(CalleeCC) && CCMatch)
+    if (AMDGPU::canGuaranteeTCO(CalleeCC) && CCMatch)
       return true;
     return false;
   }
@@ -3805,7 +3805,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (!CLI.CB)
-    report_fatal_error("unsupported libcall legalization");
+    return lowerUnhandledCall(CLI, InVals, "unsupported libcall legalization");
 
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
@@ -4481,6 +4481,8 @@ SDValue SITargetLowering::lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const {
 
 Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                              const MachineFunction &MF) const {
+  const Function &Fn = MF.getFunction();
+
   Register Reg = StringSwitch<Register>(RegName)
                      .Case("m0", AMDGPU::M0)
                      .Case("exec", AMDGPU::EXEC)
@@ -4490,16 +4492,13 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
                      .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
                      .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
                      .Default(Register());
-
-  if (Reg == AMDGPU::NoRegister) {
-    report_fatal_error(
-        Twine("invalid register name \"" + StringRef(RegName) + "\"."));
-  }
+  if (!Reg)
+    return Reg;
 
   if (!Subtarget->hasFlatScrRegister() &&
       Subtarget->getRegisterInfo()->regsOverlap(Reg, AMDGPU::FLAT_SCR)) {
-    report_fatal_error(Twine("invalid register \"" + StringRef(RegName) +
-                             "\" for subtarget."));
+    Fn.getContext().emitError(Twine("invalid register \"" + StringRef(RegName) +
+                                    "\" for subtarget."));
   }
 
   switch (Reg) {
@@ -5038,6 +5037,28 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   return LoopBB;
 }
 
+static uint32_t getIdentityValueForWaveReduction(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::S_MIN_U32:
+    return std::numeric_limits<uint32_t>::max();
+  case AMDGPU::S_MIN_I32:
+    return std::numeric_limits<int32_t>::max();
+  case AMDGPU::S_MAX_U32:
+    return std::numeric_limits<uint32_t>::min();
+  case AMDGPU::S_MAX_I32:
+    return std::numeric_limits<int32_t>::min();
+  case AMDGPU::S_ADD_I32:
+  case AMDGPU::S_SUB_I32:
+  case AMDGPU::S_OR_B32:
+  case AMDGPU::S_XOR_B32:
+    return std::numeric_limits<uint32_t>::min();
+  case AMDGPU::S_AND_B32:
+    return std::numeric_limits<uint32_t>::max();
+  default:
+    llvm_unreachable("Unexpected opcode in getIdentityValueForWaveReduction");
+  }
+}
+
 static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                                           MachineBasicBlock &BB,
                                           const GCNSubtarget &ST,
@@ -5053,13 +5074,78 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   MachineBasicBlock *RetBB = nullptr;
   if (isSGPR) {
-    // These operations with a uniform value i.e. SGPR are idempotent.
-    // Reduced value will be same as given sgpr.
-    // clang-format off
-    BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg)
-        .addReg(SrcReg);
-    // clang-format on
-    RetBB = &BB;
+    switch (Opc) {
+    case AMDGPU::S_MIN_U32:
+    case AMDGPU::S_MIN_I32:
+    case AMDGPU::S_MAX_U32:
+    case AMDGPU::S_MAX_I32:
+    case AMDGPU::S_AND_B32:
+    case AMDGPU::S_OR_B32: {
+      // Idempotent operations.
+      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
+      RetBB = &BB;
+      break;
+    }
+    case AMDGPU::S_XOR_B32:
+    case AMDGPU::S_ADD_I32:
+    case AMDGPU::S_SUB_I32: {
+      const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
+      const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
+      Register ExecMask = MRI.createVirtualRegister(WaveMaskRegClass);
+      Register ActiveLanes = MRI.createVirtualRegister(DstRegClass);
+
+      bool IsWave32 = ST.isWave32();
+      unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+      MCRegister ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+      unsigned CountReg =
+          IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
+
+      auto Exec =
+          BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
+
+      auto NewAccumulator = BuildMI(BB, MI, DL, TII->get(CountReg), ActiveLanes)
+                                .addReg(Exec->getOperand(0).getReg());
+
+      switch (Opc) {
+      case AMDGPU::S_XOR_B32: {
+        // Performing an XOR operation on a uniform value
+        // depends on the parity of the number of active lanes.
+        // For even parity, the result will be 0, for odd
+        // parity the result will be the same as the input value.
+        Register ParityRegister = MRI.createVirtualRegister(DstRegClass);
+
+        auto ParityReg =
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
+                .addReg(NewAccumulator->getOperand(0).getReg())
+                .addImm(1);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+            .addReg(SrcReg)
+            .addReg(ParityReg->getOperand(0).getReg());
+        break;
+      }
+      case AMDGPU::S_SUB_I32: {
+        Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
+
+        // Take the negation of the source operand.
+        auto InvertedValReg =
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), NegatedVal)
+                .addImm(-1)
+                .addReg(SrcReg);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+            .addReg(InvertedValReg->getOperand(0).getReg())
+            .addReg(NewAccumulator->getOperand(0).getReg());
+        break;
+      }
+      case AMDGPU::S_ADD_I32: {
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+            .addReg(SrcReg)
+            .addReg(NewAccumulator->getOperand(0).getReg());
+        break;
+      }
+      }
+      RetBB = &BB;
+    }
+    }
   } else {
     // TODO: Implement DPP Strategy and switch based on immediate strategy
     // operand. For now, for all the cases (default, Iterative and DPP we use
@@ -5095,10 +5181,9 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
-    // Create initail values of induction variable from Exec, Accumulator and
-    // insert branch instr to newly created ComputeBlockk
-    uint32_t InitalValue =
-        (Opc == AMDGPU::S_MIN_U32) ? std::numeric_limits<uint32_t>::max() : 0;
+    // Create initial values of induction variable from Exec, Accumulator and
+    // insert branch instr to newly created ComputeBlock
+    uint32_t InitalValue = getIdentityValueForWaveReduction(Opc);
     auto TmpSReg =
         BuildMI(BB, I, DL, TII->get(MovOpc), LoopIterator).addReg(ExecReg);
     BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), InitalValReg)
@@ -5170,8 +5255,22 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
+  case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_I32);
   case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_U32);
+  case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_I32);
+  case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_I32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
+  case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_I32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
+  case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_AND_B32);
+  case AMDGPU::WAVE_REDUCE_OR_PSEUDO_B32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_OR_B32);
+  case AMDGPU::WAVE_REDUCE_XOR_PSEUDO_B32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B32);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
     const DebugLoc &DL = MI.getDebugLoc();
@@ -5421,6 +5520,14 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
             AMDGPU::M0)
         .add(M0Init);
     MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM: {
+    // Set SCC to true, in case the barrier instruction gets converted to a NOP.
+    BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
+            TII->get(AMDGPU::S_CMP_EQ_U32))
+        .addImm(0)
+        .addImm(0);
     return BB;
   }
   case AMDGPU::GET_GROUPSTATICSIZE: {
@@ -6066,6 +6173,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return lowerFMINIMUMNUM_FMAXIMUMNUM(Op, DAG);
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
     return lowerFMINIMUM_FMAXIMUM(Op, DAG);
@@ -6090,8 +6200,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
-  case ISD::FMINIMUMNUM:
-  case ISD::FMAXIMUMNUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:
@@ -6911,14 +7019,35 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
                            DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
+SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  EVT DstVT = Op.getValueType();
+  unsigned NumElts = DstVT.getVectorNumElements();
+  assert(NumElts > 2 && isPowerOf2_32(NumElts));
+
+  auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+
+  SDLoc DL(Op);
+  unsigned Opc = Op.getOpcode();
+  SDValue Flags = Op.getOperand(1);
+  EVT HalfDstVT =
+      EVT::getVectorVT(*DAG.getContext(), DstVT.getScalarType(), NumElts / 2);
+  SDValue OpLo = DAG.getNode(Opc, DL, HalfDstVT, Lo, Flags);
+  SDValue OpHi = DAG.getNode(Opc, DL, HalfDstVT, Hi, Flags);
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, OpLo, OpHi);
+}
+
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Op.getValueType();
 
-  if (DstVT == MVT::v2f16) {
+  if (DstVT.isVector() && DstVT.getScalarType() == MVT::f16) {
     assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
-    return SrcVT == MVT::v2f32 ? Op : SDValue();
+    if (SrcVT.getScalarType() != MVT::f32)
+      return SDValue();
+    return SrcVT == MVT::v2f32 ? Op : splitFP_ROUNDVectorOp(Op, DAG);
   }
 
   if (SrcVT.getScalarType() != MVT::f64)
@@ -6971,6 +7100,23 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   // where there is known no sNaN.
   if (IsIEEEMode)
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
+
+  if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
+      VT == MVT::v16bf16)
+    return splitBinaryVectorOp(Op, DAG);
+  return Op;
+}
+
+SDValue
+SITargetLowering::lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  const MachineFunction &MF = DAG.getMachineFunction();
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  bool IsIEEEMode = Info->getMode().IEEE;
+
+  if (IsIEEEMode)
+    return expandFMINIMUMNUM_FMAXIMUMNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
       VT == MVT::v16bf16)
@@ -9281,16 +9427,27 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       IndexOperand &= ~(0xf << 24);
 
       if (CountDw < 1 || CountDw > 4) {
-        report_fatal_error(
-            "ds_ordered_count: dword count must be between 1 and 4");
+        const Function &Fn = DAG.getMachineFunction().getFunction();
+        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+            Fn, "ds_ordered_count: dword count must be between 1 and 4",
+            DL.getDebugLoc()));
+        CountDw = 1;
       }
     }
 
-    if (IndexOperand)
-      report_fatal_error("ds_ordered_count: bad index operand");
+    if (IndexOperand) {
+      const Function &Fn = DAG.getMachineFunction().getFunction();
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          Fn, "ds_ordered_count: bad index operand", DL.getDebugLoc()));
+    }
 
-    if (WaveDone && !WaveRelease)
-      report_fatal_error("ds_ordered_count: wave_done requires wave_release");
+    if (WaveDone && !WaveRelease) {
+      // TODO: Move this to IR verifier
+      const Function &Fn = DAG.getMachineFunction().getFunction();
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          Fn, "ds_ordered_count: wave_done requires wave_release",
+          DL.getDebugLoc()));
+    }
 
     unsigned Instruction = IntrID == Intrinsic::amdgcn_ds_ordered_add ? 0 : 1;
     unsigned ShaderType =
@@ -10448,6 +10605,11 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
 }
 
+bool SITargetLowering::shouldPreservePtrArith(const Function &F,
+                                              EVT PtrVT) const {
+  return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
+}
+
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:
 // offset (the offset that is included in bounds checking and swizzling, to be
 // split between the instruction's voffset and immoffset fields) and soffset
@@ -10814,7 +10976,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       (AS == AMDGPUAS::GLOBAL_ADDRESS &&
        Subtarget->getScalarizeGlobalBehavior() && Load->isSimple() &&
        isMemOpHasNoClobberedMemOperand(Load))) {
-    if ((!Op->isDivergent() || AMDGPUInstrInfo::isUniformMMO(MMO)) &&
+    if ((!Op->isDivergent() || AMDGPU::isUniformMMO(MMO)) &&
         Alignment >= Align(4) && NumElements < 32) {
       if (MemVT.isPow2VectorType() ||
           (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
@@ -13858,6 +14020,17 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
       return Res;
   }
 
+  // Prefer fminnum_ieee over fminimum. For gfx950, minimum/maximum are legal
+  // for some types, but at a higher cost since it's implemented with a 3
+  // operand form.
+  const SDNodeFlags Flags = N->getFlags();
+  if ((Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM) &&
+      !Subtarget->hasIEEEMinMax() && Flags.hasNoNaNs()) {
+    unsigned NewOpc =
+        Opc == ISD::FMINIMUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+    return DAG.getNode(NewOpc, SDLoc(N), VT, Op0, Op1, Flags);
+  }
+
   return SDValue();
 }
 
@@ -15125,6 +15298,12 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   EVT ScalarVT = VT.getScalarType();
   EVT IntVT = VT.changeElementType(MVT::i32);
+
+  if (!N->isDivergent() && getSubtarget()->hasSALUFloatInsts() &&
+      (ScalarVT == MVT::f32 || ScalarVT == MVT::f16)) {
+    // Prefer to use s_mul_f16/f32 instead of v_ldexp_f16/f32.
+    return SDValue();
+  }
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -17541,9 +17720,11 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   // where we only insert a check for private and still use the flat instruction
   // for global and shared.
 
-  bool FullFlatEmulation = RMW && RMW->getOperation() == AtomicRMWInst::FAdd &&
-                           Subtarget->hasAtomicFaddInsts() &&
-                           RMW->getType()->isFloatTy();
+  bool FullFlatEmulation =
+      RMW && RMW->getOperation() == AtomicRMWInst::FAdd &&
+      ((Subtarget->hasAtomicFaddInsts() && RMW->getType()->isFloatTy()) ||
+       (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() &&
+        RMW->getType()->isDoubleTy()));
 
   // If the return value isn't used, do not introduce a false use in the phi.
   bool ReturnValueIsUsed = !AI->use_empty();

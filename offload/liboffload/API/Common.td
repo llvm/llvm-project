@@ -106,6 +106,7 @@ def ErrorCode : Enum {
     Etor<"ASSEMBLE_FAILURE", "assembler failure while processing binary image">,
     Etor<"LINK_FAILURE", "linker failure while processing binary image">,
     Etor<"BACKEND_FAILURE", "the plugin backend is in an invalid or unsupported state">,
+    Etor<"UNINITIALIZED", "not initialized">,
 
     // Handle related errors - only makes sense for liboffload
     Etor<"INVALID_NULL_HANDLE", "a handle argument is null when it should not be">,
@@ -145,6 +146,16 @@ def : Struct {
     StructMember<"const char*", "SourceFile", "Source code file">,
     StructMember<"uint32_t", "LineNumber", "Source code line number">,
     StructMember<"uint32_t", "ColumnNumber", "Source code column number">
+  ];
+}
+
+def : Struct {
+  let name = "ol_dimensions_t";
+  let desc = "A three element vector";
+  let members = [
+    StructMember<"uint32_t", "x", "X">,
+    StructMember<"uint32_t", "y", "Y">,
+    StructMember<"uint32_t", "z", "Z">,
   ];
 }
 
