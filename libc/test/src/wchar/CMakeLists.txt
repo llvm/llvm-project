@@ -255,3 +255,13 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcpcpy
 )
+
+add_libc_test(
+  wcpncpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcpncpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcpncpy
+)
