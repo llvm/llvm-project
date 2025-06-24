@@ -77,7 +77,6 @@ write_lit_config("lit_site_cfg") {
     "LLVM_USE_SANITIZER=",
     "LLVM_VERSION_MAJOR=$llvm_version_major",
     "Python3_EXECUTABLE=$python_path",
-    "USE_Z3_SOLVER=",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
   ]
 
