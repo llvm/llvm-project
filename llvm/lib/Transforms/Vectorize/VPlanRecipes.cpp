@@ -152,7 +152,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
-  case VPReverseInterleavePtrSC:
   case VPVectorEndPointerSC:
     return false;
   case VPInstructionSC:
@@ -2379,33 +2378,6 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-pointer ";
 
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPReverseInterleavePtrRecipe::execute(VPTransformState &State) {
-  auto &Builder = State.Builder;
-  Value *Ptr = State.get(getPtr(), /*IsScalar*/ true);
-  Value *RuntimeVF = State.get(getVFValue(), /*IsScalar*/ true);
-  Type *IndexTy = Builder.getInt32Ty();
-  if (RuntimeVF->getType() != IndexTy)
-    RuntimeVF = Builder.CreateZExtOrTrunc(RuntimeVF, IndexTy);
-  Value *Index = Builder.CreateSub(RuntimeVF, Builder.getInt32(1));
-  Index = Builder.CreateMul(Index, Builder.getInt32(Factor));
-  Index = Builder.CreateNeg(Index);
-  Value *ReversePtr =
-      Builder.CreateGEP(IndexedTy, Ptr, Index, "", getGEPNoWrapFlags());
-
-  State.set(this, ReversePtr, /*IsScalar*/ true);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPReverseInterleavePtrRecipe::print(raw_ostream &O, const Twine &Indent,
-                                         VPSlotTracker &SlotTracker) const {
-  O << Indent;
-  printAsOperand(O, SlotTracker);
-  O << " = reverse-interleave-ptr";
-  printFlags(O);
   printOperands(O, SlotTracker);
 }
 #endif
