@@ -1054,9 +1054,8 @@ public:
     }
 
     static Assignment make(DIAssignID *ID, DbgVariableRecord *Source) {
-      assert((!Source ||
-             Source->isDbgAssign()) &&
-              "Cannot make an assignment from a non-assign DbgVariableRecord");
+      assert((!Source || Source->isDbgAssign()) &&
+             "Cannot make an assignment from a non-assign DbgVariableRecord");
       return Assignment(Known, ID, Source);
     }
     static Assignment makeFromMemDef(DIAssignID *ID) {
