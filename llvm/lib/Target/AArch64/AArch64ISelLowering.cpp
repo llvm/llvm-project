@@ -153,6 +153,14 @@ cl::opt<bool> EnableSVEGISel(
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
+static cl::opt<bool> UseFEATCPACodegen(
+    "aarch64-use-featcpa-codegen", cl::Hidden,
+    cl::desc("Generate ISD::PTRADD nodes for pointer arithmetic in "
+             "SelectionDAG for FEAT_CPA"),
+    cl::init(false));
+
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
@@ -1762,7 +1770,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto Opcode :
          {ISD::FCEIL, ISD::FDIV, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
-          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC, ISD::SETCC}) {
+          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC, ISD::SETCC,
+          ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMAXIMUM,
+          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMINIMUM}) {
       setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
       setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
@@ -2119,7 +2129,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
   // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
-  if (!Subtarget->hasSVE() || ResVT.getVectorElementType() != MVT::i1)
+  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
+      ResVT.getVectorElementType() != MVT::i1)
     return true;
 
   // Only support illegal types if the result is scalable and min elements > 1.
@@ -2289,6 +2300,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FSQRT, VT, Default);
   setOperationAction(ISD::FSUB, VT, Default);
   setOperationAction(ISD::FTRUNC, VT, Default);
+  setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Default);
   setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Default);
   setOperationAction(ISD::LOAD, VT, PreferNEON ? Legal : Default);
   setOperationAction(ISD::MGATHER, VT, PreferSVE ? Default : Expand);
@@ -11967,12 +11979,9 @@ getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const 
     unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
     if (!Subtarget->isXRegisterReserved(DwarfRegNum) &&
         !MRI->isReservedReg(MF, Reg))
-      Reg = 0;
+      Reg = Register();
   }
-  if (Reg)
-    return Reg;
-  report_fatal_error(Twine("Invalid register name \""
-                              + StringRef(RegName)  + "\"."));
+  return Reg;
 }
 
 SDValue AArch64TargetLowering::LowerADDROFRETURNADDR(SDValue Op,
@@ -16869,14 +16878,14 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     if (SrcWidth * 4 <= DstWidth) {
       if (all_of(I->users(), [&](auto *U) {
             auto *SingleUser = cast<Instruction>(&*U);
-            return (
-                match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
-                (match(SingleUser,
-                       m_Intrinsic<
-                           Intrinsic::experimental_vector_partial_reduce_add>(
-                           m_Value(), m_Specific(I))) &&
-                 !shouldExpandPartialReductionIntrinsic(
-                     cast<IntrinsicInst>(SingleUser))));
+            if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
+              return true;
+            if (match(SingleUser,
+                      m_Intrinsic<
+                          Intrinsic::experimental_vector_partial_reduce_add>(
+                          m_Value(), m_Specific(I))))
+              return true;
+            return false;
           }))
         return false;
     }
@@ -18132,7 +18141,8 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                                 /*IsEqual=*/false))
     return While;
 
-  if (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming()))
+  if (!N->getValueType(0).isScalableVector() ||
+      (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming())))
     return SDValue();
 
   if (!N->hasNUsesOfValue(2, 0))
@@ -29356,6 +29366,16 @@ SDValue AArch64TargetLowering::LowerFixedLengthConcatVectorsToSVE(
   EVT VT = Op.getValueType();
   EVT SrcVT = SrcOp1.getValueType();
 
+  // Match a splat of 128b segments that fit in a single register.
+  if (SrcVT.is128BitVector() && all_equal(Op.getNode()->op_values())) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+    SDValue Splat =
+        DAG.getNode(AArch64ISD::DUPLANE128, DL, ContainerVT,
+                    convertToScalableVector(DAG, ContainerVT, SrcOp1),
+                    DAG.getConstant(0, DL, MVT::i64, /*isTarget=*/true));
+    return convertFromScalableVector(DAG, VT, Splat);
+  }
+
   if (NumOperands > 2) {
     SmallVector<SDValue, 4> Ops;
     EVT PairVT = SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext());
@@ -30467,4 +30487,9 @@ bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   }
 
   return TargetLowering::isTypeDesirableForOp(Opc, VT);
+}
+
+bool AArch64TargetLowering::shouldPreservePtrArith(const Function &F,
+                                                   EVT VT) const {
+  return Subtarget->hasCPA() && UseFEATCPACodegen;
 }
