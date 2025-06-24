@@ -799,6 +799,16 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
          ThinOrFullLTOPhase Phase) {
         PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
+        if (!isLTOPreLink(Phase)) {
+          // When we are not using -fgpu-rdc, we can run accelerator code
+          // selection relatively early, but still after linking to prevent
+          // eager removal of potentially reachable symbols.
+          if (EnableHipStdPar) {
+            PM.addPass(HipStdParMathFixupPass());
+            PM.addPass(HipStdParAcceleratorCodeSelectionPass());
+          }
+        }
+
         if (Level == OptimizationLevel::O0)
           return;
 
@@ -873,6 +883,15 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FunctionPassManager FPM;
         FPM.addPass(AMDGPUPromoteKernelArgumentsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+        // When we are using -fgpu-rdc, we can only run accelerator code
+        // selection after linking to prevent, otherwise we end up removing
+        // potentially reachable symbols that were exported as external in other
+        // modules.
+        if (EnableHipStdPar) {
+          PM.addPass(HipStdParMathFixupPass());
+          PM.addPass(HipStdParAcceleratorCodeSelectionPass());
+        }
         // We want to support the -lto-partitions=N option as "best effort".
         // For that, we need to lower LDS earlier in the pipeline before the
         // module is partitioned for codegen.
