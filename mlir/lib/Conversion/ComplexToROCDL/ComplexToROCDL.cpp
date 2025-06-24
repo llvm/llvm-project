@@ -21,59 +21,53 @@ using namespace mlir;
 
 namespace {
 
-template <typename Op>
+template <typename Op, typename Ty>
 // Pattern to convert Complex ops to ROCDL function calls.
 struct ComplexOpToROCDLCall : public OpRewritePattern<Op> {
   using OpRewritePattern<Op>::OpRewritePattern;
-  ComplexOpToROCDLCall(MLIRContext *context, StringRef floatFunc,
-                       StringRef doubleFunc, PatternBenefit benefit = 1)
-      : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
-        doubleFunc(doubleFunc) {}
+  ComplexOpToROCDLCall(MLIRContext *context, StringRef funcName,
+                       PatternBenefit benefit = 1)
+      : OpRewritePattern<Op>(context, benefit), funcName(funcName) {}
 
   LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final {
     Operation *symTable = SymbolTable::getNearestSymbolTable(op);
     Type resType = op.getType();
     if (auto complexType = dyn_cast<ComplexType>(resType))
       resType = complexType.getElementType();
-    FloatType floatTy = dyn_cast<FloatType>(resType);
-    if (!floatTy)
-      return failure();
-
-    StringRef name;
-    if (floatTy.isF64())
-      name = doubleFunc;
-    else if (floatTy.isF32())
-      name = floatFunc;
-    else
+    if (!isa<Ty>(resType))
       return failure();
 
     auto opFunc = dyn_cast_or_null<SymbolOpInterface>(
-        SymbolTable::lookupSymbolIn(symTable, name));
+        SymbolTable::lookupSymbolIn(symTable, funcName));
     if (!opFunc) {
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(&symTable->getRegion(0).front());
       auto funcTy = FunctionType::get(
           rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
-      opFunc =
-          rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name, funcTy);
+      opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), funcName,
+                                             funcTy);
       opFunc.setPrivate();
     }
-    rewriter.replaceOpWithNewOp<func::CallOp>(op, name, op.getType(),
+    rewriter.replaceOpWithNewOp<func::CallOp>(op, funcName, op.getType(),
                                               op->getOperands());
     return success();
   }
 
 private:
-  std::string floatFunc, doubleFunc;
+  std::string funcName;
 };
 } // namespace
 
 void mlir::populateComplexToROCDLConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<ComplexOpToROCDLCall<complex::AbsOp>>(
-      patterns.getContext(), "__ocml_cabs_f32", "__ocml_cabs_f64");
-  patterns.add<ComplexOpToROCDLCall<complex::ExpOp>>(
-      patterns.getContext(), "__ocml_cexp_f32", "__ocml_cexp_f64");
+  patterns.add<ComplexOpToROCDLCall<complex::AbsOp, Float32Type>>(
+      patterns.getContext(), "__ocml_cabs_f32");
+  patterns.add<ComplexOpToROCDLCall<complex::AbsOp, Float64Type>>(
+      patterns.getContext(), "__ocml_cabs_f64");
+  patterns.add<ComplexOpToROCDLCall<complex::ExpOp, Float32Type>>(
+      patterns.getContext(), "__ocml_cexp_f32");
+  patterns.add<ComplexOpToROCDLCall<complex::ExpOp, Float64Type>>(
+      patterns.getContext(), "__ocml_cexp_f64");
 }
 
 namespace {
