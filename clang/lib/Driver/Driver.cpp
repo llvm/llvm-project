@@ -1072,7 +1072,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       }
     } else if (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
                ((!IsHIP && !IsCuda) || UseLLVMOffload)) {
-      const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
       llvm::Triple AMDTriple("amdgcn-amd-amdhsa");
       llvm::Triple NVPTXTriple("nvptx64-nvidia-cuda");
 
@@ -1096,11 +1095,10 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
             return;
           }
 
-          if (TT.isNVPTX() && IsNVPTX) {
+          if (TT.isNVPTX() && IsNVPTX)
             ArchsForTarget.insert(Arch);
-          } else if (TT.isAMDGPU() && IsAMDGPU) {
+          else if (TT.isAMDGPU() && IsAMDGPU)
             ArchsForTarget.insert(Arch);
-          }
         }
         if (!ArchsForTarget.empty()) {
           C.addOffloadDeviceToolChain(&TC, Action::OFK_OpenMP);
