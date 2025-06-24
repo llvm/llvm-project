@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/RegisterContext.h"
@@ -55,22 +56,25 @@ bool DWARFExpressionList::ContainsAddress(lldb::addr_t func_load_addr,
 
 llvm::Expected<DWARFExpressionList::DWARFExpressionEntry>
 DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
-                                                 lldb::addr_t load_addr) const {
-  if (const DWARFExpression *expr = GetAlwaysValidExpr())
-    return DWARFExpressionEntry{0, LLDB_INVALID_ADDRESS, expr};
+                                                lldb::addr_t load_addr) const {
+  if (const DWARFExpression *always = GetAlwaysValidExpr()) {
+    AddressRange full_range(m_func_file_addr, /*size=*/LLDB_INVALID_ADDRESS);
+    return DWARFExpressionEntry{full_range, always};
+  }
 
   if (func_load_addr == LLDB_INVALID_ADDRESS)
     func_load_addr = m_func_file_addr;
+  lldb::addr_t file_pc = load_addr - func_load_addr + m_func_file_addr;
 
-  addr_t addr = load_addr - func_load_addr + m_func_file_addr;
-  uint32_t index = m_exprs.FindEntryIndexThatContains(addr);
-  if (index == UINT32_MAX) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "No DWARF expression found for address 0x%llx", addr);
-  }
+  uint32_t idx = m_exprs.FindEntryIndexThatContains(file_pc);
+  if (idx == UINT32_MAX)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "no DWARF location list entry for PC 0x%" PRIx64, load_addr);
 
-  const Entry &entry = *m_exprs.GetEntryAtIndex(index);
-  return DWARFExpressionEntry{entry.base, entry.GetRangeEnd(), &entry.data};
+  const auto &entry = *m_exprs.GetEntryAtIndex(idx);
+  AddressRange range_in_file(entry.base, entry.GetRangeEnd() - entry.base);
+  return DWARFExpressionEntry{range_in_file, &entry.data};
 }
 
 const DWARFExpression *
