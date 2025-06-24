@@ -1,4 +1,4 @@
-//===--- FlangTidyToolMain.cpp - flang-tidy -------------------------------===//
+//===--- FlangTidyMain.cpp - flang-tidy -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FlangTidyMain.h"
+namespace Fortran::tidy {
 
-int main(int argc, const char **argv) {
-  return Fortran::tidy::flangTidyMain(argc, argv);
-}
+extern int flangTidyMain(int &argc, const char **argv) { return 0; }
+
+} // namespace Fortran::tidy
