@@ -75,11 +75,14 @@ class FRemExpander {
   Value *One;
 
 public:
-  static std::optional<FRemExpander> create(IRBuilder<> &B, Type *Ty) {
-    // TODO The expansion should work for other types as well, but
-    // this would require additional testing.
-    if (!Ty->isIEEELikeFPTy() || Ty->isBFloatTy() || Ty->isFP128Ty())
-      return std::nullopt;
+  static bool canExpandType(Type *Ty) {
+    // TODO The expansion should work for other floating point types
+    // as well, but this would require additional testing.
+    return Ty->isIEEELikeFPTy() && !Ty->isBFloatTy() && !Ty->isFP128Ty();
+  }
+
+  static FRemExpander create(IRBuilder<> &B, Type *Ty) {
+    assert(canExpandType(Ty));
 
     // The type to use for the computation of the remainder. This may be
     // wider than the input/result type which affects the ...
@@ -335,7 +338,7 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
 
   Type *ReturnTy = I.getType();
-  assert(ReturnTy->isFPOrFPVectorTy());
+  assert(FRemExpander::canExpandType(ReturnTy->getScalarType()));
 
   FastMathFlags FMF = I.getFastMathFlags();
   // TODO Make use of those flags for optimization?
@@ -348,16 +351,11 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   B.SetCurrentDebugLocation(I.getDebugLoc());
 
   Type *ElemTy = ReturnTy->getScalarType();
-  const std::optional<FRemExpander> Expander = FRemExpander::create(B, ElemTy);
-
-  if (!Expander || isa<ScalableVectorType>(ReturnTy)) {
-    LLVM_DEBUG(dbgs() << "Cannot expand 'frem' of type " << ReturnTy << ".\n");
-    return false;
-  }
+  const FRemExpander Expander = FRemExpander::create(B, ElemTy);
 
   Value *Ret;
   if (ReturnTy->isFloatingPointTy())
-    Ret = Expander->buildFRem(I.getOperand(0), I.getOperand(1), SQ);
+    Ret = Expander.buildFRem(I.getOperand(0), I.getOperand(1), SQ);
   else {
     auto *VecTy = cast<FixedVectorType>(ReturnTy);
 
@@ -371,7 +369,7 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
     for (int I = 0, E = VecTy->getNumElements(); I != E; ++I) {
       Value *Num = B.CreateExtractElement(Nums, I);
       Value *Denum = B.CreateExtractElement(Denums, I);
-      Value *Rem = Expander->buildFRem(Num, Denum, SQ);
+      Value *Rem = Expander.buildFRem(Num, Denum, SQ);
       Ret = B.CreateInsertElement(Ret, Rem, I);
     }
   }
@@ -987,12 +985,21 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
   for (auto &I : instructions(F)) {
     switch (I.getOpcode()) {
-    case Instruction::FRem:
-      if (!targetSupportsFrem(TLI, I.getType())) {
-        Replace.push_back(&I);
-        Modified = true;
-      }
+    case Instruction::FRem: {
+      Type *Ty = I.getType();
+      // TODO: This pass doesn't handle scalable vectors.
+      if (Ty->isScalableTy())
+        continue;
+
+      if (targetSupportsFrem(TLI, Ty) ||
+          !FRemExpander::canExpandType(Ty->getScalarType()))
+        continue;
+
+      Replace.push_back(&I);
+      Modified = true;
+
       break;
+    }
     case Instruction::FPToUI:
     case Instruction::FPToSI: {
       // TODO: This pass doesn't handle scalable vectors.
