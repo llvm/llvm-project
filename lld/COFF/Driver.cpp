@@ -275,7 +275,12 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
 
       int memberIndex = 0;
       for (MemoryBufferRef m : getArchiveMembers(ctx, archive))
-        addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
+        if (!archive->isThin())
+          addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
+        else
+          // Pass empty string as archive name so that the original filename is
+          // used as the buffer identifier.
+          addArchiveBuffer(m, "<whole-archive>", "", /*OffsetInArchive=*/0);
       return;
     }
     addFile(make<ArchiveFile>(ctx, mbref));
