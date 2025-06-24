@@ -910,13 +910,13 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // have a chance to save them.
       EmitToStreamer(MCInstBuilder(AArch64::ADRP)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
+                         .addExpr(MCSpecifierExpr::create(
                              HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
                              OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
                          .addReg(AArch64::X16)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
+                         .addExpr(MCSpecifierExpr::create(
                              HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
                              OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
