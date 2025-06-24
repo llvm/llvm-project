@@ -4,9 +4,9 @@
 #include <stdio.h>
 
 int x[10];
-int *p;
 
 void f1() {
+  int *p;
   p = &x[0];
   p[0] = 111;
   p[1] = 222;
