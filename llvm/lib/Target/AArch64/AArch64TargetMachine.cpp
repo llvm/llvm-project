@@ -482,7 +482,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   }
 
   if (IsStreaming && !I->hasSME())
-    reportFatalUsageError("Streaming SVE functions require SME");
+    reportFatalUsageError("streaming SVE functions require SME");
 
   return I.get();
 }
