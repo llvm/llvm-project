@@ -1,4 +1,6 @@
-# RUN: llvm-mc --triple=aarch64-elf --filetype=obj < %s | llvm-objdump -d -r --symbolize-operands --no-show-raw-insn --no-leading-addr - | FileCheck %s --match-full-lines
+# RUN: llvm-mc --triple=aarch64-elf --filetype=obj < %s | \
+# RUN:   llvm-objdump -d -r --symbolize-operands --no-show-raw-insn --no-leading-addr - | \
+# RUN:   FileCheck %s --match-full-lines
 
 # CHECK:      <fn1>:
 # CHECK-NEXT:   b <L0>
@@ -63,9 +65,9 @@ fn1:
     .p2align 4
     .global fn2
 fn2:
-.Lfn2: # local label for non-interposable call
+.Lfn2: ## Local label for non-interposable call.
     bl .Lfn3
-    # In future, we might identify the pairs and symbolize the operands properly
+    ## In future, we might identify the pairs and symbolize the operands properly.
     adrp x3, fn2
     add x3, x3, :lo12:fn2
     adrp x3, fn2
@@ -73,5 +75,5 @@ fn2:
     ret
 
     .p2align 4
-.Lfn3: # private function
+.Lfn3: ## Private function
     ret
