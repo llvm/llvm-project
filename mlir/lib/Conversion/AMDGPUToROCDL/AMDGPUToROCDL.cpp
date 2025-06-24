@@ -1115,6 +1115,16 @@ struct TransposeLoadOpLowering
 
     Location loc = op.getLoc();
     auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+
+    // Elements in subbyte memrefs are stored non-contiguously,
+    // reject if source is sub-byte memref. Use emulated memrefs instead.
+    size_t srcElementSize =
+        srcMemRefType.getElementType().getIntOrFloatBitWidth();
+    if (srcElementSize < 8)
+      return op.emitOpError("Expect source memref to have at least 8 bits "
+                            "element size, got ")
+             << srcElementSize;
+
     auto resultType = cast<VectorType>(op.getResult().getType());
     Value srcPtr =
         getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),

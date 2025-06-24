@@ -21,26 +21,6 @@ func.func @transpose_load_to_rocdl_8xi8(%idx1 : index, %idx2 : index, %wgmem : m
 
 // -----
 
-// CHECK-LABEL: func @transpose_load_to_rocdl_16xi4
-func.func @transpose_load_to_rocdl_16xi4(%idx1 : index, %idx2 : index, %wgmem : memref<128x16xi4, 3>) -> vector<16xi4> {
-  // CHECK: rocdl.ds.read.tr4.b64
-  // CHECK-OLD: error: 'amdgpu.transpose_load' op Non-gfx950 chipset not supported
-  %0 = amdgpu.transpose_load %wgmem[%idx1, %idx2] : memref<128x16xi4, 3> -> vector<16xi4>
-  return %0 : vector<16xi4>
-}
-
-// -----
-
-// CHECK-LABEL: func @transpose_load_to_rocdl_16xi6
-func.func @transpose_load_to_rocdl_16xi6(%idx1 : index, %idx2 : index, %wgmem : memref<128x32xi6, 3>) -> vector<16xi6> {
-  // CHECK: rocdl.ds.read.tr6.b96
-  // CHECK-OLD: error: 'amdgpu.transpose_load' op Non-gfx950 chipset not supported
-  %0 = amdgpu.transpose_load %wgmem[%idx1, %idx2] : memref<128x32xi6, 3> -> vector<16xi6>
-  return %0 : vector<16xi6>
-}
-
-// -----
-
 // CHECK-LABEL: func @transpose_load_to_rocdl_i4_memrefxi8
 func.func @transpose_load_to_rocdl_i4_memrefxi8(%idx1 : index, %idx2 : index, %wgmem : memref<128x32xi8, 3>) -> vector<16xi4> {
   // CHECK: rocdl.ds.read.tr4.b64
