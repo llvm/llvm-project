@@ -36,13 +36,12 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result fast ir<%red>, ir<%red.next>
-; CHECK-NEXT:   EMIT vp<[[RED_EX:%.+]]> = extract-last-element vp<[[RED_RES]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:  IR %red.next.lcssa = phi float [ %red.next, %loop ] (extra operand: vp<[[RED_EX]]> from middle.block)
+; CHECK-NEXT:  IR %red.next.lcssa = phi float [ %red.next, %loop ] (extra operand: vp<[[RED_RES]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
@@ -179,13 +178,12 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result nnan ninf nsz ir<%sum.07>, ir<[[MULADD]]>
-; CHECK-NEXT:   EMIT vp<[[RED_EX:%.+]]> = extract-last-element vp<[[RED_RES]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:   IR %muladd.lcssa = phi float [ %muladd, %loop ] (extra operand: vp<[[RED_EX]]> from middle.block)
+; CHECK-NEXT:   IR %muladd.lcssa = phi float [ %muladd, %loop ] (extra operand: vp<[[RED_RES]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
@@ -241,13 +239,12 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RDX_RES:%.+]]> = compute-find-last-iv-result ir<%rdx>, ir<%start>, ir<-9223372036854775808>, ir<%cond>
-; CHECK-NEXT:   EMIT vp<[[EXT:%.+]]> = extract-last-element vp<[[RDX_RES]]>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<{{.+}}>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK:      ir-bb<exit>:
-; CHECK-NEXT:   IR   %cond.lcssa = phi i64 [ %cond, %loop ] (extra operand: vp<[[EXT]]> from middle.block)
+; CHECK-NEXT:   IR   %cond.lcssa = phi i64 [ %cond, %loop ] (extra operand: vp<[[RDX_RES]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:

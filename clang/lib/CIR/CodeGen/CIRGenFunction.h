@@ -68,6 +68,10 @@ public:
   mlir::Value cxxThisValue = nullptr;
   clang::CharUnits cxxThisAlignment;
 
+  /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
+  /// expression.
+  Address cxxDefaultInitExprThis = Address::invalid();
+
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
 
@@ -338,6 +342,8 @@ public:
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
 
+  bool isLValueSuitableForInlineAtomic(LValue lv);
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -488,7 +494,26 @@ public:
   static bool
   isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
 
+  /// A scope within which we are constructing the fields of an object which
+  /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
+  /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
+  class FieldConstructionScope {
+  public:
+    FieldConstructionScope(CIRGenFunction &cgf, Address thisAddr)
+        : cgf(cgf), oldCXXDefaultInitExprThis(cgf.cxxDefaultInitExprThis) {
+      cgf.cxxDefaultInitExprThis = thisAddr;
+    }
+    ~FieldConstructionScope() {
+      cgf.cxxDefaultInitExprThis = oldCXXDefaultInitExprThis;
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    Address oldCXXDefaultInitExprThis;
+  };
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
+  LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
@@ -770,6 +795,10 @@ public:
 
   LValue emitCastLValue(const CastExpr *e);
 
+  /// Emits an argument for a call to a `__builtin_assume`. If the builtin
+  /// sanitizer is enabled, a runtime check is also emitted.
+  mlir::Value emitCheckedArgForAssume(const Expr *e);
+
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
   void emitConstructorBody(FunctionArgList &args);
@@ -838,6 +867,9 @@ public:
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
+                               clang::Expr *init);
+
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
   /// Emit the computation of the specified expression of scalar type.
@@ -859,6 +891,12 @@ public:
                                      bool useCurrentScope);
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+
+  /// Emit the computation of the specified expression of complex type,
+  /// returning the result.
+  mlir::Value emitComplexExpr(const Expr *e);
+
+  LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -928,6 +966,13 @@ public:
   LValue emitLValue(const clang::Expr *e);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
+  /// Like emitLValueForField, excpet that if the Field is a reference, this
+  /// will return the address of the reference and not the address of the value
+  /// stored in the reference.
+  LValue emitLValueForFieldInitialization(LValue base,
+                                          const clang::FieldDecl *field,
+                                          llvm::StringRef fieldName);
+
   LValue emitMemberExpr(const MemberExpr *e);
 
   /// Given an expression with a pointer type, emit the value and compute our
@@ -960,6 +1005,9 @@ public:
                       LValue lvalue, bool capturedByInit = false);
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
+
+  void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
+                          bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,

@@ -432,6 +432,10 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
 
+  // Reading type padding, return zero.
+  if (ByteOffset >= DL.getTypeStoreSize(C->getType()))
+    return true;
+
   // If this element is zero or undefined, we can just return since *CurPtr is
   // zero initialized.
   if (isa<ConstantAggregateZero>(C) || isa<UndefValue>(C))
@@ -3990,31 +3994,30 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     return ConstantStruct::get(StTy, SinResult, CosResult);
   }
   case Intrinsic::vector_deinterleave2: {
-    auto *Vec = dyn_cast<Constant>(Operands[0]);
-    if (!Vec)
+    auto *Vec = Operands[0];
+    auto *VecTy = cast<VectorType>(Vec->getType());
+
+    if (auto *EltC = Vec->getSplatValue()) {
+      ElementCount HalfEC = VecTy->getElementCount().divideCoefficientBy(2);
+      auto *HalfVec = ConstantVector::getSplat(HalfEC, EltC);
+      return ConstantStruct::get(StTy, HalfVec, HalfVec);
+    }
+
+    if (!isa<FixedVectorType>(Vec->getType()))
       return nullptr;
 
-    auto *VecTy = cast<VectorType>(Vec->getType());
-    unsigned NumElements = VecTy->getElementCount().getKnownMinValue() / 2;
-    if (isa<ConstantAggregateZero>(Vec)) {
-      auto *HalfVecTy = VectorType::getHalfElementsVectorType(VecTy);
-      return ConstantStruct::get(StTy, ConstantAggregateZero::get(HalfVecTy),
-                                 ConstantAggregateZero::get(HalfVecTy));
+    unsigned NumElements = VecTy->getElementCount().getFixedValue() / 2;
+    SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Constant *Elt0 = Vec->getAggregateElement(2 * I);
+      Constant *Elt1 = Vec->getAggregateElement(2 * I + 1);
+      if (!Elt0 || !Elt1)
+        return nullptr;
+      Res0[I] = Elt0;
+      Res1[I] = Elt1;
     }
-    if (isa<FixedVectorType>(Vec->getType())) {
-      SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
-      for (unsigned I = 0; I < NumElements; ++I) {
-        Constant *Elt0 = Vec->getAggregateElement(2 * I);
-        Constant *Elt1 = Vec->getAggregateElement(2 * I + 1);
-        if (!Elt0 || !Elt1)
-          return nullptr;
-        Res0[I] = Elt0;
-        Res1[I] = Elt1;
-      }
-      return ConstantStruct::get(StTy, ConstantVector::get(Res0),
-                                 ConstantVector::get(Res1));
-    }
-    return nullptr;
+    return ConstantStruct::get(StTy, ConstantVector::get(Res0),
+                               ConstantVector::get(Res1));
   }
   default:
     // TODO: Constant folding of vector intrinsics that fall through here does

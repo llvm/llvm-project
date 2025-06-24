@@ -1729,7 +1729,6 @@ bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
   switch (beginDir.v) {
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
-  case llvm::omp::Directive::OMPD_taskgroup:
     return false;
   default:
     return true;
@@ -1801,9 +1800,9 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   Walk(std::get<parser::TypeSpec>(spec.t));
   auto &varName{std::get<parser::Name>(spec.t)};
   DeclareObjectEntity(varName);
+  EndDeclTypeSpec();
 
   Walk(clauses);
-  EndDeclTypeSpec();
   PopScope();
 }
 

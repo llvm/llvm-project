@@ -30,6 +30,7 @@
 #include "Commands/CommandObjectPlatform.h"
 #include "Commands/CommandObjectPlugin.h"
 #include "Commands/CommandObjectProcess.h"
+#include "Commands/CommandObjectProtocolServer.h"
 #include "Commands/CommandObjectQuit.h"
 #include "Commands/CommandObjectRegexCommand.h"
 #include "Commands/CommandObjectRegister.h"
@@ -574,6 +575,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("platform", CommandObjectPlatform);
   REGISTER_COMMAND_OBJECT("plugin", CommandObjectPlugin);
   REGISTER_COMMAND_OBJECT("process", CommandObjectMultiwordProcess);
+  REGISTER_COMMAND_OBJECT("protocol-server", CommandObjectProtocolServer);
   REGISTER_COMMAND_OBJECT("quit", CommandObjectQuit);
   REGISTER_COMMAND_OBJECT("register", CommandObjectRegister);
   REGISTER_COMMAND_OBJECT("scripting", CommandObjectMultiwordScripting);
