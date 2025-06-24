@@ -624,6 +624,11 @@ struct CheckFallThroughDiagnostics {
   }
 };
 
+// FIXME: This is a shallow best-effort check. Currently, we only handle
+// cases where the function body consists of a single `throw` expression,
+// possibly wrapped in an `ExprWithCleanups`. We do not perform general
+// control-flow analysis or handle more complex throwing patterns.
+// Consider expanding this to handle more cases in the future.
 bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   if (!FD->hasBody())
     return false;
@@ -704,7 +709,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
     } else if (!ReturnsVoid && CD.diag_FallThrough_ReturnsNonVoid) {
       // If the final statement is a call to an always-throwing function,
       // don't warn about the fall-through.
-      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+      if (const auto *FD = D->getAsFunction()) {
         if (const auto *CS = dyn_cast<CompoundStmt>(Body);
             CS && !CS->body_empty()) {
           const Stmt *LastStmt = CS->body_back();
