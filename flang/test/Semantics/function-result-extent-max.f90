@@ -1,6 +1,5 @@
 !RUN: %flang_fc1 -cpp -DFILE1 -DFILE2 %s | FileCheck %s --allow-empty
-!RUN: %flang_fc1 -cpp -DFILE1 %s | FileCheck %s --allow-empty
-!RUN: %flang_fc1 -cpp -DFILE2 %s | FileCheck %s --allow-empty
+!RUN: %flang_fc1 -cpp -DFILE1 %s | FileCheck %s --allow-empty && %flang_fc1 -cpp -DFILE2 %s | FileCheck %s --allow-empty
 
 !CHECK-NOT: error
 !CHECK-NOT: warning
@@ -8,7 +7,6 @@
 #ifdef FILE1
 module function_with_max_result_extent_module
     implicit none
-    private
     public :: function_with_max_result_extent
   interface function_with_max_result_extent
     pure module function function_with_max_result_extent(n) result(res)
@@ -20,7 +18,7 @@ end module function_with_max_result_extent_module
 #endif
 
 #ifdef FILE2
-submodule (m) function_with_max_result_extent_submodule
+submodule (function_with_max_result_extent_module) function_with_max_result_extent_submodule
   implicit none
 contains
   pure module function function_with_max_result_extent(n) result(res)
