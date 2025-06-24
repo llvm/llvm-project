@@ -54,6 +54,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Capacity.h"
@@ -1204,19 +1205,22 @@ bool Preprocessor::HandleModuleContextualKeyword(
   bool SavedParsingPreprocessorDirective =
       CurPPLexer->ParsingPreprocessorDirective;
   CurPPLexer->ParsingPreprocessorDirective = true;
-  // Peek next token.
-  auto NextTok = peekNextPPToken().value_or(Token{});
-  CurPPLexer->ParsingPreprocessorDirective = SavedParsingPreprocessorDirective;
+  auto _ = llvm::make_scope_exit([&]() {
+    CurPPLexer->ParsingPreprocessorDirective =
+        SavedParsingPreprocessorDirective;
+  });
+
   if (Result.getIdentifierInfo()->isModulesImport() &&
-      NextTok.isOneOf(tok::raw_identifier, tok::less, tok::string_literal,
-                      tok::colon)) {
+      isNextPPTokenOneOf<tok::raw_identifier, tok::less, tok::string_literal,
+                         tok::colon>()) {
     Result.setKind(tok::kw_import);
     ModuleImportLoc = Result.getLocation();
     IsAtImport = false;
     return true;
   }
+
   if (Result.getIdentifierInfo()->isModulesDeclaration() &&
-      NextTok.isOneOf(tok::raw_identifier, tok::colon, tok::semi)) {
+      isNextPPTokenOneOf<tok::raw_identifier, tok::colon, tok::semi>()) {
     Result.setKind(tok::kw_module);
     ModuleDeclLoc = Result.getLocation();
     return true;
