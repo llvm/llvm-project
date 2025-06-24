@@ -1457,11 +1457,14 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
           Attributor::AlignmentCallbackTy ACB =
               [](const IRPosition &IRP, const AbstractAttribute *AA,
                  SmallVectorImpl<AA::ValueAndContext> &Values) {
-                if (auto *I = dyn_cast<Instruction>(&IRP.getAssociatedValue()))
-                  if (isAlignAndMakeBuffer(AA, I)) {
+                Instruction *I = IRP.getCtxI();
+                if (!I)
+                  return;
+                if (auto *II = dyn_cast<IntrinsicInst>(I))
+                  if (II->getIntrinsicID() ==
+                      Intrinsic::amdgcn_make_buffer_rsrc)
                     Values.push_back(
                         AA::ValueAndContext{*I->getOperand(0), nullptr});
-                  }
               };
           A.registerAlignmentCallback(IRP, ACB);
 
