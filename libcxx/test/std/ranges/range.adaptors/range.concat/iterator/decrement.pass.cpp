@@ -19,6 +19,7 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "../types.h"
+#include <iostream>
 
 constexpr void test() {
   // Test with a single satisfied value
@@ -80,6 +81,36 @@ constexpr void test() {
     ASSERT_SAME_TYPE(decltype(result), decltype(it--));
     assert(result == view.end());
     assert(it == (result - 1));
+  }
+
+  // Test two iterators
+  {
+    std::array<int, 5> array1{0, 1};
+    std::array<int, 5> array2{2, 3};
+    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
+    auto it1 = view.begin();
+    it1++;
+    it1++;
+    auto it2 = view.begin();
+    auto res = it1 - it2;
+    std::cout << res << std::endl;
+    assert(res == 2);
+  }
+
+  // Test one iterator and one sentinel
+  {
+    std::array<int, 5> array1{0, 1};
+    std::array<int, 5> array2{2, 3};
+    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
+    auto it1 = view.begin();
+    it1++;
+    it1++;
+    it1++;
+    it1++;
+    auto it2 = view.begin();
+    auto res = it1 - it2;
+    std::cout << res << std::endl;
+    assert(res == 4);
   }
 }
 

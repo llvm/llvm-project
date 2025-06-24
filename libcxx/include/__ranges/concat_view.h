@@ -264,13 +264,25 @@ private:
     }
   }
 
+  template <typename _Func>
+  _LIBCPP_HIDE_FROM_ABI constexpr auto __invoke_at_index(_Func&& __func) const {
+    return [&__func, this]<std::size_t _Is>(this auto&& __self) {
+      if (_Is == __it_.index()) {
+        return __func.template operator()<_Is>();
+      } else if constexpr (_Is + 1 < sizeof...(_Views)) {
+        return __self.template operator()<_Is + 1>();
+      }
+      __builtin_unreachable();
+    }.template operator()<0>();
+  }
+
   template <size_t... _Is, typename _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __apply_at_index(size_t __index, _Func&& __func, index_sequence<_Is...>) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __apply_at_index(size_t __index, _Func&& __func, index_sequence<_Is...>) const {
     ((__index == _Is ? (__func(integral_constant<size_t, _Is>{}), 0) : 0), ...);
   }
 
   template <size_t _Idx, typename _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __apply_at_index(size_t __index, _Func&& __func) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __apply_at_index(size_t __index, _Func&& __func) const {
     __apply_at_index(__index, std::forward<_Func>(__func), make_index_sequence<_Idx>{});
   }
 
@@ -280,6 +292,7 @@ private:
       : __it_(std::forward<_Args>(__args)...), __parent_(__parent) {}
 
   friend class concat_view;
+  friend class __iterator<!_Const>;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
@@ -517,35 +530,28 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
         "Trying to subtract two iterators of concat_view where at least one iterator is valueless.");
-    size_t __ix = __x.__it_.index();
-    size_t __iy = __y.__it_.index();
-
-    if (__ix > __iy) {
-      __x.__it_.template __apply_at_index<tuple_size_v<decltype(__x.__parent_->__views_)>>(
-          __ix, [&](auto __index_constant_x) {
-            constexpr size_t __index_x = __index_constant_x.value;
-            auto __dx                  = ranges::distance(
-                ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), std::get<__index_x>(__x.__it_));
-
-            __y.__it_.template __apply_at_index<tuple_size_v<decltype(__y.__parent_->__views_)>>(
-                __iy, [&](auto __index_constant_y) {
-                  constexpr size_t __index_y = __index_constant_y.value;
-                  auto __dy                  = ranges::distance(
-                      std::get<__index_y>(__y.__it_), ranges::end(std::get<__index_y>(__y.__parent_->__views_)));
-                  difference_type __s = 0;
-                  for (size_t __idx = __index_y + 1; __idx < __index_x; __idx++) {
-                    __s += ranges::size(std::get<__idx>(__x.__parent_->__views_));
-                  }
-                  return __dy + __s + __dx;
-                });
-          });
-
-    } else if (__ix < __iy) {
-      return -(__y - __x);
-    } else {
-      __variant_detail::__visitation::__variant::__visit_value(
-          [&](const auto& __it1, const auto& __it2) { return __it1 - __it2; }, __x.__it_, __y.__it_);
-    }
+    return __x.__invoke_at_index([&]<std::size_t __index_x>() -> difference_type {
+      return __y.__invoke_at_index([&]<std::size_t __index_y>() -> difference_type {
+        if (__index_x > __index_y) {
+          auto __dx = ranges::distance(
+              ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), std::get<__index_x>(__x.__it_));
+          auto __dy = ranges::distance(
+              std::get<__index_y>(__y.__it_), ranges::end(std::get<__index_y>(__y.__parent_->__views_)));
+          difference_type __s = [&]<std::size_t __start, std::size_t __end>(this auto&& self) -> difference_type {
+            if constexpr (__start < __end) {
+              return ranges::size(std::get<__start>(__x.__parent_->__views_)) +
+                     self.template operator()<__start + 1, __end>();
+            }
+            return 0;
+          }.template operator()<__index_y + 1, __index_x>();
+          return __dy + __s + __dx;
+        } else if (__index_x < __index_y) {
+          return -(__y - __x);
+        } else {
+          return std::get<__index_x>(__x.__it_) - std::get<__index_y>(__y.__it_);
+        }
+      });
+    });
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(const __iterator& __it, difference_type __n)
@@ -566,19 +572,17 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__x.__it_.valueless_by_exception(),
         "Trying to subtract a valuess iterators of concat_view from the default sentinel.");
-    size_t __ix = __x.__it_.index();
-    __x.__it_.template __apply_at_index<tuple_size_v<decltype(__x.__parent_->__views_)>>(
-        __ix, [&](auto __index_constant) {
-          constexpr size_t __index_x = __index_constant.value;
-          auto __dx = ranges::distance(ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), __x.__it_);
-
-          difference_type __s = 0;
-          for (size_t __idx = 0; __idx < __index_x; __idx++) {
-            __s += ranges::size(std::get<__idx>(__x.__parent_->__views_));
-          }
-
-          return -(__dx + __s);
-        });
+    __x.__invoke_at_index([&]<std::size_t __index_x>() -> difference_type {
+      auto __dx           = ranges::distance(ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), __x.__it_);
+      difference_type __s = [&]<std::size_t __start, std::size_t __end>(this auto&& self) -> difference_type {
+        if constexpr (__start < __end) {
+          return ranges::size(std::get<__start>(__x.__parent_->__views_)) +
+                 self.template operator()<__start + 1, __end>();
+        }
+        return 0;
+      }.template operator()<0, __index_x>();
+      return -(__dx + __s);
+    });
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(default_sentinel_t, const __iterator& __x)
