@@ -193,31 +193,31 @@ void __attribute__((riscv_vls_cc)) test_st_i32x4x9(struct st_i32x4x9 arg) {}
 // CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x9_256(ptr noundef %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4x9_256(struct st_i32x4x9 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) <vscale x 8 x i32> @test_function_prolog_epilog(<vscale x 8 x i32> %arg.coerce) #0 {
-// CHECK-LLVM: entry:
-// CHECK-LLVM:   %retval = alloca %struct.st_i32x4_arr4, align 16
-// CHECK-LLVM:   %arg = alloca %struct.st_i32x4_arr4, align 16
-// CHECK-LLVM:   store <vscale x 8 x i32> %arg.coerce, ptr %arg, align 16
-// CHECK-LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %retval, ptr align 16 %arg, i64 64, i1 false)
-// CHECK-LLVM:   %0 = load <vscale x 8 x i32>, ptr %retval, align 16
-// CHECK-LLVM:   ret <vscale x 8 x i32> %0
-// CHECK-LLVM: }
+// CHECK-LLVM-LABEL: define dso_local riscv_vls_cc(128) <vscale x 8 x i32> @test_function_prolog_epilog(<vscale x 8 x i32> %arg.coerce) #0 {
+// CHECK-LLVM-NEXT: entry:
+// CHECK-LLVM-NEXT:   %retval = alloca %struct.st_i32x4_arr4, align 16
+// CHECK-LLVM-NEXT:   %arg = alloca %struct.st_i32x4_arr4, align 16
+// CHECK-LLVM-NEXT:   store <vscale x 8 x i32> %arg.coerce, ptr %arg, align 16
+// CHECK-LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %retval, ptr align 16 %arg, i64 64, i1 false)
+// CHECK-LLVM-NEXT:   %0 = load <vscale x 8 x i32>, ptr %retval, align 16
+// CHECK-LLVM-NEXT:   ret <vscale x 8 x i32> %0
+// CHECK-LLVM-NEXT: }
 struct st_i32x4_arr4 __attribute__((riscv_vls_cc)) test_function_prolog_epilog(struct st_i32x4_arr4 arg) {
   return arg;
 }
 
 struct st_i32x4 __attribute__((riscv_vls_cc)) dummy(struct st_i32x4);
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) <vscale x 2 x i32> @test_call(<vscale x 2 x i32> %arg.coerce) #0 {
-// CHECK-LLVM: entry:
-// CHECK-LLVM:   %retval = alloca %struct.st_i32x4, align 16
-// CHECK-LLVM:   %arg = alloca %struct.st_i32x4, align 16
-// CHECK-LLVM:   store <vscale x 2 x i32> %arg.coerce, ptr %arg, align 16
-// CHECK-LLVM:   %0 = load <vscale x 2 x i32>, ptr %arg, align 16
-// CHECK-LLVM:   %call = call riscv_vls_cc(128) <vscale x 2 x i32> @dummy(<vscale x 2 x i32> %0)
-// CHECK-LLVM:   store <vscale x 2 x i32> %call, ptr %retval, align 16
-// CHECK-LLVM:   %1 = load <vscale x 2 x i32>, ptr %retval, align 16
-// CHECK-LLVM:   ret <vscale x 2 x i32> %1
-// CHECK-LLVM: }
+// CHECK-LLVM-LABEL: define dso_local riscv_vls_cc(128) <vscale x 2 x i32> @test_call(<vscale x 2 x i32> %arg.coerce) #0 {
+// CHECK-LLVM-NEXT: entry:
+// CHECK-LLVM-NEXT:   %retval = alloca %struct.st_i32x4, align 16
+// CHECK-LLVM-NEXT:   %arg = alloca %struct.st_i32x4, align 16
+// CHECK-LLVM-NEXT:   store <vscale x 2 x i32> %arg.coerce, ptr %arg, align 16
+// CHECK-LLVM-NEXT:   %0 = load <vscale x 2 x i32>, ptr %arg, align 16
+// CHECK-LLVM-NEXT:   %call = call riscv_vls_cc(128) <vscale x 2 x i32> @dummy(<vscale x 2 x i32> %0)
+// CHECK-LLVM-NEXT:   store <vscale x 2 x i32> %call, ptr %retval, align 16
+// CHECK-LLVM-NEXT:   %1 = load <vscale x 2 x i32>, ptr %retval, align 16
+// CHECK-LLVM-NEXT:   ret <vscale x 2 x i32> %1
+// CHECK-LLVM-NEXT: }
 struct st_i32x4 __attribute__((riscv_vls_cc)) test_call(struct st_i32x4 arg) {
   struct st_i32x4 abc = dummy(arg);
   return abc;
