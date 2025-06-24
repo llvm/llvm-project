@@ -9,7 +9,6 @@
 #include "llvm/UnwindInfoChecker/UnwindInfoAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -23,9 +22,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/UnwindInfoChecker/UnwindInfoHistory.h"
 #include <cstdint>
@@ -75,12 +72,6 @@ static std::optional<DWARFRegType> getReferenceRegisterForUnwindInfoOfRegister(
     // TODO register, if yes assert it here!
     return UnwindRow->getCFAValue().getRegister();
   }
-}
-
-// TODO remove it, it's just for debug purposes.
-void printUntilNextLine(const char *Str) {
-  for (int I = 0; Str[I] != '\0' && Str[I] != '\n'; I++)
-    dbgs() << Str[I];
 }
 
 bool UnwindInfoAnalysis::isSuperReg(MCPhysReg Reg) {
