@@ -1704,7 +1704,7 @@ public:
 
 /// A recipe to compute a pointer to the last element of each part of a widened
 /// memory access for widened memory accesses of IndexedTy. Used for
-/// VPWidenMemoryRecipes that are reversed.
+/// VPWidenMemoryRecipes or VPInterleaveRecipes that are reversed.
 class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags,
                                  public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
