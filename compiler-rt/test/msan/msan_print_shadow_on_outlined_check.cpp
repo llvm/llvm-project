@@ -1,6 +1,9 @@
 // RUN: %clangxx_msan -fsanitize-recover=memory -mllvm -msan-instrumentation-with-call-threshold=0 -g %s -o %t \
 // RUN:   && not env MSAN_OPTIONS=verbosity=1 %run %t 2>&1 | FileCheck %s
 
+// REQUIRES: x86_64-target-arch
+// 'long double' implementation varies between platforms.
+
 #include <ctype.h>
 #include <stdio.h>
 
