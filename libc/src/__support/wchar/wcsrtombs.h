@@ -1,4 +1,4 @@
-//===-- Implementation header for wcrtomb ---------------------------------===//
+//===-- Implementation header for wcsrtombs -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC__SUPPORT_WCHAR_WCRTOMB_H
-#define LLVM_LIBC_SRC__SUPPORT_WCHAR_WCRTOMB_H
+#ifndef LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSRTOMBS_H
+#define LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSRTOMBS_H
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
@@ -18,9 +18,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc, mbstate *__restrict ps, size_t max_written);
+ErrorOr<size_t> wcsrtombs(char *__restrict dst, const wchar_t **__restrict src,
+                          size_t len, mbstate_t *__restrict ps);
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC__SUPPORT_WCHAR_WCRTOMB_H
+#endif // LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSRTOMBS_H
