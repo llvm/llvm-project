@@ -10540,6 +10540,8 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                                bool Approximate) {
   E = E->IgnoreParens();
 
+  assert(MaxWidth == C.getIntWidth(GetExprType(E)));
+
   // Try a full evaluation first.
   Expr::EvalResult result;
   if (E->EvaluateAsRValue(result, C, InConstantContext))
@@ -10805,9 +10807,8 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
         return std::nullopt;
 
       // If the range was previously non-negative, we need an extra bit for the
-      // sign bit. If the range was not non-negative, we need an extra bit
-      // because the negation of the most-negative value is one bit wider than
-      // that value.
+      // sign bit. Otherwise, we need an extra bit because the negation of the
+      // most-negative value is one bit wider than that value.
       return IntRange(std::min(SubRange->Width + 1, MaxWidth), false);
     }
 
