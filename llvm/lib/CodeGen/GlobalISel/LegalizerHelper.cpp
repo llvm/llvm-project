@@ -675,7 +675,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::simpleLibcallSinCos(
           .getReg(0);
 
   auto &Ctx = MF.getFunction().getContext();
-  auto libcallResult =
+  auto LibcallResult =
       createLibcall(MIRBuilder, getRTLibDesc(MI.getOpcode(), Size),
                     {{0}, Type::getVoidTy(Ctx), 0},
                     {{Src, OpType, 0},
@@ -683,7 +683,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::simpleLibcallSinCos(
                      {StackPtrCos, PointerType::get(Ctx, AddrSpace), 2}},
                     LocObserver, &MI);
 
-  if (libcallResult != LegalizeResult::Legalized)
+  if (LibcallResult != LegalizeResult::Legalized)
     return LegalizerHelper::UnableToLegalize;
 
   MachineMemOperand *LoadMMOSin = MF.getMachineMemOperand(
