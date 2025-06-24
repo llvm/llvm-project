@@ -307,9 +307,7 @@ class StructurizeCFG {
 
   RegionNode *PrevNode;
 
-  void reorderIfElseBlock(BasicBlock *BB, unsigned Idx);
-
-  void HoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB, BasicBlock *ThenBB);
+  void hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB, BasicBlock *ThenBB);
 
   void orderNodes();
 
@@ -340,7 +338,7 @@ class StructurizeCFG {
 
   void simplifyAffectedPhis();
 
-  void SimplifyHoistedPhis();
+  void simplifyHoistedPhis();
 
   DebugLoc killTerminator(BasicBlock *BB);
 
@@ -472,7 +470,7 @@ INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
 /// blocks. A follow-up function after setting PhiNodes assigns the hoisted
 /// value to poison phi nodes along the if→flow edge, aiding register coalescing
 /// and minimizing unnecessary live ranges.
-void StructurizeCFG::HoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
+void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
                                                      BasicBlock *ThenBB) {
 
   BasicBlock *ElseSucc = ElseBB->getSingleSuccessor();
@@ -615,7 +613,7 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
             BasicBlock *Other = Term->getSuccessor(!i);
             if (Visited.count(Other) && !Loops.count(Other) &&
                 !Pred.count(Other) && !Pred.count(P)) {
-              HoistZeroCostElseBlockPhiValues(Succ, Other);
+              hoistZeroCostElseBlockPhiValues(Succ, Other);
               Pred[Other] = {BoolFalse, std::nullopt};
               Pred[P] = {BoolTrue, std::nullopt};
               continue;
@@ -973,7 +971,7 @@ void StructurizeCFG::setPhiValues() {
 
 /// Updates PHI nodes after hoisted zero cost instructions by replacing poison
 /// entries on Flow nodes with the appropriate hoisted values
-void StructurizeCFG::SimplifyHoistedPhis() {
+void StructurizeCFG::simplifyHoistedPhis() {
   for (WeakVH VH : AffectedPhis) {
     if (auto Phi = dyn_cast_or_null<PHINode>(VH)) {
       if (Phi->getNumIncomingValues() != 2)
@@ -1414,7 +1412,7 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   insertConditions(false);
   insertConditions(true);
   setPhiValues();
-  SimplifyHoistedPhis();
+  simplifyHoistedPhis();
   simplifyConditions();
   simplifyAffectedPhis();
   rebuildSSA();
