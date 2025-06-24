@@ -9,6 +9,7 @@
 #ifndef LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 #define LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/RangeMap.h"
@@ -58,15 +59,16 @@ public:
   }
 
   lldb::addr_t GetFuncFileAddress() { return m_func_file_addr; }
-
+  
   /// Represents an entry in the DWARFExpressionList with all needed metadata.
   struct DWARFExpressionEntry {
-    lldb::addr_t base;
-    lldb::addr_t end;
+    AddressRange file_range; /// Represents a DWARF location range in the DWARF unit’s file‐address space
     const DWARFExpression *expr;
   };
 
-  /// Returns the DWARFExpressionEntry for a given PC address.
+  /// Returns a DWARFExpressionEntry whose file_range contains the given
+  /// load‐address.  `func_load_addr` is the load‐address of the function
+  /// start; `load_addr` is the full runtime PC.  On success, `expr` is non-null.
   llvm::Expected<DWARFExpressionEntry>
   GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
                               lldb::addr_t load_addr) const;
