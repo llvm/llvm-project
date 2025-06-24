@@ -409,10 +409,7 @@ namespace {
       // Trust "HasFallThrough" if we could analyze branches.
       if (BBI.IsBrAnalyzable)
         return !BBI.HasFallThrough;
-      // Empty successor list implies that there is no fallthrough.
-      if (BBI.BB->succ_empty())
-        return true;
-      // If this is the last MBB in the function, or it the textual successor
+      // If this is the last MBB in the function, or if the textual successor
       // isn't in the successor list, then there is no fallthrough.
       MachineFunction::iterator PI = BBI.BB->getIterator();
       MachineFunction::iterator I = std::next(PI);
