@@ -207,8 +207,8 @@ struct DescriptorTableView : RootParameterView {
         support::endian::read<uint32_t, llvm::endianness::little>(Current);
     Current += sizeof(uint32_t);
 
-    Table.Ranges.Data =
-        ParamData.substr(2 * sizeof(uint32_t), Table.NumRanges * sizeof(T));
+    Table.Ranges.Data = ParamData.substr(2 * sizeof(uint32_t),
+                                         Table.NumRanges * Table.Ranges.Stride);
     return Table;
   }
 };
