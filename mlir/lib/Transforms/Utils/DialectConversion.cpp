@@ -2301,7 +2301,7 @@ LogicalResult OperationLegalizer::legalizePatternBlockRewrites(
       continue;
     Block *block = rewrite->getBlock();
     if (isa<BlockTypeConversionRewrite, EraseBlockRewrite,
-            ReplaceBlockArgRewrite>(rewrite))
+            ReplaceBlockArgRewrite, InlineBlockRewrite>(rewrite))
       continue;
     // Only check blocks outside of the current operation.
     Operation *parentOp = block->getParentOp();
