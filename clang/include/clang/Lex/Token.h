@@ -101,8 +101,10 @@ public:
   /// "if (Tok.is(tok::l_brace)) {...}".
   bool is(tok::TokenKind K) const { return Kind == K; }
   bool isNot(tok::TokenKind K) const { return Kind != K; }
-  template <typename... Ts> bool isOneOf(tok::TokenKind K1, Ts... Ks) const {
-    return is(K1) || (is(Ks) || ...);
+  template <typename... Ts> bool isOneOf(Ts... Ks) const {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
+    return (is(Ks) || ...);
   }
 
   /// Return true if this is a raw identifier (when lexing
