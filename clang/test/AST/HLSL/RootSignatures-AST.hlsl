@@ -5,29 +5,61 @@
 // the Attr AST Node is created succesfully. If an invalid root signature was
 // passed in then we would exit out of Sema before the Attr is created.
 
-#define SampleRS \
-  "DescriptorTable( " \
-  "  CBV(b1), " \
-  "  SRV(t1, numDescriptors = 8, " \
-  "          flags = DESCRIPTORS_VOLATILE), " \
-  "  UAV(u1, numDescriptors = 0, " \
-  "          flags = DESCRIPTORS_VOLATILE) " \
-  "), " \
-  "DescriptorTable(Sampler(s0, numDescriptors = 4, space = 1))"
+#define SampleRS "RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | " \
+                             "DENY_VERTEX_SHADER_ROOT_ACCESS), " \
+                 "CBV(b0, space = 1, flags = DATA_STATIC), " \
+                 "SRV(t0), " \
+                 "UAV(u0), " \
+                 "DescriptorTable( CBV(b1), " \
+                                   "SRV(t1, numDescriptors = 8, " \
+                                   "        flags = DESCRIPTORS_VOLATILE), " \
+                                   "UAV(u1, numDescriptors = unbounded, " \
+                                   "        flags = DESCRIPTORS_VOLATILE)), " \
+                 "DescriptorTable(Sampler(s0, space=1, numDescriptors = 4)), " \
+                 "RootConstants(num32BitConstants=3, b10), " \
+                 "StaticSampler(s1)," \
+                 "StaticSampler(s2, " \
+                                 "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                                 "filter = FILTER_MIN_MAG_MIP_LINEAR )"
 
 // CHECK: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[SAMPLE_RS_DECL:__hlsl_rootsig_decl_\d*]]
 // CHECK-SAME: RootElements{
-// CHECK-SAME:   CBV(b1, numDescriptors = 1, space = 0,
-// CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = DataStaticWhileSetAtExecute),
-// CHECK-SAME:   SRV(t1, numDescriptors = 8, space = 0,
-// CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile),
-// CHECK-SAME:   UAV(u1, numDescriptors = 0, space = 0,
-// CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile),
-// CHECK-SAME:   DescriptorTable(numClauses = 3, visibility = All),
-// CHECK-SAME:   Sampler(s0, numDescriptors = 4, space = 1,
-// CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = None),
-// CHECK-SAME:   DescriptorTable(numClauses = 1, visibility = All)
-// CHECK-SAME: }
+// CHECK-SAME: RootFlags(AllowInputAssemblerInputLayout | DenyVertexShaderRootAccess),
+// CHECK-SAME: RootCBV(b0,
+// CHECK-SAME:   space = 1, visibility = All, flags = DataStatic
+// CHECK-SAME: ),
+// CHECK-SAME: RootSRV(t0,
+// CHECK-SAME:   space = 0, visibility = All, flags = DataStaticWhileSetAtExecute
+// CHECK-SAME: ),
+// CHECK-SAME: RootUAV(
+// CHECK-SAME:   u0, space = 0, visibility = All, flags = DataVolatile
+// CHECK-SAME: ),
+// CHECK-SAME: CBV(
+// CHECK-SAME:   b1, numDescriptors = 1, space = 0, offset = DescriptorTableOffsetAppend, flags = DataStaticWhileSetAtExecute
+// CHECK-SAME: ),
+// CHECK-SAME: SRV(
+// CHECK-SAME:   t1, numDescriptors = 8, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
+// CHECK-SAME: ),
+// CHECK-SAME: UAV(
+// CHECK-SAME:   u1, numDescriptors = unbounded, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
+// CHECK-SAME: ),
+// CHECK-SAME: DescriptorTable(
+// CHECK-SAME:   numClauses = 3, visibility = All
+// CHECK-SAME: ),
+// CHECK-SAME: Sampler(
+// CHECK-SAME:   s0, numDescriptors = 4, space = 1, offset = DescriptorTableOffsetAppend, flags = None
+// CHECK-SAME: ),
+// CHECK-SAME: DescriptorTable(
+// CHECK-SAME:   numClauses = 1, visibility = All
+// CHECK-SAME: ),
+// CHECK-SAME: RootConstants(
+// CHECK-SAME:   num32BitConstants = 3, b10, space = 0, visibility = All
+// CHECK-SAME: ),
+// CHECK-SAME: StaticSampler(
+// CHECK-SAME:   s1, filter = Anisotropic, addressU = Wrap, addressV = Wrap, addressW = Wrap,
+// CHECK-SAME:   mipLODBias = 0.000000e+00, maxAnisotropy = 16, comparisonFunc = LessEqual,
+// CHECK-SAME:   borderColor = OpaqueWhite, minLOD = 0.000000e+00, maxLOD = 3.402823e+38, space = 0, visibility = All
+// CHECK-SAME: )}
 
 // CHECK: -RootSignatureAttr 0x{{.*}} {{.*}} [[SAMPLE_RS_DECL]]
 [RootSignature(SampleRS)]
@@ -44,14 +76,23 @@ void same_rs_main() {}
 // link to the same root signature declaration
 
 #define SampleSameRS \
-  "DescriptorTable( " \
-  "  CBV(b1), " \
-  "  SRV(t1, numDescriptors = 8, " \
-  "          flags = DESCRIPTORS_VOLATILE), " \
-  "  UAV(u1, numDescriptors = 0, " \
-  "          flags = DESCRIPTORS_VOLATILE) " \
-  "), " \
-  "DescriptorTable(Sampler(s0, numDescriptors = 4, space = 1))"
+   "RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | " \
+               "DENY_VERTEX_SHADER_ROOT_ACCESS), " \
+   "CBV(b0, space = 1, flags = DATA_STATIC), " \
+   "SRV(t0), " \
+   "UAV(u0), " \
+   "DescriptorTable( CBV(b1), " \
+                     "SRV(t1, numDescriptors = 8, " \
+                     "        flags = DESCRIPTORS_VOLATILE), " \
+                     "UAV(u1, numDescriptors = unbounded, " \
+                     "        flags = DESCRIPTORS_VOLATILE)), " \
+   "DescriptorTable(Sampler(s0, space=1, numDescriptors = 4)), " \
+   "RootConstants(num32BitConstants=3, b10), " \
+   "StaticSampler(s1)," \
+   "StaticSampler(s2, " \
+                   "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                   "filter = FILTER_MIN_MAG_MIP_LINEAR )"
+
 
 // CHECK: -RootSignatureAttr 0x{{.*}} {{.*}} [[SAMPLE_RS_DECL]]
 [RootSignature(SampleSameRS)]

@@ -31,7 +31,8 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-
+include "mlir/Interfaces/ValueBoundsOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 
 // Include the attribute definitions.
 include "TestAttrDefs.td"
@@ -2375,6 +2376,24 @@ def ForwardBufferOp : TEST_Op<"forward_buffer", [Pure]> {
 // Test ValueBoundsOpInterface
 //===----------------------------------------------------------------------===//
 
+def TestValueWithBoundsOp : TEST_Op<"value_with_bounds", [
+    DeclareOpInterfaceMethods<ValueBoundsOpInterface, ["populateBoundsForIndexValue"]>
+  ]> {
+  let description = [{
+    Creates a value with specified [min, max] range for value bounds analysis.
+
+    Example:
+
+    ```mlir
+    %0 = test.value_with_bounds { min = 4 : index, max = 5 : index}
+    ```
+  }];
+  let arguments = (ins IndexAttr:$min, IndexAttr:$max);
+  let results = (outs Index:$result);
+  let assemblyFormat = "attr-dict";
+}
+
+
 def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
   let description = [{
     Reify a bound for the given index-typed value or dimension size of a shaped
@@ -2825,7 +2844,7 @@ def TestNVVMRequiresSMArchCondOp :
   let assemblyFormat = "attr-dict";
 }
 
-def TestNVVMRequirestSMArchCondMultiOp : 
+def TestNVVMRequirestSMArchCondMultiOp :
     TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
@@ -3179,7 +3198,7 @@ def TestOpWithPropertiesAndInferredType
   ]> {
   let assemblyFormat = "$lhs prop-dict attr-dict";
 
-  let arguments = (ins I32Attr:$lhs, IntProp<"int64_t">:$rhs);
+  let arguments = (ins I32Attr:$lhs, IntProp<"int64_t">:$rhs, OptionalAttr<UnitAttr>: $packed);
   let results = (outs AnyType:$result);
 }
 
@@ -3387,6 +3406,8 @@ def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
   let assemblyFormat = [{
     (`anAttr` `=` $anAttr^)?
     (`simple` `=` $simple^)?
+    (`simplei8` `=` $simplei8^)?
+    (`simpleui8` `=` $simpleui8^)?
     (`nonTrivialStorage` `=` $nonTrivialStorage^)?
     (`hasDefault` `=` $hasDefault^)?
     (`nested` `=` $nested^)?
@@ -3398,6 +3419,8 @@ def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
   let arguments = (ins
     OptionalAttr<I32Attr>:$anAttr,
     OptionalProp<I64Prop>:$simple,
+    OptionalProp<IntProp<"int8_t">>:$simplei8,
+    OptionalProp<IntProp<"uint8_t">>:$simpleui8,
     OptionalProp<StringProp>:$nonTrivialStorage,
     // Confirm that properties with default values now default to nullopt and have
     // the long syntax.
@@ -3550,6 +3573,60 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
   let assemblyFormat = [{
      attr-dict `:` type($index) `,` type($memref)
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test Ops bufferization
+//===----------------------------------------------------------------------===//
+
+def TestDummyTensorOp : TEST_Op<"dummy_tensor_op", [BufferizableOpInterface]> {
+  let arguments = (ins
+    Arg<TestTensorType>:$input
+  );
+  let results = (outs
+    Arg<TestTensorType>:$output
+  );
+  let extraClassDeclaration = [{
+    // BufferizableOpInterface
+    bool bufferizesToMemoryRead(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    bool bufferizesToMemoryWrite(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    mlir::bufferization::AliasingValueList getAliasingValues(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    mlir::LogicalResult bufferize(
+      mlir::RewriterBase& rewriter,
+      const mlir::bufferization::BufferizationOptions& options,
+      mlir::bufferization::BufferizationState &state);
+  }];
+
+  let extraClassDefinition = [{
+    bool test::TestDummyTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestDummyTensorOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestDummyTensorOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
+  let arguments = (ins
+    Arg<TestMemrefType>:$input
+  );
+  let results = (outs
+    Arg<TestMemrefType>:$output
+  );
 }
 
 #endif // TEST_OPS

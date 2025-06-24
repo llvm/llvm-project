@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_BAREMETAL_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_BAREMETAL_H
 
-#include "ToolChains/Gnu.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
@@ -20,7 +19,7 @@ namespace driver {
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY BareMetal : public Generic_ELF {
+class LLVM_LIBRARY_VISIBILITY BareMetal : public ToolChain {
 public:
   BareMetal(const Driver &D, const llvm::Triple &Triple,
             const llvm::opt::ArgList &Args);
@@ -36,9 +35,7 @@ protected:
   Tool *buildStaticLibTool() const override;
 
 public:
-  bool initGCCInstallation(const llvm::Triple &Triple,
-                           const llvm::opt::ArgList &Args);
-  bool hasValidGCCInstallation() const { return IsGCCInstallationValid; }
+  bool useIntegratedAs() const override { return true; }
   bool isBareMetal() const override { return true; }
   bool isCrossCompiling() const override { return true; }
   bool HasNativeLLVMSupport() const override { return true; }
@@ -51,18 +48,14 @@ public:
 
   StringRef getOSLibName() const override { return "baremetal"; }
 
-  UnwindTableLevel
-  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override {
-    return UnwindTableLevel::None;
-  }
-
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
   }
-
   CXXStdlibType GetDefaultCXXStdlibType() const override {
     return ToolChain::CST_Libcxx;
   }
+
+  const char *getDefaultLinker() const override { return "ld.lld"; }
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -74,9 +67,6 @@ public:
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
-  void
-  addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                           llvm::opt::ArgStringList &CC1Args) const override;
   std::string computeSysRoot() const override;
   SanitizerMask getSupportedSanitizers() const override;
 
@@ -89,8 +79,6 @@ private:
   OrderedMultilibs getOrderedMultilibs() const;
 
   std::string SysRoot;
-
-  bool IsGCCInstallationValid;
 
   SmallVector<std::string> MultilibMacroDefines;
 };
@@ -116,7 +104,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
-  Linker(const ToolChain &TC) : Tool("baremetal::Linker", "linker", TC) {}
+  Linker(const ToolChain &TC) : Tool("baremetal::Linker", "ld.lld", TC) {}
   bool isLinkJob() const override { return true; }
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,
