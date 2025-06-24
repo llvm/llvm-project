@@ -7,20 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "Tool.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 using namespace lldb_private::mcp;
 using namespace llvm;
 
-struct LLDBCommandToolArguments {
+struct CommandToolArguments {
+  uint64_t debugger_id;
   std::string arguments;
 };
 
-bool fromJSON(const llvm::json::Value &V, LLDBCommandToolArguments &A,
+bool fromJSON(const llvm::json::Value &V, CommandToolArguments &A,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(V, P);
-  return O && O.map("arguments", A.arguments);
+  return O && O.map("debugger_id", A.debugger_id) &&
+         O.mapOptional("arguments", A.arguments);
 }
 
 Tool::Tool(std::string name, std::string description)
@@ -37,22 +40,27 @@ protocol::ToolDefinition Tool::GetDefinition() const {
   return definition;
 }
 
-LLDBCommandTool::LLDBCommandTool(std::string name, std::string description,
-                                 Debugger &debugger)
-    : Tool(std::move(name), std::move(description)), m_debugger(debugger) {}
-
 llvm::Expected<protocol::TextResult>
-LLDBCommandTool::Call(const llvm::json::Value &args) {
+CommandTool::Call(const llvm::json::Value *args) {
+  if (!args)
+    return createStringError("no tool arguments");
+
   llvm::json::Path::Root root;
 
-  LLDBCommandToolArguments arguments;
-  if (!fromJSON(args, arguments, root))
+  CommandToolArguments arguments;
+  if (!fromJSON(*args, arguments, root))
     return root.getError();
+
+  lldb::DebuggerSP debugger_sp =
+      Debugger::GetDebuggerAtIndex(arguments.debugger_id);
+  if (!debugger_sp)
+    return createStringError(
+        llvm::formatv("no debugger with id {0}", arguments.debugger_id));
 
   // FIXME: Disallow certain commands and their aliases.
   CommandReturnObject result(/*colors=*/false);
-  m_debugger.GetCommandInterpreter().HandleCommand(arguments.arguments.c_str(),
-                                                   eLazyBoolYes, result);
+  debugger_sp->GetCommandInterpreter().HandleCommand(
+      arguments.arguments.c_str(), eLazyBoolYes, result);
 
   std::string output;
   llvm::StringRef output_str = result.GetOutputString();
@@ -72,10 +80,46 @@ LLDBCommandTool::Call(const llvm::json::Value &args) {
   return text_result;
 }
 
-std::optional<llvm::json::Value> LLDBCommandTool::GetSchema() const {
+std::optional<llvm::json::Value> CommandTool::GetSchema() const {
+  llvm::json::Object id_type{{"type", "number"}};
   llvm::json::Object str_type{{"type", "string"}};
-  llvm::json::Object properties{{"arguments", std::move(str_type)}};
+  llvm::json::Object properties{{"debugger_id", std::move(id_type)},
+                                {"arguments", std::move(str_type)}};
+  llvm::json::Array required{"debugger_id"};
   llvm::json::Object schema{{"type", "object"},
-                            {"properties", std::move(properties)}};
+                            {"properties", std::move(properties)},
+                            {"required", std::move(required)}};
   return schema;
+}
+
+llvm::Expected<protocol::TextResult>
+DebuggerListTool::Call(const llvm::json::Value *args) {
+  llvm::json::Path::Root root;
+
+  std::string output;
+  llvm::raw_string_ostream os(output);
+
+  const size_t num_debuggers = Debugger::GetNumDebuggers();
+  for (size_t i = 0; i < num_debuggers; ++i) {
+    lldb::DebuggerSP debugger_sp = Debugger::GetDebuggerAtIndex(i);
+    if (!debugger_sp)
+      continue;
+
+    os << "- debugger " << i << '\n';
+
+    const TargetList &target_list = debugger_sp->GetTargetList();
+    const size_t num_targets = target_list.GetNumTargets();
+    for (size_t j = 0; j < num_targets; ++j) {
+      lldb::TargetSP target_sp = target_list.GetTargetAtIndex(i);
+      if (!target_sp)
+        continue;
+      os << "    - target " << j;
+      if (Module *exe_module = target_sp->GetExecutableModulePointer())
+        os << " " << exe_module->GetFileSpec().GetPath();
+    }
+  }
+
+  mcp::protocol::TextResult text_result;
+  text_result.content.emplace_back(mcp::protocol::TextContent{{output}});
+  return text_result;
 }
