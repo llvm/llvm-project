@@ -1520,13 +1520,14 @@ void MallocChecker::checkGetdelim(ProgramStateRef State, const CallEvent &Call,
 
   const auto LinePtrOpt = getPointeeVal(Call.getArgSVal(0), State);
   const auto SizeOpt = getPointeeVal(Call.getArgSVal(1), State);
-  if (!LinePtrOpt || !SizeOpt)
+  if (!LinePtrOpt || !SizeOpt || LinePtrOpt->isUnknownOrUndef() ||
+      SizeOpt->isUnknownOrUndef())
     return;
 
   const auto LinePtr = LinePtrOpt->getAs<DefinedSVal>();
   const auto Size = SizeOpt->getAs<DefinedSVal>();
   const MemRegion *LinePtrReg = LinePtr->getAsRegion();
-  if (!LinePtr || !Size || !LinePtrReg)
+  if (!LinePtrReg)
     return;
 
   State = setDynamicExtent(State, LinePtrReg, *Size);

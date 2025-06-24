@@ -83,7 +83,7 @@ public:
 
   void CheckOpen(CheckerContext &C, const CallEvent &Call) const;
   void CheckOpenAt(CheckerContext &C, const CallEvent &Call) const;
-  void CheckGetDelim(CheckerContext &C, const CallEvent &Call) const;
+  void CheckGetDelimOrGetline(CheckerContext &C, const CallEvent &Call) const;
   void CheckPthreadOnce(CheckerContext &C, const CallEvent &Call) const;
 
   void CheckOpenVariant(CheckerContext &C, const CallEvent &Call,
@@ -177,7 +177,7 @@ void UnixAPIMisuseChecker::checkPreCall(const CallEvent &Call,
     CheckPthreadOnce(C, Call);
 
   else if (is_contained({"getdelim", "getline"}, FName))
-    CheckGetDelim(C, Call);
+    CheckGetDelimOrGetline(C, Call);
 }
 void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
                                          ProgramStateRef State,
@@ -378,8 +378,8 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
   return State;
 }
 
-void UnixAPIMisuseChecker::CheckGetDelim(CheckerContext &C,
-                                         const CallEvent &Call) const {
+void UnixAPIMisuseChecker::CheckGetDelimOrGetline(CheckerContext &C,
+                                                  const CallEvent &Call) const {
   if (Call.getNumArgs() < 2)
     return;
 
