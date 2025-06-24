@@ -320,7 +320,7 @@ static unsigned getColumns(int FileID) {
   // instead if it isn't available.
   unsigned Columns = 0;
 
-#ifdef HAVE_SYS_IOCTL_H
+#if defined(HAVE_SYS_IOCTL_H) && !defined(__sun__)
   struct winsize ws;
   if (ioctl(FileID, TIOCGWINSZ, &ws) == 0)
     Columns = ws.ws_col;

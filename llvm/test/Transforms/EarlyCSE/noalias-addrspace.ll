@@ -2,20 +2,20 @@
 ; RUN: opt -passes='early-cse<memssa>' -S < %s | FileCheck %s
 
 declare void @use(i1)
-declare void @use.ptr(ptr) memory(read)
+declare void @use.ptr(i32, ptr) memory(read)
 
 define void @load_first_noalias_addrspace(ptr %p) {
 ; CHECK-LABEL: define void @load_first_noalias_addrspace(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META0:![0-9]+]], !noundef [[META0]], !noalias.addrspace [[META1:![0-9]+]]
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}, !noundef !{}, !noalias.addrspace !0
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
@@ -23,14 +23,14 @@ define void @load_both_same_noalias_addrspace(ptr %p) {
 ; CHECK-LABEL: define void @load_both_same_noalias_addrspace(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META0]], !noundef [[META0]], !noalias.addrspace [[META1]]
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}, !noundef !{}, !noalias.addrspace !0
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p, !noalias.addrspace !0
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
@@ -38,14 +38,14 @@ define void @load_both_disjoint_noalias_addrspace(ptr %p) {
 ; CHECK-LABEL: define void @load_both_disjoint_noalias_addrspace(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META0]], !noundef [[META0]], !noalias.addrspace [[META1]]
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}, !noundef !{}, !noalias.addrspace !0
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p, !noalias.addrspace !1
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 
@@ -53,14 +53,14 @@ define void @load_both_overlap_noalias_addrspace(ptr %p) {
 ; CHECK-LABEL: define void @load_both_overlap_noalias_addrspace(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META0]], !noundef [[META0]], !noalias.addrspace [[META1]]
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
-; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[V1]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load ptr, ptr %p, !nonnull !{}, !noundef !{}, !noalias.addrspace !0
-  call void @use.ptr(ptr %v1)
+  call void @use.ptr(i32 0, ptr %v1)
   %v2 = load ptr, ptr %p, !noalias.addrspace !2
-  call void @use.ptr(ptr %v2)
+  call void @use.ptr(i32 1, ptr %v2)
   ret void
 }
 

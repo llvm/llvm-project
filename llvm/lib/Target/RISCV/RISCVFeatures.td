@@ -385,6 +385,13 @@ def FeatureStdExtZca
                      "part of the C extension, excluding compressed "
                      "floating point loads/stores">,
       RISCVExtensionBitmask<1, 2>;
+// FIXME: Update this message - Zca always implies C.
+def HasStdExtZca
+    : Predicate<"Subtarget->hasStdExtZca()">,
+      AssemblerPredicate<(any_of FeatureStdExtZca),
+                         "'C' (Compressed Instructions) or "
+                         "'Zca' (part of the C extension, excluding "
+                         "compressed floating point loads/stores)">;
 
 def FeatureStdExtC
     : RISCVExtension<2, 0, "Compressed Instructions", [FeatureStdExtZca]>,
@@ -392,14 +399,6 @@ def FeatureStdExtC
 def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
                  AssemblerPredicate<(all_of FeatureStdExtC),
                                     "'C' (Compressed Instructions)">;
-
-
-def HasStdExtCOrZca
-    : Predicate<"Subtarget->hasStdExtCOrZca()">,
-      AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZca),
-                         "'C' (Compressed Instructions) or "
-                         "'Zca' (part of the C extension, excluding "
-                         "compressed floating point loads/stores)">;
 
 def FeatureStdExtZcb
     : RISCVExtension<1, 0, "Compressed basic bit manipulation instructions",
@@ -456,10 +455,11 @@ def HasStdExtZcmt : Predicate<"Subtarget->hasStdExtZcmt()">,
 def FeatureStdExtZce
     : RISCVExtension<1, 0,
                      "Compressed extensions for microcontrollers",
-                     [FeatureStdExtZcb, FeatureStdExtZcmp, FeatureStdExtZcmt]>;
+                     [FeatureStdExtZca, FeatureStdExtZcb, FeatureStdExtZcmp,
+                      FeatureStdExtZcmt]>;
 
 def HasStdExtCOrZcfOrZce
-    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() "
+    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() ||"
                 "Subtarget->hasStdExtZce()">,
       AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcf,
                                  FeatureStdExtZce),
@@ -1598,6 +1598,15 @@ def HasVendorXAndesPerf
     : Predicate<"Subtarget->hasVendorXAndesPerf()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesPerf),
                          "'XAndesPerf' (Andes Performance Extension)">;
+
+def FeatureVendorXAndesVBFHCvt
+    : RISCVExtension<5, 0, "Andes Vector BFLOAT16 Conversion Extension",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXAndesVBFHCvt
+    : Predicate<"Subtarget->hasVendorXAndesVBFHCvt()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
+                         "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
+
 
 def FeatureVendorXAndesVPackFPH
     : RISCVExtension<5, 0, "Andes Vector Packed FP16 Extension",

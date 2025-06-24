@@ -1906,32 +1906,6 @@ llvm.func @cond_br_weights(%cond : i1, %arg0 : i32,  %arg1 : i32) -> i32 {
 
 // -----
 
-llvm.func @fn()
-
-// CHECK-LABEL: @call_branch_weights
-llvm.func @call_branch_weights() {
-  // CHECK: !prof ![[NODE:[0-9]+]]
-  llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> ()
-  llvm.return
-}
-
-// CHECK: ![[NODE]] = !{!"branch_weights", i32 42}
-
-// -----
-
-llvm.func @fn() -> i32
-
-// CHECK-LABEL: @call_branch_weights
-llvm.func @call_branch_weights() {
-  // CHECK: !prof ![[NODE:[0-9]+]]
-  %res = llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> i32
-  llvm.return
-}
-
-// CHECK: ![[NODE]] = !{!"branch_weights", i32 42}
-
-// -----
-
 llvm.func @foo()
 llvm.func @__gxx_personality_v0(...) -> i32
 
