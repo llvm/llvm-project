@@ -74,7 +74,7 @@ struct MissingFeatures {
   static bool opFuncOpenCLKernelMetadata() { return false; }
   static bool opFuncCallingConv() { return false; }
   static bool opFuncExtraAttrs() { return false; }
-  static bool opFuncDsolocal() { return false; }
+  static bool opFuncDsoLocal() { return false; }
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
   static bool opFuncNoProto() { return false; }
