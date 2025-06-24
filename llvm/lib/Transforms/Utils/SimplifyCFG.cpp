@@ -7604,7 +7604,10 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
       switchToLookupTable(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
-  if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
+  // Do not transform the switch into a `cttz` and a reduced table on early
+  // invocations.
+  if (Options.ConvertSwitchToLookupTable &&
+      simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
     return requestResimplify();
 
   if (reduceSwitchRange(SI, Builder, DL, TTI))

@@ -8,10 +8,9 @@ define void @simplifycfg_switch_power_two_late_optimized(i64 %x, ptr noalias der
 ; CHECK-SAME: i64 [[X:%.*]], ptr noalias readonly captures(none) dereferenceable(8) [[Y:%.*]], ptr [[Z:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [24 x i8], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[X]], 1
-; CHECK-NEXT:    [[SWITCH_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i64 [[X]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[Z]], null
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH_NOT]], i1 undef, i1 [[TMP1]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i1 [[TMP1]], i1 undef
 ; CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[EXIT:.*]], label %[[OPAQUE_CALL:.*]]
 ; CHECK:       [[OPAQUE_CALL]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 8
