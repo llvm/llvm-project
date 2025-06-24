@@ -38,6 +38,55 @@ void OperatingSystemSwiftTasks::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
+/// A wrapper around ThreadMemory providing lazy name evaluation, as this is
+/// expensive to compute for Swift Tasks.
+class SwiftTaskThreadMemory : public ThreadMemory {
+public:
+  SwiftTaskThreadMemory(lldb_private::Process &process, lldb::tid_t tid,
+                        lldb::addr_t register_data_addr)
+      : ThreadMemory(process, tid, register_data_addr) {}
+
+  /// Updates the backing thread of this Task, as well as the location where the
+  /// task pointer is stored.
+  void UpdateBackingThread(const ThreadSP &new_backing_thread,
+                           lldb::addr_t task_addr) {
+    SetBackingThread(new_backing_thread);
+    m_task_addr = task_addr;
+  }
+
+  const char *GetName() override {
+    if (m_task_name.empty())
+      m_task_name = FindTaskName();
+    return m_task_name.c_str();
+  }
+
+private:
+  std::string GetDefaultTaskName() const {
+    return llvm::formatv("Task {0}", GetID());
+  }
+
+  /// If possible, read a user-provided task name from memory, otherwise use a
+  /// default name. This never returns an empty string.
+  std::string FindTaskName() const {
+    llvm::Expected<std::optional<std::string>> task_name =
+        GetTaskName(m_task_addr, *GetProcess());
+    if (auto err = task_name.takeError()) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::OS), std::move(err),
+                     "OperatingSystemSwiftTasks: failed while looking for name "
+                     "of task {1:x}: {0}",
+                     m_task_addr);
+      return GetDefaultTaskName();
+    }
+
+    if (!task_name->has_value())
+      return GetDefaultTaskName();
+    return llvm::formatv("{0} (Task {1})", *task_name, GetID());
+  }
+
+  std::string m_task_name = "";
+  lldb::addr_t m_task_addr = LLDB_INVALID_ADDRESS;
+};
+
 OperatingSystem *OperatingSystemSwiftTasks::CreateInstance(Process *process,
                                                            bool force) {
   if (!process || !process->GetTarget().GetSwiftUseTasksPlugin())
@@ -78,9 +127,9 @@ OperatingSystemSwiftTasks::OperatingSystemSwiftTasks(
     lldb_private::Process &process)
     : OperatingSystem(&process) {}
 
-ThreadSP OperatingSystemSwiftTasks::FindOrCreateSwiftThread(
-    ThreadList &old_thread_list, uint64_t task_id,
-    std::optional<std::string> task_name) {
+ThreadSP
+OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
+                                                   uint64_t task_id) {
   // Mask higher bits to avoid conflicts with core thread IDs.
   uint64_t masked_task_id = 0x0000000f00000000 | task_id;
 
@@ -89,15 +138,8 @@ ThreadSP OperatingSystemSwiftTasks::FindOrCreateSwiftThread(
       IsOperatingSystemPluginThread(old_thread))
     return old_thread;
 
-  std::string name;
-  if (task_name)
-    name = llvm::formatv("{0} (Task {1})", *task_name, task_id);
-  else
-    name = llvm::formatv("Task {0}", task_id);
-
-  return std::make_shared<ThreadMemoryProvidingName>(*m_process, masked_task_id,
-                                                     /*register_data_addr*/ 0,
-                                                     name);
+  return std::make_shared<SwiftTaskThreadMemory>(*m_process, masked_task_id,
+                                                 /*register_data_addr*/ 0);
 }
 
 static std::optional<addr_t> FindTaskAddress(TaskInspector &task_inspector,
@@ -132,19 +174,6 @@ static std::optional<uint64_t> FindTaskId(addr_t task_addr, Process &process) {
   return task_id;
 }
 
-static std::optional<std::string> FindTaskName(addr_t task_addr,
-                                               Process &process) {
-  auto task_name_or_err = GetTaskName(task_addr, process);
-  if (auto err = task_name_or_err.takeError()) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::OS), std::move(err),
-                   "OperatingSystemSwiftTasks: failed while looking for name "
-                   "of task {1:x}: {0}",
-                   task_addr);
-    return {};
-  }
-  return *task_name_or_err;
-}
-
 bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
                                                  ThreadList &core_thread_list,
                                                  ThreadList &new_thread_list) {
@@ -173,9 +202,9 @@ bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
       continue;
     }
 
-    ThreadSP swift_thread = FindOrCreateSwiftThread(
-        old_thread_list, *task_id, FindTaskName(*task_addr, *m_process));
-    swift_thread->SetBackingThread(real_thread);
+    ThreadSP swift_thread = FindOrCreateSwiftThread(old_thread_list, *task_id);
+    static_cast<SwiftTaskThreadMemory &>(*swift_thread)
+        .UpdateBackingThread(real_thread, *task_addr);
     new_thread_list.AddThread(swift_thread);
     LLDB_LOGF(log,
               "OperatingSystemSwiftTasks: mapping thread IDs: %" PRIx64
