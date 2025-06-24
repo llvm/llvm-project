@@ -128,3 +128,521 @@ s_alloc_vgpr vcc
 
 v_cvt_f32_fp8 v1, v3 clamp
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cvt_f32_fp8 v1, v3 clamp
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+buffer_load_dword v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_dword v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_dwordx2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_dwordx3 v[0:2], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_dwordx4 v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_short_d16 v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_xy v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_xyz v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_xyzw v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_short_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_hi_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_sbyte_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_ubyte_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_sbyte_d16 v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_ubyte_d16 v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_sbyte v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_sshort v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_ubyte v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_ushort v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_byte v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_short v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_dword v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_dwordx2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_dwordx3 v[0:2], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_dwordx4 v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_xy v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_xyz v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_xyzw v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_byte_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_short_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_hi_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_add v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_add_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_and v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_and_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_cmpswap v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_csub v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_dec v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_dec_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_inc v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_inc_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_fmax v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_smax v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_smax_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_umax v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_umax_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_fmin v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_smin v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_smin_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_umin v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_umin_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_or v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_or_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_sub v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_sub_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_swap v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_swap_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_xor v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_xor_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_d16_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_d16_xy v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_d16_xyz v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_d16_xyzw v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_xy v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_xyz v[0:2], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_xyzw v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_d16_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_d16_xy v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_d16_xyz v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_d16_xyzw v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_xy v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_xyz v[0:2], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_xyzw v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+s_buffer_load_b32 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_b64 s[10:11], s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_b96 s[20:22], s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_i8 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_u8 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_i16 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_u16 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_prefetch_data s[20:23], -1, s10, 7
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+buffer_load_dword v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_dword v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_dwordx2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_dwordx3 v[0:2], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_dwordx4 v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_short_d16 v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_xy v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_xyz v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_xyzw v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_short_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_format_d16_hi_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_sbyte_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_ubyte_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_sbyte_d16 v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_ubyte_d16 v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_sbyte v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_sshort v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_ubyte v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_load_ushort v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_byte v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_short v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_dword v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_dwordx2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_dwordx3 v[0:2], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_dwordx4 v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_xy v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_xyz v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_xyzw v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_byte_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_short_d16_hi v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_store_format_d16_hi_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_add v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_add_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_and v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_and_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_cmpswap v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_cmpswap_x2 v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_csub v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_dec v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_dec_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_inc v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_inc_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_fmax v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_smax v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_smax_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_umax v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_umax_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_fmin v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_smin v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_smin_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_umin v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_umin_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_or v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_or_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_sub v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_sub_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_swap v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_swap_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_xor v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+buffer_atomic_xor_x2 v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_d16_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_d16_xy v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_d16_xyz v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_d16_xyzw v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_xy v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_xyz v[0:2], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_load_format_xyzw v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_d16_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_d16_xy v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_d16_xyz v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_d16_xyzw v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_x v0, off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_xy v[0:1], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_xyz v[0:2], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+tbuffer_store_format_xyzw v[0:3], off, s[4:7], s8 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for buffer ops
+
+s_buffer_load_b32 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_b64 s[10:11], s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_b96 s[20:22], s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_i8 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_u8 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_i16 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_load_u16 s5, s[4:7], s0 offset:-1
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops
+
+s_buffer_prefetch_data s[20:23], -1, s10, 7
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit positive offset for S_BUFFER ops

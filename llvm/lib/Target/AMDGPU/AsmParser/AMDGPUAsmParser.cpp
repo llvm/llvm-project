@@ -4782,12 +4782,13 @@ bool AMDGPUAsmParser::validateOffset(const MCInst &Inst,
     return validateSMEMOffset(Inst, Operands);
 
   const auto &Op = Inst.getOperand(OpNum);
+  // GFX12+ buffer ops: InstOffset is signed 24, but must be positive
   if (isGFX12Plus() &&
       (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))) {
     const unsigned OffsetSize = 24;
-    if (!isIntN(OffsetSize, Op.getImm())) {
+    if (!isUIntN(OffsetSize - 1, Op.getImm())) {
       Error(getFlatOffsetLoc(Operands),
-            Twine("expected a ") + Twine(OffsetSize) + "-bit signed offset");
+            Twine("expected a ") + Twine(OffsetSize - 1) + "-bit positive offset for buffer ops");
       return false;
     }
   } else {
@@ -4865,6 +4866,16 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
 
   uint64_t Offset = Op.getImm();
   bool IsBuffer = AMDGPU::getSMEMIsBuffer(Opcode);
+  // GFX12+ S_BUFFER_*: InstOffset is signed 24, but must be positive
+  if (isGFX12Plus() && IsBuffer) {
+    const unsigned OffsetSize = 24;
+    if (!isUIntN(OffsetSize, Offset)) {
+      Error(getSMEMOffsetLoc(Operands),
+            Twine("expected a ") + Twine(OffsetSize - 1) + "-bit positive offset for S_BUFFER ops");
+      return false;
+    }
+    return true;
+  }
   if (AMDGPU::isLegalSMRDEncodedUnsignedOffset(getSTI(), Offset) ||
       AMDGPU::isLegalSMRDEncodedSignedOffset(getSTI(), Offset, IsBuffer))
     return true;

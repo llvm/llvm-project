@@ -843,6 +843,21 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     }
   }
 
+  // Validate buffer offset for GFX12+ - must be positive
+  if ((MCII->get(MI.getOpcode()).TSFlags &
+       (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF)) &&
+      AMDGPU::isGFX12Plus(STI)) {
+    int OffsetIdx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::offset);
+    if (OffsetIdx != -1) {
+      uint32_t Imm = MI.getOperand(OffsetIdx).getImm();
+      int64_t SignedOffset = SignExtend64<24>(Imm);
+      if (SignedOffset < 0) {
+        return MCDisassembler::Fail;
+      }
+    }
+  }
+
   if (MCII->get(MI.getOpcode()).TSFlags &
       (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF)) {
     int SWZOpIdx =
