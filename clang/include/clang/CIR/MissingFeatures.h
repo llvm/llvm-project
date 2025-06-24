@@ -242,6 +242,7 @@ struct MissingFeatures {
   static bool builtinCallMathErrno() { return false; }
   static bool nonFineGrainedBitfields() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
+  static bool ctorMemcpyizer() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
