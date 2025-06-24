@@ -4846,7 +4846,7 @@ cc_library(
     hdrs = glob(["include/mlir/Support/*.h"]),
     includes = ["include"],
     deps = [
-        "//llvm:Support"
+        "//llvm:Support",
         "//mlir:IR",
     ],
 )
