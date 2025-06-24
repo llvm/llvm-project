@@ -877,9 +877,7 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
-  static bool isXDLWMMA(const MachineInstr &MI) {
-    return (isWMMA(MI) || isSWMMAC(MI)) && AMDGPU::getWMMAIsXDL(MI.getOpcode());
-  }
+  bool isXDLWMMA(const MachineInstr &MI) const;
 
   bool isXDL(const MachineInstr &MI) const;
 
