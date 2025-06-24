@@ -3527,6 +3527,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::BFloat16:
     case BuiltinType::VectorQuad:
     case BuiltinType::VectorPair:
+    case BuiltinType::DMR1024:
       OS << "?";
       return;
 
@@ -6111,8 +6112,7 @@ SortAndUniqueProtocols(SmallVectorImpl<ObjCProtocolDecl *> &Protocols) {
 QualType ASTContext::getObjCObjectType(QualType BaseType,
                                        ObjCProtocolDecl * const *Protocols,
                                        unsigned NumProtocols) const {
-  return getObjCObjectType(BaseType, {},
-                           llvm::ArrayRef(Protocols, NumProtocols),
+  return getObjCObjectType(BaseType, {}, ArrayRef(Protocols, NumProtocols),
                            /*isKindOf=*/false);
 }
 
@@ -13119,9 +13119,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return true;
 
   // Variables that have initialization with side-effects are required.
-  if (VD->getInit() && VD->getInit()->HasSideEffects(*this) &&
-      // We can get a value-dependent initializer during error recovery.
-      (VD->getInit()->isValueDependent() || !VD->evaluateValue()))
+  if (VD->hasInitWithSideEffects())
     return true;
 
   // Likewise, variables with tuple-like bindings are required if their
@@ -14292,7 +14290,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
         ::getCommonTemplateNameChecked(Ctx, TX->getTemplateName(),
                                        TY->getTemplateName(),
                                        /*IgnoreDeduced=*/true),
-        As, /*CanonicalArgs=*/std::nullopt, X->getCanonicalTypeInternal());
+        As, /*CanonicalArgs=*/{}, X->getCanonicalTypeInternal());
   }
   case Type::Decltype: {
     const auto *DX = cast<DecltypeType>(X);
@@ -14538,7 +14536,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                    TY->template_arguments()))
       return QualType();
     return Ctx.getTemplateSpecializationType(CTN, As,
-                                             /*CanonicalArgs=*/std::nullopt,
+                                             /*CanonicalArgs=*/{},
                                              Ctx.getQualifiedType(Underlying));
   }
   case Type::Typedef: {
@@ -14601,7 +14599,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     Expr *CEX = DX->getCountExpr();
     Expr *CEY = DY->getCountExpr();
-    llvm::ArrayRef<clang::TypeCoupledDeclRefInfo> CDX = DX->getCoupledDecls();
+    ArrayRef<clang::TypeCoupledDeclRefInfo> CDX = DX->getCoupledDecls();
     if (Ctx.hasSameExpr(CEX, CEY))
       return Ctx.getCountAttributedType(Ctx.getQualifiedType(Underlying), CEX,
                                         DX->isCountInBytes(), DX->isOrNull(),

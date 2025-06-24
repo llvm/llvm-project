@@ -13054,6 +13054,11 @@ def err_invalid_hlsl_resource_type: Error<
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
+def err_hlsl_resource_range_overlap: Error<
+  "resource ranges %select{t|u|b|s}0[%1;%2] and %select{t|u|b|s}3[%4;%5] "
+  "overlap within space = %6 and visibility = "
+  "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}7">;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;

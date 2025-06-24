@@ -2,23 +2,35 @@
 Test lldb-dap RestartRequest.
 """
 
-import os
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import line_number
+from typing import Dict, Any, List
+
 import lldbdap_testcase
+from lldbsuite.test.decorators import skipIfWindows, skipIf, skipIfBuildType
+from lldbsuite.test.lldbtest import line_number
 
 
+@skipIfBuildType(["debug"])
 class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
-    def isTestSupported(self):
-        try:
-            # We skip this test for debug builds because it takes too long
-            # parsing lldb's own debug info. Release builds are fine.
-            # Checking the size of the lldb-dap binary seems to be a decent
-            # proxy for a quick detection. It should be far less than 1 MB in
-            # Release builds.
-            return os.path.getsize(os.environ["LLDBDAP_EXEC"]) < 1000000
-        except:
-            return False
+    def verify_stopped_on_entry(self, stopped_events: List[Dict[str, Any]]):
+        seen_stopped_event = 0
+        for stopped_event in stopped_events:
+            body = stopped_event.get("body")
+            if body is None:
+                continue
+
+            reason = body.get("reason")
+            if reason is None:
+                continue
+
+            self.assertNotEqual(
+                reason,
+                "breakpoint",
+                'verify stop after restart isn\'t "main" breakpoint',
+            )
+            if reason == "entry":
+                seen_stopped_event += 1
+
+        self.assertEqual(seen_stopped_event, 1, "expect only one stopped entry event.")
 
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
@@ -27,8 +39,6 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         Test basic restarting functionality when the process is running in
         a terminal.
         """
-        if not self.isTestSupported():
-            return
         line_A = line_number("main.c", "// breakpoint A")
         line_B = line_number("main.c", "// breakpoint B")
 
@@ -60,33 +70,31 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             "i != 0 after hitting breakpoint A on restart",
         )
 
+        # Check breakpoint B
+        self.dap_server.request_continue()
+        self.verify_breakpoint_hit([bp_B])
+        self.assertEqual(
+            int(self.dap_server.get_local_variable_value("i")),
+            1234,
+            "i != 1234 after hitting breakpoint B",
+        )
+        self.continue_to_exit()
+
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
     def test_stopOnEntry(self):
         """
         Check that stopOnEntry works correctly when using runInTerminal.
         """
-        if not self.isTestSupported():
-            return
-        line_A = line_number("main.c", "// breakpoint A")
-        line_B = line_number("main.c", "// breakpoint B")
-
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, runInTerminal=True, stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
 
-        # When using stopOnEntry, configurationDone doesn't result in a running
-        # process, we should immediately get a stopped event instead.
+        self.dap_server.request_continue()  # sends configuration done
         stopped_events = self.dap_server.wait_for_stopped()
         # We should be stopped at the entry point.
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" in body:
-                    reason = body["reason"]
-                    self.assertNotEqual(
-                        reason, "breakpoint", "verify stop isn't a breakpoint"
-                    )
+        self.assertGreaterEqual(len(stopped_events), 0, "expect stopped events")
+        self.verify_stopped_on_entry(stopped_events)
 
         # Then, if we continue, we should hit the breakpoint at main.
         self.dap_server.request_continue()
@@ -95,14 +103,11 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         # Restart and check that we still get a stopped event before reaching
         # main.
         self.dap_server.request_restart()
-        stopped_events = self.dap_server.wait_for_stopped()
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" in body:
-                    reason = body["reason"]
-                    self.assertNotEqual(
-                        reason,
-                        "breakpoint",
-                        'verify stop after restart isn\'t "main" breakpoint',
-                    )
+        stopped_events = self.dap_server.wait_for_stopped(timeout=20)
+        self.verify_stopped_on_entry(stopped_events)
+
+        # continue to main
+        self.dap_server.request_continue()
+        self.verify_breakpoint_hit([bp_main])
+
+        self.continue_to_exit()

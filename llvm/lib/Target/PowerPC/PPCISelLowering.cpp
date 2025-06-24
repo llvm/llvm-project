@@ -2242,10 +2242,15 @@ bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
       return false;
 
   for (unsigned i = EltSize, e = 16; i != e; i += EltSize) {
-    if (N->getMaskElt(i) < 0) continue;
-    for (unsigned j = 0; j != EltSize; ++j)
-      if (N->getMaskElt(i+j) != N->getMaskElt(j))
-        return false;
+    // An UNDEF element is a sequence of UNDEF bytes.
+    if (N->getMaskElt(i) < 0) {
+      for (unsigned j = 1; j != EltSize; ++j)
+        if (N->getMaskElt(i + j) >= 0)
+          return false;
+    } else
+      for (unsigned j = 0; j != EltSize; ++j)
+        if (N->getMaskElt(i + j) != N->getMaskElt(j))
+          return false;
   }
   return true;
 }
@@ -17984,8 +17989,7 @@ Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
 
   Register Reg = MatchRegisterName(RegName);
   if (!Reg)
-    report_fatal_error(
-        Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
+    return Reg;
 
   // FIXME: Unable to generate code for `-O2` but okay for `-O0`.
   // Need followup investigation as to why.
