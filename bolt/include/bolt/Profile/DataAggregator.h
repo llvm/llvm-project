@@ -514,6 +514,9 @@ private:
   void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) const;
   void printBranchStacksDiagnostics(uint64_t IgnoredSamples) const;
 
+  /// Get instruction at \p Addr either from containing binary function or
+  /// disassemble in-place, and invoke \p Callback on resulting MCInst.
+  /// Returns the result of the callback or nullopt.
   template <typename T>
   std::optional<T>
   testInstructionAt(const uint64_t Addr,
@@ -532,6 +535,8 @@ private:
     return std::nullopt;
   }
 
+  /// Apply \p Callback to the instruction at \p Addr, and memoize the result
+  /// in a \p Map.
   template <typename T>
   std::optional<T> testAndSet(const uint64_t Addr,
                               std::function<T(const MCInst &)> Callback,

@@ -2460,11 +2460,25 @@ void SelectionDAGISel::Select_READ_REGISTER(SDNode *Op) {
 
   EVT VT = Op->getValueType(0);
   LLT Ty = VT.isSimple() ? getLLTForMVT(VT.getSimpleVT()) : LLT();
-  Register Reg =
-      TLI->getRegisterByName(RegStr->getString().data(), Ty,
-                             CurDAG->getMachineFunction());
-  SDValue New = CurDAG->getCopyFromReg(
-                        Op->getOperand(0), dl, Reg, Op->getValueType(0));
+
+  const MachineFunction &MF = CurDAG->getMachineFunction();
+  Register Reg = TLI->getRegisterByName(RegStr->getString().data(), Ty, MF);
+
+  SDValue New;
+  if (!Reg) {
+    const Function &Fn = MF.getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+        "invalid register \"" + Twine(RegStr->getString().data()) +
+            "\" for llvm.read_register",
+        Fn, Op->getDebugLoc()));
+    New =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, dl, VT), 0);
+    ReplaceUses(SDValue(Op, 1), Op->getOperand(0));
+  } else {
+    New =
+        CurDAG->getCopyFromReg(Op->getOperand(0), dl, Reg, Op->getValueType(0));
+  }
+
   New->setNodeId(-1);
   ReplaceUses(Op, New.getNode());
   CurDAG->RemoveDeadNode(Op);
@@ -2478,12 +2492,23 @@ void SelectionDAGISel::Select_WRITE_REGISTER(SDNode *Op) {
   EVT VT = Op->getOperand(2).getValueType();
   LLT Ty = VT.isSimple() ? getLLTForMVT(VT.getSimpleVT()) : LLT();
 
-  Register Reg = TLI->getRegisterByName(RegStr->getString().data(), Ty,
-                                        CurDAG->getMachineFunction());
-  SDValue New = CurDAG->getCopyToReg(
-                        Op->getOperand(0), dl, Reg, Op->getOperand(2));
-  New->setNodeId(-1);
-  ReplaceUses(Op, New.getNode());
+  const MachineFunction &MF = CurDAG->getMachineFunction();
+  Register Reg = TLI->getRegisterByName(RegStr->getString().data(), Ty, MF);
+
+  if (!Reg) {
+    const Function &Fn = MF.getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+        "invalid register \"" + Twine(RegStr->getString().data()) +
+            "\" for llvm.write_register",
+        Fn, Op->getDebugLoc()));
+    ReplaceUses(SDValue(Op, 0), Op->getOperand(0));
+  } else {
+    SDValue New =
+        CurDAG->getCopyToReg(Op->getOperand(0), dl, Reg, Op->getOperand(2));
+    New->setNodeId(-1);
+    ReplaceUses(Op, New.getNode());
+  }
+
   CurDAG->RemoveDeadNode(Op);
 }
 

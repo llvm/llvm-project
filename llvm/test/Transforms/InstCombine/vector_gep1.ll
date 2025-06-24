@@ -55,7 +55,7 @@ define <2 x i1> @test5(<2 x ptr> %a) {
 
 define <2 x ptr> @test7(<2 x ptr> %a) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> <i64 5, i64 9>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> <i64 5, i64 9>, i32 0
 ; CHECK-NEXT:    ret <2 x ptr> [[W]]
 ;
   %w = getelementptr {i32, i32}, <2 x ptr> %a, <2 x i32> <i32 5, i32 9>, <2 x i32> zeroinitializer

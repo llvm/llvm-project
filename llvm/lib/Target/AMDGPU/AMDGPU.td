@@ -1118,6 +1118,12 @@ def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
   "Has s_wait_xcnt instruction"
 >;
 
+def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
+  "HasSetPrioIncWgInst",
+  "true",
+  "Has s_setprio_inc_wg instruction."
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1275,12 +1281,14 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
 
+// FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "DynamicVGPR",
   "true",
   "Enable dynamic VGPR mode"
 >;
 
+// FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
   "DynamicVGPRBlockSize32",
   "true",
@@ -1940,6 +1948,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureKernargPreload,
    FeatureLshlAddU64Inst,
+   FeatureSetPrioIncWgInst,
 ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2244,9 +2253,29 @@ def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
+def isGFX12Not12_50 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+
+def isGFX12PlusNot12_50 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+
+def isGFX125xOnly :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def isGFX1250Plus :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def isNotGFX1250Plus :
+  Predicate<"!Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def HasMinimum3Maximum3F32 :
   Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
@@ -2324,6 +2353,9 @@ def D16PreservesUnusedBits :
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
+
+def HasMTBUFInsts : Predicate<"Subtarget->hasMTBUFInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
@@ -2641,6 +2673,9 @@ def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
 
 def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
                         AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
+
+def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
+ AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
