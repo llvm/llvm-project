@@ -26,66 +26,66 @@
 # CHECK-NEXT:       3c: 8800         	sb	s0, 0x0(s0) <zcb>
 # CHECK-NEXT:       3e: 4522         	lw	a0, 0x8(sp)
 
-# The core of the feature being added was address resolution for instruction 
-# sequences where a register is populated by immediate values via two
-# separate instructions. First by an instruction that provides the upper bits
-# (auipc, lui, etc) followed by another instruction for the lower bits (addi,
-# jalr, ld, etc.).
+## The core of the feature being added was address resolution for instruction 
+## sequences where a register is populated by immediate values via two
+## separate instructions. First by an instruction that provides the upper bits
+## (auipc, lui, etc) followed by another instruction for the lower bits (addi,
+## jalr, ld, etc.).
 
 .global _start
 .text
 
 _start:
-  # Test block 1-3 each focus on a certain starting instruction in a sequence. 
-  # Starting instructions are the ones that provide the upper bits. The other
-  # instruction in the sequence is the one that provides the lower bits. The
-  # second instruction is arbitrarily chosen to increase code coverage.
+  ## Test block 1-3 each focus on a certain starting instruction in a sequence. 
+  ## Starting instructions are the ones that provide the upper bits. The other
+  ## instruction in the sequence is the one that provides the lower bits. The
+  ## second instruction is arbitrarily chosen to increase code coverage.
 
-  # Test block #1.
+  ## Test block #1.
   lla a0, target
   auipc a0, 0x10
   c.addi a0, -0x4
 
-  # Test block #2.
+  ## Test block #2.
   c.lui a0, 0x10
   addiw a1, a0, 0x4
   c.lui a0, 0x10
   c.addiw a0, 0x4
 
-  # Test block #3.
+  ## Test block #3.
   lui a0, 0x110
   sw a1, 0x8(a0)
   lui a0, 0x110
   c.lw a0, 0x8(a0)
 
-  # Test block 4 tests instruction interleaving. Essentially the code's
-  # ability to keep track of a valid sequence even if multiple other unrelated
-  # instructions separate the two.
+  ## Test block 4 tests instruction interleaving. Essentially the code's
+  ## ability to keep track of a valid sequence even if multiple other unrelated
+  ## instructions separate the two.
   lui a0, 0x10
-  lui a1, 0x1        # Unrelated instruction.
-  slli t1, t1, 0x1   # Unrelated instruction.
+  lui a1, 0x1        ## Unrelated instruction.
+  slli t1, t1, 0x1   ## Unrelated instruction.
   addi a0, a0, 0x4
-  addi a0, a0, 0x1   # Verify register tracking terminates.
+  addi a0, a0, 0x1   ## Verify register tracking terminates.
 
-  # Test 5 checks instructions providing upper bits do not change the tracked
-  # value of zero register. Also ensures load/store instructions accessing data
-  # relative to the zero register trigger address resolution. The latter kind
-  # of instructions are essentially memory accesses relative to the zero
-  # register.
+  ## Test 5 checks instructions providing upper bits do not change the tracked
+  ## value of zero register. Also ensures load/store instructions accessing data
+  ## relative to the zero register trigger address resolution. The latter kind
+  ## of instructions are essentially memory accesses relative to the zero
+  ## register.
   fsw f0, 0x8(x0)
 
-  # Test 6 ensures that the newly added functionality is compatible with
-  # code that already worked for branch instructions.
+  ## Test 6 ensures that the newly added functionality is compatible with
+  ## code that already worked for branch instructions.
   call func
 
-  # Test #7 -- zcb extension.
+  ## Test #7 -- zcb extension.
   lui x8, 0x11
   c.sb x8, 0(x8)
 
-  # Test #8 -- stack based load/stores.
+  ## Test #8 -- stack based load/stores.
   c.lwsp a0, 0x8(sp)
 
-# These are the labels that the instructions above are expected to resolve to.
+## These are the labels that the instructions above are expected to resolve to.
 .skip 0xffc4
 target:
   .word 1
