@@ -792,3 +792,63 @@ void issue_138842_reduced() {
       y++;
     }
 }
+
+namespace std {
+template <typename T, typename U>
+struct pair {
+  T first;
+  U second;
+
+  pair(T a, U b) : first(a), second(b) {}
+};
+}
+
+template <typename T, typename U>
+void structured_binding_in_template_byval(T a, U b) {
+  auto [c, d] = std::pair<T, U>(a,b);
+
+  while (c < 10) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (c) are updated in the loop body [bugprone-infinite-loop]
+    d++;
+  }
+
+  while (c < 10) {
+    c++; // no warning
+  }
+}
+
+template <typename T, typename U>
+void structured_binding_in_template_bylref(T a, U b) {
+  auto p = std::pair<T, U>(a,b);
+  auto& [c, d] = p;
+
+  while (c < 10) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (c) are updated in the loop body [bugprone-infinite-loop]
+    d++;
+  }
+
+  while (c < 10) {
+    c++; // no warning
+  }
+}
+
+template <typename T, typename U>
+void structured_binding_in_template_byrref(T a, U b) {
+  auto p = std::pair<T, U>(a,b);
+  auto&& [c, d] = p;
+
+  while (c < 10) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (c) are updated in the loop body [bugprone-infinite-loop]
+    d++;
+  }
+
+  while (c < 10) {
+    c++; // no warning
+  }
+}
+
+void structured_binding_in_template_instantiation(int b) {
+  structured_binding_in_template_byval(b, 0);
+  structured_binding_in_template_bylref(b, 0);
+  structured_binding_in_template_byrref(b, 0);
+}
