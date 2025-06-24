@@ -10540,8 +10540,6 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                                bool Approximate) {
   E = E->IgnoreParens();
 
-  assert(MaxWidth == C.getIntWidth(GetExprType(E)));
-
   // Try a full evaluation first.
   Expr::EvalResult result;
   if (E->EvaluateAsRValue(result, C, InConstantContext))
