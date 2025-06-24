@@ -809,8 +809,18 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
+  PB.registerPipelineStartEPCallback(
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
+        PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
+      });
+
+  PB.registerFullLinkTimeOptimizationEarlyEPCallback(
+      [this](ModulePassManager &PM, OptimizationLevel) {
+        PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
+      });
+
   PB.registerScalarOptimizerLateEPCallback(
-      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+      [this](FunctionPassManager &FPM, OptimizationLevel Level) {
         if (Level == OptimizationLevel::O0)
           return;
 
