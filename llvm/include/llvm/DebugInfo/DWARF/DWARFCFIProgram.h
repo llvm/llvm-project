@@ -112,7 +112,8 @@ public:
   /// above. This is indexed by opcode.
   static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
 
-private:
+//! FIX me, making these methods public to be usable inside the UnwindInfoAnalysis
+// private:
   std::vector<Instruction> Instructions;
   const uint64_t CodeAlignmentFactor;
   const int64_t DataAlignmentFactor;
