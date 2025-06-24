@@ -909,8 +909,9 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (!PostJITImageOrErr) {
     auto Err = PostJITImageOrErr.takeError();
     REPORT("Failure to jit IR image %p on device %d: %s\n", InputTgtImage,
-           DeviceId, toString(std::move(Err)).data());
-    return nullptr;
+           DeviceId, toStringWithoutConsuming(Err).data());
+    return Plugin::error(ErrorCode::COMPILE_FAILURE, std::move(Err),
+                         "failure to jit IR image");
   }
 
   // Load the binary and allocate the image object. Use the next available id
