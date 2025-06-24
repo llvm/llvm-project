@@ -1,7 +1,7 @@
 // This checks that clang-scan-deps properly outputs named module dependencies 
 // when using the the scanning output format 'experimental-full'.
 //
-// See commit 72304.
+// See PR #72304.
 // UNSUPPORTED: target={{.*}}-aix{{.*}}
 //
 // The slash direction in linux and windows are different.
