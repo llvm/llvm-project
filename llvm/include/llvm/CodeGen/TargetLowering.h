@@ -3002,6 +3002,7 @@ public:
     case ISD::AVGCEILU:
     case ISD::ABDS:
     case ISD::ABDU:
+    case ISD::CLMUL:
       return true;
     default: return false;
     }
@@ -5410,6 +5411,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandFunnelShift(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand carryless multiply.
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand rotations.
   /// \param N Node to expand

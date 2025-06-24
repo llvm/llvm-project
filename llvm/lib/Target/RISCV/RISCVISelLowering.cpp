@@ -402,6 +402,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Legal);
   }
 
+  if (Subtarget.hasStdExtZbc() || Subtarget.hasStdExtZbkc()) {
+    setOperationAction(ISD::CLMUL, XLenVT, Legal);
+  }
+
   if (Subtarget.hasStdExtZbb() ||
       (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
     if (Subtarget.is64Bit())
