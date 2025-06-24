@@ -195,8 +195,7 @@ struct DescriptorTableView : RootParameterView {
   }
 
   // Define a type alias to access the template parameter from inside classof
-  template <typename T>
-  llvm::Expected<DescriptorTable<T>> read(uint32_t Version) {
+  template <typename T> llvm::Expected<DescriptorTable<T>> read() {
     const char *Current = ParamData.begin();
     DescriptorTable<T> Table;
 
@@ -208,9 +207,7 @@ struct DescriptorTableView : RootParameterView {
         support::endian::read<uint32_t, llvm::endianness::little>(Current);
     Current += sizeof(uint32_t);
 
-    size_t RangeSize = sizeof(dxbc::RTS0::v1::DescriptorRange);
-    if (Version > 1)
-      RangeSize = sizeof(dxbc::RTS0::v2::DescriptorRange);
+    size_t RangeSize = sizeof(T);
 
     Table.Ranges.Stride = RangeSize;
     Table.Ranges.Data =

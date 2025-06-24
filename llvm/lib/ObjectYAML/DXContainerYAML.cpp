@@ -33,10 +33,11 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-static void AddDescriptorRanges(
-    DXContainerYAML::RootParameterHeaderYaml &Header,
-    DXContainerYAML::RootSignatureYamlDesc &RootSigDesc,
-    object::DirectX::DescriptorTable<dxbc::RTS0::v1::DescriptorRange> &Table) {
+template <typename T>
+static void
+addDescriptorRanges(DXContainerYAML::RootParameterHeaderYaml &Header,
+                    DXContainerYAML::RootSignatureYamlDesc &RootSigDesc,
+                    const object::DirectX::DescriptorTable<T> &Table) {
 
   DXContainerYAML::RootParameterLocationYaml Location(Header);
   DXContainerYAML::DescriptorTableYaml &TableYaml =
@@ -46,45 +47,21 @@ static void AddDescriptorRanges(
   TableYaml.NumRanges = Table.NumRanges;
   TableYaml.RangesOffset = Table.RangesOffset;
 
-  for (const auto &R : Table) {
+  for (const auto &R : Table.Ranges) {
     DXContainerYAML::DescriptorRangeYaml NewR;
-
     NewR.OffsetInDescriptorsFromTableStart =
         R.OffsetInDescriptorsFromTableStart;
     NewR.NumDescriptors = R.NumDescriptors;
     NewR.BaseShaderRegister = R.BaseShaderRegister;
     NewR.RegisterSpace = R.RegisterSpace;
     NewR.RangeType = R.RangeType;
-    TableYaml.Ranges.push_back(NewR);
-  }
-}
-
-static void AddDescriptorRanges(
-    DXContainerYAML::RootParameterHeaderYaml &Header,
-    DXContainerYAML::RootSignatureYamlDesc &RootSigDesc,
-    object::DirectX::DescriptorTable<dxbc::RTS0::v2::DescriptorRange> &Table) {
-
-  DXContainerYAML::RootParameterLocationYaml Location(Header);
-  DXContainerYAML::DescriptorTableYaml &TableYaml =
-      RootSigDesc.Parameters.getOrInsertTable(Location);
-  RootSigDesc.Parameters.insertLocation(Location);
-
-  TableYaml.NumRanges = Table.NumRanges;
-  TableYaml.RangesOffset = Table.RangesOffset;
-
-  for (const auto &R : Table) {
-    DXContainerYAML::DescriptorRangeYaml NewR;
-
-    NewR.OffsetInDescriptorsFromTableStart =
-        R.OffsetInDescriptorsFromTableStart;
-    NewR.NumDescriptors = R.NumDescriptors;
-    NewR.BaseShaderRegister = R.BaseShaderRegister;
-    NewR.RegisterSpace = R.RegisterSpace;
-    NewR.RangeType = R.RangeType;
+    if constexpr (std::is_same_v<T, dxbc::RTS0::v2::DescriptorRange>) {
+      // Set all flag fields for v2
 #define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
   NewR.Val =                                                                   \
-      (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlag::Val)) > 0;
+      (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlag::Val)) != 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+    }
     TableYaml.Ranges.push_back(NewR);
   }
 }
@@ -167,19 +144,19 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       if (Version == 1) {
         llvm::Expected<
             object::DirectX::DescriptorTable<dxbc::RTS0::v1::DescriptorRange>>
-            TableOrErr = DTV->read<dxbc::RTS0::v1::DescriptorRange>(Version);
+            TableOrErr = DTV->read<dxbc::RTS0::v1::DescriptorRange>();
         if (Error E = TableOrErr.takeError())
           return std::move(E);
         auto Table = *TableOrErr;
-        AddDescriptorRanges(Header, RootSigDesc, Table);
+        addDescriptorRanges(Header, RootSigDesc, Table);
       } else {
         llvm::Expected<
             object::DirectX::DescriptorTable<dxbc::RTS0::v2::DescriptorRange>>
-            TableOrErr = DTV->read<dxbc::RTS0::v2::DescriptorRange>(Version);
+            TableOrErr = DTV->read<dxbc::RTS0::v2::DescriptorRange>();
         if (Error E = TableOrErr.takeError())
           return std::move(E);
         auto Table = *TableOrErr;
-        AddDescriptorRanges(Header, RootSigDesc, Table);
+        addDescriptorRanges(Header, RootSigDesc, Table);
       }
     }
   }
