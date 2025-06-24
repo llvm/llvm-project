@@ -787,6 +787,13 @@ public:
 
   static std::vector<RegisteredPluginInfo> GetUnwindAssemblyPluginInfo();
   static bool SetUnwindAssemblyPluginEnabled(llvm::StringRef name, bool enable);
+  static lldb::OptionValuePropertiesSP
+  GetSettingForSwiftLanguagePlugin(Debugger &debugger,
+                                   llvm::StringRef setting_name);
+
+  static bool CreateSettingForSwiftLanguagePlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
 };
 
 } // namespace lldb_private

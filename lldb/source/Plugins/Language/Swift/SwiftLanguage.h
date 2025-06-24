@@ -133,6 +133,13 @@ public:
 
   llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
+  bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                 const ExecutionContext *exe_ctx,
+                                 FormatEntity::Entry::Type type,
+                                 Stream &s) override;
+
+  FormatEntity::Entry GetFunctionNameFormat() const override;
+
   /// Override that skips breakpoints inside await resume ("Q") async funclets.
   void FilterForLineBreakpoints(
       llvm::SmallVectorImpl<SymbolContext> &) const override;
@@ -141,6 +148,9 @@ public:
   // PluginInterface protocol
   //------------------------------------------------------------------
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+private:
+  static void DebuggerInitialize(Debugger &);
 };
 
 } // namespace lldb_private
