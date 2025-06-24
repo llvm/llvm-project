@@ -777,19 +777,10 @@ define signext range(i32 0, 43) i32 @bar1_023_OR_AND(i32 noundef signext %x) {
 ; CHECK-NEXT:    ahi %r2, 42
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lhi %r0, 0
-; CHECK-NEXT:    jno .LBB34_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    jnhe .LBB34_4
-; CHECK-NEXT:  .LBB34_2: # %entry
-; CHECK-NEXT:    llgfr %r2, %r0
-; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB34_3: # %entry
-; CHECK-NEXT:    lhi %r0, 42
-; CHECK-NEXT:    jhe .LBB34_2
-; CHECK-NEXT:  .LBB34_4: # %entry
-; CHECK-NEXT:    lhi %r0, 0
-; CHECK-NEXT:    llgfr %r2, %r0
+; CHECK-NEXT:    lghi %r2, 42
+; CHECK-NEXT:    bher %r14
+; CHECK-NEXT:  .LBB34_1: # %entry
+; CHECK-NEXT:    lghi %r2, 0
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 %x) #2
@@ -798,10 +789,8 @@ entry:
   tail call void @llvm.assume(i1 %1)
   %2 = and i32 %asmresult1, 1
   %or.cond = icmp eq i32 %2, 0
-  %cmp3.not = icmp eq i32 %asmresult1, 3
-  %3 = select i1 %cmp3.not, i32 0, i32 42
-  %cond = select i1 %or.cond, i32 %3, i32 0
-  ret i32 %cond
+  %spec.select = select i1 %or.cond, i32 42, i32 0
+  ret i32 %spec.select
 }
 
 ; Test (((cc == 1) || (cc == 2)) && (cc != 3))
