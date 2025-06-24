@@ -883,6 +883,9 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForCXXMethod(
   if (Method->isVolatile())
     Fragments.append("volatile", DeclarationFragments::FragmentKind::Keyword)
         .appendSpace();
+  if (Method->isVirtual())
+    Fragments.append("virtual", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
 
   // Build return type
   DeclarationFragments After;

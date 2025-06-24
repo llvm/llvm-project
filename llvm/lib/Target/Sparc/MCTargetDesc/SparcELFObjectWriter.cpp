@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcFixupKinds.h"
-#include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -72,7 +72,7 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
   if (mc::isRelocation(Fixup.getKind()))
     return Kind;
 
-  if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Fixup.getValue())) {
+  if (const auto *SExpr = dyn_cast<MCSpecifierExpr>(Fixup.getValue())) {
     if (SExpr->getSpecifier() == ELF::R_SPARC_DISP32)
       return ELF::R_SPARC_DISP32;
   }

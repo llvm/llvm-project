@@ -31,6 +31,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -1738,6 +1739,7 @@ INITIALIZE_PASS(SystemZAsmPrinter, "systemz-asm-printer",
                 "SystemZ Assembly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZAsmPrinter() {
   RegisterAsmPrinter<SystemZAsmPrinter> X(getTheSystemZTarget());
 }

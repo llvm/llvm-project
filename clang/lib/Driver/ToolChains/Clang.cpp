@@ -937,7 +937,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // openmp_wrappers folder which contains alternative system headers.
   if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
       !Args.hasArg(options::OPT_nostdinc) &&
-      !Args.hasArg(options::OPT_nogpuinc) &&
+      Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                   true) &&
       getToolChain().getTriple().isGPU()) {
     if (!Args.hasArg(options::OPT_nobuiltininc)) {
       // Add openmp_wrappers/* to our system include path.  This lets us wrap
@@ -1120,7 +1121,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // TODO: This should be moved to `AddClangSystemIncludeArgs` by passing the
   //       OffloadKind as an argument.
   if (!Args.hasArg(options::OPT_nostdinc) &&
-      !Args.hasArg(options::OPT_nogpuinc) &&
+      Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                   true) &&
       !Args.hasArg(options::OPT_nobuiltininc)) {
     // Without an offloading language we will include these headers directly.
     // Offloading languages will instead only use the declarations stored in
@@ -5202,7 +5204,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-module-interface");
     else if (JA.getType() == types::TY_HeaderUnit)
       CmdArgs.push_back("-emit-header-unit");
-    else
+    else if (!Args.hasArg(options::OPT_ignore_pch))
       CmdArgs.push_back("-emit-pch");
   } else if (isa<VerifyPCHJobAction>(JA)) {
     CmdArgs.push_back("-verify-pch");
@@ -5259,7 +5261,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_PP_Asm) {
       CmdArgs.push_back("-S");
     } else if (JA.getType() == types::TY_AST) {
-      CmdArgs.push_back("-emit-pch");
+      if (!Args.hasArg(options::OPT_ignore_pch))
+        CmdArgs.push_back("-emit-pch");
     } else if (JA.getType() == types::TY_ModuleFile) {
       CmdArgs.push_back("-module-file-info");
     } else if (JA.getType() == types::TY_RewrittenObjC) {
@@ -5701,9 +5704,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "libmvec" || Name == "AMDLIBM") {
+    } else if (Name == "AMDLIBM") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "libmvec") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64 &&
+          Triple.getArch() != llvm::Triple::aarch64 &&
+          Triple.getArch() != llvm::Triple::aarch64_be)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     } else if (Name == "SLEEF" || Name == "ArmPL") {
@@ -7547,7 +7557,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fretain_comments_from_system_headers))
     CmdArgs.push_back("-fretain-comments-from-system-headers");
 
-  Args.AddLastArg(CmdArgs, options::OPT_fextend_variable_liveness_EQ);
+  if (Arg *A = Args.getLastArg(options::OPT_fextend_variable_liveness_EQ)) {
+    A->render(Args, CmdArgs);
+  } else if (Arg *A = Args.getLastArg(options::OPT_O_Group);
+             A && A->containsValue("g")) {
+    // Set -fextend-variable-liveness=all by default at -Og.
+    CmdArgs.push_back("-fextend-variable-liveness=all");
+  }
 
   // Forward -fcomment-block-commands to -cc1.
   Args.AddAllArgs(CmdArgs, options::OPT_fcomment_block_commands);
@@ -8939,7 +8955,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, std::nullopt, Output));
+      CmdArgs, ArrayRef<InputInfo>(), Output));
 }
 
 void OffloadBundler::ConstructJobMultipleOutputs(
@@ -9026,7 +9042,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, std::nullopt, Outputs));
+      CmdArgs, ArrayRef<InputInfo>(), Outputs));
 }
 
 void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
@@ -9178,6 +9194,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           CmdArgs.push_back(
               Args.MakeArgString("--device-linker=" + TC->getTripleString() +
                                  "=-plugin-opt=-avail-extern-to-local"));
+          CmdArgs.push_back(Args.MakeArgString(
+              "--device-linker=" + TC->getTripleString() +
+              "=-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3"));
           if (Kind == Action::OFK_OpenMP) {
             CmdArgs.push_back(
                 Args.MakeArgString("--device-linker=" + TC->getTripleString() +

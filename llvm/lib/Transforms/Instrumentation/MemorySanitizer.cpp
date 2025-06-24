@@ -265,9 +265,22 @@ static cl::opt<bool>
                       cl::desc("Print name of local stack variable"),
                       cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClPoisonUndef("msan-poison-undef",
-                                   cl::desc("poison undef temps"), cl::Hidden,
-                                   cl::init(true));
+static cl::opt<bool>
+    ClPoisonUndef("msan-poison-undef",
+                  cl::desc("Poison fully undef temporary values. "
+                           "Partially undefined constant vectors "
+                           "are unaffected by this flag (see "
+                           "-msan-poison-undef-vectors)."),
+                  cl::Hidden, cl::init(true));
+
+static cl::opt<bool> ClPoisonUndefVectors(
+    "msan-poison-undef-vectors",
+    cl::desc("Precisely poison partially undefined constant vectors. "
+             "If false (legacy behavior), the entire vector is "
+             "considered fully initialized, which may lead to false "
+             "negatives. Fully undefined constant vectors are "
+             "unaffected by this flag (see -msan-poison-undef)."),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClHandleICmp("msan-handle-icmp",
@@ -1181,6 +1194,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   bool PropagateShadow;
   bool PoisonStack;
   bool PoisonUndef;
+  bool PoisonUndefVectors;
 
   struct ShadowOriginAndInsertPoint {
     Value *Shadow;
@@ -1207,6 +1221,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     PropagateShadow = SanitizeFunction;
     PoisonStack = SanitizeFunction && ClPoisonStack;
     PoisonUndef = SanitizeFunction && ClPoisonUndef;
+    PoisonUndefVectors = SanitizeFunction && ClPoisonUndefVectors;
 
     // In the presence of unreachable blocks, we may see Phi nodes with
     // incoming nodes from such blocks. Since InstVisitor skips unreachable
@@ -1989,6 +2004,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
       return Shadow;
     }
+    // Handle fully undefined values
+    // (partially undefined constant vectors are handled later)
     if (UndefValue *U = dyn_cast<UndefValue>(V)) {
       Value *AllOnes = (PropagateShadow && PoisonUndef) ? getPoisonedShadow(V)
                                                         : getCleanShadow(V);
@@ -2086,8 +2103,27 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return ShadowPtr;
     }
 
-    // TODO: Partially undefined vectors are handled by the fall-through case
-    //       below (see partial-poison.ll); this causes false negatives.
+    // Check for partially-undefined constant vectors
+    // TODO: scalable vectors (this is hard because we do not have IRBuilder)
+    if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V) &&
+        cast<Constant>(V)->containsUndefOrPoisonElement() && PropagateShadow &&
+        PoisonUndefVectors) {
+      unsigned NumElems = cast<FixedVectorType>(V->getType())->getNumElements();
+      SmallVector<Constant *, 32> ShadowVector(NumElems);
+      for (unsigned i = 0; i != NumElems; ++i) {
+        Constant *Elem = cast<Constant>(V)->getAggregateElement(i);
+        ShadowVector[i] = isa<UndefValue>(Elem) ? getPoisonedShadow(Elem)
+                                                : getCleanShadow(Elem);
+      }
+
+      Value *ShadowConstant = ConstantVector::get(ShadowVector);
+      LLVM_DEBUG(dbgs() << "Partial undef constant vector: " << *V << " ==> "
+                        << *ShadowConstant << "\n");
+
+      return ShadowConstant;
+    }
+
+    // TODO: partially-undefined constant arrays, structures, and nested types
 
     // For everything else the shadow is zero.
     return getCleanShadow(V);
@@ -4173,15 +4209,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument AVX permutation intrinsic.
   // We apply the same permutation (argument index 1) to the shadow.
-  void handleAVXPermutation(IntrinsicInst &I) {
-    assert(I.arg_size() == 2);
-    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
-    [[maybe_unused]] auto ArgVectorSize =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(I.getType() == I.getArgOperand(0)->getType());
+  void handleAVXVpermilvar(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Shadow = getShadow(&I, 0);
     insertShadowCheck(I.getArgOperand(1), &I);
@@ -4191,38 +4219,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
     CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
                                        {Shadow, I.getArgOperand(1)});
-
-    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
-    setOriginForNaryOp(I);
-  }
-  // Instrument AVX permutation intrinsic.
-  // We apply the same permutation (argument index 1) to the shadows.
-  void handleAVXVpermil2var(IntrinsicInst &I) {
-    assert(I.arg_size() == 3);
-    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
-    [[maybe_unused]] auto ArgVectorSize =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(cast<FixedVectorType>(I.getArgOperand(2)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
-    assert(I.getType() == I.getArgOperand(0)->getType());
-    assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
-    IRBuilder<> IRB(&I);
-    Value *AShadow = getShadow(&I, 0);
-    Value *Idx = I.getArgOperand(1);
-    Value *BShadow = getShadow(&I, 2);
-    insertShadowCheck(Idx, &I);
-
-    // Shadows are integer-ish types but some intrinsics require a
-    // different (e.g., floating-point) type.
-    AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
-    BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
-    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                       {AShadow, Idx, BShadow});
 
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
     setOriginForNaryOp(I);
@@ -5172,52 +5168,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(Success);
       break;
     }
-    case Intrinsic::x86_avx2_permd:
-    case Intrinsic::x86_avx2_permps:
-    case Intrinsic::x86_ssse3_pshuf_b_128:
-    case Intrinsic::x86_avx2_pshuf_b:
-    case Intrinsic::x86_avx512_pshuf_b_512:
-    case Intrinsic::x86_avx512_permvar_df_256:
-    case Intrinsic::x86_avx512_permvar_df_512:
-    case Intrinsic::x86_avx512_permvar_di_256:
-    case Intrinsic::x86_avx512_permvar_di_512:
-    case Intrinsic::x86_avx512_permvar_hi_128:
-    case Intrinsic::x86_avx512_permvar_hi_256:
-    case Intrinsic::x86_avx512_permvar_hi_512:
-    case Intrinsic::x86_avx512_permvar_qi_128:
-    case Intrinsic::x86_avx512_permvar_qi_256:
-    case Intrinsic::x86_avx512_permvar_qi_512:
-    case Intrinsic::x86_avx512_permvar_sf_512:
-    case Intrinsic::x86_avx512_permvar_si_512:
+
     case Intrinsic::x86_avx_vpermilvar_pd:
     case Intrinsic::x86_avx_vpermilvar_pd_256:
     case Intrinsic::x86_avx512_vpermilvar_pd_512:
     case Intrinsic::x86_avx_vpermilvar_ps:
     case Intrinsic::x86_avx_vpermilvar_ps_256:
     case Intrinsic::x86_avx512_vpermilvar_ps_512: {
-      handleAVXPermutation(I);
+      handleAVXVpermilvar(I);
       break;
     }
-    case Intrinsic::x86_avx512_vpermi2var_d_128:
-    case Intrinsic::x86_avx512_vpermi2var_d_256:
-    case Intrinsic::x86_avx512_vpermi2var_d_512:
-    case Intrinsic::x86_avx512_vpermi2var_hi_128:
-    case Intrinsic::x86_avx512_vpermi2var_hi_256:
-    case Intrinsic::x86_avx512_vpermi2var_hi_512:
-    case Intrinsic::x86_avx512_vpermi2var_pd_128:
-    case Intrinsic::x86_avx512_vpermi2var_pd_256:
-    case Intrinsic::x86_avx512_vpermi2var_pd_512:
-    case Intrinsic::x86_avx512_vpermi2var_ps_128:
-    case Intrinsic::x86_avx512_vpermi2var_ps_256:
-    case Intrinsic::x86_avx512_vpermi2var_ps_512:
-    case Intrinsic::x86_avx512_vpermi2var_q_128:
-    case Intrinsic::x86_avx512_vpermi2var_q_256:
-    case Intrinsic::x86_avx512_vpermi2var_q_512:
-    case Intrinsic::x86_avx512_vpermi2var_qi_128:
-    case Intrinsic::x86_avx512_vpermi2var_qi_256:
-    case Intrinsic::x86_avx512_vpermi2var_qi_512:
-      handleAVXVpermil2var(I);
-      break;
 
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
     case Intrinsic::x86_avx512fp16_mask_sub_sh_round:

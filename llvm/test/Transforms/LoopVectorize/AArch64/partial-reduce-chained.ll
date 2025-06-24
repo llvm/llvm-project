@@ -56,16 +56,16 @@ define i32 @chained_partial_reduce_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE:       vector.ph:
 ; CHECK-SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -102,16 +102,16 @@ define i32 @chained_partial_reduce_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE-MAXBW:       vector.ph:
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-SVE-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -221,16 +221,16 @@ define i32 @chained_partial_reduce_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE:       vector.ph:
 ; CHECK-SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -267,16 +267,16 @@ define i32 @chained_partial_reduce_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE-MAXBW:       vector.ph:
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-SVE-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -386,16 +386,16 @@ define i32 @chained_partial_reduce_sub_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE:       vector.ph:
 ; CHECK-SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -432,16 +432,16 @@ define i32 @chained_partial_reduce_sub_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE-MAXBW:       vector.ph:
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-SVE-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -555,16 +555,16 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE:       vector.ph:
 ; CHECK-SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -601,16 +601,16 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE-MAXBW:       vector.ph:
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-SVE-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -726,16 +726,16 @@ define i32 @chained_partial_reduce_add_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE:       vector.ph:
 ; CHECK-SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -774,16 +774,16 @@ define i32 @chained_partial_reduce_add_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-MAXBW-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE-MAXBW:       vector.ph:
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-SVE-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -903,16 +903,16 @@ define i32 @chained_partial_reduce_sub_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-SVE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE:       vector.ph:
 ; CHECK-SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-SVE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -951,16 +951,16 @@ define i32 @chained_partial_reduce_sub_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-MAXBW-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE-MAXBW:       vector.ph:
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-SVE-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; CHECK-SVE-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
+; CHECK-SVE-MAXBW-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-SVE-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
