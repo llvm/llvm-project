@@ -186,11 +186,17 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
     return FeatureBits[Xtensa::FeatureMiscSR];
   case Xtensa::PRID:
     return RAType == Xtensa::REGISTER_READ && FeatureBits[Xtensa::FeaturePRID];
+  case Xtensa::THREADPTR:
+    return FeatureBits[FeatureTHREADPTR];
   case Xtensa::VECBASE:
     return FeatureBits[Xtensa::FeatureRelocatableVector];
   case Xtensa::FCR:
   case Xtensa::FSR:
     return FeatureBits[FeatureSingleFloat];
+  case Xtensa::F64R_LO:
+  case Xtensa::F64R_HI:
+  case Xtensa::F64S:
+    return FeatureBits[FeatureDFPAccel];
   case Xtensa::WINDOWBASE:
   case Xtensa::WINDOWSTART:
     return FeatureBits[Xtensa::FeatureWindowed];
@@ -207,6 +213,14 @@ MCRegister Xtensa::getUserRegister(unsigned Code, const MCRegisterInfo &MRI) {
     return Xtensa::FCR;
   } else if (MRI.getEncodingValue(Xtensa::FSR) == Code) {
     return Xtensa::FSR;
+  } else if (MRI.getEncodingValue(Xtensa::F64R_LO) == Code) {
+    return Xtensa::F64R_LO;
+  } else if (MRI.getEncodingValue(Xtensa::F64R_HI) == Code) {
+    return Xtensa::F64R_HI;
+  } else if (MRI.getEncodingValue(Xtensa::F64S) == Code) {
+    return Xtensa::F64S;
+  } else if (MRI.getEncodingValue(Xtensa::THREADPTR) == Code) {
+    return Xtensa::THREADPTR;
   }
   return Xtensa::NoRegister;
 }
