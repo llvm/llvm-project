@@ -26,12 +26,12 @@ AnalysisKey FunctionAnalysisManagerMachineFunctionProxy::Key;
 namespace llvm {
 template class LLVM_EXPORT_TEMPLATE AnalysisManager<MachineFunction>;
 template class PassManager<MachineFunction>;
-template class LLVM_EXPORT_TEMPLATE InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
-                                         Module>;
-template class LLVM_EXPORT_TEMPLATE InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
-                                         Function>;
-template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                         MachineFunction>;
+template class LLVM_EXPORT_TEMPLATE
+    InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Module>;
+template class LLVM_EXPORT_TEMPLATE
+    InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Function>;
+template class LLVM_EXPORT_TEMPLATE
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, MachineFunction>;
 } // namespace llvm
 
 bool FunctionAnalysisManagerMachineFunctionProxy::Result::invalidate(
