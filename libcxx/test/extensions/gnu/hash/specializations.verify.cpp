@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <ext/hash_map>
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
 
-int main(int, char**)
-{
-    __gnu_cxx::hash_map<int, int> m;
-    m[1] = 1;
-    const __gnu_cxx::hash_map<int, int> &cm = m;
-    cm.find(1)->second = 2;  // error
+#include <assert.h>
+#include <ext/hash_map>
+#include <string>
+
+int main(int, char**) {
+  assert(__gnu_cxx::hash<std::string>()(std::string()) == 0); // expected-error {{does not provide a call operator}}
 
   return 0;
 }
