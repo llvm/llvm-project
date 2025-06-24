@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 ErrorOr<size_t> wcsrtombs(char *__restrict dst, const wchar_t **__restrict src,
-                          size_t len, mbstate_t *__restrict ps);
+                          size_t len, mbstate *__restrict ps);
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

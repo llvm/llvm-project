@@ -25,7 +25,7 @@ ErrorOr<size_t> wcsrtombs(char *__restrict dst, const wchar_t **__restrict src,
                           size_t len, mbstate *__restrict ps) {
   static_assert(sizeof(wchar_t) == 4);
 
-  if (dst == nullptr)
+  if (src == nullptr || dst == nullptr)
     return Error(-1);
 
   size_t bytes_written = 0;
