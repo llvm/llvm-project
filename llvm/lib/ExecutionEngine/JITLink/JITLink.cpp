@@ -430,8 +430,8 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
       ErrStream << "<anonymous symbol>";
     if (E.getAddend()) {
       // Target address includes non-zero added, so break down the arithmetic.
-      ErrStream << formatv(":{0:x}", E.getTarget().getAddress()) << " + "
-                << formatv("{0:x}", E.getAddend());
+      ErrStream << formatv(":{0:x}", E.getTarget().getAddress())
+                << formatv(" + <addend>:{0:x}", E.getAddend());
     }
     ErrStream << ") is out of range of " << G.getEdgeKindName(E.getKind())
               << " fixup at address "
