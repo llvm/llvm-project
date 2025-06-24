@@ -55,7 +55,7 @@ static void AsanDie() {
   WaitForDebugger(flags()->sleep_before_dying, "before dying");
 
   if (flags()->unmap_shadow_on_exit) {
-#if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
+#if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
     UnmapOrDie((void *)kHighShadowBeg, kHighShadowEnd - kHighShadowBeg);
     UnmapOrDie((void *)kMidShadowBeg, kMidShadowEnd - kMidShadowBeg);
 
@@ -369,7 +369,7 @@ void PrintAddressSpaceLayout() {
     Printf("|| `[%p, %p]` || MidShadow  ||\n",
            (void*)kMidShadowBeg, (void*)kMidShadowEnd);
   }
-#if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
+#if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
   Printf("|| `[%p, %p]` || Mid2Shadow  ||\n", (void *)kMid2ShadowBeg,
          (void *)kMid2ShadowEnd);
   Printf("|| `[%p, %p]` || Mid3Shadow  ||\n", (void *)kMid3ShadowBeg,
