@@ -1610,7 +1610,7 @@ def GlobalOp : CIR_Op<"global",
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
-                       UnitAttr:$dsolocal,
+                       UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
@@ -1618,7 +1618,7 @@ def GlobalOp : CIR_Op<"global",
     (`` $global_visibility^)?
     $linkage
     (`comdat` $comdat^)?
-    (`dsolocal` $dsolocal^)?
+    (`dso_local` $dso_local^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
     attr-dict
