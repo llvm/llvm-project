@@ -4,9 +4,6 @@
 // See PR #72304.
 // UNSUPPORTED: target={{.*}}-aix{{.*}}
 //
-// The slash direction in linux and windows are different.
-// UNSUPPORTED: system-windows
-//
 // RUN: rm -fr %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
@@ -15,24 +12,31 @@
 // RUN: sed "s|DIR|%/t|g" %t/compile_commands.json.in > %t/compile_commands.json
 // RUN: clang-scan-deps -format=experimental-full \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/M.cppm -o %t/M.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/M.cppm -DPREFIX=%/t
 // RUN: clang-scan-deps -format=experimental-full \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/Impl.cpp -o %t/Impl.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/Impl.cpp -DPREFIX=%/t
 // RUN: clang-scan-deps -format=experimental-full \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/impl_part.cppm -o %t/impl_part.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t
 // RUN: clang-scan-deps -format=experimental-full \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/interface_part.cppm -o %t/interface_part.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/interface_part.cppm -DPREFIX=%/t
 // RUN: clang-scan-deps -format=experimental-full \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/User.cpp -o %t/User.o \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/User.cpp -DPREFIX=%/t
 //
 // Check the combined dependency format.
 // RUN: clang-scan-deps -compilation-database %t/compile_commands.json -format=experimental-full \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/Checks.cpp -DPREFIX=%/t
 // RUN: clang-scan-deps --mode=preprocess-dependency-directives -compilation-database %t/compile_commands.json -format=experimental-full \
+// RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %t/Checks.cpp -DPREFIX=%/t
 
 //--- compile_commands.json.in
