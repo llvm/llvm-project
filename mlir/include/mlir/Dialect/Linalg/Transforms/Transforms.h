@@ -355,12 +355,6 @@ struct PadTilingInterfaceOptions {
     paddingValues.assign(pv.begin(), pv.end());
     return *this;
   }
-  /// A list of iterator dimensions to pad.
-  SmallVector<int64_t> paddingDimensions;
-  PadTilingInterfaceOptions &setPaddingDimensions(ArrayRef<int64_t> pd) {
-    paddingDimensions.assign(pd.begin(), pd.end());
-    return *this;
-  }
   /// A list of iterator dimensions sizes to pad to.
   SmallVector<OpFoldResult> paddingSizes;
   PadTilingInterfaceOptions &setPaddingSizes(ArrayRef<OpFoldResult> m) {
