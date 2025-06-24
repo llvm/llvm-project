@@ -13298,9 +13298,9 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
   }
 
   if (ImmValue != 0)
-    Op1 =
-        getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                      Op1, DownOffset, Mask, UpOffset);
+    Op1 = getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                        DAG.getUNDEF(ContainerVT), Op1, DownOffset, Mask,
+                        UpOffset);
   SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, Op1, Op2,
                                UpOffset, Mask, EVL2, RISCVVType::TAIL_AGNOSTIC);
 
