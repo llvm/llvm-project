@@ -298,7 +298,7 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
 /// For subtargets which support it, \p EnableWavefrontSize32 should match
 /// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
 unsigned
-getVGPRAllocGranule(const MCSubtargetInfo *STI,
+getVGPRAllocGranule(const MCSubtargetInfo *STI, unsigned DynamicVGPRBlockSize,
                     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns VGPR encoding granularity for given subtarget \p STI.
@@ -321,20 +321,24 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
 
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
+unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
+                                unsigned DynamicVGPRBlockSize);
 
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned DynamicVGPRBlockSize);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned DynamicVGPRBlockSize);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage for given
 /// subtarget \p STI.
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
-                                      unsigned NumVGPRs);
+                                      unsigned NumVGPRs,
+                                      unsigned DynamicVGPRBlockSize);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage, \p Granule
 /// size, \p MaxWaves possible, and \p TotalNumVGPRs available.
@@ -361,6 +365,7 @@ unsigned getEncodedNumVGPRBlocks(
 /// subtarget \p STI when \p NumVGPRs are used.
 unsigned getAllocatedNumVGPRBlocks(
     const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    unsigned DynamicVGPRBlockSize,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
@@ -1304,6 +1309,12 @@ unsigned getInitialPSInputAddr(const Function &F);
 bool getHasColorExport(const Function &F);
 
 bool getHasDepthExport(const Function &F);
+
+bool hasDynamicVGPR(const Function &F);
+
+// Returns the value of the "amdgpu-dynamic-vgpr-block-size" attribute, or 0 if
+// the attribute is missing or its value is invalid.
+unsigned getDynamicVGPRBlockSize(const Function &F);
 
 LLVM_READNONE
 constexpr bool isShader(CallingConv::ID CC) {
