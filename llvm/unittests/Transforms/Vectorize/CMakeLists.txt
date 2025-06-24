@@ -15,4 +15,6 @@ add_llvm_unittest(VectorizeTests
   VPlanPatternMatchTest.cpp
   VPlanSlpTest.cpp
   VPlanVerifierTest.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   )
