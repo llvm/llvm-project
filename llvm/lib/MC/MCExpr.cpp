@@ -173,10 +173,15 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
     return;
   }
 
-  case MCExpr::Specifier:
-    // TODO: Remove after all targets that use MCSpecifierExpr migrate to
-    // MCAsmInfo::printSpecifierExpr.
-    return cast<MCSpecifierExpr>(this)->printImpl(OS, MAI);
+  case MCExpr::Specifier: {
+    auto &SE = cast<MCSpecifierExpr>(*this);
+    if (MAI)
+      return MAI->printSpecifierExpr(OS, SE);
+    // Used by dump features like -show-inst. Regular MCAsmStreamer output must
+    // set MAI.
+    OS << "specifier(" << SE.getSpecifier() << ',' << *SE.getSubExpr() << ')';
+    return;
+  }
   }
 
   llvm_unreachable("Invalid expression kind!");
@@ -748,13 +753,4 @@ const MCSpecifierExpr *MCSpecifierExpr::create(const MCExpr *Expr, Spec S,
 const MCSpecifierExpr *MCSpecifierExpr::create(const MCSymbol *Sym, Spec S,
                                                MCContext &Ctx, SMLoc Loc) {
   return new (Ctx) MCSpecifierExpr(MCSymbolRefExpr::create(Sym, Ctx), S, Loc);
-}
-
-bool MCSpecifierExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-
-  Res.setSpecifier(specifier);
-  return !Res.getSubSym();
 }

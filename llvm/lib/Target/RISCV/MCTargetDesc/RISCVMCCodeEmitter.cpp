@@ -280,8 +280,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
       Opcode == RISCV::PseudoLongBNE || Opcode == RISCV::PseudoLongBEQ;
 
   bool UseCompressedBr = false;
-  if (IsEqTest && (STI.hasFeature(RISCV::FeatureStdExtC) ||
-                   STI.hasFeature(RISCV::FeatureStdExtZca))) {
+  if (IsEqTest && STI.hasFeature(RISCV::FeatureStdExtZca)) {
     if (RISCV::X8 <= SrcReg1.id() && SrcReg1.id() <= RISCV::X15 &&
         SrcReg2.id() == RISCV::X0) {
       UseCompressedBr = true;
@@ -645,8 +644,10 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_qc_e_32;
       RelaxCandidate = true;
     } else if (MIFrm == RISCVII::InstFormatQC_EJ) {
-      FixupKind = RISCV::fixup_riscv_qc_e_jump_plt;
+      FixupKind = RISCV::fixup_riscv_qc_e_call_plt;
       RelaxCandidate = true;
+    } else if (MIFrm == RISCVII::InstFormatNDS_BRANCH_10) {
+      FixupKind = RISCV::fixup_riscv_nds_branch_10;
     }
   }
 

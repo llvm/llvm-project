@@ -38,6 +38,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -131,7 +132,7 @@ private:
 
 void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                     const MachineInstr &MI) {
-  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtZca() ? 2 : 4;
   unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
 
   auto &Ctx = OutStreamer.getContext();
@@ -164,7 +165,7 @@ void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 // [<def>], <id>, <numBytes>, <target>, <numArgs>
 void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtZca() ? 2 : 4;
 
   auto &Ctx = OutStreamer.getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
@@ -213,7 +214,7 @@ void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 
 void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtZca() ? 2 : 4;
 
   StatepointOpers SOpers(&MI);
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
@@ -291,7 +292,7 @@ void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
     NontemporalMode += 0b10;
 
   MCInst Hint;
-  if (STI->hasStdExtCOrZca() && STI->enableRVCHintInstrs())
+  if (STI->hasStdExtZca() && STI->enableRVCHintInstrs())
     Hint.setOpcode(RISCV::C_ADD_HINT);
   else
     Hint.setOpcode(RISCV::ADD);
@@ -610,7 +611,8 @@ void RISCVAsmPrinter::emitFunctionEntryLabel() {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeRISCVAsmPrinter() {
   RegisterAsmPrinter<RISCVAsmPrinter> X(getTheRISCV32Target());
   RegisterAsmPrinter<RISCVAsmPrinter> Y(getTheRISCV64Target());
 }
@@ -672,7 +674,7 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   } else {
     // Adjust the offset for patchable-function-prefix. This assumes that
     // patchable-function-prefix is the same for all functions.
-    int NopSize = STI->hasStdExtCOrZca() ? 2 : 4;
+    int NopSize = STI->hasStdExtZca() ? 2 : 4;
     int64_t PrefixNops = 0;
     (void)MI.getMF()
         ->getFunction()

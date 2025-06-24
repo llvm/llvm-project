@@ -4916,8 +4916,8 @@ multiclass VPatBinaryV_VV_INT_EEW<string intrinsic, string instruction,
       defvar emul_str = octuple_to_str<octuple_emul>.ret;
       defvar ivti = !cast<VTypeInfo>("VI" # eew # emul_str);
       defvar inst = instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW # "_" # emul_str;
-      let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                   GetVTypePredicates<ivti>.Predicates) in
+      let Predicates = !listconcat(GetVTypeMinimalPredicates<vti>.Predicates,
+                                   GetVTypeMinimalPredicates<ivti>.Predicates) in
       defm : VPatBinary<intrinsic, inst,
                         vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
                         vti.Log2SEW, vti.RegClass,
@@ -5584,7 +5584,7 @@ multiclass VPatTernaryV_VV_AAXA_RM<string intrinsic, string instruction,
 multiclass VPatTernaryV_VX<string intrinsic, string instruction,
                            list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = GetVTypeMinimalPredicates<vti>.Predicates in
     defm : VPatTernaryWithPolicy<intrinsic, instruction, "VX",
                                  vti.Vector, vti.Vector, XLenVT, vti.Mask,
                                  vti.Log2SEW, vti.LMul, vti.RegClass,
@@ -5616,7 +5616,7 @@ multiclass VPatTernaryV_VX_AAXA_RM<string intrinsic, string instruction,
 multiclass VPatTernaryV_VI<string intrinsic, string instruction,
                            list<VTypeInfo> vtilist, Operand Imm_type> {
   foreach vti = vtilist in
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = GetVTypeMinimalPredicates<vti>.Predicates in
     defm : VPatTernaryWithPolicy<intrinsic, instruction, "VI",
                                  vti.Vector, vti.Vector, XLenVT, vti.Mask,
                                  vti.Log2SEW, vti.LMul, vti.RegClass,

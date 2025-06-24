@@ -2232,13 +2232,10 @@ void PredTransitions::dump() const {
       dbgs() << LS << SchedModels.getSchedRW(PC.RWIdx, PC.IsRead).Name << ":"
              << PC.Predicate->getName();
     dbgs() << "},\n  => {";
-    for (SmallVectorImpl<SmallVector<unsigned, 4>>::const_iterator
-             WSI = TI.WriteSequences.begin(),
-             WSE = TI.WriteSequences.end();
-         WSI != WSE; ++WSI) {
+    for (const auto &WS : TI.WriteSequences) {
       dbgs() << "(";
       ListSeparator LS;
-      for (unsigned N : *WSI)
+      for (unsigned N : WS)
         dbgs() << LS << SchedModels.getSchedWrite(N).Name;
       dbgs() << "),";
     }
