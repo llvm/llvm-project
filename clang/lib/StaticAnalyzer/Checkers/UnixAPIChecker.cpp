@@ -128,7 +128,7 @@ ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
     const StringRef PtrDescr,
     std::optional<std::reference_wrapper<const BugType>> BT) const {
   const auto Ptr = PtrVal.getAs<DefinedSVal>();
-  if (!Ptr)
+  if (!Ptr || !PtrExpr->getType()->isPointerType())
     return State;
 
   const auto [PtrNotNull, PtrNull] = State->assume(*Ptr);
@@ -343,10 +343,6 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
 
   assert(LinePtrPtrExpr && SizePtrExpr);
 
-  // Add defensive check to ensure we can handle the assume operation
-  if (!LinePtrSVal->getAs<DefinedSVal>())
-    return nullptr;
-
   const auto [LinePtrNotNull, LinePtrNull] = State->assume(*LinePtrSVal);
   if (LinePtrNotNull && !LinePtrNull) {
     // If `*lineptr` is not null, but `*n` is undefined, there is UB.
@@ -384,30 +380,27 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
 
 void UnixAPIMisuseChecker::CheckGetDelim(CheckerContext &C,
                                          const CallEvent &Call) const {
-  ProgramStateRef State = C.getState();
   if (Call.getNumArgs() < 2)
     return;
 
-  const Expr *Arg0 = Call.getArgExpr(0);
-  const Expr *Arg1 = Call.getArgExpr(1);
-
-  if (!Arg0->getType()->isPointerType() || !Arg1->getType()->isPointerType())
-    return;
+  ProgramStateRef State = C.getState();
 
   // The parameter `n` must not be NULL.
   SVal SizePtrSval = Call.getArgSVal(1);
-  State = EnsurePtrNotNull(SizePtrSval, Arg1, C, State, "Size");
+  State = EnsurePtrNotNull(SizePtrSval, Call.getArgExpr(1), C, State, "Size");
   if (!State)
     return;
 
   // The parameter `lineptr` must not be NULL.
   SVal LinePtrPtrSVal = Call.getArgSVal(0);
-  State = EnsurePtrNotNull(LinePtrPtrSVal, Arg0, C, State, "Line");
+  State =
+      EnsurePtrNotNull(LinePtrPtrSVal, Call.getArgExpr(0), C, State, "Line");
   if (!State)
     return;
 
-  State = EnsureGetdelimBufferAndSizeCorrect(LinePtrPtrSVal, SizePtrSval, Arg0,
-                                             Arg1, C, State);
+  State = EnsureGetdelimBufferAndSizeCorrect(LinePtrPtrSVal, SizePtrSval,
+                                             Call.getArgExpr(0),
+                                             Call.getArgExpr(1), C, State);
   if (!State)
     return;
 
