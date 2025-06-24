@@ -127,13 +127,8 @@ module attributes { test.nested_nosymboltable_region } {
 module attributes { test.nested_nosymboltable_region_notcalled } {
   "test.one_region_op"() ({
     module {
-        func.func nested @nested() {
-            return
-        }
-
-        func.func @main() {
-            return
-        }
+      func.func nested @nested() { return }
+      func.func @main() { return }
     }
     "test.finish"() : () -> ()
   }) : () -> ()
