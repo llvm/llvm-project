@@ -102,6 +102,8 @@ void fun() {
 // CHECK-NEXT: %loadedv20 = trunc i8 %28 to i1,                       !dbg [[LINE87_G15R3:!.*]]
 // CHECK-NEXT: %conv21 = zext i1 %loadedv20 to i32,                   !dbg [[LINE87_G15R2:!.*]]
 // CHECK-NEXT: store i32 %conv21, ptr %r7, align 4,                   !dbg [[LINE87_G15R1:!.*]]
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[LINE11_G2R1]] = !DILocation(line: 11, scope: ![[#]], atomGroup: 2, atomRank: 1)
@@ -160,3 +162,5 @@ void fun() {
 // CHECK: [[LINE87_G15R3]] = !DILocation(line: 87, scope: ![[#]], atomGroup: 15, atomRank: 3)
 // CHECK: [[LINE87_G15R2]] = !DILocation(line: 87, scope: ![[#]], atomGroup: 15, atomRank: 2)
 // CHECK: [[LINE87_G15R1]] = !DILocation(line: 87, scope: ![[#]], atomGroup: 15, atomRank: 1)
+
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 17, atomRank: 1)
