@@ -75,9 +75,8 @@ if config.gnu_ld:
 if lit.util.which("fuser"):
     config.available_features.add("fuser")
 
-rhel_release="/etc/redhat-release"
-if os.path.exists(rhel_release) and \
-    "release 8" in open(rhel_release).read().lower():
+rhel_release = "/etc/redhat-release"
+if os.path.exists(rhel_release) and "release 8" in open(rhel_release).read().lower():
     config.available_features.add("rhel8")
 
 llvm_config.use_default_substitutions()
