@@ -300,7 +300,6 @@ TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_h, "V4UiUifV4fV4hV4hV4Ui
 TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_l, "V4UiWUifV4fV4fV4fV4Ui", "nc", "gfx10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_lh, "V4UiWUifV4fV4hV4hV4Ui", "nc", "gfx10-insts")
 
-
 //===----------------------------------------------------------------------===//
 // GFX11+ only builtins.
 //===----------------------------------------------------------------------===//
@@ -308,6 +307,8 @@ TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_lh, "V4UiWUifV4fV4hV4hV4
 // TODO: This is a no-op in wave32. Should the builtin require wavefrontsize64?
 TARGET_BUILTIN(__builtin_amdgcn_permlane64, "UiUi", "nc", "gfx11-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_wait_event_export_ready, "v", "n", "gfx11-insts")
+
+TARGET_BUILTIN(__builtin_amdgcn_ds_bvh_stack_push4_pop1_rtn, "V2UiUiUiV4UiIi", "n", "gfx11-insts")
 
 //===----------------------------------------------------------------------===//
 // WMMA builtins.
@@ -502,6 +503,16 @@ TARGET_BUILTIN(__builtin_amdgcn_s_get_barrier_state, "Uii", "n", "gfx12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_get_named_barrier_state, "Uiv*", "n", "gfx12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_prefetch_data, "vvC*Ui", "nc", "gfx12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_buffer_prefetch_data, "vQbIiUi", "nc", "gfx12-insts")
+
+// For the following two builtins, the second and third return values of the
+// intrinsics are returned through the last two pointer-type function arguments.
+TARGET_BUILTIN(__builtin_amdgcn_image_bvh8_intersect_ray, "V10UiWUifUcV3fV3fUiV4UiV3f*V3f*", "nc", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_image_bvh_dual_intersect_ray, "V10UiWUifUcV3fV3fV2UiV4UiV3f*V3f*", "nc", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_bvh_stack_push8_pop1_rtn, "V2UiUiUiV8UiIi", "n", "gfx12-insts")
+
+// The intrinsic returns {i64, i32}, the builtin returns <2 x i64>.
+// The second return value of the intrinsic is zext'ed.
+TARGET_BUILTIN(__builtin_amdgcn_ds_bvh_stack_push8_pop2_rtn, "V2WUiUiUiV8UiIi", "n", "gfx12-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b64_v2i32, "V2iV2i*1", "nc", "gfx12-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v8i16, "V8sV8s*1", "nc", "gfx12-insts,wavefrontsize32")
