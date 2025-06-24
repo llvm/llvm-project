@@ -2924,24 +2924,24 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
     return success();
   case SliceVerificationResult::RankTooLarge:
     return op->emitError("expected result rank to be smaller or equal to ")
-           << "the source rank, but got:" << op.getType();
+           << "the source rank, but got " << op.getType();
   case SliceVerificationResult::SizeMismatch:
     return op->emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result sizes), but got:"
+           << " or a rank-reduced version. (mismatch of result sizes), but got "
            << op.getType();
   case SliceVerificationResult::ElemTypeMismatch:
     return op->emitError("expected result element type to be ")
-           << memrefType.getElementType() << ", but got:" << op.getType();
+           << memrefType.getElementType() << ", but got " << op.getType();
   case SliceVerificationResult::MemSpaceMismatch:
     return op->emitError(
-               "expected result and source memory spaces to match, but got:")
+               "expected result and source memory spaces to match, but got ")
            << op.getType();
   case SliceVerificationResult::LayoutMismatch:
     return op->emitError("expected result type to be ")
            << expectedType
            << " or a rank-reduced version. (mismatch of result layout), but "
-              "got:"
+              "got "
            << op.getType();
   }
   llvm_unreachable("unexpected subview verification result");
