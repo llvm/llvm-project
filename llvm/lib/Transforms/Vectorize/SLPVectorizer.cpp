@@ -14568,8 +14568,6 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
 
-  unsigned BundleWidth = VectorizableTree[0]->Scalars.size();
-
   SmallPtrSet<Value *, 4> CheckedExtracts;
   for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
     TreeEntry &TE = *VectorizableTree[I];
@@ -14632,6 +14630,11 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   }
   SmallDenseSet<std::pair<Value *, Value *>, 8> CheckedScalarUser;
   for (ExternalUser &EU : ExternalUses) {
+    LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
+                      << EU.E.Idx << " in lane " << EU.Lane << "\n");
+    LLVM_DEBUG(dbgs() << "  User:" << *EU.User << "\n");
+    LLVM_DEBUG(dbgs() << "  Use: " << EU.Scalar->getNameOrAsOperand() << "\n");
+
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
     // removed as well).
@@ -14739,6 +14742,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
     // for the extract and the added cost of the sign extend if needed.
     InstructionCost ExtraCost = TTI::TCC_Free;
     auto *ScalarTy = EU.Scalar->getType();
+    const unsigned BundleWidth = EU.E.getVectorFactor();
+    assert(EU.Lane < BundleWidth && "Extracted lane out of bounds.");
     auto *VecTy = getWidenedType(ScalarTy, BundleWidth);
     const TreeEntry *Entry = &EU.E;
     auto It = MinBWs.find(Entry);
@@ -14752,10 +14757,14 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       VecTy = getWidenedType(MinTy, BundleWidth);
       ExtraCost =
           getExtractWithExtendCost(*TTI, Extend, ScalarTy, VecTy, EU.Lane);
+      LLVM_DEBUG(dbgs() << "  ExtractExtend or ExtractSubvec cost: "
+                        << ExtraCost << "\n");
     } else {
       ExtraCost =
           getVectorInstrCost(*TTI, ScalarTy, Instruction::ExtractElement, VecTy,
                              CostKind, EU.Lane, EU.Scalar, ScalarUserAndIdx);
+      LLVM_DEBUG(dbgs() << "  ExtractElement cost for " << *ScalarTy << " from "
+                        << *VecTy << ": " << ExtraCost << "\n");
     }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
