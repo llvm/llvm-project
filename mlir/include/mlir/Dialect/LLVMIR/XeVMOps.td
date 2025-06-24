@@ -381,13 +381,12 @@ def XeVM_MemfenceOp
 def XeVM_PrefetchOp
     : XeVM_Op<"prefetch">,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
-          XeVM_AddrSpaceAttr:$addrspace,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
   let summary = "Prefetch data into a cache subsystem.";
   let description = [{
     Work-item issues a prefetch from global memory to cache:
-    $ptr - memory pointer.
-    $addrspace - address space of a pointer, must be generic or global.
+    $ptr - LLVM pointer with address space. Address space must be 1 (global)
+      or 4 (generic)
     $cache_control - specify caching options
   }];
   let assemblyFormat = [{

@@ -63,10 +63,9 @@ func.func @memfence() {
 // CHECK: func.func @prefetch(%[[ARG0:.*]]: !llvm.ptr<1>)
 func.func @prefetch(%ptr: !llvm.ptr<1>) {
   // CHECK: xevm.prefetch %[[ARG0]]
-  // CHECK-DAG: addrspace = #xevm.addr_space<global>
   // CHECK-DAG: cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>
   // CHECK: (!llvm.ptr<1>)
-  xevm.prefetch %ptr <{addrspace = #xevm.addr_space<global>, cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>)
+  xevm.prefetch %ptr <{cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>)
   return
 }
 

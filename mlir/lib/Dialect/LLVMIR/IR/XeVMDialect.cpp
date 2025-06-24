@@ -316,10 +316,11 @@ LogicalResult MMAOp::verify() {
 }
 
 LogicalResult PrefetchOp::verify() {
-  auto addrSpace = getAddrspace();
-  if (addrSpace != AddrSpace::GLOBAL && addrSpace != AddrSpace::GENERIC) {
-    return emitOpError("address space must be global or generic");
-  }
+  auto ptrTy = mlir::dyn_cast<LLVM::LLVMPointerType>(getOperand().getType());
+  auto addrSpace = ptrTy.getAddressSpace();
+  if (addrSpace != 1 && addrSpace != 4)
+    return emitOpError(
+        "LLVM pointer type address space must be 1 (global) or 4 (generic)");
   return success();
 }
 
