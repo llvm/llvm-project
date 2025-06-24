@@ -196,8 +196,7 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   // DepFS's eyes.
   ASSERT_EQ(Path1Exists, false);
 
-  auto InvalidEntries =
-      Service.getSharedCache().getInvalidEntryDiagInfo(*InMemoryFS);
+  auto InvalidEntries = SharedCache.getInvalidEntryDiagInfo(*InMemoryFS);
 
   EXPECT_EQ(InvalidEntries.size(), 1u);
   ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);
@@ -209,9 +208,8 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
   InMemoryFS1->setCurrentWorkingDirectory("/");
   InMemoryFS2->setCurrentWorkingDirectory("/");
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS1);
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS1);
 
   InMemoryFS1->addFile("/path1.suffix", 0,
                        llvm::MemoryBuffer::getMemBuffer(""));
@@ -224,8 +222,7 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
 
   // Check against the new file system. InMemoryFS2 could be the underlying
   // physical system in the real world.
-  auto InvalidEntries =
-      Service.getSharedCache().getInvalidEntryDiagInfo(*InMemoryFS2);
+  auto InvalidEntries = SharedCache.getInvalidEntryDiagInfo(*InMemoryFS2);
 
   ASSERT_EQ(InvalidEntries.size(), 1u);
   ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);
