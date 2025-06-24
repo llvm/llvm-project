@@ -329,22 +329,10 @@ public:
       return;
     }
 
-    lldb::ProcessSP process_sp =
-        map.GetBestExecutionContextScope()->CalculateProcess();
-    if (!process_sp || !process_sp->CanJIT()) {
-      // Allocations are not persistent so persistent variables cannot stay
-      // materialized.
-
-      m_persistent_variable_sp->m_flags |=
-          ExpressionVariable::EVNeedsAllocation;
-
-      DestroyAllocation(map, err);
-      if (!err.Success())
-        return;
-    } else if (m_persistent_variable_sp->m_flags &
-                   ExpressionVariable::EVNeedsAllocation &&
-               !(m_persistent_variable_sp->m_flags &
-                 ExpressionVariable::EVKeepInTarget)) {
+    if (m_persistent_variable_sp->m_flags &
+            ExpressionVariable::EVNeedsAllocation &&
+        !(m_persistent_variable_sp->m_flags &
+          ExpressionVariable::EVKeepInTarget)) {
       DestroyAllocation(map, err);
       if (!err.Success())
         return;
@@ -1086,9 +1074,8 @@ public:
       m_delegate->DidDematerialize(ret);
     }
 
-    bool can_persist =
-        (m_is_program_reference && process_sp && process_sp->CanJIT() &&
-         !(address >= frame_bottom && address < frame_top));
+    bool can_persist = m_is_program_reference &&
+                       !(address >= frame_bottom && address < frame_top);
 
     if (can_persist && m_keep_in_memory) {
       ret->m_live_sp = ValueObjectConstResult::Create(exe_scope, m_type, name,
@@ -1118,7 +1105,9 @@ public:
         map.Free(m_temporary_allocation, free_error);
       }
     } else {
-      ret->m_flags |= ExpressionVariable::EVIsLLDBAllocated;
+      ret->m_flags |= m_is_program_reference
+                          ? ExpressionVariable::EVIsProgramReference
+                          : ExpressionVariable::EVIsLLDBAllocated;
     }
 
     m_temporary_allocation = LLDB_INVALID_ADDRESS;
