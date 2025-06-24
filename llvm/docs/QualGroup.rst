@@ -41,10 +41,10 @@ Participation
 
 Participation is open to anyone interested. The group currently coordinates via:
 
-* LLVM Discourse: https://discourse.llvm.org/
+* LLVM Discourse (under the "Community" category): https://discourse.llvm.org/
 * Public working sessions and collaborative documents
-* Informal discussions on the LLVM Community Discord server: https://discord.gg/xS7Z362
-* Mailing lists (as needed)
+* [Details on working sessions will be shared soon on the GettingInvolved page]
+* Informal discussions on the LLVM Community Discord server (channel to be announced)
 
 Initial Contributors
 ====================
