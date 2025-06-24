@@ -6726,23 +6726,24 @@ inline bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
 
 /// isDUPQMask - matches a splat of equivalent lanes within segments of a given
 ///              number of elements.
-inline std::optional<unsigned> isDUPQMask(ArrayRef<int> M, unsigned Segments,
-                                          unsigned NumElts) {
-  unsigned Lane = (unsigned)M[0];
+inline std::optional<unsigned> isDUPQMask(ArrayRef<int> Mask, unsigned Segments,
+                                          unsigned SegmentSize) {
+  unsigned Lane = unsigned(Mask[0]);
 
   // Make sure there's no size changes.
-  if (NumElts * Segments != M.size())
+  if (SegmentSize * Segments != Mask.size())
     return std::nullopt;
 
   // Check the first index corresponds to one of the lanes in the first segment.
-  if (Lane >= NumElts)
+  if (Lane >= SegmentSize)
     return std::nullopt;
 
   // Check that all lanes match the first, adjusted for segment.
   // Undef/poison lanes (<0) are also accepted.
-  if (all_of(enumerate(M), [&](auto P) {
+  if (all_of(enumerate(Mask), [&](auto P) {
+        const unsigned SegmentIndex = P.index() / SegmentSize;
         return P.value() < 0 ||
-               (unsigned)P.value() == Lane + (P.index() / NumElts) * NumElts;
+               unsigned(P.value()) == Lane + SegmentIndex * SegmentSize;
       }))
     return Lane;
 
