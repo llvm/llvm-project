@@ -17,8 +17,10 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, wcsnlen, (const wchar_t *src, size_t maxlen)) {
-  size_t temp = internal::string_length(src);
-  return temp > maxlen ? maxlen : temp;
+  size_t i = 0;
+  for (; i < maxlen && src[i]; ++i)
+    ;
+  return i;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

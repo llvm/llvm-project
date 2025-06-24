@@ -44,3 +44,11 @@ TEST(LlvmLibcWCSNLenTest, IgnoreCharactersAfterNullTerminator) {
   ASSERT_EQ(static_cast<size_t>(3), LIBC_NAMESPACE::wcsnlen(src, 4));
   ASSERT_EQ(static_cast<size_t>(3), LIBC_NAMESPACE::wcsnlen(src, 5));
 }
+
+TEST(LlvmLibcWCSNLenTest, NoNullTerminator) {
+  const wchar_t src[4] = {L'a', L'b', L'c', L'd'};
+  // Should return 4
+  ASSERT_EQ(static_cast<size_t>(4), LIBC_NAMESPACE::wcsnlen(src, 4));
+  // Should return 2 since N is smaller than string length
+  ASSERT_EQ(static_cast<size_t>(2), LIBC_NAMESPACE::wcsnlen(src, 2));
+}
