@@ -565,7 +565,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           // The output from scaled phis and scaled reductions actually has
           // fewer lanes than the VF.
           ElementCount VF = VFs[J];
-          if (unsigned ScaleFactor = getVFScaleFactor(R); ScaleFactor > 1)
+          if (unsigned ScaleFactor = getVFScaleFactor(R))
             VF = VF.divideCoefficientBy(ScaleFactor);
           LLVM_DEBUG(if (VF != VFs[J]) {
             dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
