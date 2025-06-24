@@ -1939,7 +1939,7 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult cir::ComplexRealOp::verify() {
   if (getType() != getOperand().getType().getElementType()) {
-    emitOpError() << "cir.complex.real result type does not match operand type";
+    emitOpError() << ": result type does not match operand type";
     return failure();
   }
   return success();

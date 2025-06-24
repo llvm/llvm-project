@@ -1898,7 +1898,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
   Expr *op = e->getSubExpr();
   if (op->getType()->isAnyComplexType()) {
     // If it's an l-value, load through the appropriate subobject l-value.
-    // Note that we have to ask E because Op might be an l-value that
+    // Note that we have to ask `e` because `op` might be an l-value that
     // this won't work for, e.g. an Obj-C property.
     if (e->isGLValue()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
