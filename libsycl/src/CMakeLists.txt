@@ -2,6 +2,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes/cmake/
 include(WarningFlags)
 
 function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
+  if (NOT LLVM_ENABLE_PIC)
+    message( FATAL_ERROR "Position-Independent Code generation is required for libsycl shared library" )
+  endif()
   # Add an optional argument so we can get the library name to
   # link with for Windows Debug version
   cmake_parse_arguments(ARG "" "IMPLIB_NAME" "COMPILE_OPTIONS;SOURCES" ${ARGN})
@@ -10,6 +13,7 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
 
   # Common compilation step setup
   target_compile_definitions(${LIB_OBJ_NAME} PRIVATE $<$<BOOL:${MSVC}>:_LIBSYCL_BUILD_SYCL_DLL>)
+  cxx_add_warning_flags(${LIB_OBJ_NAME} ${LIBSYCL_ENABLE_WERROR} ${LIBSYCL_ENABLE_PEDANTIC})
 
   target_include_directories(
     ${LIB_OBJ_NAME}
@@ -20,12 +24,6 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
 
   add_library(${LIB_NAME} SHARED
               $<TARGET_OBJECTS:${LIB_OBJ_NAME}>)
-
-  if (ARG_COMPILE_OPTIONS)
-    target_compile_options(${LIB_OBJ_NAME} PRIVATE ${ARG_COMPILE_OPTIONS})
-  endif()
-
-  cxx_add_warning_flags(${LIB_OBJ_NAME} ${LIBSYCL_ENABLE_WERROR} ${LIBSYCL_ENABLE_PEDANTIC})
 
   add_dependencies(${LIB_OBJ_NAME}
     sycl-headers
@@ -98,14 +96,12 @@ endif()
 # Version-agnostic name of the import library, has effect on Windows only.
 set(IMPLIB_NAME "sycl")
 
-add_sycl_rt_library(${LIB_NAME} sycl_object COMPILE_OPTIONS ${LIBSYCL_EXTRA_OPTS}
+add_sycl_rt_library(${LIB_NAME} sycl_object
                     SOURCES ${LIBSYCL_SOURCES} IMPLIB_NAME ${IMPLIB_NAME})
 
 if (WIN32)
   add_library(sycl ALIAS ${LIB_NAME})
-endif()
 
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   set_target_properties(${LIB_NAME} PROPERTIES DEBUG_POSTFIX d)
 endif()
 
