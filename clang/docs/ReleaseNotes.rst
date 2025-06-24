@@ -1025,9 +1025,6 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
-- Support trailing whitespace in line splicing.
-  (P2223R2 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2223r2.pdf>_, #GH145226)
-
 
 clang-refactor
 --------------

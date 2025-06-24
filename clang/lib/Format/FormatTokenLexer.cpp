@@ -1204,25 +1204,22 @@ static size_t countLeadingWhitespace(StringRef Text) {
   const unsigned char *const End = Text.bytes_end();
   const unsigned char *Cur = Begin;
   while (Cur < End) {
-    if (isspace(Cur[0])) {
+    if (isWhitespace(Cur[0])) {
       ++Cur;
     } else if (Cur[0] == '\\') {
-      // A '\' followed by a optional horizontal whitespace (P22232R2) and then
-      // newline  always escapes the newline, regardless  of whether there is
-      // another '\' before it.
+      // A backslash followed by optional horizontal whitespaces (P22232R2) and
+      // then a newline always escapes the newline.
       // The source has a null byte at the end. So the end of the entire input
       // isn't reached yet. Also the lexer doesn't break apart an escaped
       // newline.
-      const unsigned char *Lookahead = Cur + 1;
+      const auto *Lookahead = Cur + 1;
       while (isHorizontalWhitespace(*Lookahead))
         ++Lookahead;
-      if (*Lookahead == '\n' || *Lookahead == '\r') {
-        // Splice found, consume it.
-        Cur = Lookahead + 1;
-        continue;
-      }
-      // No line splice found; the '\' is a token.
-      break;
+      // No line splice found; the backslash is a token.
+      if (!isVerticalWhitespace(*Lookahead))
+        break;
+      // Splice found, consume it.
+      Cur = Lookahead + 1;
     } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
                (Cur[3] == '\n' || Cur[3] == '\r')) {
       // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
