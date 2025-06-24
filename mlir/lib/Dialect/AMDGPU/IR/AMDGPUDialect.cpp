@@ -534,7 +534,7 @@ LogicalResult TransposeLoadOp::verify() {
   if (!transferType)
     return emitOpError("destination type must be a vector type");
   size_t numElements = transferType.getNumElements();
-  size_t elementTypeSize = srcType.getElementType().getIntOrFloatBitWidth();
+  size_t elementTypeSize = transferType.getElementType().getIntOrFloatBitWidth();
 
   // ElementSize -> NumElements
   const std::map<size_t, size_t> KValidLoadSizeMap = {
