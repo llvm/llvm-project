@@ -609,6 +609,10 @@ public:
 
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
+  mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
+    return cgf.emitCXXNewExpr(e);
+  }
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
