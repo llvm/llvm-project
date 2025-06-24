@@ -407,6 +407,14 @@ public:
     return UncountableExitingBB;
   }
 
+  /// Returns true if this is an early exit loop containing a store.
+  bool isConditionCopyRequired() const { return EarlyExitLoad.has_value(); }
+
+  /// Returns the load instruction, if any, directly used for an exit comparison
+  /// in and early exit loop containing state-changing or potentially-faulting
+  /// operations.
+  std::optional<LoadInst *> getEarlyExitLoad() const { return EarlyExitLoad; }
+
   /// Return true if there is store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
     return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
@@ -538,6 +546,12 @@ private:
   /// additional cases safely.
   bool isVectorizableEarlyExitLoop();
 
+  /// Clears any current early exit data gathered if a check failed.
+  void clearEarlyExitData() {
+    UncountableExitingBB = nullptr;
+    EarlyExitLoad = std::nullopt;
+  }
+
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
   /// \p SafePtrs is a list of addresses that are known to be legal and we know
@@ -659,6 +673,10 @@ private:
   /// Keep track of an uncountable exiting block, if there is exactly one early
   /// exit.
   BasicBlock *UncountableExitingBB = nullptr;
+
+  /// Keep track of the load used for early exits where state-changing or
+  /// potentially faulting operations occur inside the loop.
+  std::optional<LoadInst *> EarlyExitLoad;
 };
 
 } // namespace llvm
