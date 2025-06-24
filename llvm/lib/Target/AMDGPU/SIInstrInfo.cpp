@@ -8716,11 +8716,9 @@ void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
 void SIInstrInfo::addUsersToMoveToVALUWorklist(
     Register DstReg, MachineRegisterInfo &MRI,
     SIInstrWorklist &Worklist) const {
-  SmallVector<std::pair<MachineInstr *, unsigned>> EarlyRangeInc;
-
-  for (MachineRegisterInfo::use_iterator I = MRI.use_begin(DstReg),
-         E = MRI.use_end(); I != E;) {
-    MachineInstr &UseMI = *I->getParent();
+  MachineInstr *prevMI = nullptr;
+  for (MachineOperand &MO : make_early_inc_range(MRI.use_operands(DstReg))) {
+    MachineInstr &UseMI = *MO.getParent();
 
     unsigned OpNo = 0;
 
@@ -8735,25 +8733,22 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
     case AMDGPU::INSERT_SUBREG:
       break;
     default:
-      OpNo = I.getOperandNo();
+      OpNo = MO.getOperandNo();
       break;
     }
 
     if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo))) {
+      if (&UseMI == prevMI)
+        continue;
+
+      prevMI = &UseMI;
+
       Worklist.insert(&UseMI);
-
-      do {
-        ++I;
-      } while (I != E && I->getParent() == &UseMI);
     } else {
-      EarlyRangeInc.emplace_back(&UseMI, OpNo);
-
-      ++I;
+      // legalize could changes user list
+      legalizeOperandsVALUt16(UseMI, OpNo, MRI);
     }
   }
-
-  for (auto &[UseMI, OpNo] : EarlyRangeInc)
-    legalizeOperandsVALUt16(*UseMI, OpNo, MRI);
 }
 
 void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
