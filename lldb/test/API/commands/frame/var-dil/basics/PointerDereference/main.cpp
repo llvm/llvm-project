@@ -26,6 +26,8 @@ int main(int argc, char **argv) {
   void **pp_void0 = &p_void;
   void **pp_void1 = pp_void0 + 1;
 
+  void **pp_void0_2 = &pp_void0[2];
+  int *pp_int0_2stars = &**pp_int0;
   std::nullptr_t std_nullptr_t = nullptr;
 
   return 0; // Set a breakpoint here

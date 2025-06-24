@@ -1,5 +1,5 @@
 """
-Test code that should work on smart pointers, but make it impl independent.
+Test code for dereferencing synthetic wrapped pointers.
 """
 
 import lldb
@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class FakeSmartPtrDataFormatterTestCase(TestBase):
+class DILSyntheticDereferenceTestCase(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
@@ -21,14 +21,14 @@ class FakeSmartPtrDataFormatterTestCase(TestBase):
         )
 
         self.runCmd("settings set target.experimental.use-DIL true")
-        self.runCmd("script from smartPtrSynthProvider import *")
-        self.runCmd("type synth add -l smartPtrSynthProvider smart_ptr")
+        self.runCmd("script from wrapPtrSynthProvider import *")
+        self.runCmd("type synth add -l wrapPtrSynthProvider wrap_ptr")
 
         self.expect_var_path("ptr_node->value", value="1")
         self.expect_var_path("ptr_node->next->value", value="2")
         self.expect_var_path("(*ptr_node).value", value="1")
         self.expect_var_path("(*(*ptr_node).next).value", value="2")
 
-        self.expect_var_path("ptr_node.__ptr_", type="NodeS *")
-        self.expect_var_path("ptr_node.__ptr_->value", value="1")
-        self.expect_var_path("ptr_node.__ptr_->next.__ptr_->value", value="2")
+        self.expect_var_path("ptr_node.ptr", type="NodeS *")
+        self.expect_var_path("ptr_node.ptr->value", value="1")
+        self.expect_var_path("ptr_node.ptr->next.ptr->value", value="2")
