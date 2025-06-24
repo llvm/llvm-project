@@ -23,8 +23,6 @@ namespace clang {
 namespace tooling {
 namespace dependencies {
 
-class DependencyScanningService;
-
 using DependencyDirectivesTy =
     SmallVector<dependency_directives_scan::Directive, 20>;
 
@@ -351,7 +349,7 @@ public:
   static const char ID;
 
   DependencyScanningWorkerFilesystem(
-      DependencyScanningService &Service,
+      DependencyScanningFilesystemSharedCache &SharedCache,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
@@ -437,7 +435,10 @@ private:
   /// Returns entry associated with the unique ID in the shared cache or nullptr
   /// if none is found.
   const CachedFileSystemEntry *
-  findSharedEntryByUID(llvm::vfs::Status Stat) const;
+  findSharedEntryByUID(llvm::vfs::Status Stat) const {
+    return SharedCache.getShardForUID(Stat.getUniqueID())
+        .findEntryByUID(Stat.getUniqueID());
+  }
 
   /// Associates the given entry with the filename in the local cache and
   /// returns it.
@@ -451,14 +452,20 @@ private:
   /// some. Otherwise, constructs new one with the given error code, associates
   /// it with the filename and returns the result.
   const CachedFileSystemEntry &
-  getOrEmplaceSharedEntryForFilename(StringRef Filename, std::error_code EC);
+  getOrEmplaceSharedEntryForFilename(StringRef Filename, std::error_code EC) {
+    return SharedCache.getShardForFilename(Filename)
+        .getOrEmplaceEntryForFilename(Filename, EC);
+  }
 
   /// Returns entry associated with the filename in the shared cache if there is
   /// some. Otherwise, associates the given entry with the filename and returns
   /// it.
   const CachedFileSystemEntry &
   getOrInsertSharedEntryForFilename(StringRef Filename,
-                                    const CachedFileSystemEntry &Entry);
+                                    const CachedFileSystemEntry &Entry) {
+    return SharedCache.getShardForFilename(Filename)
+        .getOrInsertEntryForFilename(Filename, Entry);
+  }
 
   void printImpl(raw_ostream &OS, PrintType Type,
                  unsigned IndentLevel) const override {
@@ -471,9 +478,8 @@ private:
   /// VFS.
   bool shouldBypass(StringRef Path) const;
 
-  /// The service associated with this VFS.
-  DependencyScanningService &Service;
-
+  /// The global cache shared between worker threads.
+  DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;

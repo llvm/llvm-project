@@ -168,6 +168,8 @@ public:
     return {Children.begin(), Children.end()};
   }
 
+  bool hasChild(const ValueDecl &D) const { return Children.contains(&D); }
+
 private:
   FieldToLoc Children;
   SyntheticFieldMap SyntheticFields;

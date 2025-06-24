@@ -100,6 +100,32 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value complex = builder.createComplexCreate(loc, real, imag);
     return RValue::get(complex);
   }
+
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability: {
+    mlir::Value argValue = emitScalarExpr(e->getArg(0));
+    mlir::Value expectedValue = emitScalarExpr(e->getArg(1));
+
+    mlir::FloatAttr probAttr;
+    if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_expect_with_probability) {
+      llvm::APFloat probability(0.0);
+      const Expr *probArg = e->getArg(2);
+      [[maybe_unused]] bool evalSucceeded =
+          probArg->EvaluateAsFloat(probability, cgm.getASTContext());
+      assert(evalSucceeded &&
+             "probability should be able to evaluate as float");
+      bool loseInfo = false; // ignored
+      probability.convert(llvm::APFloat::IEEEdouble(),
+                          llvm::RoundingMode::Dynamic, &loseInfo);
+      probAttr = mlir::FloatAttr::get(mlir::Float64Type::get(&getMLIRContext()),
+                                      probability);
+    }
+
+    auto result = builder.create<cir::ExpectOp>(getLoc(e->getSourceRange()),
+                                                argValue.getType(), argValue,
+                                                expectedValue, probAttr);
+    return RValue::get(result);
+  }
   }
 
   cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
