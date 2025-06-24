@@ -337,8 +337,6 @@ private:
 
   void emitCompilerInformation();
 
-  void emitSecureHotPatchInformation();
-
   void emitBuildInfo();
 
   void emitInlineeLinesSubsection();
