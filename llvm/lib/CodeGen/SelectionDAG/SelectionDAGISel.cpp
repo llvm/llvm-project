@@ -485,7 +485,7 @@ void SelectionDAGISel::initializeAnalysisResults(
   TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
 
   CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs,
-               TTI->hasBranchDivergence());
+               TTI->hasBranchDivergence(&Fn));
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -541,7 +541,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
 
   CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, MMI, FnVarLocs,
-               TTI->hasBranchDivergence());
+               TTI->hasBranchDivergence(&Fn));
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
