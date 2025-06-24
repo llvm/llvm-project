@@ -13,6 +13,7 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -1134,29 +1135,39 @@ struct TransposeLoadOpLowering
     size_t elementTypeSize =
         resultType.getElementType().getIntOrFloatBitWidth();
 
+    // ROCDL transpose load intrinsics return vectors of 32-bit integers.
+    Type rocdlResultType = VectorType::get((numElements * elementTypeSize) / 32,
+                                           rewriter.getIntegerType(32));
+    Type llvmResultType = typeConverter->convertType(resultType);
+
     switch (elementTypeSize) {
-    case 4:
+    case 4: {
       assert(numElements == 16);
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr4_b64>(op, resultType,
-                                                          srcPtr);
+      auto rocdlOp =
+          rewriter.create<ROCDL::ds_read_tr4_b64>(loc, rocdlResultType, srcPtr);
+      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
-    case 6:
-      // To use ds_read_tr6_b96, the load size is vector<3xi32>.
-      // TODO: support native 6-bit data types.
+    }
+    case 6: {
       assert(numElements == 16);
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr6_b96>(op, resultType,
-                                                          srcPtr);
+      auto rocdlOp =
+          rewriter.create<ROCDL::ds_read_tr6_b96>(loc, rocdlResultType, srcPtr);
+      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
-    case 8:
+    }
+    case 8: {
       assert(numElements == 8);
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr8_b64>(op, resultType,
-                                                          srcPtr);
+      auto rocdlOp =
+          rewriter.create<ROCDL::ds_read_tr8_b64>(loc, rocdlResultType, srcPtr);
+      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
-    case 16:
+    }
+    case 16: {
       assert(numElements == 4);
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr16_b64>(op, resultType,
+      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr16_b64>(op, llvmResultType,
                                                            srcPtr);
       break;
+    }
     default:
       return op.emitOpError("Unsupported element size for transpose load");
     }
