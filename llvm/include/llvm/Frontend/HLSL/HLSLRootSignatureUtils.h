@@ -44,6 +44,8 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const StaticSampler &StaticSampler);
 
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element);
+
 LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 class MetadataBuilder {
