@@ -1329,6 +1329,19 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   llvm::TypeSize DstSize = CGF.CGM.getDataLayout().getTypeAllocSize(Ty);
 
   if (llvm::StructType *SrcSTy = dyn_cast<llvm::StructType>(SrcTy)) {
+    if (Ty->isScalableTy() || Ty->isRISCVVectorTupleTy()) {
+      // In RISCV VLS calling convention, struct of fixed vector might be
+      // lowered using scalable vector, we consider it as a valid load, e.g.
+      // struct i32x4 {
+      //     __attribute__((vector_size(16))) int i;
+      // };
+      // is lowered to
+      // <vscale x 2 x i32> when ABI_VLEN = 128 bits, please checkout
+      // clang/test/CodeGen/RISCV/riscv-vector-callingconv-llvm-ir.c
+      // for more information.
+      Src = Src.withElementType(Ty);
+      return CGF.Builder.CreateLoad(Src);
+    }
     Src = EnterStructPointerForCoercedAccess(Src, SrcSTy,
                                              DstSize.getFixedValue(), CGF);
     SrcTy = Src.getElementType();
@@ -1412,6 +1425,21 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
   if (SrcTy != Dst.getElementType()) {
     if (llvm::StructType *DstSTy =
             dyn_cast<llvm::StructType>(Dst.getElementType())) {
+      if (SrcTy->isScalableTy() || SrcTy->isRISCVVectorTupleTy()) {
+        // In RISCV VLS calling convention, struct of fixed vector might be
+        // lowered using scalable vector, we consider it as a valid load, e.g.
+        // struct i32x4 {
+        //     __attribute__((vector_size(16))) int i;
+        // };
+        // is lowered to
+        // <vscale x 2 x i32> when ABI_VLEN = 128 bits, please checkout
+        // clang/test/CodeGen/RISCV/riscv-vector-callingconv-llvm-ir.c
+        // for more information.
+        Dst = Dst.withElementType(SrcTy);
+        auto *I = Builder.CreateStore(Src, Dst, DstIsVolatile);
+        addInstToCurrentSourceAtom(I, Src);
+        return;
+      }
       assert(!SrcSize.isScalable());
       Dst = EnterStructPointerForCoercedAccess(Dst, DstSTy,
                                                SrcSize.getFixedValue(), *this);
@@ -3326,17 +3354,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             break;
           }
         }
-      }
-
-      // Struct of fixed-length vectors and struct of array of fixed-length
-      // vector in VLS calling convention are coerced to vector tuple
-      // type(represented as TargetExtType) and scalable vector type
-      // respectively, they're no longer handled as struct.
-      if (ArgI.isDirect() && isa<llvm::StructType>(ConvertType(Ty)) &&
-          (isa<llvm::TargetExtType>(ArgI.getCoerceToType()) ||
-           isa<llvm::ScalableVectorType>(ArgI.getCoerceToType()))) {
-        ArgVals.push_back(ParamValue::forDirect(AI));
-        break;
       }
 
       llvm::StructType *STy =
