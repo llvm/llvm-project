@@ -151,7 +151,7 @@ func.func @generic_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off
 // -----
 
 func.func @generic_singular_maps(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>, %arg1: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+1 {{expected the shape-to-loops map to be non-null}}
+  // expected-error @+1 {{invalid indexing maps are non-invertible: ((d0, d1) -> (d0 + d1, d0 + d1))}}
   linalg.generic {
     indexing_maps =  [
       affine_map<(i, j) -> (i + j)>,

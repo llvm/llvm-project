@@ -153,6 +153,14 @@ cl::opt<bool> EnableSVEGISel(
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
+static cl::opt<bool> UseFEATCPACodegen(
+    "aarch64-use-featcpa-codegen", cl::Hidden,
+    cl::desc("Generate ISD::PTRADD nodes for pointer arithmetic in "
+             "SelectionDAG for FEAT_CPA"),
+    cl::init(false));
+
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
@@ -11969,12 +11977,9 @@ getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const 
     unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
     if (!Subtarget->isXRegisterReserved(DwarfRegNum) &&
         !MRI->isReservedReg(MF, Reg))
-      Reg = 0;
+      Reg = Register();
   }
-  if (Reg)
-    return Reg;
-  report_fatal_error(Twine("Invalid register name \""
-                              + StringRef(RegName)  + "\"."));
+  return Reg;
 }
 
 SDValue AArch64TargetLowering::LowerADDROFRETURNADDR(SDValue Op,
@@ -30479,4 +30484,9 @@ bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   }
 
   return TargetLowering::isTypeDesirableForOp(Opc, VT);
+}
+
+bool AArch64TargetLowering::shouldPreservePtrArith(const Function &F,
+                                                   EVT VT) const {
+  return Subtarget->hasCPA() && UseFEATCPACodegen;
 }
