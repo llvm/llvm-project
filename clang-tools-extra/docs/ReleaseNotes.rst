@@ -203,10 +203,18 @@ Changes in existing checks
   <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
   where ``strerror`` was flagged as MT-unsafe.
 
+- Improved :doc:`cppcoreguidelines-avoid-goto
+  <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
+  `IgnoreMacros` to ignore ``goto`` labels defined in macros.
+
 - Improved :doc:`google-readability-namespace-comments
   <clang-tidy/checks/google/readability-namespace-comments>` check by adding
   the option `AllowOmittingNamespaceComments` to accept if a namespace comment
   is omitted entirely.
+
+- Improved :doc:`hicpp-avoid-goto
+  <clang-tidy/checks/hicpp/avoid-goto>` check by adding the option
+  `IgnoreMacros` to ignore ``goto`` labels defined in macros.
 
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check by adding the option
