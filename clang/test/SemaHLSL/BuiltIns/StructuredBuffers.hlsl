@@ -2,7 +2,7 @@
 
 typedef vector<float, 3> float3;
 
-StructuredBuffer<float3> Buffer;
+StructuredBuffer<float3> Buff;
 
 // expected-error@+2 {{class template 'StructuredBuffer' requires template arguments}}
 // expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
@@ -26,6 +26,6 @@ StructuredBuffer<Empty> BufferErr4;
 
 [numthreads(1,1,1)]
 void main() {
-  (void)Buffer.__handle; // expected-error {{'__handle' is a private member of 'hlsl::StructuredBuffer<vector<float, 3>>'}}
+  (void)Buff.__handle; // expected-error {{'__handle' is a private member of 'hlsl::StructuredBuffer<vector<float, 3>>'}}
   // expected-note@* {{implicitly declared private here}}
 }

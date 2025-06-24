@@ -347,7 +347,7 @@ void *ArgvArray::reset(LLVMContext &C, ExecutionEngine *EE,
     LLVM_DEBUG(dbgs() << "JIT: ARGV[" << i << "] = " << (void *)Dest.get()
                       << "\n");
 
-    std::copy(InputArgv[i].begin(), InputArgv[i].end(), Dest.get());
+    llvm::copy(InputArgv[i], Dest.get());
     Dest[Size-1] = 0;
 
     // Endian safe: Array[i] = (PointerTy)Dest;

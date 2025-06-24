@@ -164,6 +164,8 @@ public:
   SmallVector<StringRef>
   stringifyProfile(const SmallVector<ArrayRef<T>> &profileSet);
 
+  static llvm::SmallString<7> stringifyTypeInfo(const TypeInfo &typeInfo);
+
 private:
   template <typename T>
   FailureOr<SmallVector<T>> getOperatorDefinition(Operation *op,

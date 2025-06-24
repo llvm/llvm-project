@@ -247,6 +247,8 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
     llvm::errs() << " [LeadingSpace]";
   if (Tok.isExpandDisabled())
     llvm::errs() << " [ExpandDisabled]";
+  if (Tok.isFirstPPToken())
+    llvm::errs() << " [First pp-token]";
   if (Tok.needsCleaning()) {
     const char *Start = SourceMgr.getCharacterData(Tok.getLocation());
     llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength())
@@ -319,7 +321,7 @@ Preprocessor::macro_begin(bool IncludeExternalMacros) const {
 
   // Make sure we cover all macros in visible modules.
   for (const ModuleMacro &Macro : ModuleMacros)
-    CurSubmoduleState->Macros.insert(std::make_pair(Macro.II, MacroState()));
+    CurSubmoduleState->Macros.try_emplace(Macro.II);
 
   return CurSubmoduleState->Macros.begin();
 }
@@ -759,6 +761,8 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
 
 void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   assert(II.isOutOfDate() && "not out of date");
+  assert(getExternalSource() &&
+         "getExternalSource() should not return nullptr");
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
 
@@ -833,6 +837,11 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     // Don't diagnose this keyword again in this translation unit.
     II.setIsFutureCompatKeyword(false);
   }
+
+  // If this identifier would be a keyword in C++, diagnose as a compatibility
+  // issue.
+  if (II.IsKeywordInCPlusPlus() && !DisableMacroExpansion)
+    Diag(Identifier, diag::warn_pp_identifier_is_cpp_keyword) << &II;
 
   // If this is an extension token, diagnose its use.
   // We avoid diagnosing tokens that originate from macro definitions.
@@ -1159,8 +1168,8 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
     if (Result.is(tok::colon) && ModuleDeclState.isNamedModule()) {
       std::string Name = ModuleDeclState.getPrimaryName().str();
       Name += ":";
-      NamedModuleImportPath.push_back(
-          {getIdentifierInfo(Name), Result.getLocation()});
+      NamedModuleImportPath.emplace_back(Result.getLocation(),
+                                         getIdentifierInfo(Name));
       CurLexerCallback = CLK_LexAfterModuleImport;
       return true;
     }
@@ -1258,8 +1267,8 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   if (ModuleImportExpectsIdentifier && Result.getKind() == tok::identifier) {
     // We expected to see an identifier here, and we did; continue handling
     // identifiers.
-    NamedModuleImportPath.push_back(
-        std::make_pair(Result.getIdentifierInfo(), Result.getLocation()));
+    NamedModuleImportPath.emplace_back(Result.getLocation(),
+                                       Result.getIdentifierInfo());
     ModuleImportExpectsIdentifier = false;
     CurLexerCallback = CLK_LexAfterModuleImport;
     return true;
@@ -1302,12 +1311,12 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       // If the FlatModuleName ends with colon, it implies it is a partition.
       if (!FlatModuleName.empty() && FlatModuleName.back() != ':')
         FlatModuleName += ".";
-      FlatModuleName += Piece.first->getName();
+      FlatModuleName += Piece.getIdentifierInfo()->getName();
     }
-    SourceLocation FirstPathLoc = NamedModuleImportPath[0].second;
+    SourceLocation FirstPathLoc = NamedModuleImportPath[0].getLoc();
     NamedModuleImportPath.clear();
-    NamedModuleImportPath.push_back(
-        std::make_pair(getIdentifierInfo(FlatModuleName), FirstPathLoc));
+    NamedModuleImportPath.emplace_back(FirstPathLoc,
+                                       getIdentifierInfo(FlatModuleName));
   }
 
   Module *Imported = nullptr;

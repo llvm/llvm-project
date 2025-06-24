@@ -113,6 +113,7 @@ protected:
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
+  bool GFX1250Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
   bool SGPRInitBug = false;
@@ -201,6 +202,7 @@ protected:
 
   bool HasNoSdstCMPX = false;
   bool HasVscnt = false;
+  bool HasWaitXcnt = false;
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
@@ -260,8 +262,10 @@ protected:
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
   bool HasPointSampleAccel = false;
+  bool HasSetPrioIncWgInst = false;
 
   bool RequiresCOV6 = false;
+  bool UseBlockVGPROpsForCSR = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1277,6 +1281,8 @@ public:
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
@@ -1363,6 +1369,10 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1250.
+  bool hasWaitXCnt() const { return HasWaitXcnt; }
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
@@ -1456,6 +1466,11 @@ public:
   /// values.
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
+  bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  // \returns true if target has S_SETPRIO_INC_WG instruction.
+  bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
+
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending.
   bool hasGetPCZeroExtension() const { return GFX12Insts; }
@@ -1501,6 +1516,9 @@ public:
 
   /// \returns Reserved number of SGPRs for given function \p F.
   unsigned getReservedNumSGPRs(const Function &F) const;
+
+  /// \returns Maximum number of preloaded SGPRs for the subtarget.
+  unsigned getMaxNumPreloadedSGPRs() const;
 
   /// \returns max num SGPRs. This is the common utility
   /// function called by MachineFunction and Function
@@ -1570,8 +1588,10 @@ public:
 
   /// \returns max num VGPRs. This is the common utility function
   /// called by MachineFunction and Function variants of getMaxNumVGPRs.
-  unsigned getBaseMaxNumVGPRs(const Function &F,
-                              std::pair<unsigned, unsigned> WavesPerEU) const;
+  unsigned
+  getBaseMaxNumVGPRs(const Function &F,
+                     std::pair<unsigned, unsigned> NumVGPRBounds) const;
+
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p F, or number of VGPRs explicitly
   /// requested using "amdgpu-num-vgpr" attribute attached to function \p F.

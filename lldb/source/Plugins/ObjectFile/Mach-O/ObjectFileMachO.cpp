@@ -12,6 +12,7 @@
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_i386.h"
+#include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -769,6 +770,147 @@ protected:
   }
 };
 
+class RegisterContextDarwin_riscv32_Mach
+    : public RegisterContextDarwin_riscv32 {
+public:
+  RegisterContextDarwin_riscv32_Mach(lldb_private::Thread &thread,
+                                     const DataExtractor &data)
+      : RegisterContextDarwin_riscv32(thread, 0) {
+    SetRegisterDataFrom_LC_THREAD(data);
+  }
+
+  void InvalidateAllRegisters() override {
+    // Do nothing... registers are always valid...
+  }
+
+  void SetRegisterDataFrom_LC_THREAD(const DataExtractor &data) {
+    lldb::offset_t offset = 0;
+    SetError(GPRRegSet, Read, -1);
+    SetError(FPURegSet, Read, -1);
+    SetError(EXCRegSet, Read, -1);
+    SetError(CSRRegSet, Read, -1);
+    bool done = false;
+    while (!done) {
+      int flavor = data.GetU32(&offset);
+      uint32_t count = data.GetU32(&offset);
+      lldb::offset_t next_thread_state = offset + (count * 4);
+      switch (flavor) {
+      case GPRRegSet:
+        // x0-x31 + pc
+        if (count >= 32) {
+          for (uint32_t i = 0; i < 32; ++i)
+            ((uint32_t *)&gpr.x0)[i] = data.GetU32(&offset);
+          gpr.pc = data.GetU32(&offset);
+          SetError(GPRRegSet, Read, 0);
+        }
+        offset = next_thread_state;
+        break;
+      case FPURegSet: {
+        // f0-f31 + fcsr
+        if (count >= 32) {
+          for (uint32_t i = 0; i < 32; ++i)
+            ((uint32_t *)&fpr.f0)[i] = data.GetU32(&offset);
+          fpr.fcsr = data.GetU32(&offset);
+          SetError(FPURegSet, Read, 0);
+        }
+      }
+        offset = next_thread_state;
+        break;
+      case EXCRegSet:
+        if (count == 3) {
+          exc.exception = data.GetU32(&offset);
+          exc.fsr = data.GetU32(&offset);
+          exc.far = data.GetU32(&offset);
+          SetError(EXCRegSet, Read, 0);
+        }
+        offset = next_thread_state;
+        break;
+      default:
+        done = true;
+        break;
+      }
+    }
+  }
+
+  static bool Create_LC_THREAD(Thread *thread, Stream &data) {
+    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    if (reg_ctx_sp) {
+      RegisterContext *reg_ctx = reg_ctx_sp.get();
+
+      data.PutHex32(GPRRegSet); // Flavor
+      data.PutHex32(GPRWordCount);
+      PrintRegisterValue(reg_ctx, "x0", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x1", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x2", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x3", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x4", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x5", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x6", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x7", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x8", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x9", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x10", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x11", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x12", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x13", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x14", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x15", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x16", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x17", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x18", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x19", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x20", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x21", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x22", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x23", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x24", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x25", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x26", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x27", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x28", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x29", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x30", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x31", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "pc", nullptr, 4, data);
+      data.PutHex32(0); // uint32_t pad at the end
+
+      // Write out the EXC registers
+      data.PutHex32(EXCRegSet);
+      data.PutHex32(EXCWordCount);
+      PrintRegisterValue(reg_ctx, "exception", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "fsr", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "far", nullptr, 4, data);
+      return true;
+    }
+    return false;
+  }
+
+protected:
+  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return -1; }
+
+  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return -1; }
+
+  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return -1; }
+
+  int DoReadCSR(lldb::tid_t tid, int flavor, CSR &csr) override { return -1; }
+
+  int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) override {
+    return 0;
+  }
+
+  int DoWriteFPU(lldb::tid_t tid, int flavor, const FPU &fpu) override {
+    return 0;
+  }
+
+  int DoWriteEXC(lldb::tid_t tid, int flavor, const EXC &exc) override {
+    return 0;
+  }
+
+  int DoWriteCSR(lldb::tid_t tid, int flavor, const CSR &csr) override {
+    return 0;
+  }
+};
+
 static uint32_t MachHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
   case MH_MAGIC:
@@ -1453,34 +1595,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_objc_classlist("__objc_classlist");
   static ConstString g_sect_name_cfstring("__cfstring");
 
-  static ConstString g_sect_name_dwarf_debug_abbrev("__debug_abbrev");
-  static ConstString g_sect_name_dwarf_debug_abbrev_dwo("__debug_abbrev.dwo");
-  static ConstString g_sect_name_dwarf_debug_addr("__debug_addr");
-  static ConstString g_sect_name_dwarf_debug_aranges("__debug_aranges");
-  static ConstString g_sect_name_dwarf_debug_cu_index("__debug_cu_index");
-  static ConstString g_sect_name_dwarf_debug_frame("__debug_frame");
-  static ConstString g_sect_name_dwarf_debug_info("__debug_info");
-  static ConstString g_sect_name_dwarf_debug_info_dwo("__debug_info.dwo");
-  static ConstString g_sect_name_dwarf_debug_line("__debug_line");
-  static ConstString g_sect_name_dwarf_debug_line_dwo("__debug_line.dwo");
-  static ConstString g_sect_name_dwarf_debug_line_str("__debug_line_str");
-  static ConstString g_sect_name_dwarf_debug_loc("__debug_loc");
-  static ConstString g_sect_name_dwarf_debug_loclists("__debug_loclists");
-  static ConstString g_sect_name_dwarf_debug_loclists_dwo("__debug_loclists.dwo");
-  static ConstString g_sect_name_dwarf_debug_macinfo("__debug_macinfo");
-  static ConstString g_sect_name_dwarf_debug_macro("__debug_macro");
-  static ConstString g_sect_name_dwarf_debug_macro_dwo("__debug_macro.dwo");
-  static ConstString g_sect_name_dwarf_debug_names("__debug_names");
-  static ConstString g_sect_name_dwarf_debug_pubnames("__debug_pubnames");
-  static ConstString g_sect_name_dwarf_debug_pubtypes("__debug_pubtypes");
-  static ConstString g_sect_name_dwarf_debug_ranges("__debug_ranges");
-  static ConstString g_sect_name_dwarf_debug_rnglists("__debug_rnglists");
-  static ConstString g_sect_name_dwarf_debug_str("__debug_str");
-  static ConstString g_sect_name_dwarf_debug_str_dwo("__debug_str.dwo");
   static ConstString g_sect_name_dwarf_debug_str_offs("__debug_str_offs");
   static ConstString g_sect_name_dwarf_debug_str_offs_dwo("__debug_str_offs.dwo");
-  static ConstString g_sect_name_dwarf_debug_tu_index("__debug_tu_index");
-  static ConstString g_sect_name_dwarf_debug_types("__debug_types");
   static ConstString g_sect_name_dwarf_apple_names("__apple_names");
   static ConstString g_sect_name_dwarf_apple_types("__apple_types");
   static ConstString g_sect_name_dwarf_apple_namespaces("__apple_namespac");
@@ -1495,62 +1611,15 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_lldb_formatters("__lldbformatters");
   static ConstString g_sect_name_swift_ast("__swift_ast");
 
-  if (section_name == g_sect_name_dwarf_debug_abbrev)
-    return eSectionTypeDWARFDebugAbbrev;
-  if (section_name == g_sect_name_dwarf_debug_abbrev_dwo)
-    return eSectionTypeDWARFDebugAbbrevDwo;
-  if (section_name == g_sect_name_dwarf_debug_addr)
-    return eSectionTypeDWARFDebugAddr;
-  if (section_name == g_sect_name_dwarf_debug_aranges)
-    return eSectionTypeDWARFDebugAranges;
-  if (section_name == g_sect_name_dwarf_debug_cu_index)
-    return eSectionTypeDWARFDebugCuIndex;
-  if (section_name == g_sect_name_dwarf_debug_frame)
-    return eSectionTypeDWARFDebugFrame;
-  if (section_name == g_sect_name_dwarf_debug_info)
-    return eSectionTypeDWARFDebugInfo;
-  if (section_name == g_sect_name_dwarf_debug_info_dwo)
-    return eSectionTypeDWARFDebugInfoDwo;
-  if (section_name == g_sect_name_dwarf_debug_line)
-    return eSectionTypeDWARFDebugLine;
-  if (section_name == g_sect_name_dwarf_debug_line_dwo)
-    return eSectionTypeDWARFDebugLine; // Same as debug_line.
-  if (section_name == g_sect_name_dwarf_debug_line_str)
-    return eSectionTypeDWARFDebugLineStr;
-  if (section_name == g_sect_name_dwarf_debug_loc)
-    return eSectionTypeDWARFDebugLoc;
-  if (section_name == g_sect_name_dwarf_debug_loclists)
-    return eSectionTypeDWARFDebugLocLists;
-  if (section_name == g_sect_name_dwarf_debug_loclists_dwo)
-    return eSectionTypeDWARFDebugLocListsDwo;
-  if (section_name == g_sect_name_dwarf_debug_macinfo)
-    return eSectionTypeDWARFDebugMacInfo;
-  if (section_name == g_sect_name_dwarf_debug_macro)
-    return eSectionTypeDWARFDebugMacro;
-  if (section_name == g_sect_name_dwarf_debug_macro_dwo)
-    return eSectionTypeDWARFDebugMacInfo; // Same as debug_macro.
-  if (section_name == g_sect_name_dwarf_debug_names)
-    return eSectionTypeDWARFDebugNames;
-  if (section_name == g_sect_name_dwarf_debug_pubnames)
-    return eSectionTypeDWARFDebugPubNames;
-  if (section_name == g_sect_name_dwarf_debug_pubtypes)
-    return eSectionTypeDWARFDebugPubTypes;
-  if (section_name == g_sect_name_dwarf_debug_ranges)
-    return eSectionTypeDWARFDebugRanges;
-  if (section_name == g_sect_name_dwarf_debug_rnglists)
-    return eSectionTypeDWARFDebugRngLists;
-  if (section_name == g_sect_name_dwarf_debug_str)
-    return eSectionTypeDWARFDebugStr;
-  if (section_name == g_sect_name_dwarf_debug_str_dwo)
-    return eSectionTypeDWARFDebugStrDwo;
   if (section_name == g_sect_name_dwarf_debug_str_offs)
     return eSectionTypeDWARFDebugStrOffsets;
   if (section_name == g_sect_name_dwarf_debug_str_offs_dwo)
     return eSectionTypeDWARFDebugStrOffsetsDwo;
-  if (section_name == g_sect_name_dwarf_debug_tu_index)
-    return eSectionTypeDWARFDebugTuIndex;
-  if (section_name == g_sect_name_dwarf_debug_types)
-    return eSectionTypeDWARFDebugTypes;
+
+  llvm::StringRef stripped_name = section_name.GetStringRef();
+  if (stripped_name.consume_front("__debug_"))
+    return ObjectFile::GetDWARFSectionTypeFromName(stripped_name);
+
   if (section_name == g_sect_name_dwarf_apple_names)
     return eSectionTypeDWARFAppleNames;
   if (section_name == g_sect_name_dwarf_apple_types)
@@ -5827,6 +5896,11 @@ ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
         reg_ctx_sp =
             std::make_shared<RegisterContextDarwin_x86_64_Mach>(thread, data);
         break;
+
+      case llvm::MachO::CPU_TYPE_RISCV:
+        reg_ctx_sp =
+            std::make_shared<RegisterContextDarwin_riscv32_Mach>(thread, data);
+        break;
       }
     }
   }
@@ -6502,7 +6576,6 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
 
   offset_t current_string_offset = start_of_filenames;
   offset_t current_segaddrs_offset = start_of_seg_vmaddrs;
-  std::vector<struct image_entry> image_entries;
   for (size_t i = 0; i < modules_count; i++) {
     ModuleSP module_sp = modules.GetModuleAtIndex(i);
 
@@ -6693,6 +6766,11 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
             case llvm::MachO::CPU_TYPE_X86_64:
               RegisterContextDarwin_x86_64_Mach::Create_LC_THREAD(
+                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
+              break;
+
+            case llvm::MachO::CPU_TYPE_RISCV:
+              RegisterContextDarwin_riscv32_Mach::Create_LC_THREAD(
                   thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
             }

@@ -739,6 +739,8 @@ func.func @scopeMerge() {
 // CHECK:     "test.use"(%[[alloc]]) : (memref<?xi64>) -> ()
 // CHECK:     return
 
+// -----
+
 func.func @scopeMerge2() {
   "test.region"() ({
     memref.alloca_scope {
@@ -763,6 +765,8 @@ func.func @scopeMerge2() {
 // CHECK:     return
 // CHECK:   }
 
+// -----
+
 func.func @scopeMerge3() {
   %cnt = "test.count"() : () -> index
   "test.region"() ({
@@ -786,6 +790,8 @@ func.func @scopeMerge3() {
 // CHECK:     }) : () -> ()
 // CHECK:     return
 // CHECK:   }
+
+// -----
 
 func.func @scopeMerge4() {
   %cnt = "test.count"() : () -> index
@@ -813,6 +819,8 @@ func.func @scopeMerge4() {
 // CHECK:     return
 // CHECK:   }
 
+// -----
+
 func.func @scopeMerge5() {
   "test.region"() ({
     memref.alloca_scope {
@@ -839,6 +847,8 @@ func.func @scopeMerge5() {
 // CHECK:     return
 // CHECK:   }
 
+// -----
+
 func.func @scopeInline(%arg : memref<index>) {
   %cnt = "test.count"() : () -> index
   "test.region"() ({
@@ -852,6 +862,24 @@ func.func @scopeInline(%arg : memref<index>) {
 
 // CHECK:   func @scopeInline
 // CHECK-NOT:  memref.alloca_scope
+
+// -----
+
+// Ensure this case not crash.
+
+// CHECK-LABEL:   func.func @scope_merge_without_terminator() {
+// CHECK:           "test.region"()
+// CHECK:             memref.alloca_scope
+func.func @scope_merge_without_terminator() {
+  "test.region"() ({
+    memref.alloca_scope {
+      %cnt = "test.count"() : () -> index
+      %a = memref.alloca(%cnt) : memref<?xi64>
+      "test.use"(%a) : (memref<?xi64>) -> ()
+    }
+  }) : () -> ()
+  return
+}
 
 // -----
 
@@ -1148,4 +1176,17 @@ func.func @cannot_fold_transpose_cast(%arg0: memref<?x4xf32>) -> memref<?x?xf32,
     %transpose = memref.transpose %cast (d0, d1) -> (d1, d0) : memref<?x?xf32> to memref<?x?xf32, #transpose_map>
     // CHECK: return %[[TRANSPOSE]]
     return %transpose : memref<?x?xf32, #transpose_map>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_assume_alignment_chain
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]
+func.func @fold_assume_alignment_chain(%0: memref<128xf32>) -> memref<128xf32> {
+  // CHECK: %[[ALIGN:.+]] = memref.assume_alignment %[[ARG0]], 16
+  %1 = memref.assume_alignment %0, 16 : memref<128xf32>
+  // CHECK-NOT: memref.assume_alignment
+  %2 = memref.assume_alignment %1, 16 : memref<128xf32>
+  // CHECK: return %[[ALIGN]]
+  return %2 : memref<128xf32>
 }

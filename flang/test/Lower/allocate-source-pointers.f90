@@ -285,11 +285,11 @@ end
 ! CHECK:         %[[VAL_14:.*]] = fir.embox %[[VAL_12]] typeparams %[[VAL_13]] : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK:         fir.store %[[VAL_14]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:         %[[VAL_15:.*]] = fir.box_elesize %[[VAL_11]] : (!fir.box<!fir.char<1,?>>) -> index
-! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (index) -> i64
-! CHECK:         %[[VAL_18:.*]] = arith.constant 1 : i32
-! CHECK:         %[[VAL_19:.*]] = arith.constant 0 : i32
-! CHECK:         %[[VAL_20:.*]] = arith.constant 0 : i32
+! CHECK-DAG:         %[[VAL_16:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK-DAG:         %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (index) -> i64
+! CHECK-DAG:         %[[VAL_18:.*]] = arith.constant 1 : i32
+! CHECK-DAG:         %[[VAL_19:.*]] = arith.constant 0 : i32
+! CHECK-DAG:         %[[VAL_20:.*]] = arith.constant 0 : i32
 ! CHECK:         fir.call @_FortranAPointerNullifyCharacter(%[[VAL_16]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> ()
 ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>

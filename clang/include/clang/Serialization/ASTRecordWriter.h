@@ -17,6 +17,7 @@
 #include "clang/AST/AbstractBasicWriter.h"
 #include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/SourceLocationEncoding.h"
 
@@ -115,6 +116,13 @@ public:
     Record->push_back(BitOffset);
   }
 
+  void AddLookupOffsets(const LookupBlockOffsets &Offsets) {
+    AddOffset(Offsets.LexicalOffset);
+    AddOffset(Offsets.VisibleOffset);
+    AddOffset(Offsets.ModuleLocalOffset);
+    AddOffset(Offsets.TULocalOffset);
+  }
+
   /// Add the given statement or expression to the queue of
   /// statements to emit.
   ///
@@ -149,6 +157,20 @@ public:
   void writeTypeCoupledDeclRefInfo(TypeCoupledDeclRefInfo Info) {
     writeDeclRef(Info.getDecl());
     writeBool(Info.isDeref());
+  }
+
+  void writeHLSLSpirvOperand(SpirvOperand Op) {
+    QualType ResultType;
+    llvm::APInt Value;
+
+    if (Op.isConstant() || Op.isType())
+      ResultType = Op.getResultType();
+    if (Op.isConstant() || Op.isLiteral())
+      Value = Op.getValue();
+
+    Record->push_back(Op.getKind());
+    writeQualType(ResultType);
+    writeAPInt(Value);
   }
 
   /// Emit a source range.

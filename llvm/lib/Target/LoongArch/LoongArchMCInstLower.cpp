@@ -14,6 +14,7 @@
 #include "LoongArch.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -25,7 +26,7 @@ using namespace llvm;
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                     const AsmPrinter &AP) {
   MCContext &Ctx = AP.OutContext;
-  LoongArchMCExpr::Specifier Kind;
+  uint16_t Kind = 0;
 
   switch (LoongArchII::getDirectFlags(MO)) {
   default:
@@ -34,94 +35,92 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = LoongArchMCExpr::VK_None;
     break;
   case LoongArchII::MO_CALL:
-    Kind = LoongArchMCExpr::VK_CALL;
-    break;
   case LoongArchII::MO_CALL_PLT:
-    Kind = LoongArchMCExpr::VK_CALL_PLT;
+    Kind = ELF::R_LARCH_B26;
     break;
   case LoongArchII::MO_PCREL_HI:
-    Kind = LoongArchMCExpr::VK_PCALA_HI20;
+    Kind = ELF::R_LARCH_PCALA_HI20;
     break;
   case LoongArchII::MO_PCREL_LO:
-    Kind = LoongArchMCExpr::VK_PCALA_LO12;
+    Kind = ELF::R_LARCH_PCALA_LO12;
     break;
   case LoongArchII::MO_PCREL64_LO:
-    Kind = LoongArchMCExpr::VK_PCALA64_LO20;
+    Kind = ELF::R_LARCH_PCALA64_LO20;
     break;
   case LoongArchII::MO_PCREL64_HI:
-    Kind = LoongArchMCExpr::VK_PCALA64_HI12;
+    Kind = ELF::R_LARCH_PCALA64_HI12;
     break;
   case LoongArchII::MO_GOT_PC_HI:
-    Kind = LoongArchMCExpr::VK_GOT_PC_HI20;
+    Kind = ELF::R_LARCH_GOT_PC_HI20;
     break;
   case LoongArchII::MO_GOT_PC_LO:
-    Kind = LoongArchMCExpr::VK_GOT_PC_LO12;
+    Kind = ELF::R_LARCH_GOT_PC_LO12;
     break;
   case LoongArchII::MO_GOT_PC64_LO:
-    Kind = LoongArchMCExpr::VK_GOT64_PC_LO20;
+    Kind = ELF::R_LARCH_GOT64_PC_LO20;
     break;
   case LoongArchII::MO_GOT_PC64_HI:
-    Kind = LoongArchMCExpr::VK_GOT64_PC_HI12;
+    Kind = ELF::R_LARCH_GOT64_PC_HI12;
     break;
   case LoongArchII::MO_LE_HI:
-    Kind = LoongArchMCExpr::VK_TLS_LE_HI20;
+    Kind = ELF::R_LARCH_TLS_LE_HI20;
     break;
   case LoongArchII::MO_LE_LO:
-    Kind = LoongArchMCExpr::VK_TLS_LE_LO12;
+    Kind = ELF::R_LARCH_TLS_LE_LO12;
     break;
   case LoongArchII::MO_LE64_LO:
-    Kind = LoongArchMCExpr::VK_TLS_LE64_LO20;
+    Kind = ELF::R_LARCH_TLS_LE64_LO20;
     break;
   case LoongArchII::MO_LE64_HI:
-    Kind = LoongArchMCExpr::VK_TLS_LE64_HI12;
+    Kind = ELF::R_LARCH_TLS_LE64_HI12;
     break;
   case LoongArchII::MO_IE_PC_HI:
-    Kind = LoongArchMCExpr::VK_TLS_IE_PC_HI20;
+    Kind = ELF::R_LARCH_TLS_IE_PC_HI20;
     break;
   case LoongArchII::MO_IE_PC_LO:
-    Kind = LoongArchMCExpr::VK_TLS_IE_PC_LO12;
+    Kind = ELF::R_LARCH_TLS_IE_PC_LO12;
     break;
   case LoongArchII::MO_IE_PC64_LO:
-    Kind = LoongArchMCExpr::VK_TLS_IE64_PC_LO20;
+    Kind = ELF::R_LARCH_TLS_IE64_PC_LO20;
     break;
   case LoongArchII::MO_IE_PC64_HI:
-    Kind = LoongArchMCExpr::VK_TLS_IE64_PC_HI12;
+    Kind = ELF::R_LARCH_TLS_IE64_PC_HI12;
     break;
   case LoongArchII::MO_LD_PC_HI:
-    Kind = LoongArchMCExpr::VK_TLS_LD_PC_HI20;
+    Kind = ELF::R_LARCH_TLS_LD_PC_HI20;
     break;
   case LoongArchII::MO_GD_PC_HI:
-    Kind = LoongArchMCExpr::VK_TLS_GD_PC_HI20;
+    Kind = ELF::R_LARCH_TLS_GD_PC_HI20;
     break;
   case LoongArchII::MO_CALL36:
-    Kind = LoongArchMCExpr::VK_CALL36;
+    Kind = ELF::R_LARCH_CALL36;
     break;
   case LoongArchII::MO_DESC_PC_HI:
-    Kind = LoongArchMCExpr::VK_TLS_DESC_PC_HI20;
+    Kind = ELF::R_LARCH_TLS_DESC_PC_HI20;
     break;
   case LoongArchII::MO_DESC_PC_LO:
-    Kind = LoongArchMCExpr::VK_TLS_DESC_PC_LO12;
+    Kind = ELF::R_LARCH_TLS_DESC_PC_LO12;
     break;
   case LoongArchII::MO_DESC64_PC_LO:
-    Kind = LoongArchMCExpr::VK_TLS_DESC64_PC_LO20;
+    Kind = ELF::R_LARCH_TLS_DESC64_PC_LO20;
     break;
   case LoongArchII::MO_DESC64_PC_HI:
-    Kind = LoongArchMCExpr::VK_TLS_DESC64_PC_HI12;
+    Kind = ELF::R_LARCH_TLS_DESC64_PC_HI12;
     break;
   case LoongArchII::MO_DESC_LD:
-    Kind = LoongArchMCExpr::VK_TLS_DESC_LD;
+    Kind = ELF::R_LARCH_TLS_DESC_LD;
     break;
   case LoongArchII::MO_DESC_CALL:
-    Kind = LoongArchMCExpr::VK_TLS_DESC_CALL;
+    Kind = ELF::R_LARCH_TLS_DESC_CALL;
     break;
   case LoongArchII::MO_LE_HI_R:
-    Kind = LoongArchMCExpr::VK_TLS_LE_HI20_R;
+    Kind = ELF::R_LARCH_TLS_LE_HI20_R;
     break;
   case LoongArchII::MO_LE_ADD_R:
-    Kind = LoongArchMCExpr::VK_TLS_LE_ADD_R;
+    Kind = ELF::R_LARCH_TLS_LE_ADD_R;
     break;
   case LoongArchII::MO_LE_LO_R:
-    Kind = LoongArchMCExpr::VK_TLS_LE_LO12_R;
+    Kind = ELF::R_LARCH_TLS_LE_LO12_R;
     break;
     // TODO: Handle more target-flags.
   }

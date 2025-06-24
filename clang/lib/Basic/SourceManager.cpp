@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -343,6 +344,9 @@ void SourceManager::clearIDTables() {
   NextLocalOffset = 0;
   CurrentLoadedOffset = MaxLoadedOffset;
   createExpansionLoc(SourceLocation(), SourceLocation(), SourceLocation(), 1);
+  // Diagnostics engine keeps some references to fileids, mostly for dealing
+  // with diagnostic pragmas, make sure they're reset as well.
+  Diag.ResetPragmas();
 }
 
 bool SourceManager::isMainFile(const FileEntry &SourceFile) {
@@ -1725,7 +1729,7 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
   assert(FID.isValid());
 
   // Initially no macro argument chunk is present.
-  MacroArgsCache.insert(std::make_pair(0, SourceLocation()));
+  MacroArgsCache.try_emplace(0);
 
   int ID = FID.ID;
   while (true) {
@@ -2390,11 +2394,11 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
   // in `Environment` so that `FileMgr` can out-live this function scope.
   FileMgr =
       std::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
   Diagnostics = std::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      new DiagnosticOptions);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =

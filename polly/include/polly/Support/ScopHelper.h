@@ -402,7 +402,7 @@ llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                            llvm::Function *GenFn, llvm::ScalarEvolution &GenSE,
                            const llvm::DataLayout &DL, const char *Name,
                            const llvm::SCEV *E, llvm::Type *Ty,
-                           llvm::Instruction *IP, ValueMapT *VMap,
+                           llvm::BasicBlock::iterator IP, ValueMapT *VMap,
                            LoopToScevMapT *LoopMap, llvm::BasicBlock *RTCBB);
 
 /// Return the condition for the terminator @p TI.

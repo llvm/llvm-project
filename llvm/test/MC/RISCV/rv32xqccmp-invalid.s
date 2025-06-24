@@ -10,7 +10,7 @@ qc.cm.mvsa01 s0, s0
 # CHECK-ERROR: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.cm.mva01s a1, a2
 
-# CHECK-ERROR: :[[@LINE+1]]:15: error: invalid register list, {ra, s0-s10} or {x1, x8-x9, x18-x26} is not supported
+# CHECK-ERROR: :[[@LINE+1]]:15: error: invalid register list, '{ra, s0-s10}' or '{x1, x8-x9, x18-x26}' is not supported
 qc.cm.popretz {ra, s0-s10}, 112
 
 # CHECK-ERROR: :[[@LINE+1]]:28: error: stack adjustment for register list must be a multiple of 16 bytes in the range [16, 64]

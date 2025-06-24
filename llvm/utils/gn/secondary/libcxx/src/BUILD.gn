@@ -47,6 +47,7 @@ config("cxx_config") {
     "-Wextra-semi",
     "-Wno-user-defined-literals",
     "-Wno-covered-switch-default",
+    "-Wno-nullability-completeness",
   ]
   cflags_cc = [
     "-std=c++23",

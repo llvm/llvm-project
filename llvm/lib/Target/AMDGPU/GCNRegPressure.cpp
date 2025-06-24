@@ -35,58 +35,60 @@ bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
 ///////////////////////////////////////////////////////////////////////////////
 // GCNRegPressure
 
-unsigned GCNRegPressure::getRegKind(Register Reg,
-                                    const MachineRegisterInfo &MRI) {
-  assert(Reg.isVirtual());
-  const auto *const RC = MRI.getRegClass(Reg);
-  const auto *STI =
-      static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-  return STI->isSGPRClass(RC)
-             ? (STI->getRegSizeInBits(*RC) == 32 ? SGPR32 : SGPR_TUPLE)
-         : STI->isAGPRClass(RC)
-             ? (STI->getRegSizeInBits(*RC) == 32 ? AGPR32 : AGPR_TUPLE)
-             : (STI->getRegSizeInBits(*RC) == 32 ? VGPR32 : VGPR_TUPLE);
+unsigned GCNRegPressure::getRegKind(const TargetRegisterClass *RC,
+                                    const SIRegisterInfo *STI) {
+  return STI->isSGPRClass(RC) ? SGPR : (STI->isAGPRClass(RC) ? AGPR : VGPR);
 }
 
 void GCNRegPressure::inc(unsigned Reg,
                          LaneBitmask PrevMask,
                          LaneBitmask NewMask,
                          const MachineRegisterInfo &MRI) {
-  if (SIRegisterInfo::getNumCoveredRegs(NewMask) ==
-      SIRegisterInfo::getNumCoveredRegs(PrevMask))
+  unsigned NewNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(NewMask);
+  unsigned PrevNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(PrevMask);
+  if (NewNumCoveredRegs == PrevNumCoveredRegs)
     return;
 
   int Sign = 1;
   if (NewMask < PrevMask) {
     std::swap(NewMask, PrevMask);
+    std::swap(NewNumCoveredRegs, PrevNumCoveredRegs);
     Sign = -1;
   }
+  assert(PrevMask < NewMask && PrevNumCoveredRegs < NewNumCoveredRegs &&
+         "prev mask should always be lesser than new");
 
-  switch (auto Kind = getRegKind(Reg, MRI)) {
-  case SGPR32:
-  case VGPR32:
-  case AGPR32:
-    Value[Kind] += Sign;
-    break;
-
-  case SGPR_TUPLE:
-  case VGPR_TUPLE:
-  case AGPR_TUPLE:
-    assert(PrevMask < NewMask);
-
-    Value[Kind == SGPR_TUPLE ? SGPR32 : Kind == AGPR_TUPLE ? AGPR32 : VGPR32] +=
-      Sign * SIRegisterInfo::getNumCoveredRegs(~PrevMask & NewMask);
-
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  const SIRegisterInfo *STI = static_cast<const SIRegisterInfo *>(TRI);
+  unsigned RegKind = getRegKind(RC, STI);
+  if (TRI->getRegSizeInBits(*RC) != 32) {
+    // Reg is from a tuple register class.
     if (PrevMask.none()) {
-      assert(NewMask.any());
-      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      Value[Kind] +=
-          Sign * TRI->getRegClassWeight(MRI.getRegClass(Reg)).RegWeight;
+      unsigned TupleIdx = TOTAL_KINDS + RegKind;
+      Value[TupleIdx] += Sign * TRI->getRegClassWeight(RC).RegWeight;
     }
-    break;
-
-  default: llvm_unreachable("Unknown register kind");
+    // Pressure scales with number of new registers covered by the new mask.
+    // Note when true16 is enabled, we can no longer safely use the following
+    // approach to calculate the difference in the number of 32-bit registers
+    // between two masks:
+    //
+    // Sign *= SIRegisterInfo::getNumCoveredRegs(~PrevMask & NewMask);
+    //
+    // The issue is that the mask calculation `~PrevMask & NewMask` doesn't
+    // properly account for partial usage of a 32-bit register when dealing with
+    // 16-bit registers.
+    //
+    // Consider this example:
+    // Assume PrevMask = 0b0010 and NewMask = 0b1111. Here, the correct register
+    // usage difference should be 1, because even though PrevMask uses only half
+    // of a 32-bit register, it should still be counted as a full register use.
+    // However, the mask calculation yields `~PrevMask & NewMask = 0b1101`, and
+    // calling `getNumCoveredRegs` returns 2 instead of 1. This incorrect
+    // calculation can lead to integer overflow when Sign = -1.
+    Sign *= NewNumCoveredRegs - PrevNumCoveredRegs;
   }
+  Value[RegKind] += Sign;
 }
 
 bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
@@ -226,7 +228,7 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
 
 Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST) {
   return Printable([&RP, ST](raw_ostream &OS) {
-    OS << "VGPRs: " << RP.Value[GCNRegPressure::VGPR32] << ' '
+    OS << "VGPRs: " << RP.getArchVGPRNum() << ' '
        << "AGPRs: " << RP.getAGPRNum();
     if (ST)
       OS << "(O"

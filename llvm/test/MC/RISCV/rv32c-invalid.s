@@ -69,6 +69,7 @@ c.lui t0, 0 # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xffff
 c.lui t0, 32 # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
 c.lui t0, 0xffffdf # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
 c.lui t0, 0x1000000 # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
+c.lui t0, foo # CHECK: [[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
 
 ## uimm8_lsb00
 c.lwsp  ra, 256(sp) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 252]

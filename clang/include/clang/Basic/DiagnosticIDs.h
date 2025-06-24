@@ -483,18 +483,6 @@ private:
 
   Class getDiagClass(unsigned DiagID) const;
 
-  /// Used to report a diagnostic that is finally fully formed.
-  ///
-  /// \returns \c true if the diagnostic was emitted, \c false if it was
-  /// suppressed.
-  bool ProcessDiag(DiagnosticsEngine &Diag,
-                   const DiagnosticBuilder &DiagBuilder) const;
-
-  /// Used to emit a diagnostic that is finally fully formed,
-  /// ignoring suppression.
-  void EmitDiag(DiagnosticsEngine &Diag, const DiagnosticBuilder &DiagBuilder,
-                Level DiagLevel) const;
-
   /// Whether the diagnostic may leave the AST in a state where some
   /// invariants can break.
   bool isUnrecoverable(unsigned DiagID) const;

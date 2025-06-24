@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CloexecOpenCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -21,12 +20,11 @@ void CloexecOpenCheck::registerMatchers(MatchFinder *Finder) {
                                     hasAnyName("open", "open64"),
                                     hasParameter(0, CharPointerType),
                                     hasParameter(1, hasType(isInteger()))));
-  registerMatchersImpl(Finder,
-                       functionDecl(isExternC(), returns(isInteger()),
-                                    hasName("openat"),
-                                    hasParameter(0, hasType(isInteger())),
-                                    hasParameter(1, CharPointerType),
-                                    hasParameter(2, hasType(isInteger()))));
+  registerMatchersImpl(
+      Finder, functionDecl(isExternC(), returns(isInteger()), hasName("openat"),
+                           hasParameter(0, hasType(isInteger())),
+                           hasParameter(1, CharPointerType),
+                           hasParameter(2, hasType(isInteger()))));
 }
 
 void CloexecOpenCheck::check(const MatchFinder::MatchResult &Result) {

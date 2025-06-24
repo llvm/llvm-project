@@ -180,8 +180,8 @@ define void @foo(i32 %v0) {
   EXPECT_EQ(VecTy32x2->getScalarSizeInBits(), 32u);
   // Check getFPMantissaWidth().
   EXPECT_EQ(FloatTy->getFPMantissaWidth(), LLVMFloatTy->getFPMantissaWidth());
-  // Check isIEEE().
-  EXPECT_EQ(FloatTy->isIEEE(), LLVMFloatTy->isIEEE());
+  // Check isIEEELikeFPTy().
+  EXPECT_EQ(FloatTy->isIEEELikeFPTy(), LLVMFloatTy->isIEEELikeFPTy());
   // Check getScalarType().
   EXPECT_EQ(
       Ctx.getType(llvm::FixedVectorType::get(LLVMInt32Ty, 8u))->getScalarType(),

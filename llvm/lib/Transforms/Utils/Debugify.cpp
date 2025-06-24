@@ -35,6 +35,8 @@ using namespace llvm;
 
 namespace {
 
+cl::opt<bool> ApplyAtomGroups("debugify-atoms", cl::init(false));
+
 cl::opt<bool> Quiet("debugify-quiet",
                     cl::desc("Suppress verbose debugify output"));
 
@@ -142,8 +144,13 @@ bool llvm::applyDebugifyMetadata(
 
     for (BasicBlock &BB : F) {
       // Attach debug locations.
-      for (Instruction &I : BB)
-        I.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
+      for (Instruction &I : BB) {
+        uint64_t AtomGroup = ApplyAtomGroups ? NextLine : 0;
+        uint8_t AtomRank = ApplyAtomGroups ? 1 : 0;
+        uint64_t Line = NextLine++;
+        I.setDebugLoc(DILocation::get(Ctx, Line, 1, SP, nullptr, false,
+                                      AtomGroup, AtomRank));
+      }
 
       if (DebugifyLevel < Level::LocationsAndVariables)
         continue;
@@ -290,6 +297,16 @@ bool llvm::stripDebugifyMetadata(Module &M) {
   return Changed;
 }
 
+bool hasLoc(const Instruction &I) {
+  const DILocation *Loc = I.getDebugLoc().get();
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+  DebugLocKind Kind = I.getDebugLoc().getKind();
+  return Loc || Kind != DebugLocKind::Normal;
+#else
+  return Loc;
+#endif
+}
+
 bool llvm::collectDebugInfoMetadata(Module &M,
                                     iterator_range<Module::iterator> Functions,
                                     DebugInfoPerPass &DebugInfoBeforePass,
@@ -336,7 +353,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
 
         // Cllect dbg.values and dbg.declare.
         if (DebugifyLevel > Level::Locations) {
-          auto HandleDbgVariable = [&](auto *DbgVar) {
+          auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
             // Skip inlined variables.
@@ -351,20 +368,12 @@ bool llvm::collectDebugInfoMetadata(Module &M,
           };
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
-          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-            HandleDbgVariable(DVI);
         }
-
-        // Skip debug instructions other than dbg.value and dbg.declare.
-        if (isa<DbgInfoIntrinsic>(&I))
-          continue;
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
         DebugInfoBeforePass.InstToDelete.insert({&I, &I});
 
-        const DILocation *Loc = I.getDebugLoc().get();
-        bool HasLoc = Loc != nullptr;
-        DebugInfoBeforePass.DILocations.insert({&I, HasLoc});
+        DebugInfoBeforePass.DILocations.insert({&I, hasLoc(I)});
       }
     }
   }
@@ -582,7 +591,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
         // Collect dbg.values and dbg.declares.
         if (DebugifyLevel > Level::Locations) {
-          auto HandleDbgVariable = [&](auto *DbgVar) {
+          auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
             // Skip inlined variables.
@@ -597,20 +606,11 @@ bool llvm::checkDebugInfoMetadata(Module &M,
           };
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
-          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-            HandleDbgVariable(DVI);
         }
-
-        // Skip debug instructions other than dbg.value and dbg.declare.
-        if (isa<DbgInfoIntrinsic>(&I))
-          continue;
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
 
-        const DILocation *Loc = I.getDebugLoc().get();
-        bool HasLoc = Loc != nullptr;
-
-        DebugInfoAfterPass.DILocations.insert({&I, HasLoc});
+        DebugInfoAfterPass.DILocations.insert({&I, hasLoc(I)});
       }
     }
   }
@@ -693,7 +693,7 @@ bool diagnoseMisSizedDbgValue(Module &M, DbgValTy *DbgVal) {
   bool HasBadSize = false;
   if (Ty->isIntegerTy()) {
     auto Signedness = DbgVal->getVariable()->getSignedness();
-    if (Signedness && *Signedness == DIBasicType::Signedness::Signed)
+    if (Signedness == DIBasicType::Signedness::Signed)
       HasBadSize = ValueOperandSize < *DbgVarSize;
   } else {
     HasBadSize = ValueOperandSize != *DbgVarSize;

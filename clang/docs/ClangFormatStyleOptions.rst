@@ -5195,6 +5195,29 @@ the configuration (without a prefix: ``Auto``).
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
 
+.. _OneLineFormatOffRegex:
+
+**OneLineFormatOffRegex** (``String``) :versionbadge:`clang-format 21` :ref:`¶ <OneLineFormatOffRegex>`
+  A regular expression that describes markers for turning formatting off for
+  one line. If it matches a comment that is the only token of a line,
+  clang-format skips the comment and the next line. Otherwise, clang-format
+  skips lines containing a matched token.
+
+  .. code-block:: c++
+
+     // OneLineFormatOffRegex: ^(// NOLINT|logger$)
+     // results in the output below:
+     int a;
+     int b ;  // NOLINT
+     int c;
+      // NOLINTNEXTLINE
+     int d ;
+     int e;
+     s = "// NOLINT";
+      logger() ;
+     logger2();
+     my_logger();
+
 .. _PPIndentWidth:
 
 **PPIndentWidth** (``Integer``) :versionbadge:`clang-format 13` :ref:`¶ <PPIndentWidth>`
@@ -5967,41 +5990,25 @@ the configuration (without a prefix: ``Auto``).
 **SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 3.8` :ref:`¶ <SortIncludes>`
   Controls if and how clang-format will sort ``#includes``.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``SI_Never`` (in configuration: ``Never``)
-    Includes are never sorted.
+  Includes sorting options.
 
-    .. code-block:: c++
+  * ``bool Enabled`` If ``true``, includes are sorted based on the other suboptions below.
+    (``Never`` is deprecated by ``Enabled: false``.)
 
-       #include "B/A.h"
-       #include "A/B.h"
-       #include "a/b.h"
-       #include "A/b.h"
-       #include "B/a.h"
-
-  * ``SI_CaseSensitive`` (in configuration: ``CaseSensitive``)
-    Includes are sorted in an ASCIIbetical or case sensitive fashion.
+  * ``bool IgnoreCase`` Whether or not includes are sorted in a case-insensitive fashion.
+    (``CaseSensitive`` and ``CaseInsensitive`` are deprecated by
+    ``IgnoreCase: false`` and ``IgnoreCase: true``, respectively.)
 
     .. code-block:: c++
 
-       #include "A/B.h"
-       #include "A/b.h"
-       #include "B/A.h"
-       #include "B/a.h"
-       #include "a/b.h"
-
-  * ``SI_CaseInsensitive`` (in configuration: ``CaseInsensitive``)
-    Includes are sorted in an alphabetical or case insensitive fashion.
-
-    .. code-block:: c++
-
-       #include "A/B.h"
-       #include "A/b.h"
-       #include "a/b.h"
-       #include "B/A.h"
-       #include "B/a.h"
-
+       true:                      false:
+       #include "A/B.h"    vs.    #include "A/B.h"
+       #include "A/b.h"           #include "A/b.h"
+       #include "a/b.h"           #include "B/A.h"
+       #include "B/A.h"           #include "B/a.h"
+       #include "B/a.h"           #include "a/b.h"
 
 
 .. _SortJavaStaticImport:
@@ -6103,6 +6110,16 @@ the configuration (without a prefix: ``Auto``).
 
      true:                                  false:
      ! someExpression();            vs.     !someExpression();
+
+.. _SpaceAfterOperatorKeyword:
+
+**SpaceAfterOperatorKeyword** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <SpaceAfterOperatorKeyword>`
+  If ``true``, a space will be inserted after the ``operator`` keyword.
+
+  .. code-block:: c++
+
+     true:                                false:
+     bool operator ==(int a);     vs.     bool operator==(int a);
 
 .. _SpaceAfterTemplateKeyword:
 
@@ -6975,7 +6992,7 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       namespace N1 {
-      namespace N2
+      namespace N2 {
       function();
       }
       }

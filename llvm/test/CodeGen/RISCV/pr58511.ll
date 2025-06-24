@@ -7,7 +7,7 @@ define i32 @f(i1 %0, i32 %1, ptr %2) {
 ; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    lui a3, 4097
 ; CHECK-NEXT:    srai a0, a0, 63
-; CHECK-NEXT:    addiw a3, a3, -2047
+; CHECK-NEXT:    addi a3, a3, -2047
 ; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    mul a1, a1, a3
 ; CHECK-NEXT:    sw a1, 0(a2)
@@ -26,7 +26,7 @@ define i32 @g(i1 %0, i32 %1, ptr %2) {
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    lui a3, 4097
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    addiw a3, a3, -2047
+; CHECK-NEXT:    addi a3, a3, -2047
 ; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    mul a1, a1, a3
 ; CHECK-NEXT:    sw a1, 0(a2)
@@ -44,7 +44,7 @@ define i32 @h(i1 %0, i32 %1, ptr %2) {
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    lui a3, 4097
 ; CHECK-NEXT:    slli a0, a0, 63
-; CHECK-NEXT:    addiw a3, a3, -2047
+; CHECK-NEXT:    addi a3, a3, -2047
 ; CHECK-NEXT:    srai a0, a0, 63
 ; CHECK-NEXT:    mul a1, a1, a3
 ; CHECK-NEXT:    and a0, a0, a3
@@ -63,7 +63,7 @@ define i32 @i(i1 %0, i32 %1, ptr %2) {
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    lui a3, 4097
-; CHECK-NEXT:    addiw a3, a3, -2047
+; CHECK-NEXT:    addi a3, a3, -2047
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    mul a1, a1, a3
 ; CHECK-NEXT:    and a0, a0, a3

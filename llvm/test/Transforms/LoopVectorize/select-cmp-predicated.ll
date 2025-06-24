@@ -13,9 +13,8 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF2IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF2IC1:       [[VECTOR_BODY]]:
-; CHECK-VF2IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2:.*]] ]
+; CHECK-VF2IC1-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2:.*]] ]
 ; CHECK-VF2IC1-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
-; CHECK-VF2IC1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-VF2IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 [[TMP0]]
 ; CHECK-VF2IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-VF2IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
@@ -23,7 +22,8 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; CHECK-VF2IC1-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK-VF2IC1:       [[PRED_LOAD_IF]]:
-; CHECK-VF2IC1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[TMP0]]
+; CHECK-VF2IC1-NEXT:    [[TMP19:%.*]] = add i64 [[TMP0]], 0
+; CHECK-VF2IC1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[TMP19]]
 ; CHECK-VF2IC1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-VF2IC1-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
 ; CHECK-VF2IC1-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
@@ -32,7 +32,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
 ; CHECK-VF2IC1-NEXT:    br i1 [[TMP10]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK-VF2IC1:       [[PRED_LOAD_IF1]]:
-; CHECK-VF2IC1-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
+; CHECK-VF2IC1-NEXT:    [[TMP11:%.*]] = add i64 [[TMP0]], 1
 ; CHECK-VF2IC1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[TMP11]]
 ; CHECK-VF2IC1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
 ; CHECK-VF2IC1-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP13]], i32 1
@@ -42,7 +42,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[TMP16:%.*]] = icmp eq <2 x i32> [[TMP15]], splat (i32 2)
 ; CHECK-VF2IC1-NEXT:    [[TMP17:%.*]] = or <2 x i1> [[VEC_PHI]], [[TMP16]]
 ; CHECK-VF2IC1-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP17]], <2 x i1> [[VEC_PHI]]
-; CHECK-VF2IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-VF2IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
 ; CHECK-VF2IC1-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF2IC1-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-VF2IC1:       [[MIDDLE_BLOCK]]:

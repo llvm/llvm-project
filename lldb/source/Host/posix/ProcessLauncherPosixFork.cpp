@@ -17,6 +17,7 @@
 #include "llvm/Support/Errno.h"
 
 #include <climits>
+#include <fcntl.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -122,8 +123,14 @@ struct ForkLaunchInfo {
         ExitWithError(error_fd, "close");
       break;
     case FileAction::eFileActionDuplicate:
-      if (dup2(action.fd, action.arg) == -1)
-        ExitWithError(error_fd, "dup2");
+      if (action.fd != action.arg) {
+        if (dup2(action.fd, action.arg) == -1)
+          ExitWithError(error_fd, "dup2");
+      } else {
+        if (fcntl(action.fd, F_SETFD,
+                  fcntl(action.fd, F_GETFD) & ~FD_CLOEXEC) == -1)
+          ExitWithError(error_fd, "fcntl");
+      }
       break;
     case FileAction::eFileActionOpen:
       DupDescriptor(error_fd, action.path.c_str(), action.fd, action.arg);

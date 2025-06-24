@@ -17,8 +17,8 @@ define void @test_tcgen05_alloc(ptr %addr, i32 %ncols) {
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.u64 %rd1, [test_tcgen05_alloc_param_0];
-; CHECK_PTX64-NEXT:    ld.param.u32 %r1, [test_tcgen05_alloc_param_1];
+; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_alloc_param_0];
+; CHECK_PTX64-NEXT:    ld.param.b32 %r1, [test_tcgen05_alloc_param_1];
 ; CHECK_PTX64-NEXT:    tcgen05.alloc.cta_group::1.sync.aligned.b32 [%rd1], %r1;
 ; CHECK_PTX64-NEXT:    tcgen05.alloc.cta_group::2.sync.aligned.b32 [%rd1], %r1;
 ; CHECK_PTX64-NEXT:    ret;
@@ -29,8 +29,8 @@ define void @test_tcgen05_alloc(ptr %addr, i32 %ncols) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.u64 %rd1, [test_tcgen05_alloc_param_0];
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.u32 %r1, [test_tcgen05_alloc_param_1];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param.b64 %rd1, [test_tcgen05_alloc_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_alloc_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.alloc.cta_group::1.sync.aligned.b32 [%rd1], %r1;
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.alloc.cta_group::2.sync.aligned.b32 [%rd1], %r1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
@@ -48,8 +48,8 @@ define void @test_tcgen05_alloc_shared(ptr addrspace(3) %addr, i32 %ncols) {
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.u64 %rd1, [test_tcgen05_alloc_shared_param_0];
-; CHECK_PTX64-NEXT:    ld.param.u32 %r1, [test_tcgen05_alloc_shared_param_1];
+; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_alloc_shared_param_0];
+; CHECK_PTX64-NEXT:    ld.param.b32 %r1, [test_tcgen05_alloc_shared_param_1];
 ; CHECK_PTX64-NEXT:    tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%rd1], %r1;
 ; CHECK_PTX64-NEXT:    tcgen05.alloc.cta_group::2.sync.aligned.shared::cta.b32 [%rd1], %r1;
 ; CHECK_PTX64-NEXT:    ret;
@@ -59,8 +59,8 @@ define void @test_tcgen05_alloc_shared(ptr addrspace(3) %addr, i32 %ncols) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b32 %r<3>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.u32 %r1, [test_tcgen05_alloc_shared_param_0];
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.u32 %r2, [test_tcgen05_alloc_shared_param_1];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_alloc_shared_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r2, [test_tcgen05_alloc_shared_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%r1], %r2;
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.alloc.cta_group::2.sync.aligned.shared::cta.b32 [%r1], %r2;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
@@ -80,8 +80,8 @@ define void @test_tcgen05_dealloc(ptr addrspace(6) %tmem_addr, i32 %ncols) {
 ; CHECK_PTX64-NEXT:    .reg .b32 %r<3>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.u32 %r1, [test_tcgen05_dealloc_param_0];
-; CHECK_PTX64-NEXT:    ld.param.u32 %r2, [test_tcgen05_dealloc_param_1];
+; CHECK_PTX64-NEXT:    ld.param.b32 %r1, [test_tcgen05_dealloc_param_0];
+; CHECK_PTX64-NEXT:    ld.param.b32 %r2, [test_tcgen05_dealloc_param_1];
 ; CHECK_PTX64-NEXT:    tcgen05.dealloc.cta_group::1.sync.aligned.b32 %r1, %r2;
 ; CHECK_PTX64-NEXT:    tcgen05.dealloc.cta_group::2.sync.aligned.b32 %r1, %r2;
 ; CHECK_PTX64-NEXT:    ret;
@@ -91,8 +91,8 @@ define void @test_tcgen05_dealloc(ptr addrspace(6) %tmem_addr, i32 %ncols) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b32 %r<3>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.u32 %r1, [test_tcgen05_dealloc_param_0];
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.u32 %r2, [test_tcgen05_dealloc_param_1];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_dealloc_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r2, [test_tcgen05_dealloc_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.dealloc.cta_group::1.sync.aligned.b32 %r1, %r2;
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.dealloc.cta_group::2.sync.aligned.b32 %r1, %r2;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;

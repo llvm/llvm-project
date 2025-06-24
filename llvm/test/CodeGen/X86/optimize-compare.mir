@@ -422,7 +422,7 @@ body: |
     ; CMP+SETCC   %0 != 42
     CMP64ri32 %0, 42, implicit-def $eflags
     $cl = SETCCr 5, implicit $eflags
-    ; CMP+SETCC   %0 > 41; CMP can be removed.
+    ; CMP+SETCC   %0 >= 2; CMP can be removed.
     CMP64ri32 %0, 41, implicit-def $eflags
     ; %0 >s 41  -->  %0 >=s 42
     $bl = SETCCr 15, implicit $eflags

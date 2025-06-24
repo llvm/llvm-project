@@ -153,6 +153,20 @@ public:
                                     ParentDC);
   }
 
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    if (E->isGlobalNew() || !E->getOperatorNew())
+      return true;
+    return IndexCtx.handleReference(E->getOperatorNew(), E->getBeginLoc(),
+                                    Parent, ParentDC);
+  }
+
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    if (E->isGlobalDelete() || !E->getOperatorDelete())
+      return true;
+    return IndexCtx.handleReference(E->getOperatorDelete(), E->getBeginLoc(),
+                                    Parent, ParentDC);
+  }
+
   bool VisitLabelStmt(LabelStmt *S) {
     if (IndexCtx.shouldIndexFunctionLocalSymbols())
       return IndexCtx.handleDecl(S->getDecl());
@@ -420,6 +434,13 @@ public:
             return IndexCtx.handleReference(FD, D.getFieldLoc(), Parent,
                                             ParentDC, SymbolRoleSet(),
                                             /*Relations=*/{}, E);
+          }
+        } else {
+          if (D.isArrayDesignator())
+            TraverseStmt(E->getArrayIndex(D));
+          else if (D.isArrayRangeDesignator()) {
+            TraverseStmt(E->getArrayRangeStart(D));
+            TraverseStmt(E->getArrayRangeEnd(D));
           }
         }
       }

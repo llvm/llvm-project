@@ -564,6 +564,17 @@ func.func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
   return %0, %1, %2, %3 : vector<15x2xf32>, vector<8xf32>, vector<16xf32>, vector<16x1xf32>
 }
 
+// A vector.shape_cast can cast between any 2 shapes as long as the
+// number of elements is preserved. For those familiar with the tensor
+// dialect: this behaviour is like the tensor.reshape operation, i.e.
+// less restrictive than tensor.collapse_shape and tensor.expand_shape
+// CHECK-LABEL: @shape_cast_general_reshape
+func.func @shape_cast_general_reshape(%arg0 : vector<2x3xf32>) -> (vector<3x1x2xf32>) {
+  // CHECK: vector.shape_cast %{{.*}} : vector<2x3xf32> to vector<3x1x2xf32>
+  %0 = vector.shape_cast %arg0 : vector<2x3xf32> to vector<3x1x2xf32>
+  return %0 : vector<3x1x2xf32>
+}
+
 // CHECK-LABEL: @shape_cast_0d
 func.func @shape_cast_0d(%arg0 : vector<1x1x1x1xf32>) -> (vector<1x1x1x1xf32>) {
 
@@ -1162,6 +1173,24 @@ func.func @deinterleave_nd_scalable(%arg:vector<2x3x4x[6]xf32>) -> (vector<2x3x4
   // CHECK: vector.deinterleave %{{.*}} : vector<2x3x4x[6]xf32> -> vector<2x3x4x[3]xf32>
   %0, %1 = vector.deinterleave %arg : vector<2x3x4x[6]xf32> -> vector<2x3x4x[3]xf32>
   return %0, %1 : vector<2x3x4x[3]xf32>, vector<2x3x4x[3]xf32>
+}
+
+// CHECK-LABEL: func @to_elements(
+//  CHECK-SAME:     %[[A_VEC:.*]]: vector<f32>, %[[B_VEC:.*]]: vector<1xf32>,
+//  CHECK-SAME:     %[[C_VEC:.*]]: vector<1x2xf32>, %[[D_VEC:.*]]: vector<2x2xf32>)
+func.func @to_elements(%a_vec : vector<f32>, %b_vec : vector<1xf32>,
+                       %c_vec : vector<1x2xf32>, %d_vec : vector<2x2xf32>)
+                   -> (f32, f32, f32, f32, f32, f32, f32, f32) {
+  // CHECK: %[[A_ELEMS:.*]] = vector.to_elements %[[A_VEC]] : vector<f32>
+  %0 = vector.to_elements %a_vec : vector<f32>
+  // CHECK: %[[B_ELEMS:.*]] = vector.to_elements %[[B_VEC]] : vector<1xf32>
+  %1 = vector.to_elements %b_vec : vector<1xf32>
+  // CHECK: %[[C_ELEMS:.*]]:2 = vector.to_elements %[[C_VEC]] : vector<1x2xf32>
+  %2:2 = vector.to_elements %c_vec : vector<1x2xf32>
+  // CHECK: %[[D_ELEMS:.*]]:4 = vector.to_elements %[[D_VEC]] : vector<2x2xf32>
+  %3:4 = vector.to_elements %d_vec : vector<2x2xf32>
+  // CHECK: return %[[A_ELEMS]], %[[B_ELEMS]], %[[C_ELEMS]]#0, %[[C_ELEMS]]#1, %[[D_ELEMS]]#0, %[[D_ELEMS]]#1, %[[D_ELEMS]]#2, %[[D_ELEMS]]#3
+  return %0, %1, %2#0, %2#1, %3#0, %3#1, %3#2, %3#3: f32, f32, f32, f32, f32, f32, f32, f32
 }
 
 // CHECK-LABEL: func @from_elements(

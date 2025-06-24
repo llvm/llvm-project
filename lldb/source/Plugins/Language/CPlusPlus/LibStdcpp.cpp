@@ -49,7 +49,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
@@ -68,7 +68,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+
 private:
 
   // The lifetime of a ValueObject and all its derivative ValueObjects
@@ -145,13 +146,15 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   return lldb::ValueObjectSP();
 }
 
-size_t LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
+llvm::Expected<size_t>
+LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   if (name == "first")
     return 0;
   if (name == "second")
     return 1;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *
@@ -226,26 +229,21 @@ VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   return lldb::ValueObjectSP();
 }
 
-size_t VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+llvm::Expected<size_t>
+VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "item")
     return 0;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   const bool scalar_is_load_addr = true;
-  AddressType addr_type;
-  lldb::addr_t addr_of_string = LLDB_INVALID_ADDRESS;
-  if (valobj.IsPointerOrReferenceType()) {
-    Status error;
-    ValueObjectSP pointee_sp = valobj.Dereference(error);
-    if (pointee_sp && error.Success())
-      addr_of_string = pointee_sp->GetAddressOf(scalar_is_load_addr, &addr_type);
-  } else
-    addr_of_string =
-        valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
+  auto [addr_of_string, addr_type] =
+      valobj.IsPointerOrReferenceType()
+          ? valobj.GetPointerValue()
+          : valobj.GetAddressOf(scalar_is_load_addr);
   if (addr_of_string != LLDB_INVALID_ADDRESS) {
     switch (addr_type) {
     case eAddressTypeLoad: {
@@ -292,9 +290,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
 bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   const bool scalar_is_load_addr = true;
-  AddressType addr_type;
-  lldb::addr_t addr_of_string =
-      valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
+  auto [addr_of_string, addr_type] = valobj.GetAddressOf(scalar_is_load_addr);
   if (addr_of_string != LLDB_INVALID_ADDRESS) {
     switch (addr_type) {
     case eAddressTypeLoad: {
@@ -375,6 +371,9 @@ LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
 
 lldb::ValueObjectSP
 LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (!m_ptr_obj)
+    return nullptr;
+
   if (idx == 0)
     return m_ptr_obj->GetSP();
   if (idx == 1) {
@@ -409,13 +408,14 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+llvm::Expected<size_t>
+LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "pointer")
     return 0;
   if (name == "object" || name == "$$dereference$$")
     return 1;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

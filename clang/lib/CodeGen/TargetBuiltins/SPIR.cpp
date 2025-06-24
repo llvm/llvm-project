@@ -71,6 +71,32 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         ArrayRef<Value *>{Min, Max, X}, /*FMFSource=*/nullptr,
         "spv.smoothstep");
   }
+  case SPIRV::BI__builtin_spirv_faceforward: {
+    Value *N = EmitScalarExpr(E->getArg(0));
+    Value *I = EmitScalarExpr(E->getArg(1));
+    Value *Ng = EmitScalarExpr(E->getArg(2));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           E->getArg(2)->getType()->hasFloatingRepresentation() &&
+           "FaceForward operands must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/N->getType(), Intrinsic::spv_faceforward,
+        ArrayRef<Value *>{N, I, Ng}, /*FMFSource=*/nullptr, "spv.faceforward");
+  }
+  case SPIRV::BI__builtin_spirv_generic_cast_to_ptr_explicit: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasPointerRepresentation() &&
+           E->getArg(1)->getType()->hasIntegerRepresentation() &&
+           "GenericCastToPtrExplicit takes a pointer and an int");
+    llvm::Type *Res = getTypes().ConvertType(E->getType());
+    assert(Res->isPointerTy() &&
+           "GenericCastToPtrExplicit doesn't return a pointer");
+    llvm::CallInst *Call = Builder.CreateIntrinsic(
+        /*ReturnType=*/Res, Intrinsic::spv_generic_cast_to_ptr_explicit,
+        ArrayRef<Value *>{Ptr}, nullptr, "spv.generic_cast");
+    Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
+    return Call;
+  }
   }
   return nullptr;
 }

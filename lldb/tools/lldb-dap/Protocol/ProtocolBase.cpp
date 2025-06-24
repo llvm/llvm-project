@@ -163,11 +163,6 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
     return false;
   }
 
-  if (seq != 0) {
-    P.field("seq").report("expected to be '0'");
-    return false;
-  }
-
   if (R.command.empty()) {
     P.field("command").report("expected to not be ''");
     return false;
@@ -178,7 +173,7 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
     return false;
   }
 
-  return O.map("success", R.success) && O.mapOptional("message", R.message) &&
+  return O.map("success", R.success) && O.map("message", R.message) &&
          mapRaw(Params, "body", R.body, P);
 }
 
@@ -284,6 +279,7 @@ bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
     PM = std::move(evt);
     return true;
   }
+  llvm_unreachable("unhandled message type request.");
 }
 
 json::Value toJSON(const Message &M) {

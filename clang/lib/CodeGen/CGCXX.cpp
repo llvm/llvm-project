@@ -175,6 +175,7 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // requires explicit comdat support in the IL.
   if (llvm::GlobalValue::isWeakForLinker(TargetLinkage))
     return true;
+
   // Create the alias with no name.
   auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
                                           Aliasee, &getModule());
@@ -198,42 +199,6 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   SetCommonAttributes(AliasDecl, Alias);
 
   return false;
-}
-
-/// Emit a definition as a global alias for another definition, unconditionally.
-void CodeGenModule::EmitDefinitionAsAlias(GlobalDecl AliasDecl,
-                                          GlobalDecl TargetDecl) {
-
-  llvm::Type *AliasValueType = getTypes().GetFunctionType(AliasDecl);
-
-  StringRef MangledName = getMangledName(AliasDecl);
-  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-  if (Entry && !Entry->isDeclaration())
-    return;
-  auto *Aliasee = cast<llvm::GlobalValue>(GetAddrOfGlobal(TargetDecl));
-
-  // Determine the linkage type for the alias.
-  llvm::GlobalValue::LinkageTypes Linkage = getFunctionLinkage(AliasDecl);
-
-  // Create the alias with no name.
-  auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
-                                          Aliasee, &getModule());
-  // Destructors are always unnamed_addr.
-  Alias->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-
-  if (Entry) {
-    assert(Entry->getValueType() == AliasValueType &&
-           Entry->getAddressSpace() == Alias->getAddressSpace() &&
-           "declaration exists with different type");
-    Alias->takeName(Entry);
-    Entry->replaceAllUsesWith(Alias);
-    Entry->eraseFromParent();
-  } else {
-    Alias->setName(MangledName);
-  }
-
-  // Set any additional necessary attributes for the alias.
-  SetCommonAttributes(AliasDecl, Alias);
 }
 
 llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {

@@ -7,23 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSVC.h"
-#include "CommonArgs.h"
 #include "Darwin.h"
-#include "clang/Basic/CharInfo.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -211,7 +206,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "asan_dynamic"));
     auto defines = Args.getAllArgValues(options::OPT_D);
     if (Args.hasArg(options::OPT__SLASH_MD, options::OPT__SLASH_MDd) ||
-        find(begin(defines), end(defines), "_DLL") != end(defines)) {
+        llvm::is_contained(defines, "_DLL")) {
       // Make sure the dynamic runtime thunk is not optimized out at link time
       // to ensure proper SEH handling.
       CmdArgs.push_back(Args.MakeArgString(

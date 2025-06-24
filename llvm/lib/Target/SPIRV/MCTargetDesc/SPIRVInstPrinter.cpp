@@ -21,7 +21,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
 using namespace llvm::SPIRV;
@@ -242,6 +241,34 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           }
           break;
         }
+        case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumFixedOps >= NumOps)
+            break;
+          OS << ' ';
+          const unsigned Flags = MI->getOperand(NumOps - 1).getImm();
+          if (Flags == 0) {
+            printSymbolicOperand<
+                OperandCategory::MatrixMultiplyAccumulateOperandsOperand>(
+                MI, NumOps - 1, OS);
+          } else {
+            std::string Buffer;
+            for (unsigned Mask = 0x1;
+                 Mask <= SPIRV::MatrixMultiplyAccumulateOperands::
+                             MatrixBPackedBFloat16INTEL;
+                 Mask <<= 1) {
+              if (Flags & Mask) {
+                if (!Buffer.empty())
+                  Buffer += '|';
+                Buffer += getSymbolicOperandMnemonic(
+                    OperandCategory::MatrixMultiplyAccumulateOperandsOperand,
+                    Mask);
+              }
+            }
+            OS << Buffer;
+          }
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
@@ -359,8 +386,7 @@ static void printExpr(const MCExpr *Expr, raw_ostream &O) {
 }
 
 void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &O, const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+                                    raw_ostream &O) {
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
