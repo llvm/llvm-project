@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -106,6 +107,7 @@ public:
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
   mutable Function *LdexpF32 = nullptr;
+  mutable SetVector<Value *> DeadVals;
 
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
 
@@ -281,28 +283,19 @@ bool AMDGPUCodeGenPrepareImpl::run() {
   BreakPhiNodesCache.clear();
   bool MadeChange = false;
 
-  Function::iterator NextBB;
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; FI = NextBB) {
-    BasicBlock *BB = &*FI;
-    NextBB = std::next(FI);
-
-    BasicBlock::iterator Next;
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;
-         I = Next) {
-      Next = std::next(I);
-
-      MadeChange |= visit(*I);
-
-      if (Next != E) { // Control flow changed
-        BasicBlock *NextInstBB = Next->getParent();
-        if (NextInstBB != BB) {
-          BB = NextInstBB;
-          E = BB->end();
-          FE = F.end();
-        }
-      }
+  for (BasicBlock &BB : reverse(F)) {
+    for (Instruction &I : make_early_inc_range(reverse(BB))) {
+      if (!DeadVals.contains(&I))
+        MadeChange |= visit(I);
     }
   }
+
+  while (!DeadVals.empty()) {
+    RecursivelyDeleteTriviallyDeadInstructions(
+        DeadVals.pop_back_val(), TLI, /*MSSAU*/ nullptr,
+        [&](Value *V) { DeadVals.remove(V); });
+  }
+
   return MadeChange;
 }
 
@@ -422,7 +415,7 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   Value *NewVal = insertValues(Builder, Ty, ResultVals);
   NewVal->takeName(&I);
   I.replaceAllUsesWith(NewVal);
-  I.eraseFromParent();
+  DeadVals.insert(&I);
 
   return true;
 }
@@ -496,10 +489,10 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
                                           FoldedT, FoldedF);
   NewSelect->takeName(&BO);
   BO.replaceAllUsesWith(NewSelect);
-  BO.eraseFromParent();
+  DeadVals.insert(&BO);
   if (CastOp)
-    CastOp->eraseFromParent();
-  Sel->eraseFromParent();
+    DeadVals.insert(CastOp);
+  DeadVals.insert(Sel);
   return true;
 }
 
@@ -895,7 +888,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   if (NewVal) {
     FDiv.replaceAllUsesWith(NewVal);
     NewVal->takeName(&FDiv);
-    RecursivelyDeleteTriviallyDeadInstructions(&FDiv, TLI);
+    DeadVals.insert(&FDiv);
   }
 
   return true;
@@ -1305,7 +1298,8 @@ within the byte are all 0.
 static bool tryNarrowMathIfNoOverflow(Instruction *I,
                                       const SITargetLowering *TLI,
                                       const TargetTransformInfo &TTI,
-                                      const DataLayout &DL) {
+                                      const DataLayout &DL,
+                                      SetVector<Value *> &DeadVals) {
   unsigned Opc = I->getOpcode();
   Type *OldType = I->getType();
 
@@ -1360,7 +1354,7 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
 
   Value *Zext = Builder.CreateZExt(Arith, OldType);
   I->replaceAllUsesWith(Zext);
-  I->eraseFromParent();
+  DeadVals.insert(I);
   return true;
 }
 
@@ -1371,7 +1365,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
   if (UseMul24Intrin && replaceMulWithMul24(I))
     return true;
   if (tryNarrowMathIfNoOverflow(&I, ST.getTargetLowering(),
-                                TM.getTargetTransformInfo(F), DL))
+                                TM.getTargetTransformInfo(F), DL, DeadVals))
     return true;
 
   bool Changed = false;
@@ -1436,7 +1430,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
     if (NewDiv) {
       I.replaceAllUsesWith(NewDiv);
-      I.eraseFromParent();
+      DeadVals.insert(&I);
       Changed = true;
     }
   }
@@ -1492,7 +1486,7 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
     Value *ValTrunc = Builder.CreateTrunc(WidenLoad, IntNTy);
     Value *ValOrig = Builder.CreateBitCast(ValTrunc, I.getType());
     I.replaceAllUsesWith(ValOrig);
-    I.eraseFromParent();
+    DeadVals.insert(&I);
     return true;
   }
 
@@ -1534,7 +1528,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
 
   Fract->takeName(&I);
   I.replaceAllUsesWith(Fract);
-  RecursivelyDeleteTriviallyDeadInstructions(&I, TLI);
+  DeadVals.insert(&I);
   return true;
 }
 
@@ -1822,7 +1816,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   }
 
   I.replaceAllUsesWith(Vec);
-  I.eraseFromParent();
+  DeadVals.insert(&I);
   return true;
 }
 
@@ -1903,7 +1897,7 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   auto *Intrin = B.CreateIntrinsic(
       I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
   I.replaceAllUsesWith(Intrin);
-  I.eraseFromParent();
+  DeadVals.insert(&I);
   return true;
 }
 
@@ -2000,14 +1994,8 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
   Value *Fract = applyFractPat(Builder, FractArg);
   Fract->takeName(&I);
   I.replaceAllUsesWith(Fract);
-
-  RecursivelyDeleteTriviallyDeadInstructions(&I, TLI);
+  DeadVals.insert(&I);
   return true;
-}
-
-static bool isOneOrNegOne(const Value *Val) {
-  const APFloat *C;
-  return match(Val, m_APFloat(C)) && C->getExactLog2Abs() == 0;
 }
 
 // Expand llvm.sqrt.f32 calls with !fpmath metadata in a semi-fast way.
@@ -2028,18 +2016,6 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
 
   // Defer correctly rounded expansion to codegen.
   if (ReqdAccuracy < 1.0f)
-    return false;
-
-  // FIXME: This is an ugly hack for this pass using forward iteration instead
-  // of reverse. If it worked like a normal combiner, the rsq would form before
-  // we saw a sqrt call.
-  auto *FDiv =
-      dyn_cast_or_null<FPMathOperator>(Sqrt.getUniqueUndroppableUser());
-  if (FDiv && FDiv->getOpcode() == Instruction::FDiv &&
-      FDiv->getFPAccuracy() >= 1.0f &&
-      canOptimizeWithRsq(FPOp, FDiv->getFastMathFlags(), SqrtFMF) &&
-      // TODO: We should also handle the arcp case for the fdiv with non-1 value
-      isOneOrNegOne(FDiv->getOperand(0)))
     return false;
 
   Value *SrcVal = Sqrt.getOperand(0);
@@ -2065,7 +2041,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   Value *NewSqrt = insertValues(Builder, Sqrt.getType(), ResultVals);
   NewSqrt->takeName(&Sqrt);
   Sqrt.replaceAllUsesWith(NewSqrt);
-  Sqrt.eraseFromParent();
+  DeadVals.insert(&Sqrt);
   return true;
 }
 
