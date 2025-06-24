@@ -991,7 +991,7 @@ void PDLToPDLInterpPass::runOnOperation() {
       module.getLoc(), pdl_interp::PDLInterpDialect::getMatcherFunctionName(),
       builder.getFunctionType(builder.getType<pdl::OperationType>(),
                               /*results=*/{}),
-      /*attrs=*/std::nullopt);
+      /*attrs=*/ArrayRef<NamedAttribute>());
 
   // Create a nested module to hold the functions invoked for rewriting the IR
   // after a successful match.
