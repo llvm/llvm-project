@@ -969,7 +969,7 @@ void CodeGenModule::Release() {
         llvm::ConstantArray::get(ATy, UsedArray), "__clang_gpu_used_external");
     addCompilerUsedGlobal(GV);
   }
-  if (LangOpts.HIP && !getLangOpts().OffloadingNewDriver) {
+  if (LangOpts.HIP) {
     // Emit a unique ID so that host and device binaries from the same
     // compilation unit can be associated.
     auto *GV = new llvm::GlobalVariable(
@@ -1319,8 +1319,10 @@ void CodeGenModule::Release() {
                               1);
 
   // Enable unwind v2 (epilog).
-  if (CodeGenOpts.WinX64EHUnwindV2)
-    getModule().addModuleFlag(llvm::Module::Warning, "winx64-eh-unwindv2", 1);
+  if (CodeGenOpts.getWinX64EHUnwindV2() != llvm::WinX64EHUnwindV2Mode::Disabled)
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "winx64-eh-unwindv2",
+        static_cast<unsigned>(CodeGenOpts.getWinX64EHUnwindV2()));
 
   // Indicate whether this Module was compiled with -fopenmp
   if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)
@@ -1663,6 +1665,11 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
           OMPDeclareTargetDeclAttr::DT_NoHost &&
       LV.getVisibility() == HiddenVisibility) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    return;
+  }
+
+  if (Context.getLangOpts().HLSL && !D->isInExportDeclContext()) {
+    GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
     return;
   }
 

@@ -9824,7 +9824,8 @@ public:
   DeclGroupPtrTy ActOnModuleDecl(SourceLocation StartLoc,
                                  SourceLocation ModuleLoc, ModuleDeclKind MDK,
                                  ModuleIdPath Path, ModuleIdPath Partition,
-                                 ModuleImportState &ImportState);
+                                 ModuleImportState &ImportState,
+                                 bool IntroducerIsFirstPPToken);
 
   /// The parser has processed a global-module-fragment declaration that begins
   /// the definition of the global module fragment of the current module unit.

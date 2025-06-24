@@ -85,7 +85,10 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
       {"fixup_riscv_qc_abs20_u", 12, 20, 0},
-      {"fixup_riscv_qc_e_jump_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_qc_e_call_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+
+      // Andes fixups
+      {"fixup_riscv_nds_branch_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -422,11 +425,9 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     Count -= 1;
   }
 
-  bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
-                          STI->hasFeature(RISCV::FeatureStdExtZca);
-  // The canonical nop on RVC is c.nop.
   if (Count % 4 == 2) {
-    OS.write(UseCompressedNop ? "\x01\0" : "\0\0", 2);
+    // The canonical nop with Zca is c.nop.
+    OS.write(STI->hasFeature(RISCV::FeatureStdExtZca) ? "\x01\0" : "\0\0", 2);
     Count -= 2;
   }
 
@@ -552,7 +553,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (Bit19 << 31) | (Bit14_0 << 16) | (Bit18_15 << 12);
     return Value;
   }
-  case RISCV::fixup_riscv_qc_e_jump_plt: {
+  case RISCV::fixup_riscv_qc_e_call_plt: {
     if (!isInt<32>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     if (Value & 0x1)
@@ -565,6 +566,21 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     uint64_t Bit11 = (Value >> 11) & 0x1;
     Value = (Bit31_16 << 32ull) | (Bit12 << 31) | (Bit10_5 << 25) |
             (Bit15_13 << 17) | (Bit4_1 << 8) | (Bit11 << 7);
+    return Value;
+  }
+  case RISCV::fixup_riscv_nds_branch_10: {
+    if (!isInt<11>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    if (Value & 0x1)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 2-byte aligned");
+    // Need to extract imm[10], imm[9:5], imm[4:1] from the 11-bit Value.
+    unsigned Sbit = (Value >> 10) & 0x1;
+    unsigned Hi5 = (Value >> 5) & 0x1f;
+    unsigned Lo4 = (Value >> 1) & 0xf;
+    // Inst{31} = Sbit;
+    // Inst{29-25} = Hi5;
+    // Inst{11-8} = Lo4;
+    Value = (Sbit << 31) | (Hi5 << 25) | (Lo4 << 8);
     return Value;
   }
   }
@@ -699,8 +715,11 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
   case RISCV::fixup_riscv_qc_e_branch:
   case RISCV::fixup_riscv_qc_abs20_u:
   case RISCV::fixup_riscv_qc_e_32:
-  case RISCV::fixup_riscv_qc_e_jump_plt:
+  case RISCV::fixup_riscv_qc_e_call_plt:
     VendorIdentifier = "QUALCOMM";
+    break;
+  case RISCV::fixup_riscv_nds_branch_10:
+    VendorIdentifier = "ANDES";
     break;
   }
 
@@ -836,9 +855,7 @@ bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
   if (!STI->hasFeature(RISCV::FeatureRelax))
     return false;
 
-  bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
-                          STI->hasFeature(RISCV::FeatureStdExtZca);
-  unsigned MinNopLen = UseCompressedNop ? 2 : 4;
+  unsigned MinNopLen = STI->hasFeature(RISCV::FeatureStdExtZca) ? 2 : 4;
 
   if (AF.getAlignment() <= MinNopLen) {
     return false;

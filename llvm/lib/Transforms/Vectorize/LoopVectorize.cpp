@@ -419,6 +419,13 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
+/// A version of ScalarEvolution::getSmallConstantTripCount that returns an
+/// ElementCount to include loops whose trip count is a function of vscale.
+static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
+                                              const Loop *L) {
+  return ElementCount::getFixed(SE->getSmallConstantTripCount(L));
+}
+
 /// Returns "best known" trip count, which is either a valid positive trip count
 /// or std::nullopt when an estimate cannot be made (including when the trip
 /// count would overflow), for the specified loop \p L as defined by the
@@ -427,24 +434,24 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
 ///   4) Returns std::nullopt if all of the above failed.
-static std::optional<unsigned>
+static std::optional<ElementCount>
 getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
                     bool CanUseConstantMax = true) {
   // Check if exact trip count is known.
-  if (unsigned ExpectedTC = PSE.getSE()->getSmallConstantTripCount(L))
+  if (auto ExpectedTC = getSmallConstantTripCount(PSE.getSE(), L))
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
   if (LoopVectorizeWithBlockFrequency)
     if (auto EstimatedTC = getLoopEstimatedTripCount(L))
-      return *EstimatedTC;
+      return ElementCount::getFixed(*EstimatedTC);
 
   if (!CanUseConstantMax)
     return std::nullopt;
 
   // Check if upper bound estimate is known.
   if (unsigned ExpectedTC = PSE.getSmallConstantMaxTripCount())
-    return ExpectedTC;
+    return ElementCount::getFixed(ExpectedTC);
 
   return std::nullopt;
 }
@@ -1357,38 +1364,33 @@ public:
       return;
     }
 
-    if (!ForceTailFoldingStyle.getNumOccurrences()) {
-      ChosenTailFoldingStyle = {
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
-      return;
-    }
+    // Default to TTI preference, but allow command line override.
+    ChosenTailFoldingStyle = {
+        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
+        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
+    if (ForceTailFoldingStyle.getNumOccurrences())
+      ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
+                                ForceTailFoldingStyle.getValue()};
 
-    // Set styles when forced.
-    ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
-                              ForceTailFoldingStyle.getValue()};
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override forced styles if needed.
-    // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
-                      TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-                      !EnableVPlanNativePath;
-    if (!EVLIsLegal) {
-      // If for some reason EVL mode is unsupported, fallback to
-      // DataWithoutLaneMask to try to vectorize the loop with folded tail
-      // in a generic way.
-      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                                TailFoldingStyle::DataWithoutLaneMask};
-      LLVM_DEBUG(
-          dbgs()
-          << "LV: Preference for VP intrinsics indicated. Will "
-             "not try to generate VP Intrinsics "
-          << (UserIC > 1
-                  ? "since interleave count specified is greater than 1.\n"
-                  : "due to non-interleaving reasons.\n"));
-    }
+                      TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
+    if (EVLIsLegal)
+      return;
+    // If for some reason EVL mode is unsupported, fallback to
+    // DataWithoutLaneMask to try to vectorize the loop with folded tail
+    // in a generic way.
+    ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
+                              TailFoldingStyle::DataWithoutLaneMask};
+    LLVM_DEBUG(
+        dbgs() << "LV: Preference for VP intrinsics indicated. Will "
+                  "not try to generate VP Intrinsics "
+               << (UserIC > 1
+                       ? "since interleave count specified is greater than 1.\n"
+                       : "due to non-interleaving reasons.\n"));
   }
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
@@ -1960,7 +1962,8 @@ public:
           // Get the best known TC estimate.
           if (auto EstimatedTC = getSmallBestKnownTC(
                   PSE, OuterLoop, /* CanUseConstantMax = */ false))
-            BestTripCount = *EstimatedTC;
+            if (EstimatedTC->isFixed())
+              BestTripCount = EstimatedTC->getFixedValue();
 
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
@@ -2426,7 +2429,7 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else if (VF.isScalable() &&
+  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
              !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
              Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee
@@ -2764,8 +2767,7 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
 
 void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Fix widened non-induction PHIs by setting up the PHI operands.
-  if (EnableVPlanNativePath)
-    fixNonInductionPHIs(State);
+  fixNonInductionPHIs(State);
 
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
@@ -3102,14 +3104,14 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
     // is correct.  The easiest form of the later is to require that all values
     // stored are the same.
     return !(Legal->isInvariant(getLoadStorePointerOperand(I)) &&
-             TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
+             Legal->isInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem:
     // If the divisor is loop-invariant no predication is needed.
-    return !TheLoop->isLoopInvariant(I->getOperand(1));
+    return !Legal->isInvariant(I->getOperand(1));
   }
 }
 
@@ -3751,12 +3753,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   ScalarEvolution *SE = PSE.getSE();
-  unsigned TC = SE->getSmallConstantTripCount(TheLoop);
+  ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
-  if (TC != MaxTC)
+  if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
-  if (TC == 1) {
+  if (TC.isScalar()) {
     reportVectorizationFailure("Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
@@ -3870,7 +3872,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
-  if (ExpectedTC && ExpectedTC <= TTI.getMinTripCountTailFoldingThreshold()) {
+  if (ExpectedTC && ExpectedTC->isFixed() &&
+      ExpectedTC->getFixedValue() <=
+          TTI.getMinTripCountTailFoldingThreshold()) {
     if (MaxPowerOf2RuntimeVF > 0u) {
       // If we have a low-trip-count, and the fixed-width VF is known to divide
       // the trip count but the scalable factor does not, use the fixed-width
@@ -3928,7 +3932,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return FixedScalableVFPair::getNone();
   }
 
-  if (TC == 0) {
+  if (TC.isZero()) {
     reportVectorizationFailure(
         "unable to calculate the loop count due to complex control flow",
         "UnknownLoopCountComplexCFG", ORE, TheLoop);
@@ -4817,13 +4821,13 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
     unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
-                               ? (*BestKnownTC) - 1
-                               : *BestKnownTC;
+                               ? BestKnownTC->getFixedValue() - 1
+                               : BestKnownTC->getFixedValue();
 
     unsigned InterleaveCountLB = bit_floor(std::max(
         1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
 
-    if (PSE.getSE()->getSmallConstantTripCount(TheLoop) > 0) {
+    if (getSmallConstantTripCount(PSE.getSE(), TheLoop).isNonZero()) {
       // If the best known trip count is exact, we select between two
       // prospective ICs, where
       //
@@ -5183,8 +5187,8 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   // costs of comparison and induction instructions, as they'll get simplified
   // away.
   SmallPtrSet<Instruction *, 2> ValuesToIgnoreForVF;
-  auto TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
-  if (VF.isFixed() && TC == VF.getFixedValue() && !foldTailByMasking())
+  auto TC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
+  if (TC == VF && !foldTailByMasking())
     addFullyUnrolledInstructionsToIgnore(TheLoop, Legal->getInductionVars(),
                                          ValuesToIgnoreForVF);
 
@@ -5339,8 +5343,8 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
-    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
-                               CostKind, 0);
+    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                               VectorTy, {}, CostKind, 0);
   return Cost;
 }
 
@@ -5357,8 +5361,8 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS,
                                CostKind) +
-           TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy, {},
-                              CostKind);
+           TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
+                              VectorTy, {}, CostKind);
   }
   StoreInst *SI = cast<StoreInst>(I);
 
@@ -5424,8 +5428,8 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
     assert(!Legal->isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
-            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
-                               CostKind, 0);
+            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                               VectorTy, {}, CostKind, 0);
   }
   return Cost;
 }
@@ -6164,14 +6168,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
     // First-order recurrences are replaced by vector shuffles inside the loop.
     if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi)) {
-      // For <vscale x 1 x i64>, if vscale = 1 we are unable to extract the
-      // penultimate value of the recurrence.
-      // TODO: Consider vscale_range info.
-      if (VF.isScalable() && VF.getKnownMinValue() == 1)
-        return InstructionCost::getInvalid();
       SmallVector<int> Mask(VF.getKnownMinValue());
       std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                cast<VectorType>(VectorTy),
                                 cast<VectorType>(VectorTy), Mask, CostKind,
                                 VF.getKnownMinValue() - 1);
     }
@@ -6884,8 +6884,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     // simplified away.
     // TODO: Remove this code after stepping away from the legacy cost model and
     // adding code to simplify VPlans before calculating their costs.
-    auto TC = PSE.getSE()->getSmallConstantTripCount(OrigLoop);
-    if (VF.isFixed() && TC == VF.getFixedValue() && !CM.foldTailByMasking())
+    auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
+    if (TC == VF && !CM.foldTailByMasking())
       addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                            CostCtx.SkipCostComputation);
 
@@ -7324,7 +7324,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
          "Trying to execute plan with unsupported UF");
-  VPlanTransforms::runPass(VPlanTransforms::materializeStepVectors, BestVPlan);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
@@ -7682,6 +7681,8 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+    // FIXME: See test Transforms/LoopVectorize/branch-weights.ll. I don't
+    // think the MainLoopStep is correct.
     unsigned MainLoopStep = UF * VF.getKnownMinValue();
     unsigned EpilogueLoopStep =
         EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
@@ -7826,7 +7827,7 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
     VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep(),
                                                            *PSE.getSE());
     return new VPWidenPointerInductionRecipe(
-        Phi, Operands[0], Step, *II,
+        Phi, Operands[0], Step, &Plan.getVFxUF(), *II,
         LoopVectorizationPlanner::getDecisionAndClampRange(
             [&](ElementCount VF) {
               return CM.isScalarAfterVectorization(Phi, VF);
@@ -8237,7 +8238,7 @@ bool VPRecipeBuilder::getScaledReductions(
           [&](ElementCount VF) {
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), A->getType(), B->getType(), PHI->getType(),
-                VF, OpAExtend, OpBExtend, BinOp->getOpcode());
+                VF, OpAExtend, OpBExtend, BinOp->getOpcode(), CM.CostKind);
             return Cost.isValid();
           },
           Range)) {
@@ -8558,12 +8559,16 @@ addUsersInExitBlocks(VPlan &Plan,
 /// users in the original exit block using the VPIRInstruction wrapping to the
 /// LCSSA phi.
 static void addExitUsersForFirstOrderRecurrences(
-    VPlan &Plan, SetVector<VPIRInstruction *> &ExitUsersToFix) {
+    VPlan &Plan, SetVector<VPIRInstruction *> &ExitUsersToFix, VFRange &Range) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *ScalarPHVPBB = Plan.getScalarPreheader();
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+
+  auto IsScalableOne = [](ElementCount VF) -> bool {
+    return VF == ElementCount::getScalable(1);
+  };
 
   for (auto &HeaderPhi : VectorRegion->getEntryBasicBlock()->phis()) {
     auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhi);
@@ -8646,6 +8651,15 @@ static void addExitUsersForFirstOrderRecurrences(
     for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
       if (ExitIRI->getOperand(0) != FOR)
         continue;
+      // For VF vscale x 1, if vscale = 1, we are unable to extract the
+      // penultimate value of the recurrence. Instead, we rely on function
+      // addUsersInExitBlocks to extract the last element from the result of
+      // VPInstruction::FirstOrderRecurrenceSplice by leaving the user of the
+      // recurrence phi in ExitUsersToFix.
+      // TODO: Consider vscale_range info and UF.
+      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
+                                                             Range))
+        return;
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
           {}, "vector.recur.extract.for.phi");
@@ -8860,7 +8874,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
   SetVector<VPIRInstruction *> ExitUsersToFix =
       collectUsersInLatchExitBlock(*Plan);
-  addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
+  addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix, Range);
   addUsersInExitBlocks(*Plan, ExitUsersToFix);
 
   // ---------------------------------------------------------------------------
@@ -9641,8 +9655,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // Skip vectorization if the expected trip count is less than the minimum
   // required trip count.
   if (auto ExpectedTC = getSmallBestKnownTC(PSE, L)) {
-    if (ElementCount::isKnownLT(ElementCount::getFixed(*ExpectedTC),
-                                VF.MinProfitableTripCount)) {
+    if (ElementCount::isKnownLT(*ExpectedTC, VF.MinProfitableTripCount)) {
       LLVM_DEBUG(dbgs() << "LV: Vectorization is not beneficial: expected "
                            "trip count < minimum profitable VF ("
                         << *ExpectedTC << " < " << VF.MinProfitableTripCount
@@ -9765,7 +9778,10 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                 match(
                     P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
                     m_SpecificInt(0)) &&
-                is_contained(P.incoming_values(), EPI.VectorTripCount))
+                all_of(P.incoming_values(), [&EPI](Value *Inc) {
+                  return Inc == EPI.VectorTripCount ||
+                         match(Inc, m_SpecificInt(0));
+                }))
               return &P;
             return nullptr;
           });
@@ -10009,7 +10025,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
   auto ExpectedTC = getSmallBestKnownTC(PSE, L);
-  if (ExpectedTC && *ExpectedTC < TinyTripCountVectorThreshold) {
+  if (ExpectedTC && ExpectedTC->isFixed() &&
+      ExpectedTC->getFixedValue() < TinyTripCountVectorThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                       << "This loop is worth vectorizing only if no scalar "
                       << "iteration overheads are incurred.");

@@ -6061,6 +6061,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "va_start called in a non-varargs function");
     break;
   }
+  case Intrinsic::get_dynamic_area_offset: {
+    auto *IntTy = dyn_cast<IntegerType>(Call.getType());
+    Check(IntTy && DL.getPointerSizeInBits(DL.getAllocaAddrSpace()) ==
+                       IntTy->getBitWidth(),
+          "get_dynamic_area_offset result type must be scalar integer matching "
+          "alloca address space width",
+          Call);
+    break;
+  }
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
@@ -6557,8 +6566,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     unsigned RegCount = cast<ConstantInt>(V)->getZExtValue();
     Check(RegCount % 8 == 0,
           "reg_count argument to nvvm.setmaxnreg must be in multiples of 8");
-    Check((RegCount >= 24 && RegCount <= 256),
-          "reg_count argument to nvvm.setmaxnreg must be within [24, 256]");
     break;
   }
   case Intrinsic::experimental_convergence_entry:
@@ -6603,14 +6610,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.threadlocal.address first argument must be a GlobalValue");
     Check(cast<GlobalValue>(Arg0).isThreadLocal(),
           "llvm.threadlocal.address operand isThreadLocal() must be true");
-    break;
-  }
-  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cta:
-  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cluster:
-  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_gpu:
-  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys: {
-    unsigned size = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
-    Check(size == 128, " The only supported value for size operand is 128");
     break;
   }
   };

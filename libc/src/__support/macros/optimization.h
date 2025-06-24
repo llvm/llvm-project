@@ -63,4 +63,12 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #define LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
 #endif
 
+#if (LIBC_MATH & LIBC_MATH_NO_ERRNO)
+#define LIBC_MATH_HAS_NO_ERRNO
+#endif
+
+#if (LIBC_MATH & LIBC_MATH_NO_EXCEPT)
+#define LIBC_MATH_HAS_NO_EXCEPT
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

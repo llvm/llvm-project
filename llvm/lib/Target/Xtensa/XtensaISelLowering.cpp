@@ -58,6 +58,10 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // Set up the register classes.
   addRegisterClass(MVT::i32, &Xtensa::ARRegClass);
 
+  if (Subtarget.hasSingleFloat()) {
+    addRegisterClass(MVT::f32, &Xtensa::FPRRegClass);
+  }
+
   if (Subtarget.hasBoolean()) {
     addRegisterClass(MVT::v1i1, &Xtensa::BRRegClass);
   }
@@ -71,6 +75,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::Constant, MVT::i32, Custom);
   setOperationAction(ISD::Constant, MVT::i64, Expand);
+  setOperationAction(ISD::ConstantFP, MVT::f32, Expand);
+  setOperationAction(ISD::ConstantFP, MVT::f64, Expand);
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
@@ -107,8 +113,12 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
 
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
+  setOperationAction(ISD::SELECT, MVT::f32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
+
   setOperationAction(ISD::SETCC, MVT::i32, Expand);
+  setOperationAction(ISD::SETCC, MVT::f32, Expand);
 
   setCondCodeAction(ISD::SETGT, MVT::i32, Expand);
   setCondCodeAction(ISD::SETLE, MVT::i32, Expand);
@@ -175,6 +185,64 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY, MVT::Other, Custom);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
+  // Handle floating-point types.
+  for (unsigned I = MVT::FIRST_FP_VALUETYPE; I <= MVT::LAST_FP_VALUETYPE; ++I) {
+    MVT VT = MVT::SimpleValueType(I);
+    if (isTypeLegal(VT)) {
+      if (VT.getSizeInBits() == 32 && Subtarget.hasSingleFloat()) {
+        setOperationAction(ISD::FABS, VT, Legal);
+        setOperationAction(ISD::FADD, VT, Legal);
+        setOperationAction(ISD::FSUB, VT, Legal);
+        setOperationAction(ISD::FMA, VT, Legal);
+        setOperationAction(ISD::FMUL, VT, Legal);
+        setOperationAction(ISD::FNEG, VT, Legal);
+      } else {
+        setOperationAction(ISD::FABS, VT, Expand);
+        setOperationAction(ISD::FADD, VT, Expand);
+        setOperationAction(ISD::FSUB, VT, Expand);
+        setOperationAction(ISD::FMA, VT, Expand);
+        setOperationAction(ISD::FMUL, VT, Expand);
+        setOperationAction(ISD::FNEG, VT, Expand);
+      }
+
+      // TODO: once implemented in InstrInfo uncomment
+      setOperationAction(ISD::FSQRT, VT, Expand);
+      setOperationAction(ISD::FSIN, VT, Expand);
+      setOperationAction(ISD::FCOS, VT, Expand);
+      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FDIV, VT, Expand);
+      setOperationAction(ISD::FPOW, VT, Expand);
+      setOperationAction(ISD::FSQRT, VT, Expand);
+      setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+    }
+  }
+
+  // Handle floating-point types.
+  if (Subtarget.hasSingleFloat()) {
+    setOperationAction(ISD::BITCAST, MVT::i32, Legal);
+    setOperationAction(ISD::BITCAST, MVT::f32, Legal);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i32, Legal);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i32, Legal);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Legal);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Legal);
+
+    setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETOGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
+  } else {
+    setOperationAction(ISD::BITCAST, MVT::i32, Expand);
+    setOperationAction(ISD::BITCAST, MVT::f32, Expand);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i32, Expand);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i32, Expand);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Expand);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Expand);
+  }
+
+  // Floating-point truncation and stores need to be done separately.
+  setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
 }
@@ -182,6 +250,11 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 bool XtensaTargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
   // The Xtensa target isn't yet aware of offsets.
+  return false;
+}
+
+bool XtensaTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                        bool ForCodeSize) const {
   return false;
 }
 
@@ -333,6 +406,16 @@ static bool CC_Xtensa_Custom(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   return false;
+}
+
+/// Return the register type for a given MVT
+MVT XtensaTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                        CallingConv::ID CC,
+                                                        EVT VT) const {
+  if (VT.isFloatingPoint())
+    return MVT::i32;
+
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
 CCAssignFn *XtensaTargetLowering::CCAssignFnForCall(CallingConv::ID CC,
@@ -604,15 +687,19 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if ((!name.empty()) && isLongCall(name.c_str())) {
     // Create a constant pool entry for the callee address
     XtensaCP::XtensaCPModifier Modifier = XtensaCP::no_modifier;
+    XtensaMachineFunctionInfo *XtensaFI =
+        MF.getInfo<XtensaMachineFunctionInfo>();
+    unsigned LabelId = XtensaFI->createCPLabelId();
 
     XtensaConstantPoolValue *CPV = XtensaConstantPoolSymbol::Create(
-        *DAG.getContext(), name.c_str(), 0 /* XtensaCLabelIndex */, false,
-        Modifier);
+        *DAG.getContext(), name.c_str(), LabelId, false, Modifier);
 
     // Get the address of the callee into a register
     SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4), 0, TF);
     SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
-    Callee = CPWrap;
+    Callee = DAG.getLoad(
+        PtrVT, DL, DAG.getEntryNode(), CPWrap,
+        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
   }
 
   // The first call operand is the chain and the second is the target address.
@@ -805,12 +892,14 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
     // Check if use node maybe lowered to the ADDMI instruction
     SDNode &OpNode = *Op.getNode();
     if ((OpNode.hasOneUse() && OpNode.user_begin()->getOpcode() == ISD::ADD) &&
-        isShiftedInt<16, 8>(Value))
+        isShiftedInt<8, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
     Constant *CV = ConstantInt::get(Ty, Value);
     SDValue CP = DAG.getConstantPool(CV, MVT::i32);
-    return CP;
+    SDValue Res =
+        DAG.getLoad(MVT::i32, DL, DAG.getEntryNode(), CP, MachinePointerInfo());
+    return Res;
   }
   return Op;
 }
@@ -824,22 +913,30 @@ SDValue XtensaTargetLowering::LowerGlobalAddress(SDValue Op,
 
   SDValue CPAddr = DAG.getTargetConstantPool(GV, PtrVT, Align(4));
   SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
-
-  return CPWrap;
+  SDValue Res = DAG.getLoad(
+      PtrVT, DL, DAG.getEntryNode(), CPWrap,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+  return Res;
 }
 
 SDValue XtensaTargetLowering::LowerBlockAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
   BlockAddressSDNode *Node = cast<BlockAddressSDNode>(Op);
+  SDLoc DL(Op);
   const BlockAddress *BA = Node->getBlockAddress();
   EVT PtrVT = Op.getValueType();
+  MachineFunction &MF = DAG.getMachineFunction();
+  XtensaMachineFunctionInfo *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
+  unsigned LabelId = XtensaFI->createCPLabelId();
 
   XtensaConstantPoolValue *CPV =
-      XtensaConstantPoolConstant::Create(BA, 0, XtensaCP::CPBlockAddress);
+      XtensaConstantPoolConstant::Create(BA, LabelId, XtensaCP::CPBlockAddress);
   SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
   SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
-
-  return CPWrap;
+  SDValue Res = DAG.getLoad(
+      PtrVT, DL, DAG.getEntryNode(), CPWrap,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+  return Res;
 }
 
 SDValue XtensaTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
@@ -874,15 +971,19 @@ SDValue XtensaTargetLowering::LowerJumpTable(SDValue Op,
                                              SelectionDAG &DAG) const {
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
   EVT PtrVT = Op.getValueType();
+  SDLoc DL(Op);
 
-  // Create a constant pool entry for the callee address
+  // Create a constant pool entry for the jumptable address
   XtensaConstantPoolValue *CPV =
       XtensaConstantPoolJumpTable::Create(*DAG.getContext(), JT->getIndex());
 
-  // Get the address of the callee into a register
+  // Get the address of the jumptable into a register
   SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
 
-  return getAddrPCRel(CPAddr, DAG);
+  SDValue Res = DAG.getLoad(
+      PtrVT, DL, DAG.getEntryNode(), getAddrPCRel(CPAddr, DAG),
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+  return Res;
 }
 
 SDValue XtensaTargetLowering::getAddrPCRel(SDValue Op,
@@ -1311,6 +1412,26 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::SRCL";
   case XtensaISD::SRCR:
     return "XtensaISD::SRCR";
+  case XtensaISD::CMPUO:
+    return "XtensaISD::CMPUO";
+  case XtensaISD::CMPUEQ:
+    return "XtensaISD::CMPUEQ";
+  case XtensaISD::CMPULE:
+    return "XtensaISD::CMPULE";
+  case XtensaISD::CMPULT:
+    return "XtensaISD::CMPULT";
+  case XtensaISD::CMPOEQ:
+    return "XtensaISD::CMPOEQ";
+  case XtensaISD::CMPOLE:
+    return "XtensaISD::CMPOLE";
+  case XtensaISD::CMPOLT:
+    return "XtensaISD::CMPOLT";
+  case XtensaISD::MADD:
+    return "XtensaISD::MADD";
+  case XtensaISD::MSUB:
+    return "XtensaISD::MSUB";
+  case XtensaISD::MOVS:
+    return "XtensaISD::MOVS";
   }
   return nullptr;
 }
@@ -1395,11 +1516,19 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
   case Xtensa::S16I:
   case Xtensa::S32I:
   case Xtensa::S32I_N:
+  case Xtensa::SSI:
+  case Xtensa::SSIP:
+  case Xtensa::SSX:
+  case Xtensa::SSXP:
   case Xtensa::L8UI:
   case Xtensa::L16SI:
   case Xtensa::L16UI:
   case Xtensa::L32I:
-  case Xtensa::L32I_N: {
+  case Xtensa::L32I_N:
+  case Xtensa::LSI:
+  case Xtensa::LSIP:
+  case Xtensa::LSX:
+  case Xtensa::LSXP: {
     // Insert memory wait instruction "memw" before volatile load/store as it is
     // implemented in gcc. If memoperands is empty then assume that it aslo
     // maybe volatile load/store and insert "memw".

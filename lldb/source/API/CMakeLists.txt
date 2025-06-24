@@ -326,7 +326,7 @@ foreach(header
 endforeach()
 
 add_custom_command(TARGET liblldb POST_BUILD
-  COMMAND ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h ${lldb_header_staging_dir}/lldb-defines.h ${LLDB_VERSION_MAJOR} ${LLDB_VERSION_MINOR} ${LLDB_VERSION_PATCH}
+  COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h ${lldb_header_staging_dir}/lldb-defines.h ${LLDB_VERSION_MAJOR} ${LLDB_VERSION_MINOR} ${LLDB_VERSION_PATCH}
 )
 add_custom_target(liblldb-header-staging DEPENDS ${lldb_staged_headers})
 add_dependencies(liblldb liblldb-header-staging)
