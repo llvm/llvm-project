@@ -55,13 +55,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
     ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
-    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %one:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
-    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %zero(s64)
-    ; CHECK-NEXT: %extract2:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %one(s64)
-    ; CHECK-NEXT: $x0 = COPY %extract(s64)
-    ; CHECK-NEXT: $x1 = COPY %extract2(s64)
+    ; CHECK-NEXT: $x0 = COPY %arg1(s64)
+    ; CHECK-NEXT: $x1 = COPY %arg2(s64)
     ; CHECK-NEXT: $q0 = COPY %bv(<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %arg1:_(s64) = COPY $x0

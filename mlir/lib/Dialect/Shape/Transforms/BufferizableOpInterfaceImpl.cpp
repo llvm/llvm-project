@@ -67,7 +67,7 @@ struct AssumingOpInterface
     for (const auto &it : llvm::enumerate(assumingOp->getResultTypes())) {
       if (isa<TensorType>(it.value())) {
         newResults.push_back(rewriter.create<bufferization::ToTensorOp>(
-            assumingOp.getLoc(), newOp->getResult(it.index())));
+            assumingOp.getLoc(), it.value(), newOp->getResult(it.index())));
       } else {
         newResults.push_back(newOp->getResult(it.index()));
       }
@@ -119,7 +119,7 @@ struct AssumingYieldOpInterface
     SmallVector<Value> newResults;
     for (Value value : yieldOp.getOperands()) {
       if (isa<TensorType>(value.getType())) {
-        FailureOr<Value> buffer = getBuffer(rewriter, value, options);
+        FailureOr<Value> buffer = getBuffer(rewriter, value, options, state);
         if (failed(buffer))
           return failure();
         newResults.push_back(*buffer);

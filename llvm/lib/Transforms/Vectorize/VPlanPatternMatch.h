@@ -192,6 +192,9 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
 /// Match a VPValue, capturing it if we match.
 inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 
+/// Match a VPInstruction, capturing if we match.
+inline bind_ty<VPInstruction> m_VPInstruction(VPInstruction *&V) { return V; }
+
 template <typename Ops_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
 struct Recipe_match {
@@ -316,6 +319,31 @@ inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>
 m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>(
       {Op0, Op1, Op2});
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, typename Op3_t,
+          unsigned Opcode, bool Commutative, typename... RecipeTys>
+using Recipe4Op_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t, Op3_t>,
+                                     Opcode, Commutative, RecipeTys...>;
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, typename Op3_t,
+          unsigned Opcode>
+using VPInstruction4Op_match =
+    Recipe4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode, /*Commutative*/ false,
+                    VPInstruction>;
+
+template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t,
+          typename Op3_t>
+inline VPInstruction4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode>
+m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2,
+                const Op3_t &Op3) {
+  return VPInstruction4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode>(
+      {Op0, Op1, Op2, Op3});
+}
+template <typename Op0_t>
+inline UnaryVPInstruction_match<Op0_t, Instruction::Freeze>
+m_Freeze(const Op0_t &Op0) {
+  return m_VPInstruction<Instruction::Freeze>(Op0);
 }
 
 template <typename Op0_t>

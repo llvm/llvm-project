@@ -19,12 +19,22 @@
 #include <map>
 
 namespace llvm {
+
+class OptimizationRemarkEmitter;
+
 namespace memprof {
 
-/// Return the allocation type for a given set of memory profile values.
-LLVM_ABI AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
-                                     uint64_t AllocCount,
-                                     uint64_t TotalLifetime);
+/// Whether the alloc memeprof metadata will include context size info for all
+/// MIBs.
+LLVM_ABI bool metadataIncludesAllContextSizeInfo();
+
+/// Whether the alloc memprof metadata may include context size info for some
+/// MIBs (but possibly not all).
+LLVM_ABI bool metadataMayIncludeContextSizeInfo();
+
+/// Whether we need to record the context size info in the alloc trie used to
+/// build metadata.
+LLVM_ABI bool recordContextSizeInfoForAnalysis();
 
 /// Build callstack metadata from the provided list of call stack ids. Returns
 /// the resulting metadata node.
@@ -85,6 +95,13 @@ private:
   // The allocation's leaf stack id.
   uint64_t AllocStackId = 0;
 
+  // If the client provides a remarks emitter object, we will emit remarks on
+  // allocations for which we apply non-context sensitive allocation hints.
+  OptimizationRemarkEmitter *ORE;
+
+  // The maximum size of a cold allocation context, from the profile summary.
+  uint64_t MaxColdSize;
+
   void deleteTrieNode(CallStackTrieNode *Node) {
     if (!Node)
       return;
@@ -111,7 +128,9 @@ private:
                      uint64_t &ColdBytes);
 
 public:
-  CallStackTrie() = default;
+  CallStackTrie(OptimizationRemarkEmitter *ORE = nullptr,
+                uint64_t MaxColdSize = 0)
+      : ORE(ORE), MaxColdSize(MaxColdSize) {}
   ~CallStackTrie() { deleteTrieNode(Alloc); }
 
   bool empty() const { return Alloc == nullptr; }

@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -641,8 +642,10 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
   // in that case. stlport does so too.
   // Look for std::__debug for libstdc++, and for std:: for stlport.
   // This is effectively a compiler-side implementation of LWG2193.
-  if (!InitSeq && EmptyInitList && InitSeq.getFailureKind() ==
-          InitializationSequence::FK_ExplicitConstructor) {
+  if (!InitSeq && EmptyInitList &&
+      InitSeq.getFailureKind() ==
+          InitializationSequence::FK_ExplicitConstructor &&
+      SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2014'04'22)) {
     OverloadCandidateSet::iterator Best;
     OverloadingResult O =
         InitSeq.getFailedCandidateSet()
@@ -6617,7 +6620,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // initializer present. However, we only do this for structure types, not
       // union types, because an unitialized field in a union is generally
       // reasonable, especially in C where unions can be used for type punning.
-      if (!Initializer && !Rec->isUnion() && !Rec->isInvalidDecl()) {
+      if (Var && !Initializer && !Rec->isUnion() && !Rec->isInvalidDecl()) {
         if (const FieldDecl *FD = getConstField(Rec)) {
           unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||

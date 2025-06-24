@@ -333,3 +333,62 @@ func.func @_QPreuse_alloca(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = 
 // CHECK:       }
 // CHECK:       return
 
+
+
+omp.private {type = firstprivate} @boxchar.privatizer : !fir.boxchar<1> copy {
+  ^bb0(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>):
+    omp.yield(%arg0 : !fir.boxchar<1>)
+  }
+func.func @_QPrealtest(%arg0: !fir.boxchar<1>) {
+  %0 = fir.alloca !fir.boxchar<1>
+  %1 = fir.dummy_scope : !fir.dscope
+  %2:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %1 {uniq_name = "a0"}: (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  fir.store %3#0 to %0 : !fir.ref<!fir.boxchar<1>>
+  %4 = fir.load %0 : !fir.ref<!fir.boxchar<1>>
+  %5:2 = fir.unboxchar %4 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %6:2 = fir.unboxchar %4 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  %7 = arith.subi %6#1, %c1 : index
+  %8 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%7 : index) extent(%6#1 : index) stride(%c1 : index) start_idx(%c0 : index) {stride_in_bytes = true}
+  %9 = omp.map.info var_ptr(%0 : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(to) capture(ByRef) bounds(%8) -> !fir.ref<!fir.boxchar<1>>
+  omp.target map_entries(%9 -> %arg1 : !fir.ref<!fir.boxchar<1>>) private(@boxchar.privatizer %3#0 -> %arg2 [map_idx=0] : !fir.boxchar<1>) {
+    %10:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+    %11:2 = hlfir.declare %10#0 typeparams %10#1 {uniq_name = "tgt_a0"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    omp.terminator
+  }
+  return
+}
+
+
+// CHECK-LABEL:   omp.private {type = firstprivate} @boxchar.privatizer : !fir.boxchar<1> copy {
+// CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.boxchar<1>, %[[VAL_1:.*]]: !fir.boxchar<1>):
+// CHECK:           omp.yield(%[[VAL_0]] : !fir.boxchar<1>)
+// CHECK:         }
+
+// CHECK-LABEL:   func.func @_QPrealtest(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.boxchar<1>) {
+// CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.boxchar<1>
+// CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+// CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 dummy_scope %[[VAL_1]] {uniq_name = "a0"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           fir.store %[[VAL_3]]#0 to %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
+// CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
+// CHECK:           %[[VAL_5:.*]]:2 = fir.unboxchar %[[VAL_4]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_8:.*]]:2 = fir.unboxchar %[[VAL_4]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+// CHECK:           %[[VAL_9:.*]] = arith.subi %[[VAL_8]]#1, %[[VAL_7]] : index
+// CHECK:           %[[VAL_10:.*]] = omp.map.bounds lower_bound(%[[VAL_6]] : index) upper_bound(%[[VAL_9]] : index) extent(%[[VAL_8]]#1 : index) stride(%[[VAL_7]] : index) start_idx(%[[VAL_6]] : index) {stride_in_bytes = true}
+// CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
+// CHECK:           %[[VAL_12:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+// CHECK:           %[[VAL_13:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.char<1,?>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[VAL_12]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) bounds(%[[VAL_10]]) -> !fir.ref<!fir.boxchar<1>>
+// CHECK:           %[[VAL_14:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(to) capture(ByRef) members(%[[VAL_13]] : [0] : !fir.ref<!fir.boxchar<1>>) -> !fir.ref<!fir.boxchar<1>>
+// CHECK:           omp.target map_entries(%[[VAL_14]] -> %[[VAL_15:.*]], %[[VAL_13]] -> %[[VAL_16:.*]] : !fir.ref<!fir.boxchar<1>>, !fir.ref<!fir.boxchar<1>>) private(@boxchar.privatizer %[[VAL_3]]#0 -> %[[VAL_17:.*]] [map_idx=0] : !fir.boxchar<1>) {
+// CHECK:             %[[VAL_18:.*]]:2 = fir.unboxchar %[[VAL_17]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+// CHECK:             %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]]#0 typeparams %[[VAL_18]]#1 {uniq_name = "tgt_a0"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:             omp.terminator
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

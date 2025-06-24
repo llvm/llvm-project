@@ -243,9 +243,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
         // TODO: Also verify VPPredInstPHIRecipe.
-        if (isa<VPPredInstPHIRecipe>(UI) ||
-            (isa<VPInstruction>(UI) && (cast<VPInstruction>(UI)->getOpcode() ==
-                                        VPInstruction::ResumePhi)))
+        if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
@@ -431,8 +429,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
   }
 
-  // TODO: Remove once loop regions are dissolved before execution.
-  if (!VerifyLate && !isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
+  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
     errs() << "VPlan vector loop header does not start with a "
               "VPCanonicalIVPHIRecipe\n";
     return false;

@@ -900,9 +900,9 @@ Expr ScriptParser::readAssert() {
   StringRef msg = readName();
   expect(")");
 
-  return [=, s = ctx.script, &ctx = ctx]() -> ExprValue {
+  return [=, s = ctx.script]() -> ExprValue {
     if (!e().getValue())
-      Err(ctx) << msg;
+      s->recordError(msg);
     return s->getDot();
   };
 }

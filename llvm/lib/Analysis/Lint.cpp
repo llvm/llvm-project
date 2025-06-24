@@ -551,8 +551,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   VectorType *VecTy = dyn_cast<VectorType>(V->getType());
   if (!VecTy) {
-    KnownBits Known =
-        computeKnownBits(V, DL, 0, AC, dyn_cast<Instruction>(V), DT);
+    KnownBits Known = computeKnownBits(V, DL, AC, dyn_cast<Instruction>(V), DT);
     return Known.isZero();
   }
 

@@ -1379,7 +1379,7 @@ LogicalResult bufferization::runOneShotBufferize(
     // Run One-Shot Analysis and insert buffer copies (on the tensor level)
     // only where needed. This is the default and much more efficient than
     // copy-before-write.
-    if (failed(insertTensorCopies(op, options, statistics)))
+    if (failed(insertTensorCopies(op, options, state, statistics)))
       return failure();
 
     // If test-analysis-only is set, the IR was annotated with RaW conflict

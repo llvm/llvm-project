@@ -134,14 +134,23 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
   return NVPTX::DivPrecisionLevel::IEEE754;
 }
 
-bool NVPTXTargetLowering::usePrecSqrtF32() const {
-  if (UsePrecSqrtF32.getNumOccurrences() > 0) {
-    // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
+bool NVPTXTargetLowering::usePrecSqrtF32(const MachineFunction &MF,
+                                         const SDNode *N) const {
+  // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
+  if (UsePrecSqrtF32.getNumOccurrences() > 0)
     return UsePrecSqrtF32;
-  } else {
-    // Otherwise, use sqrt.approx if fast math is enabled
-    return !getTargetMachine().Options.UnsafeFPMath;
+
+  // Otherwise, use sqrt.approx if fast math is enabled
+  if (allowUnsafeFPMath(MF))
+    return false;
+
+  if (N) {
+    const SDNodeFlags Flags = N->getFlags();
+    if (Flags.hasApproximateFuncs())
+      return false;
   }
+
+  return true;
 }
 
 bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
@@ -580,18 +589,18 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, VT, IsOpSupported ? Action : NoI16x2Action);
   };
 
-  addRegisterClass(MVT::i1, &NVPTX::Int1RegsRegClass);
-  addRegisterClass(MVT::i16, &NVPTX::Int16RegsRegClass);
-  addRegisterClass(MVT::v2i16, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::v4i8, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::i32, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::i64, &NVPTX::Int64RegsRegClass);
-  addRegisterClass(MVT::f32, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::f64, &NVPTX::Int64RegsRegClass);
-  addRegisterClass(MVT::f16, &NVPTX::Int16RegsRegClass);
-  addRegisterClass(MVT::v2f16, &NVPTX::Int32RegsRegClass);
-  addRegisterClass(MVT::bf16, &NVPTX::Int16RegsRegClass);
-  addRegisterClass(MVT::v2bf16, &NVPTX::Int32RegsRegClass);
+  addRegisterClass(MVT::i1, &NVPTX::B1RegClass);
+  addRegisterClass(MVT::i16, &NVPTX::B16RegClass);
+  addRegisterClass(MVT::v2i16, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::v4i8, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::i32, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::i64, &NVPTX::B64RegClass);
+  addRegisterClass(MVT::f32, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::f64, &NVPTX::B64RegClass);
+  addRegisterClass(MVT::f16, &NVPTX::B16RegClass);
+  addRegisterClass(MVT::v2f16, &NVPTX::B32RegClass);
+  addRegisterClass(MVT::bf16, &NVPTX::B16RegClass);
+  addRegisterClass(MVT::v2bf16, &NVPTX::B32RegClass);
 
   // Conversion to/from FP16/FP16x2 is always legal.
   setOperationAction(ISD::BUILD_VECTOR, MVT::v2f16, Custom);
@@ -1134,7 +1143,8 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
                                              bool &UseOneConst,
                                              bool Reciprocal) const {
   if (!(Enabled == ReciprocalEstimate::Enabled ||
-        (Enabled == ReciprocalEstimate::Unspecified && !usePrecSqrtF32())))
+        (Enabled == ReciprocalEstimate::Unspecified &&
+         !usePrecSqrtF32(DAG.getMachineFunction()))))
     return SDValue();
 
   if (ExtraSteps == ReciprocalEstimate::Unspecified)
@@ -1996,12 +2006,11 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoDynamicAlloca(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for dynamic alloca introduced in PTX ISA version 7.3 and "
         "requires target sm_52.",
-        SDLoc(Op).getDebugLoc());
-    DAG.getContext()->diagnose(NoDynamicAlloca);
+        SDLoc(Op).getDebugLoc()));
     auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()),
                 Op.getOperand(0)};
     return DAG.getMergeValues(Ops, SDLoc());
@@ -2037,12 +2046,11 @@ SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoStackRestore(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for stackrestore requires PTX ISA version >= 7.3 and target "
         ">= sm_52.",
-        DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoStackRestore);
+        DL.getDebugLoc()));
     return Op.getOperand(0);
   }
 
@@ -2060,12 +2068,11 @@ SDValue NVPTXTargetLowering::LowerSTACKSAVE(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoStackSave(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for stacksave requires PTX ISA version >= 7.3 and target >= "
         "sm_52.",
-        DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoStackSave);
+        DL.getDebugLoc()));
     auto Ops = {DAG.getConstant(0, DL, Op.getValueType()), Op.getOperand(0)};
     return DAG.getMergeValues(Ops, DL);
   }
@@ -4859,22 +4866,22 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'b':
-      return std::make_pair(0U, &NVPTX::Int1RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B1RegClass);
     case 'c':
     case 'h':
-      return std::make_pair(0U, &NVPTX::Int16RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B16RegClass);
     case 'r':
     case 'f':
-      return std::make_pair(0U, &NVPTX::Int32RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B32RegClass);
     case 'l':
     case 'N':
     case 'd':
-      return std::make_pair(0U, &NVPTX::Int64RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B64RegClass);
     case 'q': {
       if (STI.getSmVersion() < 70)
         report_fatal_error("Inline asm with 128 bit operands is only "
                            "supported for sm_70 and higher!");
-      return std::make_pair(0U, &NVPTX::Int128RegsRegClass);
+      return std::make_pair(0U, &NVPTX::B128RegClass);
     }
     }
   }

@@ -423,3 +423,45 @@ namespace SubObj {
   }
   static_assert(construct_after_lifetime_2()); // both-error {{}} both-note {{in call}}
 }
+
+namespace RecursiveLifetimeStart {
+  struct B {
+    int b;
+  };
+
+  struct A {
+    B b;
+    int a;
+  };
+
+  constexpr int foo() {
+    A a;
+    a.~A();
+
+    new (&a) A();
+    a.a = 10;
+    a.b.b = 12;
+    return a.a;
+  }
+  static_assert(foo() == 10);
+}
+
+namespace ArrayRoot {
+  struct S {
+    int a;
+  };
+  constexpr int foo() {
+    S* ss = std::allocator<S>().allocate(2);
+    new (ss) S{};
+    new (ss + 1) S{};
+
+    S* ps = &ss[2];
+    ps = ss;
+    ps->~S();
+
+    std::allocator<S>().deallocate(ss);
+    return 0;
+  }
+
+  static_assert(foo() == 0);
+}

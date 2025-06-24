@@ -378,6 +378,7 @@ cc_library(
     hdrs = glob(["include/llvm/TableGen/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":FrontendDirective",
         ":Support",
         ":config",
     ],
@@ -417,6 +418,7 @@ cc_library(
         "include/llvm/BinaryFormat/ELFRelocs/*.def",
     ]),
     deps = [
+        ":PPCTargetParser",
         ":Support",
         ":TargetParser",
     ],
@@ -960,7 +962,10 @@ cc_library(
         "include/llvm/Analysis/WithCache.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
-    textual_hdrs = glob(["include/llvm/IR/*.def"]),
+    textual_hdrs = glob([
+        "include/llvm/IR/*.def",
+        "lib/IR/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":Demangle",
@@ -1360,6 +1365,13 @@ td_library(
     ]),
 )
 
+td_library(
+    name = "PPCTargetTdFiles",
+    srcs = glob([
+        "lib/Target/PowerPC/**/*.td",
+    ]),
+)
+
 gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
@@ -1371,11 +1383,38 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "PPCGenTargetFeaturesGen",
+    tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/PPC.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":PPCTargetTdFiles",
+    ],
+)
+
+cc_library(
+    name = "PPCTargetParser",
+    srcs = ["lib/TargetParser/PPCTargetParser.cpp"],
+    hdrs = ["include/llvm/TargetParser/PPCTargetParser.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":PPCGenTargetFeaturesGen",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 cc_library(
     name = "TargetParser",
-    srcs = glob([
-        "lib/TargetParser/*.cpp",
-    ]) + select({
+    srcs = glob(
+        [
+            "lib/TargetParser/*.cpp",
+        ],
+        exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
+    ) + select({
         "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.inc",
         ]),
@@ -1627,6 +1666,8 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":ProfileData",
+        ":Support",
         ":TargetParser",
     ],
 )
@@ -1727,6 +1768,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendAtomic",
+        ":FrontendDirective",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -1763,6 +1805,13 @@ gentbl_filegroup(
 )
 
 cc_library(
+    name = "FrontendDirective",
+    srcs = glob(["lib/Frontend/Directive/*.cpp"]),
+    hdrs = glob(["include/llvm/Frontend/Directive/*.h"]),
+    deps = [":Support"],
+)
+
+cc_library(
     name = "FrontendOpenACC",
     srcs = glob([
         "lib/Frontend/OpenACC/*.cpp",
@@ -1774,6 +1823,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":FrontendDirective",
         ":Support",
         ":TransformUtils",
     ],
@@ -2108,10 +2158,10 @@ llvm_target_lib_list = [lib for lib in [
                 "-combiners=AArch64PostLegalizerLowering",
             ],
             "lib/Target/AArch64/AArch64GenCallingConv.inc": ["-gen-callingconv"],
+            "lib/Target/AArch64/AArch64GenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "--large-decoder-table",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],
@@ -5160,6 +5210,13 @@ cc_library(
         ":Support",
         "//third-party/unittest:gmock",
     ],
+)
+
+cc_library(
+    name = "TestingDemangle",
+    testonly = True,
+    copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/Testing/Demangle/*.inc"]),
 )
 
 cc_library(

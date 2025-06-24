@@ -164,6 +164,12 @@ end
   No other Fortran compiler enforces C7108 (to our knowledge);
   they all resolve the ambiguity by interpreting the call as a function
   reference.  We do the same, with a portability warning.
+* An override for an inaccessible procedure binding works only within
+  the same module; other apparent overrides of inaccessible bindings
+  are actually new bindings of the same name.
+  In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
+  however, overrides are necessary, so they are permitted for inaccessible
+  bindings with an optional warning.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -291,7 +297,10 @@ end
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 * Nonstandard intrinsic functions: ISNAN, SIZEOF
-* A forward reference to a default INTEGER scalar dummy argument or
+* A forward reference to an INTEGER dummy argument is permitted to appear
+  in a specification expression, such as an array bound, in a scope with
+  IMPLICIT NONE(TYPE).
+* A forward reference to a default INTEGER scalar
   `COMMON` block variable is permitted to appear in a specification
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
@@ -424,6 +433,10 @@ end
 * A zero field width is allowed for logical formatted output (`L0`).
 * `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
   the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
+* A character string edit descriptor is allowed in an input format
+  with an optional compilation-time warning.  When executed, it
+  is treated as an 'nX' positioning control descriptor that skips
+  over the same number of characters, without comparison.
 
 ### Extensions supported when enabled by options
 
@@ -514,6 +527,8 @@ end
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+* We implement the `__COUNTER__` preprocessing extension,
+  see [Non-standard Extensions](Preprocessing.md#non-standard-extensions)
 
 ## Standard features not silently accepted
 
@@ -842,6 +857,16 @@ print *, [(j,j=1,10)]
   in a specification expression via host association with a portability
   warning since such values may have become defined by the time the nested
   expression's value is required.
+
+* Intrinsic assignment of arrays is defined elementally, and intrinsic
+  assignment of derived type components is defined componentwise.
+  However, when intrinsic assignment takes place for an array of derived
+  type, the order of the loop nesting is not defined.
+  Some compilers will loop over the elements, assigning all of the components
+  of each element before proceeding to the next element.
+  This compiler loops over all of the components, and assigns all of
+  the elements for each component before proceeding to the next component.
+  A program using defined assignment might be able to detect the difference.
 
 ## De Facto Standard Features
 

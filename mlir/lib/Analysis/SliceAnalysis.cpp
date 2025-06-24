@@ -111,8 +111,10 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
           return getBackwardSliceImpl(parentOp, backwardSlice, options);
         }
       }
+    } else {
+      return failure();
     }
-    return failure();
+    return success();
   };
 
   bool succeeded = true;

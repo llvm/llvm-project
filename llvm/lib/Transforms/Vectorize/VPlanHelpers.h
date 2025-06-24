@@ -286,9 +286,10 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Construct the vectorized value of a scalarized value \p V one lane at a
-  /// time.
-  void packScalarIntoVectorizedValue(const VPValue *Def, const VPLane &Lane);
+  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
+  /// and return the resulting value.
+  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
+                                       const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.

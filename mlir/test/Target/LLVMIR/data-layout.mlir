@@ -5,6 +5,7 @@
 // CHECK: A4-
 // CHECK: S128-
 // CHECK: m:e-
+// CHECK: n8:16:32:64-
 // CHECK: Fn32
 // CHECK: i64:64:128
 // CHECK: f80:128:256
@@ -15,6 +16,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<
 #dlti.dl_entry<"dlti.alloca_memory_space", 4 : ui32>,
 #dlti.dl_entry<"dlti.stack_alignment", 128 : i32>,
 #dlti.dl_entry<"dlti.mangling_mode", "e">,
+#dlti.dl_entry<"dlti.legal_int_widths", array<i32: 8, 16, 32, 64>>,
 #dlti.dl_entry<"dlti.function_pointer_alignment",
                #dlti.function_pointer_alignment<32, function_dependent = true>>,
 #dlti.dl_entry<index, 64>,

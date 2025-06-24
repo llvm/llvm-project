@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_PASSES_H
 #define LLVM_ANALYSIS_PASSES_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
   class FunctionPass;
   class ImmutablePass;

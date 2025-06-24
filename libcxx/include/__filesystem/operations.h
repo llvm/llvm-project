@@ -33,7 +33,6 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI path __absolute(const path&, error_code* __ec = nullptr);
 _LIBCPP_EXPORTED_FROM_ABI path __canonical(const path&, error_code* __ec = nullptr);
 _LIBCPP_EXPORTED_FROM_ABI bool
@@ -70,7 +69,6 @@ _LIBCPP_EXPORTED_FROM_ABI path __temp_directory_path(error_code* __ec = nullptr)
 _LIBCPP_EXPORTED_FROM_ABI bool __fs_is_empty(const path& __p, error_code* __ec = nullptr);
 _LIBCPP_EXPORTED_FROM_ABI void __permissions(const path&, perms, perm_options, error_code* = nullptr);
 _LIBCPP_EXPORTED_FROM_ABI space_info __space(const path&, error_code* __ec = nullptr);
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 inline _LIBCPP_HIDE_FROM_ABI path absolute(const path& __p) { return __absolute(__p); }
 inline _LIBCPP_HIDE_FROM_ABI path absolute(const path& __p, error_code& __ec) { return __absolute(__p, &__ec); }

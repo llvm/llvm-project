@@ -13,16 +13,26 @@
 # RELAX:        R_RISCV_CALL_PLT
 # RELAX-NEXT:   R_RISCV_RELAX
 # RELAX-EMPTY:
-# CHECK-NEXT:   Relocation section '.rela.eh_frame' at offset {{.*}} contains 1 entries:
-# CHECK:         Offset     Info    Type                Sym. Value  Symbol's Name + Addend
-# CHECK-NEXT:   0000001c  00000139 R_RISCV_32_PCREL       00000000   .L0 + 0
+# NORELAX-NEXT: Relocation section '.rela.eh_frame' at offset {{.*}} contains 1 entries:
+# NORELAX:       Offset     Info    Type                Sym. Value  Symbol's Name + Addend
+# NORELAX-NEXT: 0000001c  00000139 R_RISCV_32_PCREL       00000000   .L0 + 0
+# RELAX-NEXT:   Relocation section '.rela.eh_frame' at offset {{.*}} contains 5 entries:
+# RELAX:         Offset     Info    Type                Sym. Value  Symbol's Name + Addend
+# RELAX-NEXT:   0000001c  00000139 R_RISCV_32_PCREL       00000000   .L0  + 0
+# RELAX-NEXT:   00000020  00000c23 R_RISCV_ADD32          0001017a   .L0  + 0
+# RELAX-NEXT:   00000020  00000127 R_RISCV_SUB32          00000000   .L0  + 0
+# RELAX-NEXT:   00000035  00000b35 R_RISCV_SET6           00010176   .L0  + 0
+# RELAX-NEXT:   00000035  00000934 R_RISCV_SUB6           0001016e   .L0  + 0
 # CHECK-EMPTY:
-# CHECK:        Symbol table '.symtab' contains 13 entries:
-# CHECK-NEXT:      Num:    Value  Size Type    Bind   Vis       Ndx Name
-# CHECK-NEXT:        0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
-# CHECK-NEXT:        1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
-# CHECK:             3: 00000004     0 NOTYPE  LOCAL  DEFAULT     2 .L0{{$}}
-# CHECK-NOT:    .L0
+# NORELAX:      Symbol table '.symtab' contains 13 entries:
+# RELAX:        Symbol table '.symtab' contains 16 entries:
+# RELAX-NEXT:      Num:    Value  Size Type    Bind   Vis       Ndx Name
+# RELAX-NEXT:        0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# RELAX-NEXT:        1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# RELAX:             3: 00000004     0 NOTYPE  LOCAL  DEFAULT     2 .L0{{$}}
+# RELAX:             9: 0001016e     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# RELAX:            11: 00010176     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# RELAX:            12: 0001017a     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
 
 # CHECK-DWARFDUMP: DW_CFA_advance_loc1: 104
 # CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +8

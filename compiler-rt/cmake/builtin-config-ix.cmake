@@ -50,6 +50,24 @@ void foo(void)  __arm_streaming_compatible {
 }
 ")
 
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ARM_UNALIGNED
+"
+void foo() {
+#ifndef __ARM_FEATURE_UNALIGNED
+#error \"Unaligned accesses unsupported\"
+#endif
+}
+")
+
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ARM_FP
+"
+void foo() {
+#ifndef __ARM_FP
+#error \"No floating-point support\"
+#endif
+}
+")
+
 check_include_files("sys/auxv.h"    COMPILER_RT_HAS_AUXV)
 
 if(ANDROID)

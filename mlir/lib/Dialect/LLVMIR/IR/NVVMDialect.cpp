@@ -1205,11 +1205,84 @@ LogicalResult NVVM::VoteSyncOp::verify() {
   return success();
 }
 
-llvm::Value *
-NVVM::DotAccumulate4WayOp::getPackedArg(llvm::Value *arg,
-                                        llvm::IRBuilderBase &builder) {
-  return builder.CreateBitCast(arg,
-                               llvm::Type::getInt32Ty(builder.getContext()));
+LogicalResult NVVM::PrefetchOp::verify() {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority = getEvictPriority();
+
+  if (getUniform()) {
+    if (getCacheLevel() != CacheLevel::L1)
+      return emitOpError("unsupported cache level, the only supported uniform "
+                         "cache level is L1");
+
+    if (addressSpace != MemSpace::kGenericMemorySpace)
+      return emitOpError(
+          "prefetch to uniform cache requires a generic pointer");
+  }
+
+  if (evictPriority) {
+    if (getCacheLevel() != CacheLevel::L2)
+      return emitOpError(
+          "cache eviction priority supported only for cache level L2");
+
+    if (addressSpace != MemSpace::kGlobalMemorySpace)
+      return emitOpError("cache eviction priority requires a global pointer");
+
+    if (*evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
+        *evictPriority != NVVM::CacheEvictionPriority::EvictLast)
+      return emitOpError(
+          "unsupported cache eviction priority, only evict_last and "
+          "evict_normal are supported");
+  }
+
+  return success();
+}
+
+/// Packs the given `field` into the `result`.
+/// The `result` is 64-bits and each `field` can be 32-bits or narrower.
+static llvm::Value *
+packValInto64Bits(llvm::IRBuilderBase &builder,
+                  llvm::Value *result, // the `result` (unset bits are zero)
+                  llvm::Value *field,  // `field` to pack into `result`
+                  unsigned sizeInBits, // Size of `field` in bits
+                  unsigned start) {    // Starting bit within `result`
+  field = builder.CreateZExtOrBitCast(field, builder.getInt32Ty());
+
+  unsigned mask = (sizeInBits < 32 ? ((1u << sizeInBits) - 1) : 0xffffffffu);
+  if (mask != 0xffffffffu)
+    field = builder.CreateAnd(field, builder.getInt32(mask));
+
+  field = builder.CreateZExtOrBitCast(field, builder.getInt64Ty());
+  field = builder.CreateShl(field, start);
+
+  return builder.CreateOr(result, field);
+}
+
+void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
+                                                LLVM::ModuleTranslation &mt,
+                                                llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05MmaSmemDescOp>(op);
+  llvm::Value *smemDesc = builder.getInt64(0);
+
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getStartAddr()), 14, 0);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimOffset()), 14, 16);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getStrideDimOffset()), 14, 32);
+
+  smemDesc = packValInto64Bits(builder, smemDesc, builder.getInt32(1), 3, 46);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getBaseOffset()), 3, 49);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimMode()), 1, 52);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getSwizzleMode()), 3, 61);
+
+  mt.mapValue(thisOp.getRes()) = smemDesc;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1648,23 +1721,94 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   }
 }
 
-llvm::Intrinsic::ID
-DotAccumulate4WayOp::getIntrinsicID(NVVM::DotAccumulate4WayType a_type,
-                                    NVVM::DotAccumulate4WayType b_type) {
-  bool is_a_siext = a_type == NVVM::DotAccumulate4WayType::S8;
-  bool is_b_siext = b_type == NVVM::DotAccumulate4WayType::S8;
-  unsigned type = (is_a_siext << 1) | is_b_siext;
-  switch (type) {
-  case 0:
-    return llvm::Intrinsic::nvvm_idp4a_u_u;
-  case 1:
-    return llvm::Intrinsic::nvvm_idp4a_u_s;
-  case 2:
-    return llvm::Intrinsic::nvvm_idp4a_s_u;
-  case 3:
-    return llvm::Intrinsic::nvvm_idp4a_s_s;
+static llvm::Value *getAsPackedI32(llvm::Value *arg,
+                                   llvm::IRBuilderBase &builder) {
+  return builder.CreateBitCast(arg,
+                               llvm::Type::getInt32Ty(builder.getContext()));
+}
+
+NVVM::IDArgPair DotAccumulate4WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate4WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp4a_u_u,
+      llvm::Intrinsic::nvvm_idp4a_u_s,
+      llvm::Intrinsic::nvvm_idp4a_s_u,
+      llvm::Intrinsic::nvvm_idp4a_s_s,
+  };
+  return {ids[type], args};
+}
+
+NVVM::IDArgPair DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate2WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(builder.getInt1(curOp.getBHi()));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp2a_u_u,
+      llvm::Intrinsic::nvvm_idp2a_u_s,
+      llvm::Intrinsic::nvvm_idp2a_s_u,
+      llvm::Intrinsic::nvvm_idp2a_s_s,
+  };
+  return {ids[type], args};
+}
+
+llvm::Intrinsic::ID PrefetchOp::getIntrinsicID(NVVM::PrefetchOp &op) {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  NVVM::PrefetchCacheLevel cacheLevel = op.getCacheLevel();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority =
+      op.getEvictPriority();
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType())
+          .getAddressSpace();
+
+  if (op.getUniform() && cacheLevel == CacheLevel::L1)
+    return llvm::Intrinsic::nvvm_prefetchu_L1;
+
+  if (evictPriority && cacheLevel == CacheLevel::L2) {
+    switch (*evictPriority) {
+    case NVVM::CacheEvictionPriority::EvictLast:
+      return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_last;
+    case NVVM::CacheEvictionPriority::EvictNormal:
+      return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_normal;
+    default:
+      llvm_unreachable("Invalid cache eviction priority");
+    }
+  }
+
+  switch (addressSpace) {
+  case MemSpace::kGenericMemorySpace:
+    return cacheLevel == CacheLevel::L1 ? llvm::Intrinsic::nvvm_prefetch_L1
+                                        : llvm::Intrinsic::nvvm_prefetch_L2;
+  case MemSpace::kGlobalMemorySpace:
+    return cacheLevel == CacheLevel::L1
+               ? llvm::Intrinsic::nvvm_prefetch_global_L1
+               : llvm::Intrinsic::nvvm_prefetch_global_L2;
+  case MemSpace::kLocalMemorySpace:
+    return cacheLevel == CacheLevel::L1
+               ? llvm::Intrinsic::nvvm_prefetch_local_L1
+               : llvm::Intrinsic::nvvm_prefetch_local_L2;
   default:
-    llvm_unreachable("Invalid DP4a type");
+    llvm_unreachable("Invalid pointer address space");
   }
 }
 

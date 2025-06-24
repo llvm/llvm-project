@@ -1034,7 +1034,7 @@ private:
     // A SubstTemplateTypeParmType exists solely to mark a type substitution
     // on the instantiated template. As users usually want to match the
     // template parameter on the uninitialized template, we can always desugar
-    // one level without loss of expressivness.
+    // one level without loss of expressiveness.
     // For example, given:
     //   template<typename T> struct X { T t; } class A {}; X<A> a;
     // The following matcher will match, which otherwise would not:

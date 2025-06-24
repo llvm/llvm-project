@@ -43,6 +43,7 @@ public:
   void Analyze(const parser::PointerAssignmentStmt &);
   void Analyze(const parser::ConcurrentControl &);
   int deviceConstructDepth_{0};
+  SemanticsContext &context() { return context_; }
 
 private:
   bool CheckForPureContext(const SomeExpr &rhs, parser::CharBlock rhsSource);
@@ -218,8 +219,17 @@ void AssignmentContext::PopWhereContext() {
 
 AssignmentChecker::~AssignmentChecker() {}
 
+SemanticsContext &AssignmentChecker::context() {
+  return context_.value().context();
+}
+
 AssignmentChecker::AssignmentChecker(SemanticsContext &context)
     : context_{new AssignmentContext{context}} {}
+
+void AssignmentChecker::Enter(
+    const parser::OpenMPDeclareReductionConstruct &x) {
+  context().set_location(x.source);
+}
 void AssignmentChecker::Enter(const parser::AssignmentStmt &x) {
   context_.value().Analyze(x);
 }

@@ -709,7 +709,7 @@ class LoweringDiagnosticInfo : public DiagnosticInfo {
   const Twine &Msg;
 
 public:
-  LoweringDiagnosticInfo(const Twine &DiagMsg,
+  LoweringDiagnosticInfo(const Twine &DiagMsg LLVM_LIFETIME_BOUND,
                          DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Lowering, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
@@ -1219,7 +1219,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerSymbolDifference(
     if (Addend)
       Res = MCBinaryExpr::createAdd(Res, MCConstantExpr::create(Addend, Ctx),
                                     Ctx);
-    return createTargetMCExpr(Res, PLTPCRelativeSpecifier);
+    return MCSpecifierExpr::create(Res, PLTPCRelativeSpecifier, getContext());
   }
 
   if (!PLTRelativeSpecifier)
