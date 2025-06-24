@@ -104,6 +104,8 @@ TEST(SourceLocationEncoding, Sequence) {
 
   roundTrip(
       {123 | MacroBit, 1, 9, Biggest, Big, Big + 1, 0, MacroBit | Big, 0});
+
+  roundTrip({1, (1u << 30) + 1});
 }
 
 } // namespace
