@@ -27,7 +27,7 @@
 
 ## Create a dummy shared library to link against to force creation of the dynamic section.
 # RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -shared -o %t-stub.so
-# RUN: %clang %cflags %s -no-pie -Wl,-q,-fini=0 %t-stub.so -o %t-no-pie-no-fini.exe
+# RUN: %clang %base_cflags %s -no-pie -Wl,-q,-fini=0 %t-stub.so -o %t-no-pie-no-fini.exe
 # RUN: llvm-readelf -r %t-no-pie-no-fini.exe | FileCheck --check-prefix=RELOC-NO-PIE %s
 # RUN: llvm-bolt %t-no-pie-no-fini.exe -o %t-no-pie-no-fini --instrument
 # RUN: llvm-readelf -ds -x .fini_array %t-no-pie-no-fini | FileCheck --check-prefix=CHECK-NO-PIE-NO-FINI %s

@@ -24,7 +24,7 @@ int main() {
 }
 
 // REQUIRES: system-linux
-// RUN: %clang %cflags -no-pie %s -o %t.exe -Wl,-q \
+// RUN: %clang %base_cflags -no-pie %s -o %t.exe -Wl,-q \
 // RUN:   -Wl,--unresolved-symbols=ignore-all \
 // RUN:   -fuse-ld=lld \
 // RUN:   -nostdlib

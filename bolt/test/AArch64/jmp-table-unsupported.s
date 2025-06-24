@@ -92,7 +92,7 @@ SECTIONS {
 # JT-BOLT-FIXED-BR: failed to match indirect branch
 
 ## Prepare binary (6)
-# RUN: %clang %cflags -no-pie %t/jt_type_normal.c \
+# RUN: %clang %base_cflags -no-pie %t/jt_type_normal.c \
 # RUN:   -Wl,-q -Wl,-z,now -Wl,--no-relax \
 # RUN:   -o %t/jt_type_normal.exe
 # RUN: llvm-objdump --no-show-raw-insn -d %t/jt_type_normal.exe | FileCheck \
