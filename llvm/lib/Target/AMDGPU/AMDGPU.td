@@ -2354,6 +2354,9 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
+def HasMTBUFInsts : Predicate<"Subtarget->hasMTBUFInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
+
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
 
