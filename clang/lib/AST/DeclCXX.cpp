@@ -1828,7 +1828,7 @@ CXXRecordDecl::getLambdaExplicitTemplateParameters() const {
 
   const auto ExplicitEnd = llvm::partition_point(
       *List, [](const NamedDecl *D) { return !D->isImplicit(); });
-  return llvm::ArrayRef(List->begin(), ExplicitEnd);
+  return ArrayRef(List->begin(), ExplicitEnd);
 }
 
 Decl *CXXRecordDecl::getLambdaContextDecl() const {
@@ -3578,13 +3578,13 @@ VarDecl *BindingDecl::getHoldingVar() const {
   return VD;
 }
 
-llvm::ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
+ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
   assert(Binding && "expecting a pack expr");
   auto *FP = cast<FunctionParmPackExpr>(Binding);
   ValueDecl *const *First = FP->getNumExpansions() > 0 ? FP->begin() : nullptr;
   assert((!First || isa<BindingDecl>(*First)) && "expecting a BindingDecl");
-  return llvm::ArrayRef<BindingDecl *>(
-      reinterpret_cast<BindingDecl *const *>(First), FP->getNumExpansions());
+  return ArrayRef<BindingDecl *>(reinterpret_cast<BindingDecl *const *>(First),
+                                 FP->getNumExpansions());
 }
 
 void DecompositionDecl::anchor() {}
