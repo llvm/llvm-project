@@ -4518,6 +4518,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   using BodyGenTy = llvm::OpenMPIRBuilder::BodyGenTy;
   auto bodyGenCB = [&](InsertPointTy codeGenIP, BodyGenTy bodyGenType)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    // We must always restoreIP regardless of doing anything the caller
+    // does not restore it, leading to incorrect (no) branch generation.
     builder.restoreIP(codeGenIP);
     assert(isa<omp::TargetDataOp>(op) &&
            "BodyGen requested for non TargetDataOp");
@@ -4561,9 +4563,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                        useDevicePtrVars, mapData);
         }
       }
-      // We must always restoreIP regardless of doing anything the caller
-      // does not restore it, leading to incorrect (no) branch generation.
-      builder.restoreIP(codeGenIP);
       break;
     case BodyGenTy::NoPriv:
       // If device info is available then region has already been generated
