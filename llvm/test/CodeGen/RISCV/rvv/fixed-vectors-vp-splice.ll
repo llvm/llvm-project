@@ -30,6 +30,17 @@ define <2 x i64> @test_vp_splice_v2i64_negative_offset(<2 x i64> %va, <2 x i64> 
   ret <2 x i64> %v
 }
 
+define <2 x i64> @test_vp_splice_v2i64_zero_offset(<2 x i64> %va, <2 x i64> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
+; CHECK-LABEL: test_vp_splice_v2i64_zero_offset:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; CHECK-NEXT:    vslideup.vx v8, v9, a0
+; CHECK-NEXT:    ret
+
+  %v = call <2 x i64> @llvm.experimental.vp.splice.v2i64(<2 x i64> %va, <2 x i64> %vb, i32 0, <2 x i1> splat (i1 1), i32 %evla, i32 %evlb)
+  ret <2 x i64> %v
+}
+
 define <2 x i64> @test_vp_splice_v2i64_masked(<2 x i64> %va, <2 x i64> %vb, <2 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_v2i64_masked:
 ; CHECK:       # %bb.0:
