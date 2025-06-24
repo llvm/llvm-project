@@ -198,9 +198,6 @@ def AddLike: PatFrags<(ops node:$A, node:$B),
     return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
 }]>;
 
-def AddShl : PatFrag<(ops node:$Ra, node:$Rb, node:$SH3),
-                     (add node:$Ra, (shl node:$Rb, node:$SH3))>;
-
 def IntCCtoQCRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   int64_t Imm = cast<ConstantSDNode>(N->getOperand(1))->getSExtValue();
@@ -1327,12 +1324,14 @@ class QC48StPat<PatFrag StoreOp, RVInst48 Inst>
     : Pat<(StoreOp (i32 GPR:$rs2), (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26)),
           (Inst GPR:$rs2, GPR:$rs1, simm26_nosimm12:$imm26)>;
 
+def AddrRegRegScale7 : AddrRegRegScale<7>;
+
 class QCScaledLdPat<PatFrag LoadOp, RVInst Inst>
-    : Pat<(i32 (LoadOp (AddShl (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt))),
+    : Pat<(i32 (LoadOp (AddrRegRegScale7 (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt))),
           (Inst GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
 
 class QCScaledStPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (i32 GPR:$rd), (AddShl (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
+    : Pat<(StoreOp (i32 GPR:$rd), (AddrRegRegScale7 (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
           (Inst GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
 
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
