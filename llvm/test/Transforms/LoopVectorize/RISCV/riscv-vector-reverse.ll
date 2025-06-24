@@ -58,7 +58,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    WIDEN-PHI ir<%indvars.iv> = phi [ ir<%indvars.iv.next>, for.body ], [ ir<%0>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:    WIDEN-PHI ir<%i.0.in8> = phi [ ir<%i.0>, for.body ], [ ir<%n>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:    EMIT ir<%i.0> = add ir<%i.0.in8>, ir<-1>
-; CHECK-NEXT:    EMIT ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    EMIT-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    EMIT ir<%arrayidx> = getelementptr ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    EMIT ir<%1> = load ir<%arrayidx>
 ; CHECK-NEXT:    EMIT ir<%add9> = add ir<%1>, ir<1>
@@ -467,7 +467,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    WIDEN-PHI ir<%indvars.iv> = phi [ ir<%indvars.iv.next>, for.body ], [ ir<%0>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:    WIDEN-PHI ir<%i.0.in8> = phi [ ir<%i.0>, for.body ], [ ir<%n>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:    EMIT ir<%i.0> = add ir<%i.0.in8>, ir<-1>
-; CHECK-NEXT:    EMIT ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    EMIT-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    EMIT ir<%arrayidx> = getelementptr ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    EMIT ir<%1> = load ir<%arrayidx>
 ; CHECK-NEXT:    EMIT ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>

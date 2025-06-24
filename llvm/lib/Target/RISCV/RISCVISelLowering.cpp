@@ -1598,7 +1598,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // Function alignments.
-  const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
+  const Align FunctionAlignment(Subtarget.hasStdExtZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
   // Set preferred alignments.
   setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
@@ -21062,7 +21062,7 @@ RISCVTargetLowering::getTargetConstantFromLoad(LoadSDNode *Ld) const {
 
   // Simple case, LLA.
   if (Ptr.getOpcode() == RISCVISD::LLA) {
-    auto *CNode = GetSupportedConstantPool(Ptr);
+    auto *CNode = GetSupportedConstantPool(Ptr.getOperand(0));
     if (!CNode || CNode->getTargetFlags() != 0)
       return nullptr;
 
@@ -24563,11 +24563,11 @@ Register
 RISCVTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                        const MachineFunction &MF) const {
   Register Reg = MatchRegisterAltName(RegName);
-  if (Reg == RISCV::NoRegister)
+  if (!Reg)
     Reg = MatchRegisterName(RegName);
-  if (Reg == RISCV::NoRegister)
-    report_fatal_error(
-        Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
+  if (!Reg)
+    return Reg;
+
   BitVector ReservedRegs = Subtarget.getRegisterInfo()->getReservedRegs(MF);
   if (!ReservedRegs.test(Reg) && !Subtarget.isRegisterReservedByUser(Reg))
     report_fatal_error(Twine("Trying to obtain non-reserved register \"" +

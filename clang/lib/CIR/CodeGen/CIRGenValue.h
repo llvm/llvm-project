@@ -182,9 +182,7 @@ public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
-
-  // TODO: Add support for volatile
-  bool isVolatile() const { return false; }
+  bool isVolatile() const { return quals.hasVolatile(); }
 
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;

@@ -28312,10 +28312,7 @@ Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
 #endif
   }
 
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 SDValue X86TargetLowering::LowerFRAME_TO_ARGS_OFFSET(SDValue Op,
@@ -59465,8 +59462,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   }
 
   // If we're splatting the lower half subvector of a full vector load into the
-  // upper half, just splat the subvector directly, potentially creating a
-  // subvector broadcast.
+  // upper half, attempt to create a subvector broadcast.
   if ((int)IdxVal == (VecNumElts / 2) &&
       Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits())) {
     auto *VecLd = dyn_cast<LoadSDNode>(Vec);
@@ -59474,7 +59470,12 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     if (VecLd && SubLd &&
         DAG.areNonVolatileConsecutiveLoads(
             SubLd, VecLd, SubVec.getValueSizeInBits() / 8, 0)) {
-      return concatSubVectors(SubVec, SubVec, DAG, dl);
+      SDValue BcastLd = getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, dl, OpVT,
+                                          SubVecVT, SubLd, 0, DAG);
+      SDValue NewSubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVecVT,
+                                      BcastLd, DAG.getVectorIdxConstant(0, dl));
+      DCI.CombineTo(SubLd, NewSubVec, BcastLd.getValue(1));
+      return BcastLd;
     }
   }
 
