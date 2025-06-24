@@ -51,7 +51,9 @@ def emit_param_as_remark(
         param, anchor=anchor, message=message, loc=loc, ip=ip
     )
 
+
 del debug_emit_param_as_remark
+
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class DebugEmitRemarkAtOp(DebugEmitRemarkAtOp):
@@ -82,5 +84,6 @@ def emit_remark_at(
     ip=None,
 ):
     return DebugEmitRemarkAtOp(at, message, loc=loc, ip=ip)
+
 
 del debug_emit_remark_at
