@@ -177,6 +177,8 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoParseTime",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         if self.getPlatform() != "windows":
@@ -287,6 +289,8 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoParseTime",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -325,6 +329,8 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
 
@@ -377,6 +383,8 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -397,6 +405,8 @@ class TestCase(TestBase):
             "symbolTableLoadedFromCache",
             "symbolTableParseTime",
             "symbolTableSavedToCache",
+            "dwoFileCount",
+            "loadedDwoFileCount",
             "triple",
             "uuid",
         ]
@@ -485,6 +495,8 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         target_stats = debug_stats["targets"][0]
@@ -512,6 +524,132 @@ class TestCase(TestBase):
             self.verify_keys(
                 breakpoint, 'target_stats["breakpoints"]', bp_keys_exist, None
             )
+    def test_non_split_dwarf_has_no_dwo_files(self):
+        """
+        Test "statistics dump" and the dwo file count.
+        Builds a binary without split-dwarf mode, and then
+        verifies the dwo file count is zero after running "statistics dump"
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da, debug_info=["debug_names"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+        
+        # Verify that the dwo file count is zero
+        self.assertEqual(debug_stats["totalDwoFileCount"], 0)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
+    
+    def test_no_debug_names_eager_loads_dwo_files(self):
+        """
+        Test the eager loading behavior of DWO files when debug_names is absent by
+        building a split-dwarf binary without debug_names and then running "statistics dump".
+        DWO file loading behavior:
+        - With debug_names: DebugNamesDWARFIndex allows for lazy loading.
+          DWO files are loaded on-demand when symbols are actually looked up
+        - Without debug_names: ManualDWARFIndex uses eager loading.
+          All DWO files are loaded upfront during the first symbol lookup to build a manual index. 
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da, debug_info=["dwo"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+        
+        # Verify that all DWO files are loaded
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
+
+    def test_split_dwarf_dwo_file_count(self):
+        """
+        Test "statistics dump" and the dwo file count.
+        Builds a binary w/ separate .dwo files and debug_names, and then
+        verifies the loaded dwo file count is the expected count after running
+        various commands
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        # -gsplit-dwarf creates separate .dwo files,
+        # -gpubnames enables the debug_names accelerator tables for faster symbol lookup
+        #  and lazy loading of DWO files
+        # Expected output: third.dwo (contains main) and baz.dwo (contains Baz struct/function)
+        self.build(dictionary=da, debug_info=["dwo", "debug_names"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        # 1) 2 DWO files available but none loaded yet
+        self.assertEqual(len(debug_stats["modules"]), 1)
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+        
+        # Since there's only one module, module stats should have the same counts as total counts
+        self.assertIn("dwoFileCount", debug_stats["modules"][0])
+        self.assertIn("loadedDwoFileCount", debug_stats["modules"][0])
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 0)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
+        
+        # 2) Setting breakpoint in main triggers loading of third.dwo (contains main function)
+        self.runCmd("b main")
+        debug_stats = self.get_stats()
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 1)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 1)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
+        
+        # 3) Type lookup forces loading of baz.dwo (contains struct Baz definition)
+        self.runCmd("type lookup Baz")
+        debug_stats = self.get_stats()
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 2)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
+    
+    def test_dwp_dwo_file_count(self):
+        """
+        Test "statistics dump" and the loaded dwo file count.
+        Builds a binary w/ a separate .dwp file and debug_names, and then
+        verifies the loaded dwo file count is the expected count after running
+        various commands.
+
+        We expect the DWO file counters to reflect the number of compile units 
+        loaded from the DWP file (each representing what was originally a separate DWO file)
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da, debug_info=["dwp", "debug_names"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        # Initially: 2 DWO files available but none loaded yet
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+        
+        # Setting breakpoint in main triggers parsing of the CU within a.dwp corresponding to third.dwo (contains main function)
+        self.runCmd("b main")
+        debug_stats = self.get_stats()
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 1)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+        
+        # Type lookup forces parsing of the CU within a.dwp corresponding to baz.dwo (contains struct Baz definition)
+        self.runCmd("type lookup Baz")
+        debug_stats = self.get_stats()
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
+        
 
     @skipUnlessDarwin
     @no_debug_info_test
