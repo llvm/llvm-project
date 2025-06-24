@@ -282,6 +282,43 @@ cc_library(
 )
 
 td_library(
+    name = "IndexingMapOpInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/IndexingMapOpInterface.td"],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "IndexingMapOpInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/IndexingMapOpInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Interfaces/IndexingMapOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/IndexingMapOpInterface.td",
+    deps = [
+        ":IndexingMapOpInterfaceTdFiles",
+    ],
+)
+
+cc_library(
+    name = "IndexingMapOpInterface",
+    srcs = [
+        "lib/Interfaces/IndexingMapOpInterface.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Interfaces/IndexingMapOpInterface.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":IndexingMapOpInterfaceIncGen",
+    ],
+)
+
+td_library(
     name = "RelayoutOpInterfaceTdFiles",
     srcs = ["include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.td"],
     includes = ["include"],
@@ -4483,6 +4520,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "FuncUtils",
+    srcs = glob(["lib/Dialect/Func/Utils/*.cpp"]),
+    hdrs = [
+        "include/mlir/Dialect/Func/Utils/Utils.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":Analysis",
+        ":FuncDialect",
+        ":IR",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "FuncTransformOpsTdFiles",
     srcs = [
@@ -4522,6 +4574,7 @@ cc_library(
         ":FuncDialect",
         ":FuncToLLVM",
         ":FuncTransformOpsIncGen",
+        ":FuncUtils",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -4639,6 +4692,7 @@ cc_library(
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
+        ":IndexingMapOpInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":MaskableOpInterface",
@@ -10097,6 +10151,7 @@ td_library(
         ":ControlFlowInterfacesTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
         ":DialectUtilsTdFiles",
+        ":IndexingMapOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -10459,6 +10514,7 @@ cc_library(
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
+        ":IndexingMapOpInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":LinalgEnumsIncGen",
@@ -10741,6 +10797,7 @@ td_library(
     deps = [
         ":ControlFlowInterfacesTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
+        ":IndexingMapOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":MaskableOpInterfaceTdFiles",
         ":MaskingOpInterfaceTdFiles",
