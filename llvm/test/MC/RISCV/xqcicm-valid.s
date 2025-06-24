@@ -137,8 +137,7 @@ qc.mvltui x9, x9, 1, x12
 
 # Following instruction should not be compressed
 
-# CHECK-NOALIAS: qc.c.mveqz s1, a2
-# CHECK-ALIAS: qc.mveqi s1, s1, 0, a2
-# CHECK-ENC: encoding: [0x06,0xae]
+# CHECK-INST: qc.mveqi a0, s1, 0, a2
+# CHECK-ENC: encoding: [0x5b,0x85,0x04,0x64]
 qc.mveqi x10, x9, 0, x12
 
