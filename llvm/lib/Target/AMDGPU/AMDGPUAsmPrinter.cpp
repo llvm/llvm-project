@@ -991,13 +991,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // dispatch registers are function args.
   unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
 
-  // Entry functions need to count input arguments even if they're not used
-  // (i.e. not reported by AMDGPUResourceUsageAnalysis). Other functions can
-  // skip including them. This is especially important for shaders that use the
-  // init.whole.wave intrinsic, since they sometimes have VGPR arguments that
-  // are only added for the purpose of preserving their inactive lanes and
-  // should not be included in the vgpr-count.
-  if (isShader(F.getCallingConv()) && isEntryFunctionCC(F.getCallingConv())) {
+  if (AMDGPU::shouldReportUnusedFuncArgs(F.getCallingConv())) {
     bool IsPixelShader =
         F.getCallingConv() == CallingConv::AMDGPU_PS && !STM.isAmdHsaOS();
 
