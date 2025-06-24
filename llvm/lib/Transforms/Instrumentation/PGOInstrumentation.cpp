@@ -1213,7 +1213,7 @@ public:
   uint64_t getFuncHash() const { return FuncInfo.FunctionHash; }
 
   // Return the profile record for this function;
-  InstrProfRecord &getProfileRecord() { return ProfileRecord; }
+  NamedInstrProfRecord &getProfileRecord() { return ProfileRecord; }
 
   // Return the auxiliary BB information.
   PGOUseBBInfo &getBBInfo(const BasicBlock *BB) const {
@@ -1251,7 +1251,7 @@ private:
   uint32_t ProfileCountSize = 0;
 
   // ProfileRecord for this function.
-  InstrProfRecord ProfileRecord;
+  NamedInstrProfRecord ProfileRecord;
 
   // Function hotness info derived from profile.
   FuncFreqAttr FreqAttr;
