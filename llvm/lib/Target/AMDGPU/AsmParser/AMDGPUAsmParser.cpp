@@ -4866,24 +4866,19 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
 
   uint64_t Offset = Op.getImm();
   bool IsBuffer = AMDGPU::getSMEMIsBuffer(Opcode);
-  // GFX12+ S_BUFFER_*: InstOffset is signed 24, but must be positive
-  if (isGFX12Plus() && IsBuffer) {
-    const unsigned OffsetSize = 24;
-    if (!isUIntN(OffsetSize, Offset)) {
-      Error(getSMEMOffsetLoc(Operands),
-            Twine("expected a ") + Twine(OffsetSize - 1) + "-bit positive offset for S_BUFFER ops");
-      return false;
-    }
-    return true;
-  }
   if (AMDGPU::isLegalSMRDEncodedUnsignedOffset(getSTI(), Offset) ||
       AMDGPU::isLegalSMRDEncodedSignedOffset(getSTI(), Offset, IsBuffer))
     return true;
 
-  Error(getSMEMOffsetLoc(Operands),
-        isGFX12Plus()          ? "expected a 24-bit signed offset"
-        : (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset"
-                               : "expected a 21-bit signed offset");
+  // Generate appropriate error message based on generation and buffer type
+  if (isGFX12Plus() && IsBuffer)
+    Error(getSMEMOffsetLoc(Operands),
+          "expected a 23-bit positive offset for S_BUFFER ops");
+  else
+    Error(getSMEMOffsetLoc(Operands),
+          isGFX12Plus()          ? "expected a 24-bit signed offset"
+          : (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset"
+                                 : "expected a 21-bit signed offset");
 
   return false;
 }

@@ -3220,8 +3220,14 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
                                     int64_t EncodedOffset, bool IsBuffer) {
-  if (isGFX12Plus(ST))
+  if (isGFX12Plus(ST)) {
+          // GFX12+ S_BUFFER_*: InstOffset is signed 24, but must be positive (23-bit)
+      if (IsBuffer) {
+        constexpr const unsigned OffsetSize = 23;
+        return isUIntN(OffsetSize, EncodedOffset);
+      }
     return isInt<24>(EncodedOffset);
+  }
 
   return !IsBuffer && hasSMRDSignedImmOffset(ST) && isInt<21>(EncodedOffset);
 }
