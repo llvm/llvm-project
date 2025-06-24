@@ -44,7 +44,7 @@ bool CharacterConverter::isFull() {
 bool CharacterConverter::isEmpty() { return state->bytes_stored == 0; }
 
 bool CharacterConverter::isValidState() {
-  if (state->total_bytes > 4)
+  if (state->total_bytes > MAX_UTF8_LENGTH)
     return false;
 
   const char32_t max_utf32_value =
