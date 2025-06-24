@@ -27,7 +27,7 @@ std::pair<unsigned, unsigned> FunctionUnitStreamer::updateDirectivesRange() {
   return CFIDirectivesRange;
 }
 
-void FunctionUnitStreamer::updateUIA() {
+void FunctionUnitStreamer::updateAnalyzer() {
   if (FrameIndices.empty()) {
     auto CFIDirectivesRange = updateDirectivesRange();
     assert(CFIDirectivesRange.first == CFIDirectivesRange.second &&
@@ -47,25 +47,21 @@ void FunctionUnitStreamer::updateUIA() {
   }
 
   if (LastInstruction) {
-    assert(!UIAs.empty() && "If the instruction is in a frame, there should be "
-                            "a analysis instantiated for it");
-    UIAs.back().update(LastInstruction.value(), Directives);
+    Analyzer->emitInstructionAndDirectives(LastInstruction.value(), Directives);
   } else {
-    assert(!DirectivesRange.first &&
-           "An analysis should be created at the begining of a frame");
-    UIAs.emplace_back(&getContext(), MCII,
-                      false /* TODO should put isEH here */, Directives);
+    Analyzer->startFunctionUnit(false /* TODO should put isEH here */,
+                                Directives);
   }
 }
 
 void FunctionUnitStreamer::emitInstruction(const MCInst &Inst,
                                            const MCSubtargetInfo &STI) {
-  updateUIA();
+  updateAnalyzer();
   LastInstruction = Inst;
 }
 
 void FunctionUnitStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
-  updateUIA();
+  updateAnalyzer();
   FrameIndices.push_back(getNumFrameInfos());
   LastInstruction = std::nullopt;
   LastDirectiveIndex = 0;
@@ -73,13 +69,12 @@ void FunctionUnitStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
 }
 
 void FunctionUnitStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) {
-  updateUIA();
+  updateAnalyzer();
 
   assert(!FrameIndices.empty() && "There should be at least one frame to pop");
   FrameIndices.pop_back();
 
-  assert(!UIAs.empty() && "There should be an analysis for each frame");
-  UIAs.pop_back();
+  Analyzer->finishFunctionUnit();
 
   LastInstruction = std::nullopt;
   LastDirectiveIndex = 0;

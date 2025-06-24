@@ -1,40 +1,34 @@
 #ifndef LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_MC_STREAMER_H
 #define LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_MC_STREAMER_H
 
-#include "UnwindInfoAnalysis.h"
+#include "FunctionUnitAnalyzer.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include <cstdio>
+#include <memory>
 #include <optional>
 
 namespace llvm {
 
-// ? Now the design is that the streamer, make instances of the analysis and
-// ? run the analysis on the instruction, I suspect that instead the streamer
-// ? should divide the program into function units, and then emit the function
-// ? units one by one. Also in each function unit, an instruction with
-// ? associated directives should be emitted. Furthermore, there should be a
-// ? receiver of these function units, that receive them and run a new analysis
-// ? on them.
 class FunctionUnitStreamer : public MCStreamer {
-  MCInstrInfo const &MCII;
-
   std::vector<unsigned> FrameIndices;
-  std::vector<UnwindInfoAnalysis> UIAs;
 
   unsigned LastDirectiveIndex;
   std::optional<MCInst> LastInstruction;
-
-  void updateUIA();
+  std::unique_ptr<FunctionUnitAnalyzer> Analyzer;
 
   std::pair<unsigned, unsigned> updateDirectivesRange();
+  void updateAnalyzer();
 
 public:
-  FunctionUnitStreamer(MCContext &Context, const MCInstrInfo &MCII)
-      : MCStreamer(Context), MCII(MCII), LastDirectiveIndex(0),
-        LastInstruction(std::nullopt) {}
+  FunctionUnitStreamer(MCContext &Context,
+                       std::unique_ptr<FunctionUnitAnalyzer> Analyzer)
+      : MCStreamer(Context), LastDirectiveIndex(0),
+        LastInstruction(std::nullopt), Analyzer(std::move(Analyzer)) {
+    assert(this->Analyzer && "Analyzer should not be null");
+  }
 
   bool hasRawTextSupport() const override { return true; }
   void emitRawTextImpl(StringRef String) override {}

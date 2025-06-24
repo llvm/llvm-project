@@ -1,5 +1,7 @@
 add_llvm_component_library(LLVMMCCFIAnalysis
+  FunctionUnitAnalyzer.cpp
   FunctionUnitStreamer.cpp
+  FunctionUnitUnwindInfoAnalyzer.cpp
   UnwindInfoHistory.cpp
   UnwindInfoAnalysis.cpp
 

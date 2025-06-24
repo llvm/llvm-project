@@ -1,0 +1,20 @@
+#include "llvm/MCCFIAnalysis/FunctionUnitUnwindInfoAnalyzer.h"
+
+using namespace llvm;
+
+void FunctionUnitUnwindInfoAnalyzer::startFunctionUnit(
+    bool IsEH, ArrayRef<MCCFIInstruction> Prologue) {
+  UIAs.emplace_back(&getContext(), MCII, IsEH, Prologue);
+}
+
+void FunctionUnitUnwindInfoAnalyzer::emitInstructionAndDirectives(
+    const MCInst &Inst, ArrayRef<MCCFIInstruction> Directives) {
+  assert(!UIAs.empty() && "If the instruction is in a frame, there should be "
+                          "a analysis instantiated for it");
+  UIAs.back().update(Inst, Directives);
+}
+
+void FunctionUnitUnwindInfoAnalyzer::finishFunctionUnit() {
+  assert(!UIAs.empty() && "There should be an analysis for each frame");
+  UIAs.pop_back();
+}

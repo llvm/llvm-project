@@ -30,6 +30,7 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/MCCFIAnalysis/FunctionUnitStreamer.h"
+#include "llvm/MCCFIAnalysis/FunctionUnitUnwindInfoAnalyzer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
@@ -524,12 +525,15 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 
+  std::unique_ptr<FunctionUnitUnwindInfoAnalyzer> FUUIA(
+      new FunctionUnitUnwindInfoAnalyzer(Ctx, *MCII));
+
   std::unique_ptr<MCInstPrinter> IP;
   if (ValidateCFI) {
     assert(FileType == OFT_Null);
-    auto *CFIAMCS = new FunctionUnitStreamer(Ctx, *MCII);
-    TheTarget->createNullTargetStreamer(*CFIAMCS);
-    Str.reset(CFIAMCS);
+    auto *FUS = new FunctionUnitStreamer(Ctx, std::move(FUUIA));
+    TheTarget->createNullTargetStreamer(*FUS);
+    Str.reset(FUS);
   } else if (FileType == OFT_AssemblyFile) {
     IP.reset(TheTarget->createMCInstPrinter(
         Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
