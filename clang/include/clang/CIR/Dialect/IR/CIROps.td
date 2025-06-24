@@ -2393,4 +2393,41 @@ def AssumeOp : CIR_Op<"assume"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Branch Probability Operations
+//===----------------------------------------------------------------------===//
+
+def ExpectOp : CIR_Op<"expect",
+  [Pure, AllTypesMatch<["result", "val", "expected"]>]> {
+  let summary = "Tell the optimizer that two values are likely to be equal.";
+  let description = [{
+    The `cir.expect` operation may take 2 or 3 arguments.
+
+    When the argument `prob` is missing, this operation effectively models the
+    `__builtin_expect` builtin function. It tells the optimizer that `val` and
+    `expected` are likely to be equal.
+
+    When the argument `prob` is present, this operation effectively models the
+    `__builtin_expect_with_probability` builtin function. It tells the
+    optimizer that `val` and `expected` are equal to each other with a certain
+    probability.
+
+    `val` and `expected` must be integers and their types must match.
+
+    The result of this operation is always equal to `val`.
+  }];
+
+  let arguments = (ins
+    CIR_AnyFundamentalIntType:$val,
+    CIR_AnyFundamentalIntType:$expected,
+    OptionalAttr<F64Attr>:$prob
+  );
+
+  let results = (outs CIR_AnyFundamentalIntType:$result);
+
+  let assemblyFormat = [{
+    `(` $val`,` $expected (`,` $prob^)? `)` `:` type($val) attr-dict
+  }];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
