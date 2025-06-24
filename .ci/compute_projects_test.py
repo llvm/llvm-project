@@ -221,18 +221,21 @@ class TestComputeProjects(unittest.TestCase):
         env_variables = compute_projects.get_env_variables(
             [".ci/compute_projects.py"], "Linux"
         )
-        self.assertEqual(env_variables["projects_to_build"], "clang;lld;lldb;llvm")
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "bolt;clang;clang-tools-extra;flang;libclc;lld;lldb;llvm;mlir;polly",
+        )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-lld check-lldb check-llvm",
+            "check-bolt check-clang check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "libcxx;libcxxabi;libunwind",
+            "compiler-rt;libc;libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "",
+            "check-compiler-rt check-libc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],

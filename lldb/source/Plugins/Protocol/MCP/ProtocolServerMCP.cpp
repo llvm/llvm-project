@@ -156,8 +156,6 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   if (status.Fail())
     return status.takeError();
 
-  std::string address =
-      llvm::join(m_listener->GetListeningConnectionURI(), ", ");
   auto handles =
       m_listener->Accept(m_loop, std::bind(&ProtocolServerMCP::AcceptCallback,
                                            this, std::placeholders::_1));
