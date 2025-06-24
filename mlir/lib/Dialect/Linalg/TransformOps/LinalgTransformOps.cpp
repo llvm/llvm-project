@@ -3823,9 +3823,14 @@ struct VectorizationPattern : public RewritePattern {
     if (!linalg::hasVectorizationImpl(op))
       return rewriter.notifyMatchFailure(op,
                                          "Unsupported Op, cannot vectorize");
-    return vectorize(rewriter, op, /*inputVectorSizes=*/{},
-                     /*inputScalableVecDims=*/{}, vectorizeNDExtract,
-                     flatten1DDepthwiseConv);
+    FailureOr<VectorizationResult> vectorResults =
+        vectorize(rewriter, op, /*inputVectorSizes=*/{},
+                  /*inputScalableVecDims=*/{}, vectorizeNDExtract,
+                  flatten1DDepthwiseConv);
+    if (failed(vectorResults))
+      return failure();
+    rewriter.replaceOp(op, vectorResults->replacements);
+    return success();
   }
 
 private:
@@ -3914,13 +3919,14 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
-
-    if (failed(linalg::vectorize(rewriter, target, vectorSizes,
-                                 getScalableSizes(),
-                                 getVectorizeNdExtract().value_or(false)))) {
+    FailureOr<VectorizationResult> vectorResults =
+        linalg::vectorize(rewriter, target, vectorSizes, getScalableSizes(),
+                          getVectorizeNdExtract().value_or(false));
+    if (failed(vectorResults)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
     }
+    rewriter.replaceOp(target, vectorResults->replacements);
   }
 
   return DiagnosedSilenceableFailure::success();
