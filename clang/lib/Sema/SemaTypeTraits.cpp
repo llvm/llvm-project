@@ -1725,15 +1725,15 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     // Build expressions that emulate the effect of declval<T>() and
     // declval<U>().
-    auto createOpaqueExpr = [&](QualType Ty) -> OpaqueValueExpr {
+    auto createDeclValExpr = [&](QualType Ty) -> OpaqueValueExpr {
       if (Ty->isObjectType() || Ty->isFunctionType())
         Ty = Self.Context.getRValueReferenceType(Ty);
       return {KeyLoc, Ty.getNonLValueExprType(Self.Context),
               Expr::getValueKindForType(Ty)};
     };
 
-    auto Lhs = createOpaqueExpr(LhsT);
-    auto Rhs = createOpaqueExpr(RhsT);
+    auto Lhs = createDeclValExpr(LhsT);
+    auto Rhs = createDeclValExpr(RhsT);
 
     // Attempt the assignment in an unevaluated context within a SFINAE
     // trap at translation unit scope.
@@ -2291,15 +2291,15 @@ static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
                                         QualType T, QualType U) {
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
 
-  auto createOpaqueExpr = [&](QualType Ty) -> OpaqueValueExpr {
+  auto createDeclValExpr = [&](QualType Ty) -> OpaqueValueExpr {
     if (Ty->isObjectType() || Ty->isFunctionType())
       Ty = SemaRef.Context.getRValueReferenceType(Ty);
     return {Loc, Ty.getNonLValueExprType(SemaRef.Context),
             Expr::getValueKindForType(Ty)};
   };
 
-  auto LHS = createOpaqueExpr(T);
-  auto RHS = createOpaqueExpr(U);
+  auto LHS = createDeclValExpr(T);
+  auto RHS = createDeclValExpr(U);
 
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
