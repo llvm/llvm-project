@@ -323,9 +323,8 @@ define signext i16 @test_i16s(i16 signext %a) {
 ; CHECK: .func  (.param .align 8 .b8 func_retval0[8])
 ; CHECK-LABEL: test_v3i16(
 ; CHECK-NEXT: .param .align 8 .b8 test_v3i16_param_0[8]
-; CHECK-DAG:  ld.param.b16    [[E2:%rs[0-9]+]], [test_v3i16_param_0+4];
-; CHECK-DAG:  ld.param.b32    [[R:%r[0-9]+]], [test_v3i16_param_0];
-; CHECK-DAG:  mov.b32 {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[R]];
+; CHECK-DAG:  ld.param.b16      [[E2:%rs[0-9]+]], [test_v3i16_param_0+4];
+; CHECK-DAG:  ld.param.v2.b16   {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [test_v3i16_param_0];
 ; CHECK:      .param .align 8 .b8 param0[8];
 ; CHECK:      st.param.v2.b16 [param0], {[[E0]], [[E1]]};
 ; CHECK:      st.param.b16    [param0+4], [[E2]];
@@ -452,8 +451,7 @@ define <2 x bfloat> @test_v2bf16(<2 x bfloat> %a) {
 ; CHECK:.func  (.param .align 8 .b8 func_retval0[8])
 ; CHECK-LABEL: test_v3f16(
 ; CHECK:      .param .align 8 .b8 test_v3f16_param_0[8]
-; CHECK-DAG:  ld.param.b32    [[HH01:%r[0-9]+]], [test_v3f16_param_0];
-; CHECK-DAG:  mov.b32         {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[HH01]];
+; CHECK-DAG:  ld.param.v2.b16 {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [test_v3f16_param_0];
 ; CHECK-DAG:  ld.param.b16    [[E2:%rs[0-9]+]], [test_v3f16_param_0+4];
 ; CHECK:      .param .align 8 .b8 param0[8];
 ; CHECK-DAG:  st.param.v2.b16 [param0], {[[E0]], [[E1]]};
