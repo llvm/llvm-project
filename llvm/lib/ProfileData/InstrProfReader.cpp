@@ -18,7 +18,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/MemProf.h"
+// #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/Endian.h"
@@ -1550,6 +1551,20 @@ memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
     Pair.GUID = Key;
     Pair.Record = std::move(*Record);
     AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
+  }
+  // Populate the data access profiles for yaml output.
+  if (DataAccessProfileData != nullptr) {
+    for (const auto &[SymHandleRef, RecordRef] :
+         DataAccessProfileData->getRecords())
+      AllMemProfData.YamlifiedDataAccessProfiles.Records.push_back(
+          memprof::DataAccessProfRecord(SymHandleRef, RecordRef.AccessCount,
+                                        RecordRef.Locations));
+    for (StringRef ColdSymbol : DataAccessProfileData->getKnownColdSymbols())
+      AllMemProfData.YamlifiedDataAccessProfiles.KnownColdSymbols.push_back(
+          ColdSymbol.str());
+    for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
+      AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes.push_back(
+          Hash);
   }
   return AllMemProfData;
 }

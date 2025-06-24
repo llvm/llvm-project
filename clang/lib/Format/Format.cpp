@@ -659,15 +659,26 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortLambdaStyle> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::SortIncludesOptions> {
-  static void enumeration(IO &IO, FormatStyle::SortIncludesOptions &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::SI_Never);
-    IO.enumCase(Value, "CaseInsensitive", FormatStyle::SI_CaseInsensitive);
-    IO.enumCase(Value, "CaseSensitive", FormatStyle::SI_CaseSensitive);
+template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
+  static void enumInput(IO &IO, FormatStyle::SortIncludesOptions &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SortIncludesOptions({}));
+    IO.enumCase(Value, "CaseInsensitive",
+                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
+                                                  /*IgnoreCase=*/true}));
+    IO.enumCase(Value, "CaseSensitive",
+                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
+                                                  /*IgnoreCase=*/false}));
 
     // For backward compatibility.
-    IO.enumCase(Value, "false", FormatStyle::SI_Never);
-    IO.enumCase(Value, "true", FormatStyle::SI_CaseSensitive);
+    IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions({}));
+    IO.enumCase(Value, "true",
+                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
+                                                  /*IgnoreCase=*/false}));
+  }
+
+  static void mapping(IO &IO, FormatStyle::SortIncludesOptions &Value) {
+    IO.mapOptional("Enabled", Value.Enabled);
+    IO.mapOptional("IgnoreCase", Value.IgnoreCase);
   }
 };
 
@@ -1152,6 +1163,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SortUsingDeclarations", Style.SortUsingDeclarations);
     IO.mapOptional("SpaceAfterCStyleCast", Style.SpaceAfterCStyleCast);
     IO.mapOptional("SpaceAfterLogicalNot", Style.SpaceAfterLogicalNot);
+    IO.mapOptional("SpaceAfterOperatorKeyword",
+                   Style.SpaceAfterOperatorKeyword);
     IO.mapOptional("SpaceAfterTemplateKeyword",
                    Style.SpaceAfterTemplateKeyword);
     IO.mapOptional("SpaceAroundPointerQualifiers",
@@ -1634,11 +1647,12 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SkipMacroDefinitionBody = false;
-  LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
+  LLVMStyle.SortIncludes = {/*Enabled=*/true, /*IgnoreCase=*/false};
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
   LLVMStyle.SpaceAfterLogicalNot = false;
+  LLVMStyle.SpaceAfterOperatorKeyword = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
   LLVMStyle.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
   LLVMStyle.SpaceBeforeAssignmentOperators = true;
@@ -1898,7 +1912,6 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
         "java",
         "javax",
     };
-    ChromiumStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
   } else if (Language == FormatStyle::LK_JavaScript) {
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
@@ -2026,7 +2039,7 @@ FormatStyle getClangFormatStyle() {
 FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
   NoStyle.DisableFormat = true;
-  NoStyle.SortIncludes = FormatStyle::SI_Never;
+  NoStyle.SortIncludes = {};
   NoStyle.SortUsingDeclarations = FormatStyle::SUD_Never;
   return NoStyle;
 }
@@ -2095,7 +2108,7 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
 std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
                                    FormatStyle *Style, bool AllowUnknownOptions,
                                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
-                                   void *DiagHandlerCtxt) {
+                                   void *DiagHandlerCtxt, bool IsDotHFile) {
   assert(Style);
   FormatStyle::LanguageKind Language = Style->Language;
   assert(Language != FormatStyle::LK_None);
@@ -2141,6 +2154,10 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
     if (Lang == Language ||
         // For backward compatibility.
         (Lang == FormatStyle::LK_Cpp && Language == FormatStyle::LK_C)) {
+      LanguageFound = true;
+    } else if (IsDotHFile && Language == FormatStyle::LK_Cpp &&
+               (Lang == FormatStyle::LK_C || Lang == FormatStyle::LK_ObjC)) {
+      Language = Lang;
       LanguageFound = true;
     }
   }
@@ -3088,9 +3105,8 @@ private:
               FormatTok->isOneOf(tok::numeric_constant, tok::l_square,
                                  tok::l_brace))) ||
             (FormatTok->Tok.isAnyIdentifier() &&
-             std::binary_search(std::begin(FoundationIdentifiers),
-                                std::end(FoundationIdentifiers),
-                                FormatTok->TokenText)) ||
+             llvm::binary_search(FoundationIdentifiers,
+                                 FormatTok->TokenText)) ||
             FormatTok->is(TT_ObjCStringLiteral) ||
             FormatTok->isOneOf(Keywords.kw_NS_CLOSED_ENUM, Keywords.kw_NS_ENUM,
                                Keywords.kw_NS_ERROR_ENUM,
@@ -3218,7 +3234,7 @@ static void sortCppIncludes(const FormatStyle &Style,
   SmallVector<unsigned, 16> Indices =
       llvm::to_vector<16>(llvm::seq<unsigned>(0, Includes.size()));
 
-  if (Style.SortIncludes == FormatStyle::SI_CaseInsensitive) {
+  if (Style.SortIncludes.Enabled && Style.SortIncludes.IgnoreCase) {
     stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
       const auto LHSFilenameLower = Includes[LHSI].Filename.lower();
       const auto RHSFilenameLower = Includes[RHSI].Filename.lower();
@@ -3593,7 +3609,7 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
                                    StringRef FileName, unsigned *Cursor) {
   tooling::Replacements Replaces;
-  if (!Style.SortIncludes || Style.DisableFormat)
+  if (!Style.SortIncludes.Enabled || Style.DisableFormat)
     return Replaces;
   if (isLikelyXml(Code))
     return Replaces;
@@ -3796,8 +3812,10 @@ reformat(const FormatStyle &Style, StringRef Code,
     tooling::Replacements Replaces =
         Formatter(*Env, Style, Status).process().first;
     // add a replacement to remove the "x = " from the result.
-    Replaces = Replaces.merge(
-        tooling::Replacements(tooling::Replacement(FileName, 0, 4, "")));
+    if (Code.starts_with("x = ")) {
+      Replaces = Replaces.merge(
+          tooling::Replacements(tooling::Replacement(FileName, 0, 4, "")));
+    }
     // apply the reformatting changes and the removal of "x = ".
     if (applyAllReplacements(Code, Replaces))
       return {Replaces, 0};
@@ -4163,13 +4181,15 @@ const char *DefaultFallbackStyle = "LLVM";
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
                        FormatStyle *Style, bool AllowUnknownOptions,
-                       llvm::SourceMgr::DiagHandlerTy DiagHandler) {
+                       llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                       bool IsDotHFile) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       FS->getBufferForFile(ConfigFile.str());
   if (auto EC = Text.getError())
     return EC;
   if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions,
-                                   DiagHandler)) {
+                                   DiagHandler, /*DiagHandlerCtx=*/nullptr,
+                                   IsDotHFile)) {
     return EC;
   }
   return Text;
@@ -4207,13 +4227,15 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     FS = llvm::vfs::getRealFileSystem().get();
   assert(FS);
 
+  const bool IsDotHFile = FileName.ends_with(".h");
+
   // User provided clang-format file using -style=file:path/to/format/file.
   if (!Style.InheritsParentConfig &&
       StyleName.starts_with_insensitive("file:")) {
     auto ConfigFile = StyleName.substr(5);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
         loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
-                               DiagHandler);
+                               DiagHandler, IsDotHFile);
     if (auto EC = Text.getError()) {
       return make_string_error("Error reading " + ConfigFile + ": " +
                                EC.message());
@@ -4289,7 +4311,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
           loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
-                                 DiagHandler);
+                                 DiagHandler, IsDotHFile);
       if (auto EC = Text.getError()) {
         if (EC != ParseError::Unsuitable) {
           return make_string_error("Error reading " + ConfigFile + ": " +

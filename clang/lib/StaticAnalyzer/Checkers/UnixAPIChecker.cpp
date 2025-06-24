@@ -22,7 +22,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>

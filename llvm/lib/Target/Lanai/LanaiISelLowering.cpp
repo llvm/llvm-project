@@ -151,9 +151,8 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   setMinimumJumpTableEntries(100);
 
   // Use fast calling convention for library functions.
-  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-    setLibcallCallingConv(static_cast<RTLIB::Libcall>(I), CallingConv::Fast);
-  }
+  for (RTLIB::Libcall LC : RTLIB::libcalls())
+    setLibcallCallingConv(LC, CallingConv::Fast);
 
   MaxStoresPerMemset = 16; // For @llvm.memset -> sequence of stores
   MaxStoresPerMemsetOptSize = 8;
@@ -212,7 +211,7 @@ Register LanaiTargetLowering::getRegisterByName(
   const char *RegName, LLT /*VT*/,
   const MachineFunction & /*MF*/) const {
   // Only unallocatable registers should be matched here.
-  Register Reg = StringSwitch<unsigned>(RegName)
+  Register Reg = StringSwitch<Register>(RegName)
                      .Case("pc", Lanai::PC)
                      .Case("sp", Lanai::SP)
                      .Case("fp", Lanai::FP)
@@ -221,11 +220,8 @@ Register LanaiTargetLowering::getRegisterByName(
                      .Case("rr2", Lanai::RR2)
                      .Case("r11", Lanai::R11)
                      .Case("rca", Lanai::RCA)
-                     .Default(0);
-
-  if (Reg)
-    return Reg;
-  report_fatal_error("Invalid register name global variable");
+                     .Default(Register());
+  return Reg;
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
@@ -1085,37 +1081,6 @@ SDValue LanaiTargetLowering::LowerFRAMEADDR(SDValue Op,
         DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, MachinePointerInfo());
   }
   return FrameAddr;
-}
-
-const char *LanaiTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case LanaiISD::ADJDYNALLOC:
-    return "LanaiISD::ADJDYNALLOC";
-  case LanaiISD::RET_GLUE:
-    return "LanaiISD::RET_GLUE";
-  case LanaiISD::CALL:
-    return "LanaiISD::CALL";
-  case LanaiISD::SELECT_CC:
-    return "LanaiISD::SELECT_CC";
-  case LanaiISD::SETCC:
-    return "LanaiISD::SETCC";
-  case LanaiISD::SUBBF:
-    return "LanaiISD::SUBBF";
-  case LanaiISD::SET_FLAG:
-    return "LanaiISD::SET_FLAG";
-  case LanaiISD::BR_CC:
-    return "LanaiISD::BR_CC";
-  case LanaiISD::Wrapper:
-    return "LanaiISD::Wrapper";
-  case LanaiISD::HI:
-    return "LanaiISD::HI";
-  case LanaiISD::LO:
-    return "LanaiISD::LO";
-  case LanaiISD::SMALL:
-    return "LanaiISD::SMALL";
-  default:
-    return nullptr;
-  }
 }
 
 SDValue LanaiTargetLowering::LowerConstantPool(SDValue Op,

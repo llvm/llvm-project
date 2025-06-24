@@ -1486,7 +1486,7 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
     return nullptr;
 
   // Check for empty weights.
-  uint64_t MaxWeight = *std::max_element(Weights.begin(), Weights.end());
+  uint64_t MaxWeight = *llvm::max_element(Weights);
   if (MaxWeight == 0)
     return nullptr;
 
@@ -1505,9 +1505,9 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
 llvm::MDNode *
 CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
                                              uint64_t LoopCount) const {
-  if (!PGO.haveRegionCounts())
+  if (!PGO->haveRegionCounts())
     return nullptr;
-  std::optional<uint64_t> CondCount = PGO.getStmtCount(Cond);
+  std::optional<uint64_t> CondCount = PGO->getStmtCount(Cond);
   if (!CondCount || *CondCount == 0)
     return nullptr;
   return createProfileWeights(LoopCount,
@@ -1520,7 +1520,59 @@ void CodeGenFunction::incrementProfileCounter(const Stmt *S,
       !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
       !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
     auto AL = ApplyDebugLocation::CreateArtificial(*this);
-    PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+    PGO->emitCounterSetOrIncrement(Builder, S, StepV);
   }
-  PGO.setCurrentStmt(S);
+  PGO->setCurrentStmt(S);
+}
+
+std::pair<bool, bool> CodeGenFunction::getIsCounterPair(const Stmt *S) const {
+  return PGO->getIsCounterPair(S);
+}
+void CodeGenFunction::markStmtAsUsed(bool Skipped, const Stmt *S) {
+  PGO->markStmtAsUsed(Skipped, S);
+}
+void CodeGenFunction::markStmtMaybeUsed(const Stmt *S) {
+  PGO->markStmtMaybeUsed(S);
+}
+
+void CodeGenFunction::maybeCreateMCDCCondBitmap() {
+  if (isMCDCCoverageEnabled()) {
+    PGO->emitMCDCParameters(Builder);
+    MCDCCondBitmapAddr = CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
+  }
+}
+void CodeGenFunction::maybeResetMCDCCondBitmap(const Expr *E) {
+  if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
+    PGO->emitMCDCCondBitmapReset(Builder, E, MCDCCondBitmapAddr);
+    PGO->setCurrentStmt(E);
+  }
+}
+void CodeGenFunction::maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
+  if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
+    PGO->emitMCDCTestVectorBitmapUpdate(Builder, E, MCDCCondBitmapAddr, *this);
+    PGO->setCurrentStmt(E);
+  }
+}
+
+void CodeGenFunction::maybeUpdateMCDCCondBitmap(const Expr *E,
+                                                llvm::Value *Val) {
+  if (isMCDCCoverageEnabled()) {
+    PGO->emitMCDCCondBitmapUpdate(Builder, E, MCDCCondBitmapAddr, Val, *this);
+    PGO->setCurrentStmt(E);
+  }
+}
+
+uint64_t CodeGenFunction::getProfileCount(const Stmt *S) {
+  return PGO->getStmtCount(S).value_or(0);
+}
+
+/// Set the profiler's current count.
+void CodeGenFunction::setCurrentProfileCount(uint64_t Count) {
+  PGO->setCurrentRegionCount(Count);
+}
+
+/// Get the profiler's current count. This is generally the count for the most
+/// recently incremented counter.
+uint64_t CodeGenFunction::getCurrentProfileCount() {
+  return PGO->getCurrentRegionCount();
 }

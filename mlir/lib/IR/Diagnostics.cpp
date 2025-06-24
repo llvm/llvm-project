@@ -392,11 +392,11 @@ struct SourceMgrDiagnosticHandlerImpl {
 
 /// Return a processable CallSiteLoc from the given location.
 static std::optional<CallSiteLoc> getCallSiteLoc(Location loc) {
-  if (dyn_cast<NameLoc>(loc))
+  if (isa<NameLoc>(loc))
     return getCallSiteLoc(cast<NameLoc>(loc).getChildLoc());
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc))
     return callLoc;
-  if (dyn_cast<FusedLoc>(loc)) {
+  if (isa<FusedLoc>(loc)) {
     for (auto subLoc : cast<FusedLoc>(loc).getLocations()) {
       if (auto callLoc = getCallSiteLoc(subLoc)) {
         return callLoc;
@@ -979,7 +979,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
     // Stable sort all of the diagnostics that were emitted. This creates a
     // deterministic ordering for the diagnostics based upon which order id they
     // were emitted for.
-    std::stable_sort(diagnostics.begin(), diagnostics.end());
+    llvm::stable_sort(diagnostics);
 
     // Emit each diagnostic to the context again.
     for (ThreadDiagnostic &diag : diagnostics)

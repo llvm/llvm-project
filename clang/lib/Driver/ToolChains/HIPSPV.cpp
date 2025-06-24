@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPSPV.h"
-#include "CommonArgs.h"
 #include "HIPUtility.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Support/FileSystem.h"
@@ -188,7 +187,8 @@ void HIPSPVToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 
 void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true))
     return;
 
   StringRef hipPath = DriverArgs.getLastArgValue(options::OPT_hip_path_EQ);

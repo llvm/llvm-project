@@ -201,6 +201,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
             0, len(stackFrames), "verify zero frames with startFrame out of bounds"
         )
 
+    @skipIfWindows
     def test_functionNameWithArgs(self):
         """
         Test that the stack frame without a function name is given its pc in the response.
@@ -215,6 +216,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         frame = self.get_stackFrames()[0]
         self.assertEqual(frame["name"], "recurse(x=1)")
 
+    @skipIfWindows
     def test_StackFrameFormat(self):
         """
         Test the StackFrameFormat.

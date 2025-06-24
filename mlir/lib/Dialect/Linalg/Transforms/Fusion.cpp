@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Dominance.h"
@@ -26,6 +27,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -271,12 +273,20 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
            consumerOpOperand);
 
   // Replace use.
+  Value def = fusedProducer->getResult(producerOpResult.getResultNumber());
+  Type consumerType = consumerOpOperand.get().getType();
+  // Check if rank-reduction occurred as part of the extract_slice. If yes,
+  // collapse the dropped dimensions.
+  if (cast<ShapedType>(consumerType).getRank() !=
+      cast<ShapedType>(def.getType()).getRank()) {
+    llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
+    def =
+        tensor::dropGivenUnitDims(b, fusedProducer.getLoc(), def, droppedDims);
+  }
   // Canonicalizations are not guaranteed to have happened before constructing
   // `fusedProducer`. In the tensor case this can result in temporary type
   // mismatches. Insert a `tensor.cast` op to propagate the transformation
   // invariant that types are compatible.
-  Value def = fusedProducer->getResult(producerOpResult.getResultNumber());
-  Type consumerType = consumerOpOperand.get().getType();
   if (consumerType != def.getType())
     def = b.create<tensor::CastOp>(fusedProducer.getLoc(), consumerType, def);
   consumerOpOperand.set(def);

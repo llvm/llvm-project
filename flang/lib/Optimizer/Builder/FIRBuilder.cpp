@@ -283,6 +283,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
     return doConcurentOp.getBody();
 
+  if (auto firLocalOp = getRegion().getParentOfType<fir::LocalitySpecifierOp>())
+    return &getRegion().front();
+
   return getEntryBlock();
 }
 
@@ -366,55 +369,29 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
                                  name, dynamicLength, dynamicShape, attrs);
 }
 
-std::pair<mlir::Value, bool> fir::FirOpBuilder::createArrayTemp(
-    mlir::Location loc, fir::SequenceType arrayType, mlir::Value shape,
+std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
+    mlir::Location loc, mlir::Type baseType, mlir::Value shape,
     llvm::ArrayRef<mlir::Value> extents, llvm::ArrayRef<mlir::Value> typeParams,
     const std::function<decltype(FirOpBuilder::genTempDeclareOp)> &genDeclare,
     mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName) {
   if (polymorphicMold) {
     // Create *allocated* polymorphic temporary using the dynamic type
-    // of the mold and the provided shape/extents. The created temporary
-    // array will be written element per element, that is why it has to be
-    // allocated.
-    mlir::Type boxHeapType = fir::HeapType::get(arrayType);
-    mlir::Value alloc = fir::factory::genNullBoxStorage(
-        *this, loc, fir::ClassType::get(boxHeapType));
-    fir::FortranVariableFlagsAttr declAttrs =
-        fir::FortranVariableFlagsAttr::get(
-            getContext(), fir::FortranVariableFlagsEnum::allocatable);
-
-    mlir::Value base = genDeclare(*this, loc, alloc, tmpName,
-                                  /*shape=*/nullptr, typeParams, declAttrs);
-
-    int rank = extents.size();
-    fir::runtime::genAllocatableApplyMold(*this, loc, alloc, polymorphicMold,
-                                          rank);
-    if (!extents.empty()) {
-      mlir::Type idxTy = getIndexType();
-      mlir::Value one = createIntegerConstant(loc, idxTy, 1);
-      unsigned dim = 0;
-      for (mlir::Value extent : extents) {
-        mlir::Value dimIndex = createIntegerConstant(loc, idxTy, dim++);
-        fir::runtime::genAllocatableSetBounds(*this, loc, alloc, dimIndex, one,
-                                              extent);
-      }
-    }
-    if (!typeParams.empty()) {
-      // We should call AllocatableSetDerivedLength() here.
-      // TODO: does the mold provide the length parameters or
-      // the operation itself or should they be in sync?
-      TODO(loc, "polymorphic type with length parameters");
-    }
-    fir::runtime::genAllocatableAllocate(*this, loc, alloc);
-
+    // of the mold and the provided shape/extents.
+    auto boxType = fir::ClassType::get(fir::HeapType::get(baseType));
+    mlir::Value boxAddress = fir::factory::getAndEstablishBoxStorage(
+        *this, loc, boxType, shape, typeParams, polymorphicMold);
+    fir::runtime::genAllocatableAllocate(*this, loc, boxAddress);
+    mlir::Value box = create<fir::LoadOp>(loc, boxAddress);
+    mlir::Value base =
+        genDeclare(*this, loc, box, tmpName, /*shape=*/mlir::Value{},
+                   typeParams, fir::FortranVariableFlagsAttr{});
     return {base, /*isHeapAllocation=*/true};
   }
   mlir::Value allocmem;
   if (useStack)
-    allocmem = createTemporary(loc, arrayType, tmpName, extents, typeParams);
+    allocmem = createTemporary(loc, baseType, tmpName, extents, typeParams);
   else
-    allocmem =
-        createHeapTemporary(loc, arrayType, tmpName, extents, typeParams);
+    allocmem = createHeapTemporary(loc, baseType, tmpName, extents, typeParams);
   mlir::Value base = genDeclare(*this, loc, allocmem, tmpName, shape,
                                 typeParams, fir::FortranVariableFlagsAttr{});
   return {base, !useStack};
@@ -1868,7 +1845,8 @@ void fir::factory::setInternalLinkage(mlir::func::FuncOp func) {
   func->setAttr("llvm.linkage", linkage);
 }
 
-uint64_t fir::factory::getAllocaAddressSpace(mlir::DataLayout *dataLayout) {
+uint64_t
+fir::factory::getAllocaAddressSpace(const mlir::DataLayout *dataLayout) {
   if (dataLayout)
     if (mlir::Attribute addrSpace = dataLayout->getAllocaMemorySpace())
       return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
@@ -1939,4 +1917,21 @@ void fir::factory::genDimInfoFromBox(
     if (strides)
       strides->push_back(dimInfo.getByteStride());
   }
+}
+
+mlir::Value fir::factory::genLifetimeStart(mlir::OpBuilder &builder,
+                                           mlir::Location loc,
+                                           fir::AllocaOp alloc, int64_t size,
+                                           const mlir::DataLayout *dl) {
+  mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(
+      alloc.getContext(), getAllocaAddressSpace(dl));
+  mlir::Value cast =
+      builder.create<fir::ConvertOp>(loc, ptrTy, alloc.getResult());
+  builder.create<mlir::LLVM::LifetimeStartOp>(loc, size, cast);
+  return cast;
+}
+
+void fir::factory::genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
+                                  mlir::Value cast, int64_t size) {
+  builder.create<mlir::LLVM::LifetimeEndOp>(loc, size, cast);
 }

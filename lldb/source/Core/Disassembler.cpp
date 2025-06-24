@@ -310,8 +310,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx.HasTargetScope()) {
-    disassembly_format =
-        exe_ctx.GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx.GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);
     disassembly_format = &format;
@@ -1037,8 +1037,8 @@ void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx && exe_ctx->HasTargetScope()) {
-    disassembly_format =
-        exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);
     disassembly_format = &format;

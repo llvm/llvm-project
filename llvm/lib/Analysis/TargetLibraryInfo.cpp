@@ -205,6 +205,14 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     return;
   }
 
+  // DXIL does not support libcalls, and disabling them here prevents a number
+  // of passes from introducing libcalls into DXIL which would otherwise
+  // complicate lowering/legalization
+  if (T.isDXIL()) {
+    TLI.disableAllFunctions();
+    return;
+  }
+
   // memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X 10.5 and
   // later. All versions of watchOS support it.
   if (T.isMacOSX()) {
@@ -806,6 +814,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_pclose);
     TLI.setUnavailable(LibFunc_popen);
     TLI.setUnavailable(LibFunc_pread);
+    TLI.setUnavailable(LibFunc_pvalloc);
     TLI.setUnavailable(LibFunc_pwrite);
     TLI.setUnavailable(LibFunc_read);
     TLI.setUnavailable(LibFunc_readlink);
@@ -1291,6 +1300,14 @@ static const VecDesc VecFuncs_LIBMVEC_X86[] = {
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
 
+static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
+#define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
+};
+
 static const VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
@@ -1367,6 +1384,10 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_AARCH64);
       break;
     }
     break;

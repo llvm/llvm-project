@@ -271,14 +271,14 @@ public:
   /// Sample genDeclare callback for createArrayTemp() below.
   /// It creates fir.declare operation using the given operands.
   /// \p memref is the base of the allocated temporary,
-  /// which may be !fir.ref<!fir.array<>> or !fir.ref<!fir.box/class<>>.
+  /// which may be !fir.ref<!fir.array<>> or !fir.box/class<>.
   static mlir::Value genTempDeclareOp(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Value memref,
                                       llvm::StringRef name, mlir::Value shape,
                                       llvm::ArrayRef<mlir::Value> typeParams,
                                       fir::FortranVariableFlagsAttr attrs);
 
-  /// Create a temporary array with the given \p arrayType,
+  /// Create a temporary with the given \p baseType,
   /// \p shape, \p extents and \p typeParams. An optional
   /// \p polymorphicMold specifies the entity which dynamic type
   /// has to be used for the allocation.
@@ -291,16 +291,26 @@ public:
   /// If \p useStack is true, the function will try to do the allocation
   /// in stack memory (which is not always possible currently).
   /// The first return value is the base of the temporary object,
-  /// which may be !fir.ref<!fir.array<>> or !fir.ref<!fir.box/class<>>.
+  /// which may be !fir.ref<!fir.array<>> or !fir.box/class<>.
   /// The second return value is true, if the actual allocation
   /// was done in heap memory.
+  std::pair<mlir::Value, bool> createAndDeclareTemp(
+      mlir::Location loc, mlir::Type baseType, mlir::Value shape,
+      llvm::ArrayRef<mlir::Value> extents,
+      llvm::ArrayRef<mlir::Value> typeParams,
+      const std::function<decltype(genTempDeclareOp)> &genDeclare,
+      mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName);
+  /// Create and declare an array temporary.
   std::pair<mlir::Value, bool>
   createArrayTemp(mlir::Location loc, fir::SequenceType arrayType,
                   mlir::Value shape, llvm::ArrayRef<mlir::Value> extents,
                   llvm::ArrayRef<mlir::Value> typeParams,
                   const std::function<decltype(genTempDeclareOp)> &genDeclare,
                   mlir::Value polymorphicMold, bool useStack = false,
-                  llvm::StringRef tmpName = ".tmp.array");
+                  llvm::StringRef tmpName = ".tmp.array") {
+    return createAndDeclareTemp(loc, arrayType, shape, extents, typeParams,
+                                genDeclare, polymorphicMold, useStack, tmpName);
+  }
 
   /// Create an LLVM stack save intrinsic op. Returns the saved stack pointer.
   /// The stack address space is fetched from the data layout of the current
@@ -879,7 +889,7 @@ llvm::SmallVector<mlir::Value>
 elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
 
 /// Get the address space which should be used for allocas
-uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
+uint64_t getAllocaAddressSpace(const mlir::DataLayout *dataLayout);
 
 /// The two vectors of MLIR values have the following property:
 ///   \p extents1[i] must have the same value as \p extents2[i]
@@ -912,6 +922,18 @@ void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
                        llvm::SmallVectorImpl<mlir::Value> *lbounds,
                        llvm::SmallVectorImpl<mlir::Value> *extents,
                        llvm::SmallVectorImpl<mlir::Value> *strides);
+
+/// Generate an LLVM dialect lifetime start marker at the current insertion
+/// point given an fir.alloca and its constant size in bytes. Returns the value
+/// to be passed to the lifetime end marker.
+mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
+                             fir::AllocaOp alloc, int64_t size,
+                             const mlir::DataLayout *dl);
+
+/// Generate an LLVM dialect lifetime end marker at the current insertion point
+/// given an llvm.ptr value and the constant size in bytes of its storage.
+void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
+                    mlir::Value mem, int64_t size);
 
 } // namespace fir::factory
 

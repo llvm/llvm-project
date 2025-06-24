@@ -110,11 +110,11 @@ public:
     CheckFactories.registerCheck<UseDefaultMemberInitCheck>(
         "modernize-use-default-member-init");
     CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
-    CheckFactories.registerCheck<UseEqualsDefaultCheck>("modernize-use-equals-default");
+    CheckFactories.registerCheck<UseEqualsDefaultCheck>(
+        "modernize-use-equals-default");
     CheckFactories.registerCheck<UseEqualsDeleteCheck>(
         "modernize-use-equals-delete");
-    CheckFactories.registerCheck<UseNodiscardCheck>(
-        "modernize-use-nodiscard");
+    CheckFactories.registerCheck<UseNodiscardCheck>("modernize-use-nodiscard");
     CheckFactories.registerCheck<UseNoexceptCheck>("modernize-use-noexcept");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");
@@ -136,6 +136,7 @@ static ClangTidyModuleRegistry::Add<ModernizeModule> X("modernize-module",
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the ModernizeModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int ModernizeModuleAnchorSource = 0;
 
 } // namespace clang::tidy

@@ -16,7 +16,6 @@
 // To get the test dialect definition.
 include "TestDialect.td"
 include "TestEnumDefs.td"
-include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.td"
 include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -379,22 +378,6 @@ def TestCustomStructAttr : Test_Attr<"TestCustomStruct"> {
   }];
 }
 
-def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
-  let mnemonic = "nested_polynomial";
-  let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
-  let assemblyFormat = [{
-    `<` struct(params) `>`
-  }];
-}
-
-def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
-  let mnemonic = "nested_polynomial2";
-  let parameters = (ins OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">:$poly);
-  let assemblyFormat = [{
-    `<` struct(params) `>`
-  }];
-}
-
 // Test a ptr constant memory space.
 def TestConstMemorySpaceAttr : Test_Attr<"TestConstMemorySpace", [
     DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
@@ -422,6 +405,30 @@ def TestOpAsmAttrInterfaceAttr : Test_Attr<"TestOpAsmAttrInterface",
   let assemblyFormat = [{
     `<` struct(params) `>`
   }];
+}
+
+// Test OpAsmAttrInterface from tablegen genMnemonicAlias option.
+def TestOpAsmAttrInterfaceTablegenDefaultAttr : Test_Attr<"TestOpAsmAttrInterfaceTablegenDefault"> {
+  let mnemonic = "op_asm_attr_interface_tablegen_default";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+
+  let genMnemonicAlias = 1;
+}
+
+// Test attribute containing a slash token
+def SlashAttr: Test_Attr<"Slash">{
+  let mnemonic = "slash_attr";
+
+  let parameters = (
+    ins
+    "int":$lhs,
+    "int":$rhs
+  );
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // TEST_ATTRDEFS

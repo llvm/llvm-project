@@ -1158,10 +1158,16 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs) {
 }
 
 unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
+                             unsigned DynamicVGPRBlockSize,
                              std::optional<bool> EnableWavefrontSize32) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
+  if (DynamicVGPRBlockSize != 0)
+    return DynamicVGPRBlockSize;
+
+  // Temporarily check the subtarget feature, until we fully switch to using
+  // attributes.
   if (STI->getFeatureBits().test(FeatureDynamicVGPR))
     return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
 
@@ -1190,6 +1196,8 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
   return IsWave32 ? 8 : 4;
 }
 
+unsigned getArchVGPRAllocGranule() { return 4; }
+
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
@@ -1203,20 +1211,26 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
 
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
+unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
+                                unsigned DynamicVGPRBlockSize) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
-  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+
+  // Temporarily check the subtarget feature, until we fully switch to using
+  // attributes.
+  if (DynamicVGPRBlockSize != 0 ||
+      STI->getFeatureBits().test(FeatureDynamicVGPR))
     // On GFX12 we can allocate at most 8 blocks of VGPRs.
-    return 8 * getVGPRAllocGranule(STI);
+    return 8 * getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
   return getAddressableNumArchVGPRs(STI);
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
-                                      unsigned NumVGPRs) {
-  return getNumWavesPerEUWithNumVGPRs(NumVGPRs, getVGPRAllocGranule(STI),
-                                      getMaxWavesPerEU(STI),
-                                      getTotalNumVGPRs(STI));
+                                      unsigned NumVGPRs,
+                                      unsigned DynamicVGPRBlockSize) {
+  return getNumWavesPerEUWithNumVGPRs(
+      NumVGPRs, getVGPRAllocGranule(STI, DynamicVGPRBlockSize),
+      getMaxWavesPerEU(STI), getTotalNumVGPRs(STI));
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
@@ -1255,7 +1269,8 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
   return 5;
 }
 
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
   unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
@@ -1263,28 +1278,33 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
     return 0;
 
   unsigned TotNumVGPRs = getTotalNumVGPRs(STI);
-  unsigned AddrsableNumVGPRs = getAddressableNumVGPRs(STI);
-  unsigned Granule = getVGPRAllocGranule(STI);
+  unsigned AddrsableNumVGPRs =
+      getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
+  unsigned Granule = getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
   unsigned MaxNumVGPRs = alignDown(TotNumVGPRs / WavesPerEU, Granule);
 
   if (MaxNumVGPRs == alignDown(TotNumVGPRs / MaxWavesPerEU, Granule))
     return 0;
 
-  unsigned MinWavesPerEU = getNumWavesPerEUWithNumVGPRs(STI, AddrsableNumVGPRs);
+  unsigned MinWavesPerEU = getNumWavesPerEUWithNumVGPRs(STI, AddrsableNumVGPRs,
+                                                        DynamicVGPRBlockSize);
   if (WavesPerEU < MinWavesPerEU)
-    return getMinNumVGPRs(STI, MinWavesPerEU);
+    return getMinNumVGPRs(STI, MinWavesPerEU, DynamicVGPRBlockSize);
 
   unsigned MaxNumVGPRsNext = alignDown(TotNumVGPRs / (WavesPerEU + 1), Granule);
   unsigned MinNumVGPRs = 1 + std::min(MaxNumVGPRs - Granule, MaxNumVGPRsNext);
   return std::min(MinNumVGPRs, AddrsableNumVGPRs);
 }
 
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
   unsigned MaxNumVGPRs =
-      alignDown(getTotalNumVGPRs(STI) / WavesPerEU, getVGPRAllocGranule(STI));
-  unsigned AddressableNumVGPRs = getAddressableNumVGPRs(STI);
+      alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
+                getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
+  unsigned AddressableNumVGPRs =
+      getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
@@ -1297,9 +1317,11 @@ unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
 
 unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
                                    unsigned NumVGPRs,
+                                   unsigned DynamicVGPRBlockSize,
                                    std::optional<bool> EnableWavefrontSize32) {
   return getGranulatedNumRegisterBlocks(
-      NumVGPRs, getVGPRAllocGranule(STI, EnableWavefrontSize32));
+      NumVGPRs,
+      getVGPRAllocGranule(STI, DynamicVGPRBlockSize, EnableWavefrontSize32));
 }
 } // end namespace IsaInfo
 
@@ -1360,7 +1382,7 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired) {
   if (auto Attr = getIntegerPairAttribute(F, Name, OnlyFirstRequired))
-    return {Attr->first, Attr->second ? *(Attr->second) : Default.second};
+    return {Attr->first, Attr->second.value_or(Default.second)};
   return Default;
 }
 
@@ -2122,69 +2144,14 @@ bool getHasDepthExport(const Function &F) {
   return F.getFnAttributeAsParsedInteger("amdgpu-depth-export", 0) != 0;
 }
 
-bool isShader(CallingConv::ID cc) {
-  switch (cc) {
-  case CallingConv::AMDGPU_VS:
-  case CallingConv::AMDGPU_LS:
-  case CallingConv::AMDGPU_HS:
-  case CallingConv::AMDGPU_ES:
-  case CallingConv::AMDGPU_GS:
-  case CallingConv::AMDGPU_PS:
-  case CallingConv::AMDGPU_CS_Chain:
-  case CallingConv::AMDGPU_CS_ChainPreserve:
-  case CallingConv::AMDGPU_CS:
-    return true;
-  default:
-    return false;
-  }
-}
+unsigned getDynamicVGPRBlockSize(const Function &F) {
+  unsigned BlockSize =
+      F.getFnAttributeAsParsedInteger("amdgpu-dynamic-vgpr-block-size", 0);
 
-bool isGraphics(CallingConv::ID cc) {
-  return isShader(cc) || cc == CallingConv::AMDGPU_Gfx;
-}
+  if (BlockSize == 16 || BlockSize == 32)
+    return BlockSize;
 
-bool isCompute(CallingConv::ID cc) {
-  return !isGraphics(cc) || cc == CallingConv::AMDGPU_CS;
-}
-
-bool isEntryFunctionCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-  case CallingConv::AMDGPU_VS:
-  case CallingConv::AMDGPU_GS:
-  case CallingConv::AMDGPU_PS:
-  case CallingConv::AMDGPU_CS:
-  case CallingConv::AMDGPU_ES:
-  case CallingConv::AMDGPU_HS:
-  case CallingConv::AMDGPU_LS:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool isModuleEntryFunctionCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_Gfx:
-    return true;
-  default:
-    return isEntryFunctionCC(CC) || isChainCC(CC);
-  }
-}
-
-bool isChainCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_CS_Chain:
-  case CallingConv::AMDGPU_CS_ChainPreserve:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool isKernelCC(const Function *Func) {
-  return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
+  return 0;
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {
@@ -2295,6 +2262,10 @@ bool isGFX12(const MCSubtargetInfo &STI) {
 bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
+
+bool isGFX1250(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts];
+}
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) { return !isGFX11Plus(STI); }
 
@@ -2510,20 +2481,15 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   unsigned OpType = Desc.operands()[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
-  case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
-  case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
-  case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return true;
   default:
@@ -2875,15 +2841,12 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     return getInlineEncodingV216(false, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     return getInlineEncodingV216(true, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
   default:
     llvm_unreachable("bad packed operand type");

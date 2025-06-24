@@ -404,6 +404,11 @@ def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
   let mnemonic = "op_asm_type_interface";
 }
 
+def TestTypeOpAsmTypeInterfaceTablegenDefault : Test_Type<"TestTypeOpAsmTypeInterfaceTablegenDefault"> {
+  let mnemonic = "op_asm_type_interface_tablegen_default";
+  let genMnemonicAlias = 1;
+}
+
 def TestTensorType : Test_Type<"TestTensor",
     [Bufferization_TensorLikeTypeInterface, ShapedTypeInterface]> {
   let mnemonic = "test_tensor";
@@ -423,6 +428,15 @@ def TestTensorType : Test_Type<"TestTensor",
       return test::TestTensorType::get(
         getContext(), shape.value_or(getShape()), elementType);
     }
+
+    // TensorLikeTypeInterface:
+    ::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
+    getBufferType(const ::mlir::bufferization::BufferizationOptions& options,
+                  ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError);
+
+    ::mlir::LogicalResult verifyCompatibleBufferType(
+        ::mlir::bufferization::BufferLikeType bufferType,
+        ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError);
   }];
 }
 

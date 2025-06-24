@@ -1499,7 +1499,7 @@ APISet::createRecord(StringRef USR, StringRef Name,
                      CtorArgsContTy &&...CtorArgs) {
   // Ensure USR refers to a String stored in the allocator.
   auto USRString = copyString(USR);
-  auto Result = USRBasedLookupTable.insert({USRString, nullptr});
+  auto Result = USRBasedLookupTable.try_emplace(USRString);
   RecordTy *Record;
 
   // Create the record if it does not already exist

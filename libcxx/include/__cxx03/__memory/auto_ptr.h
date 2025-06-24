@@ -19,12 +19,12 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr_ref {
+struct auto_ptr_ref {
   _Tp* __ptr_;
 };
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr {
+class _LIBCPP_TEMPLATE_VIS auto_ptr {
 private:
   _Tp* __ptr_;
 
@@ -78,7 +78,7 @@ public:
 };
 
 template <>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr<void> {
+class _LIBCPP_TEMPLATE_VIS auto_ptr<void> {
 public:
   typedef void element_type;
 };

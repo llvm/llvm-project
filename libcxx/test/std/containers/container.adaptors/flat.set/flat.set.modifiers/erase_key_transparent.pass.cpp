@@ -138,6 +138,13 @@ void test() {
     assert(n == 1);
     assert(transparent_used);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_set<std::string, std::less<>>;
+    M m{"alpha", "beta", "epsilon", "eta", "gamma"};
+    auto n = m.erase("beta");
+    assert(n == 1);
+  }
 }
 
 void test_exception() {

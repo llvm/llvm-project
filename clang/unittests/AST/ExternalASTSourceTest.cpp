@@ -51,9 +51,9 @@ bool testExternalASTSource(ExternalASTSource *Source, StringRef FileContents) {
       "test.cc", MemoryBuffer::getMemBuffer(FileContents).release());
   const char *Args[] = { "test.cc" };
 
-  auto InvocationDiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  DiagnosticOptions InvocationDiagOpts;
   auto InvocationDiags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), InvocationDiagOpts.get());
+      *llvm::vfs::getRealFileSystem(), InvocationDiagOpts);
   CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
 
   CompilerInstance Compiler(std::move(Invocation));

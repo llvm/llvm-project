@@ -60,7 +60,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
   }
 }
 // CHECK-LABEL: define void @_QPfunc(
-// CHECK-SAME:      ptr %[[ARG0:.*]]){{.*}}{
+// CHECK-SAME:      ptr {{[^%]*}}%[[ARG0:.*]]){{.*}}{
 // [...]
 // CHECK:  %[[VAL5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG0]], i32 0, i32 7, i32 0, i32 0
 // box access:
@@ -100,7 +100,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // [...]
 // CHECK:  %[[VAL50:.*]] = getelementptr i32, ptr %{{.*}}, i64 %{{.*}}
 // store to the temporary:
-// CHECK:  store i32 %{{.*}}, ptr %[[VAL50]], align 4, !tbaa ![[DATA_ACCESS_TAG:.*]]
+// CHECK:  store i32 %{{.*}}, ptr %[[VAL50]], align 4, !tbaa ![[TMP_DATA_ACCESS_TAG:.*]]
 // [...]
 
 // CHECK: [[BOX_ACCESS_TAG]] = !{![[BOX_ACCESS_TYPE:.*]], ![[BOX_ACCESS_TYPE]], i64 0}
@@ -111,4 +111,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK: ![[A_ACCESS_TYPE]] = !{!"dummy arg data/_QFfuncEa", ![[ARG_ACCESS_TYPE:.*]], i64 0}
 // CHECK: ![[ARG_ACCESS_TYPE]] = !{!"dummy arg data", ![[DATA_ACCESS_TYPE:.*]], i64 0}
 // CHECK: ![[DATA_ACCESS_TYPE]] = !{!"any data access", ![[ANY_ACCESS_TYPE]], i64 0}
-// CHECK: ![[DATA_ACCESS_TAG]] = !{![[DATA_ACCESS_TYPE]], ![[DATA_ACCESS_TYPE]], i64 0}
+// CHECK: ![[TMP_DATA_ACCESS_TAG]] = !{![[TMP_DATA_ACCESS_TYPE:.*]], ![[TMP_DATA_ACCESS_TYPE]], i64 0}
+// CHECK: ![[TMP_DATA_ACCESS_TYPE]] = !{!"allocated data/", ![[TMP_ACCESS_TYPE:.*]], i64 0}
+// CHECK: ![[TMP_ACCESS_TYPE]] = !{!"allocated data", ![[TARGET_ACCESS_TAG:.*]], i64 0}
+// CHECK: ![[TARGET_ACCESS_TAG]] = !{!"target data", ![[DATA_ACCESS_TYPE]], i64 0}

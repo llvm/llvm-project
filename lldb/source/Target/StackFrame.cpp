@@ -552,8 +552,9 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
 
   // Evaluate the parsed expression.
   lldb::TargetSP target = this->CalculateTarget();
-  dil::Interpreter interpreter(target, var_expr, use_dynamic,
-                               shared_from_this());
+  dil::Interpreter interpreter(target, var_expr, shared_from_this(),
+                               use_dynamic, !no_synth_child, !no_fragile_ivar,
+                               check_ptr_vs_member);
 
   auto valobj_or_error = interpreter.Evaluate((*tree_or_error).get());
   if (!valobj_or_error) {
@@ -1936,12 +1937,15 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
   ExecutionContext exe_ctx(shared_from_this());
 
   const FormatEntity::Entry *frame_format = nullptr;
+  FormatEntity::Entry format_entry;
   Target *target = exe_ctx.GetTargetPtr();
   if (target) {
     if (show_unique) {
-      frame_format = target->GetDebugger().GetFrameFormatUnique();
+      format_entry = target->GetDebugger().GetFrameFormatUnique();
+      frame_format = &format_entry;
     } else {
-      frame_format = target->GetDebugger().GetFrameFormat();
+      format_entry = target->GetDebugger().GetFrameFormat();
+      frame_format = &format_entry;
     }
   }
   if (!DumpUsingFormat(*strm, frame_format, frame_marker)) {

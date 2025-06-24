@@ -2,15 +2,11 @@
 Test lldb-dap attach request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import os
-import shutil
 import subprocess
-import tempfile
 import threading
 import time
 
@@ -24,7 +20,6 @@ def spawn_and_wait(program, delay):
     process.wait()
 
 
-@skip
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def set_and_hit_breakpoint(self, continueToExit=True):
         source = "main.c"
@@ -35,7 +30,12 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
-        self.continue_to_breakpoints(breakpoint_ids)
+        # Test binary will sleep for 10s, offset the breakpoint timeout
+        # accordingly.
+        timeout_offset = 10
+        self.continue_to_breakpoints(
+            breakpoint_ids, timeout=timeout_offset + self.DEFAULT_TIMEOUT
+        )
         if continueToExit:
             self.continue_to_exit()
 
@@ -77,7 +77,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def test_by_name_waitFor(self):
         """
         Tests attaching to a process by process name and waiting for the
-        next instance of a process to be launched, ingoring all current
+        next instance of a process to be launched, ignoring all current
         ones.
         """
         program = self.build_and_create_debug_adapter_for_attach()
@@ -100,7 +100,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         that can be passed during attach.
 
         "initCommands" are a list of LLDB commands that get executed
-        before the targt is created.
+        before the target is created.
         "preRunCommands" are a list of LLDB commands that get executed
         after the target has been created and before the launch.
         "stopCommands" are a list of LLDB commands that get executed each
@@ -159,7 +159,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Continue after launch and hit the "pause()" call and stop the target.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after we stop.
-        self.dap_server.request_continue()
+        self.do_continue()
         time.sleep(0.5)
         self.dap_server.request_pause()
         self.dap_server.wait_for_stopped()
@@ -178,10 +178,25 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
+    def test_attach_command_process_failures(self):
+        """
+        Tests that a 'attachCommands' is expected to leave the debugger's
+        selected target with a valid process.
+        """
+        program = self.build_and_create_debug_adapter_for_attach()
+        attachCommands = ['script print("oops, forgot to attach to a process...")']
+        resp = self.attach(
+            program=program,
+            attachCommands=attachCommands,
+            expectFailure=True,
+        )
+        self.assertFalse(resp["success"])
+        self.assertIn(
+            "attachCommands failed to attach to a process",
+            resp["body"]["error"]["format"],
+        )
+
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(
-        archs=["arm", "aarch64"]
-    )  # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5517/steps/test/logs/stdio
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during

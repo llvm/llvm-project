@@ -190,7 +190,7 @@ namespace llvm {
     // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
     template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
       T *Buff = A.template Allocate<T>(Length);
-      std::uninitialized_copy(begin(), end(), Buff);
+      llvm::uninitialized_copy(*this, Buff);
       return MutableArrayRef<T>(Buff, Length);
     }
 

@@ -68,6 +68,7 @@ def ICarryBorrow : BuiltinGroup;
 def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
 def TernaryBitwiseINTEL : BuiltinGroup;
+def Block2DLoadStore : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -673,6 +674,8 @@ defm : DemangledNativeBuiltin<"ndrange_3D", OpenCL_std, Enqueue, 1, 3, OpBuildND
 
 // Spec constant builtin records:
 defm : DemangledNativeBuiltin<"__spirv_SpecConstant", OpenCL_std, SpecConstant, 2, 2, OpSpecConstant>;
+defm : DemangledNativeBuiltin<"__spirv_SpecConstant", GLSL_std_450,
+                              SpecConstant, 2, 2, OpSpecConstant>;
 defm : DemangledNativeBuiltin<"__spirv_SpecConstantComposite", OpenCL_std, SpecConstant, 1, 0, OpSpecConstantComposite>;
 
 // Async Copy and Prefetch builtin records:
@@ -717,6 +720,13 @@ defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSampledImageINTEL", OpenCL
 
 // SPV_INTEL_ternary_bitwise_function builtin records:
 defm : DemangledNativeBuiltin<"__spirv_BitwiseFunctionINTEL", OpenCL_std, TernaryBitwiseINTEL, 4, 4, OpBitwiseFunctionINTEL>;
+
+// SPV_INTEL_2d_block_io builtin records
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransposeINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadTransposeINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransformINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadTransformINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockPrefetchINTEL", OpenCL_std, Block2DLoadStore, 9, 9, OpSubgroup2DBlockPrefetchINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockStoreINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockStoreINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a

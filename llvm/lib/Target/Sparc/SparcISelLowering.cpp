@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcISelLowering.h"
-#include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcRegisterInfo.h"
@@ -1162,12 +1162,9 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
   // make sure that said register is in the reserve list.
   const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
   if (!TRI->isReservedReg(MF, Reg))
-    Reg = 0;
+    Reg = Register();
 
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 // Fixup floating point arguments in the ... part of a varargs call.
@@ -2952,7 +2949,7 @@ static SDValue LowerF128Load(SDValue Op, SelectionDAG &DAG)
   LoadSDNode *LdNode = cast<LoadSDNode>(Op.getNode());
   assert(LdNode->getOffset().isUndef() && "Unexpected node type");
 
-  Align Alignment = commonAlignment(LdNode->getOriginalAlign(), 8);
+  Align Alignment = commonAlignment(LdNode->getBaseAlign(), 8);
 
   SDValue Hi64 =
       DAG.getLoad(MVT::f64, dl, LdNode->getChain(), LdNode->getBasePtr(),
@@ -3018,7 +3015,7 @@ static SDValue LowerF128Store(SDValue Op, SelectionDAG &DAG) {
                                     StNode->getValue(),
                                     SubRegOdd);
 
-  Align Alignment = commonAlignment(StNode->getOriginalAlign(), 8);
+  Align Alignment = commonAlignment(StNode->getBaseAlign(), 8);
 
   SDValue OutChains[2];
   OutChains[0] =
@@ -3050,8 +3047,7 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG)
     SDValue Val = DAG.getNode(ISD::BITCAST, dl, MVT::v2i32, St->getValue());
     SDValue Chain = DAG.getStore(
         St->getChain(), dl, Val, St->getBasePtr(), St->getPointerInfo(),
-        St->getOriginalAlign(), St->getMemOperand()->getFlags(),
-        St->getAAInfo());
+        St->getBaseAlign(), St->getMemOperand()->getFlags(), St->getAAInfo());
     return Chain;
   }
 
@@ -3537,9 +3533,8 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
     SDLoc dl(N);
     SDValue LoadRes = DAG.getExtLoad(
         Ld->getExtensionType(), dl, MVT::v2i32, Ld->getChain(),
-        Ld->getBasePtr(), Ld->getPointerInfo(), MVT::v2i32,
-        Ld->getOriginalAlign(), Ld->getMemOperand()->getFlags(),
-        Ld->getAAInfo());
+        Ld->getBasePtr(), Ld->getPointerInfo(), MVT::v2i32, Ld->getBaseAlign(),
+        Ld->getMemOperand()->getFlags(), Ld->getAAInfo());
 
     SDValue Res = DAG.getNode(ISD::BITCAST, dl, MVT::i64, LoadRes);
     Results.push_back(Res);
@@ -3564,8 +3559,14 @@ bool SparcTargetLowering::isFNegFree(EVT VT) const {
 
 bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
-  return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
-         Imm.isZero();
+  if (VT != MVT::f32 && VT != MVT::f64)
+    return false;
+  if (Subtarget->isVIS() && Imm.isZero())
+    return true;
+  if (Subtarget->isVIS3())
+    return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
+           Imm.getExactLog2Abs() == -1;
+  return false;
 }
 
 bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }

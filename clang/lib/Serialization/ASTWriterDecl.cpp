@@ -221,6 +221,48 @@ namespace clang {
         Record.AddDeclRef(F.second);
     }
 
+    template <typename T> bool shouldSkipWritingSpecializations(T *Spec) {
+      // Now we will only avoid writing specializations if we're generating
+      // reduced BMI.
+      if (!GeneratingReducedBMI)
+        return false;
+
+      assert((isa<FunctionDecl, ClassTemplateSpecializationDecl,
+                  VarTemplateSpecializationDecl>(Spec)));
+
+      ArrayRef<TemplateArgument> Args;
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Spec))
+        Args = CTSD->getTemplateArgs().asArray();
+      else if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Spec))
+        Args = VTSD->getTemplateArgs().asArray();
+      else
+        Args = cast<FunctionDecl>(Spec)
+                   ->getTemplateSpecializationArgs()
+                   ->asArray();
+
+      // If there is any template argument is TULocal, we can avoid writing the
+      // specialization since the consumers of reduced BMI won't get the
+      // specialization anyway.
+      for (const TemplateArgument &TA : Args) {
+        switch (TA.getKind()) {
+        case TemplateArgument::Type: {
+          Linkage L = TA.getAsType()->getLinkage();
+          if (!isExternallyVisible(L))
+            return true;
+          break;
+        }
+        case TemplateArgument::Declaration:
+          if (!TA.getAsDecl()->isExternallyVisible())
+            return true;
+          break;
+        default:
+          break;
+        }
+      }
+
+      return false;
+    }
+
     /// Add to the record the first template specialization from each module
     /// file that provides a declaration of D. We store the DeclId and an
     /// ODRHash of the template arguments of D which should provide enough
@@ -235,6 +277,9 @@ namespace clang {
       CollectFirstDeclFromEachModule(D, /*IncludeLocal*/ true, Firsts);
 
       for (const auto &F : Firsts) {
+        if (shouldSkipWritingSpecializations(F.second))
+          continue;
+
         if (isa<ClassTemplatePartialSpecializationDecl,
                 VarTemplatePartialSpecializationDecl>(F.second))
           PartialSpecsInMap.push_back(F.second);
@@ -1261,6 +1306,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     VarDeclBits.addBit(D->isConstexpr());
     VarDeclBits.addBit(D->isInitCapture());
     VarDeclBits.addBit(D->isPreviousDeclInSameBlockScope());
+    VarDeclBits.addBit(D->hasInitWithSideEffects());
 
     VarDeclBits.addBit(D->isEscapingByref());
     HasDeducedType = D->getType()->getContainedDeducedType();
@@ -1310,10 +1356,11 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       !D->hasExtInfo() && D->getFirstDecl() == D->getMostRecentDecl() &&
       D->getKind() == Decl::Var && !D->isInline() && !D->isConstexpr() &&
       !D->isInitCapture() && !D->isPreviousDeclInSameBlockScope() &&
-      !D->isEscapingByref() && !HasDeducedType &&
-      D->getStorageDuration() != SD_Static && !D->getDescribedVarTemplate() &&
-      !D->getMemberSpecializationInfo() && !D->isObjCForDecl() &&
-      !isa<ImplicitParamDecl>(D) && !D->isEscapingByref())
+      !D->hasInitWithSideEffects() && !D->isEscapingByref() &&
+      !HasDeducedType && D->getStorageDuration() != SD_Static &&
+      !D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo() &&
+      !D->isObjCForDecl() && !isa<ImplicitParamDecl>(D) &&
+      !D->isEscapingByref())
     AbbrevToUse = Writer.getDeclVarAbbrev();
 
   Code = serialization::DECL_VAR;
@@ -1389,7 +1436,7 @@ void ASTDeclWriter::VisitBindingDecl(BindingDecl *D) {
 
 void ASTDeclWriter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
   VisitDecl(D);
-  Record.AddStmt(D->getAsmString());
+  Record.AddStmt(D->getAsmStringExpr());
   Record.AddSourceLocation(D->getRParenLoc());
   Code = serialization::DECL_FILE_SCOPE_ASM;
 }
@@ -1655,7 +1702,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
         FD && isDefinitionInDependentContext(FD)) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
-          Writer.GetDeclRef(D));
+          Writer.GetDeclRef(D->getLambdaCallOperator()));
     }
   } else {
     Record.push_back(CXXRecNotTemplate);
@@ -2144,11 +2191,7 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
   static_assert(DeclContext::NumDeclContextBits == 13,
                 "You need to update the serializer after you change the "
                 "DeclContextBits");
-
-  uint64_t LexicalOffset = 0;
-  uint64_t VisibleOffset = 0;
-  uint64_t ModuleLocalOffset = 0;
-  uint64_t TULocalOffset = 0;
+  LookupBlockOffsets Offsets;
 
   if (Writer.isGeneratingReducedBMI() && isa<NamespaceDecl>(DC) &&
       cast<NamespaceDecl>(DC)->isFromExplicitGlobalModule()) {
@@ -2157,17 +2200,12 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
     // details.
     Writer.DelayedNamespace.push_back(cast<NamespaceDecl>(DC));
   } else {
-    LexicalOffset =
+    Offsets.LexicalOffset =
         Writer.WriteDeclContextLexicalBlock(Record.getASTContext(), DC);
-    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC,
-                                        VisibleOffset, ModuleLocalOffset,
-                                        TULocalOffset);
+    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC, Offsets);
   }
 
-  Record.AddOffset(LexicalOffset);
-  Record.AddOffset(VisibleOffset);
-  Record.AddOffset(ModuleLocalOffset);
-  Record.AddOffset(TULocalOffset);
+  Record.AddLookupOffsets(Offsets);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {
@@ -2695,12 +2733,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // VarDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      21)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
+      22)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
             // SClass, TSCSpec, InitStyle,
             // isARCPseudoStrong, IsThisDeclarationADemotedDefinition,
             // isExceptionVariable, isNRVOVariable, isCXXForRangeDecl,
             // isInline, isInlineSpecified, isConstexpr,
-            // isInitCapture, isPrevDeclInSameScope,
+            // isInitCapture, isPrevDeclInSameScope, hasInitWithSideEffects,
             // EscapingByref, HasDeducedType, ImplicitParamKind, isObjCForDecl
   Abv->Add(BitCodeAbbrevOp(0));                         // VarKind (local enum)
   // Type Source Info
