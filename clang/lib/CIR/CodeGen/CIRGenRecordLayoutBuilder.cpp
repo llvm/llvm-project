@@ -79,12 +79,17 @@ struct CIRRecordLowering final {
   /// Inserts padding everywhere it's needed.
   void insertPadding();
 
+  void computeVolatileBitfields();
   void accumulateBases(const CXXRecordDecl *cxxRecordDecl);
   void accumulateVPtrs();
   void accumulateFields();
   RecordDecl::field_iterator
   accumulateBitFields(RecordDecl::field_iterator field,
                       RecordDecl::field_iterator fieldEnd);
+
+  bool isAAPCS() const {
+    return astContext.getTargetInfo().getABI().starts_with("aapcs");
+  }
 
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
@@ -239,7 +244,7 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
 void CIRRecordLowering::lower() {
   if (recordDecl->isUnion()) {
     lowerUnion();
-    assert(!cir::MissingFeatures::bitfields());
+    computeVolatileBitfields();
     return;
   }
 
@@ -253,7 +258,7 @@ void CIRRecordLowering::lower() {
     accumulateBases(cxxRecordDecl);
     if (members.empty()) {
       appendPaddingBytes(size);
-      assert(!cir::MissingFeatures::bitfields());
+      computeVolatileBitfields();
       return;
     }
     assert(!cir::MissingFeatures::recordLayoutVirtualBases());
@@ -271,6 +276,7 @@ void CIRRecordLowering::lower() {
 
   calculateZeroInit();
   fillOutputFields();
+  computeVolatileBitfields();
 }
 
 void CIRRecordLowering::fillOutputFields() {
@@ -752,6 +758,30 @@ void CIRRecordLowering::lowerUnion() {
   // Set packed if we need it.
   if (layoutSize % getAlignment(storageType))
     packed = true;
+}
+
+/// The AAPCS that defines that, when possible, bit-fields should
+/// be accessed using containers of the declared type width:
+/// When a volatile bit-field is read, and its container does not overlap with
+/// any non-bit-field member or any zero length bit-field member, its container
+/// must be read exactly once using the access width appropriate to the type of
+/// the container. When a volatile bit-field is written, and its container does
+/// not overlap with any non-bit-field member or any zero-length bit-field
+/// member, its container must be read exactly once and written exactly once
+/// using the access width appropriate to the type of the container. The two
+/// accesses are not atomic.
+///
+/// Enforcing the width restriction can be disabled using
+/// -fno-aapcs-bitfield-width.
+void CIRRecordLowering::computeVolatileBitfields() {
+  if (!isAAPCS() ||
+      !cirGenTypes.getCGModule().getCodeGenOpts().AAPCSBitfieldWidth)
+    return;
+
+  for ([[maybe_unused]] auto &I : bitFields) {
+    assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+    cirGenTypes.getCGModule().errorNYI("NYI AAPCS bit-fields");
+  }
 }
 
 void CIRRecordLowering::accumulateBases(const CXXRecordDecl *cxxRecordDecl) {
