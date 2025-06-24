@@ -9297,8 +9297,11 @@ def fdx_rootsig_ver :
   NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
   NormalizedValues<["V1_0", "V1_1"]>,
   MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
-def dxc_rootsig_ver : DXCJoinedOrSeparate<"force-rootsig-ver">, Alias<fdx_rootsig_ver>;
-def dxc_rootsig_ver_ : DXCJoinedOrSeparate<"force_rootsig_ver">, Alias<fdx_rootsig_ver>;
+def dxc_rootsig_ver :
+  Separate<["/", "-"], "force-rootsig-ver">,
+  Alias<fdx_rootsig_ver>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,
