@@ -10614,9 +10614,6 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     return SDValue();
 
   EVT VT = Op.getValueType();
-  assert((!Subtarget->isNeonAvailable() ||
-          (VT != MVT::v8i8 && VT != MVT::v16i8)) &&
-         "Unexpected custom lowering for B vectors with Neon available.");
   bool OverrideNEON = !Subtarget->isNeonAvailable() || VT.isFixedLengthVector();
   if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
@@ -10631,8 +10628,6 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     return SDValue();
 
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
-    assert((VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128) &&
-           "Unexpected type for custom ctpop lowering.");
     if (VT == MVT::i32 || VT == MVT::i64) {
       EVT ContainerVT = VT == MVT::i32 ? MVT::nxv4i32 : MVT::nxv2i64;
       Val = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ContainerVT,
@@ -10641,6 +10636,9 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
       Val = DAG.getNode(ISD::CTPOP, DL, ContainerVT, Val);
       Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Val,
                         DAG.getVectorIdxConstant(0, DL));
+      if (IsParity)
+        Val = DAG.getNode(ISD::AND, DL, VT, Val, DAG.getConstant(1, DL, VT));
+      return Val;
     } else if (VT == MVT::i128) {
       Val = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Val);
       Val = convertToScalableVector(DAG, MVT::nxv2i64, Val);
@@ -10648,11 +10646,10 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
       Val = convertFromScalableVector(DAG, MVT::v2i64, Val);
       Val = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i64, Val);
       Val = DAG.getZExtOrTrunc(Val, DL, VT);
-    } else
-      llvm_unreachable("Unexpected type!");
-    if (IsParity)
-      Val = DAG.getNode(ISD::AND, DL, VT, Val, DAG.getConstant(1, DL, VT));
-    return Val;
+      if (IsParity)
+        Val = DAG.getNode(ISD::AND, DL, VT, Val, DAG.getConstant(1, DL, VT));
+      return Val;
+    }
   }
 
   if (!Subtarget->isNeonAvailable())
