@@ -790,6 +790,8 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+/// Sink a gpu::BarrierOp at the end of enclosing `gpu.warp_execute_on_lane_0`
+/// region. This will simply move the barrier op outside of the warp op.
 struct GpuBarrierDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
@@ -801,7 +803,7 @@ struct GpuBarrierDistribution final : public gpu::WarpDistributionPattern {
     auto barrierOp = dyn_cast_or_null<gpu::BarrierOp>(lastNode);
     if (!barrierOp)
       return failure();
-    // Simply move the barrier op outside of the warp op.
+    // Move the barrier op outside of the warp op.
     rewriter.setInsertionPointAfter(subgroupOp);
     rewriter.create<gpu::BarrierOp>(
         barrierOp.getLoc(), barrierOp->getResultTypes(),
