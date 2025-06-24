@@ -218,8 +218,6 @@ inline bool isValidShaderVisibility(uint32_t V) {
 #define STATIC_SAMPLER_FILTER(Val, Enum) Enum = Val,
 enum class StaticSamplerFilter : uint32_t {
 #include "DXContainerConstants.def"
-
-  LLVM_MARK_AS_BITMASK_ENUM(MAXIMUM_ANISOTROPIC)
 };
 
 #define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
