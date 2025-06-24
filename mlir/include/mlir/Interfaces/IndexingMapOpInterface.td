@@ -13,7 +13,6 @@
 #ifndef MLIR_INTERFACES_INDEXING_MAP_OP_INTERFACE
 #define MLIR_INTERFACES_INDEXING_MAP_OP_INTERFACE
 
-include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/IR/OpBase.td"
 
 def IndexingMapOpInterface : OpInterface<"IndexingMapOpInterface"> {
