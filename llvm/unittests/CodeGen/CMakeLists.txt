@@ -48,8 +48,10 @@ add_llvm_unittest(CodeGenTests
   TestAsmPrinter.cpp
   MLRegAllocDevelopmentFeatures.cpp
   X86MCInstLowerTest.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 
 add_subdirectory(GlobalISel)
 
-target_link_libraries(CodeGenTests PRIVATE LLVMTestingSupport)
+target_link_libraries(CodeGenTests PRIVATE LLVMTestingSupportStatic)
