@@ -23,7 +23,7 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t stream,
+int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t *stream,
     bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFAllocatableAllocate)(
@@ -41,7 +41,7 @@ int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t stream,
   return stat;
 }
 
-int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t stream,
+int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t *stream,
     bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
   if (desc.HasAddendum()) {
@@ -53,7 +53,7 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t stream,
   }
   // Perform the standard allocation.
   int stat{RTNAME(AllocatableAllocate)(
-      desc, hasStat, errMsg, sourceFile, sourceLine)};
+      desc, stream, hasStat, errMsg, sourceFile, sourceLine)};
   if (pinned) {
     // Set pinned according to stat. More infrastructre is needed to set it
     // closer to the actual allocation call.
@@ -63,7 +63,7 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t stream,
 }
 
 int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
-    const Descriptor &source, int64_t stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFAllocatableAllocate)(
       alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
@@ -76,7 +76,7 @@ int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
 }
 
 int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
-    const Descriptor &source, int64_t stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFAllocatableAllocateSync)(
       alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};

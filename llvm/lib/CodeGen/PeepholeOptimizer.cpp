@@ -94,7 +94,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <utility>
 
 using namespace llvm;
@@ -406,9 +405,7 @@ public:
 
     const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
     Src.Reg = MOInsertedReg.getReg();
-    // If we have to compose sub-register indices, bail out.
-    if ((Src.SubReg = MOInsertedReg.getSubReg()))
-      return false;
+    Src.SubReg = MOInsertedReg.getSubReg();
 
     // We want to track something that is compatible with the related
     // partial definition.
@@ -523,7 +520,7 @@ private:
   DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
   // MachineFunction::Delegate implementation. Used to maintain CopySrcMIs.
-  void MF_HandleInsertion(MachineInstr &MI) override { return; }
+  void MF_HandleInsertion(MachineInstr &MI) override {}
 
   bool getCopySrc(MachineInstr &MI, RegSubRegPair &SrcPair) {
     if (!MI.isCopy())
@@ -579,8 +576,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -25,6 +26,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttributeParser.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Error.h"
@@ -44,7 +46,8 @@ template <typename T> class SmallVectorImpl;
 namespace object {
 
 constexpr int NumElfSymbolTypes = 16;
-extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
+LLVM_ABI extern const llvm::EnumEntry<unsigned>
+    ElfSymbolTypes[NumElfSymbolTypes];
 
 class elf_symbol_iterator;
 
@@ -54,7 +57,7 @@ struct ELFPltEntry {
   uint64_t Address;
 };
 
-class ELFObjectFileBase : public ObjectFile {
+class LLVM_ABI ELFObjectFileBase : public ObjectFile {
   friend class ELFRelocationRef;
   friend class ELFSectionRef;
   friend class ELFSymbolRef;
@@ -107,7 +110,7 @@ public:
 
   virtual uint8_t getEIdentABIVersion() const = 0;
 
-  std::vector<ELFPltEntry> getPltEntries() const;
+  std::vector<ELFPltEntry> getPltEntries(const MCSubtargetInfo &STI) const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
   /// Returns an empty vector if version sections do not exist.
@@ -409,6 +412,9 @@ protected:
     switch (getEMachine()) {
     case ELF::EM_ARM:
       Type = ELF::SHT_ARM_ATTRIBUTES;
+      break;
+    case ELF::EM_AARCH64:
+      Type = ELF::SHT_AARCH64_ATTRIBUTES;
       break;
     case ELF::EM_RISCV:
       Type = ELF::SHT_RISCV_ATTRIBUTES;

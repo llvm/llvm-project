@@ -268,3 +268,18 @@ body: |
     %0:sreg_32 = S_MOV_B32 80
     S_CMP_EQ_U32 %0, 64, implicit-def $scc
 ...
+
+# Ignore regmask operands
+# GCN-LABEL: name: test_si_cs_chain_fold_with_regmask{{$}}
+# GCN: SI_CS_CHAIN_TC_W32 %0, 0, 0, 1234, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+---
+name: test_si_cs_chain_fold_with_regmask
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr2_sgpr3, $vgpr8
+
+    %1:ccr_sgpr_64 = COPY $sgpr2_sgpr3
+    %2:sreg_32 = S_MOV_B32 1234
+    SI_CS_CHAIN_TC_W32 %1:ccr_sgpr_64, 0, 0, %2:sreg_32, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+...

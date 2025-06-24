@@ -8,6 +8,7 @@
 // affine.load op in the innermost loop as a filter.
 // RUN: mlir-opt %s -split-input-file -test-affine-data-copy='memref-filter' | FileCheck %s --check-prefix=FILTER
 // RUN: mlir-opt %s -split-input-file -test-affine-data-copy='for-memref-region' | FileCheck %s --check-prefix=MEMREF_REGION
+// RUN: mlir-opt %s -split-input-file -test-affine-data-copy='capacity-kib=32' | FileCheck %s --check-prefix=LIMITED-MEM
 
 // -copy-skip-non-stride-loops forces the copies to be placed right inside the
 // tile space loops, avoiding the sensitivity of copy placement depth to memory
@@ -23,6 +24,7 @@
 
 // CHECK-LABEL: func @matmul
 // FILTER-LABEL: func @matmul
+// LIMITED-MEM-LABEL: func @matmul
 func.func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<4096x4096xf32>) -> memref<4096x4096xf32> {
   affine.for %i = 0 to 4096 step 128 {
     affine.for %j = 0 to 4096 step 128 {
@@ -43,6 +45,7 @@ func.func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memr
     }
   }
   return %C : memref<4096x4096xf32>
+  // LIMITED-MEM: return
 }
 
 // Buffers of size 128x128 get created here for all three matrices.
@@ -421,6 +424,7 @@ func.func @scalar_memref_copy_in_loop(%3:memref<480xi1>) {
 }
 
 // CHECK-LABEL: func @memref_def_inside
+// LIMITED-MEM-LABEL: func @memref_def_inside
 func.func @memref_def_inside(%arg0: index) {
   %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
   // No copy generation can happen at this depth given the definition inside.
@@ -429,5 +433,17 @@ func.func @memref_def_inside(%arg0: index) {
     // CHECK: affine.store {{.*}} : memref<1xf32>
     affine.store %0, %alloc_7[0] : memref<1xf32>
   }
+
+  // With the limited capacity specified, buffer generation happens at the
+  // innermost depth. Tests that copy-placement is proper and respects the
+  // memref definition.
+
+  // LIMITED-MEM:      affine.for %{{.*}} = 0 to 29
+  // LIMITED-MEM-NEXT:   memref.alloc() : memref<1xf32>
+  // LIMITED-MEM-NEXT:   memref.alloc() : memref<1xf32>
+  // LIMITED-MEM-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // LIMITED-MEM-NEXT:   affine.load %{{.*}}[%c0{{.*}}] : memref<1xf32>
+  // LIMITED-MEM-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // LIMITED-MEM-NEXT:   memref.dealloc %{{.*}} : memref<1xf32>
   return
 }

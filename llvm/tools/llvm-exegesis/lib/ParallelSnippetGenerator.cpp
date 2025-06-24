@@ -80,7 +80,6 @@ namespace llvm {
 namespace exegesis {
 
 static bool hasVariablesWithTiedOperands(const Instruction &Instr) {
-  SmallVector<const Variable *, 8> Result;
   for (const auto &Var : Instr.Variables)
     if (Var.hasTiedOperands())
       return true;

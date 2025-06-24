@@ -595,7 +595,7 @@ module attributes {transform.with_named_sequence} {
       %unpack = transform.get_consumers_of_result %1[0]
         : (!transform.op<"linalg.generic">) -> (!transform.op<"linalg.unpack">)
       %2, %pack_2, %unpack_2 =
-        // expected-error @below {{invalid outer_perm}}
+        // expected-error @below {{"outer_perm" is not a valid permutation}}
         transform.structured.pack_transpose %unpack with_compute_op(%1)
         outer_perm = [1]
         : (!transform.op<"linalg.unpack">, !transform.op<"linalg.generic">)
@@ -623,7 +623,7 @@ module attributes {transform.with_named_sequence} {
       %unpack = transform.get_consumers_of_result %1[0]
         : (!transform.op<"linalg.generic">) -> (!transform.op<"linalg.unpack">)
       %2, %pack_2, %unpack_2 =
-        // expected-error @below {{invalid inner_perm}}
+        // expected-error @below {{"inner_perm" is not a valid permutation}}
         transform.structured.pack_transpose %unpack with_compute_op(%1)
         inner_perm = [1]
         : (!transform.op<"linalg.unpack">, !transform.op<"linalg.generic">)

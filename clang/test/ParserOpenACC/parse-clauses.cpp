@@ -49,52 +49,39 @@ void use() {
   templ<7, S>();
 }
 
-namespace NS {
-void NSFunc();
-
-class RecordTy { // #RecTy
-  static constexpr bool Value = false; // #VAL
-  void priv_mem_function(); // #PrivMemFun
-  public:
-  static constexpr bool ValuePub = true;
-  void mem_function();
-};
-template<typename T>
-class TemplTy{};
-void function();
-}
-
-
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
+// expected-error@+2{{expected ')'}}
+// expected-note@+1{{to match this '('}}
 #pragma acc routine(use) seq bind(NS::NSFunc)
-  // expected-error@+2{{'RecordTy' does not refer to a value}}
-  // expected-note@#RecTy{{declared here}}
-#pragma acc routine(use) seq bind(NS::RecordTy)
-  // expected-error@+3{{'Value' is a private member of 'NS::RecordTy'}}
-  // expected-note@#VAL{{implicitly declared private here}}
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) seq bind(NS::RecordTy::Value)
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) seq bind(NS::RecordTy::ValuePub)
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) seq bind(NS::TemplTy<int>)
-  // expected-error@+1{{no member named 'unknown' in namespace 'NS'}}
-#pragma acc routine(use) seq bind(NS::unknown<int>)
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) seq bind(NS::function)
-  // expected-error@+3{{'priv_mem_function' is a private member of 'NS::RecordTy'}}
-  // expected-note@#PrivMemFun{{implicitly declared private here}}
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) seq bind(NS::RecordTy::priv_mem_function)
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) seq bind(NS::RecordTy::mem_function)
 
   // expected-error@+1{{string literal with user-defined suffix cannot be used here}}
 #pragma acc routine(use) seq bind("unknown udl"_UDL)
 
-  // expected-warning@+2{{encoding prefix 'u' on an unevaluated string literal has no effect}}
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
+  // expected-warning@+1{{encoding prefix 'u' on an unevaluated string literal has no effect}}
 #pragma acc routine(use) seq bind(u"16 bits")
-  // expected-warning@+2{{encoding prefix 'U' on an unevaluated string literal has no effect}}
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) seq bind(U"32 bits")
+void another_func();
+  // expected-warning@+1{{encoding prefix 'U' on an unevaluated string literal has no effect}}
+#pragma acc routine(another_func) seq bind(U"32 bits")
+
+void AtomicIf() {
+  int i, j;
+  // expected-error@+1{{expected '('}}
+#pragma acc atomic read if
+  i = j;
+#pragma acc atomic read if (true)
+  i = j;
+#pragma acc atomic write if (false)
+  i = j + 1;
+
+#pragma acc atomic update if (i)
+  ++i;
+#pragma acc atomic if (j)
+  ++i;
+
+#pragma acc atomic capture if (true)
+  i = j++;
+#pragma acc atomic capture if (i)
+  {
+    ++j;
+    i = j;
+  }
+}

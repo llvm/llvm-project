@@ -173,15 +173,15 @@ namespace param_formarding_function {
 
   namespace casts {
 
-  RefCountable* downcast(RefCountable*) { return nullptr; }
+  RefCountable* downcast(RefCountable*);
+  template<class T> T* bitwise_cast(T*);
+  template<class T> T* bit_cast(T*);
 
-  template<class T>
-  T* bitwise_cast(T*) { return nullptr; }
-
-    void foo(RefCountable* param) {
-      consume_ref_countable_ptr(downcast(param));
-      consume_ref_countable_ptr(bitwise_cast(param));
-     }
+  void foo(RefCountable* param) {
+    consume_ref_countable_ptr(downcast(param));
+    consume_ref_countable_ptr(bitwise_cast(param));
+    consume_ref_countable_ptr(bit_cast(param));
+   }
   }
 }
 
@@ -406,6 +406,17 @@ namespace call_with_explicit_temporary_obj {
   }
   void baz() {
     bar<int>();
+  }
+
+  class Foo {
+    Ref<RefCountable> ensure();
+    void foo() {
+      Ref { ensure() }->method();
+    }
+  };
+
+  void baz(Ref<RefCountable>&& arg) {
+    Ref { arg }->method();
   }
 }
 

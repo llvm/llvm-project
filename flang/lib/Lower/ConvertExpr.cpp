@@ -2705,7 +2705,7 @@ public:
                     mlir::isa<fir::BoxCharType>(funcTy.getResult(0))) {
                   auto boxTy =
                       mlir::cast<fir::BoxCharType>(funcTy.getResult(0));
-                  mlir::Value ref = builder.createConvert(
+                  mlir::Value ref = builder.createConvertWithVolatileCast(
                       loc, builder.getRefType(boxTy.getEleTy()), x.getAddr());
                   auto len = builder.create<fir::UndefOp>(
                       loc, builder.getCharacterLengthType());
@@ -6184,17 +6184,16 @@ private:
 
   /// Get the function signature of the LLVM memcpy intrinsic.
   mlir::FunctionType memcpyType() {
-    return fir::factory::getLlvmMemcpy(builder).getFunctionType();
+    auto ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+    llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type()};
+    return mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
   }
 
   /// Create a call to the LLVM memcpy intrinsic.
-  void createCallMemcpy(llvm::ArrayRef<mlir::Value> args) {
+  void createCallMemcpy(llvm::ArrayRef<mlir::Value> args, bool isVolatile) {
     mlir::Location loc = getLoc();
-    mlir::func::FuncOp memcpyFunc = fir::factory::getLlvmMemcpy(builder);
-    mlir::SymbolRefAttr funcSymAttr =
-        builder.getSymbolRefAttr(memcpyFunc.getName());
-    mlir::FunctionType funcTy = memcpyFunc.getFunctionType();
-    builder.create<fir::CallOp>(loc, funcSymAttr, funcTy.getResults(), args);
+    builder.create<mlir::LLVM::MemcpyOp>(loc, args[0], args[1], args[2],
+                                         isVolatile);
   }
 
   // Construct code to check for a buffer overrun and realloc the buffer when
@@ -6306,9 +6305,9 @@ private:
       auto buff = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
       mlir::Value buffi = computeCoordinate(buff, off);
       llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-          builder, loc, memcpyType(), buffi, v.getAddr(), byteSz,
-          /*volatile=*/builder.createBool(loc, false));
-      createCallMemcpy(args);
+          builder, loc, memcpyType(), buffi, v.getAddr(), byteSz);
+      const bool isVolatile = fir::isa_volatile_type(v.getAddr().getType());
+      createCallMemcpy(args, isVolatile);
 
       // Save the incremented buffer position.
       builder.create<fir::StoreOp>(loc, endOff, buffPos);
@@ -6357,9 +6356,10 @@ private:
                 builder.createConvert(loc, fir::HeapType::get(resTy), mem);
             mlir::Value buffi = computeCoordinate(buff, off);
             llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-                builder, loc, memcpyType(), buffi, v.getAddr(), eleSz,
-                /*volatile=*/builder.createBool(loc, false));
-            createCallMemcpy(args);
+                builder, loc, memcpyType(), buffi, v.getAddr(), eleSz);
+            const bool isVolatile =
+                fir::isa_volatile_type(v.getAddr().getType());
+            createCallMemcpy(args, isVolatile);
 
             builder.create<fir::StoreOp>(loc, plusOne, buffPos);
           }
@@ -7016,7 +7016,8 @@ private:
           components.resetExtendCoorRef();
           auto ptrEleTy = fir::PointerType::get(eleTy);
           auto ptrAddr = builder.createConvert(loc, ptrEleTy, addr);
-          auto boxTy = fir::BoxType::get(ptrEleTy);
+          auto boxTy = fir::BoxType::get(
+              ptrEleTy, fir::isa_volatile_type(addr.getType()));
           // FIXME: The typeparams to the load may be different than those of
           // the subobject.
           if (components.hasExtendCoorRef())

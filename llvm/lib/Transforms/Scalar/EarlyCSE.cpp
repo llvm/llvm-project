@@ -133,7 +133,7 @@ struct SimpleValue {
         }
         }
       }
-      return CI->doesNotAccessMemory() && !CI->getType()->isVoidTy() &&
+      return CI->doesNotAccessMemory() &&
              // FIXME: Currently the calls which may access the thread id may
              // be considered as not accessing the memory. But this is
              // problematic for coroutines, since coroutines may resume in a
@@ -223,13 +223,11 @@ static unsigned hashCallInst(CallInst *CI) {
   // Don't CSE convergent calls in different basic blocks, because they
   // implicitly depend on the set of threads that is currently executing.
   if (CI->isConvergent()) {
-    return hash_combine(
-        CI->getOpcode(), CI->getParent(),
-        hash_combine_range(CI->value_op_begin(), CI->value_op_end()));
+    return hash_combine(CI->getOpcode(), CI->getParent(),
+                        hash_combine_range(CI->operand_values()));
   }
-  return hash_combine(
-      CI->getOpcode(),
-      hash_combine_range(CI->value_op_begin(), CI->value_op_end()));
+  return hash_combine(CI->getOpcode(),
+                      hash_combine_range(CI->operand_values()));
 }
 
 static unsigned getHashValueImpl(SimpleValue Val) {
@@ -302,12 +300,11 @@ static unsigned getHashValueImpl(SimpleValue Val) {
 
   if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(Inst))
     return hash_combine(EVI->getOpcode(), EVI->getOperand(0),
-                        hash_combine_range(EVI->idx_begin(), EVI->idx_end()));
+                        hash_combine_range(EVI->indices()));
 
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(Inst))
     return hash_combine(IVI->getOpcode(), IVI->getOperand(0),
-                        IVI->getOperand(1),
-                        hash_combine_range(IVI->idx_begin(), IVI->idx_end()));
+                        IVI->getOperand(1), hash_combine_range(IVI->indices()));
 
   assert((isa<CallInst>(Inst) || isa<ExtractElementInst>(Inst) ||
           isa<InsertElementInst>(Inst) || isa<ShuffleVectorInst>(Inst) ||
@@ -322,7 +319,7 @@ static unsigned getHashValueImpl(SimpleValue Val) {
       std::swap(LHS, RHS);
     return hash_combine(
         II->getOpcode(), LHS, RHS,
-        hash_combine_range(II->value_op_begin() + 2, II->value_op_end()));
+        hash_combine_range(drop_begin(II->operand_values(), 2)));
   }
 
   // gc.relocate is 'special' call: its second and third operands are
@@ -338,9 +335,8 @@ static unsigned getHashValueImpl(SimpleValue Val) {
     return hashCallInst(CI);
 
   // Mix in the opcode.
-  return hash_combine(
-      Inst->getOpcode(),
-      hash_combine_range(Inst->value_op_begin(), Inst->value_op_end()));
+  return hash_combine(Inst->getOpcode(),
+                      hash_combine_range(Inst->operand_values()));
 }
 
 unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
@@ -404,7 +400,9 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
     return LII->getArgOperand(0) == RII->getArgOperand(1) &&
            LII->getArgOperand(1) == RII->getArgOperand(0) &&
            std::equal(LII->arg_begin() + 2, LII->arg_end(),
-                      RII->arg_begin() + 2, RII->arg_end());
+                      RII->arg_begin() + 2, RII->arg_end()) &&
+           LII->hasSameSpecialState(RII, /*IgnoreAlignment=*/false,
+                                    /*IntersectAttrs=*/true);
   }
 
   // See comment above in `getHashValue()`.
@@ -494,10 +492,6 @@ struct CallValue {
   }
 
   static bool canHandle(Instruction *Inst) {
-    // Don't value number anything that returns void.
-    if (Inst->getType()->isVoidTy())
-      return false;
-
     CallInst *CI = dyn_cast<CallInst>(Inst);
     if (!CI || !CI->onlyReadsMemory() ||
         // FIXME: Currently the calls which may access the thread id may
@@ -608,9 +602,8 @@ unsigned DenseMapInfo<GEPValue>::getHashValue(const GEPValue &Val) {
   if (Val.ConstantOffset.has_value())
     return hash_combine(GEP->getOpcode(), GEP->getPointerOperand(),
                         Val.ConstantOffset.value());
-  return hash_combine(
-      GEP->getOpcode(),
-      hash_combine_range(GEP->value_op_begin(), GEP->value_op_end()));
+  return hash_combine(GEP->getOpcode(),
+                      hash_combine_range(GEP->operand_values()));
 }
 
 bool DenseMapInfo<GEPValue>::isEqual(const GEPValue &LHS, const GEPValue &RHS) {
@@ -1528,6 +1521,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       }
     }
 
+    // Make sure stores prior to a potential unwind are not removed, as the
+    // caller may read the memory.
+    if (Inst.mayThrow())
+      LastStore = nullptr;
+
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(&Inst)) {
       if ([[maybe_unused]] auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
@@ -1619,13 +1617,12 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
-    // If this instruction may read from memory or throw (and potentially read
-    // from memory in the exception handler), forget LastStore.  Load/store
+    // If this instruction may read from memory, forget LastStore.  Load/store
     // intrinsics will indicate both a read and a write to memory.  The target
     // may override this (e.g. so that a store intrinsic does not read from
     // memory, and thus will be treated the same as a regular store for
     // commoning purposes).
-    if ((Inst.mayReadFromMemory() || Inst.mayThrow()) &&
+    if (Inst.mayReadFromMemory() &&
         !(MemInst.isValid() && !MemInst.mayReadFromMemory()))
       LastStore = nullptr;
 
@@ -1703,16 +1700,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     if (MemInst.isValid() && MemInst.isStore()) {
       LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
       if (InVal.DefInst &&
-          InVal.DefInst == getMatchingValue(InVal, MemInst, CurrentGeneration)) {
-        // It is okay to have a LastStore to a different pointer here if MemorySSA
-        // tells us that the load and store are from the same memory generation.
-        // In that case, LastStore should keep its present value since we're
-        // removing the current store.
-        assert((!LastStore ||
-                ParseMemoryInst(LastStore, TTI).getPointerOperand() ==
-                    MemInst.getPointerOperand() ||
-                MSSA) &&
-               "can't have an intervening store if not using MemorySSA!");
+          InVal.DefInst ==
+              getMatchingValue(InVal, MemInst, CurrentGeneration)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << Inst << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");

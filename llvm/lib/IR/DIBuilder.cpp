@@ -25,8 +25,7 @@ using namespace llvm;
 using namespace llvm::dwarf;
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
-    : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
-      ValueFn(nullptr), LabelFn(nullptr), AssignFn(nullptr),
+    : M(m), VMContext(M.getContext()), CUNode(CU),
       AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
@@ -38,7 +37,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &IMs = CUNode->getImportedEntities())
       ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
-      AllMacrosPerParent.insert({nullptr, {MNs.begin(), MNs.end()}});
+      AllMacrosPerParent.insert({nullptr, {llvm::from_range, MNs}});
   }
 }
 
@@ -272,6 +271,37 @@ DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
                           0, Encoding, NumExtraInhabitants, Flags);
 }
 
+DIFixedPointType *
+DIBuilder::createBinaryFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                      uint32_t AlignInBits, unsigned Encoding,
+                                      DINode::DIFlags Flags, int Factor) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointBinary, Factor,
+                               APInt(), APInt());
+}
+
+DIFixedPointType *
+DIBuilder::createDecimalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                       uint32_t AlignInBits, unsigned Encoding,
+                                       DINode::DIFlags Flags, int Factor) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointDecimal, Factor,
+                               APInt(), APInt());
+}
+
+DIFixedPointType *
+DIBuilder::createRationalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                        uint32_t AlignInBits, unsigned Encoding,
+                                        DINode::DIFlags Flags, APInt Numerator,
+                                        APInt Denominator) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointRational, 0,
+                               Numerator, Denominator);
+}
+
 DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIStringType::get(VMContext, dwarf::DW_TAG_string_type, Name,
@@ -407,10 +437,26 @@ DIDerivedType *DIBuilder::createVariantMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     Constant *Discriminant, DINode::DIFlags Flags, DIType *Ty) {
+  // "ExtraData" is overloaded for bit fields and for variants, so
+  // make sure to disallow this.
+  assert((Flags & DINode::FlagBitField) == 0);
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, SizeInBits, AlignInBits, OffsetInBits,
       std::nullopt, std::nullopt, Flags, getConstantOrNull(Discriminant));
+}
+
+DIDerivedType *DIBuilder::createVariantMemberType(DIScope *Scope,
+                                                  DINodeArray Elements,
+                                                  Constant *Discriminant,
+                                                  DIType *Ty) {
+  auto *V = DICompositeType::get(VMContext, dwarf::DW_TAG_variant, {}, nullptr,
+                                 0, getNonCompileUnitScope(Scope), {}, 0, 0, 0,
+                                 DINode::FlagZero, Elements, 0, {}, nullptr);
+
+  trackIfUnresolved(V);
+  return createVariantMemberType(Scope, {}, nullptr, 0, 0, 0, 0, Discriminant,
+                                 DINode::FlagZero, V);
 }
 
 DIDerivedType *DIBuilder::createBitFieldMemberType(
@@ -611,7 +657,7 @@ DICompositeType *DIBuilder::createArrayType(
     PointerUnion<DIExpression *, DIVariable *> DL,
     PointerUnion<DIExpression *, DIVariable *> AS,
     PointerUnion<DIExpression *, DIVariable *> AL,
-    PointerUnion<DIExpression *, DIVariable *> RK) {
+    PointerUnion<DIExpression *, DIVariable *> RK, Metadata *BitStride) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_array_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, Size, AlignInBits, 0, DINode::FlagZero,
@@ -623,7 +669,8 @@ DICompositeType *DIBuilder::createArrayType(
       isa<DIExpression *>(AL) ? (Metadata *)cast<DIExpression *>(AL)
                               : (Metadata *)cast<DIVariable *>(AL),
       isa<DIExpression *>(RK) ? (Metadata *)cast<DIExpression *>(RK)
-                              : (Metadata *)cast<DIVariable *>(RK));
+                              : (Metadata *)cast<DIVariable *>(RK),
+      nullptr, nullptr, 0, BitStride);
   trackIfUnresolved(R);
   return R;
 }
@@ -895,8 +942,7 @@ DISubprogram *DIBuilder::createFunction(
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
       ThrownTypes, Annotations, TargetFuncName);
 
-  if (IsDefinition)
-    AllSubprograms.push_back(Node);
+  AllSubprograms.push_back(Node);
   trackIfUnresolved(Node);
   return Node;
 }
@@ -933,8 +979,7 @@ DISubprogram *DIBuilder::createMethod(
       Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
       nullptr, ThrownTypes);
 
-  if (IsDefinition)
-    AllSubprograms.push_back(SP);
+  AllSubprograms.push_back(SP);
   trackIfUnresolved(SP);
   return SP;
 }
@@ -1001,36 +1046,13 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
       LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID));
   assert(Link && "Linked instruction must have DIAssign metadata attached");
 
-  if (M.IsNewDbgInfoFormat) {
-    DbgVariableRecord *DVR = DbgVariableRecord::createDVRAssign(
-        Val, SrcVar, ValExpr, Link, Addr, AddrExpr, DL);
-    // Insert after LinkedInstr.
-    BasicBlock::iterator NextIt = std::next(LinkedInstr->getIterator());
-    NextIt.setHeadBit(true);
-    insertDbgVariableRecord(DVR, NextIt);
-    return DVR;
-  }
-
-  LLVMContext &Ctx = LinkedInstr->getContext();
-  Module *M = LinkedInstr->getModule();
-  if (!AssignFn)
-    AssignFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_assign);
-
-  std::array<Value *, 6> Args = {
-      MetadataAsValue::get(Ctx, ValueAsMetadata::get(Val)),
-      MetadataAsValue::get(Ctx, SrcVar),
-      MetadataAsValue::get(Ctx, ValExpr),
-      MetadataAsValue::get(Ctx, Link),
-      MetadataAsValue::get(Ctx, ValueAsMetadata::get(Addr)),
-      MetadataAsValue::get(Ctx, AddrExpr),
-  };
-
-  IRBuilder<> B(Ctx);
-  B.SetCurrentDebugLocation(DL);
-
-  auto *DVI = cast<DbgAssignIntrinsic>(B.CreateCall(AssignFn, Args));
-  DVI->insertAfter(LinkedInstr->getIterator());
-  return DVI;
+  DbgVariableRecord *DVR = DbgVariableRecord::createDVRAssign(
+      Val, SrcVar, ValExpr, Link, Addr, AddrExpr, DL);
+  // Insert after LinkedInstr.
+  BasicBlock::iterator NextIt = std::next(LinkedInstr->getIterator());
+  NextIt.setHeadBit(true);
+  insertDbgVariableRecord(DVR, NextIt);
+  return DVR;
 }
 
 /// Initialize IRBuilder for inserting dbg.declare and dbg.value intrinsics.
@@ -1046,27 +1068,15 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
   return MetadataAsValue::get(VMContext, ValueAsMetadata::get(V));
 }
 
-static Function *getDeclareIntrin(Module &M) {
-  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_declare);
-}
-
 DbgInstPtr DIBuilder::insertDbgValueIntrinsic(llvm::Value *Val,
                                               DILocalVariable *VarInfo,
                                               DIExpression *Expr,
                                               const DILocation *DL,
                                               InsertPosition InsertPt) {
-  if (M.IsNewDbgInfoFormat) {
-    DbgVariableRecord *DVR =
-        DbgVariableRecord::createDbgVariableRecord(Val, VarInfo, Expr, DL);
-    insertDbgVariableRecord(DVR, InsertPt);
-    return DVR;
-  }
-
-  if (!ValueFn)
-    ValueFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_value);
-  auto *DVI = insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertPt);
-  cast<CallInst>(DVI)->setTailCall();
-  return DVI;
+  DbgVariableRecord *DVR =
+      DbgVariableRecord::createDbgVariableRecord(Val, VarInfo, Expr, DL);
+  insertDbgVariableRecord(DVR, InsertPt);
+  return DVR;
 }
 
 DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
@@ -1078,25 +1088,10 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
              VarInfo->getScope()->getSubprogram() &&
          "Expected matching subprograms");
 
-  if (M.IsNewDbgInfoFormat) {
-    DbgVariableRecord *DVR =
-        DbgVariableRecord::createDVRDeclare(Storage, VarInfo, Expr, DL);
-    insertDbgVariableRecord(DVR, InsertPt);
-    return DVR;
-  }
-
-  if (!DeclareFn)
-    DeclareFn = getDeclareIntrin(M);
-
-  trackIfUnresolved(VarInfo);
-  trackIfUnresolved(Expr);
-  Value *Args[] = {getDbgIntrinsicValueImpl(VMContext, Storage),
-                   MetadataAsValue::get(VMContext, VarInfo),
-                   MetadataAsValue::get(VMContext, Expr)};
-
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertPt);
-  return B.CreateCall(DeclareFn, Args);
+  DbgVariableRecord *DVR =
+      DbgVariableRecord::createDVRDeclare(Storage, VarInfo, Expr, DL);
+  insertDbgVariableRecord(DVR, InsertPt);
+  return DVR;
 }
 
 void DIBuilder::insertDbgVariableRecord(DbgVariableRecord *DVR,
@@ -1145,23 +1140,12 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
          "Expected matching subprograms");
 
   trackIfUnresolved(LabelInfo);
-  if (M.IsNewDbgInfoFormat) {
-    DbgLabelRecord *DLR = new DbgLabelRecord(LabelInfo, DL);
-    if (InsertPt.isValid()) {
-      auto *BB = InsertPt.getBasicBlock();
-      BB->insertDbgRecordBefore(DLR, InsertPt);
-    }
-    return DLR;
+  DbgLabelRecord *DLR = new DbgLabelRecord(LabelInfo, DL);
+  if (InsertPt.isValid()) {
+    auto *BB = InsertPt.getBasicBlock();
+    BB->insertDbgRecordBefore(DLR, InsertPt);
   }
-
-  if (!LabelFn)
-    LabelFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_label);
-
-  Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
-
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertPt);
-  return B.CreateCall(LabelFn, Args);
+  return DLR;
 }
 
 void DIBuilder::replaceVTableHolder(DICompositeType *&T, DIType *VTableHolder) {

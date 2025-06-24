@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalVariableDeclarationCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -53,7 +52,7 @@ FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
       CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
       llvm::StringRef(NewName));
 }
-}  // namespace
+} // namespace
 
 void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // need to add two matchers since we need to bind different ids to distinguish

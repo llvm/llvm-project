@@ -2,6 +2,7 @@
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 
@@ -119,8 +120,10 @@ func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
 /// Run the ownership-based buffer deallocation.
-LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
-                                              DeallocationOptions options);
+LogicalResult
+deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                DeallocationOptions options,
+                                SymbolTableCollection &symbolTables);
 
 // Options struct for BufferResultsToOutParams pass.
 // Note: defined only here, not in tablegen.

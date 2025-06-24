@@ -11,27 +11,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEMCAsmInfo.h"
+#include "VEMCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_VE_HI32, "hi"},
-    {MCSymbolRefExpr::VK_VE_LO32, "lo"},
-    {MCSymbolRefExpr::VK_VE_PC_HI32, "pc_hi"},
-    {MCSymbolRefExpr::VK_VE_PC_LO32, "pc_lo"},
-    {MCSymbolRefExpr::VK_VE_GOT_HI32, "got_hi"},
-    {MCSymbolRefExpr::VK_VE_GOT_LO32, "got_lo"},
-    {MCSymbolRefExpr::VK_VE_GOTOFF_HI32, "gotoff_hi"},
-    {MCSymbolRefExpr::VK_VE_GOTOFF_LO32, "gotoff_lo"},
-    {MCSymbolRefExpr::VK_VE_PLT_HI32, "plt_hi"},
-    {MCSymbolRefExpr::VK_VE_PLT_LO32, "plt_lo"},
-    {MCSymbolRefExpr::VK_VE_TLS_GD_HI32, "tls_gd_hi"},
-    {MCSymbolRefExpr::VK_VE_TLS_GD_LO32, "tls_gd_lo"},
-    {MCSymbolRefExpr::VK_VE_TPOFF_HI32, "tpoff_hi"},
-    {MCSymbolRefExpr::VK_VE_TPOFF_LO32, "tpoff_lo"},
+    {VE::S_HI32, "hi"},
+    {VE::S_LO32, "lo"},
+    {VE::S_PC_HI32, "pc_hi"},
+    {VE::S_PC_LO32, "pc_lo"},
+    {VE::S_GOT_HI32, "got_hi"},
+    {VE::S_GOT_LO32, "got_lo"},
+    {VE::S_GOTOFF_HI32, "gotoff_hi"},
+    {VE::S_GOTOFF_LO32, "gotoff_lo"},
+    {VE::S_PLT_HI32, "plt_hi"},
+    {VE::S_PLT_LO32, "plt_lo"},
+    {VE::S_TLS_GD_HI32, "tls_gd_hi"},
+    {VE::S_TLS_GD_LO32, "tls_gd_lo"},
+    {VE::S_TPOFF_HI32, "tpoff_hi"},
+    {VE::S_TPOFF_LO32, "tpoff_lo"},
 };
 
 void VEELFMCAsmInfo::anchor() {}
@@ -54,4 +56,21 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple) {
   SupportsDebugInformation = true;
 
   initializeVariantKinds(variantKindDescs);
+}
+
+void VEELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                        const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  auto specifier = Expr.getSpecifier();
+  if (specifier && specifier != VE::S_REFLONG)
+    OS << '@' << getSpecifierName(specifier);
+}
+
+bool VEELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                               MCValue &Res,
+                                               const MCAssembler *Asm) const {
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+  Res.setSpecifier(Expr.getSpecifier());
+  return true;
 }

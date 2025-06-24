@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 -verify=good -std=c2y -Wall -pedantic %s
 // RUN: %clang_cc1 -verify -Wnewline-eof -std=c2y -Wall -pedantic %s
-// RUN: %clang_cc1 -verify -std=c23 -Wall -pedantic %s
+// RUN: %clang_cc1 -verify=good -std=c23 -Wall -pedantic %s
 // RUN: %clang_cc1 -verify=good -std=c23 %s
+// RUN: %clang_cc1 -verify -Wnewline-eof -std=c23 %s
 
 /* WG14 N3411: Yes
  * Slay Some Earthly Demons XII

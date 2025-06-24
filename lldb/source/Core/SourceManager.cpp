@@ -360,10 +360,7 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
     GetDefaultFileAndLine();
 
   if (last_file_sp) {
-    if (m_last_line == UINT32_MAX)
-      return 0;
-
-    if (reverse && m_last_line == 1)
+    if (AtLastLine(reverse))
       return 0;
 
     if (count > 0)

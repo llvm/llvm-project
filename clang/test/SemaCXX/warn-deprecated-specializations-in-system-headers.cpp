@@ -10,7 +10,6 @@ template <>
 struct [[deprecated]] traits<int> {}; // expected-note {{'traits<int>' has been explicitly marked deprecated here}}
 
 template<typename T, typename Trait = traits<T>>  // expected-warning {{'traits<int>' is deprecated}}
-                                                  // expected-note@-1 {{template parameter is declared here}}
 struct basic_string {};
 
 // should not warn, defined and used in system headers

@@ -12,6 +12,7 @@
 
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
@@ -318,9 +319,9 @@ static bool PersonalityHasOnlyCXXUses(llvm::Constant *Fn) {
     llvm::Function *F = dyn_cast<llvm::Function>(U);
     if (!F) return false;
 
-    for (auto BB = F->begin(), E = F->end(); BB != E; ++BB) {
-      if (BB->isLandingPad())
-        if (!LandingPadHasOnlyCXXUses(BB->getLandingPadInst()))
+    for (llvm::BasicBlock &BB : *F) {
+      if (BB.isLandingPad())
+        if (!LandingPadHasOnlyCXXUses(BB.getLandingPadInst()))
           return false;
     }
   }
@@ -936,8 +937,8 @@ llvm::BasicBlock *CodeGenFunction::EmitLandingPad() {
                              filterTypes[0]->getType() : Int8PtrTy,
                            filterTypes.size());
 
-    for (unsigned i = 0, e = filterTypes.size(); i != e; ++i)
-      Filters.push_back(cast<llvm::Constant>(filterTypes[i]));
+    for (llvm::Value *filterType : filterTypes)
+      Filters.push_back(cast<llvm::Constant>(filterType));
     llvm::Constant *FilterArray = llvm::ConstantArray::get(AType, Filters);
     LPadInst->addClause(FilterArray);
 
@@ -1155,9 +1156,8 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
     assert(typeValue && "fell into catch-all case!");
     // With opaque ptrs, only the address space can be a mismatch.
     if (typeValue->getType() != argTy)
-      typeValue =
-        CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue, globAS,
-                                                  LangAS::Default, argTy);
+      typeValue = CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue,
+                                                            globAS, argTy);
 
     // Figure out the next block.
     bool nextIsEnd;
@@ -2145,7 +2145,7 @@ llvm::Value *CodeGenFunction::EmitSEHExceptionInfo() {
   // Sema should diagnose calling this builtin outside of a filter context, but
   // don't crash if we screw up.
   if (!SEHInfo)
-    return llvm::UndefValue::get(Int8PtrTy);
+    return llvm::PoisonValue::get(Int8PtrTy);
   assert(SEHInfo->getType() == Int8PtrTy);
   return SEHInfo;
 }

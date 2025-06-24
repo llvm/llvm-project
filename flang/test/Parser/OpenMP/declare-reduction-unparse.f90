@@ -44,7 +44,7 @@ end function func
 program main
   integer :: my_var
 !CHECK: !$OMP DECLARE REDUCTION (my_add_red:INTEGER: omp_out=omp_out+omp_in
-!CHECK-NEXT: ) INITIALIZER(OMP_PRIV = 0_4)
+!CHECK-NEXT: ) INITIALIZER(omp_priv=0_4)
 
   !$omp declare reduction (my_add_red : integer : omp_out = omp_out + omp_in) initializer (omp_priv=0)
   my_var = 0
@@ -58,4 +58,4 @@ end program main
 !PARSE-TREE:        OmpReductionIdentifier -> ProcedureDesignator -> Name = 'my_add_red'
 !PARSE-TREE:        DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec
 !PARSE-TREE:        OmpReductionCombiner -> AssignmentStmt = 'omp_out=omp_out+omp_in'
-!PARSE-TREE:        OmpInitializerClause -> OmpInitializerExpr -> Expr = '0_4'
+!PARSE-TREE:        OmpInitializerClause -> AssignmentStmt = 'omp_priv=0_4'

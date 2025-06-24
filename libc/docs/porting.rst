@@ -53,7 +53,7 @@ architectures. Since a large part of the libc makes use of syscalls (or an
 equivalent on non-Linux like platforms), it might be simpler and convenient to
 bring up the libc for one architecture at a time. In such cases, wherein the
 support surface of LLVM's libc differs for each target architecture, one will
-have to add a subdirectory (within the config directory os the operating
+have to add a subdirectory (within the config directory of the operating
 system) for each target architecture, and list the relevant config information
 separately in those subdirectories. For example, for Linux, the x86_64 and
 aarch64 configs are in separate directories, named

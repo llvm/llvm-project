@@ -25,6 +25,14 @@ end subroutine
 ! CHECK: ------------ scheduling forall in _QMforall_pointersPtest_no_conflict ------------
 ! CHECK-NEXT: run 1 evaluate: forall/region_assign1
 
+subroutine test_null_no_conflict(n, a)
+ integer :: n
+ type(ptr_wrapper), allocatable :: a(:)
+ forall(i=1:n) a(i)%p => null()
+end subroutine
+! CHECK: ------------ scheduling forall in _QMforall_pointersPtest_null_no_conflict ------------
+! CHECK-NEXT: run 1 evaluate: forall/region_assign1
+
 ! Case where the pointer target evaluations are impacted by the pointer
 ! assignments and should be evaluated for each iteration before doing
 ! any pointer assignment.
@@ -53,6 +61,16 @@ end subroutine
 ! CHECK-NEXT: run 1 save    : forall/region_assign1/lhs
 ! CHECK-NEXT: run 2 evaluate: forall/region_assign1
 
+subroutine test_null_need_to_save_lhs(n, a)
+ integer :: n
+ type(ptr_wrapper) :: a(:)
+ forall(i=1:n) a(a(n+1-i)%p%i)%p => null()
+end subroutine
+! CHECK: ------------ scheduling forall in _QMforall_pointersPtest_null_need_to_save_lhs ------------
+! CHECK-NEXT: conflict: R/W
+! CHECK-NEXT: run 1 save    : forall/region_assign1/lhs
+! CHECK-NEXT: run 2 evaluate: forall/region_assign1
+
 ! Case where both the computation of the target and descriptor addresses are
 ! impacted by the assignment and need to be all evaluated before doing any
 ! assignment.
@@ -67,6 +85,21 @@ end subroutine
 ! CHECK-NEXT: conflict: R/W
 ! CHECK-NEXT: run 1 save    : forall/region_assign1/lhs
 ! CHECK-NEXT: run 2 evaluate: forall/region_assign1
+
+subroutine test_character_no_conflict(c)
+ type tc
+    character(10), pointer :: p
+ end type
+ character(10), target :: c(10)
+ integer(8) :: i
+ type(tc) a(10)
+ forall(i=1:10)
+   a(i)%p => c(i)
+ end forall
+end subroutine
+! CHECK: ------------ scheduling forall in _QMforall_pointersPtest_character_no_conflict ------------
+! CHECK-NEXT: run 1 evaluate: forall/region_assign1
+
 end module
 
 ! End to end test provided for debugging purpose (not run by lit).
@@ -76,27 +109,29 @@ program end_to_end
   type(t), target, save :: data(n) = [(t(i), i=1,n)]
   type(ptr_wrapper) :: pointers(n)
   ! Print pointer/target mapping baseline.
-  ! Expect: 10 9 8 7 6 5 4 3 2 1
   call reset_pointers(pointers)
-  call print_pointers(pointers)
+  if (.not.check_equal(pointers, [10,9,8,7,6,5,4,3,2,1])) stop 1
 
   ! Test case where RHS target addresses must be saved in FORALL.
-  ! Expect: 1 2 3 4 5 6 7 8 9 10
   call test_need_to_save_rhs(n, pointers)
-  call print_pointers(pointers)
+  if (.not.check_equal(pointers, [1,2,3,4,5,6,7,8,9,10])) stop 2
 
   ! Test case where LHS pointer addresses must be saved in FORALL.
-  ! Expect: 1 1 1 1 1 1 1 1 1 1
   call reset_pointers(pointers)
   call test_need_to_save_lhs(n, pointers, data(1))
-  call print_pointers(pointers)
+  if (.not.check_equal(pointers, [(1,i=1,10)])) stop 3
 
   ! Test case where bot RHS target addresses and LHS pointer addresses must be
   ! saved in FORALL.
-  ! Expect: 2 4 6 8 10 1 3 5 7 9
   call reset_pointers(pointers)
   call test_need_to_save_lhs_and_rhs(n, pointers)
-  call print_pointers(pointers)
+  if (.not.check_equal(pointers, [2,4,6,8,10,1,3,5,7,9])) stop 4
+
+  call reset_pointers(pointers)
+  call test_null_need_to_save_lhs(n, pointers)
+  if (.not.check_associated(pointers, [(.false., i=1,n)])) stop 5
+
+  print *, "PASS"
 contains
 subroutine reset_pointers(a)
   type(ptr_wrapper) :: a(:)
@@ -104,8 +139,22 @@ subroutine reset_pointers(a)
     a(i)%p => data(n+1-i)
   end do
 end subroutine
-subroutine print_pointers(a)
+logical function check_equal(a, expected)
   type(ptr_wrapper) :: a(:)
-  print *, [(a(i)%p%i, i=lbound(a,1), ubound(a,1))]
-end subroutine
+  integer :: expected(:)
+  check_equal = all([(a(i)%p%i, i=1,10)].eq.expected)
+  if (.not.check_equal) then
+    print *, "expected:", expected
+    print *, "got:", [(a(i)%p%i, i=1,10)]
+  end if
+end function
+logical function check_associated(a, expected)
+  type(ptr_wrapper) :: a(:)
+  logical :: expected(:)
+  check_associated = all([(associated(a(i)%p), i=1,10)].eqv.expected)
+  if (.not.check_associated) then
+    print *, "expected:", expected
+    print *, "got:", [(associated(a(i)%p), i=1,10)]
+  end if
+end function
 end

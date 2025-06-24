@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ConfigFragment.h"
+#include "support/Logger.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -245,6 +246,14 @@ private:
       if (auto ArgumentLists = scalarValue(N, "ArgumentLists"))
         F.ArgumentLists = *ArgumentLists;
     });
+    Dict.handle("HeaderInsertion", [&](Node &N) {
+      if (auto HeaderInsertion = scalarValue(N, "HeaderInsertion"))
+        F.HeaderInsertion = *HeaderInsertion;
+    });
+    Dict.handle("CodePatterns", [&](Node &N) {
+      if (auto CodePatterns = scalarValue(N, "CodePatterns"))
+        F.CodePatterns = *CodePatterns;
+    });
     Dict.parse(N);
   }
 
@@ -478,6 +487,7 @@ std::vector<Fragment> Fragment::parseYAML(llvm::StringRef YAML,
                                           DiagnosticCallback Diags) {
   // The YAML document may contain multiple conditional fragments.
   // The SourceManager is shared for all of them.
+  log("Loading config file at {0}", BufferName);
   auto SM = std::make_shared<llvm::SourceMgr>();
   auto Buf = llvm::MemoryBuffer::getMemBufferCopy(YAML, BufferName);
   // Adapt DiagnosticCallback to function-pointer interface.

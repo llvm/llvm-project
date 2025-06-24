@@ -21,6 +21,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr size_t N_EXCEPTS = 2;
 
 // Exceptional values when |x| <= 0.5
@@ -40,6 +41,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ASINF_EXCEPTS_HI = {{
     // x = 0x1.ee836cp-1, asinf(x) = 0x1.4f0654p0 (RZ)
     {0x3f7741b6, 0x3fa7832a, 1, 0, 0},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -74,18 +76,20 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
       // |x| < 2^-125. For targets without FMA instructions, we simply use
       // double for intermediate results as it is more efficient than using an
       // emulated version of FMA.
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
       return fputil::multiply_add(x, 0x1.0p-25f, x);
 #else
       double xd = static_cast<double>(x);
       return static_cast<float>(fputil::multiply_add(xd, 0x1.0p-25, xd));
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
     }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     // Check for exceptional values
     if (auto r = ASINF_EXCEPTS_LO.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
       return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
     // For |x| <= 0.5, we approximate asinf(x) by:
     //   asin(x) = x * P(x^2)
@@ -104,17 +108,25 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
 
   // |x| > 1, return NaNs.
   if (LIBC_UNLIKELY(x_abs > 0x3f80'0000U)) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+
     if (x_abs <= 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
+
     return FPBits::quiet_nan().get_val();
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Check for exceptional values
   if (auto r = ASINF_EXCEPTS_HI.lookup_odd(x_abs, x_sign);
       LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // When |x| > 0.5, we perform range reduction as follow:
   //

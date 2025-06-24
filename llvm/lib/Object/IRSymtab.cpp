@@ -140,7 +140,7 @@ Error Builder::addModule(Module *M) {
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/false);
   collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/true);
-  SmallPtrSet<GlobalValue *, 4> Used(UsedV.begin(), UsedV.end());
+  SmallPtrSet<GlobalValue *, 4> Used(llvm::from_range, UsedV);
 
   ModuleSymbolTable Msymtab;
   Msymtab.addModule(M);
@@ -216,7 +216,7 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
 static DenseSet<StringRef> buildPreservedSymbolsSet(const Triple &TT) {
   DenseSet<StringRef> PreservedSymbolSet(std::begin(PreservedSymbols),
                                          std::end(PreservedSymbols));
-
+  // FIXME: Do we need to pass in ABI fields from TargetOptions?
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   for (const char *Name : Libcalls.getLibcallNames()) {
     if (Name)

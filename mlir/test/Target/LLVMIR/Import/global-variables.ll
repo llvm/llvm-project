@@ -241,8 +241,8 @@
 
 ; // -----
 
-; CHECK: llvm.mlir.global_ctors {ctors = [@foo, @bar], priorities = [0 : i32, 42 : i32]}
-; CHECK: llvm.mlir.global_dtors {dtors = [@foo], priorities = [0 : i32]}
+; CHECK: llvm.mlir.global_ctors ctors = [@foo, @bar], priorities = [0 : i32, 42 : i32], data = [#llvm.zero, #llvm.zero]
+; CHECK: llvm.mlir.global_dtors dtors = [@foo], priorities = [0 : i32], data = [#llvm.zero]
 @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }, { i32, ptr, ptr } { i32 42, ptr @bar, ptr null }]
 @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
 
@@ -256,11 +256,20 @@ define void @bar() {
 
 ; // -----
 
-; CHECK: llvm.mlir.global_ctors {ctors = [], priorities = []}
+; CHECK: llvm.mlir.global_ctors ctors = [], priorities = [], data = []
 @llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 
-; CHECK: llvm.mlir.global_dtors {dtors = [], priorities = []}
+; CHECK: llvm.mlir.global_dtors dtors = [], priorities = [], data = []
 @llvm.global_dtors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+
+; // -----
+
+; llvm.mlir.global_dtors dtors = [@foo], priorities = [0 : i32], data = [@foo]
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr @foo }]
+
+define void @foo() {
+  ret void
+}
 
 ; // -----
 

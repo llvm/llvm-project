@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
 #include "src/stdlib/strtof.h"
 
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
@@ -19,7 +19,7 @@
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingModeTest;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
-class LlvmLibcStrToFTest : public LIBC_NAMESPACE::testing::Test,
+class LlvmLibcStrToFTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest,
                            ForceRoundingModeTest<RoundingMode::Nearest> {
 public:
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
@@ -43,7 +43,6 @@ public:
     LIBC_NAMESPACE::fputil::FPBits<float> expected_fp =
         LIBC_NAMESPACE::fputil::FPBits<float>(expectedRawData);
 
-    LIBC_NAMESPACE::libc_errno = 0;
     float result = LIBC_NAMESPACE::strtof(inputString, &str_end);
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);

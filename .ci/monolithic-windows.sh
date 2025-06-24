@@ -32,14 +32,14 @@ function at-exit {
 
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
+  cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
+  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
   # If building fails there will be no results files.
   shopt -s nullglob
-  if command -v buildkite-agent 2>&1 >/dev/null
-  then
-    python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
-      "windows-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
-  fi
+    
+  python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":window: Windows x64 Test Results" \
+    $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
 }
 trap at-exit EXIT
 
@@ -47,8 +47,7 @@ projects="${1}"
 targets="${2}"
 
 echo "--- cmake"
-pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
-pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 export CC=cl
 export CXX=cl

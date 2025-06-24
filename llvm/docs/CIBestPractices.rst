@@ -61,7 +61,7 @@ just a release, which looks like the following:
 However, it is best practice to specify an exact commit SHA from which to pull
 the action from, noting the version in a comment:
 
-We plan on revisting this reccomendation once Github's immutable actions have
+We plan on revisiting this recommendation once Github's immutable actions have
 been rolled out as GA.
 
 .. code-block:: yaml
@@ -92,3 +92,19 @@ image to a new version with potentially breaking changes, instead allowing us
 to explicitly opt-in to using the new image when we have done sufficient
 testing to ensure that our existing workflows work as expected in the new
 environment.
+
+Top Level Read Permissions
+--------------------------
+
+The top of every workflow should specify that the job only has read
+permissions:
+
+.. code-block:: yaml
+
+  permissions:
+    contents: read
+
+If specific jobs within the workflow need additional permissions, those
+permissions should be added within the specific job. This practice locks down
+all permissions by default and only enables them when needed, better enforcing
+the principle of least privilege.

@@ -76,7 +76,7 @@ struct PrintingPolicy {
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
         SuppressImplicitBase(false), FullyQualifiedName(false),
-        PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
+        PrintAsCanonical(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true), UseHLSLTypes(LO.HLSL) {}
@@ -144,7 +144,7 @@ struct PrintingPolicy {
 
   /// Suppress printing parts of scope specifiers that correspond
   /// to inline namespaces.
-  /// If Redudant, where the name is unambiguous with the specifier removed.
+  /// If Redundant, where the name is unambiguous with the specifier removed.
   /// If All, even if the name is ambiguous with the specifier
   /// removed.
   LLVM_PREFERRED_TYPE(SuppressInlineNamespaceMode)
@@ -310,9 +310,9 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned FullyQualifiedName : 1;
 
-  /// Whether to print types as written or canonically.
+  /// Whether to print entities as written or canonically.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned PrintCanonicalTypes : 1;
+  unsigned PrintAsCanonical : 1;
 
   /// Whether to print an InjectedClassNameType with template arguments or as
   /// written. When a template argument is unnamed, printing it results in

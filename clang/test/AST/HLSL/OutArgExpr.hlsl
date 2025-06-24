@@ -30,10 +30,10 @@ void zero(out int Z) { Z = 0; }
 // AST-NEXT: ImplicitCastExpr {{.*}} 'void (*)(inout int)' <FunctionToPointerDecay>
 // AST-NEXT: DeclRefExpr {{.*}} 'void (inout int)' lvalue Function
 // AST-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue inout
-// AST-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'float' lvalue
-// AST-NEXT: CXXOperatorCallExpr {{.*}} 'float' lvalue '[]'
-// AST-NEXT: ImplicitCastExpr {{.*}} 'float &(*)(unsigned int)' <FunctionToPointerDecay>
-// AST-NEXT: DeclRefExpr {{.*}} 'float &(unsigned int)' lvalue CXXMethod {{.*}} 'operator[]' 'float &(unsigned int)'
+// AST-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'hlsl_device float' lvalue
+// AST-NEXT: CXXOperatorCallExpr {{.*}} 'hlsl_device float' lvalue '[]'
+// AST-NEXT: ImplicitCastExpr {{.*}} 'hlsl_device float &(*)(unsigned int)' <FunctionToPointerDecay>
+// AST-NEXT: DeclRefExpr {{.*}} 'hlsl_device float &(unsigned int)' lvalue CXXMethod {{.*}} 'operator[]' 'hlsl_device float &(unsigned int)'
 // AST-NEXT: DeclRefExpr {{.*}} 'RWBuffer<float>':'hlsl::RWBuffer<float>' lvalue Var {{.*}} 'Buf' 'RWBuffer<float>':'hlsl::RWBuffer<float>'
 // AST-NEXT: ImplicitCastExpr {{.*}} 'uint':'unsigned int' <LValueToRValue>
 // AST-NEXT: DeclRefExpr {{.*}} 'uint':'unsigned int' lvalue ParmVar {{.*}} 'GI' 'uint':'unsigned int'
@@ -41,10 +41,10 @@ void zero(out int Z) { Z = 0; }
 // AST-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
 // AST-NEXT: ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral>
 // AST-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
-// AST-NEXT: OpaqueValueExpr [[LVOpV]] <col:15, col:21> 'float' lvalue
+// AST-NEXT: OpaqueValueExpr [[LVOpV]] <col:15, col:21> 'hlsl_device float' lvalue
 
-// AST: BinaryOperator {{.*}} 'float' lvalue '='
-// AST-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'float' lvalue
+// AST: BinaryOperator {{.*}} 'hlsl_device float' lvalue '='
+// AST-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'hlsl_device float' lvalue
 // AST: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // AST-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // AST-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue

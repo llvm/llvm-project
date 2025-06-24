@@ -37,11 +37,6 @@ using __libcpp_remove_reference_t = typename remove_reference<_Tp>::type;
 #  error "remove_reference not implemented!"
 #endif // __has_builtin(__remove_reference_t)
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using remove_reference_t = __libcpp_remove_reference_t<_Tp>;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_REFERENCE_H

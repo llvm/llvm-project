@@ -531,6 +531,11 @@ public:
       if (callOp.getClusterSizeZ())
         newCall.getClusterSizeZMutable().assign(callOp.getClusterSizeZ());
       newCallResults.append(newCall.result_begin(), newCall.result_end());
+      if (auto cudaProcAttr =
+              callOp->template getAttrOfType<cuf::ProcAttributeAttr>(
+                  cuf::getProcAttrName())) {
+        newCall->setAttr(cuf::getProcAttrName(), cudaProcAttr);
+      }
     } else if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
       if (callOp.getCallee()) {
@@ -541,37 +546,38 @@ public:
             callOp.getContext(),
             mlir::TypeRange{newInTypes}.drop_front(dropFront), newResTys));
         newCall = rewriter->create<fir::CallOp>(loc, newResTys, newOpers);
-        // Set ABI argument attributes on call operation since they are not
-        // accessible via a FuncOp in indirect calls.
-        if (hasByValOrSRetArgs(newInTyAndAttrs)) {
-          llvm::SmallVector<mlir::Attribute> argAttrsArray;
-          for (const auto &arg :
-               llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(
-                   newInTyAndAttrs)
-                   .drop_front(dropFront)) {
-            mlir::NamedAttrList argAttrs;
-            const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
-            if (attr.isByVal()) {
-              mlir::Type elemType =
-                  fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
-              argAttrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
-                           mlir::TypeAttr::get(elemType));
-            } else if (attr.isSRet()) {
-              mlir::Type elemType =
-                  fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
-              argAttrs.set(mlir::LLVM::LLVMDialect::getStructRetAttrName(),
-                           mlir::TypeAttr::get(elemType));
-              if (auto align = attr.getAlignment()) {
-                argAttrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
-                             rewriter->getIntegerAttr(
-                                 rewriter->getIntegerType(32), align));
-              }
-            }
-            argAttrsArray.emplace_back(
-                argAttrs.getDictionary(rewriter->getContext()));
+      }
+      newCall.setFastmathAttr(callOp.getFastmathAttr());
+      // Always set ABI argument attributes on call operations, even when
+      // direct, as required by
+      // https://llvm.org/docs/LangRef.html#parameter-attributes.
+      if (hasByValOrSRetArgs(newInTyAndAttrs)) {
+        llvm::SmallVector<mlir::Attribute> argAttrsArray;
+        for (const auto &arg :
+             llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(newInTyAndAttrs)
+                 .drop_front(dropFront)) {
+          mlir::NamedAttrList argAttrs;
+          const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
+          if (attr.isByVal()) {
+            mlir::Type elemType =
+                fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
+            argAttrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
+                         mlir::TypeAttr::get(elemType));
+          } else if (attr.isSRet()) {
+            mlir::Type elemType =
+                fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
+            argAttrs.set(mlir::LLVM::LLVMDialect::getStructRetAttrName(),
+                         mlir::TypeAttr::get(elemType));
           }
-          newCall.setArgAttrsAttr(rewriter->getArrayAttr(argAttrsArray));
+          if (auto align = attr.getAlignment()) {
+            argAttrs.set(
+                mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                rewriter->getIntegerAttr(rewriter->getIntegerType(32), align));
+          }
+          argAttrsArray.emplace_back(
+              argAttrs.getDictionary(rewriter->getContext()));
         }
+        newCall.setArgAttrsAttr(rewriter->getArrayAttr(argAttrsArray));
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
       if (wrap)

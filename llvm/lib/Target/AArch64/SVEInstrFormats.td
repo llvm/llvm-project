@@ -119,10 +119,9 @@ def SDT_AArch64Setcc : SDTypeProfile<1, 4, [
 ]>;
 
 def AArch64setcc_z : SDNode<"AArch64ISD::SETCC_MERGE_ZERO", SDT_AArch64Setcc>;
+let HasOneUse = 1 in
 def AArch64setcc_z_oneuse : PatFrag<(ops node:$pg, node:$op1, node:$op2, node:$cc),
-                                    (AArch64setcc_z node:$pg, node:$op1, node:$op2, node:$cc), [{
-  return N->hasOneUse();
-}]>;
+                                    (AArch64setcc_z node:$pg, node:$op1, node:$op2, node:$cc)>;
 
 def SVEPatternOperand : AsmOperandClass {
   let Name = "SVEPattern";
@@ -409,15 +408,12 @@ def sve_ext_imm_0_63  : ComplexPattern<i64, 1, "SelectEXTImm<63, 4>">;
 def sve_ext_imm_0_127 : ComplexPattern<i64, 1, "SelectEXTImm<127, 2>">;
 def sve_ext_imm_0_255 : ComplexPattern<i64, 1, "SelectEXTImm<255, 1>">;
 
+let HasOneUse = 1 in
 def int_aarch64_sve_cntp_oneuse : PatFrag<(ops node:$pred, node:$src2),
-                                          (int_aarch64_sve_cntp node:$pred, node:$src2), [{
-  return N->hasOneUse();
-}]>;
-
+                                          (int_aarch64_sve_cntp node:$pred, node:$src2)>;
+let HasOneUse = 1 in
 def step_vector_oneuse : PatFrag<(ops node:$idx),
-                                 (step_vector node:$idx), [{
-  return N->hasOneUse();
-}]>;
+                                 (step_vector node:$idx)>;
 
 
 //===----------------------------------------------------------------------===//
@@ -2117,6 +2113,7 @@ class sve_int_dup_mask_imm<string asm>
 
   let DecoderMethod = "DecodeSVELogicalImmInstruction";
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }
@@ -5122,6 +5119,7 @@ class sve_int_dup_imm<bits<2> sz8_64, string asm,
   let Inst{4-0}   = Zd;
 
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }
@@ -5165,6 +5163,7 @@ class sve_int_dup_fpimm<bits<2> sz8_64, Operand fpimmtype,
   let Inst{4-0}   = Zd;
 
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }
@@ -5465,6 +5464,14 @@ multiclass sve_int_dup_fpimm_pred<string asm> {
             (!cast<Instruction>(NAME # _S) $zd, $pg, fpimm32:$imm8)>;
   def : Pat<(nxv2f64 (vselect nxv2i1:$pg, (splat_vector fpimm64:$imm8), nxv2f64:$zd)),
             (!cast<Instruction>(NAME # _D) $zd, $pg, fpimm64:$imm8)>;
+
+  // Some half precision immediates alias with bfloat (e.g. f16(1.875) == bf16(1.0)).
+  def : Pat<(nxv8bf16 (vselect nxv8i1:$pg, (splat_vector fpimmbf16:$imm8), nxv8bf16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, (fpimm16XForm bf16:$imm8))>;
+  def : Pat<(nxv4bf16 (vselect nxv4i1:$pg, (splat_vector fpimmbf16:$imm8), nxv4bf16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, (fpimm16XForm bf16:$imm8))>;
+  def : Pat<(nxv2bf16 (vselect nxv2i1:$pg, (splat_vector fpimmbf16:$imm8), nxv2bf16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, (fpimm16XForm bf16:$imm8))>;
 }
 
 class sve_int_dup_imm_pred<bits<2> sz8_64, bit m, string asm,
@@ -7877,9 +7884,14 @@ multiclass sve_int_perm_compact_sd<string asm, SDPatternOperator op> {
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_int_perm_compact_bh<string asm> {
+multiclass sve_int_perm_compact_bh<string asm, SDPatternOperator op> {
   def _B : sve_int_perm_compact<0b00, asm, ZPR8>;
   def _H : sve_int_perm_compact<0b01, asm, ZPR16>;
+
+  def : SVE_2_Op_Pat<nxv16i8,  op, nxv16i1, nxv16i8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i16,  op, nxv8i1,  nxv8i16,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv8f16,  op, nxv8i1,  nxv8f16,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, !cast<Instruction>(NAME # _H)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9228,11 +9240,12 @@ multiclass sve2_crypto_cons_bin_op<bit opc, string asm, ZPRRegOp zprty,
   def : SVE_2_Op_Pat<vt, op, vt, vt, !cast<Instruction>(NAME)>;
 }
 
-class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty>
+class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty,
+                             SDPatternOperator op, ValueType vt>
 : I<(outs zprty:$Zdn), (ins zprty:$_Zdn, zprty:$Zm),
   asm, "\t$Zdn, $_Zdn, $Zm",
   "",
-  []>, Sched<[]> {
+  [(set (vt zprty:$Zdn), (op (vt zprty:$_Zdn), (vt zprty:$Zm)))]>, Sched<[]> {
   bits<5> Zdn;
   bits<5> Zm;
   let Inst{31-17} = 0b010001010010001;
@@ -9244,12 +9257,6 @@ class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty>
 
   let Constraints = "$Zdn = $_Zdn";
   let hasSideEffects = 0;
-}
-
-multiclass sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty,
-                                  SDPatternOperator op, ValueType vt> {
-  def NAME : sve2_crypto_des_bin_op<opc, asm, zprty>;
-  def : SVE_2_Op_Pat<vt, op, vt, vt, !cast<Instruction>(NAME)>;
 }
 
 class sve2_crypto_unary_op<bit opc, string asm, ZPRRegOp zprty>

@@ -6,22 +6,22 @@ void uses() {
   typedef struct S{} STy;
   STy SImpl;
 
-#pragma acc loop device_type(I)
+#pragma acc loop device_type(radeon)
   for(int i = 0; i < 5; ++i);
-#pragma acc loop device_type(S) dtype(STy)
+#pragma acc loop device_type(host) dtype(multicore)
   for(int i = 0; i < 5; ++i);
-#pragma acc loop dtype(SImpl)
+#pragma acc loop dtype(nvidia)
   for(int i = 0; i < 5; ++i);
-#pragma acc loop dtype(int) device_type(*)
+#pragma acc loop dtype(default) device_type(*)
   for(int i = 0; i < 5; ++i);
-#pragma acc loop dtype(true) device_type(false)
+#pragma acc loop dtype(radeon) device_type(nvidia)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{expected identifier}}
 #pragma acc loop dtype(int, *)
   for(int i = 0; i < 5; ++i);
 
-#pragma acc loop device_type(I, int)
+#pragma acc loop device_type(default, nvidia)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{expected ','}}
   // expected-error@+1{{expected identifier}}
@@ -116,7 +116,7 @@ void uses() {
 #pragma acc loop device_type(*) present(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'private' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc loop device_type(*) private(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'loop' directive}}
@@ -147,13 +147,12 @@ void uses() {
 #pragma acc loop device_type(*) present_or_create(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'reduction' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc loop device_type(*) reduction(+:Var)
   for(int i = 0; i < 5; ++i);
 #pragma acc loop device_type(*) collapse(1)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'bind' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) bind(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}

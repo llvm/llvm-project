@@ -242,3 +242,20 @@
 // NO-WARN-ATOMIC: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-Werror=atomic-alignment" {{.*}} "-Wno-error=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Werror=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Wno-error=atomic-alignment"
+
+// Check --offload-compress --offload-jobs=N does not cause warning.
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-compress --offload-host-only -M %s \
+// RUN:   --offload-jobs=4
+
+// Check --offload-jobs=N option.
+
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=4 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=JOBS %s
+// JOBS: clang-linker-wrapper{{.*}} "--wrapper-jobs=4"
+
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=0x4 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVJOBS %s
+// INVJOBS: clang: error: invalid integral value '0x4' in '--offload-jobs=0x4'

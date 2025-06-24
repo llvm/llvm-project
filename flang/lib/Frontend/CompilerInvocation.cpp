@@ -20,22 +20,21 @@
 #include "flang/Support/Version.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
-#include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
@@ -158,6 +157,32 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   return true;
 }
 
+static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
+                                     llvm::opt::ArgList &args,
+                                     clang::DiagnosticsEngine &diags) {
+  llvm::opt::Arg *arg =
+      args.getLastArg(clang::driver::options::OPT_fdo_concurrent_to_openmp_EQ);
+  if (!arg)
+    return;
+
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+  std::optional<DoConcurrentMappingKind> val =
+      llvm::StringSwitch<std::optional<DoConcurrentMappingKind>>(
+          arg->getValue())
+          .Case("none", DoConcurrentMappingKind::DCMK_None)
+          .Case("host", DoConcurrentMappingKind::DCMK_Host)
+          .Case("device", DoConcurrentMappingKind::DCMK_Device)
+          .Default(std::nullopt);
+
+  if (!val.has_value()) {
+    diags.Report(clang::diag::err_drv_invalid_value)
+        << arg->getAsString(args) << arg->getValue();
+  }
+
+  opts.setDoConcurrentMapping(val.value());
+}
+
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
                               llvm::opt::ArgList &args,
                               clang::DiagnosticsEngine &diags) {
@@ -169,12 +194,13 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
   std::optional<VectorLibrary> val =
       llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
           .Case("Accelerate", VectorLibrary::Accelerate)
-          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("libmvec", VectorLibrary::LIBMVEC)
           .Case("MASSV", VectorLibrary::MASSV)
           .Case("SVML", VectorLibrary::SVML)
           .Case("SLEEF", VectorLibrary::SLEEF)
           .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)
           .Case("ArmPL", VectorLibrary::ArmPL)
+          .Case("AMDLIBM", VectorLibrary::AMDLIBM)
           .Case("NoLibrary", VectorLibrary::NoLibrary)
           .Default(std::nullopt);
   if (!val.has_value()) {
@@ -243,8 +269,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
+    opts.InterchangeLoops = 1;
+
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
+
+  if (args.getLastArg(clang::driver::options::OPT_vectorize_slp))
+    opts.VectorizeSLP = 1;
 
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
@@ -276,10 +308,18 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
+  opts.Reciprocals = clang::driver::tools::parseMRecipOption(diags, args);
+
+  opts.PreferVectorWidth =
+      clang::driver::tools::parseMPreferVectorWidthOption(diags, args);
+
   // -fembed-offload-object option
   for (auto *a :
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
+
+  if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
+    opts.InstrumentFunctions = 1;
 
   // -flto=full/thin option.
   if (const llvm::opt::Arg *a =
@@ -402,6 +442,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.IsPIE = 1;
   }
 
+  if (args.hasArg(clang::driver::options::OPT_fprofile_generate)) {
+    opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+  }
+
+  if (auto A = args.getLastArg(clang::driver::options::OPT_fprofile_use_EQ)) {
+    opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+    opts.ProfileInstrumentUsePath = A->getValue();
+  }
+
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
@@ -430,6 +479,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
+
+  parseDoConcurrentMapping(opts, args, diags);
 }
 
 /// Parses all target input arguments and populates the target
@@ -476,6 +527,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
       opts.EnableAIXExtendedAltivecABI = false;
     }
   }
+
+  opts.asmVerbose =
+      args.hasFlag(clang::driver::options::OPT_fverbose_asm,
+                   clang::driver::options::OPT_fno_verbose_asm, false);
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
@@ -863,6 +918,12 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
         (currentArg->getOption().matches(clang::driver::options::OPT_cpp))
             ? PPMacrosFlag::Include
             : PPMacrosFlag::Exclude;
+  // Enable -cpp based on -x unless explicitly disabled with -nocpp
+  if (opts.macrosFlag != PPMacrosFlag::Exclude)
+    if (const auto *dashX = args.getLastArg(clang::driver::options::OPT_x))
+      opts.macrosFlag = llvm::StringSwitch<PPMacrosFlag>(dashX->getValue())
+                            .Case("f95-cpp-input", PPMacrosFlag::Include)
+                            .Default(opts.macrosFlag);
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.preprocessIncludeLines =
@@ -923,9 +984,22 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
 /// Parses all diagnostics related arguments and populates the variables
 /// options accordingly. Returns false if new errors are generated.
+/// FC1 driver entry point for parsing diagnostic arguments.
 static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
+
+  auto &features{res.getFrontendOpts().features};
+  // The order of these flags (-pedantic -W<feature> -w) is important and is
+  // chosen to match clang's behavior.
+
+  // -pedantic
+  if (args.hasArg(clang::driver::options::OPT_pedantic)) {
+    features.WarnOnAllNonstandard();
+    features.WarnOnAllUsage();
+    res.setEnableConformanceChecks();
+    res.setEnableUsageChecks();
+  }
 
   // -Werror option
   // TODO: Currently throws a Diagnostic for anything other than -W<error>,
@@ -936,22 +1010,26 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     for (const auto &wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
-      } else {
-        const unsigned diagID =
-            diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                                  "Only `-Werror` is supported currently.");
-        diags.Report(diagID);
+        // -W(no-)<feature>
+      } else if (!features.EnableWarning(wArg)) {
+        const unsigned diagID = diags.getCustomDiagID(
+            clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
+        diags.Report(diagID) << wArg;
       }
     }
   }
 
+  // -w
+  if (args.hasArg(clang::driver::options::OPT_w)) {
+    features.DisableAllWarnings();
+    res.setDisableWarnings();
+  }
+
   // Default to off for `flang -fc1`.
-  res.getFrontendOpts().showColors =
-      parseShowColorsArgs(args, /*defaultDiagColor=*/false);
-
-  // Honor color diagnostics.
-  res.getDiagnosticOpts().ShowColors = res.getFrontendOpts().showColors;
-
+  bool showColors{parseShowColorsArgs(args, false)};
+  diags.getDiagnosticOptions().ShowColors = showColors;
+  res.getDiagnosticOpts().ShowColors = showColors;
+  res.getFrontendOpts().showColors = showColors;
   return diags.getNumErrors() == numErrorsBefore;
 }
 
@@ -1026,16 +1104,6 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         Fortran::common::LanguageFeature::OpenACC);
   }
 
-  // -pedantic
-  if (args.hasArg(clang::driver::options::OPT_pedantic)) {
-    res.setEnableConformanceChecks();
-    res.setEnableUsageChecks();
-  }
-
-  // -w
-  if (args.hasArg(clang::driver::options::OPT_w))
-    res.setDisableWarnings();
-
   // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
@@ -1044,6 +1112,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     // We only allow f2018 as the given standard
     if (standard == "f2018") {
       res.setEnableConformanceChecks();
+      res.getFrontendOpts().features.WarnOnAllNonstandard();
     } else {
       const unsigned diagID =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
@@ -1067,8 +1136,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
-  // By default OpenMP is set to 1.1 version
-  res.getLangOpts().OpenMPVersion = 11;
+  // By default OpenMP is set to 3.1 version
+  res.getLangOpts().OpenMPVersion = 31;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (int Version = getLastArgIntValue(
@@ -1126,22 +1195,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (args.hasArg(clang::driver::options::OPT_no_offloadlib))
       res.getLangOpts().NoGPULib = 1;
   }
-
-  switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
-  case llvm::Triple::nvptx:
-  case llvm::Triple::nvptx64:
-  case llvm::Triple::amdgcn:
+  if (llvm::Triple(res.getTargetOpts().triple).isGPU()) {
     if (!res.getLangOpts().OpenMPIsTargetDevice) {
       const unsigned diagID = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Error,
-          "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+          "OpenMP GPU is only prepared to deal with device code.");
       diags.Report(diagID);
     }
     res.getLangOpts().OpenMPIsGPU = 1;
-    break;
-  default:
+  } else {
     res.getLangOpts().OpenMPIsGPU = 0;
-    break;
   }
 
   // Get the OpenMP target triples if any.
@@ -1163,11 +1226,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (tt.getArch() == llvm::Triple::UnknownArch ||
           !(tt.getArch() == llvm::Triple::aarch64 || tt.isPPC() ||
             tt.getArch() == llvm::Triple::systemz ||
-            tt.getArch() == llvm::Triple::nvptx ||
-            tt.getArch() == llvm::Triple::nvptx64 ||
-            tt.getArch() == llvm::Triple::amdgcn ||
             tt.getArch() == llvm::Triple::x86 ||
-            tt.getArch() == llvm::Triple::x86_64))
+            tt.getArch() == llvm::Triple::x86_64 || tt.isGPU()))
         diags.Report(clang::diag::err_drv_invalid_omp_target)
             << arg->getValue(i);
       else if (getArchPtrSize(t) != getArchPtrSize(tt))
@@ -1444,6 +1504,19 @@ bool CompilerInvocation::createFromArgs(
                     clang::driver::options::OPT_fno_realloc_lhs, true))
     invoc.loweringOpts.setReallocateLHS(false);
 
+  invoc.loweringOpts.setRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_frepack_arrays,
+                   clang::driver::options::OPT_fno_repack_arrays,
+                   /*default=*/false));
+  invoc.loweringOpts.setStackRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_fstack_repack_arrays,
+                   clang::driver::options::OPT_fno_stack_repack_arrays,
+                   /*default=*/false));
+  if (auto *arg = args.getLastArg(
+          clang::driver::options::OPT_frepack_arrays_contiguity_EQ))
+    invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
+                                            llvm::StringRef{"whole"});
+
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
@@ -1567,13 +1640,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  if (targetTriple.isPPC()) {
-    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
-    // size.
-    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
-  }
   if (targetTriple.isOSLinux()) {
     fortranOptions.predefinitions.emplace_back("__linux__", "1");
+  } else if (targetTriple.isOSAIX()) {
+    fortranOptions.predefinitions.emplace_back("_AIX", "1");
   }
 
   switch (targetTriple.getArch()) {
@@ -1582,6 +1652,20 @@ void CompilerInvocation::setDefaultPredefinitions() {
   case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+    break;
+  case llvm::Triple::ArchType::ppc:
+  case llvm::Triple::ArchType::ppc64:
+  case llvm::Triple::ArchType::ppcle:
+  case llvm::Triple::ArchType::ppc64le:
+    // '__powerpc__' is a generic macro for any PowerPC.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+    if (targetTriple.isOSAIX() && targetTriple.isArch64Bit()) {
+      fortranOptions.predefinitions.emplace_back("__64BIT__", "1");
+    }
+    break;
+  case llvm::Triple::ArchType::aarch64:
+    fortranOptions.predefinitions.emplace_back("__aarch64__", "1");
+    fortranOptions.predefinitions.emplace_back("__aarch64", "1");
     break;
   }
 }
@@ -1635,16 +1719,7 @@ void CompilerInvocation::setFortranOpts() {
   if (frontendOptions.needProvenanceRangeToCharBlockMappings)
     fortranOptions.needProvenanceRangeToCharBlockMappings = true;
 
-  if (getEnableConformanceChecks())
-    fortranOptions.features.WarnOnAllNonstandard();
-
-  if (getEnableUsageChecks())
-    fortranOptions.features.WarnOnAllUsage();
-
-  if (getDisableWarnings()) {
-    fortranOptions.features.DisableAllNonstandardWarnings();
-    fortranOptions.features.DisableAllUsageWarnings();
-  }
+  fortranOptions.features = frontendOptions.features;
 }
 
 std::unique_ptr<Fortran::semantics::SemanticsContext>

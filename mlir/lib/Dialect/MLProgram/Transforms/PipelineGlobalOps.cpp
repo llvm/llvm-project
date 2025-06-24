@@ -104,11 +104,9 @@ LogicalResult MLProgramPipelineGlobals::buildGlobalMap(ModuleOp module) {
           work.push_back(symbol);
       });
 
-      for (auto load : opLoadSymbols[work[i]])
-        loadSymbols.insert(load);
+      loadSymbols.insert_range(opLoadSymbols[work[i]]);
 
-      for (auto store : opStoreSymbols[work[i]])
-        storeSymbols.insert(store);
+      storeSymbols.insert_range(opStoreSymbols[work[i]]);
     }
 
     loadSymbolsMap[thisSymbol] = std::move(loadSymbols);

@@ -20,7 +20,7 @@ typedef std::allocator<void> A1;
 struct A2 : std::allocator<void> { };
 
 static_assert(std::is_trivially_default_constructible<A1>::value, "");
-static_assert(std::is_trivial<A1>::value, "");
+static_assert(std::is_trivially_copyable<A1>::value, "");
 
 static_assert(std::is_trivially_default_constructible<A2>::value, "");
-static_assert(std::is_trivial<A2>::value, "");
+static_assert(std::is_trivially_copyable<A2>::value, "");

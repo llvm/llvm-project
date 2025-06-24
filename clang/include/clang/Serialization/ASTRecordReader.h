@@ -214,6 +214,8 @@ public:
 
   TypeCoupledDeclRefInfo readTypeCoupledDeclRefInfo();
 
+  SpirvOperand readHLSLSpirvOperand();
+
   /// Read a declaration name, advancing Idx.
   // DeclarationName readDeclarationName(); (inherited)
   DeclarationNameLoc readDeclarationNameLoc(DeclarationName Name);
@@ -282,6 +284,8 @@ public:
   /// statement reading.
   void readOpenACCClauseList(MutableArrayRef<const OpenACCClause *> Clauses);
 
+  void readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A);
+
   /// Read a source location, advancing Idx.
   SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {
     return Reader->ReadSourceLocation(*F, Record, Idx, Seq);
@@ -315,6 +319,10 @@ public:
   /// Read a 64-bit unsigned value; required to satisfy BasicReader.
   uint64_t readUInt64() {
     return readInt();
+  }
+
+  UnsignedOrNone readUnsignedOrNone() {
+    return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
   }
 
   /// Read a string, advancing Idx.

@@ -14,6 +14,7 @@ add_flangrt_library(flang_rt.cuda STATIC SHARED
   kernel.cpp
   memmove-function.cpp
   memory.cpp
+  pointer.cpp
   registration.cpp
 
   TARGET_PROPERTIES
@@ -23,6 +24,7 @@ add_flangrt_library(flang_rt.cuda STATIC SHARED
     OUTPUT_NAME "flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR}"
   INCLUDE_DIRECTORIES
     PRIVATE ${CUDAToolkit_INCLUDE_DIRS}
+  INSTALL_WITH_TOOLCHAIN
 )
 
 # For the static library, link-in the static dependencies as well.

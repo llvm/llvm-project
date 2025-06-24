@@ -129,8 +129,14 @@ func.func @nvvm_shfl_pred(
 
 // CHECK-LABEL: @nvvm_vote(
 func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
-  // CHECK: nvvm.vote.ballot.sync %{{.*}}, %{{.*}} : i32
-  %0 = nvvm.vote.ballot.sync %arg0, %arg1 : i32
+  // CHECK: nvvm.vote.sync ballot %{{.*}}, %{{.*}} -> i32
+  %0 = nvvm.vote.sync ballot %arg0, %arg1 -> i32
+  // CHECK: nvvm.vote.sync all %{{.*}}, %{{.*}} -> i1
+  %1 = nvvm.vote.sync all %arg0, %arg1 -> i1
+  // CHECK: nvvm.vote.sync any %{{.*}}, %{{.*}} -> i1
+  %2 = nvvm.vote.sync any %arg0, %arg1 -> i1
+  // CHECK: nvvm.vote.sync uni %{{.*}}, %{{.*}} -> i1
+  %3 = nvvm.vote.sync uni %arg0, %arg1 -> i1
   llvm.return %0 : i32
 }
 
@@ -547,6 +553,69 @@ func.func @mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
   %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
   // CHECK:   nvvm.mapa %{{.*}}
   %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
+  return
+}
+
+// CHECK-LABEL: @match_sync
+func.func @match_sync(%val32: i32, %val64: i64, %thread_mask: i32) {
+  // CHECK: nvvm.match.sync any %{{.*}}, %{{.*}} : i32 -> i32
+  %0 = nvvm.match.sync any %thread_mask, %val32 : i32 -> i32
+  // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i32 -> !llvm.struct<(i32, i1)>
+  %1 = nvvm.match.sync all %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: nvvm.match.sync any %{{.*}}, %{{.*}} : i64 -> i32
+  %2 = nvvm.match.sync any %thread_mask, %val64 : i64 -> i32
+  // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
+  %3 = nvvm.match.sync all %thread_mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
+  return 
+}
+
+// CHECK-LABEL: @st_bulk
+func.func @st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr<3>
+  nvvm.st.bulk %addr_shared, size = %size, init = 0 : !llvm.ptr<3>
+  return
+}
+
+// CHECK-LABEL: @dot_accumulate_4way
+func.func @dot_accumulate_4way(%a_vec: vector<4xi8>, %b_vec: vector<4xi8>, %c: i32) {
+  // CHECK:   nvvm.dot.accumulate.4way %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi8>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.4way %a_vec <unsigned>, %b_vec <unsigned>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.4way %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi8>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.4way %a_vec <signed>, %b_vec <signed>, %c: vector<4xi8>, vector<4xi8>
+  return
+}
+
+// CHECK-LABEL: @dot_accumulate_2way
+func.func @dot_accumulate_2way(%a_vec: vector<2xi16>, %b_vec: vector<4xi8>, %c: i32) {
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = false} : vector<2xi16>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.2way %a_vec <unsigned>, %b_vec <unsigned>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = true} : vector<2xi16>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.2way %a_vec <signed>, %b_vec <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  return
+}
+
+// CHECK-LABEL: @prefetch
+func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: !llvm.ptr<1>) {
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_normal : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L1 uniform, %{{.*}}
+  nvvm.prefetch level = L1 uniform, %gen_ptr : !llvm.ptr
   return
 }
 

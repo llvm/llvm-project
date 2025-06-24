@@ -328,8 +328,7 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 /// Compile time Log2.
 /// Valid only for positive powers of two.
 template <size_t kValue> constexpr size_t CTLog2() {
-  static_assert(kValue > 0 && llvm::isPowerOf2_64(kValue),
-                "Value is not a valid power of 2");
+  static_assert(llvm::isPowerOf2_64(kValue), "Value is not a valid power of 2");
   return 1 + CTLog2<kValue / 2>();
 }
 
@@ -595,6 +594,15 @@ inline int64_t SignExtend64(uint64_t X, unsigned B) {
   return int64_t(X << (64 - B)) >> (64 - B);
 }
 
+/// Return the absolute value of a signed integer, converted to the
+/// corresponding unsigned integer type. Avoids undefined behavior in std::abs
+/// when you pass it INT_MIN or similar.
+template <typename T, typename U = std::make_unsigned_t<T>>
+constexpr U AbsoluteValue(T X) {
+  // If X is negative, cast it to the unsigned type _before_ negating it.
+  return X < 0 ? -static_cast<U>(X) : X;
+}
+
 /// Subtract two unsigned integers, X and Y, of type T and return the absolute
 /// value of the result.
 template <typename U, typename V, typename T = common_uint<U, V>>
@@ -694,7 +702,7 @@ SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
 }
 
 /// Use this rather than HUGE_VALF; the latter causes warnings on MSVC.
-extern const float huge_valf;
+LLVM_ABI extern const float huge_valf;
 
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.

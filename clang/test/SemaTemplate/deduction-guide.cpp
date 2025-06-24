@@ -234,7 +234,7 @@ F s(0);
 // CHECK: | `-CXXBoolLiteralExpr {{.*}} 'bool' false
 // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (U) -> F<value-parameter-0-0>'
 // CHECK: | `-ParmVarDecl {{.*}} 'U'
-// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (int) -> F<>'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for F> 'auto (int) -> F<>'
 // CHECK:   |-TemplateArgument integral ''x''
 // CHECK:   |-TemplateArgument type 'int'
 // CHECK:   | `-BuiltinType {{.*}} 'int'
@@ -475,7 +475,7 @@ A a{.f1 = {1}};
 // CHECK-NEXT: `-RValueReferenceType {{.+}} 'int (&&)[N]' dependent
 // CHECK-NEXT:   `-DependentSizedArrayType {{.+}} 'int[N]' dependent
 // CHECK-NEXT:     |-BuiltinType {{.+}} 'int'
-// CHECK-NEXT:     `-DeclRefExpr {{.+}} <col:10> 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
+// CHECK-NEXT:     `-DeclRefExpr {{.+}} <{{.+}}:10> 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
 
 } // namespace GH83368
 
@@ -723,3 +723,246 @@ void test() { NewDeleteAllocator abc(42); } // expected-error {{no viable constr
 // CHECK-NEXT:  `-ParmVarDecl {{.+}} 'T'
 
 } // namespace GH128691
+
+namespace GH132616_DeductionGuide {
+
+template <class T> struct A {
+  template <class U>
+  A(U);
+};
+
+template <typename>
+struct B : A<int> {
+  using A::A;
+};
+
+template <class T>
+B(T) -> B<T>;
+
+B b(24);
+
+// CHECK-LABEL: Dumping GH132616_DeductionGuide::<deduction guide for B>:
+// CHECK-NEXT: FunctionTemplateDecl {{.+}} implicit <deduction guide for B>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} typename depth 0 index 0
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} class depth 0 index 1 U
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for B> 'auto (U) -> B<type-parameter-0-0>'
+// CHECK-NEXT:  `-ParmVarDecl {{.+}} 'U'
+
+struct C {
+  template <class U>
+  C(U);
+};
+
+template <typename>
+struct D : C {
+  using C::C;
+};
+
+template <class T>
+D(T) -> D<T>;
+
+D d(24);
+
+// CHECK-LABEL: Dumping GH132616_DeductionGuide::<deduction guide for D>:
+// CHECK-NEXT: FunctionTemplateDecl {{.+}} implicit <deduction guide for D>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} typename depth 0 index 0
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} class depth 0 index 1 U
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for D> 'auto (U) -> D<type-parameter-0-0>'
+// CHECK-NEXT:  `-ParmVarDecl {{.+}} 'U'
+
+} // namespace GH132616_DeductionGuide
+
+namespace GH133132 {
+
+template <class _Ty>
+struct A {};
+
+template <class T = int, class U = T>
+using AA = A<U>;
+
+AA a{};
+
+// CHECK-LABEL: Dumping GH133132::<deduction guide for AA>:
+// CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for AA>
+// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 0 T
+// CHECK-NEXT:  | `-TemplateArgument type 'int'
+// CHECK-NEXT:  |   `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 1 U
+// CHECK-NEXT:  | `-TemplateArgument type 'T':'type-parameter-0-0'
+// CHECK-NEXT:  |   `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT:  |     `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT:  |-TypeTraitExpr {{.+}} 'bool' __is_deducible
+// CHECK-NEXT:  | |-DeducedTemplateSpecializationType {{.+}} 'GH133132::AA' dependent
+// CHECK-NEXT:  | | `-name: 'GH133132::AA'
+// CHECK-NEXT:  | |   `-TypeAliasTemplateDecl {{.+}} AA
+// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'A<U>' dependent
+// CHECK-NEXT:  |   |-name: 'A':'GH133132::A' qualified
+// CHECK-NEXT:  |   | `-ClassTemplateDecl {{.+}} A
+// CHECK-NEXT:  |   `-TemplateArgument type 'U':'type-parameter-0-1'
+// CHECK-NEXT:  |     `-SubstTemplateTypeParmType {{.+}} 'U' sugar dependent class depth 0 index 0 _Ty
+// CHECK-NEXT:  |       |-FunctionTemplate {{.+}} '<deduction guide for A>'
+// CHECK-NEXT:  |       `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
+// CHECK-NEXT:  |         `-TemplateTypeParm {{.+}} 'U'
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for AA> 'auto () -> A<U>'
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for AA> 'auto () -> A<int>' implicit_instantiation
+// CHECK-NEXT:    |-TemplateArgument type 'int'
+// CHECK-NEXT:    | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:    `-TemplateArgument type 'int'
+// CHECK-NEXT:      `-BuiltinType {{.+}} 'int'
+
+template <template <class> class _X>
+struct B {};
+
+template <template <class> class _X = A, template <class> class _Y = _X>
+using BB = B<_Y>;
+
+BB b{};
+
+// CHECK-LABEL: Dumping GH133132::<deduction guide for BB>:
+// CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for BB>
+// CHECK-NEXT:  |-TemplateTemplateParmDecl {{.+}} depth 0 index 0 _X
+// CHECK-NEXT:  | |-TemplateTypeParmDecl {{.+}} class depth 0 index 0
+// CHECK-NEXT:  | `-TemplateArgument {{.+}} template 'A':'GH133132::A' qualified
+// CHECK-NEXT:  |   `-ClassTemplateDecl {{.+}} A
+// CHECK-NEXT:  |-TemplateTemplateParmDecl {{.+}} depth 0 index 1 _Y
+// CHECK-NEXT:  | |-TemplateTypeParmDecl {{.+}} class depth 0 index 0
+// CHECK-NEXT:  | `-TemplateArgument {{.+}} template '_X':'template-parameter-0-0' qualified
+// CHECK-NEXT:  |   `-TemplateTemplateParmDecl {{.+}} depth 0 index 0 _X
+// CHECK-NEXT:  |-TypeTraitExpr {{.+}} 'bool' __is_deducible
+// CHECK-NEXT:  | |-DeducedTemplateSpecializationType {{.+}} 'GH133132::BB' dependent
+// CHECK-NEXT:  | | `-name: 'GH133132::BB'
+// CHECK-NEXT:  | |   `-TypeAliasTemplateDecl {{.+}} BB
+// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'B<_Y>' dependent
+// CHECK-NEXT:  |   |-name: 'B':'GH133132::B' qualified
+// CHECK-NEXT:  |   | `-ClassTemplateDecl {{.+}} B
+// CHECK-NEXT:  |   `-TemplateArgument template '_Y':'template-parameter-0-1' subst index 0
+// CHECK-NEXT:  |     |-parameter: TemplateTemplateParmDecl {{.+}} depth 0 index 0 _X
+// CHECK-NEXT:  |     |-associated FunctionTemplate {{.+}} '<deduction guide for B>'
+// CHECK-NEXT:  |     `-replacement: '_Y':'template-parameter-0-1' qualified
+// CHECK-NEXT:  |       `-TemplateTemplateParmDecl {{.+}} depth 0 index 1 _Y
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for BB> 'auto () -> B<_Y>'
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for BB> 'auto () -> B<GH133132::A>' implicit_instantiation
+// CHECK-NEXT:    |-TemplateArgument template 'GH133132::A'
+// CHECK-NEXT:    | `-ClassTemplateDecl {{.+}} A
+// CHECK-NEXT:    `-TemplateArgument template 'GH133132::A'
+// CHECK-NEXT:      `-ClassTemplateDecl {{.+}} A
+
+template <int N = 42, class U = A<decltype(N)>>
+using CC = A<U>;
+
+CC c{};
+
+// CHECK-LABEL: Dumping GH133132::<deduction guide for CC>:
+// CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for CC>
+// CHECK-NEXT:  |-NonTypeTemplateParmDecl {{.+}} 'int' depth 0 index 0 N
+// CHECK-NEXT:  | `-TemplateArgument {{.+}} expr '42'
+// CHECK-NEXT:  |   `-IntegerLiteral {{.+}} 'int' 42
+// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 1 U
+// CHECK-NEXT:  | `-TemplateArgument type 'A<decltype(N)>'
+// CHECK-NEXT:  |   `-ElaboratedType {{.+}} 'A<decltype(N)>' sugar dependent
+// CHECK-NEXT:  |     `-TemplateSpecializationType {{.+}} 'A<decltype(N)>' dependent
+// CHECK-NEXT:  |       |-name: 'A':'GH133132::A' qualified
+// CHECK-NEXT:  |       | `-ClassTemplateDecl {{.+}} A
+// CHECK-NEXT:  |       `-TemplateArgument type 'decltype(N)'
+// CHECK-NEXT:  |         `-DecltypeType {{.+}} 'decltype(N)' dependent
+// CHECK-NEXT:  |           `-DeclRefExpr {{.+}} 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
+// CHECK-NEXT:  |-TypeTraitExpr {{.+}} 'bool' __is_deducible
+// CHECK-NEXT:  | |-DeducedTemplateSpecializationType {{.+}} 'GH133132::CC' dependent
+// CHECK-NEXT:  | | `-name: 'GH133132::CC'
+// CHECK-NEXT:  | |   `-TypeAliasTemplateDecl {{.+}} CC
+// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'A<U>' dependent
+// CHECK-NEXT:  |   |-name: 'A':'GH133132::A' qualified
+// CHECK-NEXT:  |   | `-ClassTemplateDecl {{.+}} A
+// CHECK-NEXT:  |   `-TemplateArgument type 'U':'type-parameter-0-1'
+// CHECK-NEXT:  |     `-SubstTemplateTypeParmType {{.+}} 'U' sugar dependent class depth 0 index 0 _Ty
+// CHECK-NEXT:  |       |-FunctionTemplate {{.+}} '<deduction guide for A>'
+// CHECK-NEXT:  |       `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
+// CHECK-NEXT:  |         `-TemplateTypeParm {{.+}} 'U'
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for CC> 'auto () -> A<U>'
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for CC> 'auto () -> A<GH133132::A<int>>' implicit_instantiation
+// CHECK-NEXT:    |-TemplateArgument integral '42'
+// CHECK-NEXT:    `-TemplateArgument type 'GH133132::A<int>'
+// CHECK-NEXT:      `-RecordType {{.+}} 'GH133132::A<int>'
+// CHECK-NEXT:        `-ClassTemplateSpecialization {{.+}} 'A'
+
+}
+
+namespace GH67173 {
+
+template <class T> struct Vec2d {
+  struct {
+    T x;
+    T y;
+  };
+};
+
+void f() {
+  Vec2d v{.x = 1, .y = 2};
+}
+
+// CHECK-LABEL: Dumping GH67173::<deduction guide for Vec2d>:
+// CHECK-NEXT: FunctionTemplateDecl {{.+}} implicit <deduction guide for Vec2d>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} referenced class depth 0 index 0 T
+// CHECK:      |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for Vec2d> 'auto (T, T) -> Vec2d<T>' aggregate
+// CHECK-NEXT: | |-ParmVarDecl {{.+}} col:27 'T'
+// CHECK-NEXT: | `-ParmVarDecl {{.+}} col:27 'T'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for Vec2d> 'auto (int, int) -> GH67173::Vec2d<int>' implicit_instantiation aggregate
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.+}} 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.+}} 'int'
+
+}
+
+namespace GH141425 {
+
+template<class... Lambda>
+struct Container
+{
+    Container(Lambda...) {}
+};
+
+template<class... T>
+using Alias = Container<T...>;
+
+template<class = void>
+struct Invocable {
+    using T = decltype([]() {
+        (void)Alias([]() -> void {});
+    }());
+};
+
+struct Type {
+    using T = bool;
+};
+
+template<class...>
+struct ExpandType {
+    using T = bool;
+};
+
+template<class... X>
+using Expand = ExpandType<typename X::T...>;
+
+Expand<Type, Invocable<>> _{};
+
+// CHECK-LABEL: Dumping GH141425::<deduction guide for Alias>:
+// CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for Alias>
+// CHECK-NEXT:   |-TemplateTypeParmDecl {{.+}} class depth 0 index 0 ... T
+// CHECK-NEXT:   |-TypeTraitExpr {{.+}} 'bool' __is_deducible
+// CHECK-NEXT:   | |-DeducedTemplateSpecializationType {{.+}} 'GH141425::Alias' dependent
+// CHECK-NEXT:   | | `-name: 'GH141425::Alias'
+// CHECK-NEXT:   | |   `-TypeAliasTemplateDecl {{.+}} Alias
+// CHECK-NEXT:   | `-TemplateSpecializationType {{.+}} 'Container<T...>' dependent
+// CHECK-NEXT:   |   |-name: 'Container':'GH141425::Container' qualified
+// CHECK-NEXT:   |   | `-ClassTemplateDecl {{.+}} Container
+// CHECK-NEXT:   |   `-TemplateArgument type 'T...':'type-parameter-0-0...'
+// CHECK-NEXT:   |     `-PackExpansionType {{.+}} 'T...' dependent
+// CHECK-NEXT:   |       `-SubstTemplateTypeParmType {{.+}} 'T' sugar dependent contains_unexpanded_pack class depth 0 index 0 ... Lambda pack_index 0
+// CHECK-NEXT:   |         |-FunctionTemplate {{.+}} '<deduction guide for Container>'
+// CHECK-NEXT:   |         `-TemplateTypeParmType {{.+}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK-NEXT:   |           `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT:   |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for Alias> 'auto (T...) -> Container<T...>'
+// CHECK-NEXT:   | `-ParmVarDecl {{.+}} 'T...' pack
+
+}

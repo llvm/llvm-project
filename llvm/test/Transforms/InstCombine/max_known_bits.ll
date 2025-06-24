@@ -35,9 +35,9 @@ define i16 @min_max_clamp(i16 %x) {
 ; Same as above with min/max reversed.
 define i16 @min_max_clamp_2(i16 %x) {
 ; CHECK-LABEL: @min_max_clamp_2(
-; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 2047)
-; CHECK-NEXT:    [[D:%.*]] = call i16 @llvm.smax.i16(i16 [[B]], i16 -2048)
-; CHECK-NEXT:    [[E:%.*]] = add nsw i16 [[D]], 1
+; CHECK-NEXT:    [[D:%.*]] = call i16 @llvm.smax.i16(i16 [[B:%.*]], i16 -2048)
+; CHECK-NEXT:    [[D1:%.*]] = call i16 @llvm.smin.i16(i16 [[D]], i16 2047)
+; CHECK-NEXT:    [[E:%.*]] = add nsw i16 [[D1]], 1
 ; CHECK-NEXT:    ret i16 [[E]]
 ;
   %a = icmp slt i16 %x, 2047
@@ -71,9 +71,9 @@ define i32 @min_max_clamp_3(i16 %x) {
 ; Same as above with min/max order reversed
 define i32 @min_max_clamp_4(i16 %x) {
 ; CHECK-LABEL: @min_max_clamp_4(
-; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 2047)
-; CHECK-NEXT:    [[D:%.*]] = call i16 @llvm.smax.i16(i16 [[B]], i16 -2048)
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[D]] to i32
+; CHECK-NEXT:    [[D:%.*]] = call i16 @llvm.smax.i16(i16 [[B:%.*]], i16 -2048)
+; CHECK-NEXT:    [[D1:%.*]] = call i16 @llvm.smin.i16(i16 [[D]], i16 2047)
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[D1]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = icmp slt i16 %x, 2047
@@ -106,9 +106,9 @@ define i16 @min_max_clamp_intrinsic(i16 %x) {
 
 define i16 @min_max_clamp_intrinsic_2(i16 %x) {
 ; CHECK-LABEL: @min_max_clamp_intrinsic_2(
-; CHECK-NEXT:    [[A:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 2047)
-; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smax.i16(i16 [[A]], i16 -2048)
-; CHECK-NEXT:    [[C:%.*]] = add nsw i16 [[B]], 1
+; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smax.i16(i16 [[A:%.*]], i16 -2048)
+; CHECK-NEXT:    [[B1:%.*]] = call i16 @llvm.smin.i16(i16 [[B]], i16 2047)
+; CHECK-NEXT:    [[C:%.*]] = add nsw i16 [[B1]], 1
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = call i16 @llvm.smin.i16(i16 %x, i16 2047)
@@ -134,9 +134,9 @@ define i32 @min_max_clamp_intrinsic_3(i16 %x) {
 
 define i32 @min_max_clamp_intrinsic_4(i16 %x) {
 ; CHECK-LABEL: @min_max_clamp_intrinsic_4(
-; CHECK-NEXT:    [[A:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 2047)
-; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smax.i16(i16 [[A]], i16 -2048)
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[B]] to i32
+; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smax.i16(i16 [[A:%.*]], i16 -2048)
+; CHECK-NEXT:    [[B1:%.*]] = call i16 @llvm.smin.i16(i16 [[B]], i16 2047)
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[B1]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = call i16 @llvm.smin.i16(i16 %x, i16 2047)

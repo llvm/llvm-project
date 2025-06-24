@@ -143,6 +143,9 @@ class Lexer : public PreprocessorLexer {
   /// True if this is the first time we're lexing the input file.
   bool IsFirstTimeLexingFile;
 
+  /// True if current lexing token is the first pp-token.
+  bool IsFirstPPToken;
+
   // NewLinePtr - A pointer to new line character '\n' being lexed. For '\r\n',
   // it also points to '\n.'
   const char *NewLinePtr;
@@ -581,6 +584,12 @@ public:
   /// Checks whether new line pointed by Str is preceded by escape
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
+
+  /// Diagnose use of a delimited or named escape sequence.
+  static void DiagnoseDelimitedOrNamedEscapeSequence(SourceLocation Loc,
+                                                     bool Named,
+                                                     const LangOptions &Opts,
+                                                     DiagnosticsEngine &Diags);
 
   /// Represents a char and the number of bytes parsed to produce it.
   struct SizedChar {

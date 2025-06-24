@@ -78,10 +78,9 @@ static unsigned getBitWidth(Type type) {
 
 /// Returns the bit width of LLVMType integer or vector.
 static unsigned getLLVMTypeBitWidth(Type type) {
-  return cast<IntegerType>((LLVM::isCompatibleVectorType(type)
-                                ? LLVM::getVectorElementType(type)
-                                : type))
-      .getWidth();
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    type = vecTy.getElementType();
+  return cast<IntegerType>(type).getWidth();
 }
 
 /// Creates `IntegerAttribute` with all bits set for given type
@@ -840,7 +839,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (callOp.getNumResults() == 0) {
       auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-          callOp, std::nullopt, adaptor.getOperands(), callOp->getAttrs());
+          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
       newOp.getProperties().operandSegmentSizes = {
           static_cast<int32_t>(adaptor.getOperands().size()), 0};
       newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});

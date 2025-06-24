@@ -164,7 +164,8 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
 }
 
 void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
-    ConversionTarget &target, RewritePatternSet &patterns, Chipset chipset) {
+    ConversionTarget &target, RewritePatternSet &patterns, Chipset chipset,
+    PatternBenefit benefit) {
   // gfx10 has no atomic adds.
   if (chipset.majorVersion == 10 || chipset < Chipset(9, 0, 8)) {
     target.addIllegalOp<RawBufferAtomicFaddOp>();
@@ -189,13 +190,22 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
     } else {
       target.addIllegalOp<RawBufferAtomicFmaxOp>();
     }
+    // TODO(https://github.com/llvm/llvm-project/issues/129206): Refactor
+    // this to avoid hardcoding ISA version: gfx950 has bf16 atomics.
+    if (chipset < Chipset(9, 5, 0)) {
+      target.addDynamicallyLegalOp<RawBufferAtomicFaddOp>(
+          [](RawBufferAtomicFaddOp op) -> bool {
+            Type elemType = getElementTypeOrSelf(op.getValue().getType());
+            return !isa<BFloat16Type>(elemType);
+          });
+    }
   }
   patterns.add<
       RawBufferAtomicByCasPattern<RawBufferAtomicFaddOp, arith::AddFOp>,
       RawBufferAtomicByCasPattern<RawBufferAtomicFmaxOp, arith::MaximumFOp>,
       RawBufferAtomicByCasPattern<RawBufferAtomicSmaxOp, arith::MaxSIOp>,
       RawBufferAtomicByCasPattern<RawBufferAtomicUminOp, arith::MinUIOp>>(
-      patterns.getContext());
+      patterns.getContext(), benefit);
 }
 
 void AmdgpuEmulateAtomicsPass::runOnOperation() {

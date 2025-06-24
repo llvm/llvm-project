@@ -47,6 +47,7 @@ class PDBASTParser;
 namespace clang {
 class FileManager;
 class HeaderSearch;
+class HeaderSearchOptions;
 class ModuleMap;
 } // namespace clang
 
@@ -479,9 +480,9 @@ public:
       clang::StorageClass storage, bool is_inline);
 
   CompilerType
-  CreateFunctionType(const CompilerType &result_type, const CompilerType *args,
-                     unsigned num_args, bool is_variadic, unsigned type_quals,
-                     clang::CallingConv cc = clang::CC_C,
+  CreateFunctionType(const CompilerType &result_type,
+                     llvm::ArrayRef<CompilerType> args, bool is_variadic,
+                     unsigned type_quals, clang::CallingConv cc = clang::CC_C,
                      clang::RefQualifierKind ref_qual = clang::RQ_None);
 
   clang::ParmVarDecl *
@@ -686,9 +687,6 @@ public:
 
   static bool IsObjCClassType(const CompilerType &type);
 
-  static bool IsObjCClassTypeAndHasIVars(const CompilerType &type,
-                                         bool check_superclass);
-
   static bool IsObjCObjectOrInterfaceType(const CompilerType &type);
 
   static bool IsObjCObjectPointerType(const CompilerType &type,
@@ -888,6 +886,12 @@ public:
 
   static uint32_t GetNumPointeeChildren(clang::QualType type);
 
+  llvm::Expected<CompilerType>
+  GetDereferencedType(lldb::opaque_compiler_type_t type,
+                      ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) override;
+
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
@@ -899,9 +903,10 @@ public:
 
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                   llvm::StringRef name,
-                                   bool omit_empty_base_classes) override;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
+                          llvm::StringRef name,
+                          bool omit_empty_base_classes) override;
 
   // Lookup a child member given a name. This function will match member names
   // only and will descend into "clang_type" children in search for the first
@@ -1069,7 +1074,7 @@ public:
 #endif
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   /// Dump clang AST types from the symbol file.
   ///
@@ -1196,6 +1201,7 @@ private:
   std::unique_ptr<clang::LangOptions> m_language_options_up;
   std::unique_ptr<clang::FileManager> m_file_manager_up;
   std::unique_ptr<clang::SourceManager> m_source_manager_up;
+  std::unique_ptr<clang::DiagnosticOptions> m_diagnostic_options_up;
   std::unique_ptr<clang::DiagnosticsEngine> m_diagnostics_engine_up;
   std::unique_ptr<clang::DiagnosticConsumer> m_diagnostic_consumer_up;
   std::shared_ptr<clang::TargetOptions> m_target_options_rp;
@@ -1203,6 +1209,7 @@ private:
   std::unique_ptr<clang::IdentifierTable> m_identifier_table_up;
   std::unique_ptr<clang::SelectorTable> m_selector_table_up;
   std::unique_ptr<clang::Builtin::Context> m_builtins_up;
+  std::unique_ptr<clang::HeaderSearchOptions> m_header_search_opts_up;
   std::unique_ptr<clang::HeaderSearch> m_header_search_up;
   std::unique_ptr<clang::ModuleMap> m_module_map_up;
   std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;
@@ -1311,7 +1318,7 @@ public:
   }
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,

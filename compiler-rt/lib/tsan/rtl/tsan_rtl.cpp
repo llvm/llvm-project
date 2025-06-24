@@ -624,6 +624,7 @@ void MapShadow(uptr addr, uptr size) {
   static uptr mapped_meta_end = 0;
   uptr meta_begin = (uptr)MemToMeta(addr);
   uptr meta_end = (uptr)MemToMeta(addr + size);
+  // Windows wants 64K alignment.
   meta_begin = RoundDownTo(meta_begin, 64 << 10);
   meta_end = RoundUpTo(meta_end, 64 << 10);
   if (!data_mapped) {
@@ -634,9 +635,6 @@ void MapShadow(uptr addr, uptr size) {
       Die();
   } else {
     // Mapping continuous heap.
-    // Windows wants 64K alignment.
-    meta_begin = RoundDownTo(meta_begin, 64 << 10);
-    meta_end = RoundUpTo(meta_end, 64 << 10);
     CHECK_GT(meta_end, mapped_meta_end);
     if (meta_begin < mapped_meta_end)
       meta_begin = mapped_meta_end;
@@ -678,6 +676,12 @@ void CheckUnwind() {
 }
 
 bool is_initialized;
+
+// Symbolization indirectly calls dl_iterate_phdr. If a CHECK() fails early on
+// (prior to the dl_iterate_phdr interceptor setup), resulting in an attempted
+// symbolization, it will segfault.
+// dl_iterate_phdr is not intercepted for Android.
+bool ready_to_symbolize = SANITIZER_ANDROID;
 
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
