@@ -660,11 +660,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::simpleLibcallSinCos(
   Register DstCos = MI.getOperand(1).getReg();
   Register Src = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(DstSin);
-  LLT SrcTy = MRI.getType(Src);
-
-  assert((SrcTy.getSizeInBits() == 32 || SrcTy.getSizeInBits() == 64 ||
-          SrcTy.getSizeInBits() == 80) &&
-         "Unexpected source type for SINCOS.");
 
   int MemSize = DstTy.getSizeInBytes();
   Align Alignment = getStackTemporaryAlignment(DstTy);
@@ -680,15 +675,16 @@ LegalizerHelper::LegalizeResult LegalizerHelper::simpleLibcallSinCos(
           .getReg(0);
 
   auto &Ctx = MF.getFunction().getContext();
-  if (LegalizerHelper::LegalizeResult::Legalized !=
+  auto libcallResult =
       createLibcall(MIRBuilder, getRTLibDesc(MI.getOpcode(), Size),
                     {{0}, Type::getVoidTy(Ctx), 0},
                     {{Src, OpType, 0},
                      {StackPtrSin, PointerType::get(Ctx, AddrSpace), 1},
                      {StackPtrCos, PointerType::get(Ctx, AddrSpace), 2}},
-                    LocObserver, &MI)) {
+                    LocObserver, &MI);
+
+  if (libcallResult != LegalizeResult::Legalized)
     return LegalizerHelper::UnableToLegalize;
-  }
 
   MachineMemOperand *LoadMMOSin = MF.getMachineMemOperand(
       PtrInfo, MachineMemOperand::MOLoad, MemSize, Alignment);
