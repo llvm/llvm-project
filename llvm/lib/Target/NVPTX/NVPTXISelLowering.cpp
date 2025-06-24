@@ -1057,30 +1057,19 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::DeclareScalarParam)
     MAKE_CASE(NVPTXISD::DeclareRet)
     MAKE_CASE(NVPTXISD::DeclareRetParam)
-    MAKE_CASE(NVPTXISD::PrintCall)
-    MAKE_CASE(NVPTXISD::PrintConvergentCall)
-    MAKE_CASE(NVPTXISD::PrintCallUni)
-    MAKE_CASE(NVPTXISD::PrintConvergentCallUni)
+    MAKE_CASE(NVPTXISD::CALL)
     MAKE_CASE(NVPTXISD::LoadParam)
     MAKE_CASE(NVPTXISD::LoadParamV2)
     MAKE_CASE(NVPTXISD::LoadParamV4)
     MAKE_CASE(NVPTXISD::StoreParam)
     MAKE_CASE(NVPTXISD::StoreParamV2)
     MAKE_CASE(NVPTXISD::StoreParamV4)
-    MAKE_CASE(NVPTXISD::CallArgBegin)
-    MAKE_CASE(NVPTXISD::CallArg)
-    MAKE_CASE(NVPTXISD::LastCallArg)
-    MAKE_CASE(NVPTXISD::CallArgEnd)
-    MAKE_CASE(NVPTXISD::CallVoid)
-    MAKE_CASE(NVPTXISD::Prototype)
     MAKE_CASE(NVPTXISD::MoveParam)
     MAKE_CASE(NVPTXISD::StoreRetval)
     MAKE_CASE(NVPTXISD::StoreRetvalV2)
     MAKE_CASE(NVPTXISD::StoreRetvalV4)
     MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
     MAKE_CASE(NVPTXISD::BUILD_VECTOR)
-    MAKE_CASE(NVPTXISD::CallSeqBegin)
-    MAKE_CASE(NVPTXISD::CallSeqEnd)
     MAKE_CASE(NVPTXISD::CallPrototype)
     MAKE_CASE(NVPTXISD::ProxyReg)
     MAKE_CASE(NVPTXISD::LoadV2)
@@ -1578,9 +1567,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
               ? promoteScalarArgumentSize(TypeSize * 8)
               : TypeSize * 8;
 
-      Chain = DAG.getNode(
-          NVPTXISD::DeclareScalarParam, dl, {MVT::Other, MVT::Glue},
-          {Chain, GetI32(ArgI), GetI32(PromotedSize), GetI32(0), InGlue});
+      Chain =
+          DAG.getNode(NVPTXISD::DeclareScalarParam, dl, {MVT::Other, MVT::Glue},
+                      {Chain, GetI32(ArgI), GetI32(PromotedSize), InGlue});
     }
     InGlue = Chain.getValue(1);
 
@@ -1717,16 +1706,13 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const unsigned ResultSize = DL.getTypeAllocSizeInBits(RetTy);
     if (!shouldPassAsArray(RetTy)) {
       const unsigned PromotedResultSize = promoteScalarArgumentSize(ResultSize);
-      SDValue DeclareRetOps[] = {Chain, GetI32(1), GetI32(PromotedResultSize),
-                                 GetI32(0), InGlue};
       Chain = DAG.getNode(NVPTXISD::DeclareRet, dl, {MVT::Other, MVT::Glue},
-                          DeclareRetOps);
+                          {Chain, GetI32(PromotedResultSize), InGlue});
       InGlue = Chain.getValue(1);
     } else {
-      SDValue DeclareRetOps[] = {Chain, GetI32(RetAlign->value()),
-                                 GetI32(ResultSize / 8), GetI32(0), InGlue};
-      Chain = DAG.getNode(NVPTXISD::DeclareRetParam, dl,
-                          {MVT::Other, MVT::Glue}, DeclareRetOps);
+      Chain = DAG.getNode(
+          NVPTXISD::DeclareRetParam, dl, {MVT::Other, MVT::Glue},
+          {Chain, GetI32(RetAlign->value()), GetI32(ResultSize / 8), InGlue});
       InGlue = Chain.getValue(1);
     }
   }
@@ -1777,25 +1763,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                      HasVAArgs ? std::optional(FirstVAArg) : std::nullopt, *CB,
                      UniqueCallSite);
     const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
-    SDValue ProtoOps[] = {
-        Chain,
-        DAG.getTargetExternalSymbol(ProtoStr, MVT::i32),
-        InGlue,
-    };
-    Chain = DAG.getNode(NVPTXISD::CallPrototype, dl, {MVT::Other, MVT::Glue},
-                        ProtoOps);
+    Chain = DAG.getNode(
+        NVPTXISD::CallPrototype, dl, {MVT::Other, MVT::Glue},
+        {Chain, DAG.getTargetExternalSymbol(ProtoStr, MVT::i32), InGlue});
     InGlue = Chain.getValue(1);
   }
-  // Op to just print "call"
-  SDValue PrintCallOps[] = {Chain, GetI32(Ins.empty() ? 0 : 1), InGlue};
-  // We model convergent calls as separate opcodes.
-  unsigned Opcode =
-      IsIndirectCall ? NVPTXISD::PrintCall : NVPTXISD::PrintCallUni;
-  if (CLI.IsConvergent)
-    Opcode = Opcode == NVPTXISD::PrintCallUni ? NVPTXISD::PrintConvergentCallUni
-                                              : NVPTXISD::PrintConvergentCall;
-  Chain = DAG.getNode(Opcode, dl, {MVT::Other, MVT::Glue}, PrintCallOps);
-  InGlue = Chain.getValue(1);
 
   if (ConvertToIndirectCall) {
     // Copy the function ptr to a ptx register and use the register to call the
@@ -1809,37 +1781,16 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Callee = DAG.getCopyFromReg(RegCopy, dl, DestReg, DestVT);
   }
 
-  // Ops to print out the function name
-  SDValue CallVoidOps[] = { Chain, Callee, InGlue };
-  Chain =
-      DAG.getNode(NVPTXISD::CallVoid, dl, {MVT::Other, MVT::Glue}, CallVoidOps);
+  const unsigned Proto = IsIndirectCall ? UniqueCallSite : 0;
+  const unsigned NumArgs =
+      std::min<unsigned>(CLI.NumFixedArgs + 1, Args.size());
+  /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
+  ///      NumParams, Callee, Proto, InGlue)
+  Chain = DAG.getNode(NVPTXISD::CALL, dl, {MVT::Other, MVT::Glue},
+                      {Chain, GetI32(CLI.IsConvergent), GetI32(IsIndirectCall),
+                       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee,
+                       GetI32(Proto), InGlue});
   InGlue = Chain.getValue(1);
-
-  // Ops to print out the param list
-  SDValue CallArgBeginOps[] = { Chain, InGlue };
-  Chain = DAG.getNode(NVPTXISD::CallArgBegin, dl, {MVT::Other, MVT::Glue},
-                      CallArgBeginOps);
-  InGlue = Chain.getValue(1);
-
-  const unsigned E = std::min<unsigned>(CLI.NumFixedArgs + 1, Args.size());
-  for (const unsigned I : llvm::seq(E)) {
-    const unsigned Opcode =
-        I == (E - 1) ? NVPTXISD::LastCallArg : NVPTXISD::CallArg;
-    SDValue CallArgOps[] = {Chain, GetI32(1), GetI32(I), InGlue};
-    Chain = DAG.getNode(Opcode, dl, {MVT::Other, MVT::Glue}, CallArgOps);
-    InGlue = Chain.getValue(1);
-  }
-  SDValue CallArgEndOps[] = {Chain, GetI32(IsIndirectCall ? 0 : 1), InGlue};
-  Chain = DAG.getNode(NVPTXISD::CallArgEnd, dl, {MVT::Other, MVT::Glue},
-                      CallArgEndOps);
-  InGlue = Chain.getValue(1);
-
-  if (IsIndirectCall) {
-    SDValue PrototypeOps[] = {Chain, GetI32(UniqueCallSite), InGlue};
-    Chain = DAG.getNode(NVPTXISD::Prototype, dl, {MVT::Other, MVT::Glue},
-                        PrototypeOps);
-    InGlue = Chain.getValue(1);
-  }
 
   SmallVector<SDValue, 16> ProxyRegOps;
   // An item of the vector is filled if the element does not need a ProxyReg

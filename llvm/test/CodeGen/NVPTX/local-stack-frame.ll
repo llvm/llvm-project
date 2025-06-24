@@ -58,11 +58,7 @@ define ptx_kernel void @foo2(i32 %a) {
 ; PTX32-NEXT:    { // callseq 0, 0
 ; PTX32-NEXT:    .param .b32 param0;
 ; PTX32-NEXT:    st.param.b32 [param0], %r2;
-; PTX32-NEXT:    call.uni
-; PTX32-NEXT:    bar,
-; PTX32-NEXT:    (
-; PTX32-NEXT:    param0
-; PTX32-NEXT:    );
+; PTX32-NEXT:    call.uni bar, (param0);
 ; PTX32-NEXT:    } // callseq 0
 ; PTX32-NEXT:    ret;
 ;
@@ -84,11 +80,7 @@ define ptx_kernel void @foo2(i32 %a) {
 ; PTX64-NEXT:    { // callseq 0, 0
 ; PTX64-NEXT:    .param .b64 param0;
 ; PTX64-NEXT:    st.param.b64 [param0], %rd1;
-; PTX64-NEXT:    call.uni
-; PTX64-NEXT:    bar,
-; PTX64-NEXT:    (
-; PTX64-NEXT:    param0
-; PTX64-NEXT:    );
+; PTX64-NEXT:    call.uni bar, (param0);
 ; PTX64-NEXT:    } // callseq 0
 ; PTX64-NEXT:    ret;
   %local = alloca i32, align 4
@@ -159,20 +151,12 @@ define void @foo4() {
 ; PTX32-NEXT:    { // callseq 1, 0
 ; PTX32-NEXT:    .param .b32 param0;
 ; PTX32-NEXT:    st.param.b32 [param0], %r1;
-; PTX32-NEXT:    call.uni
-; PTX32-NEXT:    bar,
-; PTX32-NEXT:    (
-; PTX32-NEXT:    param0
-; PTX32-NEXT:    );
+; PTX32-NEXT:    call.uni bar, (param0);
 ; PTX32-NEXT:    } // callseq 1
 ; PTX32-NEXT:    { // callseq 2, 0
 ; PTX32-NEXT:    .param .b32 param0;
 ; PTX32-NEXT:    st.param.b32 [param0], %r3;
-; PTX32-NEXT:    call.uni
-; PTX32-NEXT:    bar,
-; PTX32-NEXT:    (
-; PTX32-NEXT:    param0
-; PTX32-NEXT:    );
+; PTX32-NEXT:    call.uni bar, (param0);
 ; PTX32-NEXT:    } // callseq 2
 ; PTX32-NEXT:    ret;
 ;
@@ -197,20 +181,12 @@ define void @foo4() {
 ; PTX64-NEXT:    { // callseq 1, 0
 ; PTX64-NEXT:    .param .b64 param0;
 ; PTX64-NEXT:    st.param.b64 [param0], %rd1;
-; PTX64-NEXT:    call.uni
-; PTX64-NEXT:    bar,
-; PTX64-NEXT:    (
-; PTX64-NEXT:    param0
-; PTX64-NEXT:    );
+; PTX64-NEXT:    call.uni bar, (param0);
 ; PTX64-NEXT:    } // callseq 1
 ; PTX64-NEXT:    { // callseq 2, 0
 ; PTX64-NEXT:    .param .b64 param0;
 ; PTX64-NEXT:    st.param.b64 [param0], %rd3;
-; PTX64-NEXT:    call.uni
-; PTX64-NEXT:    bar,
-; PTX64-NEXT:    (
-; PTX64-NEXT:    param0
-; PTX64-NEXT:    );
+; PTX64-NEXT:    call.uni bar, (param0);
 ; PTX64-NEXT:    } // callseq 2
 ; PTX64-NEXT:    ret;
   %A = alloca i32

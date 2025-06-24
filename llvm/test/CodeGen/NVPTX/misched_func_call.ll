@@ -21,11 +21,7 @@ define ptx_kernel void @wombat(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], 0d0000000000000000;
 ; CHECK-NEXT:    .param .b64 retval0;
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    quux,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), quux, (param0);
 ; CHECK-NEXT:    ld.param.b64 %rd1, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    mul.lo.s32 %r7, %r10, %r3;

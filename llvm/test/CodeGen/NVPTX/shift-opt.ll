@@ -131,11 +131,7 @@ define i64 @test_negative_use_lop(i64 %x, i32 %y) {
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd3;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    use,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni use, (param0);
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
@@ -164,11 +160,7 @@ define i64 @test_negative_use_shl(i64 %x, i32 %y) {
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd2;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    use,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni use, (param0);
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;

@@ -29,19 +29,14 @@ enum NodeType : unsigned {
   DeclareScalarParam,
   DeclareRetParam,
   DeclareRet,
-  PrintCall,
-  PrintConvergentCall,
-  PrintCallUni,
-  PrintConvergentCallUni,
-  CallArgBegin,
-  CallArg,
-  LastCallArg,
-  CallArgEnd,
-  CallVoid,
-  Prototype,
+
+  /// This node represents a PTX call instruction. It's operands are as follows:
+  ///
+  /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
+  ///      NumParams, Callee, Proto, InGlue)
+  CALL,
+
   MoveParam,
-  CallSeqBegin,
-  CallSeqEnd,
   CallPrototype,
   ProxyReg,
   FSHL_CLAMP,

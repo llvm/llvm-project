@@ -153,11 +153,7 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd1;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    _Z6escapePv,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni _Z6escapePv, (param0);
 ; PTX-NEXT:    } // callseq 0
 ; PTX-NEXT:    ret;
 entry:
@@ -198,11 +194,7 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd3;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    _Z6escapePv,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni _Z6escapePv, (param0);
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
 entry:
@@ -902,11 +894,7 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 ; PTX-NEXT:    { // callseq 2, 0
 ; PTX-NEXT:    .param .align 4 .b8 param0[4];
 ; PTX-NEXT:    st.param.b32 [param0], %r1;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    device_func,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni device_func, (param0);
 ; PTX-NEXT:    } // callseq 2
 ; PTX-NEXT:    ret;
   call void @device_func(ptr byval(i32) align 4 %input)
@@ -929,11 +917,7 @@ define void @device_func(ptr byval(i32) align 4 %input) {
 ; PTX-NEXT:    { // callseq 3, 0
 ; PTX-NEXT:    .param .align 4 .b8 param0[4];
 ; PTX-NEXT:    st.param.b32 [param0], %r1;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    device_func,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni device_func, (param0);
 ; PTX-NEXT:    } // callseq 3
 ; PTX-NEXT:    ret;
   call void @device_func(ptr byval(i32) align 4 %input)

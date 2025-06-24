@@ -910,7 +910,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
   }
 }
 
-
 void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
   SDValue Src = N->getOperand(0);
   AddrSpaceCastSDNode *CastN = cast<AddrSpaceCastSDNode>(N);
