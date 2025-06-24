@@ -143,4 +143,18 @@ define void @dupq_f64_256b(ptr %addr) #0 {
   ret void
 }
 
+define void @dupq_f32_256b_with_poison(ptr %addr) #0 {
+; CHECK-LABEL: dupq_f32_256b_with_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    dupq z0.s, z0.s[3]
+; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    ret
+  %load = load <8 x float>, ptr %addr
+  %splat.lanes = shufflevector <8 x float> %load, <8 x float> poison, <8 x i32> <i32 3, i32 poison, i32 3, i32 3,
+                                                                                 i32 7, i32 7, i32 7, i32 poison>
+  store <8 x float> %splat.lanes, ptr %addr
+  ret void
+}
+
 attributes #0 = { noinline vscale_range(2,2) }

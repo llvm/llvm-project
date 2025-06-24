@@ -6739,8 +6739,10 @@ inline std::optional<unsigned> isDUPQMask(ArrayRef<int> M, unsigned Segments,
     return std::nullopt;
 
   // Check that all lanes match the first, adjusted for segment.
+  // Undef/poison lanes (<0) are also accepted.
   if (all_of(enumerate(M), [&](auto P) {
-        return (unsigned)P.value() == Lane + (P.index() / NumElts) * NumElts;
+        return P.value() < 0 ||
+               (unsigned)P.value() == Lane + (P.index() / NumElts) * NumElts;
       }))
     return Lane;
 

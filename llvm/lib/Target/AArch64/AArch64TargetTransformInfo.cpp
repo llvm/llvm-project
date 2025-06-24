@@ -5604,7 +5604,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
        (ST->hasSME2p1() && ST->isSVEorStreamingSVEAvailable())) &&
       Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(SrcTy) &&
       SrcTy->getPrimitiveSizeInBits().isKnownMultipleOf(
-          AArch64::SVEBitsPerBlock)) {
+          AArch64::SVEBitsPerBlock) && !Mask.empty()) {
 
     FixedVectorType *VTy = cast<FixedVectorType>(SrcTy);
     unsigned Segments =

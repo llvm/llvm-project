@@ -10,6 +10,7 @@ define void @dup_within_each_segment() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dupq_s3 = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 7, i32 7, i32 7, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dupq_d0 = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %dupq_512b_d1 = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dupq_s3_with_poison = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 poison, i32 3, i32 7, i32 poison, i32 7, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %dupq_b11 = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> <i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11,
@@ -20,6 +21,8 @@ define void @dup_within_each_segment() #0 {
                                                                            i32 7, i32 7, i32 7, i32 7>
   %dupq_d0  = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   %dupq_512b_d1 = shufflevector <8 x i64> poison, <8 x i64> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  %dupq_s3_with_poison = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 poison, i32 3,
+                                                                                      i32 7, i32 poison, i32 7, i32 7>
   ret void
 }
 
