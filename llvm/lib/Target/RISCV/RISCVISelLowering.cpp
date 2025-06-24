@@ -215,7 +215,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       for (MVT VT : F16VecVTs)
         addRegClassForRVV(VT);
 
-    if (Subtarget.hasVInstructionsBF16Minimal())
+    if (Subtarget.hasVInstructionsBF16Minimal() ||
+        Subtarget.hasVendorXAndesVBFHCvt())
       for (MVT VT : BF16VecVTs)
         addRegClassForRVV(VT);
 
@@ -384,7 +385,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ? Legal
                          : Expand);
 
-  if (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit()) {
+  if ((Subtarget.hasVendorXCVbitmanip() || Subtarget.hasVendorXqcibm()) &&
+      !Subtarget.is64Bit()) {
     setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
   } else {
     // Zbkb can use rev8+brev8 to implement bitreverse.
