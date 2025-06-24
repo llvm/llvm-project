@@ -1,32 +1,30 @@
-# RUN: %clang --target=fuchsia-elf-riscv64 -march=rv64gc_zcb %s -nostdlib -o %t
-# RUN: llvm-objcopy --add-symbol abs=0,global %t
+# RUN: llvm-mc -riscv-add-build-attributes -triple=riscv64 -filetype=obj -mattr=+f,+c,+zcb %s -o %t
 # RUN: llvm-objdump -d %t | FileCheck %s
 
-# CHECK: 0000000000001000 <_start>:
-# CHECK-NEXT:     1000: 00001517     	auipc	a0, 0x1
-# CHECK-NEXT:     1004: 00450513     	addi	a0, a0, 0x4 <target>
-# CHECK-NEXT:     1008: 00001517     	auipc	a0, 0x1
-# CHECK-NEXT:     100c: 1571         	addi	a0, a0, -0x4 <target>
-# CHECK-NEXT:     100e: 6509         	lui	a0, 0x2
-# CHECK-NEXT:     1010: 0045059b     	addiw	a1, a0, 0x4 <target>
-# CHECK-NEXT:     1014: 6509         	lui	a0, 0x2
-# CHECK-NEXT:     1016: 2511         	addiw	a0, a0, 0x4 <target>
-# CHECK-NEXT:     1018: 00102537     	lui	a0, 0x102
-# CHECK-NEXT:     101c: c50c         	sw	a1, 0x8(a0) <far_target>
-# CHECK-NEXT:     101e: 00102537     	lui	a0, 0x102
-# CHECK-NEXT:     1022: 4508         	lw	a0, 0x8(a0) <far_target>
-# CHECK-NEXT:     1024: 6509         	lui	a0, 0x2
-# CHECK-NEXT:     1026: 6585         	lui	a1, 0x1
-# CHECK-NEXT:     1028: 0306         	slli	t1, t1, 0x1
-# CHECK-NEXT:     102a: 0511         	addi	a0, a0, 0x4 <target>
-# CHECK-NEXT:     102c: 0505         	addi	a0, a0, 0x1
-# CHECK-NEXT:     102e: 00200037     	lui	zero, 0x200
-# CHECK-NEXT:     1032: 00a02423     	sw	a0, 0x8(zero) <abs+0x8>
-# CHECK-NEXT:     1036: 00101097     	auipc	ra, 0x101
-# CHECK-NEXT:     103a: fd6080e7     	jalr	-0x2a(ra) <func>
-# CHECK-NEXT:     103e: 640d         	lui	s0, 0x3
-# CHECK-NEXT:     1040: 8800         	sb	s0, 0x0(s0) <zcb>
-# CHECK-NEXT:     1042: 4522         	lw	a0, 0x8(sp)
+# CHECK: 0000000000000000 <_start>:
+# CHECK-NEXT:        0: 00010517     	auipc	a0, 0x10
+# CHECK-NEXT:        4: 00450513     	addi	a0, a0, 0x4 <target>
+# CHECK-NEXT:        8: 00010517     	auipc	a0, 0x10
+# CHECK-NEXT:        c: 1571         	addi	a0, a0, -0x4 <target>
+# CHECK-NEXT:        e: 6541         	lui	a0, 0x10
+# CHECK-NEXT:       10: 0045059b     	addiw	a1, a0, 0x4 <target>
+# CHECK-NEXT:       14: 6541         	lui	a0, 0x10
+# CHECK-NEXT:       16: 2511         	addiw	a0, a0, 0x4 <target>
+# CHECK-NEXT:       18: 00110537     	lui	a0, 0x110
+# CHECK-NEXT:       1c: c50c         	sw	a1, 0x8(a0) <far_target>
+# CHECK-NEXT:       1e: 00110537     	lui	a0, 0x110
+# CHECK-NEXT:       22: 4508         	lw	a0, 0x8(a0) <far_target>
+# CHECK-NEXT:       24: 6541         	lui	a0, 0x10
+# CHECK-NEXT:       26: 6585         	lui	a1, 0x1
+# CHECK-NEXT:       28: 0306         	slli	t1, t1, 0x1
+# CHECK-NEXT:       2a: 0511         	addi	a0, a0, 0x4 <target>
+# CHECK-NEXT:       2c: 0505         	addi	a0, a0, 0x1
+# CHECK-NEXT:       2e: 00002427     	fsw	ft0, 0x8(zero) <_start+0x8>
+# CHECK-NEXT:       32: 00110097     	auipc	ra, 0x110
+# CHECK-NEXT:       36: fda080e7     	jalr	-0x26(ra) <func>
+# CHECK-NEXT:       3a: 6445         	lui	s0, 0x11
+# CHECK-NEXT:       3c: 8800         	sb	s0, 0x0(s0) <zcb>
+# CHECK-NEXT:       3e: 4522         	lw	a0, 0x8(sp)
 
 # The core of the feature being added was address resolution for instruction 
 # sequences where a register is populated by immediate values via two
@@ -45,25 +43,25 @@ _start:
 
   # Test block #1.
   lla a0, target
-  auipc a0, 0x1
+  auipc a0, 0x10
   c.addi a0, -0x4
 
   # Test block #2.
-  c.lui a0, 0x2
+  c.lui a0, 0x10
   addiw a1, a0, 0x4
-  c.lui a0, 0x2
+  c.lui a0, 0x10
   c.addiw a0, 0x4
 
   # Test block #3.
-  lui a0, 0x102
+  lui a0, 0x110
   sw a1, 0x8(a0)
-  lui a0, 0x102
+  lui a0, 0x110
   c.lw a0, 0x8(a0)
 
   # Test block 4 tests instruction interleaving. Essentially the code's
   # ability to keep track of a valid sequence even if multiple other unrelated
   # instructions separate the two.
-  lui a0, 0x2
+  lui a0, 0x10
   lui a1, 0x1        # Unrelated instruction.
   slli t1, t1, 0x1   # Unrelated instruction.
   addi a0, a0, 0x4
@@ -74,23 +72,21 @@ _start:
   # relative to the zero register trigger address resolution. The latter kind
   # of instructions are essentially memory accesses relative to the zero
   # register.
-  lui x0, 0x200
-  sw a0, 0x8(x0)
+  fsw f0, 0x8(x0)
 
   # Test 6 ensures that the newly added functionality is compatible with
   # code that already worked for branch instructions.
   call func
 
   # Test #7 -- zcb extension.
-  lui x8, 0x3
+  lui x8, 0x11
   c.sb x8, 0(x8)
 
   # Test #8 -- stack based load/stores.
   c.lwsp a0, 0x8(sp)
 
 # These are the labels that the instructions above are expected to resolve to.
-.section .data
-.skip 0x4
+.skip 0xffc4
 target:
   .word 1
 .skip 0xff8
