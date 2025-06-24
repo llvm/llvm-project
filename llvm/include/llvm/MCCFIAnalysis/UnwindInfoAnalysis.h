@@ -50,8 +50,6 @@ private:
   void checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
                     const dwarf::UnwindTable::const_iterator &PrevRow,
                     const dwarf::UnwindTable::const_iterator &NextRow,
-                    const dwarf::UnwindLocation &PrevRegLoc,
-                    const dwarf::UnwindLocation &NextRegLoc,
                     const std::set<DWARFRegType> &Reads,
                     const std::set<DWARFRegType> &Writes);
 

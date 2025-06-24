@@ -193,25 +193,7 @@ void UnwindInfoAnalysis::update(const MCInst &Inst,
   for (auto [LLVMReg, _] : getAllSuperRegs()) {
     DWARFRegType Reg = MCRI->getDwarfRegNum(LLVMReg, IsEH);
 
-    auto MaybePrevUnwindLoc =
-        PrevUnwindRow->getRegisterLocations().getRegisterLocation(Reg);
-    auto MaybeNextUnwindLoc =
-        CurrentUnwindRow->getRegisterLocations().getRegisterLocation(Reg);
-
-    if (!MaybePrevUnwindLoc) {
-      assert(!MaybeNextUnwindLoc && "The register unwind info suddenly "
-                                    "appeared here, ignoring this change");
-      continue;
-    }
-
-    assert(MaybeNextUnwindLoc && "The register unwind info suddenly vanished "
-                                 "here, ignoring this change");
-
-    auto PrevUnwindLoc = MaybePrevUnwindLoc.value();
-    auto NextUnwindLoc = MaybeNextUnwindLoc.value();
-
-    checkRegDiff(Inst, Reg, PrevUnwindRow, CurrentUnwindRow, PrevUnwindLoc,
-                 NextUnwindLoc, Reads, Writes);
+    checkRegDiff(Inst, Reg, PrevUnwindRow, CurrentUnwindRow, Reads, Writes);
   }
 }
 
@@ -219,9 +201,24 @@ void UnwindInfoAnalysis::checkRegDiff(
     const MCInst &Inst, DWARFRegType Reg,
     const dwarf::UnwindTable::const_iterator &PrevRow,
     const dwarf::UnwindTable::const_iterator &NextRow,
-    const dwarf::UnwindLocation &PrevRegLoc,
-    const dwarf::UnwindLocation &NextRegLoc,
     const std::set<DWARFRegType> &Reads, const std::set<DWARFRegType> &Writes) {
+  auto MaybePrevUnwindLoc =
+      PrevRow->getRegisterLocations().getRegisterLocation(Reg);
+  auto MaybeNextUnwindLoc =
+      NextRow->getRegisterLocations().getRegisterLocation(Reg);
+
+  if (!MaybePrevUnwindLoc) {
+    assert(!MaybeNextUnwindLoc && "The register unwind info suddenly "
+                                  "appeared here, ignoring this change");
+    return;
+  }
+
+  assert(MaybeNextUnwindLoc && "The register unwind info suddenly vanished "
+                               "here, ignoring this change");
+
+  auto PrevRegLoc = MaybePrevUnwindLoc.value();
+  auto NextRegLoc = MaybeNextUnwindLoc.value();
+
   auto MaybeRegLLVM = MCRI->getLLVMRegNum(Reg, IsEH);
   if (!MaybeRegLLVM) {
     assert(PrevRegLoc == NextRegLoc &&
