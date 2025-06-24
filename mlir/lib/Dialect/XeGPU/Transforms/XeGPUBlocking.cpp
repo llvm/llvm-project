@@ -78,6 +78,17 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   }
 }
 
+struct ConvertLayoutOpPattern: public OpRewritePattern<xegpu::ConvertLayoutOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op, PatternRewriter &rewriter) const override {
+    xegpu::LayoutAttr input_layout = op.getInputLayoutAttr().dropInstData();
+    xegpu::LayoutAttr target_layout = op.getTargetLayoutAttr().dropInstData();
+    auto newOp = rewriter.createOrFold<xegpu::ConvertLayoutOp>(op.getLoc(), op.getType(), op.getSource(), input_layout, target_layout);
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
 //===------------------------------------------------------------------------===//
 // The XeGPUBlockingPass leverages the unroll patterns for XeGPU and Vector ops
 // to partition operations that process large shapes into multiple operations on

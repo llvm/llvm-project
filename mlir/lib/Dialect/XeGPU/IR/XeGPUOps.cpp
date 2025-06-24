@@ -609,8 +609,8 @@ LogicalResult DpasOp::verify() {
 // XeGPU_ConvertLayoutOp
 //===----------------------------------------------------------------------===//
 LogicalResult ConvertLayoutOp::verify() {
-  auto srcLayout = getInputLayoutAttr();
-  auto resLayout = getTargetLayoutAttr();
+  auto srcLayout = getInputLayout();
+  auto resLayout = getTargetLayout();
   if (!srcLayout)
     return emitOpError("expected input layout.");
   if (!resLayout)
@@ -636,9 +636,7 @@ LogicalResult ConvertLayoutOp::verify() {
 
 OpFoldResult ConvertLayoutOp::fold(FoldAdaptor adaptor) {
   llvm::dbgs() << "\nSource from adaptor: " << adaptor.getSource() << "\n";
-  auto srcLayout = getInputLayoutAttr();
-  auto resLayout = getTargetLayoutAttr();
-  if (srcLayout == resLayout)
+  if (getInputLayout() == getTargetLayout())
     return adaptor.getSource();
   return {};
 }
@@ -647,9 +645,7 @@ struct FoldConvertLayoutOp : public OpRewritePattern<xegpu::ConvertLayoutOp> {
   using OpRewritePattern<xegpu::ConvertLayoutOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
                                 PatternRewriter &rewriter) const override {
-    auto inputLayout = op.getInputLayoutAttr();
-    auto targetLayout = op.getTargetLayoutAttr();
-    if (inputLayout != targetLayout)
+    if (op.getInputLayout() != op.getTargetLayout())
       return failure();
     rewriter.replaceOp(op, op.getSource());
     return success();
