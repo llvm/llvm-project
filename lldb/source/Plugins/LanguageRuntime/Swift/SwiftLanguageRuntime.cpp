@@ -3016,7 +3016,8 @@ TaskInspector::GetTaskAddrFromThreadLocalStorage(Thread &thread) {
   // If the read from this TLS address is successful, cache the TLS address.
   // Caching without a valid read is dangerous: earlier in the thread
   // lifetime, the result of GetExtendedInfo can be invalid.
-  if (task_addr)
+  if (task_addr &&
+      real_thread.GetProcess()->GetTarget().GetSwiftCacheTaskPointerLocation())
     m_tid_to_task_addr_location.try_emplace(real_thread.GetID(),
                                             *task_addr_location);
   return task_addr;
