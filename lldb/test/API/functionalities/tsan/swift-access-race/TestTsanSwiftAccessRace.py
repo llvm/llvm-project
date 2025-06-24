@@ -53,20 +53,27 @@ class TsanSwiftAccessRaceTestCase(lldbtest.TestBase):
                 runtimes.append(os.path.join(libspec.GetDirectory(), libspec.GetFilename()))
         self.registerSharedLibrariesWithTarget(target, runtimes)
 
-        # Unfortunatley the runtime itself isn't 100% reliable in reporting TSAN errors.
-        process = None
-        stop_reason = lldb.eStopReasonInvalid
+        # Unfortunately the runtime itself isn't 100% reliable in reporting TSAN errors.
+        failure_reasons = []
+        stop_reason = None
         for retry in range(5):
-            process = target.LaunchSimple(None, None, self.get_process_working_directory())
-            if not process:
+            error = lldb.SBError()
+            info = lldb.SBLaunchInfo([exe_name])
+            info.SetWorkingDirectory(self.get_process_working_directory())
+            process = target.Launch(info, error)
+            if not error.success:
+                failure_reasons.append(f"Failed to bring up process, error: {error.value}")
                 continue
+
             stop_reason = process.GetSelectedThread().GetStopReason()
             if stop_reason == lldb.eStopReasonInstrumentation:
                 break
+            failure_reasons.append(f"Invalid stop_reason: {stop_reason}")
 
         self.assertEqual(
-            process.GetSelectedThread().GetStopReason(),
-            lldb.eStopReasonInstrumentation)
+            stop_reason, 
+            lldb.eStopReasonInstrumentation,
+            f"Failed with {len(failure_reasons)} attempts with reasons: {failure_reasons}")
             
         # the stop reason of the thread should be a TSan report.
         self.expect("thread list", "A Swift access race should be detected",
