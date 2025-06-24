@@ -16719,6 +16719,12 @@ static bool EvaluateInPlace(APValue &Result, EvalInfo &Info, const LValue &This,
                             const Expr *E, bool AllowNonLiteralTypes) {
   assert(!E->isValueDependent());
 
+  // Normally expressions passed to EvaluateInPlace have a type, but not when
+  // a VarDecl initializer is evaluated before the untyped ParenListExpr is
+  // replaced with a CXXConstructExpr. This can happen in LLDB.
+  if (E->getType().isNull())
+    return false;
+
   if (!AllowNonLiteralTypes && !CheckLiteralType(Info, E, &This))
     return false;
 
