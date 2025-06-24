@@ -70,15 +70,21 @@ transform::TestMakeComposedFoldedAffineApply::applyToOne(
       rewriter, loc, affineApplyOp.getAffineMap(),
       getAsOpFoldResult(affineApplyOp.getOperands()),
       /*composeAffineMin=*/true);
-  if (auto v = llvm::dyn_cast_if_present<Value>(ofr)) {
-    results.push_back(v.getDefiningOp());
+  Value result;
+  if (auto v = dyn_cast<Value>(ofr)) {
+    result = v;
   } else {
-    results.push_back(rewriter.create<arith::ConstantIndexOp>(
-        loc, getConstantIntValue(ofr).value()));
+    result = rewriter.create<arith::ConstantIndexOp>(
+        loc, getConstantIntValue(ofr).value());
   }
+  results.push_back(result.getDefiningOp());
+  rewriter.replaceOp(affineApplyOp, result);
   return DiagnosedSilenceableFailure::success();
 }
 
+//===----------------------------------------------------------------------===//
+// Extension
+//===----------------------------------------------------------------------===//
 namespace {
 
 class TestTransformsDialectExtension
