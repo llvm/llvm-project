@@ -5191,7 +5191,7 @@ class HLSLRootSignatureDecl final
   }
 
   HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
-                        llvm::dxbc::RootSignatureVersion Verison,
+                        llvm::dxbc::RootSignatureVersion Version,
                         unsigned NumElems);
 
 public:
