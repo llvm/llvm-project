@@ -3,16 +3,14 @@
 
 #include <stdio.h>
 
-void printInt(int* i){
-    printf("%d\n", *i);
-}
+void printInt(int *i) { printf("%d\n", *i); }
 
-int main(){
+int main() {
 
-    float value = 5.0f;
-    printInt((int*)&value);
+  float value = 5.0f;
+  printInt((int *)&value);
 
-    return 0;
+  return 0;
 }
 
 // CHECK: ERROR: TypeSanitizer: type-aliasing-violation
