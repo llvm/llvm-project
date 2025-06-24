@@ -39,8 +39,8 @@ Arg::Arg(const Option Opt, StringRef S, unsigned Index, const char *Value0,
 
 Arg::~Arg() {
   if (OwnsValues) {
-    for (unsigned i = 0, e = Values.size(); i != e; ++i)
-      delete[] Values[i];
+    for (const char *V : Values)
+      delete[] V;
   }
 }
 
