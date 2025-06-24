@@ -60,6 +60,13 @@ void f1() {
     // CHECK: 333 1 1
   }
 
+  // The following map(from:p) should not bring back p, because p is an
+  // attached pointer. So, it should still point to the same original
+  // location, &x[0], on host.
+#pragma omp target exit data map(always, from : p)
+  printf("%d %d\n", p[0], p == &x[0]);
+  // CHECK: 111 1
+
 #pragma omp target exit data map(delete : p[0 : 5], p)
 }
 

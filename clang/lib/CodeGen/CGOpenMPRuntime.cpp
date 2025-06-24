@@ -8838,9 +8838,9 @@ public:
           std::get<0>(LHS);
       OMPClauseMappableExprCommon::MappableExprComponentListRef ComponentsR =
           std::get<0>(RHS);
-      if (VD && VD->getType()->isAnyPointerType() && Components.size() == 1 &&
-          ComponentsR.size() > 1)
-        return true;
+      if (VD && VD->getType()->isAnyPointerType() &&
+          Components.size() != ComponentsR.size())
+        return Components.size() < ComponentsR.size();
 
       ArrayRef<OpenMPMapModifierKind> MapModifiers = std::get<2>(LHS);
       OpenMPMapClauseKind MapType = std::get<1>(RHS);
