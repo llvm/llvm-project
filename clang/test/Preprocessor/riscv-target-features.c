@@ -122,7 +122,7 @@
 // CHECK-NOT: __riscv_zfinx {{.*$}}
 // CHECK-NOT: __riscv_zhinx {{.*$}}
 // CHECK-NOT: __riscv_zhinxmin {{.*$}}
-// CHECK-NOT: __riscv_zibimm {{.*$}}
+// CHECK-NOT: __riscv_zibi {{.*$}}
 // CHECK-NOT: __riscv_zic64b {{.*$}}
 // CHECK-NOT: __riscv_zicbom {{.*$}}
 // CHECK-NOT: __riscv_zicbop {{.*$}}
@@ -1031,12 +1031,12 @@
 // CHECK-ZHINXMIN-EXT: __riscv_zhinxmin 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_zibimm0p1 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZIBIMM-EXT %s
+// RUN:   -march=rv32i_zibi0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZIBI-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_zibimm0p1 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZIBIMM-EXT %s
-// CHECK-ZIBIMM-EXT: __riscv_zibimm
+// RUN:   -march=rv64i_zibi0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZIBI-EXT %s
+// CHECK-ZIBI-EXT: __riscv_zibi
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32izic64b -E -dM %s \

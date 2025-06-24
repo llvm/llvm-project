@@ -1043,31 +1043,15 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-<<<<<<< HEAD
-unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
-=======
 unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
                             bool Imm) {
->>>>>>> 63ba04f2fad0 ([RISCV] Add Support of RISCV Zibimm Experimental Extension)
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-<<<<<<< HEAD
-    return RISCV::BEQ;
+    return (Imm && STI.hasStdExtZibi()) ? RISCV::BEQI : RISCV::BEQ;
   case RISCVCC::COND_NE:
-    return RISCV::BNE;
-=======
-    return Imm ? (STI.hasStdExtZibimm()
-                      ? RISCV::BEQI
-                      : (STI.hasVendorXCVbi() ? RISCV::CV_BEQIMM : RISCV::BEQ))
-               : RISCV::BEQ;
-  case RISCVCC::COND_NE:
-    return Imm ? (STI.hasStdExtZibimm()
-                      ? RISCV::BNEI
-                      : (STI.hasVendorXCVbi() ? RISCV::CV_BNEIMM : RISCV::BNE))
-               : RISCV::BNE;
->>>>>>> 63ba04f2fad0 ([RISCV] Add Support of RISCV Zibimm Experimental Extension)
+    return (Imm && STI.hasStdExtZibi()) ? RISCV::BNEI : RISCV::BNE;
   case RISCVCC::COND_LT:
     return RISCV::BLT;
   case RISCVCC::COND_GE:
@@ -1107,14 +1091,9 @@ unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
   }
 }
 
-<<<<<<< HEAD
-const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC) const {
-  return get(RISCVCC::getBrCond(CC));
-=======
 const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC,
                                              bool Imm) const {
   return get(RISCVCC::getBrCond(STI, CC, Imm));
->>>>>>> 63ba04f2fad0 ([RISCV] Add Support of RISCV Zibimm Experimental Extension)
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
@@ -1291,8 +1270,10 @@ unsigned RISCVInstrInfo::insertBranch(
 
   // Either a one or two-way conditional branch.
   auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
-  MachineInstr &CondMI =
-      *BuildMI(&MBB, DL, getBrCond(CC)).add(Cond[1]).add(Cond[2]).addMBB(TBB);
+  MachineInstr &CondMI = *BuildMI(&MBB, DL, getBrCond(CC, Cond[2].isImm()))
+                              .add(Cond[1])
+                              .add(Cond[2])
+                              .addMBB(TBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
 
@@ -2732,7 +2713,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM2_LSB0:
           Ok = isShiftedUInt<1, 1>(Imm);
           break;
-        case RISCVOp::OPERAND_UIMM5_ZIBIMM:
+        case RISCVOp::OPERAND_UIMM5_ZIBI:
           Ok = (isUInt<5>(Imm) && Imm != 0) || Imm == -1;
           break;
         case RISCVOp::OPERAND_UIMM5_LSB0:

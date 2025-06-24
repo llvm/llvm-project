@@ -1,6 +1,6 @@
-# RUN: not llvm-mc -triple=riscv32 --mattr=+experimental-zibimm %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 --mattr=+experimental-zibi %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-# RUN: not llvm-mc -triple=riscv64 --mattr=+experimental-zibimm %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv64 --mattr=+experimental-zibi %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 beqi a0, 0x0, 0x400
 # CHECK-ERROR: [[@LINE-1]]:10: error: immediate must be non-zero in the range [-1, 31]

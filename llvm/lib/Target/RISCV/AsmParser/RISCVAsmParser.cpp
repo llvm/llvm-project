@@ -744,15 +744,9 @@ public:
     return isUImmPred([](int64_t Imm) { return Imm != 0 && isUInt<5>(Imm); });
   }
 
-  bool isUImm5Zibimm() const {
-    if (!isImm())
-      return false;
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    Imm = fixImmediateForRV32(Imm, isRV64Imm());
-    return IsConstantImm && ((isUInt<5>(Imm) && Imm != 0) || Imm == -1) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
+  bool isUImm5Zibi() const {
+    return isUImmPred(
+        [](int64_t Imm) { return (Imm != 0 && isUInt<5>(Imm)) || Imm == -1; });
   }
 
   bool isUImm5GT3() const {
@@ -1477,7 +1471,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
   case Match_InvalidUImm5NonZero:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
-  case Match_InvalidUImm5Zibimm:
+  case Match_InvalidUImm5Zibi:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -1, (1 << 5) - 1,
         "immediate must be non-zero in the range");
