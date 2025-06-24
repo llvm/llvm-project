@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
 // RUN:  -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
-// RUN:  -fdx-rootsig-ver=rootsig_1_0 \
+// RUN:  -fdx-rootsig-version=rootsig_1_0 \
 // RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-V1_0
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
-// RUN:  -fdx-rootsig-ver=rootsig_1_1 \
+// RUN:  -fdx-rootsig-version=rootsig_1_1 \
 // RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-V1_1
 
 // This test ensures that the sample root signature is parsed without error and
