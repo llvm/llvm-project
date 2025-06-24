@@ -412,11 +412,11 @@ namespace {
       // Empty successor list implies that there is no fallthrough.
       if (BBI.BB->succ_empty())
         return true;
-      // If the textual successor isn't in the successor list, then there is no
-      // fallthrough.
+      // If this is the last MBB in the function, or it the textual successor
+      // isn't in the successor list, then there is no fallthrough.
       MachineFunction::iterator PI = BBI.BB->getIterator();
       MachineFunction::iterator I = std::next(PI);
-      if (I != BBI.BB->getParent()->end() && !PI->isSuccessor(&*I))
+      if (I == BBI.BB->getParent()->end() || !PI->isSuccessor(&*I))
         return true;
       // Could not prove that there is no fallthrough.
       return false;
