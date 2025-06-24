@@ -12,12 +12,13 @@
 
 #include "gtest/gtest.h"
 
-#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
-#include "llvm/ADT/StringRef.h"
+#include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
 #include "swift/Strings.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1036,9 +1037,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Error) {
   NodeBuilder b(dem);
   {
     NodePointer n = b.GlobalType(b.Node(Node::Kind::ErrorType, "Fatal Error"));
-    CompilerType t = GetCompilerType(b.Mangle(n));
-    lldb::opaque_compiler_type_t opaque = t.GetOpaqueQualType();
-    ASSERT_TRUE(m_swift_ts->ContainsError(opaque));
+    ASSERT_TRUE(swift_demangle::ContainsError(b.Mangle(n)));
   }
 }
 

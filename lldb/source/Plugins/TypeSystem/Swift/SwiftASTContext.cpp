@@ -16,6 +16,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 
 #include "SwiftASTContext.h"
+#include "SwiftDemangle.h"
 #include "TypeSystemSwift.h"
 #include "TypeSystemSwiftTypeRef.h"
 #include "lldb/Utility/Log.h"
@@ -4684,6 +4685,12 @@ SwiftASTContext::ReconstructType(ConstString mangled_typename) {
     return llvm::createStringError("typename \"" +
                                    mangled_typename.GetStringRef() +
                                    "\" is not a valid Swift mangled name");
+  }
+
+  if (swift_demangle::ContainsError(mangled_typename)) {
+    LOG_PRINTF(GetLog(LLDBLog::Types),
+               "(\"%s\") -- cannot reconstruct ErrorType", mangled_cstr);
+    return llvm::createStringError("cannot reconstruct ErrorType");
   }
 
   LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types), "(\"%s\")", mangled_cstr);

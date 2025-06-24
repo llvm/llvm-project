@@ -224,6 +224,20 @@ GetMangledName(swift::Demangle::Demangler &dem,
   return mangleNode(global, flavor);
 }
 
+/// Returns true if this type contains an error node anywhere.
+inline bool ContainsError(StringRef mangled_name) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = GetDemangledType(dem, mangled_name);
+  return swift_demangle::FindIf(node, [](NodePointer node) -> bool {
+    // This node is an in-band error, not a Swift.Error type, which is a
+    // protocol.
+    if (node->getKind() == Node::Kind::ErrorType)
+      return true;
+    return false;
+  });
+}
+
 } // namespace swift_demangle
 } // namespace lldb_private
 
