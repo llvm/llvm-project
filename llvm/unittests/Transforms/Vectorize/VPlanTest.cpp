@@ -724,7 +724,7 @@ TEST_F(VPBasicBlockTest, print) {
   VPBB1->setName("bb1");
 
   VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
-  VPInstruction *I5 = new VPInstruction(Instruction::FNeg, {I4});
+  VPInstruction *I5 = new VPInstruction(Instruction::Br, {I4});
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPBB2->appendRecipe(I4);
   VPBB2->appendRecipe(I5);
