@@ -350,7 +350,7 @@ private:
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
 
-  /// First pp-token in current translation unit.
+  /// First pp-token source location in current translation unit.
   SourceLocation FirstPPTokenLoc;
 
   /// A position within a C++20 import-seq.
