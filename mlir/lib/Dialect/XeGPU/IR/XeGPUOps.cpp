@@ -609,30 +609,56 @@ LogicalResult DpasOp::verify() {
 // XeGPU_ConvertLayoutOp
 //===----------------------------------------------------------------------===//
 LogicalResult ConvertLayoutOp::verify() {
-  auto srcMap = getSrcMapAttr();
-  auto resMap = getResMapAttr();
-  if (!srcMap)
-    return emitOpError("expected srcMap.");
-  if (!resMap)
-    return emitOpError("expected resMap.");
-
-  if (srcMap == resMap)
-    return emitOpError("expected different srcMap and resMap.");
+  auto srcLayout = getInputLayoutAttr();
+  auto resLayout = getTargetLayoutAttr();
+  if (!srcLayout)
+    return emitOpError("expected input layout.");
+  if (!resLayout)
+    return emitOpError("expected target layout.");
 
   // both srcMap and resMap should be WgLayout or SgLayout at the same time.
-  if ((!srcMap.isWgLayout() || !resMap.isWgLayout()) &&
-      (!srcMap.isSgLayout() || !resMap.isSgLayout()))
-    return emitOpError(
-        "expected srcMap and resMap be WgLayout or SgLayout at the same time.");
+  if ((!srcLayout.isWgLayout() || !resLayout.isWgLayout()) &&
+      (!srcLayout.isSgLayout() || !resLayout.isSgLayout()))
+    return emitOpError("expected input layout and target layout be WgLayout or "
+                       "SgLayout at the same time.");
 
   auto shape = getSource().getType().getShape();
-  if (!XeGPUDialect::isEvenlyDistributable(shape, srcMap))
-    return emitOpError("invalid srcMap, data cannot be evenly distributed.");
+  if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
+    return emitOpError(
+        "invalid input layout, data cannot be evenly distributed.");
 
-  if (!XeGPUDialect::isEvenlyDistributable(shape, resMap))
-    return emitOpError("invalid resMap, data cannot be evenly distributed.");
+  if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
+    return emitOpError(
+        "invalid target layout, data cannot be evenly distributed.");
 
   return mlir::success();
+}
+
+OpFoldResult ConvertLayoutOp::fold(FoldAdaptor adaptor) {
+  llvm::dbgs() << "\nSource from adaptor: " << adaptor.getSource() << "\n";
+  auto srcLayout = getInputLayoutAttr();
+  auto resLayout = getTargetLayoutAttr();
+  if (srcLayout == resLayout)
+    return adaptor.getSource();
+  return {};
+}
+
+struct FoldConvertLayoutOp : public OpRewritePattern<xegpu::ConvertLayoutOp> {
+  using OpRewritePattern<xegpu::ConvertLayoutOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
+                                PatternRewriter &rewriter) const override {
+    auto inputLayout = op.getInputLayoutAttr();
+    auto targetLayout = op.getTargetLayoutAttr();
+    if (inputLayout != targetLayout)
+      return failure();
+    rewriter.replaceOp(op, op.getSource());
+    return success();
+  }
+};
+
+void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<FoldConvertLayoutOp>(context);
 }
 
 } // namespace xegpu

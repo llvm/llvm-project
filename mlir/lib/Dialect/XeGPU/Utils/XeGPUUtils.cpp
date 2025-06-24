@@ -124,6 +124,10 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
 
+    // For ConvertLayoutOp, the layout is stored in the tensor descriptor
+    if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
+      return convertOp.getTargetLayoutAttr();
+
     // for LoadNdOp, the layout is stored in the tensor descriptor
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
       return getLayoutAttr(loadNd.getTensorDesc());
