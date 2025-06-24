@@ -106,6 +106,10 @@ namespace llvm {
     ///
     XXSPLTI32DX,
 
+    /// VSELECT - The PPC vector select instruction.
+    ///
+    VSELECT,
+
     /// VECINSERT - The PPC vector insert instruction
     ///
     VECINSERT,

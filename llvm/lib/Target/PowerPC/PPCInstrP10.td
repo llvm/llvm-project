@@ -2212,6 +2212,9 @@ multiclass XXEvalVSelectWithXB<ValueType vt, bits<8> baseImm>{
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, and>.opPat, vt:$vB), 
         baseImm>;
+  // def : XXEvalPattern<vt, 
+  //       (PPCvecselect vt:$vA, XXEvalBinaryPattern<vt, xor>.opPat, XXEvalBinaryPattern<vt, and>.opPat), 
+  //       baseImm>;
   // Ternary(A, nor(B,C), B) => imm: baseImm + 7 = 56
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, vt:$vB), 
@@ -2387,10 +2390,14 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     defm : XXEvalVSelectWithXB<v4i32, 49>;
     defm : XXEvalVSelectWithXC<v4i32, 81>;
     defm : XXEvalVSelectWithXXor<v4i32, 97>;
-    defm : XXEvalVSelectWithXAnd<v2i64, 22>;
-    defm : XXEvalVSelectWithXB<v2i64, 49>;
-    defm : XXEvalVSelectWithXC<v2i64, 81>;
-    defm : XXEvalVSelectWithXXor<v2i64, 97>;
+    
+    def : XXEvalPattern<v2i64, 
+        (PPCvecselect v2i64:$vA, XXEvalBinaryPattern<v2i64, xor>.opPat, XXEvalBinaryPattern<v2i64, and>.opPat), 
+        22>;
+    // defm : XXEvalVSelectWithXAnd<v2i64, 22>;
+    // defm : XXEvalVSelectWithXB<v2i64, 49>;
+    // defm : XXEvalVSelectWithXC<v2i64, 81>;
+    // defm : XXEvalVSelectWithXXor<v2i64, 97>;
 
     // Anonymous patterns to select prefixed VSX loads and stores.
     // Load / Store f128
