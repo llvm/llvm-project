@@ -25,6 +25,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
@@ -83,6 +84,7 @@ private:
   bool removeImplausibleInstructions(Function &F);
   bool cleanupPreparedFunclets(Function &F);
   void verifyPreparedFunclets(Function &F);
+  bool convertCallsToInvokesForSEH(Function &F);
 
   bool DemoteCatchSwitchPHIOnly;
 
@@ -345,6 +347,25 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
         // end of current state, retrive new state from UnwindMap
         State = EHInfo.SEHUnwindMap[State].ToState;
     }
+    else if(isa<CallInst>(TI)) {
+      auto *Call = cast<CallInst>(TI);
+      const Function *Fn = Call->getCalledFunction();
+
+      // Check if this function call can potentionally throw
+      // and we're in the context where finally blocks have been processed
+      if (Fn && !Fn->doesNotThrow() && State >= 0) {
+        // Check if we're in a finally cleanup context
+        if(State < static_cast<int>(EHInfo.SEHUnwindMap.size()) &&
+           EHInfo.SEHUnwindMap[State].IsFinally) {
+
+          
+          LLVM_DEBUG(dbgs() << "Warning: Found potentially throwing CallInst in finally context: "
+                           << Fn->getName() << " at state " << State << "\n");
+          // Ensure proper state transition for finally blocks
+          State = EHInfo.SEHUnwindMap[State].ToState;
+      }
+    }
+  }
     // Continue push successors into worklist
     for (auto *SuccBB : successors(BB)) {
       WI = new WorkItem(SuccBB, State);
@@ -1236,6 +1257,140 @@ void WinEHPrepareImpl::verifyPreparedFunclets(Function &F) {
 }
 #endif
 
+/// Detect call instructions that should be invoke instructions in SEH contexts
+/// to prevent double execution of finally blocks
+static bool shouldConvertCallToInvokeForSEH(CallInst *CI) {
+  Function *F = CI->getParent()->getParent();
+  
+  if (!F->hasPersonalityFn())
+    return false;
+    
+  Constant *PersonalityConst = F->getPersonalityFn();
+  Function *PersonalityFn = dyn_cast<Function>(PersonalityConst->stripPointerCasts());
+  if (!PersonalityFn)
+    return false;
+    
+  StringRef PersonalityName = PersonalityFn->getName();
+  if (PersonalityName != "__C_specific_handler" &&     // MSVC_TableSEH (64-bit)
+      PersonalityName != "_except_handler3" &&         // MSVC_X86SEH
+      PersonalityName != "_except_handler4")           // MSVC_X86SEH
+    return false;
+  
+  // This also checks for NoUnwind attribute
+  if (CI->doesNotThrow())
+    return false;
+  
+  if (Function *Callee = CI->getCalledFunction()) {
+    StringRef CalleeName = Callee->getName();
+    if (CalleeName.starts_with("llvm.") ||
+        CalleeName.starts_with("_seh_") ||
+        CalleeName.contains("_local_unwind"))
+      return false;
+  }
+  
+  // Check if function has SEH finally blocks
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (auto *Call = dyn_cast<CallInst>(&I)) {
+        if (Function *Callee = Call->getCalledFunction()) {
+          StringRef Name = Callee->getName();
+          if (Name == "llvm.seh.try.begin" || 
+              Name == "llvm.seh.try.end" ||
+              Name.contains("cleanup") ||
+              Name.contains("finally")) {
+            return true;
+          }
+        }
+      }
+      if (auto *LPad = dyn_cast<LandingPadInst>(&I)) {
+        if (LPad->isCleanup()) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
+/// Convert problematic call instructions to invoke instructions for SEH
+bool WinEHPrepareImpl::convertCallsToInvokesForSEH(Function &F) {
+  bool Changed = false;
+  SmallVector<CallInst *, 16> CallsToConvert;
+  
+  // First pass: identify calls that need to be converted
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (auto *CI = dyn_cast<CallInst>(&I)) {
+        if (shouldConvertCallToInvokeForSEH(CI)) {
+          CallsToConvert.push_back(CI);
+        }
+      }
+    }
+  }
+  
+  // Second pass: convert identified calls to invokes
+  for (CallInst *CI : CallsToConvert) {
+    BasicBlock *OrigBB = CI->getParent();
+    
+    // Create unwind destination with minimal landing pad
+    BasicBlock *UnwindBB = BasicBlock::Create(F.getContext(), 
+                                            "seh.call.unwind", &F);
+    
+    IRBuilder<> UnwindBuilder(UnwindBB);
+    StructType *LPadType = StructType::get(UnwindBuilder.getPtrTy(), 
+                                         UnwindBuilder.getInt32Ty());
+    LandingPadInst *LPad = UnwindBuilder.CreateLandingPad(LPadType, 0);
+    LPad->setCleanup(true);
+    UnwindBuilder.CreateResume(LPad);
+    
+    // Create continue block
+    BasicBlock *ContBB = BasicBlock::Create(F.getContext(), 
+                                          "seh.call.cont", &F);
+    
+    // Split the original block after the call instruction
+    BasicBlock::iterator SplitPoint = std::next(CI->getIterator());
+    if (SplitPoint != OrigBB->end()) {
+      // Move instructions after the call to the continue block
+      while (SplitPoint != OrigBB->end()) {
+        Instruction &InstToMove = *SplitPoint;
+        ++SplitPoint; // Advance before moving
+        InstToMove.moveBefore(*ContBB, ContBB->end());
+      }
+    }
+    
+    // Create the invoke instruction
+    IRBuilder<> CallBuilder(CI);
+    SmallVector<Value *, 8> Args(CI->args());
+
+    // Get the FunctionCallee from the call instruction
+    FunctionCallee Callee;
+    if (Function *F = CI->getCalledFunction()) {
+      // Direct call - create FunctionCallee from the function
+      Callee = FunctionCallee(F->getFunctionType(), F);
+    } else {
+      // Indirect call - create FunctionCallee from the called operand
+      Callee = FunctionCallee(CI->getFunctionType(), CI->getCalledOperand());
+    }
+
+    InvokeInst *Invoke = CallBuilder.CreateInvoke(Callee, ContBB, UnwindBB, Args);
+    
+    // Copy attributes and metadata
+    Invoke->setCallingConv(CI->getCallingConv());
+    Invoke->setAttributes(CI->getAttributes());
+    CI->replaceAllUsesWith(Invoke);
+    CI->eraseFromParent();
+    
+    // Ensure original block branches to continue block if needed
+    if (OrigBB->getTerminator() == nullptr) {
+      CallBuilder.SetInsertPoint(OrigBB);
+      CallBuilder.CreateBr(ContBB);
+    }
+    Changed = true;
+  }
+  return Changed;
+}
+
 bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
   // Remove unreachable blocks.  It is not valuable to assign them a color and
   // their existence can trick us into thinking values are alive when they are
@@ -1257,6 +1412,11 @@ bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
 
     assert(!verifyFunction(F, &dbgs()));
     Changed |= cleanupPreparedFunclets(F);
+  }
+
+  if (Personality == EHPersonality::MSVC_TableSEH || 
+      Personality == EHPersonality::MSVC_X86SEH ) {
+    Changed |= convertCallsToInvokesForSEH(F);
   }
 
   LLVM_DEBUG(verifyPreparedFunclets(F));
