@@ -422,7 +422,7 @@ private:
 
   lldb::addr_t GetISAHashTablePointer();
 
-  using ValueObjectSet = llvm::SmallSet<ValueObject *, 8>;
+  using ValueObjectSet = llvm::SmallPtrSet<ValueObject *, 8>;
   ClassDescriptorSP GetClassDescriptorImpl(ValueObject &valobj,
                                            ValueObjectSet &seen);
 
