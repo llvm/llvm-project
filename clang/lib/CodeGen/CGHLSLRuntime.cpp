@@ -75,10 +75,10 @@ void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
   llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
   MDNode *RootSignature = RSBuilder.BuildRootSignature();
 
-  ConstantAsMetadata *Version =
-      ConstantAsMetadata::get(ConstantInt::get(llvm::Type::getInt32Ty(Ctx), llvm::to_underlying(RootSigVer)));
+  ConstantAsMetadata *Version = ConstantAsMetadata::get(ConstantInt::get(
+      llvm::Type::getInt32Ty(Ctx), llvm::to_underlying(RootSigVer)));
   MDNode *MDVals =
-        MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature, Version});
+      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature, Version});
 
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
