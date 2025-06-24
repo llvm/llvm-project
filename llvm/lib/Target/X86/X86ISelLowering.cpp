@@ -4976,6 +4976,7 @@ X86TargetLowering::getTargetConstantFromLoad(LoadSDNode *LD) const {
 }
 
 bool X86TargetLowering::isTargetCanonicalSelect(SDNode *N) const {
+  // Do not fold (vselect not(C), X, 0s) to (vselect C, Os, X)
   SDValue Cond = N->getOperand(0);
   SDValue RHS = N->getOperand(2);
   EVT CondVT = Cond.getValueType();

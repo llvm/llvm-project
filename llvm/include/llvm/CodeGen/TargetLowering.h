@@ -4375,6 +4375,9 @@ public:
            Op.getOpcode() == ISD::SPLAT_VECTOR_PARTS;
   }
 
+  /// Return true if the given select/vselect should be considered canonical and
+  /// not be transformed. Currently only used for "vselect (not Cond), N1, N2 ->
+  /// vselect Cond, N2, N1".
   virtual bool isTargetCanonicalSelect(SDNode *N) const { return false; }
 
   struct DAGCombinerInfo {
