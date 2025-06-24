@@ -129,6 +129,7 @@ struct PredInfo {
 using BBPredicates = DenseMap<BasicBlock *, PredInfo>;
 using PredMap = DenseMap<BasicBlock *, BBPredicates>;
 using BB2BBMap = DenseMap<BasicBlock *, BasicBlock *>;
+using Val2BBMap = DenseMap<Value *, BasicBlock *>;
 
 // A traits type that is intended to be used in graph algorithms. The graph
 // traits starts at an entry node, and traverses the RegionNodes that are in
@@ -280,13 +281,12 @@ class StructurizeCFG {
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
   Value *BoolPoison;
-
+  TargetTransformInfo *TTI;
   Function *Func;
   Region *ParentRegion;
 
   UniformityInfo *UA = nullptr;
   DominatorTree *DT;
-  TargetTransformInfo *TTI;
 
   SmallVector<RegionNode *, 8> Order;
   BBSet Visited;
@@ -303,9 +303,13 @@ class StructurizeCFG {
   PredMap LoopPreds;
   BranchVector LoopConds;
 
+  Val2BBMap HoistedValues;
+
   RegionNode *PrevNode;
 
   void reorderIfElseBlock(BasicBlock *BB, unsigned Idx);
+
+  void HoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB, BasicBlock *ThenBB);
 
   void orderNodes();
 
@@ -335,6 +339,8 @@ class StructurizeCFG {
   void setPhiValues();
 
   void simplifyAffectedPhis();
+
+  void SimplifyHoistedPhis();
 
   DebugLoc killTerminator(BasicBlock *BB);
 
@@ -403,6 +409,7 @@ public:
       AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
     RegionPass::getAnalysisUsage(AU);
@@ -411,15 +418,14 @@ public:
 
 } // end anonymous namespace
 
-/// Helper function for heuristics to order if else block.
 /// Checks whether an instruction is zero cost instruction and checks if the
 /// operands are from different BB. If so, this instruction can be coalesced
-/// when this block is ordered first. So, this returns true.
-static bool hasAffectingInstructions(Instruction *I, BasicBlock *BB,
-                                     TargetTransformInfo *TTI) {
+/// if its hoisted to predecessor block. So, this returns true.
+static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
+                                   TargetTransformInfo *TTI) {
 
   if (I->getParent() != BB)
-    return true;
+    return false;
 
   // If the instruction is not a zero cost instruction, return false.
   auto Cost = TTI->getInstructionCost(I, TargetTransformInfo::TCK_CodeSize);
@@ -451,58 +457,39 @@ INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
 INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
                     "Structurize the CFG", false, false)
 
-/// Then and Else block order in SCC is arbitrary. But based on the
-/// order, after structurization there are cases where there might be extra
-/// VGPR copies due to interference during register coalescing.
-///  eg:- incoming phi values from Else block contains only vgpr copies and
-///  incoming phis in Then block has are some modification for the vgprs.
-/// after structurization, there would be interference when coalesing when Then
-/// block is ordered first. But those copies can be coalesced when Else is
-/// ordered first.
+/// Because the SCC order of Then and Else blocks is arbitrary, structurization
+/// can introduce unnecessary VGPR copies due to register coalescing
+/// interference.
+/// For example, if the Else block has a zero-cost instruction and
+/// the Then block modifies the VGPR value, only one value is live at a time in
+/// merge block before structurization. After structurization, the coalescer may
+/// incorrectly treat the Then value as live in the Else block (via the path
+/// Then → Flow → Else), leading to unnecessary VGPR copies.
 ///
-/// This function checks the incoming phi values in the merge block and
-/// orders based on the following heuristics  of Then and Else block. Checks
-/// whether an incoming phi is a zero cost instructions and if so
-/// checks whether operands are within the block or not.
-/// Increases score if its a operands from outside the block.
-/// the higher scored block is ordered first.
-void StructurizeCFG::reorderIfElseBlock(BasicBlock *BB, unsigned Idx) {
-  BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
+/// This function examines phi nodes whose incoming values are zero-cost
+/// instructions in the Else block. It identifies such values that can be safely
+/// hoisted and moves them to the nearest common dominator of Then and Else
+/// blocks. A follow-up function after setting PhiNodes assigns the hoisted
+/// value to poison phi nodes along the if→flow edge, aiding register coalescing
+/// and minimizing unnecessary live ranges.
+void StructurizeCFG::HoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
+                                                     BasicBlock *ThenBB) {
 
-  if (!Term || !(Term->isConditional()))
+  BasicBlock *ElseSucc = ElseBB->getSingleSuccessor();
+  BasicBlock *CommonDominator = DT->findNearestCommonDominator(ElseBB, ThenBB);
+
+  if (!ElseSucc || !CommonDominator)
     return;
-
-  BasicBlock *ThenBB = Term->getSuccessor(0);
-  BasicBlock *ElseBB = Term->getSuccessor(1);
-  BasicBlock *ThenSucc = ThenBB->getSingleSuccessor();
-
-  if (BB != ThenBB->getSinglePredecessor() || !ThenSucc ||
-      (ThenBB->getSinglePredecessor() != ElseBB->getSinglePredecessor()) ||
-      ThenSucc != ElseBB->getSingleSuccessor())
-    return;
-
-  unsigned ThenScore = 0, ElseScore = 0;
-
-  for (PHINode &Phi : ThenSucc->phis()) {
-    Value *ThenVal = Phi.getIncomingValueForBlock(ThenBB);
+  Instruction *Term = CommonDominator->getTerminator();
+  for (PHINode &Phi : ElseSucc->phis()) {
     Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
-
-    if (auto *Inst = dyn_cast<Instruction>(ThenVal))
-      ThenScore += hasAffectingInstructions(Inst, ThenBB, TTI);
-    if (auto *Inst = dyn_cast<Instruction>(ElseVal))
-      ElseScore += hasAffectingInstructions(Inst, ElseBB, TTI);
-  }
-
-  if (ThenScore == ElseScore)
-    return;
-
-  if (ThenScore < ElseScore)
-    std::swap(ThenBB, ElseBB);
-
-  // reorder the last two inserted elements in Order
-  if (Idx >= 2 && Order[Idx - 1]->getEntry() == ElseBB &&
-      Order[Idx - 2]->getEntry() == ThenBB) {
-    std::swap(Order[Idx - 1], Order[Idx - 2]);
+    if (auto *Inst = dyn_cast<Instruction>(ElseVal)) {
+      if (isHoistableInstruction(Inst, ElseBB, TTI)) {
+        Inst->removeFromParent();
+        Inst->insertInto(CommonDominator, Term->getIterator());
+        HoistedValues[Inst] = CommonDominator;
+      }
+    }
   }
 }
 
@@ -539,7 +526,6 @@ void StructurizeCFG::orderNodes() {
       // Add the SCC nodes to the Order array.
       for (const auto &N : SCC) {
         assert(I < E && "SCC size mismatch!");
-        reorderIfElseBlock(N.first->getEntry(), I);
         Order[I++] = N.first;
       }
     }
@@ -629,7 +615,7 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
             BasicBlock *Other = Term->getSuccessor(!i);
             if (Visited.count(Other) && !Loops.count(Other) &&
                 !Pred.count(Other) && !Pred.count(P)) {
-
+              HoistZeroCostElseBlockPhiValues(Succ, Other);
               Pred[Other] = {BoolFalse, std::nullopt};
               Pred[P] = {BoolTrue, std::nullopt};
               continue;
@@ -983,6 +969,39 @@ void StructurizeCFG::setPhiValues() {
   }
 
   AffectedPhis.append(InsertedPhis.begin(), InsertedPhis.end());
+}
+
+/// Updates PHI nodes after hoisted zero cost instructions by replacing poison
+/// entries on Flow nodes with the appropriate hoisted values
+void StructurizeCFG::SimplifyHoistedPhis() {
+  for (WeakVH VH : AffectedPhis) {
+    if (auto Phi = dyn_cast_or_null<PHINode>(VH)) {
+      if (Phi->getNumIncomingValues() != 2)
+        continue;
+      for (int i = 0; i < 2; i++) {
+        Value *V = Phi->getIncomingValue(i);
+        if (HoistedValues.count(V)) {
+          Value *OtherV = Phi->getIncomingValue(!i);
+          if (PHINode *OtherPhi = dyn_cast<PHINode>(OtherV)) {
+            int PoisonValBBIdx = -1;
+            for (size_t i = 0; i < OtherPhi->getNumIncomingValues(); i++) {
+              if (!isa<PoisonValue>(OtherPhi->getIncomingValue(i)))
+                continue;
+              PoisonValBBIdx = i;
+              break;
+            }
+
+            if (PoisonValBBIdx == -1 ||
+                !DT->dominates(HoistedValues[V],
+                               OtherPhi->getIncomingBlock(PoisonValBBIdx)))
+              continue;
+            OtherPhi->setIncomingValue(PoisonValBBIdx, V);
+            Phi->setIncomingValue(i, OtherV);
+          }
+        }
+      }
+    }
+  }
 }
 
 void StructurizeCFG::simplifyAffectedPhis() {
@@ -1395,6 +1414,7 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   insertConditions(false);
   insertConditions(true);
   setPhiValues();
+  SimplifyHoistedPhis();
   simplifyConditions();
   simplifyAffectedPhis();
   rebuildSSA();
