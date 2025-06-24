@@ -205,7 +205,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF2-NEXT:    [[TMP10:%.*]] = add i64 8, [[TMP8]]
 ; VF8UF2-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP3]], i1 true)
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE]]
-; VF8UF2-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP5]], 8
+; VF8UF2-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE]], 8
 ; VF8UF2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], i64 [[TMP5]], i64 [[TMP10]]
 ; VF8UF2-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; VF8UF2-NEXT:    br label %[[EXIT]]

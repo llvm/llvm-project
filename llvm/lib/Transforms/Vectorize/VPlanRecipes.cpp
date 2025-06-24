@@ -837,12 +837,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     unsigned LastOpIdx = getNumOperands() - 1;
     Value *Res = nullptr;
     for (int Idx = LastOpIdx; Idx >= 0; --Idx) {
-      Value *Current = Builder.CreateCountTrailingZeroElems(
+      Value *TrailingZeros = Builder.CreateCountTrailingZeroElems(
           Builder.getInt64Ty(), State.get(getOperand(Idx)), true, Name);
-      Current = Builder.CreateAdd(
-          Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), Current);
+      Value *Current = Builder.CreateAdd(
+          Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
       if (Res) {
-        Value *Cmp = Builder.CreateICmpNE(Current, RuntimeBitwidth);
+        Value *Cmp = Builder.CreateICmpNE(TrailingZeros, RuntimeBitwidth);
         Res = Builder.CreateSelect(Cmp, Current, Res);
       } else {
         Res = Current;
