@@ -4375,6 +4375,8 @@ public:
            Op.getOpcode() == ISD::SPLAT_VECTOR_PARTS;
   }
 
+  virtual bool isTargetCanonicalSelect(SDNode *N) const { return false; }
+
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
     CombineLevel Level;
