@@ -31,6 +31,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2217,7 +2218,9 @@ static LogicalResult vectorizeLinalgOpPrecondition(
     LinalgOp linalgOp, ArrayRef<int64_t> inputVectorSizes,
     bool vectorizeNDExtract, bool flatten1DDepthwiseConv) {
   // tensor with dimension of 0 cannot be vectorized.
-  if (llvm::is_contained(linalgOp.getStaticShape(), 0))
+  if (llvm::any_of(linalgOp->getOpOperands(), [&](OpOperand &operand) {
+        return llvm::is_contained(linalgOp.getShape(&operand), 0);
+      }))
     return failure();
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty() &&
