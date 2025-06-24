@@ -218,8 +218,8 @@ void ConnectToRemote(MainLoop &mainloop,
                                     error.AsCString());
       exit(-1);
     }
-    connection_up = std::unique_ptr<Connection>(new ConnectionFileDescriptor(
-        new TCPSocket(sockfd, /*should_close=*/true)));
+    connection_up = std::make_unique<ConnectionFileDescriptor>(
+        std::make_unique<TCPSocket>(sockfd, /*should_close=*/true));
 #else
     url = llvm::formatv("fd://{0}", connection_fd).str();
 
