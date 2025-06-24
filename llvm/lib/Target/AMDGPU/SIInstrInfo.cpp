@@ -8716,6 +8716,8 @@ void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
 void SIInstrInfo::addUsersToMoveToVALUWorklist(
     Register DstReg, MachineRegisterInfo &MRI,
     SIInstrWorklist &Worklist) const {
+  SmallVector<std::pair<MachineInstr *, unsigned>> EarlyRangeInc;
+
   for (MachineRegisterInfo::use_iterator I = MRI.use_begin(DstReg),
          E = MRI.use_end(); I != E;) {
     MachineInstr &UseMI = *I->getParent();
@@ -8744,11 +8746,14 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
         ++I;
       } while (I != E && I->getParent() == &UseMI);
     } else {
-      legalizeOperandsVALUt16(UseMI, OpNo, MRI);
+      EarlyRangeInc.emplace_back(&UseMI, OpNo);
 
       ++I;
     }
   }
+
+  for (auto &[UseMI, OpNo] : EarlyRangeInc)
+    legalizeOperandsVALUt16(*UseMI, OpNo, MRI);
 }
 
 void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
