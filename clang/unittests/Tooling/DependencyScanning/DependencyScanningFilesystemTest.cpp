@@ -196,7 +196,7 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   // DepFS's eyes.
   ASSERT_EQ(Path1Exists, false);
 
-  auto InvalidEntries = SharedCache.getInvalidEntryDiagInfo(*InMemoryFS);
+  auto InvalidEntries = SharedCache.getOutOfDateEntries(*InMemoryFS);
 
   EXPECT_EQ(InvalidEntries.size(), 1u);
   ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);
@@ -222,7 +222,7 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
 
   // Check against the new file system. InMemoryFS2 could be the underlying
   // physical system in the real world.
-  auto InvalidEntries = SharedCache.getInvalidEntryDiagInfo(*InMemoryFS2);
+  auto InvalidEntries = SharedCache.getOutOfDateEntries(*InMemoryFS2);
 
   ASSERT_EQ(InvalidEntries.size(), 1u);
   ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);

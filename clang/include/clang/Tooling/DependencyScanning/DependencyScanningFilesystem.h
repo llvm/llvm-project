@@ -248,7 +248,7 @@ public:
   ///  2. The entry is associated with a file whose size is different from the
   ///     size of the file on the same path on the UnderlyingFS.
   std::vector<OutOfDateEntry>
-  getInvalidEntryDiagInfo(llvm::vfs::FileSystem &UnderlyingFS) const;
+  getOutOfDateEntries(llvm::vfs::FileSystem &UnderlyingFS) const;
 
 private:
   std::unique_ptr<CacheShard[]> CacheShards;

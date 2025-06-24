@@ -108,7 +108,7 @@ DependencyScanningFilesystemSharedCache::getShardForUID(
 }
 
 std::vector<DependencyScanningFilesystemSharedCache::OutOfDateEntry>
-DependencyScanningFilesystemSharedCache::getInvalidEntryDiagInfo(
+DependencyScanningFilesystemSharedCache::getOutOfDateEntries(
     llvm::vfs::FileSystem &UnderlyingFS) const {
   // Iterate through all shards and look for cached stat errors.
   std::vector<OutOfDateEntry> InvalidDiagInfo;
