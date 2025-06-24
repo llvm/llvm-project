@@ -21,6 +21,19 @@ int foo(int c);
 
 [[clang::sycl_external]] void foo();
 
+class C {
+  [[clang::sycl_external]] void member();
+};
+
+[[clang::sycl_external]] int main() // expected-error {{'sycl_external' cannot be applied to main function}}
+{
+    return 0;
+}
+
+class D {
+  [[clang::sycl_external]] void del() = delete; // expected-error {{'sycl_external' cannot be applied to explicitly deleted functions}}
+};
+
 class A {
   [[clang::sycl_external]]
   A() {}

@@ -208,6 +208,15 @@ void SemaSYCL::handleExternalAttr(Decl *D, const ParsedAttr &AL) {
     Diag(AL.getLoc(), diag::err_sycl_attribute_invalid_linkage);
     return;
   }
+  std::string FunctionName = StringRef(FD->getNameInfo().getAsString()).lower();
+  if (FunctionName.find("main") != std::string::npos) {
+    Diag(AL.getLoc(), diag::err_sycl_attribute_avoid_main);
+    return;
+  }
+  if (FD->isDeleted()) {
+    Diag(AL.getLoc(), diag::err_sycl_attribute_avoid_deleted_function);
+    return;
+  }
 
   handleSimpleAttribute<SYCLExternalAttr>(*this, D, AL);
 }
