@@ -1046,59 +1046,81 @@ simplifyMapWithOperands(AffineMap &map, ArrayRef<Value> operands) {
                        map.getContext());
 }
 
-/// Assuming `dimOrSym` is a quantity in `map` that is defined by `minOp`.
-/// Assuming that the quantity is of the form:
-///   `affine_min(f(x, y), symbolic_cst)`.
-/// This function checks that `0 < affine_min(f(x, y), symbolic_cst)` and
-/// proceeds with replacing the patterns:
+/// Assuming `dimOrSym` is a quantity in the apply op map `map` and defined by
+/// `minOp = affine_min(x_1, ..., x_n)`. This function checks that:
+/// `0 < affine_min(x_1, ..., x_n)` and proceeds with replacing the patterns:
 /// ```
-///   dimOrSym.ceildiv(symbolic_cst)
-///   (dimOrSym + symbolic_cst - 1).floordiv(symbolic_cst)
+///   dimOrSym.ceildiv(x_k)
+///   (dimOrSym + x_k - 1).floordiv(x_k)
 /// ```
-/// by `1`.
+/// by `1` for all `k` in `1, ..., n`. This is possible because `x / x_k <= 1`.
 ///
-/// Additionally, allows the caller to pass `affineMinKnownToBeNonNegative` to
-/// inject static information that may not be statically discoverable.
 ///
 /// Warning: ValueBoundsConstraintSet::computeConstantBound is needed to check
-/// for the nonnegative case, if `affineMinKnownToBeNonNegative` is false.
-static LogicalResult replaceAffineMinBoundingBoxExpression(
-    AffineMinOp minOp, AffineExpr dimOrSym, AffineMap *map,
-    bool affineMinKnownToBeNonNegative = false) {
-  auto affineMinMap = minOp.getAffineMap();
-  if (!affineMinKnownToBeNonNegative) {
-    ValueRange values = minOp->getOperands();
-    for (unsigned i = 0, e = affineMinMap.getNumResults(); i < e; ++i) {
-      AffineMap row = affineMinMap.getSubMap(ArrayRef<unsigned>{i});
-      FailureOr<int64_t> lowerBound =
-          ValueBoundsConstraintSet::computeConstantBound(
-              presburger::BoundType::LB, {row, values},
-              /*stopCondition=*/nullptr,
-              /*closedUB=*/true);
-      if (failed(lowerBound) || lowerBound.value() <= 0)
-        return failure();
+/// `minOp` is positive.
+static LogicalResult replaceAffineMinBoundingBoxExpression(AffineMinOp minOp,
+                                                           AffineExpr dimOrSym,
+                                                           AffineMap *map,
+                                                           ValueRange dims,
+                                                           ValueRange syms) {
+  AffineMap affineMinMap = minOp.getAffineMap();
+
+  // Check the value is positive.
+  for (unsigned i = 0, e = affineMinMap.getNumResults(); i < e; ++i) {
+    // Compare each expression in the minimum against 0.
+    if (!ValueBoundsConstraintSet::compare(
+            getAsIndexOpFoldResult(minOp.getContext(), 0),
+            ValueBoundsConstraintSet::ComparisonOperator::LT,
+            ValueBoundsConstraintSet::Variable(affineMinMap.getSliceMap(i, 1),
+                                               minOp.getOperands())))
+      return failure();
+  }
+
+  /// Convert affine symbols and dimensions in minOp to symbols or dimensions in
+  /// the apply op affine map.
+  DenseMap<AffineExpr, AffineExpr> dimSymConversionTable;
+  SmallVector<unsigned> unmappedDims, unmappedSyms;
+  for (auto [i, dim] : llvm::enumerate(minOp.getDimOperands())) {
+    auto it = llvm::find(dims, dim);
+    if (it == dims.end()) {
+      unmappedDims.push_back(i);
+      continue;
     }
+    dimSymConversionTable[getAffineDimExpr(i, minOp.getContext())] =
+        getAffineDimExpr(it.getIndex(), minOp.getContext());
+  }
+  for (auto [i, sym] : llvm::enumerate(minOp.getSymbolOperands())) {
+    auto it = llvm::find(syms, sym);
+    if (it == syms.end()) {
+      unmappedSyms.push_back(i);
+      continue;
+    }
+    dimSymConversionTable[getAffineSymbolExpr(i, minOp.getContext())] =
+        getAffineSymbolExpr(it.getIndex(), minOp.getContext());
   }
 
-  AffineMap initialMap = *map;
-  for (unsigned i = 0, e = affineMinMap.getNumResults(); i != e; ++i) {
-    auto m = affineMinMap.getSubMap(ArrayRef<unsigned>{i});
-    AffineExpr expr = m.getResult(0);
-    if (!expr.isSymbolicOrConstant())
+  // Create the replacement map.
+  DenseMap<AffineExpr, AffineExpr> repl;
+  AffineExpr c1 = getAffineConstantExpr(1, minOp.getContext());
+  for (AffineExpr expr : affineMinMap.getResults()) {
+    // If we cannot express the result in terms of the apply map symbols and
+    // sims then continue.
+    if (llvm::any_of(unmappedDims,
+                     [&](unsigned i) { return expr.isFunctionOfDim(i); }) ||
+        llvm::any_of(unmappedSyms,
+                     [&](unsigned i) { return expr.isFunctionOfSymbol(i); }))
       continue;
 
-    DenseMap<AffineExpr, AffineExpr> repl;
+    AffineExpr convertedExpr = expr.replace(dimSymConversionTable);
+
     // dimOrSym.ceilDiv(expr) -> 1
-    repl[dimOrSym.ceilDiv(expr)] = getAffineConstantExpr(1, minOp.getContext());
+    repl[dimOrSym.ceilDiv(convertedExpr)] = c1;
     // (dimOrSym + expr - 1).floorDiv(expr) -> 1
-    repl[(dimOrSym + expr - 1).floorDiv(expr)] =
-        getAffineConstantExpr(1, minOp.getContext());
-    auto newMap = map->replace(repl);
-    if (newMap == *map)
-      continue;
-    *map = newMap;
+    repl[(dimOrSym + convertedExpr - 1).floorDiv(convertedExpr)] = c1;
   }
-
+  AffineMap initialMap = *map;
+  *map = initialMap.replace(repl, initialMap.getNumDims(),
+                            initialMap.getNumSymbols());
   return success(*map != initialMap);
 }
 
@@ -1127,11 +1149,11 @@ static LogicalResult replaceDimOrSym(AffineMap *map,
   if (!v)
     return failure();
 
-  auto minOp = v.getDefiningOp<AffineMinOp>();
-  if (minOp && replaceAffineMin) {
+  if (auto minOp = v.getDefiningOp<AffineMinOp>(); minOp && replaceAffineMin) {
     AffineExpr dimOrSym = isDimReplacement ? getAffineDimExpr(pos, ctx)
                                            : getAffineSymbolExpr(pos, ctx);
-    return replaceAffineMinBoundingBoxExpression(minOp, dimOrSym, map);
+    return replaceAffineMinBoundingBoxExpression(minOp, dimOrSym, map, dims,
+                                                 syms);
   }
 
   auto affineApply = v.getDefiningOp<AffineApplyOp>();
