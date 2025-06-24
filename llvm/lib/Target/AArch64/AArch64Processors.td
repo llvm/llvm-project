@@ -21,6 +21,7 @@ def TuneA320 : SubtargetFeature<"a320", "ARMProcFamily", "CortexA320",
                                    "Cortex-A320 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
+                                   FeatureHalfSVEFCmpBandwidth,
                                    FeaturePostRAScheduler]>;
 
 def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
@@ -41,6 +42,7 @@ def TuneA510    : SubtargetFeature<"a510", "ARMProcFamily", "CortexA510",
                                    "Cortex-A510 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
+                                   FeatureHalfSVEFCmpBandwidth,
                                    FeaturePostRAScheduler
                                    ]>;
 
@@ -48,12 +50,14 @@ def TuneA520    : SubtargetFeature<"a520", "ARMProcFamily", "CortexA520",
                                    "Cortex-A520 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
+                                   FeatureHalfSVEFCmpBandwidth,
                                    FeaturePostRAScheduler]>;
 
 def TuneA520AE  : SubtargetFeature<"a520ae", "ARMProcFamily", "CortexA520",
                                    "Cortex-A520AE ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
+                                   FeatureHalfSVEFCmpBandwidth,
                                    FeaturePostRAScheduler]>;
 
 def TuneA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
@@ -173,6 +177,7 @@ def TuneA715 : SubtargetFeature<"a715", "ARMProcFamily", "CortexA715",
                                  FeatureALULSLFast,
                                  FeatureFuseAdrpAdd,
                                  FeatureEnableSelectOptimize,
+                                 FeatureHalfSVEFCmpBandwidth,
                                  FeaturePredictableSelectIsExpensive]>;
 
 def TuneA720 : SubtargetFeature<"a720", "ARMProcFamily", "CortexA720",
@@ -235,6 +240,7 @@ def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
                                   FeatureALULSLFast,
                                   FeaturePostRAScheduler,
                                   FeatureEnableSelectOptimize,
+                                  FeatureHalfSVEFCmpBandwidth,
                                   FeatureUseFixedOverScalableIfEqualCost,
                                   FeaturePredictableSelectIsExpensive]>;
 
@@ -245,6 +251,7 @@ def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
                                FeatureFuseAES,
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
+                               FeatureHalfSVEFCmpBandwidth,
                                FeatureUseFixedOverScalableIfEqualCost,
                                FeatureAvoidLDAPUR,
                                FeaturePredictableSelectIsExpensive]>;
@@ -257,6 +264,7 @@ def TuneX4 : SubtargetFeature<"cortex-x4", "ARMProcFamily", "CortexX4",
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
                                FeatureUseFixedOverScalableIfEqualCost,
+                               FeatureHalfSVEFCmpBandwidth,
                                FeatureAvoidLDAPUR,
                                FeaturePredictableSelectIsExpensive]>;
 
@@ -268,6 +276,7 @@ def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
                                 FeaturePostRAScheduler,
                                 FeatureEnableSelectOptimize,
                                 FeatureUseFixedOverScalableIfEqualCost,
+                                FeatureHalfSVEFCmpBandwidth,
                                 FeatureAvoidLDAPUR,
                                 FeaturePredictableSelectIsExpensive]>;
 
@@ -520,6 +529,7 @@ def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureHalfSVEFCmpBandwidth,
                                       FeaturePredictableSelectIsExpensive]>;
 
 def TuneNeoverseN3 : SubtargetFeature<"neoversen3", "ARMProcFamily", "NeoverseN3",
@@ -549,6 +559,7 @@ def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
                                       FeaturePredictableSelectIsExpensive,
+                                      FeatureHalfSVEFCmpBandwidth,
                                       FeatureNoSVEFPLD1R]>;
 
 def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2",
@@ -560,6 +571,7 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
                                       FeatureUseFixedOverScalableIfEqualCost,
+                                      FeatureHalfSVEFCmpBandwidth,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureDisableLatencySchedHeuristic]>;
@@ -571,6 +583,7 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeatureFuseAdrpAdd,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureHalfSVEFCmpBandwidth,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive]>;
 
@@ -581,6 +594,7 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureFuseAdrpAdd,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureHalfSVEFCmpBandwidth,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive]>;
 

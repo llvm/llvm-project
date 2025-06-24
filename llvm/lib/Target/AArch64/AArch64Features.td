@@ -825,6 +825,10 @@ def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
                                                "HasDisableFastIncVL", "true",
                                                "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
 
+// SVE fcmxx operations sometimes have half the throughput of Neon cmxx.
+def FeatureHalfSVEFCmpBandwidth : SubtargetFeature<"half-sve-fcmp-bandwidth", "HasHalfSVEFCmpBandwidth", "false",
+  "SVE FCmp instructions have half the throughput of Neon instructions">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
