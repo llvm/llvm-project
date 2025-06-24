@@ -2177,10 +2177,10 @@ __pattern_partition_copy(__parallel_tag<_IsVector> __tag, _ExecutionPolicy&& __e
 // sort
 //------------------------------------------------------------------------
 
-template <class _Tag, class _ExecutionPolicy, class _RandomAccessIterator, class _Compare, class _IsMoveConstructible>
+template <class _Tag, class _ExecutionPolicy, class _RandomAccessIterator, class _Compare>
 void
-__pattern_sort(_Tag, _ExecutionPolicy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
-               _IsMoveConstructible) noexcept
+__pattern_sort(_Tag, _ExecutionPolicy&&, _RandomAccessIterator __first, _RandomAccessIterator __last,
+               _Compare __comp) noexcept
 {
     std::sort(__first, __last, __comp);
 }
@@ -2188,7 +2188,7 @@ __pattern_sort(_Tag, _ExecutionPolicy&&, _RandomAccessIterator __first, _RandomA
 template <class _IsVector, class _ExecutionPolicy, class _RandomAccessIterator, class _Compare>
 void
 __pattern_sort(__parallel_tag<_IsVector> __tag, _ExecutionPolicy&& __exec, _RandomAccessIterator __first,
-               _RandomAccessIterator __last, _Compare __comp, /*is_move_constructible=*/std::true_type)
+               _RandomAccessIterator __last, _Compare __comp)
 {
     using __backend_tag = typename decltype(__tag)::__backend_tag;
 
