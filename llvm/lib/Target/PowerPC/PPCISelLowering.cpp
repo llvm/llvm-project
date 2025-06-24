@@ -9635,7 +9635,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       SDValue SDV = SDValue(MSDNode, 0);
       EVT DVT = BVN->getValueType(0);
       EVT SVT = SDV.getValueType();
-      if (SVT != DVT ) {
+      if (SVT != DVT) {
         SDV = DAG.getNode(ISD::BITCAST, dl, DVT, SDV);
       }
       return SDV;
