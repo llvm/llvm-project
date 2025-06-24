@@ -1,4 +1,4 @@
-//===- MemorySanitizer.cpp - detector of uninitialized reads --------------===//
+.//===- MemorySanitizer.cpp - detector of uninitialized reads --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -3285,9 +3285,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // e.g., if 0/1 are initialized bits with concrete value 0/1, and ? is an
   //       uninitialized bit:
   //       - 0001 0??? is fully initialized
-  //       - 000? ???? is fully uninitialized
+  //       - 000? ???? is fully uninitialized (*)
   //       - ???? ???? is fully uninitialized
   //       - 0000 0000 is fully initialized iff !is_zero_poison
+  // (*) TODO: arguably, since the number of zeros is in the range [0, 8], we
+  //     only need to poison 4 bits.
   //
   // OutputShadow =
   //      ((ConcreteZerosCount >= ShadowZerosCount) && !AllZeroShadow)
