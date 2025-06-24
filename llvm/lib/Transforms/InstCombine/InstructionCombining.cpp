@@ -2983,6 +2983,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // For vector geps, use the generic demanded vector support.
   // Skip if GEP return type is scalable. The number of elements is unknown at
   // compile-time.
+  // TODO: exploit undef elements to decrease demanded bits
   if (auto *GEPFVTy = dyn_cast<FixedVectorType>(GEPType)) {
     auto VWidth = GEPFVTy->getNumElements();
     APInt PoisonElts(VWidth, 0);
@@ -2993,10 +2994,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         return replaceInstUsesWith(GEP, V);
       return &GEP;
     }
-
-    // TODO: 1) Scalarize splat operands, 2) scalarize entire instruction if
-    // possible (decide on canonical form for pointer broadcast), 3) exploit
-    // undef elements to decrease demanded bits
   }
 
   // Eliminate unneeded casts for indices, and replace indices which displace
@@ -3059,6 +3056,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   }
 
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.
+  // Note that this looses information about undef lanes; we run it after
+  // demanded bits to partially mitigate that loss.
   if (GEPType->isVectorTy() && llvm::any_of(GEP.operands(), [](Value *Op) {
         return Op->getType()->isVectorTy() && getSplatValue(Op);
       })) {
@@ -3075,8 +3074,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *Res = Builder.CreateGEP(GEP.getSourceElementType(), NewOps[0],
                                    ArrayRef(NewOps).drop_front(), GEP.getName(),
                                    GEP.getNoWrapFlags());
-    if (llvm::all_of(NewOps,
-                     [](Value *Op) { return !Op->getType()->isVectorTy(); })) {
+    if (!Res->getType()->isVectorTy()) {
       ElementCount EC = cast<VectorType>(GEPType)->getElementCount();
       Res = Builder.CreateVectorSplat(EC, Res);
     }
