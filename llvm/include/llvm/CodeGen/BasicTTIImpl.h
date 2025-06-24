@@ -1122,6 +1122,9 @@ public:
       break;
     }
     case TTI::SK_PermuteTwoSrc: {
+      if (all_of(Mask, [NumSrcElts](int M) { return M < NumSrcElts; }))
+        return improveShuffleKindFromMask(TTI::SK_PermuteSingleSrc, Mask, SrcTy,
+                                          Index, SubTy);
       int NumSubElts;
       if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
                                  Mask, NumSrcElts, NumSubElts, Index)) {
