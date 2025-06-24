@@ -481,13 +481,12 @@ void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
   Instruction *Term = CommonDominator->getTerminator();
   for (PHINode &Phi : ElseSucc->phis()) {
     Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
-    if (auto *Inst = dyn_cast<Instruction>(ElseVal)) {
-      if (isHoistableInstruction(Inst, ElseBB, TTI)) {
-        Inst->removeFromParent();
-        Inst->insertInto(CommonDominator, Term->getIterator());
-        HoistedValues[Inst] = CommonDominator;
-      }
-    }
+    auto *Inst = dyn_cast<Instruction>(ElseVal);
+    if (!Inst || !isHoistableInstruction(Inst, ElseBB, TTI))
+      continue;
+    Inst->removeFromParent();
+    Inst->insertInto(CommonDominator, Term->getIterator());
+    HoistedValues[Inst] = CommonDominator;
   }
 }
 
@@ -973,31 +972,34 @@ void StructurizeCFG::setPhiValues() {
 /// entries on Flow nodes with the appropriate hoisted values
 void StructurizeCFG::simplifyHoistedPhis() {
   for (WeakVH VH : AffectedPhis) {
-    if (auto Phi = dyn_cast_or_null<PHINode>(VH)) {
-      if (Phi->getNumIncomingValues() != 2)
-        continue;
-      for (int i = 0; i < 2; i++) {
-        Value *V = Phi->getIncomingValue(i);
-        if (HoistedValues.count(V)) {
-          Value *OtherV = Phi->getIncomingValue(!i);
-          if (PHINode *OtherPhi = dyn_cast<PHINode>(OtherV)) {
-            int PoisonValBBIdx = -1;
-            for (size_t i = 0; i < OtherPhi->getNumIncomingValues(); i++) {
-              if (!isa<PoisonValue>(OtherPhi->getIncomingValue(i)))
-                continue;
-              PoisonValBBIdx = i;
-              break;
-            }
+    PHINode *Phi = dyn_cast_or_null<PHINode>(VH);
+    if (!Phi || Phi->getNumIncomingValues() != 2)
+      continue;
 
-            if (PoisonValBBIdx == -1 ||
-                !DT->dominates(HoistedValues[V],
-                               OtherPhi->getIncomingBlock(PoisonValBBIdx)))
-              continue;
-            OtherPhi->setIncomingValue(PoisonValBBIdx, V);
-            Phi->setIncomingValue(i, OtherV);
-          }
-        }
+    for (int i = 0; i < 2; i++) {
+      Value *V = Phi->getIncomingValue(i);
+      if (!HoistedValues.count(V))
+        continue;
+
+      Value *OtherV = Phi->getIncomingValue(!i);
+      PHINode *OtherPhi = dyn_cast<PHINode>(OtherV);
+      if (!OtherPhi)
+        continue;
+
+      int PoisonValBBIdx = -1;
+      for (size_t i = 0; i < OtherPhi->getNumIncomingValues(); i++) {
+        if (!isa<PoisonValue>(OtherPhi->getIncomingValue(i)))
+          continue;
+        PoisonValBBIdx = i;
+        break;
       }
+      if (PoisonValBBIdx == -1 ||
+          !DT->dominates(HoistedValues[V],
+                         OtherPhi->getIncomingBlock(PoisonValBBIdx)))
+        continue;
+
+      OtherPhi->setIncomingValue(PoisonValBBIdx, V);
+      Phi->setIncomingValue(i, OtherV);
     }
   }
 }
