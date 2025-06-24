@@ -7832,10 +7832,9 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
         Inst.removeOperand(I);
       Inst.setDesc(get(AMDGPU::IMPLICIT_DEF));
       // Legalize t16 operand since replaceReg is called after addUsersToVALU
-      for (MachineRegisterInfo::use_iterator I = MRI.use_begin(NewDstReg),
-                                             E = MRI.use_end();
-           I != E; ++I) {
-        legalizeOperandsVALUt16(*I->getParent(), MRI);
+      for (MachineOperand &MO :
+           make_early_inc_range(MRI.use_operands(NewDstReg))) {
+        legalizeOperandsVALUt16(*MO.getParent(), MRI);
       }
       return;
     }
