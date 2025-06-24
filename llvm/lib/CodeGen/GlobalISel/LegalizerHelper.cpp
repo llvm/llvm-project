@@ -650,7 +650,7 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
                        LocObserver, &MI);
 }
 
-LegalizerHelper::LegalizeResult LegalizerHelper::simpleLibcallSinCos(
+LegalizerHelper::LegalizeResult LegalizerHelper::emitSincosLibcall(
     MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size, Type *OpType,
     LostDebugLocObserver &LocObserver) {
   MachineFunction &MF = *MI.getMF();
@@ -693,6 +693,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::simpleLibcallSinCos(
 
   MIRBuilder.buildLoad(DstSin, StackPtrSin, *LoadMMOSin);
   MIRBuilder.buildLoad(DstCos, StackPtrCos, *LoadMMOCos);
+  MI.eraseFromParent();
 
   return LegalizerHelper::Legalized;
 }
@@ -1332,10 +1333,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
       return UnableToLegalize;
     }
-    auto Status = simpleLibcallSinCos(MI, MIRBuilder, Size, HLTy, LocObserver);
-    if (Status != Legalized)
-      return Status;
-    break;
+    return emitSincosLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
   }
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
