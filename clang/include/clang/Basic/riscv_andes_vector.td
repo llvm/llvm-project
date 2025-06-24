@@ -18,6 +18,52 @@ include "riscv_vector_common.td"
 // Instruction definitions
 //===----------------------------------------------------------------------===//
 
+// Andes Vector BFLOAT16 Conversion Extension (XAndesVBFHCvt)
+
+let RequiredFeatures = ["xandesvbfhcvt"],
+    Log2LMUL = [-2, -1, 0, 1, 2],
+    HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperand in {
+  def nds_vfwcvt_s_bf16 : RVVConvBuiltin<"Fw", "Fwv", "y", "nds_vfwcvt_s">;
+
+  let ManualCodegen = [{
+    {
+      // LLVM intrinsic
+      // Unmasked: (passthru, op0, frm, vl)
+      SmallVector<llvm::Value*, 4> Operands;
+      bool HasMaskedOff = !(PolicyAttrs & RVV_VTA);
+      bool HasRoundModeOp = HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3;
+
+      unsigned Offset = HasMaskedOff ? 1 : 0;
+
+      if (!HasMaskedOff)
+        Operands.push_back(llvm::PoisonValue::get(ResultType));
+      else
+        Operands.push_back(Ops[0]);
+
+      Operands.push_back(Ops[Offset]); // op0
+
+      if (HasRoundModeOp) {
+        Operands.push_back(Ops[Offset + 1]); // frm
+        Operands.push_back(Ops[Offset + 2]); // vl
+      } else {
+        Operands.push_back(ConstantInt::get(Ops[Offset + 1]->getType(), 7)); // frm
+        Operands.push_back(Ops[Offset + 1]); // vl
+      }
+
+      IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                        Operands.back()->getType()};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      return Builder.CreateCall(F, Operands, "");
+    }
+  }] in {
+    let HasFRMRoundModeOp = 1, Name = "nds_vfncvt_bf16_s", IRName = "nds_vfncvt_bf16_s" in
+      def nds_vfncvt_bf16_s_rm : RVVConvBuiltin<"v", "vFwu", "y", "nds_vfncvt_bf16">;
+
+    def nds_vfncvt_bf16_s : RVVConvBuiltin<"v", "vFw", "y", "nds_vfncvt_bf16">;
+  }
+}
+
 // Andes Vector Packed FP16 Extension (XAndesVPackFPH)
 
 multiclass RVVFPMAD {
