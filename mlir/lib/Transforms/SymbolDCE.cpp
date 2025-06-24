@@ -140,7 +140,7 @@ LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
       for (auto &region : op->getRegions())
         for (auto &block : region.getBlocks())
           for (Operation &op : block)
-            if (op->getNumRegions())
+            if (op.getNumRegions())
               worklist.push_back(&op);
     }
 
