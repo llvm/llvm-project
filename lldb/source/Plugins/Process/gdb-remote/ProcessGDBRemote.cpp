@@ -3512,7 +3512,7 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
   // Our process spawned correctly, we can now set our connection to use
   // our end of the socket pair
   m_gdb_comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(
-      socket_pair->second.release()));
+      std::move(socket_pair->second)));
   StartAsyncThread();
 
   if (m_gdb_comm.IsConnected()) {
