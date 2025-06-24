@@ -5298,23 +5298,8 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   }
   case ISD::SELECT: {
     // fneg (select c, a, b) -> select c, (fneg a), (fneg b)
-    // This combine became necessary recently to prevent a regression in
-    // fneg-modifier-casting.ll caused by this patch legalising v2i32 xor.
-    // Specifically, additional instructions were added to the final codegen.
-    // When adding this combine a case was added to performFNEGCombine to
-    // prevent this combine from being undone under certain conditions.
     // TODO: Invert conditions of foldFreeOpFromSelect
-    SDValue Cond = N0.getOperand(0);
-    SDValue LHS = N0.getOperand(1);
-    SDValue RHS = N0.getOperand(2);
-    EVT VT = LHS.getValueType();
-    if (VT != MVT::i32)
-      return SDValue();
-
-    SDValue LFNeg = DAG.getNode(ISD::FNEG, SL, VT, LHS);
-    SDValue RFNeg = DAG.getNode(ISD::FNEG, SL, VT, RHS);
-    SDValue Op = DAG.getNode(Opc, SL, VT, Cond, LFNeg, RFNeg);
-    return Op;
+    return SDValue();
   }
   case ISD::BITCAST: {
     SDLoc SL(N);
