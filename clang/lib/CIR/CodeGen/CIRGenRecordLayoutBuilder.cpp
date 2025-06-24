@@ -778,8 +778,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
       !cirGenTypes.getCGModule().getCodeGenOpts().AAPCSBitfieldWidth)
     return;
 
-  for ([[maybe_unused]] auto &I : bitFields)
-    assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 }
 
 void CIRRecordLowering::accumulateBases(const CXXRecordDecl *cxxRecordDecl) {
