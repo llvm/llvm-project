@@ -2432,7 +2432,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   break;
               }
 
-              // Branch and instruction targets are printed just after the instructions.
+              // Instruction targets are printed just after the instructions.
               // Print the labels corresponding to the target if there's any.
               bool BBAddrMapLabelAvailable = BBAddrMapLabels.count(Target);
               bool LabelAvailable = AllLabels.count(Target);
