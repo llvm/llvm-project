@@ -16854,10 +16854,8 @@ static void knownBitsForSBFE(const MachineInstr &MI, GISelValueTracking &VT,
       Src1Cst & maskTrailingOnes<unsigned>((BFEWidth == 32) ? 5 : 6);
   const unsigned Width = (Src1Cst >> 16) & maskTrailingOnes<unsigned>(6);
 
-  if (Width >= BFEWidth) {
-    assert(false && "Invalid S_BFE");
+  if (Width >= BFEWidth) // Ill-formed.
     return;
-  }
 
   VT.computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                           Depth + 1);
