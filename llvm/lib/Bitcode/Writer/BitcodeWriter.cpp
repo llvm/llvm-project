@@ -2336,6 +2336,7 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   Record.push_back(N->getFlags());
   Record.push_back(N->getAlignInBits());
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
+  Record.push_back(N->getDWARFMemorySpace());
 
   Stream.EmitRecord(bitc::METADATA_LOCAL_VAR, Record, Abbrev);
   Record.clear();
