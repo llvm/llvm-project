@@ -1224,9 +1224,11 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       Value *Start, Value *Sentinel) {
+                                       RecurKind RdxKind, Value *Start,
+                                       Value *Sentinel) {
+  bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RdxKind);
   Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? Builder.CreateIntMaxReduce(Src, true)
+                      ? Builder.CreateIntMaxReduce(Src, IsSigned)
                       : Src;
   // Correct the final reduction result back to the start value if the maximum
   // reduction is sentinel value.
@@ -1319,18 +1321,19 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
-Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
-                                   RecurKind Kind) {
+Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
+                                   RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
          "AnyOf or FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  Type *SrcEltTy = SrcTy->getElementType();
-  Value *Iden =
-      getRecurrenceIdentity(Kind, SrcEltTy, VBuilder.getFastMathFlags());
-  Value *Ops[] = {Iden, Src};
-  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
+  auto VPID = VPIntrinsic::getForIntrinsic(Id);
+  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
+         "No VPIntrinsic for this reduction");
+  auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
+  Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
+  Value *Ops[] = {Iden, Src, Mask, EVL};
+  return Builder.CreateIntrinsic(EltTy, VPID, Ops);
 }
 
 Value *llvm::createOrderedReduction(IRBuilderBase &B, RecurKind Kind,
@@ -1343,17 +1346,21 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B, RecurKind Kind,
   return B.CreateFAddReduce(Start, Src);
 }
 
-Value *llvm::createOrderedReduction(VectorBuilder &VBuilder, RecurKind Kind,
-                                    Value *Src, Value *Start) {
+Value *llvm::createOrderedReduction(IRBuilderBase &Builder, RecurKind Kind,
+                                    Value *Src, Value *Start, Value *Mask,
+                                    Value *EVL) {
   assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  Value *Ops[] = {Start, Src};
-  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
+  auto VPID = VPIntrinsic::getForIntrinsic(Id);
+  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
+         "No VPIntrinsic for this reduction");
+  auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
+  Value *Ops[] = {Start, Src, Mask, EVL};
+  return Builder.CreateIntrinsic(EltTy, VPID, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,

@@ -303,16 +303,29 @@ def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 0, VGPR_32:$src, 0, VGPR_32:$inactive, (IMPLICIT_DEF))>;
 
-let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
-  def WAVE_REDUCE_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
-    (ins VSrc_b32: $src, VSrc_b32:$strategy),
-    [(set i32:$sdst, (int_amdgcn_wave_reduce_umin i32:$src, i32:$strategy))]> {
+// clang-format off
+defvar int_amdgcn_wave_reduce_ = "int_amdgcn_wave_reduce_";
+multiclass
+    AMDGPUWaveReducePseudoGenerator<string Op, string DataType> {
+  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
+    def !toupper(Op) #"_PSEUDO_" #DataType
+        : VPseudoInstSI<(outs SGPR_32 : $sdst),
+                        (ins VSrc_b32 : $src, VSrc_b32 : $strategy),
+                        [(set i32 : $sdst, (!cast<AMDGPUWaveReduce>(int_amdgcn_wave_reduce_ #Op) i32 : $src, i32 : $strategy))]> {}
   }
+}
+// clang-format on
 
-  def WAVE_REDUCE_UMAX_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
-    (ins VSrc_b32: $src, VSrc_b32:$strategy),
-    [(set i32:$sdst, (int_amdgcn_wave_reduce_umax i32:$src, i32:$strategy))]> {
-  }
+// Input list : [Operation_name,
+//              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B)]
+defvar Operations = [
+  ["umin", "U32"], ["min", "I32"], ["umax", "U32"], ["max", "I32"],
+  ["add", "I32"], ["sub", "I32"], ["and", "B32"], ["or", "B32"],
+  ["xor", "B32"]
+];
+
+foreach Op = Operations in {
+  defm WAVE_REDUCE_ : AMDGPUWaveReducePseudoGenerator<Op[0], Op[1]>;
 }
 
 let usesCustomInserter = 1, Defs = [VCC] in {
@@ -1376,6 +1389,69 @@ def : GCNPat <
       (i32 (V_MOV_B32_e32 (i32 0))), sub1)
 >;
 
+//===----------------------------------------------------------------------===//
+// PTRADD Patterns
+//===----------------------------------------------------------------------===//
+
+// GlobalISel shouldn't generate 64-bit addition pseudos.
+let GISelShouldIgnore = 1 in {
+def : GCNPat<
+  (DivergentBinFrag<ptradd> i64:$src0, i64:$src1),
+  (V_ADD_U64_PSEUDO $src0, $src1)>;
+def : GCNPat<
+  (UniformBinFrag<ptradd> i64:$src0, i64:$src1),
+  (S_ADD_U64_PSEUDO $src0, $src1)>;
+}
+
+//===----------------------------------------------------------------------===//
+// FP min/max patterns
+//===----------------------------------------------------------------------===//
+
+
+class FPBinOpPat <SDPatternOperator node, ValueType vt, Instruction inst>
+  : GCNPat <(vt (node (vt (VOP3Mods vt:$src0, i32:$src0_mods)),
+                      (vt (VOP3Mods vt:$src1, i32:$src1_mods)))),
+    (inst $src0_mods, $src0, $src1_mods, $src1, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+class FPPkBinOpPat <SDPatternOperator node, ValueType vt, Instruction inst>
+  : GCNPat <(vt (node (VOP3PMods v2f16:$src0, i32:$src0_mods),
+                      (VOP3PMods v2f16:$src1, i32:$src1_mods))),
+  (inst $src0_mods, $src0, $src1_mods, $src1, DSTCLAMP.NONE)
+>;
+
+/// With IEEE=0, signalingness is ignored and the non-nan input will
+/// be directly returned.
+let OtherPredicates = [IEEEModeDisabled] in {
+  def : FPBinOpPat<fminimumnum, f32, V_MIN_F32_e64>;
+  def : FPBinOpPat<fmaximumnum, f32, V_MAX_F32_e64>;
+  def : FPBinOpPat<fminimumnum, f64, V_MIN_F64_e64>;
+  def : FPBinOpPat<fmaximumnum, f64, V_MAX_F64_e64>;
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = NotHasTrue16BitInsts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_e64>;
+  }
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = UseRealTrue16Insts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_t16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_t16_e64>;
+  }
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = UseFakeTrue16Insts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_fake16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_fake16_e64>;
+  }
+
+  let SubtargetPredicate = HasVOP3PInsts in {
+    def : FPPkBinOpPat<fminimumnum, v2f16, V_PK_MIN_F16>;
+    def : FPPkBinOpPat<fmaximumnum, v2f16, V_PK_MAX_F16>;
+  }
+}
+
 /********** ============================================ **********/
 /********** Extraction, Insertion, Building and Casting  **********/
 /********** ============================================ **********/
@@ -2124,17 +2200,17 @@ foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
       (VGPRImm<(i16 imm)>:$imm),
       (V_MOV_B32_e32 imm:$imm)
     >;
-  }
 
-  // FIXME: Workaround for ordering issue with peephole optimizer where
-  // a register class copy interferes with immediate folding.  Should
-  // use s_mov_b32, which can be shrunk to s_movk_i32
+    // FIXME: Workaround for ordering issue with peephole optimizer where
+    // a register class copy interferes with immediate folding.  Should
+    // use s_mov_b32, which can be shrunk to s_movk_i32
 
-  foreach vt = [f16, bf16] in {
-    def : GCNPat <
-      (VGPRImm<(vt fpimm)>:$imm),
-      (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
-    >;
+    foreach vt = [f16, bf16] in {
+      def : GCNPat <
+        (VGPRImm<(vt fpimm)>:$imm),
+        (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
+      >;
+    }
   }
 }
 
@@ -2560,6 +2636,8 @@ def : GCNPat<
   (i32 (DivergentSextInreg<i1> i32:$src)),
   (V_BFE_I32_e64 i32:$src, (i32 0), (i32 1))>;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 1))
@@ -2569,6 +2647,23 @@ def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 8))
 >;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (i16 (DivergentSextInreg<i1> i16:$src)),
+  (V_BFE_I32_e64
+   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+   (i32 0), (i32 1))
+>;
+
+def : GCNPat <
+  (i16 (DivergentSextInreg<i8> i16:$src)),
+  (V_BFE_I32_e64
+   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+   (i32 0), (i32 8))
+>;
+}
 
 def : GCNPat<
   (i32 (DivergentSextInreg<i8> i32:$src)),

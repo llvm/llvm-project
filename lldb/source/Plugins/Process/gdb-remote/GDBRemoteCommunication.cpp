@@ -1128,8 +1128,8 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     Socket *accepted_socket = nullptr;
     error = sock_up->Accept(/*timeout=*/std::nullopt, accepted_socket);
     if (accepted_socket) {
-      SetConnection(
-          std::make_unique<ConnectionFileDescriptor>(accepted_socket));
+      SetConnection(std::make_unique<ConnectionFileDescriptor>(
+          std::unique_ptr<Socket>(accepted_socket)));
     }
   }
 
@@ -1137,40 +1137,6 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 }
 
 void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
-
-llvm::Error
-GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
-                                       GDBRemoteCommunication &server) {
-  const int backlog = 5;
-  TCPSocket listen_socket(true);
-  if (llvm::Error error =
-          listen_socket.Listen("localhost:0", backlog).ToError())
-    return error;
-
-  llvm::SmallString<32> remote_addr;
-  llvm::raw_svector_ostream(remote_addr)
-      << "connect://localhost:" << listen_socket.GetLocalPortNumber();
-
-  std::unique_ptr<ConnectionFileDescriptor> conn_up(
-      new ConnectionFileDescriptor());
-  Status status;
-  if (conn_up->Connect(remote_addr, &status) != lldb::eConnectionStatusSuccess)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Unable to connect: %s", status.AsCString());
-
-  // The connection was already established above, so a short timeout is
-  // sufficient.
-  Socket *accept_socket = nullptr;
-  if (Status accept_status =
-          listen_socket.Accept(std::chrono::seconds(1), accept_socket);
-      accept_status.Fail())
-    return accept_status.takeError();
-
-  client.SetConnection(std::move(conn_up));
-  server.SetConnection(
-      std::make_unique<ConnectionFileDescriptor>(accept_socket));
-  return llvm::Error::success();
-}
 
 GDBRemoteCommunication::ScopedTimeout::ScopedTimeout(
     GDBRemoteCommunication &gdb_comm, std::chrono::seconds timeout)

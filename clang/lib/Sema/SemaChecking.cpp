@@ -2648,8 +2648,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     bool IsDelete = BuiltinID == Builtin::BI__builtin_operator_delete;
     ExprResult Res =
         BuiltinOperatorNewDeleteOverloaded(TheCallResult, IsDelete);
-    if (Res.isInvalid())
-      CorrectDelayedTyposInExpr(TheCallResult.get());
     return Res;
   }
   case Builtin::BI__builtin_dump_struct:

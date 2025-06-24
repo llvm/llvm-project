@@ -224,18 +224,6 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
 ///     definition outlined by Microsoft.
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 
-/// Create a "ExceptionBreakpointsFilter" JSON object as described in
-/// the debug adapter definition.
-///
-/// \param[in] bp
-///     The exception breakpoint object to use
-///
-/// \return
-///     A "ExceptionBreakpointsFilter" JSON object with that follows
-///     the formal JSON definition outlined by Microsoft.
-protocol::ExceptionBreakpointsFilter
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
-
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
 /// This function will fill in the following keys in the returned

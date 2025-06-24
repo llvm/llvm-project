@@ -71,7 +71,7 @@ convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
 /// ModuleTranslation stack frame for OpenMP operations. This keeps track of the
 /// insertion points for allocas.
 class OpenMPAllocaStackFrame
-    : public LLVM::ModuleTranslation::StackFrameBase<OpenMPAllocaStackFrame> {
+    : public StateStackFrameBase<OpenMPAllocaStackFrame> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPAllocaStackFrame)
 
@@ -84,7 +84,7 @@ public:
 /// collapsed canonical loop information corresponding to an \c omp.loop_nest
 /// operation.
 class OpenMPLoopInfoStackFrame
-    : public LLVM::ModuleTranslation::StackFrameBase<OpenMPLoopInfoStackFrame> {
+    : public StateStackFrameBase<OpenMPLoopInfoStackFrame> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPLoopInfoStackFrame)
   llvm::CanonicalLoopInfo *loopInfo = nullptr;
@@ -2294,8 +2294,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     if (!privateVarOrErr)
       return handleError(privateVarOrErr, *taskOp.getOperation());
 
-    llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+    setInsertPointForPossiblyEmptyBlock(builder);
 
     // TODO: this is a bit of a hack for Fortran character boxes.
     // Character boxes are passed by value into the init region and then the
