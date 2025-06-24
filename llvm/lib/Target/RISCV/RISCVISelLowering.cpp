@@ -215,7 +215,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       for (MVT VT : F16VecVTs)
         addRegClassForRVV(VT);
 
-    if (Subtarget.hasVInstructionsBF16Minimal())
+    if (Subtarget.hasVInstructionsBF16Minimal() ||
+        Subtarget.hasVendorXAndesVBFHCvt())
       for (MVT VT : BF16VecVTs)
         addRegClassForRVV(VT);
 
@@ -384,7 +385,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ? Legal
                          : Expand);
 
-  if (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit()) {
+  if ((Subtarget.hasVendorXCVbitmanip() || Subtarget.hasVendorXqcibm()) &&
+      !Subtarget.is64Bit()) {
     setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
   } else {
     // Zbkb can use rev8+brev8 to implement bitreverse.
@@ -1598,7 +1600,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // Function alignments.
-  const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
+  const Align FunctionAlignment(Subtarget.hasStdExtZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
   // Set preferred alignments.
   setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
@@ -24563,11 +24565,11 @@ Register
 RISCVTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                        const MachineFunction &MF) const {
   Register Reg = MatchRegisterAltName(RegName);
-  if (Reg == RISCV::NoRegister)
+  if (!Reg)
     Reg = MatchRegisterName(RegName);
-  if (Reg == RISCV::NoRegister)
-    report_fatal_error(
-        Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
+  if (!Reg)
+    return Reg;
+
   BitVector ReservedRegs = Subtarget.getRegisterInfo()->getReservedRegs(MF);
   if (!ReservedRegs.test(Reg) && !Subtarget.isRegisterReservedByUser(Reg))
     report_fatal_error(Twine("Trying to obtain non-reserved register \"" +
