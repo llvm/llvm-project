@@ -12627,6 +12627,9 @@ result pointer is dereferenceable, the cast is assumed to be
 reversible (i.e. casting the result back to the original address space
 should yield the original bit pattern).
 
+Which address space casts are supported depends on the target. Unsupported
+address space casts return :ref:`poison <poisonvalues>`.
+
 Example:
 """"""""
 
@@ -14597,7 +14600,7 @@ Semantics:
       compile-time-known constant value.
 
       The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
-      must match the target's default address space's (address space 0) pointer type.
+      must match the target's :ref:`alloca address space <alloca_addrspace>` type.
 
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

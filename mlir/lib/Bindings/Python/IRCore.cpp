@@ -2626,6 +2626,88 @@ private:
   PyOperationRef operation;
 };
 
+/// A list of block successors. Internally, these are stored as consecutive
+/// elements, random access is cheap. The (returned) successor list is
+/// associated with the operation and block whose successors these are, and thus
+/// extends the lifetime of this operation and block.
+class PyBlockSuccessors : public Sliceable<PyBlockSuccessors, PyBlock> {
+public:
+  static constexpr const char *pyClassName = "BlockSuccessors";
+
+  PyBlockSuccessors(PyBlock block, PyOperationRef operation,
+                    intptr_t startIndex = 0, intptr_t length = -1,
+                    intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirBlockGetNumSuccessors(block.get())
+                               : length,
+                  step),
+        operation(operation), block(block) {}
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyBlockSuccessors, PyBlock>;
+
+  intptr_t getRawNumElements() {
+    block.checkValid();
+    return mlirBlockGetNumSuccessors(block.get());
+  }
+
+  PyBlock getRawElement(intptr_t pos) {
+    MlirBlock block = mlirBlockGetSuccessor(this->block.get(), pos);
+    return PyBlock(operation, block);
+  }
+
+  PyBlockSuccessors slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyBlockSuccessors(block, operation, startIndex, length, step);
+  }
+
+  PyOperationRef operation;
+  PyBlock block;
+};
+
+/// A list of block predecessors. The (returned) predecessor list is
+/// associated with the operation and block whose predecessors these are, and
+/// thus extends the lifetime of this operation and block.
+///
+/// WARNING: This Sliceable is more expensive than the others here because
+/// mlirBlockGetPredecessor actually iterates the use-def chain (of block
+/// operands) anew for each indexed access.
+class PyBlockPredecessors : public Sliceable<PyBlockPredecessors, PyBlock> {
+public:
+  static constexpr const char *pyClassName = "BlockPredecessors";
+
+  PyBlockPredecessors(PyBlock block, PyOperationRef operation,
+                      intptr_t startIndex = 0, intptr_t length = -1,
+                      intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirBlockGetNumPredecessors(block.get())
+                               : length,
+                  step),
+        operation(operation), block(block) {}
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyBlockPredecessors, PyBlock>;
+
+  intptr_t getRawNumElements() {
+    block.checkValid();
+    return mlirBlockGetNumPredecessors(block.get());
+  }
+
+  PyBlock getRawElement(intptr_t pos) {
+    MlirBlock block = mlirBlockGetPredecessor(this->block.get(), pos);
+    return PyBlock(operation, block);
+  }
+
+  PyBlockPredecessors slice(intptr_t startIndex, intptr_t length,
+                            intptr_t step) {
+    return PyBlockPredecessors(block, operation, startIndex, length, step);
+  }
+
+  PyOperationRef operation;
+  PyBlock block;
+};
+
 /// A list of operation attributes. Can be indexed by name, producing
 /// attributes, or by index, producing named attributes.
 class PyOpAttributeMap {
@@ -3655,7 +3737,19 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           nb::arg("operation"),
           "Appends an operation to this block. If the operation is currently "
-          "in another block, it will be moved.");
+          "in another block, it will be moved.")
+      .def_prop_ro(
+          "successors",
+          [](PyBlock &self) {
+            return PyBlockSuccessors(self, self.getParentOperation());
+          },
+          "Returns the list of Block successors.")
+      .def_prop_ro(
+          "predecessors",
+          [](PyBlock &self) {
+            return PyBlockPredecessors(self, self.getParentOperation());
+          },
+          "Returns the list of Block predecessors.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyInsertionPoint.
@@ -4099,6 +4193,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   PyBlockArgumentList::bind(m);
   PyBlockIterator::bind(m);
   PyBlockList::bind(m);
+  PyBlockSuccessors::bind(m);
+  PyBlockPredecessors::bind(m);
   PyOperationIterator::bind(m);
   PyOperationList::bind(m);
   PyOpAttributeMap::bind(m);
