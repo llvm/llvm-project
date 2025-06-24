@@ -21,6 +21,7 @@ include "mlir/Dialect/Vector/IR/Vector.td"
 include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/IndexingMapOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -33,6 +34,7 @@ include "mlir/IR/EnumAttr.td"
 // than the current set: {*, +}.
 def Vector_ContractionOp :
   Vector_Op<"contract", [
+      IndexingMapOpInterface,
       Pure,
       PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
       PredOpTrait<"third operand acc and result have same element type",
@@ -206,6 +208,16 @@ def Vector_ContractionOp :
           getIteratorTypes()
               .template getAsValueRange<IteratorTypeAttr, IteratorType>();
       return {range.begin(), range.end()};
+    }
+
+    //===------------------------------------------------------------------===//
+    // IndexingMapOpInterface interface methods implementation.
+    //===------------------------------------------------------------------===//
+    ArrayRef<int64_t> getShape(OpOperand * opOperand) {
+      Type t = opOperand->get().getType();
+      if (auto vt = dyn_cast<VectorType>(t))
+        return vt.getShape();
+      return {};
     }
   }];
 
@@ -1736,7 +1748,9 @@ def Vector_TransferWriteOp :
   let hasVerifier = 1;
 }
 
-def Vector_LoadOp : Vector_Op<"load"> {
+def Vector_LoadOp : Vector_Op<"load", [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+  ]> {
   let summary = "reads an n-D slice of memory into an n-D vector";
   let description = [{
     The 'vector.load' operation reads an n-D slice of memory into an n-D
@@ -1822,7 +1836,9 @@ def Vector_LoadOp : Vector_Op<"load"> {
       "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
 }
 
-def Vector_StoreOp : Vector_Op<"store"> {
+def Vector_StoreOp : Vector_Op<"store", [
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+  ]> {
   let summary = "writes an n-D vector to an n-D slice of memory";
   let description = [{
     The 'vector.store' operation writes an n-D vector to an n-D slice of memory.
