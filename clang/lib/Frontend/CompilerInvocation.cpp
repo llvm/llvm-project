@@ -636,9 +636,9 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-hlsl-entry" << GetInputKindName(IK);
 
-  if (Args.hasArg(OPT_fdx_rootsig_version) && !LangOpts.HLSL)
+  if (Args.hasArg(OPT_fdx_rootsignature_version) && !LangOpts.HLSL)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
-        << "-fdx-rootsig-version" << GetInputKindName(IK);
+        << "-fdx-rootsignature-version" << GetInputKindName(IK);
 
   if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
