@@ -472,14 +472,6 @@ public:
     return false;
   };
 
-  /// Get number of loaded/parsed DWO files. This is emitted in "statistics
-  /// dump"
-  ///
-  /// \returns
-  ///     A pair containing (loaded_dwo_count, total_dwo_count). If this
-  ///     symbol file doesn't support DWO files, both counts will be 0.
-  virtual std::pair<uint32_t, uint32_t> GetDwoFileCounts() { return {0, 0}; }
-
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
            std::optional<uint64_t> byte_size, SymbolContextScope *context,
