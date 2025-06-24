@@ -13,6 +13,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcsnlen_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsnlen_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.wchar.wcsnlen
+)
+
+add_libc_test(
   btowc_test
   SUITE
     libc_wchar_unittests

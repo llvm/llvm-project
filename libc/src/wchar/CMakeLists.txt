@@ -11,6 +11,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcsnlen
+  SRCS
+    wcsnlen.cpp
+  HDRS
+    wcsnlen.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.string.string_utils
+)
+
+add_entrypoint_object(
   wctob
   SRCS
     wctob.cpp

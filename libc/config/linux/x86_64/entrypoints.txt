@@ -366,6 +366,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wchar.h entrypoints
     libc.src.wchar.btowc
     libc.src.wchar.wcslen
+    libc.src.wchar.wcsnlen
     libc.src.wchar.wctob
     libc.src.wchar.wmemmove
     libc.src.wchar.wmemset
