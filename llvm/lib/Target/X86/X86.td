@@ -811,6 +811,7 @@ include "X86SchedSkylakeClient.td"
 include "X86SchedSkylakeServer.td"
 include "X86SchedIceLake.td"
 include "X86SchedAlderlakeP.td"
+include "X86SchedLunarlakeP.td"
 include "X86SchedSapphireRapids.td"
 
 //===----------------------------------------------------------------------===//
@@ -1870,10 +1871,12 @@ def : ProcModel<"meteorlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"arrowlake", AlderlakePModel,
                 ProcessorFeatures.ARLFeatures, ProcessorFeatures.ADLTuning>;
-foreach P = ["arrowlake-s", "arrowlake_s", "lunarlake"] in {
+foreach P = ["arrowlake-s", "arrowlake_s"] in {
 def : ProcModel<P, AlderlakePModel,
                 ProcessorFeatures.ARLSFeatures, ProcessorFeatures.ADLTuning>;
 }
+def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
+                ProcessorFeatures.ADLTuning>;
 def : ProcModel<"pantherlake", AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"clearwaterforest", AlderlakePModel,
