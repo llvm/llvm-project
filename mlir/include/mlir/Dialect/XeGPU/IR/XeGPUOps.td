@@ -595,7 +595,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
-            vector<16xi1> -> vector<8x16xf32>
+            vector<16xi1> -> vector<16x8xf32>
   ```
   Example 3 (SIMT mode):
   ```mlir
@@ -668,7 +668,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
     xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                             l2_hint = #xegpu.cache_hint<write_back>,
                             l3_hint = #xegpu.cache_hint<write_through>}
-          : vector<8x16xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
+          : vector<16x8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
   ```
   }];
 
