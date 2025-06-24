@@ -3838,6 +3838,24 @@ def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
   MarshallingInfoFlag<CodeGenOpts<"HotPatch">>;
+
+// See llvm/lib/CodeGen/WindowsSecureHotPatching.cpp
+def fms_secure_hotpatch_functions_file
+    : Joined<["-"], "fms-secure-hotpatch-functions-file=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MarshallingInfoString<CodeGenOpts<"MSSecureHotPatchFunctionsFile">>,
+      HelpText<"Path to a file that contains a list of mangled names of "
+               "functions that should be hot-patched for Windows Secure "
+               "Hot-Patching">;
+def fms_secure_hotpatch_functions_list
+    : CommaJoined<["-"], "fms-secure-hotpatch-functions-list=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MarshallingInfoStringVector<CodeGenOpts<"MSSecureHotPatchFunctionsList">>,
+      HelpText<"List of mangled symbol names of functions that should be "
+               "hot-patched for Windows Secure Hot-Patching">;
+
 def fpcc_struct_return : Flag<["-"], "fpcc-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Override the default ABI to return all structs on the stack">;
