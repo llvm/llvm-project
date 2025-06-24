@@ -295,6 +295,8 @@ C23 Feature Support
   type. Fixes #GH140887
 - Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
   which clarified how Clang is handling underspecified object declarations.
+- Clang now accepts single variadic parameter in type-name. It's a part of
+  `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
