@@ -211,6 +211,7 @@ Changes to the RISC-V Backend
 * `-mcpu=sifive-x390` was added.
 * `-mtune=andes-45-series` was added.
 * Adds assembler support for the Andes `XAndesvbfhcvt` (Andes Vector BFLOAT16 Conversion extension).
+* `-mcpu=andes-ax45mpv` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
