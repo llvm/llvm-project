@@ -1110,7 +1110,7 @@ struct TransposeLoadOpLowering
   LogicalResult
   matchAndRewrite(TransposeLoadOp op, TransposeLoadOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx950)
+    if (chipset != kGfx950)
       return op.emitOpError("Non-gfx950 chipset not supported");
 
     Location loc = op.getLoc();

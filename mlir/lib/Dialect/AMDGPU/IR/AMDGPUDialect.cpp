@@ -24,6 +24,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <limits>
@@ -534,10 +535,11 @@ LogicalResult TransposeLoadOp::verify() {
   if (!transferType)
     return emitOpError("destination type must be a vector type");
   size_t numElements = transferType.getNumElements();
-  size_t elementTypeSize = transferType.getElementType().getIntOrFloatBitWidth();
+  size_t elementTypeSize =
+      transferType.getElementType().getIntOrFloatBitWidth();
 
   // ElementSize -> NumElements
-  const std::map<size_t, size_t> KValidLoadSizeMap = {
+  const llvm::SmallDenseMap<size_t, size_t> KValidLoadSizeMap = {
       {4, 16},
       {32, 3}, // 6-bit element loads use casted vector<3xi32>
       {8, 8},

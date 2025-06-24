@@ -898,16 +898,6 @@ def AMDGPU_GatherToLDSOp :
   let hasVerifier = 1;
 }
 
-def F8Types : AnyTypeOf<[
-  F8E8M0FNU,      // 8 exponent, 0 mantissa
-  F8E5M2,         // 5 exponent, 2 mantissa
-  F8E5M2FNUZ,     // 5 exponent, 2 mantissa
-  F8E4M3,         // 4 exponent, 3 mantissa
-  F8E4M3FN,       // 4 exponent, 3 mantissa
-  F8E4M3B11FNUZ,  // 4 exponent, 3 mantissa (with bias 11)
-  F8E3M4          // 3 exponent, 4 mantissa
-]>;
-
 def AMDGPU_TransposeLoadOp :
     AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
