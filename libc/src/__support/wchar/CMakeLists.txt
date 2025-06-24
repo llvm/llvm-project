@@ -51,3 +51,19 @@ add_object_library(
   .character_converter
   .mbstate
 )
+
+add_object_library(
+  mbsrtowcs
+  HDRS
+    mbsrtowcs.h
+  SRCS
+    mbsrtowcs.cpp
+  DEPENDS
+  libc.hdr.types.wchar_t
+  libc.hdr.types.size_t
+  libc.src.__support.common
+  libc.src.__support.error_or
+  libc.src.__support.macros.config
+  .mbstate
+  .mbrtowc
+)

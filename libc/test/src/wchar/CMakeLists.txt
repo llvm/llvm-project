@@ -38,6 +38,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  mbsrtowcs_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbsrtowcs_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.string.memset
+    libc.src.wchar.mbsrtowcs
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
+)
+
+add_libc_test(
   mbtowc_test
   SUITE
     libc_wchar_unittests

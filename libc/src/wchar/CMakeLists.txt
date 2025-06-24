@@ -66,6 +66,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mbsrtowcs
+  SRCS
+    mbsrtowcs.cpp
+  HDRS
+    mbsrtowcs.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.wchar.mbsrtowcs
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   mbtowc
   SRCS
     mbtowc.cpp
