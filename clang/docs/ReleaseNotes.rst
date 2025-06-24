@@ -46,16 +46,22 @@ Potentially Breaking Changes
   ``endbr64`` instruction at the labels named as possible branch
   destinations, so it is not safe to use a register-controlled branch
   instruction to branch to one. (In line with gcc.)
-- Scalar deleting destructors emitted by clang have been aligned with Microsoft
-  ABI on Windows. Prior to this patch, clang handled ``::delete`` via calling
-  global operator delete direct after the destructor call and not calling class
-  operator delete in scalar deleting destructor body by passing "0" as implicit
-  flag argument value. After this change if library A was compiled with
-  clang 20, library B compiled with clang 21. class B is implemented in
-  library A, so its destructor doesn't call operator ``::delete``, then an
-  object of class B is deleted via ``::delete`` in library B, so the callsite
-  doesn't call ``::delete`` because of this patch.
-  So there will be no ``::delete`` call at all.
+- Scalar deleting destructor support has been aligned with MSVC when
+  targeting the MSVC ABI. Clang previously implemented support for
+  ``::delete`` by calling the complete object destructor and then the
+  appropriate global delete operator (as is done for the Itanium ABI).
+  The scalar deleting destructor is now called to destroy the object
+  and deallocate its storage. This is an ABI change that can result in
+  memory corruption when a program built for the MSVC ABI has
+  portions compiled with clang 20 or earlier and portions compiled
+  with a version of clang 21 (or MSVC). Consider a class ``X`` that
+  declares a virtual destructor and an ``operator delete`` member
+  with the destructor defined in library ``A`` and a call to `::delete`` in
+  library ``B``. If library ``A`` is compiled with clang 20 and library ``B``
+  is compiled with clang 21, the ``::delete`` call might dispatch to the
+  scalar deleting destructor emitted in library ``A`` which will erroneously
+  call the member ``operator delete`` instead of the expected global
+  delete operator.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
