@@ -237,7 +237,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
       InsertSubvector,
       m_InsertSubvector(m_Specific(V2), m_Specific(V3), m_SpecificInt(3))));
 
-  EXPECT_TRUE(sd_match(Load, m_Load(m_Specific(Ch), m_Specific(BasePtr), m_Specific(Offset))));
+  EXPECT_TRUE(sd_match(
+      Load, m_Load(m_Specific(Ch), m_Specific(BasePtr), m_Specific(Offset))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
