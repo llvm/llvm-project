@@ -13,7 +13,6 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -1135,7 +1134,8 @@ struct TransposeLoadOpLowering
     size_t elementTypeSize =
         resultType.getElementType().getIntOrFloatBitWidth();
 
-    // ROCDL transpose load intrinsics return vectors of 32-bit integers.
+    // ROCDL transpose load intrinsics return vectors of 32-bit integers, if
+    // the element size is smaller than 16 bits.
     Type rocdlResultType = VectorType::get((numElements * elementTypeSize) / 32,
                                            rewriter.getIntegerType(32));
     Type llvmResultType = typeConverter->convertType(resultType);
