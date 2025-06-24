@@ -28,6 +28,16 @@ struct IndexRecordHasher {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
       HashBuilder;
 
+  /// Maps declarations that have already been hashed in this
+  /// `IndexRecordHasher` to a unique ID that identifies this declaration.
+  ///
+  /// The ID assigned to a declaration is consistent across multiple runs of the
+  /// `IndexRecordHasher` on the same AST structure, even across multiple
+  /// process runs.
+  ///
+  /// See `hashDecl` for its use.
+  llvm::DenseMap<const Decl *, size_t> HashedDecls;
+
   explicit IndexRecordHasher(ASTContext &context) : Ctx(context) {}
 
   void hashDecl(const Decl *D);
@@ -184,6 +194,19 @@ void IndexRecordHasher::hashMacro(const IdentifierInfo *name,
 void IndexRecordHasher::hashDecl(const Decl *D) {
   assert(D->isCanonicalDecl());
 
+  auto emplaceResult = HashedDecls.try_emplace(D, HashedDecls.size());
+  bool inserted = emplaceResult.second;
+  if (!inserted) {
+    // If we have already serialized this declaration, just add the
+    // declaration's hash to the hash builder. This is significantly
+    // cheaper than visiting the declaration again.
+    HashBuilder.add(emplaceResult.first->second);
+    return;
+  }
+
+  // If we haven't serialized the declaration yet,`try_emplace` will insert the
+  // new unique ID into `HashedDecls`. We just need to hash the declaration
+  // once.
   if (auto *NS = dyn_cast<NamespaceDecl>(D)) {
     if (NS->isAnonymousNamespace()) {
       HashBuilder.add("@aN");
