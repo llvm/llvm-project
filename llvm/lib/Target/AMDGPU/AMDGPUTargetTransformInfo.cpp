@@ -1183,21 +1183,23 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 }
 
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *VT, ArrayRef<int> Mask,
+                                           VectorType *DstTy, VectorType *SrcTy,
+                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
-  if (!isa<FixedVectorType>(VT))
-    return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
+  if (!isa<FixedVectorType>(SrcTy))
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                                 SubTp);
 
-  Kind = improveShuffleKindFromMask(Kind, Mask, VT, Index, SubTp);
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
   // Larger vector widths may require additional instructions, but are
   // typically cheaper than scalarized versions.
-  unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
+  unsigned NumVectorElts = cast<FixedVectorType>(SrcTy)->getNumElements();
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      DL.getTypeSizeInBits(VT->getElementType()) == 16) {
+      DL.getTypeSizeInBits(SrcTy->getElementType()) == 16) {
     bool HasVOP3P = ST->hasVOP3PInsts();
     unsigned RequestedElts =
         count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
@@ -1239,7 +1241,8 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                               SubTp);
 }
 
 /// Whether it is profitable to sink the operands of an

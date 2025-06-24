@@ -77,6 +77,7 @@ public:
   bool hasMul32() const { return HasMul32; }
   bool hasMul32High() const { return HasMul32High; }
   bool hasDiv32() const { return HasDiv32; }
+  bool hasSingleFloat() const { return HasSingleFloat; }
   bool hasRegionProtection() const { return HasRegionProtection; }
   bool hasRelocatableVector() const { return HasRelocatableVector; }
   bool hasMiscSR() const { return HasMiscSR; }

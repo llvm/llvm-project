@@ -577,7 +577,8 @@ multiclass BoolWOption<string flag_base, KeyPathAndMacro kpm,
 // Works like BoolOption except without marshalling
 multiclass BoolOptionWithoutMarshalling<string prefix = "", string spelling_base,
                                         FlagDef flag1_base, FlagDef flag2_base,
-                                        BothFlags suffix = BothFlags<[]>> {
+                                        BothFlags suffix = BothFlags<[]>,
+                                        list<string> flag_prefix = ["-"]> {
   defvar flag1 = FlagDefExpanded<ApplySuffix<flag1_base, suffix>.Result, prefix,
                                  NAME, spelling_base>;
 
@@ -598,12 +599,12 @@ multiclass BoolOptionWithoutMarshalling<string prefix = "", string spelling_base
 
   defvar implied = !if(flag1.CanBeImplied, flag1, flag2);
 
-  def flag1.RecordName : Flag<["-"], flag1.Spelling>, Flags<flag1.OptionFlags>,
+  def flag1.RecordName : Flag<flag_prefix, flag1.Spelling>, Flags<flag1.OptionFlags>,
                          Visibility<flag1.OptionVisibility>,
                          HelpText<flag1.Help>,
                          ImpliedByAnyOf<implied.ImpliedBy, implied.ValueAsCode>
                          {}
-  def flag2.RecordName : Flag<["-"], flag2.Spelling>, Flags<flag2.OptionFlags>,
+  def flag2.RecordName : Flag<flag_prefix, flag2.Spelling>, Flags<flag2.OptionFlags>,
                          Visibility<flag2.OptionVisibility>,
                          HelpText<flag2.Help>,
                          ImpliedByAnyOf<implied.ImpliedBy, implied.ValueAsCode>
@@ -5756,12 +5757,17 @@ def nobuiltininc : Flag<["-"], "nobuiltininc">,
   Group<IncludePath_Group>,
   HelpText<"Disable builtin #include directories only">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"UseBuiltinIncludes">>;
-def nogpuinc : Flag<["-"], "nogpuinc">, Group<IncludePath_Group>,
-  HelpText<"Do not add include paths for CUDA/HIP and"
-  " do not include the default CUDA/HIP wrapper headers">;
+defm offload_inc: BoolOptionWithoutMarshalling<"", "offload-inc",
+  PosFlag<SetTrue, [], [ClangOption], "Add include paths for CUDA/HIP and"
+   " include the default CUDA/HIP wrapper headers (default)">,
+  NegFlag<SetFalse, [], [ClangOption], "Do not add include paths for CUDA/HIP"
+   " and include the default CUDA/HIP wrapper headers">,
+   BothFlags<[]>, ["--"]>, Group<IncludePath_Group>;
+def : Flag<["-"], "nogpuinc">, Alias<no_offload_inc>;
+
 def nohipwrapperinc : Flag<["-"], "nohipwrapperinc">, Group<IncludePath_Group>,
   HelpText<"Do not include the default HIP wrapper headers and include paths">;
-def : Flag<["-"], "nocudainc">, Alias<nogpuinc>;
+def : Flag<["-"], "nocudainc">, Alias<no_offload_inc>;
 def no_offloadlib
     : Flag<["--"], "no-offloadlib">,
       MarshallingInfoFlag<LangOpts<"NoGPULib">>,
@@ -9320,6 +9326,16 @@ def fspv_extension_EQ
       Group<dxc_Group>,
       HelpText<"Specify the available SPIR-V extensions. If this option is not "
                "specified, then all extensions are available.">;
+def fvk_use_dx_layout
+    : DXCFlag<"fvk-use-dx-layout">,
+      HelpText<"Use DirectX memory layout for Vulkan resources.">;
+def fvk_use_gl_layout : DXCFlag<"fvk-use-gl-layout">,
+                        HelpText<"Use strict OpenGL std140/std430 memory "
+                                 "layout for Vulkan resources.">;
+def fvk_use_scalar_layout
+    : DXCFlag<"fvk-use-scalar-layout">,
+      HelpText<"Use scalar memory layout for Vulkan resources.">;
+
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,

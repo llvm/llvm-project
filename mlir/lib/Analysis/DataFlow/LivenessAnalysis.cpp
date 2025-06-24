@@ -10,6 +10,7 @@
 #include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
+#include <llvm/Support/Debug.h>
 #include <mlir/Analysis/DataFlow/SparseAnalysis.h>
 #include <mlir/Analysis/DataFlow/Utils.h>
 #include <mlir/Analysis/DataFlowFramework.h>
@@ -18,6 +19,10 @@
 #include <mlir/Interfaces/CallInterfaces.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
+
+#define DEBUG_TYPE "liveness-analysis"
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -76,28 +81,46 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 LogicalResult
 LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
                                  ArrayRef<const Liveness *> results) {
+  LLVM_DEBUG(DBGS() << "[visitOperation] Enter: ";
+             op->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
+             llvm::dbgs() << "\n");
   // This marks values of type (1.a) and (4) liveness as "live".
   if (!isMemoryEffectFree(op) || op->hasTrait<OpTrait::ReturnLike>()) {
-    for (auto *operand : operands)
+    LDBG("[visitOperation] Operation has memory effects or is "
+         "return-like, marking operands live");
+    for (auto *operand : operands) {
+      LDBG(" [visitOperation] Marking operand live: "
+           << operand << " (" << operand->isLive << ")");
       propagateIfChanged(operand, operand->markLive());
+    }
   }
 
   // This marks values of type (3) liveness as "live".
   bool foundLiveResult = false;
   for (const Liveness *r : results) {
     if (r->isLive && !foundLiveResult) {
+      LDBG("[visitOperation] Found live result, "
+           "meeting all operands with result: "
+           << r);
       // It is assumed that each operand is used to compute each result of an
       // op. Thus, if at least one result is live, each operand is live.
-      for (Liveness *operand : operands)
+      for (Liveness *operand : operands) {
+        LDBG(" [visitOperation] Meeting operand: " << operand
+                                                   << " with result: " << r);
         meet(operand, *r);
+      }
       foundLiveResult = true;
     }
+    LDBG("[visitOperation] Adding dependency for result: " << r << " after op: "
+                                                           << *op);
     addDependency(const_cast<Liveness *>(r), getProgramPointAfter(op));
   }
   return success();
 }
 
 void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
+  LDBG("Visiting branch operand: " << operand.get()
+                                   << " in op: " << *operand.getOwner());
   // We know (at the moment) and assume (for the future) that `operand` is a
   // non-forwarded branch operand of a `RegionBranchOpInterface`,
   // `BranchOpInterface`, `RegionBranchTerminatorOpInterface` or return-like op.
@@ -129,6 +152,9 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       for (Value result : op->getResults()) {
         if (getLatticeElement(result)->isLive) {
           mayLive = true;
+          LDBG("[visitBranchOperand] Non-forwarded branch "
+               "operand may be live due to live result: "
+               << result);
           break;
         }
       }
@@ -148,6 +174,8 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
     // Therefore, we conservatively consider the non-forwarded operand of the
     // branch operation may live.
     mayLive = true;
+    LDBG("[visitBranchOperand] Non-forwarded branch operand may "
+         "be live due to branch op interface");
   } else {
     Operation *parentOp = op->getParentOp();
     assert(isa<RegionBranchOpInterface>(parentOp) &&
@@ -163,6 +191,9 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       for (Value result : parentOp->getResults()) {
         if (getLatticeElement(result)->isLive) {
           mayLive = true;
+          LDBG("[visitBranchOperand] Non-forwarded branch "
+               "operand may be live due to parent live result: "
+               << result);
           break;
         }
       }
@@ -183,6 +214,9 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
     for (Operation &nestedOp : *block) {
       if (!isMemoryEffectFree(&nestedOp)) {
         mayLive = true;
+        LDBG("Non-forwarded branch operand may be "
+             "live due to memory effect in block: "
+             << block);
         break;
       }
     }
@@ -190,6 +224,7 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
 
   if (mayLive) {
     Liveness *operandLiveness = getLatticeElement(operand.get());
+    LDBG("Marking branch operand live: " << operand.get());
     propagateIfChanged(operandLiveness, operandLiveness->markLive());
   }
 
@@ -201,6 +236,7 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   SmallVector<const Liveness *, 4> resultsLiveness;
   for (const Value result : op->getResults())
     resultsLiveness.push_back(getLatticeElement(result));
+  LDBG("Visiting operation for non-forwarded branch operand: " << *op);
   (void)visitOperation(op, operandLiveness, resultsLiveness);
 
   // We also visit the parent op with the parent's results and this operand if
@@ -213,10 +249,14 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   SmallVector<const Liveness *, 4> parentResultsLiveness;
   for (const Value parentResult : parentOp->getResults())
     parentResultsLiveness.push_back(getLatticeElement(parentResult));
+  LDBG("Visiting parent operation for non-forwarded branch operand: "
+       << *parentOp);
   (void)visitOperation(parentOp, operandLiveness, parentResultsLiveness);
 }
 
 void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
+  LDBG("Visiting call operand: " << operand.get()
+                                 << " in op: " << *operand.getOwner());
   // We know (at the moment) and assume (for the future) that `operand` is a
   // non-forwarded call operand of an op implementing `CallOpInterface`.
   assert(isa<CallOpInterface>(operand.getOwner()) &&
@@ -229,14 +269,18 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
   // This marks values of type (1.c) liveness as "live". A non-forwarded
   // call operand is live.
   Liveness *operandLiveness = getLatticeElement(operand.get());
+  LDBG("Marking call operand live: " << operand.get());
   propagateIfChanged(operandLiveness, operandLiveness->markLive());
 }
 
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
+  LDBG("setToExitState for lattice: " << lattice);
   if (lattice->isLive) {
+    LDBG("Lattice already live, nothing to do");
     return;
   }
   // This marks values of type (2) liveness as "live".
+  LDBG("Marking lattice live due to exit state");
   (void)lattice->markLive();
   propagateIfChanged(lattice, ChangeResult::Change);
 }
@@ -246,11 +290,14 @@ void LivenessAnalysis::setToExitState(Liveness *lattice) {
 //===----------------------------------------------------------------------===//
 
 RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
+  LDBG("Constructing RunLivenessAnalysis for op: " << op->getName());
   SymbolTableCollection symbolTable;
 
   loadBaselineAnalyses(solver);
   solver.load<LivenessAnalysis>(symbolTable);
+  LDBG("Initializing and running solver");
   (void)solver.initializeAndRun(op);
+  LDBG("Dumping liveness state for op");
 }
 
 const Liveness *RunLivenessAnalysis::getLiveness(Value val) {
