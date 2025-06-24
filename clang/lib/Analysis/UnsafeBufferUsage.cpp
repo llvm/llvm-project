@@ -572,11 +572,12 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
       const auto *MD = MC->getMethodDecl();
       const auto *RD = MC->getRecordDecl();
 
-      if (auto *II = RD->getDeclName().getAsIdentifierInfo();
-          II && RD->isInStdNamespace())
-        return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
-                                  II->getName()) &&
-               MD->getName() == MethodName;
+      if (RD && MD)
+        if (auto *II = RD->getDeclName().getAsIdentifierInfo();
+            II && RD->isInStdNamespace())
+          return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                    II->getName()) &&
+                 MD->getName() == MethodName;
     }
     return false;
   };
