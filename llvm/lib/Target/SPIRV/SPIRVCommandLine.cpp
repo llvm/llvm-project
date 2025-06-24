@@ -119,6 +119,13 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
       continue;
     }
 
+    if (Token == "KHR") {
+      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
+        if (StringRef(ExtensionName).starts_with("SPV_KHR_"))
+          EnabledExtensions.insert(ExtensionEnum);
+      continue;
+    }
+
     if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
       return O.error("Invalid extension list format: " + Token.str());
 
