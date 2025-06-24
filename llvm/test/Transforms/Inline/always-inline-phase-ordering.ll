@@ -2,10 +2,10 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64e-apple-macosx13"
 
+; CHECK: remark: <unknown>:0:0: 'wobble' inlined into 'snork' with (cost=always): always inline attribute
+; CHECK: remark: <unknown>:0:0: 'snork' inlined into 'blam' with (cost=always): always inline attribute
 ; CHECK: remark: <unknown>:0:0: 'wibble' inlined into 'bar.8' with (cost=always): always inline attribute
 ; CHECK: remark: <unknown>:0:0: 'wibble' inlined into 'pluto' with (cost=always): always inline attribute
-; CHECK: remark: <unknown>:0:0: 'snork' inlined into 'blam' with (cost=always): always inline attribute
-; CHECK: remark: <unknown>:0:0: 'wobble' inlined into 'blam' with (cost=always): always inline attribute
 ; CHECK: remark: <unknown>:0:0: 'spam' inlined into 'blam' with (cost=65, threshold=75)
 ; CHECK: remark: <unknown>:0:0: 'wibble.1' inlined into 'widget' with (cost=30, threshold=75)
 ; CHECK: remark: <unknown>:0:0: 'widget' inlined into 'bar.8' with (cost=30, threshold=75)
