@@ -445,7 +445,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
     return 1;
-
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Store:
