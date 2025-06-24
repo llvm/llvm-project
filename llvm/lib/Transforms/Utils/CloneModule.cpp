@@ -13,8 +13,10 @@
 
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+
 using namespace llvm;
 
 namespace llvm {
@@ -216,8 +218,7 @@ std::unique_ptr<Module> llvm::CloneModule(
 
 extern "C" {
 
-LLVMModuleRef LLVMCloneModule(LLVMModuleRef M) {
+LLVM_ABI LLVMModuleRef LLVMCloneModule(LLVMModuleRef M) {
   return wrap(CloneModule(*unwrap(M)).release());
 }
-
 }
