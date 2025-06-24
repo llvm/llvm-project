@@ -4331,15 +4331,45 @@ private:
       return LookupVisibility::ModuleLocalVisible;
     if (isTULocalInNamedModules(D))
       return LookupVisibility::TULocal;
+
+    // A trick to handle enum constants. The enum constants is special since
+    // they can be found directly without their parent context. This makes it
+    // tricky to decide if an EnumConstantDecl is visible or not by their own
+    // visibilities. E.g., for a class member, we can assume it is visible if
+    // the user get its parent somehow. But for an enum constant, the users may
+    // access if without its parent context. Although we can fix the problem in
+    // Sema lookup process, it might be too complex, we just make a trick here.
+    // Note that we only removes enum constant from the lookup table from its
+    // parent of parent. We DON'T remove the enum constant from its parent. So
+    // we don't need to care about merging problems here.
+    if (auto *ECD = dyn_cast<EnumConstantDecl>(D);
+        ECD && DC.isFileContext() && ECD->getOwningModule() &&
+        ECD->getTopLevelOwningNamedModule()->isNamedModule()) {
+      if (llvm::all_of(
+              DC.noload_lookup(
+                  cast<EnumDecl>(ECD->getDeclContext())->getDeclName()),
+              [](auto *Found) {
+                return Found->isInvisibleOutsideTheOwningModule();
+              }))
+        return ECD->isFromExplicitGlobalModule() ||
+                       ECD->isInAnonymousNamespace()
+                   ? LookupVisibility::TULocal
+                   : LookupVisibility::ModuleLocalVisible;
+    }
+
     return LookupVisibility::GenerallyVisibile;
   }
 
+  DeclContext &DC;
   ModuleLevelDeclsMapTy ModuleLocalDeclsMap;
   TULocalDeclsMapTy TULocalDeclsMap;
 
 public:
   using ASTDeclContextNameTrivialLookupTrait::
       ASTDeclContextNameTrivialLookupTrait;
+
+  ASTDeclContextNameLookupTrait(ASTWriter &Writer, DeclContext &DC)
+      : ASTDeclContextNameTrivialLookupTrait(Writer), DC(DC) {}
 
   template <typename Coll> data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
@@ -4612,7 +4642,7 @@ void ASTWriter::GenerateNameLookupTable(
   MultiOnDiskHashTableGenerator<reader::ASTDeclContextNameLookupTrait,
                                 ASTDeclContextNameLookupTrait>
       Generator;
-  ASTDeclContextNameLookupTrait Trait(*this);
+  ASTDeclContextNameLookupTrait Trait(*this, *DC);
 
   // The first step is to collect the declaration names which we need to
   // serialize into the name lookup table, and to collect them in a stable

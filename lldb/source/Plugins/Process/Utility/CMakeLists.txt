@@ -1,3 +1,6 @@
+# TODO: Clean up this directory and its dependencies
+set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND ProcessUtility)
+
 add_lldb_library(lldbPluginProcessUtility
   AuxVector.cpp
   FreeBSDSignals.cpp

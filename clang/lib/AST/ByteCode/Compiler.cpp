@@ -4956,8 +4956,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
-  SmallVector<const Expr *, 8> Args(
-      llvm::ArrayRef(E->getArgs(), E->getNumArgs()));
+  SmallVector<const Expr *, 8> Args(ArrayRef(E->getArgs(), E->getNumArgs()));
 
   bool IsAssignmentOperatorCall = false;
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
