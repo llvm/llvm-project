@@ -1380,7 +1380,7 @@ define ptr @gep_of_gep_multiuse_var_and_var(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_of_gep_multiuse_var_and_var(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [4 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [4 x i32], ptr [[P]], i64 [[IDX]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [4 x i32], ptr [[GEP1]], i64 0, i64 [[IDX2:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP2]]
 ;
   %gep1 = getelementptr [4 x i32], ptr %p, i64 %idx
@@ -1922,8 +1922,9 @@ define ptr @gep_merge_nusw(ptr %p, i64 %x, i64 %y) {
 
 define ptr @gep_merge_nuw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_merge_nuw_add_zero(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [2 x i32], ptr [[GEP_SPLIT:%.*]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw [2 x i32], ptr [[GEP]], i64 0, i64 [[IDX3:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep1 = getelementptr nuw [2 x i32], ptr %p, i64 %idx
   %gep = getelementptr nuw [2 x i32], ptr %gep1, i64 0, i64 %idx2
@@ -1935,7 +1936,8 @@ define ptr @gep_merge_nuw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
 ; after the merge.
 define ptr @gep_merge_nusw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_merge_nusw_add_zero(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [2 x i32], ptr [[GEP1]], i64 0, i64 [[IDX2:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep1 = getelementptr nusw [2 x i32], ptr %p, i64 %idx
