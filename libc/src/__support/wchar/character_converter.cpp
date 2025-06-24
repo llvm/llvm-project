@@ -27,6 +27,7 @@ constexpr uint32_t MASK_ENCODED_BITS =
     mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
 // Maximum value for utf-32 for a utf-8 sequence of a given length
 constexpr char32_t MAX_VALUE_PER_UTF8_LEN[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
+constexpr int MAX_UTF8_LENGTH = 4;
 
 CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
@@ -43,12 +44,14 @@ bool CharacterConverter::isFull() {
 bool CharacterConverter::isEmpty() { return state->bytes_stored == 0; }
 
 bool CharacterConverter::isValidState() {
+  if (state->total_bytes > 4)
+    return false;
+
   const char32_t max_utf32_value =
       state->total_bytes == 0 ? 0
                               : MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 1];
   return state->bytes_stored <= state->total_bytes &&
-         state->bytes_stored >= 0 && state->total_bytes <= 4 &&
-         state->partial <= max_utf32_value;
+         state->bytes_stored >= 0 && state->partial <= max_utf32_value;
 }
 
 int CharacterConverter::push(char8_t utf8_byte) {
@@ -101,8 +104,7 @@ int CharacterConverter::push(char32_t utf32) {
   state->partial = utf32;
 
   // determine number of utf-8 bytes needed to represent this utf32 value
-  constexpr int NUM_RANGES = 4;
-  for (uint8_t i = 0; i < NUM_RANGES; i++) {
+  for (uint8_t i = 0; i < MAX_UTF8_LENGTH; i++) {
     if (state->partial <= MAX_VALUE_PER_UTF8_LEN[i]) {
       state->total_bytes = i + 1;
       state->bytes_stored = i + 1;
