@@ -503,10 +503,9 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       int64_t blockedChunkSize = targetShape->back();
       int64_t numNewChunks = originalChunkSize / blockedChunkSize;
 
-      for (auto mask : convertedMasks1D) {
-        for (int64_t i = 0; i < numNewChunks; ++i)
-          convertedMasks.push_back(mask);
-      }
+      for (auto mask : convertedMasks1D)
+        convertedMasks.append(numNewChunks, mask);
+
       newValueTy = valueTy.cloneWith(*targetShape, elemTy);
     } else {
       convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
@@ -591,11 +590,8 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
       SmallVector<Value> convertedMasks1D = pack(
           op.getMask(), convertedMaskTypes, (*targetShape)[0], loc, rewriter);
 
-      for (auto mask : convertedMasks1D) {
-        for (int64_t i = 0; i < numNewChunks; ++i) {
-          convertedMasks.push_back(mask);
-        }
-      }
+      for (auto mask : convertedMasks1D)
+        convertedMasks.append(numNewChunks, mask);
     } else {
       convertedMaskTypes = getUnrolledTypes(maskTy, *targetShape);
       convertedMasks =
@@ -659,11 +655,8 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
       int64_t blockedChunkSize = targetShape->back();
       int64_t numNewChunks = originalChunkSize / blockedChunkSize;
 
-      for (auto offset : convertedOffsetVec1D) {
-        for (int64_t i = 0; i < numNewChunks; ++i) {
-          convertedOffsetVec.push_back(offset);
-        }
-      }
+      for (auto offset : convertedOffsetVec1D)
+        convertedOffsetVec.append(numNewChunks, offset);
 
     } else {
       convertedOffsetTypes = getUnrolledTypes(offsetVecTy, *targetShape);
