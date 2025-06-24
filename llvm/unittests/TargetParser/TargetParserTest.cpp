@@ -1440,7 +1440,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
       AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
       AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
-      AArch64::AEK_SSVE_BITPERM,
+      AArch64::AEK_SSVE_BITPERM, AArch64::AEK_SVESHA3,
   };
 
   std::vector<StringRef> Features;
@@ -1479,6 +1479,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
@@ -1651,6 +1652,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve-f16f32mm", "nosve-f16f32mm", "+sve-f16f32mm", "-sve-f16f32mm"},
       {"sve2", "nosve2", "+sve2", "-sve2"},
       {"sve-aes", "nosve-aes", "+sve-aes", "-sve-aes"},
+      {"sve-sha3", "nosve-sha3", "+sve-sha3", "-sve-sha3"},
       {"sve2-aes", "nosve2-aes", "+sve2-aes", "-sve2-aes"},
       {"sve2-sm4", "nosve2-sm4", "+sve2-sm4", "-sve2-sm4"},
       {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
@@ -2158,6 +2160,12 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"sve2", "sve-aes", "nosve2-aes"},
          {"sve2"},
          {"sve2-aes", "sve-aes"}},
+
+        // -sve2-sha3 should disable sve-sha3 (only)
+        {AArch64::ARMV9_6A,
+         {"sve2", "sve-sha3", "nosve2-sha3"},
+         {"sve2"},
+         {"sve2-sha3", "sve-sha3"}},
 
         // sme-tmop -> sme
         {AArch64::ARMV8A, {"nosme2", "sme-tmop"}, {"sme2", "sme-tmop"}, {}},
