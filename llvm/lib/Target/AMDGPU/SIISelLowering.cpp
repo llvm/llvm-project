@@ -2225,7 +2225,8 @@ SDValue SITargetLowering::getPreloadedValue(
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
   if (Subtarget->hasArchitectedSGPRs() &&
-      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx ||
+       CC == CallingConv::AMDGPU_Gfx_WholeWave)) {
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
@@ -2907,7 +2908,8 @@ SDValue SITargetLowering::LowerFormalArguments(
     if (!Subtarget->enableFlatScratch())
       assert(!UserSGPRInfo.hasFlatScratchInit());
     if ((CallConv != CallingConv::AMDGPU_CS &&
-         CallConv != CallingConv::AMDGPU_Gfx) ||
+         CallConv != CallingConv::AMDGPU_Gfx &&
+         CallConv != CallingConv::AMDGPU_Gfx_WholeWave) ||
         !Subtarget->hasArchitectedSGPRs())
       assert(!Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
              !Info->hasWorkGroupIDZ());
