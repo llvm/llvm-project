@@ -1176,7 +1176,9 @@ public:
 
   void handleInstrProfError(Error Err, uint64_t MismatchedFuncSum);
 
-  // Get the profile record and handle errors if necessary.
+  /// Get the profile record, assign it to \p ProfileRecord, handle errors if
+  /// necessary, and assign \p ProgramMaxCount. \returns true if there are no
+  /// errors.
   bool getRecord(IndexedInstrProfReader *PGOReader);
 
   // Read counts for the instrumented BB from profile.
@@ -1459,8 +1461,8 @@ bool PGOUseFunc::getRecord(IndexedInstrProfReader *PGOReader) {
 }
 
 // Read the profile from ProfileFileName and assign the value to the
-// instrumented BB and the edges. This function also updates ProgramMaxCount.
-// Return true if the profile are successfully read, and false on errors.
+// instrumented BB and the edges. Return true if the profile are successfully
+// read, and false on errors.
 bool PGOUseFunc::readCounters(bool &AllZeros,
                               InstrProfRecord::CountPseudoKind &PseudoKind) {
   auto &Ctx = M->getContext();
