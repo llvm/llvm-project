@@ -833,7 +833,7 @@ void NativeProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
   auto stepping_with_bp_it =
       m_threads_stepping_with_breakpoint.find(thread.GetID());
   if (stepping_with_bp_it != m_threads_stepping_with_breakpoint.end() &&
-      llvm::is_contained(stepping_with_bp_it->second, reg_ctx.GetPC()))
+      stepping_with_bp_it->second == reg_ctx.GetPC())
     thread.SetStoppedByTrace();
 
   StopRunningThreads(thread.GetID());
@@ -1960,12 +1960,10 @@ void NativeProcessLinux::SignalIfAllThreadsStopped() {
   // Clear any temporary breakpoints we used to implement software single
   // stepping.
   for (const auto &thread_info : m_threads_stepping_with_breakpoint) {
-    for (auto &&bp_addr : thread_info.second) {
-      Status error = RemoveBreakpoint(bp_addr);
-      if (error.Fail())
-        LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
-                 thread_info.first, error);
-    }
+    Status error = RemoveBreakpoint(thread_info.second);
+    if (error.Fail())
+      LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
+               thread_info.first, error);
   }
   m_threads_stepping_with_breakpoint.clear();
 
