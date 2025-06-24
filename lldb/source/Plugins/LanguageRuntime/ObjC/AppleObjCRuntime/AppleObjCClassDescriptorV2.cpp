@@ -552,9 +552,9 @@ bool ClassDescriptorV2::Describe(
     } else {
       std::optional<method_list_t> base_method_list =
           GetMethodList(process, class_ro->m_baseMethods_ptr);
-      if (base_method_list)
-        if (!ProcessMethodList(instance_method_func, *base_method_list))
-          return false;
+      if (base_method_list &&
+          !ProcessMethodList(instance_method_func, *base_method_list))
+        return false;
     }
   }
 
