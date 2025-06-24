@@ -67,7 +67,7 @@
   AddSignal(signo, name, __VA_ARGS__);                                         \
   ADD_SIGCODE(signo, signo, SI_USER, 0, "sent by kill, sigsend or raise",      \
               SignalCodePrintOption::Sender);                                  \
-  ADD_SIGCODE(signo, signo, SI_KERNEL, 0x80, "sent by kernel",                 \
+  ADD_SIGCODE(signo, signo, SI_KERNEL, 0x80, "sent by kernel (SI_KERNEL)",     \
               SignalCodePrintOption::Sender);                                  \
   ADD_SIGCODE(signo, signo, SI_QUEUE, -1, "sent by sigqueue",                  \
               SignalCodePrintOption::Sender);                                  \
