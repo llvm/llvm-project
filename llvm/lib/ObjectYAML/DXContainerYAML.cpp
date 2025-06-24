@@ -34,10 +34,16 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 }
 
 template <typename T>
-static void
-addDescriptorRanges(DXContainerYAML::RootParameterHeaderYaml &Header,
-                    DXContainerYAML::RootSignatureYamlDesc &RootSigDesc,
-                    const object::DirectX::DescriptorTable<T> &Table) {
+static llvm::Error
+readDescriptorRanges(DXContainerYAML::RootParameterHeaderYaml &Header,
+                     DXContainerYAML::RootSignatureYamlDesc &RootSigDesc,
+                     object::DirectX::DescriptorTableView *DTV) {
+
+  llvm::Expected<object::DirectX::DescriptorTable<T>> TableOrErr =
+      DTV->read<T>();
+  if (Error E = TableOrErr.takeError())
+    return E;
+  auto Table = *TableOrErr;
 
   DXContainerYAML::RootParameterLocationYaml Location(Header);
   DXContainerYAML::DescriptorTableYaml &TableYaml =
@@ -64,6 +70,8 @@ addDescriptorRanges(DXContainerYAML::RootParameterHeaderYaml &Header,
     }
     TableYaml.Ranges.push_back(NewR);
   }
+
+  return Error::success();
 }
 
 llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
@@ -140,24 +148,16 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       }
     } else if (auto *DTV =
                    dyn_cast<object::DirectX::DescriptorTableView>(&ParamView)) {
-
       if (Version == 1) {
-        llvm::Expected<
-            object::DirectX::DescriptorTable<dxbc::RTS0::v1::DescriptorRange>>
-            TableOrErr = DTV->read<dxbc::RTS0::v1::DescriptorRange>();
-        if (Error E = TableOrErr.takeError())
+        if (Error E = readDescriptorRanges<dxbc::RTS0::v1::DescriptorRange>(
+                Header, RootSigDesc, DTV))
           return std::move(E);
-        auto Table = *TableOrErr;
-        addDescriptorRanges(Header, RootSigDesc, Table);
-      } else {
-        llvm::Expected<
-            object::DirectX::DescriptorTable<dxbc::RTS0::v2::DescriptorRange>>
-            TableOrErr = DTV->read<dxbc::RTS0::v2::DescriptorRange>();
-        if (Error E = TableOrErr.takeError())
+      } else if (Version == 2) {
+        if (Error E = readDescriptorRanges<dxbc::RTS0::v2::DescriptorRange>(
+                Header, RootSigDesc, DTV))
           return std::move(E);
-        auto Table = *TableOrErr;
-        addDescriptorRanges(Header, RootSigDesc, Table);
-      }
+      } else
+        llvm_unreachable("Unknown version for DescriptorRanges");
     }
   }
 
