@@ -550,8 +550,8 @@ static_assert(__is_assignable(S3, S3&&));
 // expected-note@#a-S3 {{'S3' defined here}}
 
 class C1 { // #a-C1
-  C1& operator=(const C1&) = default;
-  C1& operator=(C1&&) = default; // #ama-C1
+    C1& operator=(const C1&) = default;
+    C1& operator=(C1&&) = default; // #ama-C1
 };
 static_assert(__is_assignable(C1, C1));
 // expected-error@-1 {{static assertion failed due to requirement '__is_assignable(assignable::C1, assignable::C1)'}} \

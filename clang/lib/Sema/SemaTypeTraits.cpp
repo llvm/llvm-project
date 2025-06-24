@@ -1725,14 +1725,15 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     // Build expressions that emulate the effect of declval<T>() and
     // declval<U>().
-    if (LhsT->isObjectType() || LhsT->isFunctionType())
-      LhsT = Self.Context.getRValueReferenceType(LhsT);
-    if (RhsT->isObjectType() || RhsT->isFunctionType())
-      RhsT = Self.Context.getRValueReferenceType(RhsT);
-    OpaqueValueExpr Lhs(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
-                        Expr::getValueKindForType(LhsT));
-    OpaqueValueExpr Rhs(KeyLoc, RhsT.getNonLValueExprType(Self.Context),
-                        Expr::getValueKindForType(RhsT));
+    auto createOpaqueExpr = [&](QualType Ty) -> OpaqueValueExpr {
+      if (Ty->isObjectType() || Ty->isFunctionType())
+        Ty = Self.Context.getRValueReferenceType(Ty);
+      return {KeyLoc, Ty.getNonLValueExprType(Self.Context),
+              Expr::getValueKindForType(Ty)};
+    };
+
+    auto Lhs = createOpaqueExpr(LhsT);
+    auto Rhs = createOpaqueExpr(RhsT);
 
     // Attempt the assignment in an unevaluated context within a SFINAE
     // trap at translation unit scope.
@@ -2290,14 +2291,15 @@ static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
                                         QualType T, QualType U) {
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
 
-  if (T->isObjectType() || T->isFunctionType())
-    T = SemaRef.Context.getRValueReferenceType(T);
-  if (U->isObjectType() || U->isFunctionType())
-    U = SemaRef.Context.getRValueReferenceType(U);
-  OpaqueValueExpr LHS(Loc, T.getNonLValueExprType(SemaRef.Context),
-                      Expr::getValueKindForType(T));
-  OpaqueValueExpr RHS(Loc, U.getNonLValueExprType(SemaRef.Context),
-                      Expr::getValueKindForType(U));
+  auto createOpaqueExpr = [&](QualType Ty) -> OpaqueValueExpr {
+    if (Ty->isObjectType() || Ty->isFunctionType())
+      Ty = SemaRef.Context.getRValueReferenceType(Ty);
+    return {Loc, Ty.getNonLValueExprType(SemaRef.Context),
+            Expr::getValueKindForType(Ty)};
+  };
+
+  auto LHS = createOpaqueExpr(T);
+  auto RHS = createOpaqueExpr(U);
 
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
