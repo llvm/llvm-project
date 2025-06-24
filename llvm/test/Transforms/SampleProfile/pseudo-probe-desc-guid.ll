@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: opt < %s -passes=pseudo-probe -S -o - | FileCheck %s
 
 ; CHECK: ![[#]] = !{i64 -3345296970173352005, i64 [[#]], !"foo.dbg"}
