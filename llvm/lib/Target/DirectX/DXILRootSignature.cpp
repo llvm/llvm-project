@@ -56,10 +56,10 @@ static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
   return std::nullopt;
 }
 
-static std::optional<APFloat> extractMdFloatValue(MDNode *Node,
-                                                  unsigned int OpId) {
+static std::optional<float> extractMdFloatValue(MDNode *Node,
+                                                unsigned int OpId) {
   if (auto *CI = mdconst::dyn_extract<ConstantFP>(Node->getOperand(OpId).get()))
-    return CI->getValue();
+    return CI->getValueAPF().convertToFloat();
   return std::nullopt;
 }
 
@@ -295,8 +295,8 @@ static bool parseStaticSampler(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   else
     return reportError(Ctx, "Invalid value for AddressW");
 
-  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 5))
-    Sampler.MipLODBias = Val->convertToFloat();
+  if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 5))
+    Sampler.MipLODBias = *Val;
   else
     return reportError(Ctx, "Invalid value for MipLODBias");
 
@@ -315,13 +315,13 @@ static bool parseStaticSampler(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   else
     return reportError(Ctx, "Invalid value for ComparisonFunc ");
 
-  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 9))
-    Sampler.MinLOD = Val->convertToFloat();
+  if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 9))
+    Sampler.MinLOD = *Val;
   else
     return reportError(Ctx, "Invalid value for MinLOD");
 
-  if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 10))
-    Sampler.MaxLOD = Val->convertToFloat();
+  if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 10))
+    Sampler.MaxLOD = *Val;
   else
     return reportError(Ctx, "Invalid value for MaxLOD");
 
@@ -493,33 +493,29 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
 }
 
 static bool verifySamplerFilter(uint32_t Value) {
-  dxbc::StaticSamplerFilter Filter = dxbc::StaticSamplerFilter(Value);
-
-  dxbc::StaticSamplerFilter Mask = dxbc::StaticSamplerFilter::MIN_MAG_MIP_POINT;
-
-#define STATIC_SAMPLER_FILTER(Num, Val) Mask |= dxbc::StaticSamplerFilter::Val;
+  switch (Value) {
+#define STATIC_SAMPLER_FILTER(Num, Val)                                        \
+  case llvm::to_underlying(dxbc::StaticSamplerFilter::Val):
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-
-  return popcount(llvm::to_underlying(Filter & Mask)) == 1;
+    return true;
+  }
+  return false;
 }
 
 // Values allowed here:
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode#syntax
 static bool verifyAddress(uint32_t Address) {
   switch (Address) {
-  case llvm::to_underlying(dxbc::TextureAddressMode::Border):
-  case llvm::to_underlying(dxbc::TextureAddressMode::Clamp):
-  case llvm::to_underlying(dxbc::TextureAddressMode::Mirror):
-  case llvm::to_underlying(dxbc::TextureAddressMode::MirrorOnce):
-  case llvm::to_underlying(dxbc::TextureAddressMode::Wrap):
+#define TEXTURE_ADDRESS_MODE(Num, Val)                                         \
+  case llvm::to_underlying(dxbc::TextureAddressMode::Val):
+#include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
-
   return false;
 }
 
 static bool verifyMipLODBias(float MipLODBias) {
-  return MipLODBias >= -16.f && MipLODBias <= 16.f;
+  return MipLODBias >= -16.f && MipLODBias <= 15.99f;
 }
 
 static bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
@@ -528,14 +524,9 @@ static bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
 
 static bool verifyComparisonFunc(uint32_t ComparisonFunc) {
   switch (ComparisonFunc) {
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Never):
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Less):
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Equal):
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::LessEqual):
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Greater):
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::NotEqual):
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::GreaterEqual):
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Always):
+#define COMPARISON_FUNCTION(Num, Val)                                          \
+  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Val):
+#include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
   return false;
@@ -543,11 +534,9 @@ static bool verifyComparisonFunc(uint32_t ComparisonFunc) {
 
 static bool verifyBorderColor(uint32_t BorderColor) {
   switch (BorderColor) {
-  case llvm::to_underlying(dxbc::SamplersBorderColor::TransparentBlack):
-  case llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueBlack):
-  case llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueWhite):
-  case llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueBlackUint):
-  case llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueWhiteUint):
+#define STATIC_BORDER_COLOR(Num, Val)                                          \
+  case llvm::to_underlying(dxbc::SamplersBorderColor::Val):
+#include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
   return false;
