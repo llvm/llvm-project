@@ -331,7 +331,8 @@ public:
             return builder.create<fir::ReboxAssumedRankOp>(
                 loc, hlfirBaseType, firBase,
                 fir::LowerBoundModifierAttribute::SetToOnes);
-          if (!fir::extractSequenceType(baseBoxType.getEleTy()) && baseBoxType == hlfirBaseType)
+          if (!fir::extractSequenceType(baseBoxType.getEleTy()) &&
+              baseBoxType == hlfirBaseType)
             return firBase;
           return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
                                               declareOp.getShape(),
