@@ -4451,6 +4451,10 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
              (VecPred == FCmpInst::FCMP_ONE || VecPred == FCmpInst::FCMP_UEQ))
       Factor = 3; // fcmxx+fcmyy+or
 
+    if (isa<ScalableVectorType>(ValTy) &&
+        CostKind == TTI::TCK_RecipThroughput && ST->hasHalfSVEFCmpThroughput())
+      Factor *= 2;
+
     return Factor * (CostKind == TTI::TCK_Latency ? 2 : LT.first);
   }
 
