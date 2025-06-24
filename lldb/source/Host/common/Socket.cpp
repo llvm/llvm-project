@@ -234,6 +234,23 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   return socket_up;
 }
 
+llvm::Expected<Socket::Pair>
+Socket::CreatePair(std::optional<SocketProtocol> protocol) {
+  constexpr SocketProtocol kBestProtocol =
+      LLDB_ENABLE_POSIX ? ProtocolUnixDomain : ProtocolTcp;
+  switch (protocol.value_or(kBestProtocol)) {
+  case ProtocolTcp:
+    return TCPSocket::CreatePair();
+#if LLDB_ENABLE_POSIX
+  case ProtocolUnixDomain:
+  case ProtocolUnixAbstract:
+    return DomainSocket::CreatePair();
+#endif
+  default:
+    return llvm::createStringError("Unsupported protocol");
+  }
+}
+
 llvm::Expected<std::unique_ptr<Socket>>
 Socket::TcpConnect(llvm::StringRef host_and_port) {
   Log *log = GetLog(LLDBLog::Connection);

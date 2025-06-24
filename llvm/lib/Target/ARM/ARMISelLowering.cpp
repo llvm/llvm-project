@@ -505,12 +505,10 @@ const ARMBaseTargetMachine &ARMTargetLowering::getTM() const {
 
 ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                                      const ARMSubtarget &STI)
-    : TargetLowering(TM_), Subtarget(&STI) {
-
+    : TargetLowering(TM_), Subtarget(&STI),
+      RegInfo(Subtarget->getRegisterInfo()),
+      Itins(Subtarget->getInstrItineraryData()) {
   const auto &TM = static_cast<const ARMBaseTargetMachine &>(TM_);
-
-  RegInfo = Subtarget->getRegisterInfo();
-  Itins = Subtarget->getInstrItineraryData();
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
@@ -6166,13 +6164,9 @@ SDValue ARMTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 // this table could be generated automatically from RegInfo.
 Register ARMTargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                               const MachineFunction &MF) const {
-  Register Reg = StringSwitch<unsigned>(RegName)
-                       .Case("sp", ARM::SP)
-                       .Default(0);
-  if (Reg)
-    return Reg;
-  report_fatal_error(Twine("Invalid register name \""
-                              + StringRef(RegName)  + "\"."));
+  return StringSwitch<Register>(RegName)
+      .Case("sp", ARM::SP)
+      .Default(Register());
 }
 
 // Result is 64 bit value so split into two 32 bit values and return as a

@@ -6061,6 +6061,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "va_start called in a non-varargs function");
     break;
   }
+  case Intrinsic::get_dynamic_area_offset: {
+    auto *IntTy = dyn_cast<IntegerType>(Call.getType());
+    Check(IntTy && DL.getPointerSizeInBits(DL.getAllocaAddrSpace()) ==
+                       IntTy->getBitWidth(),
+          "get_dynamic_area_offset result type must be scalar integer matching "
+          "alloca address space width",
+          Call);
+    break;
+  }
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
