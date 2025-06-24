@@ -87,8 +87,9 @@ unfoldableFound(Function *Caller, GlobalVariable *P, Instruction *NoFold) {
   return {PreservedAnalyses::none(), false};
 }
 
-std::pair<PreservedAnalyses, bool> handlePredicate(const GCNSubtarget &ST,
-                                                   GlobalVariable *P) {
+std::pair<PreservedAnalyses, bool>
+handlePredicate(const GCNSubtarget &ST, FunctionAnalysisManager &FAM,
+                SmallPtrSet<Function *, 32> &Predicated, GlobalVariable *P) {
   setPredicate(ST, P);
 
   SmallPtrSet<Instruction *, 32> ToFold;
@@ -98,18 +99,25 @@ std::pair<PreservedAnalyses, bool> handlePredicate(const GCNSubtarget &ST,
     return {PreservedAnalyses::all(), true};
 
   do {
-    auto *I = *ToFold.begin();
+    Instruction *I = *ToFold.begin();
     ToFold.erase(I);
 
     I->dropDroppableUses();
+
+    Function *F = I->getParent()->getParent();
+    auto &DT = FAM.getResult<DominatorTreeAnalysis>(*F);
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
     if (auto *C = ConstantFoldInstruction(I, P->getDataLayout())) {
       collectUsers(I, ToFold);
       I->replaceAllUsesWith(C);
       I->eraseFromParent();
       continue;
-    } else if (I->isTerminator() && ConstantFoldTerminator(I->getParent())) {
-      continue;
+    } else if (I->isTerminator() &&
+               ConstantFoldTerminator(I->getParent(), true, nullptr, &DTU)) {
+        Predicated.insert(F);
+
+        continue;
     }
 
     return unfoldableFound(I->getParent()->getParent(), P, I);
@@ -138,9 +146,11 @@ AMDGPUExpandFeaturePredicatesPass::run(Module &M, ModuleAnalysisManager &MAM) {
   const auto &ST = TM.getSubtarget<GCNSubtarget>(
       *find_if(M, [](auto &&F) { return !F.isIntrinsic(); }));
 
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  SmallPtrSet<Function *, 32> Predicated;
   auto Ret = PreservedAnalyses::all();
   for (auto &&P : Predicates) {
-    auto R = handlePredicate(ST, P);
+    auto R = handlePredicate(ST, FAM, Predicated, P);
 
     if (!R.second)
       break;
@@ -150,6 +160,8 @@ AMDGPUExpandFeaturePredicatesPass::run(Module &M, ModuleAnalysisManager &MAM) {
 
   for (auto &&P : Predicates)
     P->eraseFromParent();
+  for (auto &&F : Predicated)
+    removeUnreachableBlocks(*F);
 
   return Ret;
 }
