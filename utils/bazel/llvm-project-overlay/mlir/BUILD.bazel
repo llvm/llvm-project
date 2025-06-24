@@ -4483,6 +4483,24 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "FuncUtils",
+    srcs = glob(
+        include = ["lib/Dialect/Func/Utils/*.cpp"],
+    ),
+    hdrs = [
+        "include/mlir/Dialect/Func/Utils/Utils.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":Analysis",
+        ":IR",
+        ":FuncDialect",
+        "//llvm:Support",
+    ],
+    copts = mlir_copts,
+)
+
 td_library(
     name = "FuncTransformOpsTdFiles",
     srcs = [
@@ -4528,6 +4546,7 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformUtils",
+        ":FuncUtils",
     ],
 )
 
