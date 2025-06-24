@@ -989,6 +989,22 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMExpectOpLowering::matchAndRewrite(
+    cir::ExpectOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // TODO(cir): do not generate LLVM intrinsics under -O0
+  assert(!cir::MissingFeatures::optInfoAttr());
+
+  std::optional<llvm::APFloat> prob = op.getProb();
+  if (prob)
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ExpectWithProbabilityOp>(
+        op, adaptor.getVal(), adaptor.getExpected(), prob.value());
+  else
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ExpectOp>(op, adaptor.getVal(),
+                                                      adaptor.getExpected());
+  return mlir::success();
+}
+
 /// Convert the `cir.func` attributes to `llvm.func` attributes.
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out
@@ -1868,6 +1884,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMCallOpLowering,
                CIRToLLVMCmpOpLowering,
                CIRToLLVMConstantOpLowering,
+               CIRToLLVMExpectOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
