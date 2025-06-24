@@ -1448,6 +1448,8 @@ def : Pat<(i32 (and GPRNoX0:$rs, 255)), (QC_EXTU GPRNoX0:$rs, 8, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 511)), (QC_EXTU GPRNoX0:$rs, 9, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 1023)), (QC_EXTU GPRNoX0:$rs, 10, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 2047)), (QC_EXTU GPRNoX0:$rs, 11, 0)>;
+
+def : Pat<(i32 (bitreverse GPRNoX0:$rs1)), (QC_BREV32 GPRNoX0:$rs1)>;
 } // Predicates = [HasVendorXqcibm, IsRV32]
 
 // If Zbb is enabled sext.b/h is preferred since they are compressible
