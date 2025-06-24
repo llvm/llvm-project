@@ -1251,105 +1251,26 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
     if (failed(linalgOp.verifyIndexingMapRequiredAttributes()))
       return failure();
 
-  // All input/output operands must be indexed.
-  if (static_cast<int64_t>(linalgOp.getIndexingMapsArray().size()) !=
-      linalgOp->getNumOperands())
-    return op->emitOpError("expected the number of indexing_map (")
-           << linalgOp.getIndexingMapsArray().size()
-           << ") to be equal to the number of input/output operands ("
-           << linalgOp->getNumOperands() << ")";
+  // Delayed calling of IndexingMapOpInterface::verifyImpl.
+  if (failed(cast<IndexingMapOpInterface>(op).verifyImpl()))
+    return failure();
 
   // Set this flag if this op has user defined maps. This is required to guard
   // the below error condition which assume default indexing maps.
   for (OpOperand &opOperand : linalgOp->getOpOperands()) {
     AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&opOperand);
-
-    // Symbols disallowed.
-    if (indexingMap.getNumSymbols() != 0)
-      return op->emitOpError("unexpected symbols in indexing_map #")
-             << opOperand.getOperandNumber();
-
     // Domain must be consistent.
     unsigned numLoops = linalgOp.getNumLoops();
     if (indexingMap.getNumDims() != numLoops)
       return op->emitOpError("expected indexing_map #")
              << opOperand.getOperandNumber() << " to have " << numLoops
              << " dim(s) to match the number of loops";
-
-    int64_t rank = linalgOp.getRank(&opOperand);
-
-    if (indexingMap.getNumResults() != rank)
-      return op->emitOpError("expected operand rank (")
-             << rank << ") to match the result rank of indexing_map #"
-             << opOperand.getOperandNumber() << " ("
-             << indexingMap.getNumResults() << ")";
   }
   SmallVector<unsigned> redDims;
   linalgOp.getReductionDims(redDims);
 
   if (!linalgOp.getShapesToLoopsMap())
     return op->emitOpError("expected the shape-to-loops map to be non-null");
-
-  // Check if given shapes match to inferred shapes.
-  SmallVector<int64_t, 4> endLoopRangeValues = linalgOp.getStaticLoopRanges();
-  SmallVector<int64_t, 4> startLoopRangeValues(endLoopRangeValues.size(), 0);
-  // Verify only static cases since we can't get exact dimension sizes and
-  // loop ranges for dynamic cases in this stage.
-  if (llvm::none_of(endLoopRangeValues, ShapedType::isDynamic)) {
-    for (int64_t &range : endLoopRangeValues)
-      range -= 1;
-    for (OpOperand &opOperand : linalgOp->getOpOperands()) {
-      AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&opOperand);
-      SmallVector<int64_t, 4> startIndices =
-          indexingMap.compose(startLoopRangeValues);
-      SmallVector<int64_t, 4> endIndices =
-          indexingMap.compose(endLoopRangeValues);
-      ArrayRef<int64_t> shape = linalgOp.getShape(&opOperand);
-      for (auto dim : llvm::seq<int64_t>(0, shape.size())) {
-        // Ignore dynamic dimension or the case that the dimension size is 0
-        if (ShapedType::isDynamic(shape[dim]) || shape[dim] == 0)
-          continue;
-
-        // The first index or last index should be the maximum or the minimum in
-        // the inferred index ranges since the range is increasing or
-        // decreasing. The size of dimensions of input/output operands and the
-        // maximum value + 1 in the inferred range should be the same. But, for
-        // now we check if the inferred ranges are in boundary of input/output
-        // operands' size or not in case that Affine Expressions are complicated
-        // such as d0 * 3
-        // + d1 since it is not easy to handle the issues.
-        // Found the case that this solution can't check, for example, (d0, d1)
-        // -> (d1 - d0)
-        int64_t inferredDimSize =
-            std::max(startIndices[dim], endIndices[dim]) + 1;
-        if (std::min(startIndices[dim], endIndices[dim]) < 0) {
-          std::string mapStr;
-          {
-            llvm::raw_string_ostream os(mapStr);
-            os << indexingMap;
-          }
-          return op->emitOpError(
-                     "unexpected result less than 0 at expression #")
-                 << dim << " in " << mapStr;
-        }
-        if (isa<AffineDimExpr>(indexingMap.getResult(dim))) {
-          if (inferredDimSize != shape[dim]) {
-            return op->emitOpError("inferred input/output operand #")
-                   << opOperand.getOperandNumber() << " has shape's dimension #"
-                   << dim << " to be " << inferredDimSize << ", but found "
-                   << shape[dim];
-          }
-        } else {
-          if (inferredDimSize > shape[dim]) {
-            return op->emitOpError("inferred input/output operand #")
-                   << opOperand.getOperandNumber() << " has shape's dimension #"
-                   << dim << " to be greater than or equal to "
-                   << inferredDimSize << ", but found " << shape[dim];
-          }
-        }
-      }
-    }
-  }
 
   // Check the region has exactly one block.
   if (linalgOp->getNumRegions() != 1 ||

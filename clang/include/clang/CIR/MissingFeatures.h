@@ -241,6 +241,7 @@ struct MissingFeatures {
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
   static bool nonFineGrainedBitfields() { return false; }
+  static bool armComputeVolatileBitfields() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
