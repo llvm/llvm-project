@@ -1061,7 +1061,7 @@ Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash in ``UnixAPIMisuseChecker`` and ``MallocChecker`` when analyzing
-  code with non-standard ``getline`` or ``getdelim`` function signatures.
+  code with non-standard ``getline`` or ``getdelim`` function signatures. (#GH144884)
 
 Improvements
 ^^^^^^^^^^^^
