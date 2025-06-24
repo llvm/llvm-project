@@ -4,10 +4,10 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDisassemblers
   AllTargetsInfos
   MC
-  MCCFIAnalysis
   MCParser
   Support
   TargetParser
+  UnwindInfoChecker
   )
 
 add_llvm_tool(llvm-mc

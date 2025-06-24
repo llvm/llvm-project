@@ -29,8 +29,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/MCCFIAnalysis/FunctionUnitStreamer.h"
-#include "llvm/MCCFIAnalysis/FunctionUnitUnwindInfoAnalyzer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
@@ -44,6 +42,8 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/UnwindInfoChecker/FunctionUnitStreamer.h"
+#include "llvm/UnwindInfoChecker/FunctionUnitUnwindInfoAnalyzer.h"
 #include <memory>
 #include <optional>
 
