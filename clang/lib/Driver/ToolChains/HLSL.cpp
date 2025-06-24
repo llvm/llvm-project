@@ -200,7 +200,7 @@ bool checkExtensionArgsAreValid(ArrayRef<std::string> SpvExtensionArgs,
   for (auto Extension : SpvExtensionArgs) {
     if (!isValidSPIRVExtensionName(Extension)) {
       Driver.Diag(diag::err_drv_invalid_value)
-          << "-fspv_extension" << Extension;
+          << "-fspv-extension" << Extension;
       AllValid = false;
     }
   }
@@ -330,6 +330,25 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+
+    if (A->getOption().getID() == options::OPT_fvk_use_dx_layout) {
+      // This is the only implemented layout so far.
+      A->claim();
+      continue;
+    }
+
+    if (A->getOption().getID() == options::OPT_fvk_use_scalar_layout) {
+      getDriver().Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+      A->claim();
+      continue;
+    }
+
+    if (A->getOption().getID() == options::OPT_fvk_use_gl_layout) {
+      getDriver().Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+      A->claim();
+      continue;
+    }
+
     DAL->append(A);
   }
 

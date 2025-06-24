@@ -93,7 +93,6 @@ void same_rs_main() {}
                    "addressU = TEXTURE_ADDRESS_CLAMP, " \
                    "filter = FILTER_MIN_MAG_MIP_LINEAR )"
 
-
 // CHECK: -RootSignatureAttr 0x{{.*}} {{.*}} [[SAMPLE_RS_DECL]]
 [RootSignature(SampleSameRS)]
 void same_rs_string_main() {}
