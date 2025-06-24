@@ -384,6 +384,46 @@ class NDSRVInstVBFHCvt<bits<7> funct7, bits<5> vs1, string opcodestr>
 // Multiclass
 //===----------------------------------------------------------------------===//
 
+multiclass VPseudoVWCVT_S_BF16 {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxListFW in {
+    let VLMul = m.value, SEW=16 in
+    def "_" # m.MX : VPseudoUnaryNoMask<m.wvrclass, m.vrclass, constraint>,
+                     SchedUnary<"WriteVFWCvtIToFV", "ReadVFWCvtIToFV", m.MX, 16,
+                                forcePassthruRead=true>;
+  }
+}
+
+multiclass VPseudoVNCVT_BF16_S {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxListFW in {
+    let VLMul = m.value, SEW=16 in
+    def "_" # m.MX : VPseudoUnaryNoMaskRoundingMode<m.vrclass, m.wvrclass, constraint>,
+                     SchedUnary<"WriteVFNCvtFToFV", "ReadVFNCvtFToFV", m.MX, 16,
+                                forcePassthruRead=true>;
+  }
+}
+
+multiclass VPatConversionS_BF16<string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    let Predicates = [HasVendorXAndesVBFHCvt] in
+    def : VPatUnaryNoMask<intrinsic, instruction, "BF16", fwti.Vector, fvti.Vector,
+                          fvti.Log2SEW, fvti.LMul, fwti.RegClass, fvti.RegClass>;
+  }
+}
+
+multiclass VPatConversionBF16_S<string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    let Predicates = [HasVendorXAndesVBFHCvt] in
+    def : VPatUnaryNoMaskRoundingMode<intrinsic, instruction, "S", fvti.Vector, fwti.Vector,
+                                      fvti.Log2SEW, fvti.LMul, fvti.RegClass, fwti.RegClass>;
+  }
+}
+
 let fprclass = !cast<RegisterClass>("FPR32") in
 def SCALAR_F16_FPR32 : FPR_Info<16>;
 
@@ -546,6 +586,14 @@ def : Sh1AddPat<NDS_LEA_H_ZE>;
 def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+let Predicates = [HasVendorXAndesVBFHCvt] in {
+defm PseudoNDS_VFWCVT_S_BF16 : VPseudoVWCVT_S_BF16;
+defm PseudoNDS_VFNCVT_BF16_S : VPseudoVNCVT_BF16_S;
+} // Predicates = [HasVendorXAndesVBFHCvt]
+
+defm : VPatConversionS_BF16<"int_riscv_nds_vfwcvt_s_bf16", "PseudoNDS_VFWCVT_S">;
+defm : VPatConversionBF16_S<"int_riscv_nds_vfncvt_bf16_s", "PseudoNDS_VFNCVT_BF16">;
 
 let Predicates = [HasVendorXAndesVPackFPH],
     mayRaiseFPException = true in {

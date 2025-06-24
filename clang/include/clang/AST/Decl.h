@@ -3422,16 +3422,13 @@ public:
 
   static IndirectFieldDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation L, const IdentifierInfo *Id,
-                                   QualType T,
-                                   llvm::MutableArrayRef<NamedDecl *> CH);
+                                   QualType T, MutableArrayRef<NamedDecl *> CH);
 
   static IndirectFieldDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   using chain_iterator = ArrayRef<NamedDecl *>::const_iterator;
 
-  ArrayRef<NamedDecl *> chain() const {
-    return llvm::ArrayRef(Chaining, ChainingSize);
-  }
+  ArrayRef<NamedDecl *> chain() const { return {Chaining, ChainingSize}; }
   chain_iterator chain_begin() const { return chain().begin(); }
   chain_iterator chain_end() const { return chain().end(); }
 
