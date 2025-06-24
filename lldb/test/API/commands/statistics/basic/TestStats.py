@@ -524,6 +524,8 @@ class TestCase(TestBase):
             self.verify_keys(
                 breakpoint, 'target_stats["breakpoints"]', bp_keys_exist, None
             )
+
+    @add_test_categories(["dwo"])
     def test_non_split_dwarf_has_no_dwo_files(self):
         """
         Test "statistics dump" and the dwo file count.
@@ -543,6 +545,7 @@ class TestCase(TestBase):
         self.assertEqual(debug_stats["totalDwoFileCount"], 0)
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
     
+    @add_test_categories(["dwo"])
     def test_no_debug_names_eager_loads_dwo_files(self):
         """
         Test the eager loading behavior of DWO files when debug_names is absent by
@@ -566,6 +569,7 @@ class TestCase(TestBase):
         self.assertEqual(debug_stats["totalDwoFileCount"], 2)
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
 
+    @add_test_categories(["dwo"])
     def test_split_dwarf_dwo_file_count(self):
         """
         Test "statistics dump" and the dwo file count.
@@ -615,6 +619,7 @@ class TestCase(TestBase):
         self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 2)
         self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
     
+    @add_test_categories(["dwo"])
     def test_dwp_dwo_file_count(self):
         """
         Test "statistics dump" and the loaded dwo file count.
