@@ -200,8 +200,8 @@ public:
           _If<__concat_is_bidirectional<_Const, _Views...>,
               bidirectional_iterator_tag,
               _If< __all_forward<_Const, _Views...>, forward_iterator_tag, input_iterator_tag > > >;
-  using value_type                  = __concat_value_t<__maybe_const<_Const, _Views>...>;
-  using difference_type             = common_type_t<range_difference_t<__maybe_const<_Const, _Views>>...>;
+  using value_type      = __concat_value_t<__maybe_const<_Const, _Views>...>;
+  using difference_type = common_type_t<range_difference_t<__maybe_const<_Const, _Views>>...>;
 
 private:
   using __base_iter _LIBCPP_NODEBUG = variant<iterator_t<__maybe_const<_Const, _Views>>...>;
