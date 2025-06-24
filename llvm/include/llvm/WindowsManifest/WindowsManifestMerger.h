@@ -37,7 +37,8 @@ namespace windows_manifest {
 
 LLVM_ABI bool isAvailable();
 
-class LLVM_ABI WindowsManifestError : public ErrorInfo<WindowsManifestError, ECError> {
+class LLVM_ABI WindowsManifestError
+    : public ErrorInfo<WindowsManifestError, ECError> {
 public:
   static char ID;
   WindowsManifestError(const Twine &Msg);
