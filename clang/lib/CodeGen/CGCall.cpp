@@ -1330,7 +1330,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
 
   if (llvm::StructType *SrcSTy = dyn_cast<llvm::StructType>(SrcTy)) {
     if (Ty->isScalableTy() || Ty->isRISCVVectorTupleTy()) {
-      // In RISCV VLS calling convention, struct of fixed vector might be
+      // In RISC-V VLS calling convention, struct of fixed vector might be
       // lowered using scalable vector, we consider it as a valid load, e.g.
       // struct i32x4 {
       //     __attribute__((vector_size(16))) int i;
@@ -1426,7 +1426,7 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
     if (llvm::StructType *DstSTy =
             dyn_cast<llvm::StructType>(Dst.getElementType())) {
       if (SrcTy->isScalableTy() || SrcTy->isRISCVVectorTupleTy()) {
-        // In RISCV VLS calling convention, struct of fixed vector might be
+        // In RISC-V VLS calling convention, struct of fixed vector might be
         // lowered using scalable vector, we consider it as a valid load, e.g.
         // struct i32x4 {
         //     __attribute__((vector_size(16))) int i;
