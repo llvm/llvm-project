@@ -633,8 +633,8 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
     if (!ForceSetType && (!ClWritesAlwaysSetType || IsRead)) {
       // We need to check the type here. If the type is unknown, then the read
       // sets the type. If the type is known, then it is checked. If the type
-      // doesn't match, then we call the runtime (which may yet determine that
-      // the mismatch is okay).
+      // doesn't match, then we call the runtime type check (which may yet
+      // determine that the mismatch is okay).
 
       Constant *Flags =
           ConstantInt::get(OrdTy, (int)IsRead | (((int)IsWrite) << 1));
@@ -904,12 +904,13 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
   }
 
   if (ClOutlineInstrumentation) {
-    if (!Src) {
+    if (!Src)
       Src = ConstantPointerNull::get(IRB.getPtrTy());
-    }
+
     IRB.CreateCall(
         TysanIntrumentMemInst,
         {Dest, Src, Size, NeedsMemMove ? IRB.getTrue() : IRB.getFalse()});
+    return true;
   } else {
     if (!ShadowBase)
       ShadowBase = getShadowBase(*F);
@@ -965,6 +966,11 @@ PreservedAnalyses TypeSanitizerPass::run(Module &M,
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     TySan.sanitizeFunction(F, TLI);
     if (ClVerifyOutlinedInstrumentation && ClOutlineInstrumentation) {
+      // Outlined instrumentation is a new option, and so this exists to
+      // verify there is no difference in behaviour between the options.
+      // If the outlined instrumentation triggers a verification failure
+      // when the original inlined instrumentation does not, or vice versa,
+      // then there is a discrepency which should be investigated.
       ClOutlineInstrumentation = false;
       TySan.sanitizeFunction(F, TLI);
       ClOutlineInstrumentation = true;
