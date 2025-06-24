@@ -38,6 +38,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  mbtowc_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbtowc_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.wchar.mbtowc
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   wctob_test
   SUITE
     libc_wchar_unittests
@@ -241,4 +254,14 @@ add_libc_test(
     wcpcpy_test.cpp
   DEPENDS
     libc.src.wchar.wcpcpy
+)
+
+add_libc_test(
+  wcpncpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcpncpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcpncpy
 )
