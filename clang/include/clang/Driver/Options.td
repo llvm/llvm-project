@@ -9326,6 +9326,16 @@ def fspv_extension_EQ
       Group<dxc_Group>,
       HelpText<"Specify the available SPIR-V extensions. If this option is not "
                "specified, then all extensions are available.">;
+def fvk_use_dx_layout
+    : DXCFlag<"fvk-use-dx-layout">,
+      HelpText<"Use DirectX memory layout for Vulkan resources.">;
+def fvk_use_gl_layout : DXCFlag<"fvk-use-gl-layout">,
+                        HelpText<"Use strict OpenGL std140/std430 memory "
+                                 "layout for Vulkan resources.">;
+def fvk_use_scalar_layout
+    : DXCFlag<"fvk-use-scalar-layout">,
+      HelpText<"Use scalar memory layout for Vulkan resources.">;
+
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,

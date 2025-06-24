@@ -41,7 +41,7 @@ static void CommunicationReadTest(bool use_read_thread) {
 
   ThreadedCommunication comm("test");
   comm.SetConnection(
-      std::make_unique<ConnectionFileDescriptor>(pair->second.release()));
+      std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   comm.SetCloseOnEOF(true);
 
   if (use_read_thread) {
@@ -126,7 +126,7 @@ TEST_F(CommunicationTest, SynchronizeWhileClosing) {
 
   ThreadedCommunication comm("test");
   comm.SetConnection(
-      std::make_unique<ConnectionFileDescriptor>(pair->second.release()));
+      std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   comm.SetCloseOnEOF(true);
   ASSERT_TRUE(comm.StartReadThread());
 
