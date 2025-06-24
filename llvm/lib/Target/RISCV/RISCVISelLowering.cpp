@@ -215,7 +215,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       for (MVT VT : F16VecVTs)
         addRegClassForRVV(VT);
 
-    if (Subtarget.hasVInstructionsBF16Minimal())
+    if (Subtarget.hasVInstructionsBF16Minimal() ||
+        Subtarget.hasVendorXAndesVBFHCvt())
       for (MVT VT : BF16VecVTs)
         addRegClassForRVV(VT);
 
@@ -384,7 +385,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ? Legal
                          : Expand);
 
-  if (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit()) {
+  if ((Subtarget.hasVendorXCVbitmanip() || Subtarget.hasVendorXqcibm()) &&
+      !Subtarget.is64Bit()) {
     setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
   } else {
     // Zbkb can use rev8+brev8 to implement bitreverse.
@@ -1154,6 +1156,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE,
                           ISD::VECTOR_COMPRESS},
                          VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
         setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT,
@@ -13295,10 +13299,11 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
     DownOffset = DAG.getNode(ISD::SUB, DL, XLenVT, EVL1, UpOffset);
   }
 
-  SDValue SlideDown =
-      getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                    Op1, DownOffset, Mask, UpOffset);
-  SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, SlideDown, Op2,
+  if (ImmValue != 0)
+    Op1 = getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                        DAG.getUNDEF(ContainerVT), Op1, DownOffset, Mask,
+                        UpOffset);
+  SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, Op1, Op2,
                                UpOffset, Mask, EVL2, RISCVVType::TAIL_AGNOSTIC);
 
   if (IsMaskVector) {

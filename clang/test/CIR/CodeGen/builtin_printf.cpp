@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// CIR: cir.global "private" cir_private dsolocal @".str" = #cir.const_array<"%s\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3> 
-// CIR: cir.global "private" cir_private dsolocal @".str.1" = #cir.const_array<"%s %d\0A\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>
+// CIR: cir.global "private" cir_private dso_local @".str" = #cir.const_array<"%s\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3> 
+// CIR: cir.global "private" cir_private dso_local @".str.1" = #cir.const_array<"%s %d\0A\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>
 // LLVM: @.str = private global [3 x i8] c"%s\00"
 // LLVM: @.str.1 = private global [7 x i8] c"%s %d\0A\00"
 // OGCG: @.str = private unnamed_addr constant [3 x i8] c"%s\00"

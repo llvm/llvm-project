@@ -1281,12 +1281,14 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
 
+// FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "DynamicVGPR",
   "true",
   "Enable dynamic VGPR mode"
 >;
 
+// FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
   "DynamicVGPRBlockSize32",
   "true",
@@ -2351,6 +2353,12 @@ def D16PreservesUnusedBits :
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
+
+def HasMTBUFInsts : Predicate<"Subtarget->hasMTBUFInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
+
+def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;

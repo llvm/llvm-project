@@ -82,7 +82,6 @@ private:
   int64_t NodeCount = 0;
   int64_t EdgeCount = 0;
   int64_t EdgesOfLastSeenNodes = 0;
-  const bool UseIR2Vec;
 
   std::map<const LazyCallGraph::Node *, unsigned> FunctionLevels;
   const int32_t InitialIRSize = 0;

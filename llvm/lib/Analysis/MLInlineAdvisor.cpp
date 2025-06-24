@@ -107,7 +107,7 @@ static cl::opt<bool> KeepFPICache(
     cl::init(false));
 
 // clang-format off
-std::vector<TensorSpec> llvm::FeatureMap{
+const std::vector<TensorSpec> llvm::FeatureMap{
 #define POPULATE_NAMES(DTYPE, SHAPE, NAME, __) TensorSpec::createSpec<DTYPE>(#NAME, SHAPE),
 // InlineCost features - these must come first
   INLINE_COST_FEATURE_ITERATOR(POPULATE_NAMES)
@@ -144,7 +144,6 @@ MLInlineAdvisor::MLInlineAdvisor(
           M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
       ModelRunner(std::move(Runner)), GetDefaultAdvice(GetDefaultAdvice),
       CG(MAM.getResult<LazyCallGraphAnalysis>(M)),
-      UseIR2Vec(MAM.getCachedResult<IR2VecVocabAnalysis>(M) != nullptr),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize),
       PSI(MAM.getResult<ProfileSummaryAnalysis>(M)) {
   assert(ModelRunner);
@@ -187,19 +186,6 @@ MLInlineAdvisor::MLInlineAdvisor(
     EdgeCount += getLocalCalls(KVP.first->getFunction());
   }
   NodeCount = AllNodes.size();
-
-  if (auto IR2VecVocabResult = MAM.getCachedResult<IR2VecVocabAnalysis>(M)) {
-    if (!IR2VecVocabResult->isValid()) {
-      M.getContext().emitError("IR2VecVocabAnalysis is not valid");
-      return;
-    }
-    // Add the IR2Vec features to the feature map
-    auto IR2VecDim = IR2VecVocabResult->getDimension();
-    FeatureMap.push_back(
-        TensorSpec::createSpec<float>("callee_embedding", {IR2VecDim}));
-    FeatureMap.push_back(
-        TensorSpec::createSpec<float>("caller_embedding", {IR2VecDim}));
-  }
 }
 
 unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
@@ -446,24 +432,6 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
       Callee.hasAvailableExternallyLinkage();
   *ModelRunner->getTensor<int64_t>(FeatureIndex::is_caller_avail_external) =
       Caller.hasAvailableExternallyLinkage();
-
-  if (UseIR2Vec) {
-    // Python side expects float embeddings. The IR2Vec embeddings are doubles
-    // as of now due to the restriction of fromJSON method used by the
-    // readVocabulary method in ir2vec::Embeddings.
-    auto setEmbedding = [&](const ir2vec::Embedding &Embedding,
-                            FeatureIndex Index) {
-      auto Embedding_float =
-          std::vector<float>(Embedding.begin(), Embedding.end());
-      std::memcpy(ModelRunner->getTensor<float>(Index), Embedding_float.data(),
-                  Embedding.size() * sizeof(float));
-    };
-
-    setEmbedding(CalleeBefore.getFunctionEmbedding(),
-                 FeatureIndex::callee_embedding);
-    setEmbedding(CallerBefore.getFunctionEmbedding(),
-                 FeatureIndex::caller_embedding);
-  }
 
   // Add the cost features
   for (size_t I = 0;

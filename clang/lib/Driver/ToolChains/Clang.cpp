@@ -6803,6 +6803,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fms_hotpatch);
 
+  if (Args.hasArg(options::OPT_fms_secure_hotpatch_functions_file))
+    Args.AddLastArg(CmdArgs, options::OPT_fms_secure_hotpatch_functions_file);
+
+  for (const auto &A :
+       Args.getAllArgValues(options::OPT_fms_secure_hotpatch_functions_list))
+    CmdArgs.push_back(
+        Args.MakeArgString("-fms-secure-hotpatch-functions-list=" + Twine(A)));
+
   if (TC.SupportsProfiling()) {
     Args.AddLastArg(CmdArgs, options::OPT_pg);
 
