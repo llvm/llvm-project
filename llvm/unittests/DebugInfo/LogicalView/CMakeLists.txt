@@ -22,6 +22,8 @@ add_llvm_unittest_with_input_files(DebugInfoLogicalViewTests
   LogicalElementsTest.cpp
   StringPoolTest.cpp
   WarningInternalTest.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 
-target_link_libraries(DebugInfoLogicalViewTests PRIVATE LLVMTestingSupport)
+target_link_libraries(DebugInfoLogicalViewTests PRIVATE LLVMTestingSupportStatic)
