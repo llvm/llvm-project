@@ -51,7 +51,7 @@ define void @test_i8load_v4i8store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
   %b = load i8, ptr addrspace(1) %ptr_b
   %c = load i8, ptr addrspace(1) %ptr_c
   %d = load i8, ptr addrspace(1) %ptr_d
-  %ins_0 = insertelement <4 x i8> undef, i8 %a, i32 0
+  %ins_0 = insertelement <4 x i8> poison, i8 %a, i32 0
   %ins_1 = insertelement <4 x i8> %ins_0, i8 %b, i32 1
   %ins_2 = insertelement <4 x i8> %ins_1, i8 %c, i32 2
   %ins_3 = insertelement <4 x i8> %ins_2, i8 %c, i32 3
