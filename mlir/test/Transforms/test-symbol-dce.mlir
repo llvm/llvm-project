@@ -108,8 +108,8 @@ module {
 module attributes { test.nested_nosymboltable_region } {
   "test.one_region_op"() ({
     "test.symbol_scope"() ({
-      // CHECK: func @nfunction
-      func.func @nfunction() {
+      // CHECK: func nested @nfunction
+      func.func nested @nfunction() {
         return
       }
       func.call @nfunction() : () -> ()
