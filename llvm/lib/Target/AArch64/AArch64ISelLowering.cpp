@@ -30002,8 +30002,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
     }
 
-    if (Subtarget->hasSVE2p1() ||
-        (Subtarget->hasSME2p1() && Subtarget->isSVEorStreamingSVEAvailable())) {
+    if ((Subtarget->hasSVE2p1() || Subtarget->hasSME2p1()) &&
+        Subtarget->isSVEorStreamingSVEAvailable()) {
       assert(VT.getFixedSizeInBits() % AArch64::SVEBitsPerBlock == 0 &&
              "Unsupported SVE vector size");
 
