@@ -206,6 +206,9 @@ Type shardType(Type type, MeshOp mesh, MeshSharding sharding);
 // Use newShardOp if it is not null. Otherwise create a new one.
 // May insert resharding if required.
 // Potentially updates newShardOp.
+void maybeInsertTargetShardingAnnotation(MeshSharding sharding,
+                                         OpOperand &operand, OpBuilder &builder,
+                                         ShardOp &newShardOp);
 void maybeInsertTargetShardingAnnotation(MeshSharding sharding, OpResult result,
                                          OpBuilder &builder);
 void maybeInsertSourceShardingAnnotation(MeshSharding sharding,
