@@ -319,7 +319,7 @@ auto BPOrderer<D>::computeOrder(
     for (auto dupSecIdx : It->getSecond()) {
       const auto *dupIsec = sections[dupSecIdx];
       if (orderedSections.insert(dupIsec)) {
-        duplicateCodeSize += D::getSize(*isec);
+        duplicateCodeSize += D::getSize(*dupIsec);
         ++numDuplicateCodeSections;
       }
     }
@@ -337,7 +337,7 @@ auto BPOrderer<D>::computeOrder(
     for (auto dupSecIdx : It->getSecond()) {
       const auto *dupIsec = sections[dupSecIdx];
       if (orderedSections.insert(dupIsec)) {
-        duplicateDataSize += D::getSize(*isec);
+        duplicateDataSize += D::getSize(*dupIsec);
         ++numDuplicateDataSections;
       }
     }
