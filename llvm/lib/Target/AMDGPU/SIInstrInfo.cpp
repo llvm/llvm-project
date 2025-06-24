@@ -8716,7 +8716,6 @@ void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
 void SIInstrInfo::addUsersToMoveToVALUWorklist(
     Register DstReg, MachineRegisterInfo &MRI,
     SIInstrWorklist &Worklist) const {
-  MachineInstr *prevMI = nullptr;
   for (MachineOperand &MO : make_early_inc_range(MRI.use_operands(DstReg))) {
     MachineInstr &UseMI = *MO.getParent();
 
@@ -8737,17 +8736,11 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
       break;
     }
 
-    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo))) {
-      if (&UseMI == prevMI)
-        continue;
-
-      prevMI = &UseMI;
-
+    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo)))
       Worklist.insert(&UseMI);
-    } else {
-      // legalize could changes user list
+    else
+      // Legalization could change user list.
       legalizeOperandsVALUt16(UseMI, OpNo, MRI);
-    }
   }
 }
 
