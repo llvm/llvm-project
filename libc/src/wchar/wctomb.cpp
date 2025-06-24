@@ -10,6 +10,7 @@
 
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/wcrtomb.h"
@@ -23,8 +24,10 @@ LLVM_LIBC_FUNCTION(int, wctomb, (char *s, wchar_t wc)) {
 
   auto result = internal::wcrtomb(s, wc, &internal_mbstate);
 
-  if (!result.has_value()) // invalid wide character
+  if (!result.has_value()) { // invalid wide character
+    libc_errno = EILSEQ;
     return -1;
+  }
 
   return static_cast<int>(result.value());
 }

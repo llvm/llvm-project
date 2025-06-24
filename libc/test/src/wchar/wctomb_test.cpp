@@ -7,8 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/wchar_t.h"
+#include "src/__support/libc_errno.h"
 #include "src/wchar/wctomb.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
+
+using LlvmLibcWCToMBTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST(LlvmLibcWCToMBTest, OneByte) {
   wchar_t wc = L'U';
@@ -65,4 +69,5 @@ TEST(LlvmLibcWCToMBTest, InvalidWchar) {
   char mb[4];
   int cnt = LIBC_NAMESPACE::wctomb(mb, wc);
   ASSERT_EQ(cnt, -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
 }
