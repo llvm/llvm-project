@@ -457,33 +457,12 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
       }
     }
 
-    switch (TT.getOS()) {
-    case Triple::MacOSX:
-      if (TT.isMacOSXVersionLT(10, 9)) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-      } else {
-        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-        setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      }
-      break;
-    case Triple::IOS:
-      if (TT.isOSVersionLT(7, 0)) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-        break;
-      }
-      [[fallthrough]];
-    case Triple::DriverKit:
-    case Triple::TvOS:
-    case Triple::WatchOS:
-    case Triple::XROS:
-    case Triple::BridgeOS:
+    if (darwinHasExp10(TT)) {
       setLibcallName(RTLIB::EXP10_F32, "__exp10f");
       setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      break;
-    default:
-      break;
+    } else {
+      setLibcallName(RTLIB::EXP10_F32, nullptr);
+      setLibcallName(RTLIB::EXP10_F64, nullptr);
     }
   }
 
@@ -661,4 +640,23 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (TT.getArch() == Triple::ArchType::msp430)
     setMSP430Libcalls(*this, TT);
+}
+
+bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
+  assert(TT.isOSDarwin() && "should be called with darwin triple");
+
+  switch (TT.getOS()) {
+  case Triple::MacOSX:
+    return !TT.isMacOSXVersionLT(10, 9);
+  case Triple::IOS:
+    return !TT.isOSVersionLT(7, 0);
+  case Triple::DriverKit:
+  case Triple::TvOS:
+  case Triple::WatchOS:
+  case Triple::XROS:
+  case Triple::BridgeOS:
+    return true;
+  default:
+    return false;
+  }
 }
