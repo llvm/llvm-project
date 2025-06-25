@@ -19,8 +19,24 @@ void bad_root_signature_3() {}
 [RootSignature("DescriptorTable(), invalid")] // expected-error {{expected end of stream to denote end of parameters, or, another valid parameter of RootSignature}}
 void bad_root_signature_4() {}
 
-[RootSignature("CBV(b4294967295)")]  // expected-error {{finns error}}
+// Basic validation of register value and space
+
+// expected-error@+2 {{finns error}}
+// expected-error@+1 {{finns error}}
+[RootSignature("CBV(b4294967295, space = 4294967280)")]
 void bad_root_signature_5() {}
 
-[RootSignature("CBV(b0, space = 4294967280)")]  // expected-error {{finns error}}
-void bad_root_signature_5() {}
+// expected-error@+2 {{finns error}}
+// expected-error@+1 {{finns error}}
+[RootSignature("RootConstants(b4294967295, space = 4294967280, num32BitConstants = 1)")]
+void bad_root_signature_6() {}
+
+// expected-error@+2 {{finns error}}
+// expected-error@+1 {{finns error}}
+[RootSignature("StaticSampler(s4294967295, space = 4294967280)")]
+void bad_root_signature_7() {}
+
+// expected-error@+2 {{finns error}}
+// expected-error@+1 {{finns error}}
+[RootSignature("DescriptorTable(SRV(t4294967295, space = 4294967280))")]
+void bad_root_signature_8() {}

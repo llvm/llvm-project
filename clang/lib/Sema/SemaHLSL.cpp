@@ -1102,6 +1102,19 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
             std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
       VerifyRegister(Descriptor->Reg.Number);
       VerifySpace(Descriptor->Space);
+    } else if (const auto *Constants =
+                 std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
+      VerifyRegister(Constants->Reg.Number);
+      VerifySpace(Constants->Space);
+    } else if (const auto *Sampler =
+                   std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
+      VerifyRegister(Sampler->Reg.Number);
+      VerifySpace(Sampler->Space);
+    } else if (const auto *Clause =
+                   std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
+                       &Elem)) {
+      VerifyRegister(Clause->Reg.Number);
+      VerifySpace(Clause->Space);
     }
   }
 
