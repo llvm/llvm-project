@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   Core
   MC
+  Passes
   SelectionDAG
   TargetParser
   )

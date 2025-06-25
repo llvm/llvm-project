@@ -29,6 +29,21 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
+void convertSideEffectForCall(mlir::Operation *callOp,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn);
+
+class CIRToLLVMAssumeOpLowering
+    : public mlir::OpConversionPattern<cir::AssumeOp> {
+public:
+  using mlir::OpConversionPattern<cir::AssumeOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AssumeOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBrCondOpLowering
     : public mlir::OpConversionPattern<cir::BrCondOp> {
 public:
@@ -52,6 +67,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::CastOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMExpectOpLowering
+    : public mlir::OpConversionPattern<cir::ExpectOp> {
+public:
+  using mlir::OpConversionPattern<cir::ExpectOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ExpectOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
