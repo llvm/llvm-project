@@ -835,6 +835,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Expected<DeviceImageTy *>
   loadBinaryImpl(const __tgt_device_image *TgtImage, int32_t ImageId) = 0;
 
+  /// Unload a previously loaded Image from the device
+  Error unloadBinary(DeviceImageTy *Image);
+  virtual Error unloadBinaryImpl(DeviceImageTy *Image) = 0;
+
   /// Setup the device environment if needed. Notice this setup may not be run
   /// on some plugins. By default, it will be executed, but plugins can change
   /// this behavior by overriding the shouldSetupDeviceEnvironment function.
@@ -1238,6 +1242,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   uint32_t getAndIncrementLaunchId() { return LaunchId.fetch_add(1); }
 
+  /// Array of images loaded into the device. Images are automatically
+  /// deallocated by the allocator.
+  llvm::SmallVector<DeviceImageTy *> LoadedImages;
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -1299,10 +1307,6 @@ protected:
 
   /// Envar to enable runtime tuning.
   BoolEnvar OMPX_EnableRuntimeAutotuning;
-
-  /// Array of images loaded into the device. Images are automatically
-  /// deallocated by the allocator.
-  llvm::SmallVector<DeviceImageTy *> LoadedImages;
 
   /// The identifier of the device within the plugin. Notice this is not a
   /// global device id and is not the device id visible to the OpenMP user.
