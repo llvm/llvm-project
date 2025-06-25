@@ -404,7 +404,7 @@ void LoopEmitter::categorizeIterators(
       spIters.push_back(it);
   }
 
-  std::stable_sort(spIters.begin(), spIters.end(), [](auto lhs, auto rhs) {
+  llvm::stable_sort(spIters, [](auto lhs, auto rhs) {
     // AffineUnRed > Affine > Slice > Trivial
     return static_cast<uint8_t>(lhs->kind) > static_cast<uint8_t>(rhs->kind);
   });

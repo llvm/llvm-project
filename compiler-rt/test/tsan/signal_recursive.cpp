@@ -3,6 +3,8 @@
 // Test case for recursive signal handlers, adopted from:
 // https://github.com/google/sanitizers/issues/478
 
+// UNSUPPORTED: darwin
+
 #include "test.h"
 #include <semaphore.h>
 #include <signal.h>

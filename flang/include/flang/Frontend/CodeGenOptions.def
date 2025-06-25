@@ -24,8 +24,15 @@ CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
 
+
+/// Choose profile instrumenation kind or no instrumentation.
+ENUM_CODEGENOPT(ProfileInstr, llvm::driver::ProfileInstrKind, 2, llvm::driver::ProfileInstrKind::ProfileNone)
+/// Choose profile kind for PGO use compilation.
+ENUM_CODEGENOPT(ProfileUse, llvm::driver::ProfileInstrKind, 2, llvm::driver::ProfileInstrKind::ProfileNone)
+
 CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
                                       ///< enabled on the compile step.
+
 CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
 CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
 CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the

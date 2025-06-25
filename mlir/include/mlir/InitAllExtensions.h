@@ -34,6 +34,8 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/AMX/Transforms.h"
 #include "mlir/Dialect/Affine/TransformOps/AffineTransformOps.h"
+#include "mlir/Dialect/ArmNeon/TransformOps/ArmNeonVectorTransformOps.h"
+#include "mlir/Dialect/ArmSVE/TransformOps/ArmSVEVectorTransformOps.h"
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h"
 #include "mlir/Dialect/DLTI/TransformOps/DLTITransformOps.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
@@ -106,6 +108,8 @@ inline void registerAllExtensions(DialectRegistry &registry) {
   transform::registerLoopExtension(registry);
   transform::registerPDLExtension(registry);
   vector::registerTransformDialectExtension(registry);
+  arm_neon::registerTransformDialectExtension(registry);
+  arm_sve::registerTransformDialectExtension(registry);
 
   // Translation extensions need to be registered by calling
   // `registerAllToLLVMIRTranslations` (see All.h).

@@ -11,7 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 let TargetPrefix = "riscv" in {
+  // Andes Vector BFloat16 Conversion Extension
+  def int_riscv_nds_vfwcvt_s_bf16 : RISCVConversionUnMasked;
+  def int_riscv_nds_vfncvt_bf16_s : RISCVConversionUnMaskedRoundingMode;
+
   // Andes Vector Packed FP16 Extension
   defm nds_vfpmadt : RISCVBinaryAAXRoundingMode;
   defm nds_vfpmadb : RISCVBinaryAAXRoundingMode;
+
+  // Andes Vector Dot Product Extension
+  defm nds_vd4dots  : RISCVTernaryWide;
+  defm nds_vd4dotu  : RISCVTernaryWide;
+  defm nds_vd4dotsu : RISCVTernaryWide;
 }

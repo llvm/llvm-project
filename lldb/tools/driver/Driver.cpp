@@ -280,6 +280,12 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (args.hasArg(OPT_wait_for)) {
+    if (!args.hasArg(OPT_attach_name)) {
+      error.SetErrorStringWithFormat(
+          "--wait-for requires a name (--attach-name)");
+      return error;
+    }
+
     m_option_data.m_wait_for = true;
   }
 

@@ -949,6 +949,9 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Scope->setName(CurrentObjectName);
     if (options().getAttributeProducer())
       Scope->setProducer(Compile2.Version);
+    if (options().getAttributeLanguage())
+      Scope->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::codeview::SourceLanguage>(Compile2.getLanguage())});
     getReader().isSystemEntry(Scope, CurrentObjectName);
 
     // The line records in CodeView are recorded per Module ID. Update
@@ -994,6 +997,9 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Scope->setName(CurrentObjectName);
     if (options().getAttributeProducer())
       Scope->setProducer(Compile3.Version);
+    if (options().getAttributeLanguage())
+      Scope->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::codeview::SourceLanguage>(Compile3.getLanguage())});
     getReader().isSystemEntry(Scope, CurrentObjectName);
 
     // The line records in CodeView are recorded per Module ID. Update

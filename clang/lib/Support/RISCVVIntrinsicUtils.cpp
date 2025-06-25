@@ -8,13 +8,10 @@
 
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <numeric>
 #include <optional>
 
 using namespace llvm;
@@ -1210,48 +1207,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum PolicyScheme PS) {
   return OS;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require) {
-  switch (Require) {
-    STRINGIFY(RVV_REQ_RV64)
-    STRINGIFY(RVV_REQ_Zvfhmin)
-    STRINGIFY(RVV_REQ_Xandesvpackfph)
-    STRINGIFY(RVV_REQ_Xsfvcp)
-    STRINGIFY(RVV_REQ_Xsfvfnrclipxfqf)
-    STRINGIFY(RVV_REQ_Xsfvfwmaccqqq)
-    STRINGIFY(RVV_REQ_Xsfvqmaccdod)
-    STRINGIFY(RVV_REQ_Xsfvqmaccqoq)
-    STRINGIFY(RVV_REQ_Zvbb)
-    STRINGIFY(RVV_REQ_Zvbc)
-    STRINGIFY(RVV_REQ_Zvkb)
-    STRINGIFY(RVV_REQ_Zvkg)
-    STRINGIFY(RVV_REQ_Zvkned)
-    STRINGIFY(RVV_REQ_Zvknha)
-    STRINGIFY(RVV_REQ_Zvknhb)
-    STRINGIFY(RVV_REQ_Zvksed)
-    STRINGIFY(RVV_REQ_Zvksh)
-    STRINGIFY(RVV_REQ_Zvfbfwma)
-    STRINGIFY(RVV_REQ_Zvfbfmin)
-    STRINGIFY(RVV_REQ_Zvfh)
-    STRINGIFY(RVV_REQ_Experimental)
-  default:
-    llvm_unreachable("Unsupported RVVRequire!");
-    break;
-  }
-  return OS;
-}
-
 #undef STRINGIFY
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const RequiredExtensionBits &Exts) {
-  OS << "{";
-  ListSeparator LS;
-  for (unsigned I = 0; I < RVV_REQ_NUM; I++)
-    if (Exts[I])
-      OS << LS << static_cast<RVVRequire>(I);
-  OS << "}";
-  return OS;
-}
 
 raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << "{";
@@ -1261,7 +1217,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
     OS << "/*OverloadedName=*/nullptr, ";
   else
     OS << "/*OverloadedName=*/\"" << Record.OverloadedName << "\", ";
-  OS << "/*RequiredExtensions=*/" << Record.RequiredExtensions << ", ";
+  OS << "/*RequiredExtensions=*/\"" << Record.RequiredExtensions << "\", ";
   OS << "/*PrototypeIndex=*/" << Record.PrototypeIndex << ", ";
   OS << "/*SuffixIndex=*/" << Record.SuffixIndex << ", ";
   OS << "/*OverloadedSuffixIndex=*/" << Record.OverloadedSuffixIndex << ", ";

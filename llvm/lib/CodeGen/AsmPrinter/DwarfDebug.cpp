@@ -17,7 +17,6 @@
 #include "DwarfExpression.h"
 #include "DwarfUnit.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -55,7 +54,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -2370,8 +2368,8 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
   // Map {(InlinedAt, Group): (Rank, Instructions)}.
   // NOTE: Anecdotally, for a large C++ blob, 99% of the instruction
   // SmallVectors contain 2 or fewer elements; use 2 inline elements.
-  DenseMap<std::pair<DILocation *, uint32_t>,
-           std::pair<uint16_t, SmallVector<const MachineInstr *, 2>>>
+  DenseMap<std::pair<DILocation *, uint64_t>,
+           std::pair<uint8_t, SmallVector<const MachineInstr *, 2>>>
       GroupCandidates;
 
   // For each instruction:
@@ -3883,7 +3881,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
     return;
 
-  auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
+  auto Ins = TypeSignatures.try_emplace(CTy);
   if (!Ins.second) {
     CU.addDIETypeSignature(RefDie, Ins.first->second);
     return;

@@ -29,18 +29,14 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
-#include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/Refactoring.h"
-#include "clang/Tooling/ReplacementsYaml.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Process.h"
-#include <algorithm>
 #include <utility>
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -423,8 +419,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
   if (Context.getEnableProfiling()) {
-    Profiling = std::make_unique<ClangTidyProfiling>(
-        Context.getProfileStorageParams());
+    Profiling =
+        std::make_unique<ClangTidyProfiling>(Context.getProfileStorageParams());
     FinderOptions.CheckProfiling.emplace(Profiling->Records);
   }
 
@@ -436,8 +432,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
 
   if (Context.canEnableModuleHeadersParsing() &&
       Context.getLangOpts().Modules && OverlayFS != nullptr) {
-    auto ModuleExpander = std::make_unique<ExpandModularHeadersPPCallbacks>(
-        &Compiler, OverlayFS);
+    auto ModuleExpander =
+        std::make_unique<ExpandModularHeadersPPCallbacks>(&Compiler, OverlayFS);
     ModuleExpanderPP = ModuleExpander->getPreprocessor();
     PP->addPPCallbacks(std::move(ModuleExpander));
   }
@@ -501,7 +497,7 @@ getCheckNames(const ClangTidyOptions &Options,
               bool AllowEnablingAnalyzerAlphaCheckers) {
   clang::tidy::ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
-                                                Options),
+                                               Options),
       AllowEnablingAnalyzerAlphaCheckers);
   ClangTidyASTConsumerFactory Factory(Context);
   return Factory.getCheckNames();
@@ -512,7 +508,7 @@ getCheckOptions(const ClangTidyOptions &Options,
                 bool AllowEnablingAnalyzerAlphaCheckers) {
   clang::tidy::ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
-                                                Options),
+                                               Options),
       AllowEnablingAnalyzerAlphaCheckers);
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();

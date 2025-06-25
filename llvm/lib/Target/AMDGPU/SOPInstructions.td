@@ -472,6 +472,7 @@ def S_BARRIER_SIGNAL_M0 : SOP1_Pseudo <"s_barrier_signal m0", (outs), (ins),
 def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (outs), (ins),
   "", []>{
   let Defs = [SCC];
+  let Uses = [M0, SCC];
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }
@@ -487,6 +488,8 @@ def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
 def S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_Pseudo <"s_barrier_signal_isfirst", (outs),
   (ins SplitBarrier:$src0), "$src0", [(set SCC, (int_amdgcn_s_barrier_signal_isfirst timm:$src0))]>{
   let Defs = [SCC];
+  let Uses = [SCC];
+  let usesCustomInserter = 1;
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }
@@ -922,11 +925,11 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
 
 // On GFX12 MIN/MAX instructions do not read MODE register.
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
-    isReMaterializable = 1, SchedRW = [WriteSFPU], AddedComplexity = 17 in {
-  def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", fminimum>;
-  def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", fmaximum>;
-  def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", fminimum>;
-  def S_MAXIMUM_F16 : SOP2_F16_Inst<"s_maximum_f16", fmaximum>;
+    isReMaterializable = 1, SchedRW = [WriteSFPU], AddedComplexity = 25 in {
+  def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", UniformBinFrag<fminimum>>;
+  def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", UniformBinFrag<fmaximum>>;
+  def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", UniformBinFrag<fminimum>>;
+  def S_MAXIMUM_F16 : SOP2_F16_Inst<"s_maximum_f16", UniformBinFrag<fmaximum>>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1586,8 +1589,10 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let mayStore = 1;
 }
 
+let SubtargetPredicate = isNotGFX1250Plus in {
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
+}
 
 // "_soft" waitcnts are waitcnts that are either relaxed into their non-soft
 // counterpart, or completely removed.
@@ -1627,6 +1632,11 @@ def S_SLEEP_VAR : SOP1_0_32 <"s_sleep_var", [(int_amdgcn_s_sleep_var SSrc_b32:$s
 
 def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio timm:$simm16)]> {
+}
+
+def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",
+  [(int_amdgcn_s_setprio_inc_wg timm:$simm16)]> {
+  let SubtargetPredicate = HasSetPrioIncWgInst;
 }
 
 let Uses = [EXEC, M0] in {
@@ -1747,6 +1757,11 @@ let OtherPredicates = [HasExportInsts] in
     SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
+
+let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
+  def S_WAIT_XCNT :
+    SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
 
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
@@ -2000,6 +2015,15 @@ multiclass SOP1_IMM_Real_gfx12<bits<8> op> {
 multiclass SOP1_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)> :
   SOP1_Real_gfx11<op, name>, SOP1_Real_gfx12<op, name>;
 
+multiclass SOP1_Real_gfx1250<bits<8> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx1250 : SOP1_Real<op, ps, name>,
+                 Select<GFX1250Gen, ps.PseudoInstr>;
+  if !ne(ps.Mnemonic, name) then
+    let AssemblerPredicate = isGFX1250Plus in
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+}
+
 defm S_MOV_B32                    : SOP1_Real_gfx11_gfx12<0x000>;
 defm S_MOV_B64                    : SOP1_Real_gfx11_gfx12<0x001>;
 defm S_CMOV_B32                   : SOP1_Real_gfx11_gfx12<0x002>;
@@ -2058,10 +2082,16 @@ defm S_MOVRELS_B64                : SOP1_Real_gfx11_gfx12<0x041>;
 defm S_MOVRELD_B32                : SOP1_Real_gfx11_gfx12<0x042>;
 defm S_MOVRELD_B64                : SOP1_Real_gfx11_gfx12<0x043>;
 defm S_MOVRELSD_2_B32             : SOP1_Real_gfx11_gfx12<0x044>;
+let OtherPredicates = [isNotGFX1250Plus] in {
 defm S_GETPC_B64                  : SOP1_Real_gfx11_gfx12<0x047>;
 defm S_SETPC_B64                  : SOP1_Real_gfx11_gfx12<0x048>;
 defm S_SWAPPC_B64                 : SOP1_Real_gfx11_gfx12<0x049>;
 defm S_RFE_B64                    : SOP1_Real_gfx11_gfx12<0x04a>;
+}
+defm S_GETPC_B64                  : SOP1_Real_gfx1250<0x047, "s_get_pc_i64">;
+defm S_SETPC_B64                  : SOP1_Real_gfx1250<0x048, "s_set_pc_i64">;
+defm S_SWAPPC_B64                 : SOP1_Real_gfx1250<0x049, "s_swap_pc_i64">;
+defm S_RFE_B64                    : SOP1_Real_gfx1250<0x04a, "s_rfe_i64">;
 defm S_SENDMSG_RTN_B32            : SOP1_Real_gfx11_gfx12<0x04c>;
 defm S_SENDMSG_RTN_B64            : SOP1_Real_gfx11_gfx12<0x04d>;
 defm S_BARRIER_SIGNAL_M0          : SOP1_M0_Real_gfx12<0x04e>;
@@ -2436,10 +2466,21 @@ multiclass SOPK_Real32_gfx11_gfx12<bits<5> op> :
 multiclass SOPK_Real64_gfx11_gfx12<bits<5> op> :
   SOPK_Real64_gfx11<op>, SOPK_Real64_gfx12<op>;
 
+multiclass SOPK_Real32_gfx1250<bits<5> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOPK_Pseudo>(NAME);
+  def _gfx1250 : SOPK_Real32<op, ps, name>,
+                 Select<GFX1250Gen, ps.PseudoInstr>;
+  if !ne(ps.Mnemonic, name) then
+    let AssemblerPredicate = isGFX1250Plus in
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+}
+
 defm S_GETREG_B32           : SOPK_Real32_gfx11_gfx12<0x011>;
 defm S_SETREG_B32           : SOPK_Real32_gfx11_gfx12<0x012>;
 defm S_SETREG_IMM32_B32     : SOPK_Real64_gfx11_gfx12<0x013>;
+let OtherPredicates = [isNotGFX1250Plus] in
 defm S_CALL_B64             : SOPK_Real32_gfx11_gfx12<0x014>;
+defm S_CALL_B64             : SOPK_Real32_gfx1250<0x014, "s_call_i64">;
 defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx11<0x016>;
 defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx11<0x017>;
 defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11<0x018>;
@@ -2556,6 +2597,12 @@ defm S_WAIT_DSCNT           : SOPP_Real_32_gfx12<0x046>;
 defm S_WAIT_KMCNT           : SOPP_Real_32_gfx12<0x047>;
 defm S_WAIT_LOADCNT_DSCNT   : SOPP_Real_32_gfx12<0x048>;
 defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
+
+//===----------------------------------------------------------------------===//
+// SOPP - GFX1250 only.
+//===----------------------------------------------------------------------===//
+defm S_SETPRIO_INC_WG : SOPP_Real_32_gfx12<0x03e>;
+defm S_WAIT_XCNT      : SOPP_Real_32_gfx12<0x045>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX11, GFX12.

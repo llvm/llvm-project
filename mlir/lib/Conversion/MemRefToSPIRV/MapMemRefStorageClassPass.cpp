@@ -59,7 +59,8 @@ using namespace mlir;
   MAP_FN(spirv::StorageClass::UniformConstant, 8)                              \
   MAP_FN(spirv::StorageClass::Input, 9)                                        \
   MAP_FN(spirv::StorageClass::Output, 10)                                      \
-  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 11)
+  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 11)                       \
+  MAP_FN(spirv::StorageClass::Image, 12)
 
 std::optional<spirv::StorageClass>
 spirv::mapMemorySpaceToVulkanStorageClass(Attribute memorySpaceAttr) {

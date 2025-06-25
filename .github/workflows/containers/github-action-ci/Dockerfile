@@ -86,7 +86,7 @@ WORKDIR /home/gha
 
 FROM ci-container as ci-container-agent
 
-ENV GITHUB_RUNNER_VERSION=2.324.0
+ENV GITHUB_RUNNER_VERSION=2.325.0
 
 RUN mkdir actions-runner && \
     cd actions-runner && \

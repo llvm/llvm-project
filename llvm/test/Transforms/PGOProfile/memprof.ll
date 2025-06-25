@@ -20,6 +20,17 @@
 ; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.proftext -o %t.pgoprofdata
 ; RUN: llvm-profdata merge %S/Inputs/memprof.nocolinfo.memprofraw --profiled-binary %S/Inputs/memprof.nocolinfo.exe -o %t.nocolinfo.memprofdata
 
+;; Check that the summary can be shown (and is identical) for both the raw and indexed profiles.
+; RUN: llvm-profdata show --memory %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe | FileCheck %s --check-prefixes=SUMMARY
+; RUN: llvm-profdata show --memory %t.memprofdata | FileCheck %s --check-prefixes=SUMMARY
+; SUMMARY: # MemProfSummary:
+; SUMMARY: #   Total contexts: 8
+; SUMMARY: #   Total cold contexts: 5
+; SUMMARY: #   Total hot contexts: 0
+; SUMMARY: #   Maximum cold context total size: 10
+; SUMMARY: #   Maximum warm context total size: 10
+; SUMMARY: #   Maximum hot context total size: 0
+
 ;; In all below cases we should not get any messages about missing profile data
 ;; for any functions. Either we are not performing any matching for a particular
 ;; profile type or we are performing the matching and it should be successful.
@@ -64,8 +75,9 @@
 ; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
 
 ;; Check that the total sizes are reported if requested. A message should be
-;; emitted for the pruned context.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZENOKEEPALL
+;; emitted for the pruned context. Also check that remarks are emitted for the
+;; allocations hinted without context sensitivity.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZENOKEEPALL,REMARKSINGLE
 
 ;; Check that the total sizes are reported if requested, and prevent pruning
 ;; via -memprof-keep-all-not-cold-contexts.
@@ -386,7 +398,9 @@ for.end:                                          ; preds = %for.cond
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 18254812774972004394 and dominant alloc type cold: 10
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 1093248920606587996 and dominant alloc type cold: 10
 ; TOTALSIZESSINGLE: Total size for full allocation context hash 6792096022461663180 and single alloc type notcold: 10
+; REMARKSINGLE: remark: memprof.cc:25:13: call in function main marked with memprof allocation attribute notcold
 ; TOTALSIZESSINGLE: Total size for full allocation context hash 15737101490731057601 and single alloc type cold: 10
+; REMARKSINGLE: remark: memprof.cc:26:13: call in function main marked with memprof allocation attribute cold
 ;; For context sensitive allocations the full context hash and size in bytes
 ;; are in separate metadata nodes included on the MIB metadata.
 ; TOTALSIZES: !"cold", ![[CONTEXT1:[0-9]+]]}

@@ -56,7 +56,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -557,13 +556,14 @@ static void DoInitialMatch(const SCEV *S, Loop *L,
 
   // Look at addrec operands.
   const SCEV *Start, *Step;
-  if (match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step))) &&
+  const Loop *ARLoop;
+  if (match(S,
+            m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(ARLoop))) &&
       !Start->isZero()) {
     DoInitialMatch(Start, L, Good, Bad, SE);
     DoInitialMatch(SE.getAddRecExpr(SE.getConstant(S->getType(), 0), Step,
                                     // FIXME: AR->getNoWrapFlags()
-                                    cast<SCEVAddRecExpr>(S)->getLoop(),
-                                    SCEV::FlagAnyWrap),
+                                    ARLoop, SCEV::FlagAnyWrap),
                    L, Good, Bad, SE);
     return;
   }
@@ -2788,7 +2788,7 @@ std::pair<size_t, Immediate> LSRInstance::getUse(const SCEV *&Expr,
   }
 
   std::pair<UseMapTy::iterator, bool> P =
-    UseMap.insert(std::make_pair(LSRUse::SCEVUseKindPair(Expr, Kind), 0));
+      UseMap.try_emplace(LSRUse::SCEVUseKindPair(Expr, Kind));
   if (!P.second) {
     // A use already existed with this base.
     size_t LUIdx = P.first->second;
@@ -5613,8 +5613,7 @@ BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
     }
   }
 
-  assert(!isa<PHINode>(LowestIP) && !LowestIP->isEHPad()
-         && !isa<DbgInfoIntrinsic>(LowestIP) &&
+  assert(!isa<PHINode>(LowestIP) && !LowestIP->isEHPad() &&
          "Insertion point must be a normal instruction");
 
   // Then, climb up the immediate dominator tree as far as we can go while
@@ -5626,9 +5625,6 @@ BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
 
   // Ignore landingpad instructions.
   while (IP->isEHPad()) ++IP;
-
-  // Ignore debug intrinsics.
-  while (isa<DbgInfoIntrinsic>(IP)) ++IP;
 
   // Set IP below instructions recently inserted by SCEVExpander. This keeps the
   // IP consistent across expansions and allows the previously inserted
@@ -5880,7 +5876,7 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
       }
 
       std::pair<DenseMap<BasicBlock *, Value *>::iterator, bool> Pair =
-        Inserted.insert(std::make_pair(BB, static_cast<Value *>(nullptr)));
+          Inserted.try_emplace(BB);
       if (!Pair.second)
         PN->setIncomingValue(i, Pair.first->second);
       else {
@@ -6008,9 +6004,8 @@ static bool canHoistIVInc(const TargetTransformInfo &TTI, const LSRFixup &Fixup,
 
   Instruction *I = Fixup.UserInst;
   Type *Ty = I->getType();
-  return Ty->isIntegerTy() &&
-         ((isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
-          (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty)));
+  return (isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
+         (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty));
 }
 
 /// Rewrite all the fixup locations with new values, following the chosen

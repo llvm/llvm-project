@@ -7995,6 +7995,15 @@ TEST_P(ImportAttributes, ImportLocksExcluded) {
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
+TEST_P(ImportAttributes, ImportReentrantCapability) {
+  ReentrantCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<CXXRecordDecl>(
+      R"(
+      struct __attribute__((capability("x"), reentrant_capability)) test {};
+      )",
+      FromAttr, ToAttr);
+}
+
 TEST_P(ImportAttributes, ImportC99NoThrowAttr) {
   NoThrowAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>("void test () __attribute__ ((__nothrow__));",

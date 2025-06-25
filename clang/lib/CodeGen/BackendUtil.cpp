@@ -16,7 +16,6 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -44,6 +43,7 @@
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -70,7 +70,8 @@
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
-#include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
+#include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -96,8 +97,6 @@ using namespace llvm;
 #include "llvm/Support/Extension.def"
 
 namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
@@ -118,23 +117,17 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
                clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
                           "Mark cold functions with optnone.")));
 
-extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
+LLVM_ABI extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind>
+    ProfileCorrelate;
 } // namespace llvm
 namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
 }
 
-// Default filename used for profile generation.
-static std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
-}
-
 // Path and name of file used for profile generation
 static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
   std::string FileName = CodeGenOpts.InstrProfileOutput.empty()
-                             ? getDefaultProfileGenName()
+                             ? llvm::driver::getDefaultProfileGenName()
                              : CodeGenOpts.InstrProfileOutput;
   if (CodeGenOpts.ContinuousProfileSync)
     FileName = "%c" + FileName;
@@ -1352,7 +1345,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {
     Conf.RunCSIRInstr = true;
-    Conf.CSIRProfile = std::move(CGOpts.InstrProfileOutput);
+    Conf.CSIRProfile = getProfileGenName(CGOpts);
   } else if (CGOpts.hasProfileCSIRUse()) {
     Conf.RunCSIRInstr = false;
     Conf.CSIRProfile = std::move(CGOpts.ProfileInstrumentUsePath);

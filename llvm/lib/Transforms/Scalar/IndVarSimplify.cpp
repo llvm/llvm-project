@@ -808,8 +808,7 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
     return false;
 
   const SCEV *S = SE->getSCEV(Phi);
-  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_scev_One())) ||
-      cast<SCEVAddRecExpr>(S)->getLoop() != L)
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(L))))
     return false;
 
   int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
@@ -1507,6 +1506,9 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
       auto *NewRHS = CastInst::Create(
           Instruction::Trunc, RHS, LHSOp->getType(), "",
           L->getLoopPreheader()->getTerminator()->getIterator());
+      // NewRHS is an operation that has been hoisted out of the loop, and
+      // therefore should have a dropped location.
+      NewRHS->setDebugLoc(DebugLoc::getDropped());
       ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
       ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
       // Samesign flag cannot be preserved after narrowing the compare.

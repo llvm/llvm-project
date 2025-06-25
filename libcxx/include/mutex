@@ -215,7 +215,6 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #  if _LIBCPP_HAS_THREADS
 
@@ -492,7 +491,6 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(scoped_lock);
 #    endif // _LIBCPP_STD_VER >= 17
 #  endif   // _LIBCPP_HAS_THREADS
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
@@ -506,6 +504,7 @@ _LIBCPP_POP_MACROS
 #    include <initializer_list>
 #    include <iosfwd>
 #    include <new>
+#    include <optional>
 #    include <stdexcept>
 #    include <system_error>
 #    include <type_traits>

@@ -1896,7 +1896,24 @@ func.func @deinterleave_scalable_rank_fail(%vec : vector<2x[4]xf32>) {
 
 // -----
 
-func.func @invalid_from_elements(%a: f32) {
+func.func @to_elements_wrong_num_results(%a: vector<1x1x2xf32>) {
+  // expected-error @+1 {{operation defines 2 results but was provided 4 to bind}}
+  %0:4 = vector.to_elements %a : vector<1x1x2xf32>
+  return
+}
+
+// -----
+
+func.func @to_elements_wrong_result_type(%a: vector<2xf32>) -> i32 {
+  // expected-error @+3 {{use of value '%0' expects different type than prior uses: 'i32'}}
+  // expected-note @+1 {{prior use here}}
+  %0:2 = vector.to_elements %a : vector<2xf32>
+  return %0#0 : i32
+}
+
+// -----
+
+func.func @from_elements_wrong_num_operands(%a: f32) {
   // expected-error @+1 {{'vector.from_elements' number of operands and types do not match: got 1 operands and 2 types}}
   vector.from_elements %a : vector<2xf32>
   return
@@ -1905,16 +1922,15 @@ func.func @invalid_from_elements(%a: f32) {
 // -----
 
 // expected-note @+1 {{prior use here}}
-func.func @invalid_from_elements(%a: f32, %b: i32) {
+func.func @from_elements_wrong_operand_type(%a: f32, %b: i32) {
   // expected-error @+1 {{use of value '%b' expects different type than prior uses: 'f32' vs 'i32'}}
   vector.from_elements %a, %b : vector<2xf32>
   return
 }
-
 // -----
 
 func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
-  // expected-error @+1 {{'result' must be fixed-length vector of any type values, but got 'vector<[2]xf32>'}}
+  // expected-error @+1 {{'dest' must be fixed-length vector of any type values, but got 'vector<[2]xf32>'}}
   vector.from_elements %a, %b : vector<[2]xf32>
   return
 }

@@ -17,6 +17,7 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -39,6 +40,21 @@ class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
   ];
 
   let assemblyFormat = [{}];
+}
+
+class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>
+    : I32EnumAttr<name, summary, cases> {
+  let cppNamespace = "::cir";
+}
+
+class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
+    : I64EnumAttr<name, summary, cases> {
+  let cppNamespace = "::cir";
+}
+
+class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
+    : EnumAttr<CIR_Dialect, info, name, traits> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
@@ -273,6 +289,89 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 
   let assemblyFormat = [{
     `<` custom<ConstPtr>($value) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ConstComplexAttr
+//===----------------------------------------------------------------------===//
+
+def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
+                                [TypedAttrInterface]> {
+  let summary = "An attribute that contains a constant complex value";
+  let description = [{
+    The `#cir.const_complex` attribute contains a constant value of complex
+    number type. The `real` parameter gives the real part of the complex number
+    and the `imag` parameter gives the imaginary part of the complex number.
+
+    The `real` and `imag` parameters must both reference the same type and must
+    be either IntAttr or FPAttr.
+
+    ```mlir
+    %ci = #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i>
+        : !cir.complex<!s32i>
+    %cf = #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float,
+        #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "cir::ComplexType">:$type,
+    CIR_AnyIntOrFloatAttr:$real,
+    CIR_AnyIntOrFloatAttr:$imag
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::TypedAttr":$real,
+                                        "mlir::TypedAttr":$imag), [{
+      auto type = cir::ComplexType::get(real.getType());
+      return $_get(type.getContext(), type, real, imag);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` qualified($real) `,` qualified($imag) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VisibilityAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_VisibilityKind : CIR_I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
+  I32EnumAttrCase<"Default", 0, "default">,
+  I32EnumAttrCase<"Hidden", 1, "hidden">,
+  I32EnumAttrCase<"Protected", 2, "protected">
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
+  let summary = "Visibility attribute";
+  let description = [{
+    Visibility attributes.
+  }];
+
+  let cppClassName = "VisibilityAttr";
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins CArg<"VisibilityKind",
+                          "cir::VisibilityKind::Default">:$value), [{
+      return $_get($_ctxt, value);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    $value
+  }];
+
+  let extraClassDeclaration = [{
+    bool isDefault() const { return getValue() == VisibilityKind::Default; };
+    bool isHidden() const { return getValue() == VisibilityKind::Hidden; };
+    bool isProtected() const { return getValue() == VisibilityKind::Protected; };
   }];
 }
 

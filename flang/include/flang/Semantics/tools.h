@@ -182,9 +182,12 @@ const Symbol *HasImpureFinal(
     const Symbol &, std::optional<int> rank = std::nullopt);
 // Is this type finalizable or does it contain any polymorphic allocatable
 // ultimate components?
-bool MayRequireFinalization(const DerivedTypeSpec &derived);
+bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
-bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have any defined assignment at any level (or any polymorphic
+// allocatable)?
+bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
 
 bool IsInBlankCommon(const Symbol &);
 bool IsAssumedLengthCharacter(const Symbol &);
@@ -753,34 +756,5 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
-/// Checks if the assignment statement has a single variable on the RHS.
-inline bool checkForSingleVariableOnRHS(
-    const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const Fortran::parser::Expr &expr{
-      std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const Fortran::common::Indirection<Fortran::parser::Designator> *designator =
-      std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &expr.u);
-  return designator != nullptr;
-}
-
-/// Checks if the symbol on the LHS of the assignment statement is present in
-/// the RHS expression.
-inline bool checkForSymbolMatch(
-    const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const auto &var{std::get<Fortran::parser::Variable>(assignmentStmt.t)};
-  const auto &expr{std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const auto *e{Fortran::semantics::GetExpr(expr)};
-  const auto *v{Fortran::semantics::GetExpr(var)};
-  auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
-  const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
-  for (const Fortran::semantics::Symbol &symbol :
-      Fortran::evaluate::GetSymbolVector(*e)) {
-    if (varSymbol == symbol) {
-      return true;
-    }
-  }
-  return false;
-}
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

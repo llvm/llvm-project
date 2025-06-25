@@ -34,10 +34,6 @@
 #  define _CTYPE_DISABLE_MACROS
 #endif
 
-#if __has_include("<langinfo.h>")
-#  include <langinfo.h>
-#endif
-
 #include "include/atomic_support.h"
 #include "include/sso_allocator.h"
 
@@ -49,7 +45,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 struct __libcpp_unique_locale {
   __libcpp_unique_locale(const char* nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {}
@@ -5728,7 +5723,6 @@ template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t,
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char8_t, mbstate_t>;
 #endif
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

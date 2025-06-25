@@ -26,6 +26,10 @@ add_lldb_library(lldbBreakpoint NO_PLUGIN_DEPENDENCIES
   WatchpointOptions.cpp
   WatchpointResource.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Breakpoint
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbExpression
@@ -34,7 +38,4 @@ add_lldb_library(lldbBreakpoint NO_PLUGIN_DEPENDENCIES
     lldbTarget
     lldbUtility
     lldbValueObject
-
-  LINK_COMPONENTS
-    Support
   )

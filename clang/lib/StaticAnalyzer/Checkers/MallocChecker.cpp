@@ -76,10 +76,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -432,8 +430,8 @@ private:
   CHECK_FN(checkGMemdup)
   CHECK_FN(checkGMallocN)
   CHECK_FN(checkGMallocN0)
-  CHECK_FN(preGetdelim)
-  CHECK_FN(checkGetdelim)
+  CHECK_FN(preGetDelimOrGetLine)
+  CHECK_FN(checkGetDelimOrGetLine)
   CHECK_FN(checkReallocN)
   CHECK_FN(checkOwnershipAttr)
 
@@ -447,15 +445,16 @@ private:
   const CallDescriptionMap<CheckFn> PreFnMap{
       // NOTE: the following CallDescription also matches the C++ standard
       // library function std::getline(); the callback will filter it out.
-      {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::preGetdelim},
-      {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::preGetdelim},
+      {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::preGetDelimOrGetLine},
+      {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::preGetDelimOrGetLine},
   };
 
   const CallDescriptionMap<CheckFn> PostFnMap{
       // NOTE: the following CallDescription also matches the C++ standard
       // library function std::getline(); the callback will filter it out.
-      {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::checkGetdelim},
-      {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::checkGetdelim},
+      {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::checkGetDelimOrGetLine},
+      {{CDM::CLibrary, {"getdelim"}, 4},
+       &MallocChecker::checkGetDelimOrGetLine},
   };
 
   const CallDescriptionMap<CheckFn> FreeingMemFnMap{
@@ -1373,6 +1372,20 @@ void MallocChecker::checkIfFreeNameIndex(ProgramStateRef State,
   C.addTransition(State);
 }
 
+const Expr *getPlacementNewBufferArg(const CallExpr *CE,
+                                     const FunctionDecl *FD) {
+  // Checking for signature:
+  // void* operator new  ( std::size_t count, void* ptr );
+  // void* operator new[]( std::size_t count, void* ptr );
+  if (CE->getNumArgs() != 2 || (FD->getOverloadedOperator() != OO_New &&
+                                FD->getOverloadedOperator() != OO_Array_New))
+    return nullptr;
+  auto BuffType = FD->getParamDecl(1)->getType();
+  if (BuffType.isNull() || !BuffType->isVoidPointerType())
+    return nullptr;
+  return CE->getArg(1);
+}
+
 void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
                                            const CallEvent &Call,
                                            CheckerContext &C) const {
@@ -1388,6 +1401,14 @@ void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
   // processed by the checkPostStmt callbacks for CXXNewExpr and
   // CXXDeleteExpr.
   const FunctionDecl *FD = C.getCalleeDecl(CE);
+  if (const auto *BufArg = getPlacementNewBufferArg(CE, FD)) {
+    // Placement new does not allocate memory
+    auto RetVal = State->getSVal(BufArg, Call.getLocationContext());
+    State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+    C.addTransition(State);
+    return;
+  }
+
   switch (FD->getOverloadedOperator()) {
   case OO_New:
     State = MallocMemAux(C, Call, CE->getArg(0), UndefinedVal(), State,
@@ -1462,8 +1483,9 @@ static bool isFromStdNamespace(const CallEvent &Call) {
   return FD->isInStdNamespace();
 }
 
-void MallocChecker::preGetdelim(ProgramStateRef State, const CallEvent &Call,
-                                CheckerContext &C) const {
+void MallocChecker::preGetDelimOrGetLine(ProgramStateRef State,
+                                         const CallEvent &Call,
+                                         CheckerContext &C) const {
   // Discard calls to the C++ standard library function std::getline(), which
   // is completely unrelated to the POSIX getline() that we're checking.
   if (isFromStdNamespace(Call))
@@ -1485,8 +1507,9 @@ void MallocChecker::preGetdelim(ProgramStateRef State, const CallEvent &Call,
     C.addTransition(State);
 }
 
-void MallocChecker::checkGetdelim(ProgramStateRef State, const CallEvent &Call,
-                                  CheckerContext &C) const {
+void MallocChecker::checkGetDelimOrGetLine(ProgramStateRef State,
+                                           const CallEvent &Call,
+                                           CheckerContext &C) const {
   // Discard calls to the C++ standard library function std::getline(), which
   // is completely unrelated to the POSIX getline() that we're checking.
   if (isFromStdNamespace(Call))
@@ -1498,14 +1521,19 @@ void MallocChecker::checkGetdelim(ProgramStateRef State, const CallEvent &Call,
   if (!CE)
     return;
 
-  const auto LinePtr =
-      getPointeeVal(Call.getArgSVal(0), State)->getAs<DefinedSVal>();
-  const auto Size =
-      getPointeeVal(Call.getArgSVal(1), State)->getAs<DefinedSVal>();
-  if (!LinePtr || !Size || !LinePtr->getAsRegion())
+  const auto LinePtrOpt = getPointeeVal(Call.getArgSVal(0), State);
+  const auto SizeOpt = getPointeeVal(Call.getArgSVal(1), State);
+  if (!LinePtrOpt || !SizeOpt || LinePtrOpt->isUnknownOrUndef() ||
+      SizeOpt->isUnknownOrUndef())
     return;
 
-  State = setDynamicExtent(State, LinePtr->getAsRegion(), *Size);
+  const auto LinePtr = LinePtrOpt->getAs<DefinedSVal>();
+  const auto Size = SizeOpt->getAs<DefinedSVal>();
+  const MemRegion *LinePtrReg = LinePtr->getAsRegion();
+  if (!LinePtrReg)
+    return;
+
+  State = setDynamicExtent(State, LinePtrReg, *Size);
   C.addTransition(MallocUpdateRefState(C, CE, State,
                                        AllocationFamily(AF_Malloc), *LinePtr));
 }
@@ -3100,8 +3128,7 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   // Generate leak node.
   ExplodedNode *N = C.getPredecessor();
   if (!Errors.empty()) {
-    static CheckerProgramPointTag Tag("MallocChecker", "DeadSymbolsLeak");
-    N = C.generateNonFatalErrorNode(C.getState(), &Tag);
+    N = C.generateNonFatalErrorNode(C.getState());
     if (N) {
       for (SymbolRef Sym : Errors) {
         HandleLeak(Sym, N, C);

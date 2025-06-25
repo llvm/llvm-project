@@ -21,9 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -31,9 +29,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -418,8 +414,11 @@ void LTOModule::addDefinedFunctionSymbol(StringRef Name, const GlobalValue *F) {
 
 void LTOModule::addDefinedSymbol(StringRef Name, const GlobalValue *def,
                                  bool isFunction) {
-  const GlobalObject *go = dyn_cast<GlobalObject>(def);
-  uint32_t attr = go ? Log2(go->getAlign().valueOrOne()) : 0;
+  uint32_t attr = 0;
+  if (auto *gv = dyn_cast<GlobalVariable>(def))
+    attr = Log2(gv->getAlign().valueOrOne());
+  else if (auto *f = dyn_cast<Function>(def))
+    attr = Log2(f->getAlign().valueOrOne());
 
   // set permissions part
   if (isFunction) {

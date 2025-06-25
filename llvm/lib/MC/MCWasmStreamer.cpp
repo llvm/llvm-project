@@ -70,14 +70,6 @@ void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
-void MCWasmStreamer::emitWeakReference(MCSymbol *Alias,
-                                       const MCSymbol *Symbol) {
-  getAssembler().registerSymbol(*Symbol);
-  const MCExpr *Value = MCSymbolRefExpr::create(
-      Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext());
-  Alias->setVariableValue(Value);
-}
-
 bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   assert(Attribute != MCSA_IndirectSymbol && "indirect symbols not supported");
 

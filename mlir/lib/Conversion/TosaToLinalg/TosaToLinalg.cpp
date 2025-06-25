@@ -244,11 +244,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
       // Clamp to the negation range.
       Value min = rewriter.create<arith::ConstantIntOp>(
-          loc, APInt::getSignedMinValue(inputBitWidth).getSExtValue(),
-          intermediateType);
+          loc, intermediateType,
+          APInt::getSignedMinValue(inputBitWidth).getSExtValue());
       Value max = rewriter.create<arith::ConstantIntOp>(
-          loc, APInt::getSignedMaxValue(inputBitWidth).getSExtValue(),
-          intermediateType);
+          loc, intermediateType,
+          APInt::getSignedMaxValue(inputBitWidth).getSExtValue());
       auto clamp = clampIntHelper(loc, sub, min, max, rewriter, false);
 
       // Truncate to the final value.
@@ -1492,6 +1492,15 @@ public:
                                                 : blockArgs[multiplierArg];
           Value shift = shiftConstant ? shiftConstant : blockArgs[shiftArg];
 
+          if (valueTy.isUnsignedInteger()) {
+            value = nestedBuilder
+                        .create<UnrealizedConversionCastOp>(
+                            nestedLoc,
+                            nestedBuilder.getIntegerType(
+                                valueTy.getIntOrFloatBitWidth()),
+                            value)
+                        .getResult(0);
+          }
           if (valueTy.getIntOrFloatBitWidth() < 32) {
             if (op.getInputUnsigned()) {
               value = nestedBuilder.create<arith::ExtUIOp>(
@@ -1537,6 +1546,12 @@ public:
                 value);
           }
 
+          if (outIntType.isUnsignedInteger()) {
+            value = nestedBuilder
+                        .create<UnrealizedConversionCastOp>(nestedLoc,
+                                                            outIntType, value)
+                        .getResult(0);
+          }
           nestedBuilder.create<linalg::YieldOp>(loc, value);
         });
 

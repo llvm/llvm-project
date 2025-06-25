@@ -23,12 +23,19 @@ class MLIRContext;
 namespace spirv {
 class ModuleOp;
 
+struct DeserializationOptions {
+  // Whether to structurize control flow into `spirv.mlir.selection` and
+  // `spirv.mlir.loop`.
+  bool enableControlFlowStructurization = true;
+};
+
 /// Deserializes the given SPIR-V `binary` module and creates a MLIR ModuleOp
 /// in the given `context`. Returns the ModuleOp on success; otherwise, reports
 /// errors to the error handler registered with `context` and returns a null
 /// module.
-OwningOpRef<spirv::ModuleOp> deserialize(ArrayRef<uint32_t> binary,
-                                         MLIRContext *context);
+OwningOpRef<spirv::ModuleOp>
+deserialize(ArrayRef<uint32_t> binary, MLIRContext *context,
+            const DeserializationOptions &options = {});
 
 } // namespace spirv
 } // namespace mlir

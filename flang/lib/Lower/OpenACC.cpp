@@ -653,8 +653,10 @@ void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
-  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
-    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
+  if (Fortran::parser::CheckForSingleVariableOnRHS(stmt1)) {
+    if (Fortran::evaluate::CheckForSymbolMatch(
+            Fortran::semantics::GetExpr(stmt2Var),
+            Fortran::semantics::GetExpr(stmt2Expr))) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
           *Fortran::semantics::GetExpr(stmt1Expr);
@@ -810,23 +812,25 @@ static void genDeclareDataOperandOperationsWithModifier(
 }
 
 template <typename EntryOp, typename ExitOp>
-static void genDataExitOperations(fir::FirOpBuilder &builder,
-                                  llvm::SmallVector<mlir::Value> operands,
-                                  bool structured) {
+static void
+genDataExitOperations(fir::FirOpBuilder &builder,
+                      llvm::SmallVector<mlir::Value> operands, bool structured,
+                      std::optional<mlir::Location> exitLoc = std::nullopt) {
   for (mlir::Value operand : operands) {
     auto entryOp = mlir::dyn_cast_or_null<EntryOp>(operand.getDefiningOp());
     assert(entryOp && "data entry op expected");
+    mlir::Location opLoc = exitLoc ? *exitLoc : entryOp.getLoc();
     if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
                   std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
       builder.create<ExitOp>(
-          entryOp.getLoc(), entryOp.getAccVar(), entryOp.getVar(),
-          entryOp.getVarType(), entryOp.getBounds(), entryOp.getAsyncOperands(),
+          opLoc, entryOp.getAccVar(), entryOp.getVar(), entryOp.getVarType(),
+          entryOp.getBounds(), entryOp.getAsyncOperands(),
           entryOp.getAsyncOperandsDeviceTypeAttr(), entryOp.getAsyncOnlyAttr(),
           entryOp.getDataClause(), structured, entryOp.getImplicit(),
           builder.getStringAttr(*entryOp.getName()));
     else
       builder.create<ExitOp>(
-          entryOp.getLoc(), entryOp.getAccVar(), entryOp.getBounds(),
+          opLoc, entryOp.getAccVar(), entryOp.getBounds(),
           entryOp.getAsyncOperands(), entryOp.getAsyncOperandsDeviceTypeAttr(),
           entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(), structured,
           entryOp.getImplicit(), builder.getStringAttr(*entryOp.getName()));
@@ -2146,6 +2150,70 @@ privatizeIv(Fortran::lower::AbstractConverter &converter,
   ivPrivate.push_back(privateValue);
 }
 
+static void determineDefaultLoopParMode(
+    Fortran::lower::AbstractConverter &converter, mlir::acc::LoopOp &loopOp,
+    llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &independentDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &autoDeviceTypes) {
+  auto hasDeviceNone = [](mlir::Attribute attr) -> bool {
+    return mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
+           mlir::acc::DeviceType::None;
+  };
+  bool hasDefaultSeq = llvm::any_of(seqDeviceTypes, hasDeviceNone);
+  bool hasDefaultIndependent =
+      llvm::any_of(independentDeviceTypes, hasDeviceNone);
+  bool hasDefaultAuto = llvm::any_of(autoDeviceTypes, hasDeviceNone);
+  if (hasDefaultSeq || hasDefaultIndependent || hasDefaultAuto)
+    return; // Default loop par mode is already specified.
+
+  mlir::Region *currentRegion =
+      converter.getFirOpBuilder().getBlock()->getParent();
+  mlir::Operation *parentOp = mlir::acc::getEnclosingComputeOp(*currentRegion);
+  const bool isOrphanedLoop = !parentOp;
+  if (isOrphanedLoop ||
+      mlir::isa_and_present<mlir::acc::ParallelOp>(parentOp)) {
+    // As per OpenACC 3.3 standard section 2.9.6 independent clause:
+    // A loop construct with no auto or seq clause is treated as if it has the
+    // independent clause when it is an orphaned loop construct or its parent
+    // compute construct is a parallel construct.
+    independentDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
+  } else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentOp)) {
+    // Serial construct implies `seq` clause on loop. However, this
+    // conflicts with parallelism assignment if already set. Therefore check
+    // that first.
+    bool hasDefaultGangWorkerOrVector =
+        loopOp.hasVector() || loopOp.getVectorValue() || loopOp.hasWorker() ||
+        loopOp.getWorkerValue() || loopOp.hasGang() ||
+        loopOp.getGangValue(mlir::acc::GangArgType::Num) ||
+        loopOp.getGangValue(mlir::acc::GangArgType::Dim) ||
+        loopOp.getGangValue(mlir::acc::GangArgType::Static);
+    if (!hasDefaultGangWorkerOrVector)
+      seqDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          converter.getFirOpBuilder().getContext(),
+          mlir::acc::DeviceType::None));
+    // Since the loop has some parallelism assigned - we cannot assign `seq`.
+    // However, the `acc.loop` verifier will check that one of seq, independent,
+    // or auto is marked. Seems reasonable to mark as auto since the OpenACC
+    // spec does say "If not, or if it is unable to make a determination, it
+    // must treat the auto clause as if it is a seq clause, and it must
+    // ignore any gang, worker, or vector clauses on the loop construct"
+    else
+      autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          converter.getFirOpBuilder().getContext(),
+          mlir::acc::DeviceType::None));
+  } else {
+    // As per OpenACC 3.3 standard section 2.9.7 auto clause:
+    // When the parent compute construct is a kernels construct, a loop
+    // construct with no independent or seq clause is treated as if it has the
+    // auto clause.
+    assert(mlir::isa_and_present<mlir::acc::KernelsOp>(parentOp) &&
+           "Expected kernels construct");
+    autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
+  }
+}
+
 static mlir::acc::LoopOp createLoopOp(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2478,6 +2546,9 @@ static mlir::acc::LoopOp createLoopOp(
     loopOp.setTileOperandsSegmentsAttr(
         builder.getDenseI32ArrayAttr(tileOperandsSegments));
 
+  // Determine the loop's default par mode - either seq, independent, or auto.
+  determineDefaultLoopParMode(converter, loopOp, seqDeviceTypes,
+                              independentDeviceTypes, autoDeviceTypes);
   if (!seqDeviceTypes.empty())
     loopOp.setSeqAttr(builder.getArrayAttr(seqDeviceTypes));
   if (!independentDeviceTypes.empty())
@@ -2974,6 +3045,7 @@ static Op createComputeOp(
 
 static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                          mlir::Location currentLocation,
+                         mlir::Location endLocation,
                          Fortran::lower::pft::Evaluation &eval,
                          Fortran::semantics::SemanticsContext &semanticsContext,
                          Fortran::lower::StatementContext &stmtCtx,
@@ -3168,19 +3240,19 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
 
   // Create the exit operations after the region.
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-      builder, copyEntryOperands, /*structured=*/true);
+      builder, copyEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
-      builder, copyinEntryOperands, /*structured=*/true);
+      builder, copyinEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-      builder, copyoutEntryOperands, /*structured=*/true);
+      builder, copyoutEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::AttachOp, mlir::acc::DetachOp>(
-      builder, attachEntryOperands, /*structured=*/true);
+      builder, attachEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-      builder, createEntryOperands, /*structured=*/true);
+      builder, createEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::NoCreateOp, mlir::acc::DeleteOp>(
-      builder, nocreateEntryOperands, /*structured=*/true);
+      builder, nocreateEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
-      builder, presentEntryOperands, /*structured=*/true);
+      builder, presentEntryOperands, /*structured=*/true, endLocation);
 
   builder.restoreInsertionPoint(insPt);
 }
@@ -3257,7 +3329,9 @@ genACC(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
   const auto &accClauseList =
       std::get<Fortran::parser::AccClauseList>(beginBlockDirective.t);
-
+  const auto &endBlockDirective =
+      std::get<Fortran::parser::AccEndBlockDirective>(blockConstruct.t);
+  mlir::Location endLocation = converter.genLocation(endBlockDirective.source);
   mlir::Location currentLocation = converter.genLocation(blockDirective.source);
   Fortran::lower::StatementContext stmtCtx;
 
@@ -3266,8 +3340,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
                                            semanticsContext, stmtCtx,
                                            accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_data) {
-    genACCDataOp(converter, currentLocation, eval, semanticsContext, stmtCtx,
-                 accClauseList);
+    genACCDataOp(converter, currentLocation, endLocation, eval,
+                 semanticsContext, stmtCtx, accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_serial) {
     createComputeOp<mlir::acc::SerialOp>(converter, currentLocation, eval,
                                          semanticsContext, stmtCtx,

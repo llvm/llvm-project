@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
@@ -17,7 +18,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -26,6 +27,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -755,7 +757,7 @@ LoongArchAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return Error(getLoc(), "expected valid identifier for operand modifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
-  LoongArchMCExpr::Specifier VK = LoongArchMCExpr::parseSpecifier(Identifier);
+  auto VK = LoongArch::parseSpecifier(Identifier);
   if (VK == LoongArchMCExpr::VK_None)
     return Error(getLoc(), "invalid relocation specifier");
 
@@ -1952,7 +1954,8 @@ ParseStatus LoongArchAsmParser::parseDirective(AsmToken DirectiveID) {
   return ParseStatus::NoMatch;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchAsmParser() {
   RegisterMCAsmParser<LoongArchAsmParser> X(getTheLoongArch32Target());
   RegisterMCAsmParser<LoongArchAsmParser> Y(getTheLoongArch64Target());
 }

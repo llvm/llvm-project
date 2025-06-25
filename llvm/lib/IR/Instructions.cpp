@@ -39,6 +39,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CheckedArithmetic.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -448,7 +449,7 @@ bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
       (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
     return true;
 
-  if (getParamDereferenceableBytes(ArgNo) > 0 &&
+  if (paramHasAttr(ArgNo, Attribute::Dereferenceable) &&
       !NullPointerIsDefined(
           getCaller(),
           getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
@@ -485,9 +486,10 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
   return Attribute();
 }
 
-template Attribute
+template LLVM_ABI Attribute
 CallBase::getFnAttrOnCalledFunction(Attribute::AttrKind Kind) const;
-template Attribute CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
+template LLVM_ABI Attribute
+CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
 
 template <typename AK>
 Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
@@ -499,11 +501,10 @@ Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
 
   return Attribute();
 }
-template Attribute
-CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
-                                       Attribute::AttrKind Kind) const;
-template Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
-                                                          StringRef Kind) const;
+template LLVM_ABI Attribute CallBase::getParamAttrOnCalledFunction(
+    unsigned ArgNo, Attribute::AttrKind Kind) const;
+template LLVM_ABI Attribute
+CallBase::getParamAttrOnCalledFunction(unsigned ArgNo, StringRef Kind) const;
 
 void CallBase::getOperandBundlesAsDefs(
     SmallVectorImpl<OperandBundleDef> &Defs) const {
@@ -641,6 +642,10 @@ MemoryEffects CallBase::getMemoryEffects() const {
         FnME |= MemoryEffects::readOnly();
       if (hasClobberingOperandBundles())
         FnME |= MemoryEffects::writeOnly();
+    }
+    if (isVolatile()) {
+      // Volatile operations also access inaccessible memory.
+      FnME |= MemoryEffects::inaccessibleMemOnly();
     }
     ME &= FnME;
   }
@@ -1853,23 +1858,18 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
                                        SmallVectorImpl<int> &Result) {
   ElementCount EC = cast<VectorType>(Mask->getType())->getElementCount();
 
-  if (isa<ConstantAggregateZero>(Mask)) {
-    Result.resize(EC.getKnownMinValue(), 0);
-    return;
-  }
-
-  Result.reserve(EC.getKnownMinValue());
-
-  if (EC.isScalable()) {
-    assert((isa<ConstantAggregateZero>(Mask) || isa<UndefValue>(Mask)) &&
-           "Scalable vector shuffle mask must be undef or zeroinitializer");
+  if (isa<ConstantAggregateZero>(Mask) || isa<UndefValue>(Mask)) {
     int MaskVal = isa<UndefValue>(Mask) ? -1 : 0;
-    for (unsigned I = 0; I < EC.getKnownMinValue(); ++I)
-      Result.emplace_back(MaskVal);
+    Result.append(EC.getKnownMinValue(), MaskVal);
     return;
   }
 
-  unsigned NumElts = EC.getKnownMinValue();
+  assert(!EC.isScalable() &&
+         "Scalable vector shuffle mask must be undef or zeroinitializer");
+
+  unsigned NumElts = EC.getFixedValue();
+
+  Result.reserve(NumElts);
 
   if (auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
     for (unsigned i = 0; i != NumElts; ++i)

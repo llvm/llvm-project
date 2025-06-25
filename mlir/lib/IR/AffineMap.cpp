@@ -580,15 +580,13 @@ AffineMap AffineMap::compose(AffineMap map) const {
 SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) const {
   assert(getNumSymbols() == 0 && "Expected symbol-less map");
   SmallVector<AffineExpr, 4> exprs;
-  exprs.reserve(values.size());
   MLIRContext *ctx = getContext();
-  for (auto v : values)
-    exprs.push_back(getAffineConstantExpr(v, ctx));
-  auto resMap = compose(AffineMap::get(0, 0, exprs, ctx));
+  for (int64_t value : values)
+    exprs.push_back(getAffineConstantExpr(value, ctx));
   SmallVector<int64_t, 4> res;
-  res.reserve(resMap.getNumResults());
-  for (auto e : resMap.getResults())
-    res.push_back(cast<AffineConstantExpr>(e).getValue());
+  res.reserve(getNumResults());
+  for (auto e : getResults())
+    res.push_back(cast<AffineConstantExpr>(e.replaceDims(exprs)).getValue());
   return res;
 }
 

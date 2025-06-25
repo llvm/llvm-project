@@ -201,9 +201,8 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
     emitIntValue(AbsValue, Size);
     return;
   }
-  DF->getFixups().push_back(
-      MCFixup::create(DF->getContents().size(), Value,
-                      MCFixup::getKindForSize(Size, false), Loc));
+  DF->getFixups().push_back(MCFixup::create(
+      DF->getContents().size(), Value, MCFixup::getDataKindForSize(Size), Loc));
   DF->appendContents(Size, 0);
 }
 
@@ -226,6 +225,10 @@ void MCObjectStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
 
 void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::emitLabel(Symbol, Loc);
+  // If Symbol is a non-redefiniable variable, emitLabel has reported an error.
+  // Bail out.
+  if (Symbol->isVariable())
+    return;
 
   getAssembler().registerSymbol(*Symbol);
 
@@ -262,7 +265,7 @@ void MCObjectStreamer::emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
 
 void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
+  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
     emitULEB128IntValue(IntValue);
     return;
   }
@@ -271,7 +274,7 @@ void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
 
 void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
+  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
     emitSLEB128IntValue(IntValue);
     return;
   }
@@ -279,8 +282,8 @@ void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
 }
 
 void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
-                                         const MCSymbol *Symbol) {
-  report_fatal_error("This file format doesn't support weak aliases.");
+                                         const MCSymbol *Target) {
+  reportFatalUsageError("this file format doesn't support weak aliases");
 }
 
 void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
@@ -587,7 +590,14 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          const MCSubtargetInfo *STI,
                                          unsigned MaxBytesToEmit) {
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
-  cast<MCAlignFragment>(getCurrentFragment())->setEmitNops(true, STI);
+  auto *F = cast<MCAlignFragment>(getCurrentFragment());
+  F->setEmitNops(true, STI);
+  // With RISC-V style linker relaxation, mark the section as linker-relaxable
+  // if the alignment is larger than the minimum NOP size.
+  unsigned Size;
+  if (getAssembler().getBackend().shouldInsertExtraNopBytesForCodeAlign(*F,
+                                                                        Size))
+    getCurrentSectionOnly()->setLinkerRelaxable();
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
@@ -721,7 +731,7 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
                                 int64_t Expr, SMLoc Loc) {
   int64_t IntNumValues;
   // Do additional checking now if we can resolve the value.
-  if (NumValues.evaluateAsAbsolute(IntNumValues, getAssemblerPtr())) {
+  if (NumValues.evaluateAsAbsolute(IntNumValues, getAssembler())) {
     if (IntNumValues < 0) {
       getContext().getSourceManager()->PrintMessage(
           Loc, SourceMgr::DK_Warning,
@@ -754,7 +764,7 @@ void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {
   MCAssembler &Asm = getAssembler();
-  Asm.getWriter().addFileName(Asm, Filename);
+  Asm.getWriter().addFileName(Filename);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename,
@@ -762,7 +772,7 @@ void MCObjectStreamer::emitFileDirective(StringRef Filename,
                                          StringRef TimeStamp,
                                          StringRef Description) {
   MCObjectWriter &W = getAssembler().getWriter();
-  W.addFileName(getAssembler(), Filename);
+  W.addFileName(Filename);
   if (CompilerVersion.size())
     W.setCompilerVersion(CompilerVersion);
   // TODO: add TimeStamp and Description to .file symbol table entry

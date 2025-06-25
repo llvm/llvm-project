@@ -494,28 +494,28 @@ struct CallSiteInfo {
   /// Whether all call sites represented by this CallSiteInfo, including those
   /// in summaries, have been devirtualized. This starts off as true because a
   /// default constructed CallSiteInfo represents no call sites.
+  ///
+  /// If at the end of the pass there are still undevirtualized calls, we will
+  /// need to add a use of llvm.type.test to each of the function summaries in
+  /// the vector.
   bool AllCallSitesDevirted = true;
 
   // These fields are used during the export phase of ThinLTO and reflect
   // information collected from function summaries.
 
-  /// Whether any function summary contains an llvm.assume(llvm.type.test) for
-  /// this slot.
-  bool SummaryHasTypeTestAssumeUsers = false;
-
   /// CFI-specific: a vector containing the list of function summaries that use
   /// the llvm.type.checked.load intrinsic and therefore will require
   /// resolutions for llvm.type.test in order to implement CFI checks if
-  /// devirtualization was unsuccessful. If devirtualization was successful, the
-  /// pass will clear this vector by calling markDevirt(). If at the end of the
-  /// pass the vector is non-empty, we will need to add a use of llvm.type.test
-  /// to each of the function summaries in the vector.
+  /// devirtualization was unsuccessful.
   std::vector<FunctionSummary *> SummaryTypeCheckedLoadUsers;
+
+  /// A vector containing the list of function summaries that use
+  /// assume(llvm.type.test).
   std::vector<FunctionSummary *> SummaryTypeTestAssumeUsers;
 
   bool isExported() const {
-    return SummaryHasTypeTestAssumeUsers ||
-           !SummaryTypeCheckedLoadUsers.empty();
+    return !SummaryTypeCheckedLoadUsers.empty() ||
+           !SummaryTypeTestAssumeUsers.empty();
   }
 
   void addSummaryTypeCheckedLoadUser(FunctionSummary *FS) {
@@ -525,16 +525,10 @@ struct CallSiteInfo {
 
   void addSummaryTypeTestAssumeUser(FunctionSummary *FS) {
     SummaryTypeTestAssumeUsers.push_back(FS);
-    SummaryHasTypeTestAssumeUsers = true;
     AllCallSitesDevirted = false;
   }
 
-  void markDevirt() {
-    AllCallSitesDevirted = true;
-
-    // As explained in the comment for SummaryTypeCheckedLoadUsers.
-    SummaryTypeCheckedLoadUsers.clear();
-  }
+  void markDevirt() { AllCallSitesDevirted = true; }
 };
 
 // Call site information collected for a specific VTableSlot.
@@ -1456,6 +1450,22 @@ void DevirtModule::tryICallBranchFunnel(
   if (!HasNonDevirt)
     return;
 
+  // If any GV is AvailableExternally, not to generate branch.funnel.
+  // NOTE: It is to avoid crash in LowerTypeTest.
+  // If the branch.funnel is generated, because GV.isDeclarationForLinker(),
+  // in LowerTypeTestsModule::lower(), its GlobalTypeMember would NOT
+  // be saved in GlobalTypeMembers[&GV]. Then crash happens in
+  // buildBitSetsFromDisjointSet due to GlobalTypeMembers[&GV] is NULL.
+  // Even doing experiment to save it in GlobalTypeMembers[&GV] and
+  // making GlobalTypeMembers[&GV] be not NULL, crash could avoid from
+  // buildBitSetsFromDisjointSet. But still report_fatal_error in Verifier
+  // or SelectionDAGBuilder later, because operands linkage type consistency
+  // check of icall.branch.funnel can not pass.
+  for (auto &T : TargetsForSlot) {
+    if (T.TM->Bits->GV->hasAvailableExternallyLinkage())
+      return;
+  }
+
   FunctionType *FT =
       FunctionType::get(Type::getVoidTy(M.getContext()), {Int8PtrTy}, true);
   Function *JT;
@@ -1689,12 +1699,10 @@ void DevirtModule::exportConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
 
 Constant *DevirtModule::importGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
                                      StringRef Name) {
-  Constant *C =
+  GlobalVariable *GV =
       M.getOrInsertGlobal(getGlobalName(Slot, Args, Name), Int8Arr0Ty);
-  auto *GV = dyn_cast<GlobalVariable>(C);
-  if (GV)
-    GV->setVisibility(GlobalValue::HiddenVisibility);
-  return C;
+  GV->setVisibility(GlobalValue::HiddenVisibility);
+  return GV;
 }
 
 Constant *DevirtModule::importConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
@@ -1847,7 +1855,7 @@ bool DevirtModule::tryVirtualConstProp(
   if (BitWidth > 64)
     return false;
 
-  Align TypeAlignment = M.getDataLayout().getPrefTypeAlign(RetType);
+  Align TypeAlignment = M.getDataLayout().getABIIntegerTypeAlignment(BitWidth);
 
   // Make sure that each function is defined, does not access memory, takes at
   // least one argument, does not use its first argument (which we assume is
@@ -2467,11 +2475,14 @@ bool DevirtModule::run() {
     if (ExportSummary && isa<MDString>(S.first.TypeID)) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           cast<MDString>(S.first.TypeID)->getString());
-      for (auto *FS : S.second.CSInfo.SummaryTypeCheckedLoadUsers)
-        FS->addTypeTest(GUID);
+      auto AddTypeTestsForTypeCheckedLoads = [&](CallSiteInfo &CSI) {
+        if (!CSI.AllCallSitesDevirted)
+          for (auto *FS : CSI.SummaryTypeCheckedLoadUsers)
+            FS->addTypeTest(GUID);
+      };
+      AddTypeTestsForTypeCheckedLoads(S.second.CSInfo);
       for (auto &CCS : S.second.ConstCSInfo)
-        for (auto *FS : CCS.second.SummaryTypeCheckedLoadUsers)
-          FS->addTypeTest(GUID);
+        AddTypeTestsForTypeCheckedLoads(CCS.second);
     }
   }
 

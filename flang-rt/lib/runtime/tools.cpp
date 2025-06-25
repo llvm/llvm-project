@@ -136,6 +136,10 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
   }
 }
 
+// Explicitly instantiate the default case to conform to the C++ standard
+template RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous<char, -1>(
+    const Descriptor &to, const Descriptor &from);
+
 template <typename P, int RANK>
 RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
     const Descriptor &to, const Descriptor &from) {
@@ -153,6 +157,9 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   }
 }
 
+template RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous<char, -1>(
+    const Descriptor &to, const Descriptor &from);
+
 template <typename P, int RANK>
 RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from) {
@@ -169,6 +176,9 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
     }
   }
 }
+
+template RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous<char, -1>(
+    const Descriptor &to, const Descriptor &from);
 
 // ShallowCopy helper for calling the correct specialised variant based on
 // scenario
@@ -195,7 +205,7 @@ RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
 // Doing the recursion upwards instead of downwards puts the more common
 // cases earlier in the if-chain and has a tangible impact on performance.
 template <typename P, int RANK> struct ShallowCopyRankSpecialize {
-  static bool execute(const Descriptor &to, const Descriptor &from,
+  static RT_API_ATTRS bool execute(const Descriptor &to, const Descriptor &from,
       bool toIsContiguous, bool fromIsContiguous) {
     if (to.rank() == RANK && from.rank() == RANK) {
       ShallowCopyInner<P, RANK>(to, from, toIsContiguous, fromIsContiguous);
@@ -207,7 +217,7 @@ template <typename P, int RANK> struct ShallowCopyRankSpecialize {
 };
 
 template <typename P> struct ShallowCopyRankSpecialize<P, maxRank + 1> {
-  static bool execute(const Descriptor &to, const Descriptor &from,
+  static RT_API_ATTRS bool execute(const Descriptor &to, const Descriptor &from,
       bool toIsContiguous, bool fromIsContiguous) {
     return false;
   }
