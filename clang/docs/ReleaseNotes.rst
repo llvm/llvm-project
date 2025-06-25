@@ -644,6 +644,10 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
+- Clang now gives pinpointed diagnostics for std::is_empty<T> failures—emitting a “not empty” error 
+  plus “because…” notes for non-static members, virtual functions/bases, non-empty bases, and non-zero bit-fields 
+  (including dependent widths) while correctly ignoring zero-width bit-fields. 
+
 
 Improvements to Clang's time-trace
 ----------------------------------

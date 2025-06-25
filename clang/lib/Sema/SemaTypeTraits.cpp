@@ -2317,32 +2317,38 @@ static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
 static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc,
                                   const CXXRecordDecl *D) {
   // Non-static data members (ignore zero-width bit‐fields).
-  for (auto *Field : D->fields()) {
-    if (Field->isBitField() && Field->getBitWidthValue() == 0)
+  for (const auto *Field : D->fields()) {
+    if (Field->isZeroLengthBitField())
       continue;
+    if (Field->isBitField()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::ZeroLengthField << Field
+          << Field->getSourceRange();
+      continue;
+    }
     S.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::NonEmptyMember << Field
         << Field->getType() << Field->getSourceRange();
   }
 
   // Virtual functions.
-  for (auto *M : D->methods()) {
+  for (const auto *M : D->methods()) {
     if (M->isVirtual()) {
       S.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::VirtualFunction << M->getDeclName()
+          << diag::TraitNotSatisfiedReason::VirtualFunction << M
           << M->getSourceRange();
       break;
     }
   }
 
   // Virtual bases and non-empty bases.
-  for (auto &B : D->bases()) {
-    auto *BR = B.getType()->getAsCXXRecordDecl();
+  for (const auto &B : D->bases()) {
+    const auto *BR = B.getType()->getAsCXXRecordDecl();
     if (!BR || BR->isInvalidDecl())
       continue;
     if (B.isVirtual()) {
       S.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::VirtualBase << B.getType()
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
           << B.getSourceRange();
     }
     if (!BR->isEmpty()) {

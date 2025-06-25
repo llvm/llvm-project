@@ -591,7 +591,7 @@ namespace is_empty_tests {
     static_assert(__is_empty(VB));
     // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::VB)'}} \
     // expected-note@-1 {{'VB' is not empty}} \
-    // expected-note@-1 {{because it has a virtual base class 'EB'}} \
+    // expected-note@-1 {{because it has a virtual base 'EB'}} \
     // expected-note@#e-VB {{'VB' defined here}}
 
     // Non-empty base class.
@@ -614,6 +614,23 @@ namespace is_empty_tests {
     // expected-note@-1 {{because it has a non-static data member 'z' of type 'int'}} \
     // expected-note@-1 {{because it has a virtual function 'g'}} \
     // expected-note@-1 {{because it has a base class 'Base' that is not empty}} \
-    // expected-note@-1 {{because it has a virtual base class 'EB'}} \
+    // expected-note@-1 {{because it has a virtual base 'EB'}} \
     // expected-note@#e-Multi {{'Multi' defined here}}
+
+    // Zero-width bit-field.
+    struct BitField { int : 0; }; // #e-BitField
+    static_assert(__is_empty(BitField)); // no diagnostics  
+
+    // Dependent bit-field width. 
+    template <int N>
+    struct DependentBitField { int : N; }; // #e-DependentBitField
+
+    static_assert(__is_empty(DependentBitField<0>)); // no diagnostics
+
+    static_assert(__is_empty(DependentBitField<2>)); 
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::DependentBitField<2>)'}} \
+    // expected-note@-1 {{'DependentBitField<2>' is not empty}} \
+    // expected-note@-1 {{because it field '' is a non-zero-length bit-field}} \
+    // expected-note@#e-DependentBitField {{'DependentBitField<2>' defined here}}
+
 }

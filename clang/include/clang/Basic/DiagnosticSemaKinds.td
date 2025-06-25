@@ -1790,7 +1790,6 @@ def note_unsatisfied_trait_reason
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%NonEmptyMember{has a non-static data member %1 of type %2}|"
            "%VirtualFunction{has a virtual function %1}|"
-           "%VirtualBase{has a virtual base class %1}|"
            "%NonEmptyBase{has a base class %1 that is not empty}|"
            "%ZeroLengthField{field %1 is a non-zero-length bit-field}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
