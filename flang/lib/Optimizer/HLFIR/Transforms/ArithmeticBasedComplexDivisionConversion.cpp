@@ -24,7 +24,7 @@ namespace hlfir {
 } 
 
 static llvm::cl::opt<bool> EnableArithmeticBasedComplexDiv(
-    "enable-arithmetic-based-complex-divsion", llvm::cl::init(false), llvm::cl::Hidden,
+    "enable-arithmetic-based-complex-div", llvm::cl::init(false), llvm::cl::Hidden,
     llvm::cl::desc("Enable calling of Arithmetic-based Complex Division."));
 
 namespace {
