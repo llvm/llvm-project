@@ -980,6 +980,7 @@ struct Waitcnt {
   unsigned SampleCnt = ~0u; // gfx12+ only.
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
+  unsigned XCnt = ~0u;      // gfx1250.
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
@@ -988,15 +989,15 @@ struct Waitcnt {
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
-          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt)
+          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt)
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
-        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt) {}
+        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt) {}
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u;
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u;
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
@@ -1008,7 +1009,7 @@ struct Waitcnt {
         std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
-        std::min(KmCnt, Other.KmCnt));
+        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt));
   }
 };
 
@@ -1113,6 +1114,10 @@ unsigned getDscntBitMask(const IsaVersion &Version);
 /// \returns Dscnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support KMcnt
 unsigned getKmcntBitMask(const IsaVersion &Version);
+
+/// \returns Xcnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support Xcnt.
+unsigned getXcntBitMask(const IsaVersion &Version);
 
 /// \return STOREcnt or VScnt bit mask for given isa \p Version.
 /// returns 0 for versions that do not support STOREcnt or VScnt.

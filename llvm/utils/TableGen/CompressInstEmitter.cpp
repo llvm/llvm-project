@@ -137,7 +137,8 @@ class CompressInstEmitter {
                                StringMap<unsigned> &SourceOperands,
                                StringMap<unsigned> &DestOperands,
                                const DagInit *SourceDag, const DagInit *DestDag,
-                               IndexedMap<OpData> &SourceOperandMap);
+                               IndexedMap<OpData> &SourceOperandMap,
+                               bool HasSourceTiedOp);
 
   void createInstOperandMapping(const Record *Rec, const DagInit *SourceDag,
                                 const DagInit *DestDag,
@@ -349,7 +350,8 @@ static bool validateArgsTypes(const Init *Arg1, const Init *Arg2) {
 void CompressInstEmitter::createDagOperandMapping(
     const Record *Rec, StringMap<unsigned> &SourceOperands,
     StringMap<unsigned> &DestOperands, const DagInit *SourceDag,
-    const DagInit *DestDag, IndexedMap<OpData> &SourceOperandMap) {
+    const DagInit *DestDag, IndexedMap<OpData> &SourceOperandMap,
+    bool HasSourceTiedOp) {
   for (unsigned I = 0; I < DestDag->getNumArgs(); ++I) {
     // Skip fixed immediates and registers, they were handled in
     // addDagOperandMapping.
@@ -368,7 +370,10 @@ void CompressInstEmitter::createDagOperandMapping(
         SourceOperands.find(SourceDag->getArgNameStr(I));
     if (It != SourceOperands.end()) {
       // Operand sharing the same name in the Dag should be mapped as tied.
-      SourceOperandMap[I].TiedOpIdx = It->getValue();
+      if (HasSourceTiedOp)
+        SourceOperandMap[I + 1].TiedOpIdx = It->getValue() + 1;
+      else
+        SourceOperandMap[I].TiedOpIdx = It->getValue();
       if (!validateArgsTypes(SourceDag->getArg(It->getValue()),
                              SourceDag->getArg(I)))
         PrintFatalError(Rec->getLoc(),
@@ -521,8 +526,10 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
 
   StringMap<unsigned> SourceOperands;
   StringMap<unsigned> DestOperands;
+  bool HasSourceTiedOp =
+      SourceLastTiedOp != std::numeric_limits<unsigned int>::max();
   createDagOperandMapping(Rec, SourceOperands, DestOperands, SourceDag, DestDag,
-                          SourceOperandMap);
+                          SourceOperandMap, HasSourceTiedOp);
   // Create operand mapping between the source and destination instructions.
   createInstOperandMapping(Rec, SourceDag, DestDag, SourceOperandMap,
                            DestOperandMap, SourceOperands, DestInst,
