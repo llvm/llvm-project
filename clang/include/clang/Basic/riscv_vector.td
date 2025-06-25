@@ -2013,7 +2013,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 }
 
 // Zvfbfmin - Vector convert BF16 to FP32
-let Log2LMUL = [-2, -1, 0, 1, 2] in
+let RequiredFeatures = ["zvfbfmin"], Log2LMUL = [-2, -1, 0, 1, 2] in
 def vfwcvtbf16_f_f_v : RVVConvBuiltin<"Fw", "Fwv", "y", "vfwcvtbf16_f">;
 
 let ManualCodegen = [{
@@ -2121,7 +2121,8 @@ let ManualCodegen = [{
     }
 
     // Zvfbfmin - Vector convert FP32 to BF16
-    let Log2LMUL = [-2, -1, 0, 1, 2],
+    let RequiredFeatures = ["zvfbfmin"],
+        Log2LMUL = [-2, -1, 0, 1, 2],
         OverloadedName = "vfncvtbf16_f" in
     defm : RVVConvBuiltinSet<"vfncvtbf16_f_f_w", "y", [["v", "vFwu"]]>;
   }
