@@ -24,6 +24,7 @@
 #include "SILowerI1Copies.h"
 #include "AMDGPU.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
+#include "llvm/CodeGen/MachineSSAUpdater2.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "si-i1-copies"
@@ -275,7 +276,7 @@ public:
   /// Add undef values dominating the loop and the optionally given additional
   /// blocks, so that the SSA updater doesn't have to search all the way to the
   /// function entry.
-  void addLoopEntries(unsigned LoopLevel, MachineSSAUpdater &SSAUpdater,
+  void addLoopEntries(unsigned LoopLevel, MachineSSAUpdater2 &SSAUpdater,
                       MachineRegisterInfo &MRI,
                       MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs,
                       ArrayRef<Incoming> Incomings = {}) {
@@ -469,7 +470,6 @@ PhiLoweringHelper::PhiLoweringHelper(MachineFunction *MF,
 }
 
 bool PhiLoweringHelper::lowerPhis() {
-  MachineSSAUpdater SSAUpdater(*MF);
   LoopFinder LF(*DT, *PDT);
   PhiIncomingAnalysis PIA(*PDT, TII);
   SmallVector<MachineInstr *, 4> Vreg1Phis;
@@ -524,16 +524,20 @@ bool PhiLoweringHelper::lowerPhis() {
     // in practice.
     unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
 
-    SSAUpdater.Initialize(DstReg);
+    MachineSSAUpdater2 SSAUpdater(*DT, *MF, DstReg);
+    SSAUpdater.AddUseBlock(&MBB);
 
     if (FoundLoopLevel) {
       LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs,
                         Incomings);
 
       for (auto &Incoming : Incomings) {
+        SSAUpdater.AddUseBlock(Incoming.Block);
         Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
         SSAUpdater.AddAvailableValue(Incoming.Block, Incoming.UpdatedReg);
       }
+
+      SSAUpdater.Calculate();
 
       for (auto &Incoming : Incomings) {
         MachineBasicBlock &IMBB = *Incoming.Block;
@@ -556,10 +560,13 @@ bool PhiLoweringHelper::lowerPhis() {
           constrainAsLaneMask(Incoming);
           SSAUpdater.AddAvailableValue(&IMBB, Incoming.Reg);
         } else {
+          SSAUpdater.AddUseBlock(&IMBB);
           Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
           SSAUpdater.AddAvailableValue(&IMBB, Incoming.UpdatedReg);
         }
       }
+
+      SSAUpdater.Calculate();
 
       for (auto &Incoming : Incomings) {
         if (!Incoming.UpdatedReg.isValid())
@@ -585,7 +592,6 @@ bool PhiLoweringHelper::lowerPhis() {
 
 bool Vreg1LoweringHelper::lowerCopiesToI1() {
   bool Changed = false;
-  MachineSSAUpdater SSAUpdater(*MF);
   LoopFinder LF(*DT, *PDT);
   SmallVector<MachineInstr *, 4> DeadCopies;
 
@@ -643,10 +649,12 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
           PDT->findNearestCommonDominator(DomBlocks);
       unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
       if (FoundLoopLevel) {
-        SSAUpdater.Initialize(DstReg);
+        MachineSSAUpdater2 SSAUpdater(*DT, *MF, DstReg);
+        SSAUpdater.AddUseBlock(&MBB);
         SSAUpdater.AddAvailableValue(&MBB, DstReg);
         LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs);
 
+        SSAUpdater.Calculate();
         buildMergeLaneMasks(MBB, MI, DL, DstReg,
                             SSAUpdater.GetValueInMiddleOfBlock(&MBB), SrcReg);
         DeadCopies.push_back(&MI);
