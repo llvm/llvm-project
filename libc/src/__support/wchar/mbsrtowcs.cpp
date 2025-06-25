@@ -13,9 +13,9 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/mbrtowc.h"
 #include "src/__support/wchar/mbstate.h"
-#include "src/__support/wchar/character_converter.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
