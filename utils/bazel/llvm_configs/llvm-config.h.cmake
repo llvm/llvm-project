@@ -110,6 +110,9 @@
 /* Define if building LLVM with BUILD_SHARED_LIBS */
 #cmakedefine LLVM_BUILD_SHARED_LIBS
 
+/* Define if exporting LLVM public interface for shared library */
+#cmakedefine LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS
+
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 #cmakedefine LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN}
 

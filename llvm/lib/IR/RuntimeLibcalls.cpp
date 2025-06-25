@@ -432,19 +432,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
 
     // Some darwins have an optimized __bzero/bzero function.
-    switch (TT.getArch()) {
-    case Triple::x86:
-    case Triple::x86_64:
+    if (TT.isX86()) {
       if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
         setLibcallName(RTLIB::BZERO, "__bzero");
-      break;
-    case Triple::aarch64:
-    case Triple::aarch64_32:
+    } else if (TT.isAArch64())
       setLibcallName(RTLIB::BZERO, "bzero");
-      break;
-    default:
-      break;
-    }
 
     if (darwinHasSinCosStret(TT)) {
       setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
@@ -457,37 +449,13 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
       }
     }
 
-    switch (TT.getOS()) {
-    case Triple::MacOSX:
-      if (TT.isMacOSXVersionLT(10, 9)) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-      } else {
-        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-        setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      }
-      break;
-    case Triple::IOS:
-      if (TT.isOSVersionLT(7, 0)) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-        break;
-      }
-      [[fallthrough]];
-    case Triple::DriverKit:
-    case Triple::TvOS:
-    case Triple::WatchOS:
-    case Triple::XROS:
+    if (darwinHasExp10(TT)) {
       setLibcallName(RTLIB::EXP10_F32, "__exp10f");
       setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      break;
-    default:
-      break;
+    } else {
+      setLibcallName(RTLIB::EXP10_F32, nullptr);
+      setLibcallName(RTLIB::EXP10_F64, nullptr);
     }
-  } else if (TT.getOS() == Triple::BridgeOS) {
-    // TODO: BridgeOS should be included in isOSDarwin.
-    setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-    setLibcallName(RTLIB::EXP10_F64, "__exp10");
   }
 
   if (hasSinCos(TT)) {
@@ -664,4 +632,23 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (TT.getArch() == Triple::ArchType::msp430)
     setMSP430Libcalls(*this, TT);
+}
+
+bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
+  assert(TT.isOSDarwin() && "should be called with darwin triple");
+
+  switch (TT.getOS()) {
+  case Triple::MacOSX:
+    return !TT.isMacOSXVersionLT(10, 9);
+  case Triple::IOS:
+    return !TT.isOSVersionLT(7, 0);
+  case Triple::DriverKit:
+  case Triple::TvOS:
+  case Triple::WatchOS:
+  case Triple::XROS:
+  case Triple::BridgeOS:
+    return true;
+  default:
+    return false;
+  }
 }
