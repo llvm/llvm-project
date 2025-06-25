@@ -594,8 +594,8 @@ public:
     return (getVendor() == Triple::Apple) && isOSBinFormatMachO();
   }
 
-  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, XROS, bridgeOS, or
-  /// DriverKit).
+  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, DriverKit, XROS, or
+  /// bridgeOS).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS() ||
            isBridgeOS();

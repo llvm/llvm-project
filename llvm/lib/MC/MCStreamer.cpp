@@ -1453,13 +1453,9 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
   case Triple::WatchOS:
     return VersionTuple(5);
   case Triple::DriverKit:
-    // DriverKit always uses the build version load command.
-    return VersionTuple();
-  case Triple::XROS:
-    // XROS always uses the build version load command.
-    return VersionTuple();
   case Triple::BridgeOS:
-    // Who knows?
+  case Triple::XROS:
+    // DriverKit/BridgeOS/XROS always use the build version load command.
     return VersionTuple();
   default:
     break;
