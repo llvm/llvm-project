@@ -14,6 +14,7 @@
 using namespace lldb_private::mcp;
 using namespace llvm;
 
+namespace {
 struct CommandToolArguments {
   uint64_t debugger_id;
   std::string arguments;
@@ -25,6 +26,8 @@ bool fromJSON(const llvm::json::Value &V, CommandToolArguments &A,
   return O && O.map("debugger_id", A.debugger_id) &&
          O.mapOptional("arguments", A.arguments);
 }
+
+} // namespace
 
 Tool::Tool(std::string name, std::string description)
     : m_name(std::move(name)), m_description(std::move(description)) {}
@@ -41,14 +44,14 @@ protocol::ToolDefinition Tool::GetDefinition() const {
 }
 
 llvm::Expected<protocol::TextResult>
-CommandTool::Call(const llvm::json::Value *args) {
-  if (!args)
-    return createStringError("no tool arguments");
+CommandTool::Call(const protocol::ToolArguments &args) {
+  if (!std::holds_alternative<json::Value>(args))
+    return createStringError("CommandTool requires arguments");
 
-  llvm::json::Path::Root root;
+  json::Path::Root root;
 
   CommandToolArguments arguments;
-  if (!fromJSON(*args, arguments, root))
+  if (!fromJSON(std::get<json::Value>(args), arguments, root))
     return root.getError();
 
   lldb::DebuggerSP debugger_sp =
@@ -93,9 +96,22 @@ std::optional<llvm::json::Value> CommandTool::GetSchema() const {
 }
 
 llvm::Expected<protocol::TextResult>
-DebuggerListTool::Call(const llvm::json::Value *args) {
+DebuggerListTool::Call(const protocol::ToolArguments &args) {
+  if (!std::holds_alternative<std::monostate>(args))
+    return createStringError("DebuggerListTool takes no arguments");
+
   llvm::json::Path::Root root;
 
+  // Return a nested Markdown list with debuggers and target.
+  // Example output:
+  //
+  // - debugger 0
+  //     - target 0 /path/to/foo
+  //     - target 1
+  // - debugger 1
+  //     - target 0 /path/to/bar
+  //
+  // FIXME: Use Structured Content when we adopt protocol version 2025-06-18.
   std::string output;
   llvm::raw_string_ostream os(output);
 
@@ -114,8 +130,10 @@ DebuggerListTool::Call(const llvm::json::Value *args) {
       if (!target_sp)
         continue;
       os << "    - target " << j;
+      // Append the module path if we have one.
       if (Module *exe_module = target_sp->GetExecutableModulePointer())
         os << " " << exe_module->GetFileSpec().GetPath();
+      os << '\n';
     }
   }
 

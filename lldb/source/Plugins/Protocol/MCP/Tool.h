@@ -22,7 +22,7 @@ public:
   virtual ~Tool() = default;
 
   virtual llvm::Expected<protocol::TextResult>
-  Call(const llvm::json::Value *args) = 0;
+  Call(const protocol::ToolArguments &args) = 0;
 
   virtual std::optional<llvm::json::Value> GetSchema() const {
     return llvm::json::Object{{"type", "object"}};
@@ -43,7 +43,7 @@ public:
   ~CommandTool() = default;
 
   virtual llvm::Expected<protocol::TextResult>
-  Call(const llvm::json::Value *args) override;
+  Call(const protocol::ToolArguments &args) override;
 
   virtual std::optional<llvm::json::Value> GetSchema() const override;
 };
@@ -54,7 +54,7 @@ public:
   ~DebuggerListTool() = default;
 
   virtual llvm::Expected<protocol::TextResult>
-  Call(const llvm::json::Value *args) override;
+  Call(const protocol::ToolArguments &args) override;
 };
 
 } // namespace lldb_private::mcp

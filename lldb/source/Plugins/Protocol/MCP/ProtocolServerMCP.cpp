@@ -314,8 +314,12 @@ ProtocolServerMCP::ToolsCallHandler(const protocol::Request &request) {
   if (it == m_tools.end())
     return llvm::createStringError(llvm::formatv("no tool \"{0}\"", tool_name));
 
-  const json::Value *args = param_obj->get("arguments");
-  llvm::Expected<protocol::TextResult> text_result = it->second->Call(args);
+  protocol::ToolArguments tool_args;
+  if (const json::Value *args = param_obj->get("arguments"))
+    tool_args = *args;
+
+  llvm::Expected<protocol::TextResult> text_result =
+      it->second->Call(tool_args);
   if (!text_result)
     return text_result.takeError();
 
