@@ -1574,7 +1574,7 @@ def ProcessorFeatures {
                                                   FeatureVPCLMULQDQ];
   list<SubtargetFeature> ZN3AdditionalTuning = [TuningMacroFusion];
   list<SubtargetFeature> ZN3Tuning =
-    !listconcat(ZN2Tuning, ZN3AdditionalTuning);
+    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), [TuningSlowSHLD]);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
