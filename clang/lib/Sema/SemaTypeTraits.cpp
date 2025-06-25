@@ -2315,7 +2315,7 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
     }
     if (!B.getType()->isStandardLayoutType()) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::NonStdLayoutBase << B.getType()
+          << diag::TraitNotSatisfiedReason::NonStandardLayoutBase << B.getType()
           << B.getSourceRange();
     }
   }
@@ -2369,7 +2369,7 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   for (const FieldDecl *Field : D->fields()) {
     if (!Field->getType()->isStandardLayoutType()) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::NonStdLayoutMember << Field
+          << diag::TraitNotSatisfiedReason::NonStandardLayoutMember << Field
           << Field->getType() << Field->getSourceRange();
     }
   }

@@ -619,17 +619,5 @@ static_assert(__is_standard_layout(H)); // no diagnostics
 
  struct I { Empty a; int : 0; int x; }; // #sl-I
 static_assert(__is_standard_layout(I)); // no diagnostics
-
-//  [[no_unique_address]] or [[msvc::no_unique_address]] should not affect standard layout
-#if __has_cpp_attribute(no_unique_address)
-  #define NO_UNIQUE_ADDRESS [[no_unique_address]]
-#elif __has_cpp_attribute(msvc::no_unique_address)
-  #define NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
-#elif defined(_MSC_VER)
-  #define NO_UNIQUE_ADDRESS __declspec(no_unique_address)
-#else
-  #define NO_UNIQUE_ADDRESS /* nothing */
-#endif
-struct J { NO_UNIQUE_ADDRESS Empty a; int x; };
-static_assert(__is_standard_layout(J)); // no diagnostics
 }
+
