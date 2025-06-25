@@ -186,7 +186,7 @@ enum class DescriptorRangeType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
+LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
@@ -758,6 +758,12 @@ struct DescriptorRange {
 };
 } // namespace v2
 } // namespace RTS0
+
+// D3D_ROOT_SIGNATURE_VERSION
+enum class RootSignatureVersion {
+  V1_0 = 0x1,
+  V1_1 = 0x2,
+};
 
 } // namespace dxbc
 } // namespace llvm
