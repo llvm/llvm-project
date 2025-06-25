@@ -849,6 +849,30 @@ class TestCase(TestBase):
         # The second "statistics dump" in the transcript should have no output
         self.assertNotIn("output", transcript[2])
 
+    def test_transcript_warning_when_disabled(self):
+        """
+        Test that "statistics dump --transcript=true" shows a warning when
+        transcript saving is disabled.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        
+        # Ensure transcript saving is disabled (this is the default)
+        self.runCmd("settings set interpreter.save-transcript false")
+        
+        # Request transcript in statistics dump and check for warning
+        interpreter = self.dbg.GetCommandInterpreter()
+        res = lldb.SBCommandReturnObject()
+        interpreter.HandleCommand("statistics dump --transcript=true", res)
+        self.assertTrue(res.Succeeded())
+        # We should warn about transcript being requested but not saved
+        self.assertIn(
+            "transcript requested but none was saved. Enable with "
+            "'settings set interpreter.save-transcript true'",
+            res.GetError()
+        )
+
     def verify_stats(self, stats, expectation, options):
         for field_name in expectation:
             idx = field_name.find(".")
