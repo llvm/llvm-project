@@ -60,15 +60,6 @@ func.func @arm_sve_usmmla(%a: vector<[16]xi8>,
 
 // -----
 
-func.func @arm_sve_bfmmla(%a: vector<[8]xbf16>,
-                          %b: vector<[8]xbf16>,
-                          %c: vector<[4]xf32>) -> vector<[4]xf32> {
-  // CHECK: arm_sve.intr.bfmmla
-  %0 = arm_sve.bfmmla %c, %a, %b : vector<[8]xbf16> to vector<[4]xf32>
-  return %0 : vector<[4]xf32>
-}
-// -----
-
 func.func @arm_sve_arithi_masked(%a: vector<[4]xi32>,
                             %b: vector<[4]xi32>,
                             %c: vector<[4]xi32>,

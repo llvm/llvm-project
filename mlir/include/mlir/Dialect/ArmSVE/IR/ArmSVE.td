@@ -293,10 +293,10 @@ def UsmmlaOp : ArmSVE_Op<"usmmla", [Pure,
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
 }
 
-
-def BfmmlaOp : ArmSVE_Op<"bfmmla", [Pure,
-                                    AllTypesMatch<["src1", "src2"]>,
-                                    AllTypesMatch<["acc", "dst"]>]> {
+def BfmmlaOp : ArmSVE_IntrOp<"bfmmla", [Pure,
+                                        AllTypesMatch<["src1", "src2"]>,
+                                        AllTypesMatch<["acc", "res"]>,
+                                        ]> {
   let summary = "BFloat16 matrix multiply-accumulate";
   let description = [{
     BFMMLA: BFloat16 matrix multiply-accumulate into 2×2 matrices";
@@ -317,9 +317,9 @@ def BfmmlaOp : ArmSVE_Op<"bfmmla", [Pure,
           ScalableVectorOfLengthAndType<[8], [BF16]>:$src1,
           ScalableVectorOfLengthAndType<[8], [BF16]>:$src2
   );
-  let results = (outs ScalableVectorOfLengthAndType<[4], [F32]>:$dst);
+  let results = (outs ScalableVectorOfLengthAndType<[4], [F32]>:$res);
   let assemblyFormat =
-    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
 
 class SvboolTypeConstraint<string lhsArg, string rhsArg> : TypesMatchWith<
@@ -618,12 +618,6 @@ def SmmlaIntrOp :
 def UsmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"usmmla">,
   Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
-
-def BfmmlaIntrOp :
-  ArmSVE_IntrOp<"bfmmla", [Pure, TypeIs<"res", ScalableVectorOfLengthAndType<[4], [F32]>>]>,
-  Arguments<(ins Arg<ScalableVectorOfLengthAndType<[4], [F32]>, "acc">:$acc,
-                 Arg<ScalableVectorOfLengthAndType<[8], [BF16]>, "lhs">:$lhs,
-                 Arg<ScalableVectorOfLengthAndType<[8], [BF16]>, "rhs">:$rhs)>;
 
 def SdotIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"sdot">,
