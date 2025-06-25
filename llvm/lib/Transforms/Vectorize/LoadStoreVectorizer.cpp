@@ -834,6 +834,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
                      << Alignment.value() << " to " << NewAlign.value()
                      << "\n");
           Alignment = NewAlign;
+          setLoadStoreAlignment(C[CBegin].Inst, Alignment);
         }
       }
 
@@ -891,14 +892,6 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       VecElemTy, 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy));
 
   Align Alignment = getLoadStoreAlignment(C[0].Inst);
-  // If this is a load/store of an alloca, we might have upgraded the alloca's
-  // alignment earlier.  Get the new alignment.
-  if (AS == DL.getAllocaAddrSpace()) {
-    Alignment = std::max(
-        Alignment,
-        getOrEnforceKnownAlignment(getLoadStorePointerOperand(C[0].Inst),
-                                   MaybeAlign(), DL, C[0].Inst, nullptr, &DT));
-  }
 
   // All elements of the chain must have the same scalar-type size.
 #ifndef NDEBUG

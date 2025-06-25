@@ -155,7 +155,7 @@ define void @variadics1(ptr %vlist) {
 ; CHECK-NEXT:    [[ARGP_NEXT12:%.*]] = getelementptr i8, ptr [[ARGP_CUR11_ALIGNED]], i64 8
 ; CHECK-NEXT:    [[X2:%.*]] = getelementptr i8, ptr [[ARGP_NEXT12]], i32 7
 ; CHECK-NEXT:    [[ARGP_CUR16_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[X2]], i64 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARGP_CUR16_ALIGNED]], align 4294967296
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARGP_CUR16_ALIGNED]], align 8
 ; CHECK-NEXT:    [[X31:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[X42:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[X5:%.*]] = fadd double [[X42]], [[X31]]
