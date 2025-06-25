@@ -2401,17 +2401,40 @@ static bool CheckArgTypeMatches(Sema *S, Expr *Arg, QualType ExpectedType) {
   return false;
 }
 
-static bool CheckAllArgTypesAreCorrect(
+bool CheckAllArgTypesAreCorrect(
     Sema *S, CallExpr *TheCall,
-    llvm::function_ref<bool(Sema *S, SourceLocation Loc, int ArgOrdinal,
-                            clang::QualType PassedType)>
-        Check) {
-  for (unsigned I = 0; I < TheCall->getNumArgs(); ++I) {
-    Expr *Arg = TheCall->getArg(I);
-    if (Check(S, Arg->getBeginLoc(), I + 1, Arg->getType()))
-      return true;
+    llvm::ArrayRef<
+        llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)>>
+        Checks) {
+  unsigned NumArgs = TheCall->getNumArgs();
+  if (Checks.size() == 1) {
+    // Apply the single check to all arguments
+    for (unsigned I = 0; I < NumArgs; ++I) {
+      Expr *Arg = TheCall->getArg(I);
+      if (Checks[0](S, Arg->getBeginLoc(), I + 1, Arg->getType()))
+        return true;
+    }
+    return false;
+  } else if (Checks.size() == NumArgs) {
+    // Apply each check to the corresponding argument
+    for (unsigned I = 0; I < NumArgs; ++I) {
+      Expr *Arg = TheCall->getArg(I);
+      if (Checks[I](S, Arg->getBeginLoc(), I + 1, Arg->getType()))
+        return true;
+    }
+    return false;
+  } else {
+    // Mismatch: error or fallback
+    S->Diag(TheCall->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << NumArgs << Checks.size();
+    return true;
   }
-  return false;
+}
+
+bool CheckAllArgTypesAreCorrect(
+    Sema *S, CallExpr *TheCall,
+    llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)> Check) {
+  return CheckAllArgTypesAreCorrect(S, TheCall, llvm::ArrayRef{Check});
 }
 
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
@@ -2422,6 +2445,38 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
           ? PassedType->castAs<clang::VectorType>()->getElementType()
           : PassedType;
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
+    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
+           << /* half or float */ 2 << PassedType;
+  return false;
+}
+
+static bool CheckFloatOrHalfVectorsRepresentation(Sema *S, SourceLocation Loc,
+                                           int ArgOrdinal,
+                                           clang::QualType PassedType) {
+  const auto *VecTy = PassedType->getAs<VectorType>();
+
+  clang::QualType BaseType = 
+      PassedType->isVectorType()
+        ? PassedType->castAs<clang::VectorType>()->getElementType()
+          : PassedType;
+  if (!VecTy || !BaseType->isHalfType() && !BaseType->isFloat32Type())
+    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgOrdinal << /* vector of */ 5 << /* no int */ 0
+           << /* half or float */ 2 << PassedType;
+  return false;
+}
+
+static bool CheckFloatOrHalfScalarRepresentation(Sema *S, SourceLocation Loc,
+                                                 int ArgOrdinal,
+                                                 clang::QualType PassedType) {
+  const auto *VecTy = PassedType->getAs<VectorType>();
+
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+          : PassedType;
+  if (VecTy || !BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
            << /* half or float */ 2 << PassedType;

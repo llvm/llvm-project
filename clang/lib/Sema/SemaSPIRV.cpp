@@ -29,32 +29,6 @@ namespace clang {
 
 SemaSPIRV::SemaSPIRV(Sema &S) : SemaBase(S) {}
 
-/// Checks if the first `NumArgsToCheck` arguments of a function call are of
-/// vector type. If any of the arguments is not a vector type, it emits a
-/// diagnostic error and returns `true`. Otherwise, it returns `false`.
-///
-/// \param TheCall The function call expression to check.
-/// \param NumArgsToCheck The number of arguments to check for vector type.
-/// \return `true` if any of the arguments is not a vector type, `false`
-/// otherwise.
-
-bool SemaSPIRV::CheckVectorArgs(CallExpr *TheCall, unsigned NumArgsToCheck) {
-  for (unsigned i = 0; i < NumArgsToCheck; ++i) {
-    ExprResult Arg = TheCall->getArg(i);
-    QualType ArgTy = Arg.get()->getType();
-    auto *VTy = ArgTy->getAs<VectorType>();
-    if (VTy == nullptr) {
-      SemaRef.Diag(Arg.get()->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << ArgTy
-          << SemaRef.Context.getVectorType(ArgTy, 2, VectorKind::Generic) << 1
-          << 0 << 0;
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   QualType ArgTy0 = TheCall->getArg(0)->getType();
@@ -71,7 +45,6 @@ static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
   }
   return false;
 }
-bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
 
 static std::optional<int>
 processConstant32BitIntArgument(Sema &SemaRef, CallExpr *Call, int Argument) {
@@ -185,7 +158,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
       return true;
 
     // Use the helper function to check both arguments
-    if (CheckVectorArgs(TheCall, 2))
+    if (SemaRef.CheckVectorArgs(TheCall))
       return true;
 
     QualType RetTy =
@@ -198,7 +171,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
       return true;
 
     // Use the helper function to check the argument
-    if (CheckVectorArgs(TheCall, 1))
+    if (SemaRef.CheckVectorArgs(TheCall))
       return true;
 
     QualType RetTy =
@@ -210,8 +183,12 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
 
-    // Use the helper function to check the first two arguments
-    if (CheckVectorArgs(TheCall, 2))
+    llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)>
+        ChecksArr[] = {Sema::CheckFloatOrHalfVectorsRepresentation,
+                       Sema::CheckFloatOrHalfVectorsRepresentation,
+                       Sema::CheckFloatOrHalfScalarRepresentation};
+    if (SemaRef.CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                           llvm::ArrayRef(ChecksArr)))
       return true;
 
     ExprResult C = TheCall->getArg(2);
@@ -226,34 +203,13 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     TheCall->setType(RetTy);
     break;
   }
-  case SPIRV::BI__builtin_spirv_refract: {
-    if (SemaRef.checkArgCount(TheCall, 3))
-      return true;
 
-    // Use the helper function to check the first two arguments
-    if (CheckVectorArgs(TheCall, 2))
-      return true;
-
-    ExprResult C = TheCall->getArg(2);
-    QualType ArgTyC = C.get()->getType();
-    if (!ArgTyC->isFloatingType()) {
-      SemaRef.Diag(C.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 3 << /* scalar*/ 5 << /* no int */ 0 << /* fp */ 1 << ArgTyC;
-      return true;
-    }
-
-    QualType RetTy = TheCall->getArg(0)->getType();
-    TheCall->setType(RetTy);
-    assert(RetTy == ArgTyA);
-    //assert(ArgTyB == ArgTyA);
-    break;
-  }
   case SPIRV::BI__builtin_spirv_reflect: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
 
     // Use the helper function to check both arguments
-    if (CheckVectorArgs(TheCall, 2))
+    if (SemaRef.CheckVectorArgs(TheCall))
       return true;
 
     QualType RetTy = TheCall->getArg(0)->getType();

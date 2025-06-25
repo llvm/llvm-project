@@ -72,21 +72,40 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 }
 
 template <typename T> constexpr T refract_impl(T I, T N, T Eta) {
-  T K = 1 - Eta * Eta * (1 - (N * I * N * I));
-  T Result = (Eta * I - (Eta * N * I + sqrt(K)) * N);
+  T Mul = N * I;
+  T K = 1 - Eta * Eta * (1 - (Mul * Mul));
+  T Result = (Eta * I - (Eta * Mul + sqrt(K)) * N);
   return select<T>(K < 0, static_cast<T>(0), Result);
 }
 
+template <typename T, typename U>
+constexpr T refract_vec_impl(T I, T N, U Eta) {
+#if (__has_builtin(__builtin_spirv_refract))
+  if (is_vector<T>::value) {
+    return __builtin_spirv_refract(I, N, Eta);
+  }
+#else
+  T Mul = dot(N, I);
+  T K = 1 - Eta * Eta * (1 - Mul * Mul);
+  T Result = (Eta * I - (Eta * Mul + sqrt(K)) * N);
+  return select<T>(K < 0, static_cast<T>(0), Result);
+#endif
+}
+
+/*
 template <typename T, int L>
 constexpr vector<T, L> refract_vec_impl(vector<T, L> I, vector<T, L> N, T Eta) {
-#if (__has_builtin(__builtin_spirv_refract))
+#if (__has_builtin(__builtin_spirv_refract) && is_vector<T>))
   return __builtin_spirv_refract(I, N, Eta);
 #else
-  vector<T, L> K = 1 - Eta * Eta * (1 - dot(N, I) * dot(N, I));
-  vector<T, L> Result = (Eta * I - (Eta * dot(N, I) + sqrt(K)) * N);
+  T Mul = dot(N, I);
+  vector<T, L> K = 1 - Eta * Eta * (1 - Mul * Mul);
+  vector<T, L> Result = (Eta * I - (Eta * Mul + sqrt(K)) * N);
   return select<vector<T, L>>(K < 0, vector<T, L>(0), Result);
 #endif
 }
+
+*/
 
 template <typename T> constexpr T fmod_impl(T X, T Y) {
 #if !defined(__DIRECTX__)
