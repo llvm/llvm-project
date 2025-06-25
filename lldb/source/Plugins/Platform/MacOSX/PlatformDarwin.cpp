@@ -1142,6 +1142,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
         }
       }
 
+      // TODO: The result of this loop is almost equivalent to deriving the SDK
+      // from the target triple, which would be a lot cheaper.
+
       if (FileSystem::Instance().Exists(merged_sdk.GetSysroot())) {
         sysroot_spec = merged_sdk.GetSysroot();
       } else {
