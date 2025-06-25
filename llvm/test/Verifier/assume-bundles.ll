@@ -9,6 +9,8 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3) {
   call void @llvm.assume(i1 true) ["adazdazd"()]
 ; CHECK: the second argument should be a constant integral value
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 %P1)]
+; CHECK: the second argument should be a constant integral value
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, float 1.5)]
 ; CHECK: too many arguments
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 8, i32 8)]
 ; CHECK: this attribute should have 2 arguments
@@ -28,5 +30,8 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3) {
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P)]
 ; CHECK: arguments to separate_storage assumptions should be pointers
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P, i32 123)]
+; FIXME: The dereferenceable bundle is invalid.
+; CHECK-NOT: call {{.+}}dereferenceable
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 4), "dereferenceable"(ptr %P)]
   ret void
 }
