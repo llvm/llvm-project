@@ -44,7 +44,7 @@
 // Such a `vector.contract` is representative of the code we aim to generate
 // by vectorisation of `linalg.mmt4d`.
 //
-// In this specific test we use M == 4, N == 4, and K == 8.
+// In this specific test we use M == 4, N == 4, and K == 16.
 //
 
 // Test the operation where both LHS and RHS are interpreted as signed, hence
