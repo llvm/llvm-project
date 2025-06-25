@@ -198,7 +198,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 define dso_local i32 @bar() {
 ; CHECK-PTX-LABEL: bar(
 ; CHECK-PTX:       {
-; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot3[24];
+; CHECK-PTX-NEXT:    .local .align 16 .b8 __local_depot3[32];
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b16 %rs<4>;
@@ -219,6 +219,13 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-NEXT:    st.b8 [%SP+12], 1;
 ; CHECK-PTX-NEXT:    st.b64 [%SP+16], 1;
 ; CHECK-PTX-NEXT:    add.u64 %rd3, %SP, 8;
+; CHECK-PTX-NEXT:    mov.b32 %r1, 1;
+; CHECK-PTX-NEXT:    st.b32 [%SP+16], %r1;
+; CHECK-PTX-NEXT:    mov.b16 %rs4, 1;
+; CHECK-PTX-NEXT:    st.b8 [%SP+20], %rs4;
+; CHECK-PTX-NEXT:    mov.b64 %rd3, 1;
+; CHECK-PTX-NEXT:    st.b64 [%SP+24], %rd3;
+; CHECK-PTX-NEXT:    add.u64 %rd4, %SP, 16;
 ; CHECK-PTX-NEXT:    { // callseq 1, 0
 ; CHECK-PTX-NEXT:    .param .b32 param0;
 ; CHECK-PTX-NEXT:    st.param.b32 [param0], 1;
@@ -345,7 +352,7 @@ entry:
 define dso_local void @qux() {
 ; CHECK-PTX-LABEL: qux(
 ; CHECK-PTX:       {
-; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot7[24];
+; CHECK-PTX-NEXT:    .local .align 16 .b8 __local_depot7[32];
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b32 %r<2>;
