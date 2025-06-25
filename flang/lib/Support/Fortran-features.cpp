@@ -57,7 +57,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   ForEachLanguageFeature([&](auto feature) {
     std::string_view name{Fortran::common::EnumToString(feature)};
     std::string cliOption{details::CamelCaseToLowerCaseHyphenated(name)};
-    cliOptions_.insert({std::string{cliOption}, {feature}});
+    cliOptions_.insert({cliOption, {feature}});
     languageFeatureCliCanonicalSpelling_[EnumToInt(feature)] =
         std::move(cliOption);
   });
@@ -65,7 +65,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   ForEachUsageWarning([&](auto warning) {
     std::string_view name{Fortran::common::EnumToString(warning)};
     std::string cliOption{details::CamelCaseToLowerCaseHyphenated(name)};
-    cliOptions_.insert({std::string{cliOption}, {warning}});
+    cliOptions_.insert({cliOption, {warning}});
     usageWarningCliCanonicalSpelling_[EnumToInt(warning)] =
         std::move(cliOption);
   });
@@ -174,11 +174,10 @@ bool LanguageFeatureControl::EnableWarning(std::string_view input) {
 
 template <typename T, size_t ENUM_SIZE>
 static void replaceCliCanonicalSpelling(
-    std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>>
-        &cliOptions,
+    std::unordered_map<std::string, LanguageFeatureOrWarning> &cliOptions,
     std::array<std::string, ENUM_SIZE> &canonicalSpelling, T t,
     std::string &input) {
-  cliOptions.erase({canonicalSpelling[EnumToInt(t)]});
+  cliOptions.erase(canonicalSpelling[EnumToInt(t)]);
   cliOptions.insert({std::string{input}, {t}});
   canonicalSpelling[EnumToInt(t)] = std::move(input);
 }

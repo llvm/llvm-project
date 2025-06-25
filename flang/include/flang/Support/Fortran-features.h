@@ -156,8 +156,7 @@ public:
 private:
   // Map from Cli syntax of language features and usage warnings to their enum
   // values.
-  std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>>
-      cliOptions_;
+  std::unordered_map<std::string, LanguageFeatureOrWarning> cliOptions_;
   // These two arrays map the enum values to their cannonical Cli spellings.
   // Since each of the CanonicalSpelling is a string in the domain of the map
   // above we just use a view of the string instead of another copy.
