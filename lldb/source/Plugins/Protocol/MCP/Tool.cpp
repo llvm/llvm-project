@@ -27,6 +27,16 @@ bool fromJSON(const llvm::json::Value &V, CommandToolArguments &A,
          O.mapOptional("arguments", A.arguments);
 }
 
+/// Helper function to create a TextResult from a string output.
+static lldb_private::mcp::protocol::TextResult
+createTextResult(std::string output, bool is_error = false) {
+  lldb_private::mcp::protocol::TextResult text_result;
+  text_result.content.emplace_back(
+      lldb_private::mcp::protocol::TextContent{{std::move(output)}});
+  text_result.isError = is_error;
+  return text_result;
+}
+
 } // namespace
 
 Tool::Tool(std::string name, std::string description)
@@ -77,10 +87,7 @@ CommandTool::Call(const protocol::ToolArguments &args) {
     output += err_str;
   }
 
-  mcp::protocol::TextResult text_result;
-  text_result.content.emplace_back(mcp::protocol::TextContent{{output}});
-  text_result.isError = !result.Succeeded();
-  return text_result;
+  return createTextResult(output, !result.Succeeded());
 }
 
 std::optional<llvm::json::Value> CommandTool::GetSchema() const {
@@ -126,7 +133,7 @@ DebuggerListTool::Call(const protocol::ToolArguments &args) {
     const TargetList &target_list = debugger_sp->GetTargetList();
     const size_t num_targets = target_list.GetNumTargets();
     for (size_t j = 0; j < num_targets; ++j) {
-      lldb::TargetSP target_sp = target_list.GetTargetAtIndex(i);
+      lldb::TargetSP target_sp = target_list.GetTargetAtIndex(j);
       if (!target_sp)
         continue;
       os << "    - target " << j;
@@ -137,7 +144,5 @@ DebuggerListTool::Call(const protocol::ToolArguments &args) {
     }
   }
 
-  mcp::protocol::TextResult text_result;
-  text_result.content.emplace_back(mcp::protocol::TextContent{{output}});
-  return text_result;
+  return createTextResult(output);
 }
