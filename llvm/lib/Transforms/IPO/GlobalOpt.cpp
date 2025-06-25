@@ -250,7 +250,7 @@ CleanupPointerRootUsers(GlobalVariable *GV,
     }
   }
 
-  for (const auto &Pair : Dead) {
+  for (const auto [I, Store] : Dead) {
     if (IsSafeComputationToRemove(Pair.first, GetTLI)) {
       Pair.second->eraseFromParent();
       Instruction *I = Pair.first;
