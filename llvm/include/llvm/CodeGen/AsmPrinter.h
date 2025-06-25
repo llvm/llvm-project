@@ -151,12 +151,8 @@ public:
 
   /// Map global GOT equivalent MCSymbols to GlobalVariables and keep track of
   /// its number of uses by other globals.
-  struct GOTEquivUse {
-    const GlobalVariable *GV;
-    unsigned NumUses;
-    bool HasNonGlobalUsers;
-  };
-  MapVector<const MCSymbol *, GOTEquivUse> GlobalGOTEquivs;
+  using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;
+  MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
   // Flags representing which CFI section is required for a function/module.
   enum class CFISection : unsigned {
