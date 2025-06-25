@@ -31,6 +31,7 @@
 #include <climits>
 #include <cstring>
 #include <sys/stat.h>
+#include <variant>
 
 #if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
@@ -894,11 +895,9 @@ FileSpec GDBRemoteCommunication::GetDebugserverPath(Platform *platform) {
 }
 
 Status GDBRemoteCommunication::StartDebugserverProcess(
-    const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
-    uint16_t *port, const Args *inferior_args, shared_fd_t pass_comm_fd) {
+    std::variant<llvm::StringRef, shared_fd_t> comm, Platform *platform,
+    ProcessLaunchInfo &launch_info, const Args *inferior_args) {
   Log *log = GetLog(GDBRLog::Process);
-  LLDB_LOG(log, "Starting debug server: url={0}, port={1}",
-           url ? url : "<empty>", port ? *port : uint16_t(0));
 
   FileSpec debugserver_file_spec = GetDebugserverPath(platform);
   if (!debugserver_file_spec)
@@ -911,89 +910,58 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
 #if !defined(__APPLE__)
   // First argument to lldb-server must be mode in which to run.
-  debugserver_args.AppendArgument(llvm::StringRef("gdbserver"));
+  debugserver_args.AppendArgument("gdbserver");
 #endif
 
-  // If a url is supplied then use it
-  if (url && url[0])
-    debugserver_args.AppendArgument(llvm::StringRef(url));
-
-  if (pass_comm_fd != SharedSocket::kInvalidFD) {
-    StreamString fd_arg;
-    fd_arg.Printf("--fd=%" PRIi64, (int64_t)pass_comm_fd);
-    debugserver_args.AppendArgument(fd_arg.GetString());
-    // Send "pass_comm_fd" down to the inferior so it can use it to
-    // communicate back with this process. Ignored on Windows.
-    launch_info.AppendDuplicateFileAction((int64_t)pass_comm_fd,
-                                          (int64_t)pass_comm_fd);
-  }
-
   // use native registers, not the GDB registers
-  debugserver_args.AppendArgument(llvm::StringRef("--native-regs"));
+  debugserver_args.AppendArgument("--native-regs");
 
   if (launch_info.GetLaunchInSeparateProcessGroup())
-    debugserver_args.AppendArgument(llvm::StringRef("--setsid"));
+    debugserver_args.AppendArgument("--setsid");
 
   llvm::SmallString<128> named_pipe_path;
   // socket_pipe is used by debug server to communicate back either
-  // TCP port or domain socket name which it listens on.
-  // The second purpose of the pipe to serve as a synchronization point -
+  // TCP port or domain socket name which it listens on. However, we're not
+  // interested in the actualy value here.
+  // The only reason for using the pipe is to serve as a synchronization point -
   // once data is written to the pipe, debug server is up and running.
   Pipe socket_pipe;
 
-  std::unique_ptr<TCPSocket> sock_up;
+  // If a url is supplied then use it
+  if (shared_fd_t *comm_fd = std::get_if<shared_fd_t>(&comm)) {
+    LLDB_LOG(log, "debugserver communicates over fd {0}", comm_fd);
+    assert(*comm_fd != SharedSocket::kInvalidFD);
+    debugserver_args.AppendArgument(llvm::formatv("--fd={0}", *comm_fd).str());
+    // Send "comm_fd" down to the inferior so it can use it to communicate back
+    // with this process.
+    launch_info.AppendDuplicateFileAction((int64_t)*comm_fd, (int64_t)*comm_fd);
+  } else {
+    llvm::StringRef url = std::get<llvm::StringRef>(comm);
+    LLDB_LOG(log, "debugserver listens on: {0}", url);
+    debugserver_args.AppendArgument(url);
 
-  // port is null when debug server should listen on domain socket - we're
-  // not interested in port value but rather waiting for debug server to
-  // become available.
-  if (pass_comm_fd == SharedSocket::kInvalidFD) {
-    if (url) {
-// Create a temporary file to get the stdout/stderr and redirect the output of
-// the command into this file. We will later read this file if all goes well
-// and fill the data into "command_output_ptr"
 #if defined(__APPLE__)
-      // Binding to port zero, we need to figure out what port it ends up
-      // using using a named pipe...
-      Status error = socket_pipe.CreateWithUniqueName("debugserver-named-pipe",
-                                                      false, named_pipe_path);
-      if (error.Fail()) {
-        LLDB_LOG(log, "named pipe creation failed: {0}", error);
-        return error;
-      }
-      debugserver_args.AppendArgument(llvm::StringRef("--named-pipe"));
-      debugserver_args.AppendArgument(named_pipe_path);
-#else
-      // Binding to port zero, we need to figure out what port it ends up
-      // using using an unnamed pipe...
-      Status error = socket_pipe.CreateNew(true);
-      if (error.Fail()) {
-        LLDB_LOG(log, "unnamed pipe creation failed: {0}", error);
-        return error;
-      }
-      pipe_t write = socket_pipe.GetWritePipe();
-      debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
-      debugserver_args.AppendArgument(llvm::to_string(write));
-      launch_info.AppendCloseFileAction(socket_pipe.GetReadFileDescriptor());
-#endif
-    } else {
-      // No host and port given, so lets listen on our end and make the
-      // debugserver connect to us..
-      if (llvm::Expected<std::unique_ptr<TCPSocket>> expected_sock =
-              Socket::TcpListen("127.0.0.1:0"))
-        sock_up = std::move(*expected_sock);
-      else
-        return Status::FromError(expected_sock.takeError());
-
-      uint16_t port_ = sock_up->GetLocalPortNumber();
-      // Send the host and port down that debugserver and specify an option
-      // so that it connects back to the port we are listening to in this
-      // process
-      debugserver_args.AppendArgument(llvm::StringRef("--reverse-connect"));
-      debugserver_args.AppendArgument(
-          llvm::formatv("127.0.0.1:{0}", port_).str());
-      if (port)
-        *port = port_;
+    // Using a named pipe as debugserver does not support --pipe.
+    Status error = socket_pipe.CreateWithUniqueName("debugserver-named-pipe",
+                                                    false, named_pipe_path);
+    if (error.Fail()) {
+      LLDB_LOG(log, "named pipe creation failed: {0}", error);
+      return error;
     }
+    debugserver_args.AppendArgument(llvm::StringRef("--named-pipe"));
+    debugserver_args.AppendArgument(named_pipe_path);
+#else
+    // Using an unnamed pipe as it's simpler.
+    Status error = socket_pipe.CreateNew(true);
+    if (error.Fail()) {
+      LLDB_LOG(log, "unnamed pipe creation failed: {0}", error);
+      return error;
+    }
+    pipe_t write = socket_pipe.GetWritePipe();
+    debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
+    debugserver_args.AppendArgument(llvm::to_string(write));
+    launch_info.AppendCloseFileAction(socket_pipe.GetReadFileDescriptor());
+#endif
   }
 
   Environment host_env = Host::GetEnvironment();
@@ -1070,7 +1038,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     return error;
   }
 
-  if (pass_comm_fd != SharedSocket::kInvalidFD)
+  if (std::holds_alternative<shared_fd_t>(comm))
     return Status();
 
   Status error;
@@ -1084,53 +1052,28 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
   if (socket_pipe.CanWrite())
     socket_pipe.CloseWriteFileDescriptor();
-  if (socket_pipe.CanRead()) {
-    // Read port from pipe with 10 second timeout.
-    std::string port_str;
-    while (error.Success()) {
-      char buf[10];
-      if (llvm::Expected<size_t> num_bytes =
-              socket_pipe.Read(buf, std::size(buf), std::chrono::seconds(10))) {
-        if (*num_bytes == 0)
-          break;
-        port_str.append(buf, *num_bytes);
-      } else {
-        error = Status::FromError(num_bytes.takeError());
-      }
-    }
-    if (error.Success() && (port != nullptr)) {
-      // NB: Deliberately using .c_str() to stop at embedded '\0's
-      llvm::StringRef port_ref = port_str.c_str();
-      uint16_t child_port = 0;
-      // FIXME: improve error handling
-      llvm::to_integer(port_ref, child_port);
-      if (*port == 0 || *port == child_port) {
-        *port = child_port;
-        LLDB_LOG(log, "debugserver listens on port {0}", *port);
-      } else {
-        LLDB_LOG(log,
-                 "debugserver listening on port {0} but requested port was {1}",
-                 child_port, (*port));
-      }
+  assert(socket_pipe.CanRead());
+
+  // Read data from the pipe -- and ignore it (see comment above).
+  while (error.Success()) {
+    char buf[10];
+    if (llvm::Expected<size_t> num_bytes =
+            socket_pipe.Read(buf, std::size(buf), std::chrono::seconds(10))) {
+      if (*num_bytes == 0)
+        break;
     } else {
-      LLDB_LOG(log, "failed to read a port value from pipe {0}: {1}",
-               named_pipe_path, error);
+      error = Status::FromError(num_bytes.takeError());
     }
-    socket_pipe.Close();
   }
+  if (error.Fail()) {
+    LLDB_LOG(log, "failed to synchronize on pipe {0}: {1}", named_pipe_path,
+             error);
+  }
+  socket_pipe.Close();
 
   if (named_pipe_path.size() > 0) {
     if (Status err = socket_pipe.Delete(named_pipe_path); err.Fail())
       LLDB_LOG(log, "failed to delete pipe {0}: {1}", named_pipe_path, err);
-  }
-
-  if (error.Success() && sock_up) {
-    Socket *accepted_socket = nullptr;
-    error = sock_up->Accept(/*timeout=*/std::nullopt, accepted_socket);
-    if (accepted_socket) {
-      SetConnection(std::make_unique<ConnectionFileDescriptor>(
-          std::unique_ptr<Socket>(accepted_socket)));
-    }
   }
 
   return error;
