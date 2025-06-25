@@ -79,7 +79,7 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
 #endif
 
   if (!SlabAllocateSizeString.empty()) {
-    if (auto S = getSlabAllocSize(SlabAllocateSizeString))
+    if (Expected<uint64_t> S = getSlabAllocSize(SlabAllocateSizeString))
       SlabSize = *S;
     else
       return S.takeError();
@@ -162,7 +162,7 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  auto S = SimpleRemoteEPC::Setup();
+  SimpleRemoteEPC::Setup S = SimpleRemoteEPC::Setup();
   if (UseSharedMemory)
     S.CreateMemoryManager = [SlabAllocateSizeString](SimpleRemoteEPC &EPC) {
       return createSharedMemoryManager(EPC, SlabAllocateSizeString);
@@ -254,7 +254,7 @@ connectTCPSocket(StringRef NetworkAddress, bool UseSharedMemory,
   if (!SockFD)
     return SockFD.takeError();
 
-  auto S = SimpleRemoteEPC::Setup();
+  SimpleRemoteEPC::Setup S = SimpleRemoteEPC::Setup();
   if (UseSharedMemory)
     S.CreateMemoryManager = [SlabAllocateSizeString](SimpleRemoteEPC &EPC) {
       return createSharedMemoryManager(EPC, SlabAllocateSizeString);
