@@ -542,6 +542,45 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
 
+  // populateDataAccessSamples.
+  // If the <line-offset, discriminator> pair is found in both body samples
+  // and call site samples, drop annotation on both. Otherwise, pick one.
+  // This is a simplification.
+  // Or assume the compiler generates disciriminators for such cases already
+  // so it's transparent for llvm-profgen.
+  const auto &DataAccessCounters = SC.DataAccessCounter;
+  for (const auto &Entry : DataAccessCounters) {
+    uint64_t InstAddr = Entry.first.first;
+    uint64_t DataAddr = Entry.first.second;
+
+    FunctionId DataSymbolName = Binary->symbolizeDataAddress(DataAddr);
+    // If the symbol is not a valid address, skip it.
+
+    // symbolize vtable here.
+    uint64_t Count = Entry.second;
+    const SampleContextFrameVector &FrameVec =
+        Binary->getCachedFrameLocationStack(InstAddr, false);
+
+    if (!FrameVec.empty()) {
+      // If the leaf function sample has only one of body sample or call site
+      // sample, use one of them.
+      FunctionSamples &FunctionProfile =
+          getLeafProfileAndAddTotalSamples(FrameVec, 0);
+      LineLocation Loc(FrameVec.back().Location.LineOffset,
+                       getBaseDiscriminator(FrameVec.back().Location.Discriminator));
+      SampleRecord *BodySampleRec = FunctionProfile.getBodySampleRecordAt(Loc);
+      FunctionSamplesMap *CallsiteSamples =
+          FunctionProfile.findFunctionSamplesMapAt(Loc);
+      // Assume inlined callsites and call targets have different
+      // discriminators.
+      if (BodySampleRec) {
+        BodySampleRec->addVTableAccessCount(DataSymbolName, Count);
+      } else {
+        FunctionProfile.getTypeSamplesAt(Loc)[DataSymbolName] += Count;
+      }
+    }
+  }
+
   updateFunctionSamples();
 }
 

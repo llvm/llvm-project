@@ -965,6 +965,16 @@ void PerfScriptReader::generateUnsymbolizedProfile() {
     const PerfSample *Sample = Item.first.getPtr();
     computeCounterFromLBR(Sample, Item.second);
   }
+
+  SampleCounter &Counter = SampleCounters.begin()->second;
+  for (const auto &[InstDataPair, Count] : DataAccessProfInfo) {
+    errs() << "\trecord data access count for "
+           << format("0x%" PRIx64, InstDataPair.first) << " -> "
+           << format("0x%" PRIx64, InstDataPair.second) << ": " << Count
+           << "\n";
+    Counter.recordDataAccessCount(InstDataPair.first, InstDataPair.second,
+                                  Count);
+  }
 }
 
 uint64_t PerfScriptReader::parseAggregatedCount(TraceStream &TraceIt) {

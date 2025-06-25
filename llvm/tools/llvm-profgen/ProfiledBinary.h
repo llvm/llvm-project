@@ -365,6 +365,10 @@ public:
   ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
   ~ProfiledBinary();
 
+    /// Symbolize a given address as data and return a FunctionId.
+  /// Strings are owned by this ProfiledBinary object.
+  FunctionId symbolizeDataAddress(uint64_t Address);
+
   void decodePseudoProbe();
 
   StringRef getPath() const { return Path; }

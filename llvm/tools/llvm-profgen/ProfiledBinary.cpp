@@ -950,6 +950,14 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
   return CallStack;
 }
 
+FunctionId ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
+  DIGlobal DataDIGlobal = unwrapOrError(
+      Symbolizer->symbolizeData(SymbolizerPath.str(), {Address, 0}),
+      SymbolizerPath);
+  auto It = NameStrings.insert(DataDIGlobal.Name);
+  return FunctionId(StringRef(*It.first));
+}
+
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
                                                        uint64_t RangeEnd) {
   InstructionPointer IP(this, RangeBegin, true);

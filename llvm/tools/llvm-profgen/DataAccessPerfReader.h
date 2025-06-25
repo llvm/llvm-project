@@ -64,13 +64,7 @@ public:
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
 
-  struct ProfiledInfo {
-    ProfiledInfo(uint64_t InstructionAddr, uint64_t DataAddr, uint64_t Count)
-        : InstructionAddr(InstructionAddr), DataAddr(DataAddr), Count(Count) {}
-    uint64_t InstructionAddr;
-    uint64_t DataAddr;
-    uint64_t Count;
-  };
+  
 
   // A hack to demonstrate the symbolized output of vtable type profiling.
   void print() const {
@@ -92,6 +86,12 @@ public:
              << " Count: " << Entry.Count << "\n";
     }
   }
+
+  const DenseMap<uint64_t, DenseMap<uint64_t, uint64_t>> &
+getAddressMap() const {
+    return AddressMap;
+  }
+
 
 private:
   void parsePerfTrace(StringRef PerfTrace);

@@ -186,9 +186,20 @@ int main(int argc, const char *argv[]) {
     std::optional<uint32_t> PIDFilter;
     if (ProcessId.getNumOccurrences())
       PIDFilter = ProcessId;
+
+    // data access profile.
+    auto DAPReader = std::make_unique<DataAccessPerfReader>(
+        Binary.get(), DataAccessProfileFilename, PIDFilter);
+    DAPReader->parsePerfTraces();
+    DAPReader->print();
+
     PerfInputFile PerfFile = getPerfInputFile();
     std::unique_ptr<PerfReaderBase> Reader =
         PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
+    if (!DataAccessProfileFilename.empty()) {
+      errs() << "perf script reader parse dap address maps\n";
+      Reader->recordDataAccessCountRef(DAPReader->getAddressMap());
+    }
     // Parse perf events and samples
     Reader->parsePerfTraces();
 
@@ -201,12 +212,6 @@ int main(int argc, const char *argv[]) {
     assert(Binary.get() &&
            "Binary should be initialized for data access profile");
 
-    // data access profile.
-    auto DAPReader = std::make_unique<DataAccessPerfReader>(
-        Binary.get(), DataAccessProfileFilename, PIDFilter);
-    DAPReader->parsePerfTraces();
-
-    DAPReader->print();
     // Create a dap profile reader, set it to profile generator, and generate
     // the profile.
     Generator->generateProfile();

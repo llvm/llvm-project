@@ -395,10 +395,13 @@ using BranchSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // The counter of range samples for one function indexed by the range,
 // which is represented as the start and end offset pair.
 using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
+// <<inst-addr, data-addr>, count> map for data access samples.
+using DataAccessSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {
   RangeSample RangeCounter;
   BranchSample BranchCounter;
+  DataAccessSample DataAccessCounter;
 
   void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Repeat) {
     assert(Start <= End && "Invalid instruction range");
@@ -406,6 +409,10 @@ struct SampleCounter {
   }
   void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Repeat) {
     BranchCounter[{Source, Target}] += Repeat;
+  }
+  void recordDataAccessCount(uint64_t InstAddr, uint64_t DataAddr,
+                             uint64_t Repeat) {
+    DataAccessCounter[{InstAddr, DataAddr}] += Repeat;
   }
 };
 
@@ -557,6 +564,15 @@ private:
   std::set<uint64_t> UntrackedCallsites;
 };
 
+// For data access profiles.
+struct ProfiledInfo {
+  ProfiledInfo(uint64_t InstructionAddr, uint64_t DataAddr, uint64_t Count)
+      : InstructionAddr(InstructionAddr), DataAddr(DataAddr), Count(Count) {}
+  uint64_t InstructionAddr;
+  uint64_t DataAddr;
+  uint64_t Count;
+};
+
 // Read perf trace to parse the events and samples.
 class PerfReaderBase {
 public:
@@ -572,6 +588,15 @@ public:
 
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() = 0;
+  void recordDataAccessCountRef(
+      const DenseMap<uint64_t, DenseMap<uint64_t, uint64_t>> &In) {
+    DataAccessProfInfo.clear();
+    for (const auto &[IpAddr, DataCount] : In) {
+      for (const auto [DataAddr, Count] : DataCount) {
+        DataAccessProfInfo[{IpAddr, DataAddr}] += Count;
+      }
+    }
+  }
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }
@@ -587,6 +612,7 @@ protected:
   uint64_t NumTotalSample = 0;
   uint64_t NumLeafExternalFrame = 0;
   uint64_t NumLeadingOutgoingLBR = 0;
+  DataAccessSample DataAccessProfInfo;
 };
 
 // Read perf script to parse the events and samples.
