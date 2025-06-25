@@ -14062,6 +14062,18 @@ bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {
       EltSize, NumElem, Idx->isDivergent(), getSubtarget());
 }
 
+static unsigned getMappedVectorIndex(unsigned Idx, EVT From, EVT To) {
+  assert(From.isVector() && To.isVector() &&
+         "From and To types have to be vector types");
+  assert(From.getSizeInBits() == To.getSizeInBits() &&
+         "From and To vector types require the same size");
+
+  unsigned FromNumElts = From.getVectorNumElements();
+  unsigned ToNumElts = To.getVectorNumElements();
+
+  return (Idx * ToNumElts) / FromNumElts;
+}
+
 SDValue
 SITargetLowering::performExtractVectorEltCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
@@ -14121,6 +14133,27 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
       DCI.AddToWorklist(Elt1.getNode());
       return DAG.getNode(Opc, SL, ResVT, Elt0, Elt1, Vec->getFlags());
     }
+    }
+  }
+
+  // if PeekThoughBitcast(Vec)[MapIdx(CIdx)] == undef &&
+  //    VecEltSize < PeekThroughEltSize, then
+  // EXTRACT_VECTOR_ELT(bitcast(build_vector(..., undef, ...)), CIdx) => undef
+  auto *IndexC = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  SDValue PeekThroughVec = peekThroughBitcasts(Vec);
+  EVT PeekThroughVecVT = PeekThroughVec.getValueType();
+  if (IndexC && PeekThroughVec.getOpcode() == ISD::BUILD_VECTOR &&
+      PeekThroughVecVT.isFixedLengthVector()) {
+    EVT PeekThroughVecEltVT = PeekThroughVecVT.getVectorElementType();
+    // Small elt size vectors to big elt size vectors are the cases covered for
+    // now (e.g., v4i32 bitcast(v2i64)) which may be conservative.
+    if (VecEltSize < PeekThroughVecEltVT.getSizeInBits()) {
+      unsigned IndexVal = IndexC->getZExtValue();
+      unsigned MappedIndexVal =
+          getMappedVectorIndex(IndexVal, VecVT, PeekThroughVecVT);
+      SDValue PeekThroughElt = PeekThroughVec.getOperand(MappedIndexVal);
+      if (PeekThroughElt.isUndef())
+        return DAG.getUNDEF(VecEltVT);
     }
   }
 
