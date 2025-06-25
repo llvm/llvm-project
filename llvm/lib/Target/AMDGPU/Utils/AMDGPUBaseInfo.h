@@ -298,7 +298,7 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
 /// For subtargets which support it, \p EnableWavefrontSize32 should match
 /// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
 unsigned
-getVGPRAllocGranule(const MCSubtargetInfo *STI,
+getVGPRAllocGranule(const MCSubtargetInfo *STI, unsigned DynamicVGPRBlockSize,
                     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns VGPR encoding granularity for given subtarget \p STI.
@@ -309,6 +309,10 @@ unsigned getVGPREncodingGranule(
     const MCSubtargetInfo *STI,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
+/// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
+/// returns the allocation granule for ArchVGPRs.
+unsigned getArchVGPRAllocGranule();
+
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 
@@ -317,20 +321,24 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
 
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
+unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
+                                unsigned DynamicVGPRBlockSize);
 
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned DynamicVGPRBlockSize);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned DynamicVGPRBlockSize);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage for given
 /// subtarget \p STI.
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
-                                      unsigned NumVGPRs);
+                                      unsigned NumVGPRs,
+                                      unsigned DynamicVGPRBlockSize);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage, \p Granule
 /// size, \p MaxWaves possible, and \p TotalNumVGPRs available.
@@ -357,6 +365,7 @@ unsigned getEncodedNumVGPRBlocks(
 /// subtarget \p STI when \p NumVGPRs are used.
 unsigned getAllocatedNumVGPRBlocks(
     const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    unsigned DynamicVGPRBlockSize,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
@@ -1301,17 +1310,68 @@ bool getHasColorExport(const Function &F);
 
 bool getHasDepthExport(const Function &F);
 
-LLVM_READNONE
-bool isShader(CallingConv::ID CC);
+bool hasDynamicVGPR(const Function &F);
+
+// Returns the value of the "amdgpu-dynamic-vgpr-block-size" attribute, or 0 if
+// the attribute is missing or its value is invalid.
+unsigned getDynamicVGPRBlockSize(const Function &F);
 
 LLVM_READNONE
-bool isGraphics(CallingConv::ID CC);
+constexpr bool isShader(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+  case CallingConv::AMDGPU_CS:
+    return true;
+  default:
+    return false;
+  }
+}
 
 LLVM_READNONE
-bool isCompute(CallingConv::ID CC);
+constexpr bool isGraphics(CallingConv::ID CC) {
+  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx;
+}
 
 LLVM_READNONE
-bool isEntryFunctionCC(CallingConv::ID CC);
+constexpr bool isCompute(CallingConv::ID CC) {
+  return !isGraphics(CC) || CC == CallingConv::AMDGPU_CS;
+}
+
+LLVM_READNONE
+constexpr bool isEntryFunctionCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_LS:
+    return true;
+  default:
+    return false;
+  }
+}
+
+LLVM_READNONE
+constexpr bool isChainCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    return true;
+  default:
+    return false;
+  }
+}
 
 // These functions are considered entrypoints into the current module, i.e. they
 // are allowed to be called from outside the current module. This is different
@@ -1320,22 +1380,40 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 // include functions that can be called from other functions inside or outside
 // the current module. Module entry functions are allowed to allocate LDS.
 LLVM_READNONE
-bool isModuleEntryFunctionCC(CallingConv::ID CC);
+constexpr bool isModuleEntryFunctionCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_Gfx:
+    return true;
+  default:
+    return isEntryFunctionCC(CC) || isChainCC(CC);
+  }
+}
 
 LLVM_READNONE
-bool isChainCC(CallingConv::ID CC);
-
-bool isKernelCC(const Function *Func);
-
-// FIXME: Remove this when calling conventions cleaned up
-LLVM_READNONE
-inline bool isKernel(CallingConv::ID CC) {
+constexpr inline bool isKernel(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
     return true;
   default:
     return false;
+  }
+}
+
+LLVM_READNONE
+constexpr bool canGuaranteeTCO(CallingConv::ID CC) {
+  return CC == CallingConv::Fast;
+}
+
+/// Return true if we might ever do TCO for calls with this calling convention.
+LLVM_READNONE
+constexpr bool mayTailCallThisCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::AMDGPU_Gfx:
+    return true;
+  default:
+    return canGuaranteeTCO(CC);
   }
 }
 
@@ -1368,6 +1446,7 @@ bool isGFX11(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
+bool isGFX1250(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
@@ -1430,15 +1509,12 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   switch (OpInfo.OperandType) {
   case AMDGPU::OPERAND_REG_IMM_INT32:
   case AMDGPU::OPERAND_REG_IMM_FP32:
-  case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_INT32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16: // mandatory literal is always size 4
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
@@ -1454,20 +1530,12 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
-  case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
-  case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_BF16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:

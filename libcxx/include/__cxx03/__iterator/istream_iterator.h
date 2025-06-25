@@ -27,10 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp, class _CharT = char, class _Traits = char_traits<_CharT>, class _Distance = ptrdiff_t>
 class _LIBCPP_TEMPLATE_VIS istream_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<input_iterator_tag, _Tp, _Distance, const _Tp*, const _Tp&>
-#endif
-{
+    : public iterator<input_iterator_tag, _Tp, _Distance, const _Tp*, const _Tp&> {
   _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 public:
@@ -48,10 +45,7 @@ private:
   _Tp __value_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR istream_iterator() : __in_stream_(nullptr), __value_() {}
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr istream_iterator(default_sentinel_t) : istream_iterator() {}
-#endif // _LIBCPP_STD_VER >= 20
+  _LIBCPP_HIDE_FROM_ABI istream_iterator() : __in_stream_(nullptr), __value_() {}
   _LIBCPP_HIDE_FROM_ABI istream_iterator(istream_type& __s) : __in_stream_(std::addressof(__s)) {
     if (!(*__in_stream_ >> __value_))
       __in_stream_ = nullptr;
@@ -73,12 +67,6 @@ public:
   template <class _Up, class _CharU, class _TraitsU, class _DistanceU>
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __x,
                                                const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __y);
-
-#if _LIBCPP_STD_VER >= 20
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const istream_iterator& __i, default_sentinel_t) {
-    return __i.__in_stream_ == nullptr;
-  }
-#endif // _LIBCPP_STD_VER >= 20
 };
 
 template <class _Tp, class _CharT, class _Traits, class _Distance>
@@ -87,13 +75,11 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(const istream_iterator<_Tp, _CharT,
   return __x.__in_stream_ == __y.__in_stream_;
 }
 
-#if _LIBCPP_STD_VER <= 17
 template <class _Tp, class _CharT, class _Traits, class _Distance>
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __x,
                                              const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __y) {
   return !(__x == __y);
 }
-#endif // _LIBCPP_STD_VER <= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

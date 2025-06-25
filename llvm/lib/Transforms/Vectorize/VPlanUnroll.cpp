@@ -25,6 +25,7 @@
 #include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 namespace {
 
@@ -151,14 +152,14 @@ void UnrollState::unrollWidenInductionByUF(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
   Type *IVTy = TypeInfo.inferScalarType(IV);
   auto &ID = IV->getInductionDescriptor();
-  std::optional<FastMathFlags> FMFs;
+  VPIRFlags Flags;
   if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
-    FMFs = ID.getInductionBinOp()->getFastMathFlags();
+    Flags = ID.getInductionBinOp()->getFastMathFlags();
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
   VPInstruction *VectorStep = Builder.createNaryOp(
-      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, FMFs,
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, Flags,
       IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
@@ -188,7 +189,7 @@ void UnrollState::unrollWidenInductionByUF(
                                                   Prev,
                                                   VectorStep,
                                               },
-                                              FMFs, IV->getDebugLoc(), Name);
+                                              Flags, IV->getDebugLoc(), Name);
     ToSkip.insert(Add);
     addRecipeForPart(IV, Add, Part);
     Prev = Add;
@@ -223,6 +224,27 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
       Copy->addOperand(R);
       Copy->addOperand(getConstantVPV(Part));
     } else if (RdxPhi) {
+      // If the start value is a ReductionStartVector, use the identity value
+      // (second operand) for unrolled parts. If the scaling factor is > 1,
+      // create a new ReductionStartVector with the scale factor and both
+      // operands set to the identity value.
+      if (auto *VPI = dyn_cast<VPInstruction>(RdxPhi->getStartValue())) {
+        assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
+               "unexpected start VPInstruction");
+        if (Part != 1)
+          continue;
+        VPValue *StartV;
+        if (match(VPI->getOperand(2), m_SpecificInt(1))) {
+          StartV = VPI->getOperand(1);
+        } else {
+          auto *C = VPI->clone();
+          C->setOperand(0, C->getOperand(1));
+          C->insertAfter(VPI);
+          StartV = C;
+        }
+        for (unsigned Part = 1; Part != UF; ++Part)
+          VPV2Parts[VPI][Part - 1] = StartV;
+      }
       Copy->addOperand(getConstantVPV(Part));
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
@@ -233,7 +255,6 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
 
 /// Handle non-header-phi recipes.
 void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
-  using namespace llvm::VPlanPatternMatch;
   if (match(&R, m_BranchOnCond(m_VPValue())) ||
       match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
     return;
@@ -301,7 +322,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   }
 }
 
-using namespace llvm::VPlanPatternMatch;
 void UnrollState::unrollBlock(VPBlockBase *VPB) {
   auto *VPR = dyn_cast<VPRegionBlock>(VPB);
   if (VPR) {
@@ -327,26 +347,30 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // Add all VPValues for all parts to ComputeReductionResult which combines
     // the parts to compute the final reduction value.
     VPValue *Op1;
-    if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
+    if (match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
+                      m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
+        match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
                       m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
-                      m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
+                      m_VPValue(), m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                      m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                      m_VPValue(Op0))) ||
+        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                      m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       if (Plan.hasScalarVFOnly()) {
-        // Extracting from end with VF = 1 implies retrieving the scalar part UF
-        // - Op1.
+        auto *I = cast<VPInstruction>(&R);
+        // Extracting from end with VF = 1 implies retrieving the last or
+        // penultimate scalar part (UF-1 or UF-2).
         unsigned Offset =
-            cast<ConstantInt>(Op1->getLiveInIRValue())->getZExtValue();
-        R.getVPSingleValue()->replaceAllUsesWith(
-            getValueForPart(Op0, UF - Offset));
+            I->getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
+        I->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
         R.eraseFromParent();
       } else {
         // Otherwise we extract from the last part.

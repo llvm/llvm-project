@@ -1499,7 +1499,7 @@ public:
     MCEInstance.LocalCtx.reset(
         new MCContext(*TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
     MCEInstance.LocalMOFI.reset(
-        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx.get(),
+        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx,
                                           /*PIC=*/!HasFixedLoadAddress));
     MCEInstance.LocalCtx->setObjectFileInfo(MCEInstance.LocalMOFI.get());
     MCEInstance.MCE.reset(

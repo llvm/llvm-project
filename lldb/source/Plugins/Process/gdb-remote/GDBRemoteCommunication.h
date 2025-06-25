@@ -12,11 +12,9 @@
 #include "GDBRemoteCommunicationHistory.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/HostThread.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
-#include <future>
 #include <mutex>
 #include <string>
 
@@ -151,9 +149,6 @@ public:
 
   void DumpHistory(Stream &strm);
 
-  static llvm::Error ConnectLocally(GDBRemoteCommunication &client,
-                                    GDBRemoteCommunication &server);
-
   /// Expand GDB run-length encoding.
   static std::optional<std::string> ExpandRLE(std::string);
 
@@ -200,21 +195,8 @@ protected:
   // on m_bytes.  The checksum was for the compressed packet.
   bool DecompressPacket();
 
-  Status StartListenThread(const char *hostname = "127.0.0.1",
-                           uint16_t port = 0);
-
-  bool JoinListenThread();
-
-  lldb::thread_result_t ListenThread();
-
 private:
-  // Promise used to grab the port number from listening thread
-  std::promise<uint16_t> m_port_promise;
-
-  HostThread m_listen_thread;
-  std::string m_listen_url;
-
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;
 #endif

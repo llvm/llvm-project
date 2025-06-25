@@ -1277,7 +1277,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   }
 
   auto __res = std::__to_chars_integral(__buffer_ptr, __char_buffer + __buffer_size, __uval, __base);
-  _LIBCPP_ASSERT_INTERNAL(__res.__ec == std::errc(), "to_chars: invalid maximum buffer size computed?");
+  _LIBCPP_ASSERT_INTERNAL(__res.__ec == std::errc(0), "to_chars: invalid maximum buffer size computed?");
 
   // Make letters uppercase
   if (__flags & ios_base::hex && __flags & ios_base::uppercase) {
@@ -3692,6 +3692,7 @@ _LIBCPP_POP_MACROS
 #    include <cstdarg>
 #    include <iterator>
 #    include <mutex>
+#    include <optional>
 #    include <stdexcept>
 #    include <type_traits>
 #    include <typeinfo>

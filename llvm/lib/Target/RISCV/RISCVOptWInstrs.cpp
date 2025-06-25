@@ -591,6 +591,27 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         return false;
       break;
 
+    case RISCV::ADDI: {
+      if (MI->getOperand(1).isReg() && MI->getOperand(1).getReg().isVirtual()) {
+        if (MachineInstr *SrcMI = MRI.getVRegDef(MI->getOperand(1).getReg())) {
+          if (SrcMI->getOpcode() == RISCV::LUI &&
+              SrcMI->getOperand(1).isImm()) {
+            uint64_t Imm = SrcMI->getOperand(1).getImm();
+            Imm = SignExtend64<32>(Imm << 12);
+            Imm += (uint64_t)MI->getOperand(2).getImm();
+            if (isInt<32>(Imm))
+              continue;
+          }
+        }
+      }
+
+      if (hasAllWUsers(*MI, ST, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
+    }
+
     // With these opcode, we can "fix" them with the W-version
     // if we know all users of the result only rely on bits 31:0
     case RISCV::SLLI:
@@ -598,7 +619,6 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       if (MI->getOperand(2).getImm() >= 32)
         return false;
       [[fallthrough]];
-    case RISCV::ADDI:
     case RISCV::ADD:
     case RISCV::LD:
     case RISCV::LWU:
@@ -648,7 +668,7 @@ bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       // We're looking for the sext.w pattern ADDIW rd, rs1, 0.
-      if (!RISCV::isSEXT_W(MI))
+      if (!RISCVInstrInfo::isSEXT_W(MI))
         continue;
 
       Register SrcReg = MI.getOperand(1).getReg();

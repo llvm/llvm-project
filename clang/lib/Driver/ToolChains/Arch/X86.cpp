@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "ToolChains/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -122,7 +120,8 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // Claim and report unsupported -mabi=. Note: we don't support "sysv_abi" or
   // "ms_abi" as default function attributes.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
-    StringRef DefaultAbi = Triple.isOSWindows() ? "ms" : "sysv";
+    StringRef DefaultAbi =
+        (Triple.isOSWindows() || Triple.isUEFI()) ? "ms" : "sysv";
     if (A->getValue() != DefaultAbi)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();

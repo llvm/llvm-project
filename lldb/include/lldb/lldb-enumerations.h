@@ -663,6 +663,8 @@ enum CommandArgumentType {
   eArgTypeModule,
   eArgTypeCPUName,
   eArgTypeCPUFeatures,
+  eArgTypeManagedPlugin,
+  eArgTypeProtocol,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1381,6 +1383,14 @@ enum CommandReturnObjectCallbackResult {
   eCommandReturnObjectPrintCallbackSkipped = 0,
   /// The callback handled printing the command return object.
   eCommandReturnObjectPrintCallbackHandled = 1,
+};
+
+/// Used to determine when to show disassembly.
+enum StopDisassemblyType {
+  eStopDisassemblyTypeNever = 0,
+  eStopDisassemblyTypeNoDebugInfo,
+  eStopDisassemblyTypeNoSource,
+  eStopDisassemblyTypeAlways
 };
 
 } // namespace lldb

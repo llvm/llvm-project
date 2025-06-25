@@ -284,8 +284,9 @@ function(add_libclc_builtin_set)
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
-      EXTRA_OPTS -fno-builtin -nostdlib "${file_specific_compile_options}"
-        "${ARG_COMPILE_FLAGS}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
+      EXTRA_OPTS -fno-builtin -nostdlib "${ARG_COMPILE_FLAGS}"
+        "${file_specific_compile_options}"
+        -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
       DEPENDENCIES ${input_file_dep}
     )
     list( APPEND compile_tgts ${tgt} )
@@ -423,9 +424,6 @@ endfunction(add_libclc_builtin_set)
 # LIB_FILE_LIST may be pre-populated and is appended to.
 #
 # Arguments:
-# * CLC_INTERNAL
-#     Pass if compiling the internal CLC builtin libraries, which have a
-#     different directory structure.
 # * LIB_ROOT_DIR <string>
 #     Root directory containing target's lib files, relative to libclc root
 #     directory. If not provided, is set to '.'.
@@ -435,7 +433,7 @@ endfunction(add_libclc_builtin_set)
 #     subsequent ones.
 function(libclc_configure_lib_source LIB_FILE_LIST)
   cmake_parse_arguments(ARG
-    "CLC_INTERNAL"
+    ""
     "LIB_ROOT_DIR"
     "DIRS"
     ${ARGN}
@@ -449,11 +447,7 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
   set( source_list )
   foreach( l IN LISTS ARG_DIRS )
     foreach( s "SOURCES" "SOURCES_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}" )
-      if( ARG_CLC_INTERNAL )
-        file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/lib/${l}/${s} file_loc )
-      else()
-        file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/${l}/lib/${s} file_loc )
-      endif()
+      file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/lib/${l}/${s} file_loc )
       file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${file_loc} loc )
       # Prepend the location to give higher priority to the specialized
       # implementation
@@ -466,16 +460,22 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
   ## Add the generated convert files here to prevent adding the ones listed in
   ## SOURCES
   set( rel_files ${${LIB_FILE_LIST}} ) # Source directory input files, relative to the root dir
-  set( objects ${${LIB_FILE_LIST}} )   # A "set" of already-added input files
+  # A "set" of already-added input files
+  set( objects )
+  foreach( f ${${LIB_FILE_LIST}} )
+    get_filename_component( name ${f} NAME )
+    list( APPEND objects ${name} )
+  endforeach()
 
   foreach( l ${source_list} )
     file( READ ${l} file_list )
     string( REPLACE "\n" ";" file_list ${file_list} )
     get_filename_component( dir ${l} DIRECTORY )
     foreach( f ${file_list} )
+      get_filename_component( name ${f} NAME )
       # Only add each file once, so that targets can 'specialize' builtins
-      if( NOT ${f} IN_LIST objects )
-        list( APPEND objects ${f} )
+      if( NOT ${name} IN_LIST objects )
+        list( APPEND objects ${name} )
         list( APPEND rel_files ${dir}/${f} )
       endif()
     endforeach()

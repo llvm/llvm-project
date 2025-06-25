@@ -220,7 +220,7 @@ for.body:
   %sum.1 = add nuw nsw i32 %add, %sum.0
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %N
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !6
 
 for.cond.cleanup:
   ret i32 %sum.1
@@ -233,6 +233,5 @@ attributes #0 = { nounwind optsize uwtable "target-cpu"="core-avx2" "target-feat
 !7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !8 = !{!"llvm.loop.vectorize.enable", i1 true}
 
-!10 = distinct !{!10, !11, !12}
+!10 = distinct !{!10, !11}
 !11 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
-!12 = !{!"llvm.loop.vectorize.enable", i1 true}

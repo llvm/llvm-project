@@ -27,10 +27,6 @@ public:
   bool GetArgumentValues(lldb_private::Thread &thread,
                          lldb_private::ValueList &values) const override;
 
-  lldb::UnwindPlanSP CreateFunctionEntryUnwindPlan() override;
-
-  lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
-
   bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
   // The arm64 ABI requires that stack frames be 16 byte aligned.

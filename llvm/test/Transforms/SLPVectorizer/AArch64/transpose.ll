@@ -62,10 +62,11 @@ define <4 x i32> @build_vec_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @build_vec_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <4 x i32> [[V0]], [[V1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 3, i32 6>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 1, i32 4, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 1, i32 4, i32 7, i32 2>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
+; CHECK-NEXT:    ret <4 x i32> [[TMP6]]
 ;
   %v0.0 = extractelement <4 x i32> %v0, i32 0
   %v0.1 = extractelement <4 x i32> %v0, i32 1
@@ -196,8 +197,8 @@ define i32 @reduction_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @reduction_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[V0]], [[V1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 7, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 1, i32 4, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 1, i32 4, i32 3, i32 6>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr <4 x i32> [[TMP5]], splat (i32 15)
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], splat (i32 65537)

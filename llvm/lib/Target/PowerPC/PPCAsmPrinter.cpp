@@ -63,6 +63,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -108,9 +109,9 @@ template <>
 struct DenseMapInfo<std::pair<const MCSymbol *, PPCMCExpr::Specifier>> {
   using TOCKey = std::pair<const MCSymbol *, PPCMCExpr::Specifier>;
 
-  static inline TOCKey getEmptyKey() { return {nullptr, PPCMCExpr::VK_None}; }
+  static inline TOCKey getEmptyKey() { return {nullptr, PPC::S_None}; }
   static inline TOCKey getTombstoneKey() {
-    return {(const MCSymbol *)1, PPCMCExpr::VK_None};
+    return {(const MCSymbol *)1, PPC::S_None};
   }
   static unsigned getHashValue(const TOCKey &PairVal) {
     return detail::combineHashValue(
@@ -159,8 +160,8 @@ protected:
 
 public:
   explicit PPCAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+                         std::unique_ptr<MCStreamer> Streamer, char &ID)
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "PowerPC Assembly Printer"; }
 
@@ -174,9 +175,8 @@ public:
     TOCType_EHBlock
   };
 
-  MCSymbol *
-  lookUpOrCreateTOCEntry(const MCSymbol *Sym, TOCEntryType Type,
-                         PPCMCExpr::Specifier Kind = PPCMCExpr::VK_None);
+  MCSymbol *lookUpOrCreateTOCEntry(const MCSymbol *Sym, TOCEntryType Type,
+                                   PPCMCExpr::Specifier Kind = PPC::S_None);
 
   bool doInitialization(Module &M) override {
     if (!TOC.empty())
@@ -216,9 +216,11 @@ public:
 /// PPCLinuxAsmPrinter - PowerPC assembly printer, customized for Linux
 class PPCLinuxAsmPrinter : public PPCAsmPrinter {
 public:
+  static char ID;
+
   explicit PPCLinuxAsmPrinter(TargetMachine &TM,
                               std::unique_ptr<MCStreamer> Streamer)
-      : PPCAsmPrinter(TM, std::move(Streamer)) {}
+      : PPCAsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override {
     return "Linux PPC Assembly Printer";
@@ -262,8 +264,10 @@ private:
   uint64_t getAliasOffset(const Constant *C);
 
 public:
+  static char ID;
+
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : PPCAsmPrinter(TM, std::move(Streamer)) {
+      : PPCAsmPrinter(TM, std::move(Streamer), ID) {
     if (MAI->isLittleEndian())
       report_fatal_error(
           "cannot create AIX PPC Assembly Printer for a little-endian target");
@@ -687,13 +691,13 @@ void PPCAsmPrinter::EmitAIXTlsCallHelper(const MachineInstr *MI) {
 /// the current output stream.
 void PPCAsmPrinter::emitTlsCall(const MachineInstr *MI,
                                 PPCMCExpr::Specifier VK) {
-  PPCMCExpr::Specifier Kind = PPCMCExpr::VK_None;
+  PPCMCExpr::Specifier Kind = PPC::S_None;
   unsigned Opcode = PPC::BL8_NOP_TLS;
 
   assert(MI->getNumOperands() >= 3 && "Expecting at least 3 operands from MI");
   if (MI->getOperand(2).getTargetFlags() == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
       MI->getOperand(2).getTargetFlags() == PPCII::MO_GOT_TLSLD_PCREL_FLAG) {
-    Kind = PPCMCExpr::VK_NOTOC;
+    Kind = PPC::S_NOTOC;
     Opcode = PPC::BL8_NOTOC_TLS;
   }
   const Module *M = MF->getFunction().getParent();
@@ -726,13 +730,13 @@ void PPCAsmPrinter::emitTlsCall(const MachineInstr *MI,
   MCSymbol *TlsGetAddr = OutContext.getOrCreateSymbol("__tls_get_addr");
 
   if (Subtarget->is32BitELFABI() && isPositionIndependent())
-    Kind = PPCMCExpr::VK_PLT;
+    Kind = PPC::S_PLT;
 
   const MCExpr *TlsRef = MCSymbolRefExpr::create(
       TlsGetAddr, MCSymbolRefExpr::VariantKind(Kind), OutContext);
 
   // Add 32768 offset to the symbol so we follow up the latest GOT/PLT ABI.
-  if (Kind == PPCMCExpr::VK_PLT && Subtarget->isSecurePlt() &&
+  if (Kind == PPC::S_PLT && Subtarget->isSecurePlt() &&
       M->getPICLevel() == PICLevel::BigPIC)
     TlsRef = MCBinaryExpr::createAdd(
         TlsRef, MCConstantExpr::create(32768, OutContext), OutContext);
@@ -857,7 +861,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   auto getTOCEntryLoadingExprForXCOFF =
       [IsPPC64, getTOCRelocAdjustedExprForXCOFF,
        this](const MCSymbol *MOSymbol, const MCExpr *Expr,
-             PPCMCExpr::Specifier VK = PPCMCExpr::VK_None) -> const MCExpr * {
+             PPCMCExpr::Specifier VK = PPC::S_None) -> const MCExpr * {
     const unsigned EntryByteSize = IsPPC64 ? 8 : 4;
     const auto TOCEntryIter = TOC.find({MOSymbol, VK});
     assert(TOCEntryIter != TOC.end() &&
@@ -882,9 +886,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       assert(MO.isGlobal() && "Only expecting a global MachineOperand here!\n");
       TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
       if (Model == TLSModel::LocalExec)
-        return PPCMCExpr::VK_AIX_TLSLE;
+        return PPC::S_AIX_TLSLE;
       if (Model == TLSModel::InitialExec)
-        return PPCMCExpr::VK_AIX_TLSIE;
+        return PPC::S_AIX_TLSIE;
       // On AIX, TLS model opt may have turned local-dynamic accesses into
       // initial-exec accesses.
       PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
@@ -892,7 +896,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
           FuncInfo->isAIXFuncUseTLSIEForLD()) {
         LLVM_DEBUG(
             dbgs() << "Current function uses IE access for default LD vars.\n");
-        return PPCMCExpr::VK_AIX_TLSIE;
+        return PPC::S_AIX_TLSIE;
       }
       llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
     }
@@ -900,17 +904,17 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // the variable offset and the other for the region handle). They are
     // differentiated by MO_TLSGD_FLAG and MO_TLSGDM_FLAG.
     if (Flag == PPCII::MO_TLSGDM_FLAG)
-      return PPCMCExpr::VK_AIX_TLSGDM;
+      return PPC::S_AIX_TLSGDM;
     if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
-      return PPCMCExpr::VK_AIX_TLSGD;
+      return PPC::S_AIX_TLSGD;
     // For local-dynamic TLS access on AIX, we have one TOC entry for the symbol
     // (the variable offset) and one shared TOC entry for the module handle.
     // They are differentiated by MO_TLSLD_FLAG and MO_TLSLDM_FLAG.
     if (Flag == PPCII::MO_TLSLD_FLAG && IsAIX)
-      return PPCMCExpr::VK_AIX_TLSLD;
+      return PPC::S_AIX_TLSLD;
     if (Flag == PPCII::MO_TLSLDM_FLAG && IsAIX)
-      return PPCMCExpr::VK_AIX_TLSML;
-    return PPCMCExpr::VK_None;
+      return PPC::S_AIX_TLSML;
+    return PPC::S_None;
   };
 
   // Lower multi-instruction pseudo operations.
@@ -951,8 +955,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       OutContext.getOrCreateSymbol(StringRef("_GLOBAL_OFFSET_TABLE_"));
     const MCExpr *OffsExpr = MCBinaryExpr::createSub(
         MCSymbolRefExpr::create(
-            GOTSymbol, MCSymbolRefExpr::VariantKind(PPCMCExpr::VK_LOCAL),
-            OutContext),
+            GOTSymbol, MCSymbolRefExpr::VariantKind(PPC::S_LOCAL), OutContext),
         MCConstantExpr::create(4, OutContext), OutContext);
 
     // Emit the 'bl'.
@@ -998,12 +1001,14 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       const MCExpr *DeltaExpr = MCBinaryExpr::createSub(
           MCSymbolRefExpr::create(BaseSymbol, OutContext), PB, OutContext);
 
-      const MCExpr *DeltaHi = PPCMCExpr::createHa(DeltaExpr, OutContext);
+      const MCExpr *DeltaHi =
+          MCSpecifierExpr::create(DeltaExpr, PPC::S_HA, OutContext);
       EmitToStreamer(
           *OutStreamer,
           MCInstBuilder(PPC::ADDIS).addReg(PICR).addReg(PICR).addExpr(DeltaHi));
 
-      const MCExpr *DeltaLo = PPCMCExpr::createLo(DeltaExpr, OutContext);
+      const MCExpr *DeltaLo =
+          MCSpecifierExpr::create(DeltaExpr, PPC::S_LO, OutContext);
       EmitToStreamer(
           *OutStreamer,
           MCInstBuilder(PPC::ADDI).addReg(PICR).addReg(PICR).addExpr(DeltaLo));
@@ -1051,7 +1056,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Create a reference to the GOT entry for the symbol. The GOT entry will be
     // synthesized later.
     if (PL == PICLevel::SmallPIC && !IsAIX) {
-      const MCExpr *Exp = symbolWithSpecifier(MOSymbol, PPCMCExpr::VK_GOT);
+      const MCExpr *Exp = symbolWithSpecifier(MOSymbol, PPC::S_GOT);
       TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
@@ -1140,8 +1145,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCSymbol *TOCEntry =
         lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
-    PPCMCExpr::Specifier VKExpr =
-        IsAIX ? PPCMCExpr::VK_None : PPCMCExpr::VK_TOC;
+    PPCMCExpr::Specifier VKExpr = IsAIX ? PPC::S_None : PPC::S_TOC;
     const MCExpr *Exp = symbolWithSpecifier(TOCEntry, VKExpr);
     TmpInst.getOperand(1) = MCOperand::createExpr(
         IsAIX ? getTOCEntryLoadingExprForXCOFF(MOSymbol, Exp, VK) : Exp);
@@ -1191,7 +1195,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
     }
 
-    const MCExpr *Exp = symbolWithSpecifier(MOSymbol, PPCMCExpr::VK_U);
+    const MCExpr *Exp = symbolWithSpecifier(MOSymbol, PPC::S_U);
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1223,7 +1227,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // 'MOSymbol'.
     MCSymbol *TOCEntry =
         lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
-    const MCExpr *Exp = symbolWithSpecifier(TOCEntry, PPCMCExpr::VK_L);
+    const MCExpr *Exp = symbolWithSpecifier(TOCEntry, PPC::S_L);
     TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1256,7 +1260,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         (MO.isCPI() && CM == CodeModel::Large))
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
-    VK = IsAIX ? PPCMCExpr::VK_U : PPCMCExpr::VK_TOC_HA;
+    VK = IsAIX ? PPC::S_U : PPC::S_TOC_HA;
 
     const MCExpr *Exp = symbolWithSpecifier(MOSymbol, VK);
 
@@ -1298,7 +1302,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (!MO.isCPI() || CM == CodeModel::Large)
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
-    VK = IsAIX ? PPCMCExpr::VK_L : PPCMCExpr::VK_TOC_LO;
+    VK = IsAIX ? PPC::S_L : PPC::S_TOC_LO;
     const MCExpr *Exp = symbolWithSpecifier(MOSymbol, VK);
     TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
@@ -1328,8 +1332,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     const MCExpr *Exp = MCSymbolRefExpr::create(
         MOSymbol,
-        MCSymbolRefExpr::VariantKind(IsAIX ? PPCMCExpr::VK_L
-                                           : PPCMCExpr::VK_TOC_LO),
+        MCSymbolRefExpr::VariantKind(IsAIX ? PPC::S_L : PPC::S_TOC_LO),
         OutContext);
 
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
@@ -1344,7 +1347,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *SymGotTprel =
-        symbolWithSpecifier(MOSymbol, PPCMCExpr::VK_GOT_TPREL_HA);
+        symbolWithSpecifier(MOSymbol, PPC::S_GOT_TPREL_HA);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS8)
                                  .addReg(MI->getOperand(0).getReg())
                                  .addReg(MI->getOperand(1).getReg())
@@ -1361,9 +1364,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(1);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
-    const MCExpr *Exp =
-        symbolWithSpecifier(MOSymbol, IsPPC64 ? PPCMCExpr::VK_GOT_TPREL_LO
-                                              : PPCMCExpr::VK_GOT_TPREL);
+    const MCExpr *Exp = symbolWithSpecifier(
+        MOSymbol, IsPPC64 ? PPC::S_GOT_TPREL_LO : PPC::S_GOT_TPREL);
     TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1400,12 +1402,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::PPC32GOT: {
     MCSymbol *GOTSymbol =
         OutContext.getOrCreateSymbol(StringRef("_GLOBAL_OFFSET_TABLE_"));
-    const MCExpr *SymGotTlsL = PPCMCExpr::create(
-        PPCMCExpr::VK_LO, MCSymbolRefExpr::create(GOTSymbol, OutContext),
-        OutContext);
-    const MCExpr *SymGotTlsHA = PPCMCExpr::create(
-        PPCMCExpr::VK_HA, MCSymbolRefExpr::create(GOTSymbol, OutContext),
-        OutContext);
+    const MCExpr *SymGotTlsL =
+        MCSpecifierExpr::create(GOTSymbol, PPC::S_LO, OutContext);
+    const MCExpr *SymGotTlsHA =
+        MCSpecifierExpr::create(GOTSymbol, PPC::S_HA, OutContext);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LI)
                                  .addReg(MI->getOperand(0).getReg())
                                  .addExpr(SymGotTlsL));
@@ -1423,7 +1423,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *SymGotTlsGD =
-        symbolWithSpecifier(MOSymbol, PPCMCExpr::VK_GOT_TLSGD_HA);
+        symbolWithSpecifier(MOSymbol, PPC::S_GOT_TLSGD_HA);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS8)
                                  .addReg(MI->getOperand(0).getReg())
                                  .addReg(MI->getOperand(1).getReg())
@@ -1439,9 +1439,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
-    const MCExpr *SymGotTlsGD =
-        symbolWithSpecifier(MOSymbol, IsPPC64 ? PPCMCExpr::VK_GOT_TLSGD_LO
-                                              : PPCMCExpr::VK_GOT_TLSGD);
+    const MCExpr *SymGotTlsGD = symbolWithSpecifier(
+        MOSymbol, IsPPC64 ? PPC::S_GOT_TLSGD_LO : PPC::S_GOT_TLSGD);
     EmitToStreamer(*OutStreamer,
                    MCInstBuilder(IsPPC64 ? PPC::ADDI8 : PPC::ADDI)
                    .addReg(MI->getOperand(0).getReg())
@@ -1466,7 +1465,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsADDR32: {
     // Transform: %r3 = GETtlsADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsgd)@PLT
-    emitTlsCall(MI, PPCMCExpr::VK_TLSGD);
+    emitTlsCall(MI, PPC::S_TLSGD);
     return;
   }
   case PPC::GETtlsTpointer32AIX: {
@@ -1483,7 +1482,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *SymGotTlsLD =
-        symbolWithSpecifier(MOSymbol, PPCMCExpr::VK_GOT_TLSLD_HA);
+        symbolWithSpecifier(MOSymbol, PPC::S_GOT_TLSLD_HA);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS8)
                                  .addReg(MI->getOperand(0).getReg())
                                  .addReg(MI->getOperand(1).getReg())
@@ -1499,9 +1498,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
-    const MCExpr *SymGotTlsLD =
-        symbolWithSpecifier(MOSymbol, IsPPC64 ? PPCMCExpr::VK_GOT_TLSLD_LO
-                                              : PPCMCExpr::VK_GOT_TLSLD);
+    const MCExpr *SymGotTlsLD = symbolWithSpecifier(
+        MOSymbol, IsPPC64 ? PPC::S_GOT_TLSLD_LO : PPC::S_GOT_TLSLD);
     EmitToStreamer(*OutStreamer,
                    MCInstBuilder(IsPPC64 ? PPC::ADDI8 : PPC::ADDI)
                        .addReg(MI->getOperand(0).getReg())
@@ -1516,7 +1514,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsldADDR32: {
     // Transform: %r3 = GETtlsldADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsld)@PLT
-    emitTlsCall(MI, PPCMCExpr::VK_TLSLD);
+    emitTlsCall(MI, PPC::S_TLSLD);
     return;
   }
   case PPC::ADDISdtprelHA:
@@ -1528,8 +1526,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
-    const MCExpr *SymDtprel =
-        symbolWithSpecifier(MOSymbol, PPCMCExpr::VK_DTPREL_HA);
+    const MCExpr *SymDtprel = symbolWithSpecifier(MOSymbol, PPC::S_DTPREL_HA);
     EmitToStreamer(
         *OutStreamer,
         MCInstBuilder(IsPPC64 ? PPC::ADDIS8 : PPC::ADDIS)
@@ -1544,8 +1541,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
-    const MCExpr *SymDtprel =
-        symbolWithSpecifier(MOSymbol, PPCMCExpr::VK_DTPREL);
+    const MCExpr *SymDtprel = symbolWithSpecifier(MOSymbol, PPC::S_DTPREL);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::PADDI8)
                                      .addReg(MI->getOperand(0).getReg())
                                      .addReg(MI->getOperand(1).getReg())
@@ -1562,8 +1558,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
-    const MCExpr *SymDtprel =
-        symbolWithSpecifier(MOSymbol, PPCMCExpr::VK_DTPREL_LO);
+    const MCExpr *SymDtprel = symbolWithSpecifier(MOSymbol, PPC::S_DTPREL_LO);
     EmitToStreamer(*OutStreamer,
                    MCInstBuilder(IsPPC64 ? PPC::ADDI8 : PPC::ADDI)
                        .addReg(MI->getOperand(0).getReg())
@@ -1733,9 +1728,8 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
   // assume that the address of extern TLS variables are zero.
   const MCExpr *Expr = MCSymbolRefExpr::create(
       getSymbol(GValue),
-      MCSymbolRefExpr::VariantKind(Model == TLSModel::LocalExec
-                                       ? PPCMCExpr::VK_AIX_TLSLE
-                                       : PPCMCExpr::VK_AIX_TLSLD),
+      MCSymbolRefExpr::VariantKind(
+          Model == TLSModel::LocalExec ? PPC::S_AIX_TLSLE : PPC::S_AIX_TLSLD),
       OutContext);
   Expr = MCBinaryExpr::createAdd(
       Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
@@ -2024,8 +2018,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
   // Generates a R_PPC64_TOC relocation for TOC base insertion.
   OutStreamer->emitValue(
       MCSymbolRefExpr::create(
-          Symbol2, MCSymbolRefExpr::VariantKind(PPCMCExpr::VK_TOCBASE),
-          OutContext),
+          Symbol2, MCSymbolRefExpr::VariantKind(PPC::S_TOCBASE), OutContext),
       8 /*size*/);
   // Emit a null environment pointer.
   OutStreamer->emitIntValue(0, 8 /* size */);
@@ -2132,13 +2125,15 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
         MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCSymbol, OutContext),
                                 GlobalEntryLabelExp, OutContext);
 
-      const MCExpr *TOCDeltaHi = PPCMCExpr::createHa(TOCDeltaExpr, OutContext);
+      const MCExpr *TOCDeltaHi =
+          MCSpecifierExpr::create(TOCDeltaExpr, PPC::S_HA, OutContext);
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS)
                                    .addReg(PPC::X2)
                                    .addReg(PPC::X12)
                                    .addExpr(TOCDeltaHi));
 
-      const MCExpr *TOCDeltaLo = PPCMCExpr::createLo(TOCDeltaExpr, OutContext);
+      const MCExpr *TOCDeltaLo =
+          MCSpecifierExpr::create(TOCDeltaExpr, PPC::S_LO, OutContext);
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDI)
                                    .addReg(PPC::X2)
                                    .addReg(PPC::X2)
@@ -2218,6 +2213,11 @@ void PPCLinuxAsmPrinter::emitFunctionBodyEnd() {
     OutStreamer->emitIntValue(0, 8/*size*/);
   }
 }
+
+char PPCLinuxAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(PPCLinuxAsmPrinter, "ppc-linux-asm-printer",
+                "Linux PPC Assembly Printer", false, false)
 
 void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
                                    MCSymbol *GVSym) const {
@@ -2998,9 +2998,9 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     // new symbol to prefix the name with a dot.
     // If TLS model opt is turned on, create a new symbol to prefix the name
     // with a dot.
-    if (I.first.second == PPCMCExpr::VK_AIX_TLSGDM ||
+    if (I.first.second == PPC::S_AIX_TLSGDM ||
         (Subtarget->hasAIXShLibTLSModelOpt() &&
-         I.first.second == PPCMCExpr::VK_AIX_TLSLD)) {
+         I.first.second == PPC::S_AIX_TLSLD)) {
       SmallString<128> Name;
       StringRef Prefix = ".";
       Name += Prefix;
@@ -3139,9 +3139,8 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (Aliasee->hasCommonLinkage()) {
       report_fatal_error("Aliases to common variables are not allowed on AIX:"
                          "\n\tAlias attribute for " +
-                             Alias.getGlobalIdentifier() +
-                             " is invalid because " + Aliasee->getName() +
-                             " is common.",
+                             Alias.getName() + " is invalid because " +
+                             Aliasee->getName() + " is common.",
                          false);
     }
 
@@ -3370,8 +3369,14 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
 }
 
+char PPCAIXAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(PPCAIXAsmPrinter, "ppc-aix-asm-printer",
+                "AIX PPC Assembly Printer", false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCAsmPrinter() {
   TargetRegistry::RegisterAsmPrinter(getThePPC32Target(),
                                      createPPCAsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getThePPC32LETarget(),

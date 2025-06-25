@@ -230,9 +230,7 @@ defm V_NOP : VOP1Inst <"v_nop", VOP_NOP_PROFILE>;
 
 def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDX = (ins Src0RC32:$src0X);
-  let InsVOPDXDeferred = (ins VSrc_f32_Deferred:$src0X);
   let InsVOPDY = (ins Src0RC32:$src0Y);
-  let InsVOPDYDeferred = (ins VSrc_f32_Deferred:$src0Y);
 }
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
@@ -395,7 +393,6 @@ def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
   let Ins64 = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let InsVOP3OpSel = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let Asm64 = "$vdst, $src0$bound_ctrl$fi";
-  let AsmVOP3OpSel = "$vdst, $src0$bound_ctrl$fi";
 }
 
 // Special case because there are no true output operands.  Hack vdst
@@ -668,7 +665,7 @@ let HasClamp = 0, HasOMod = 0, HasExtDPP = 0, HasExtVOP3DPP = 0,
 }
 
 class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT> : VOPProfile<[DstVT, i32, untyped, untyped]> {
-  let IsFP8SrcByteSel = 1;
+  let HasFP8SrcByteSel = 1;
   let HasOpSel = 0;
   let HasExtDPP = 1;
   let HasExtVOP3DPP = 1;
@@ -676,17 +673,6 @@ class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT> : VOPProfile<[DstVT, i32
   let HasClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 0;
-
-  defvar bytesel = (ins ByteSel:$byte_sel);
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            HasClamp, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   bytesel);
-  let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, Src2VOP3DPP,
-                                        NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods,
-                                        HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
-                                        Src2ModVOP3DPP, HasOpSel>.ret,
-                         bytesel);
 }
 
 let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts],
@@ -788,7 +774,8 @@ defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
      DisableEncoding="$vdst_in,$src0_out",
-     SchedRW = [Write32Bit, Write32Bit] in {
+     SchedRW = [Write32Bit, Write32Bit],
+     isConvergent = 1 in {
 let SubtargetPredicate = HasPermlane16Swap in {
 defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP>;
 }
@@ -1472,16 +1459,9 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus, p]
 
-let True16Predicate = UseFakeTrue16Insts in {
-def : GCNPat<
-  (i32 (DivergentUnaryFrag<anyext> i16:$src)),
-  (COPY $src)
->;
-} // End True16Predicate = UseFakeTrue16Insts
-
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat<
-  (i32 (UniformUnaryFrag<anyext> (i16 SReg_32:$src))),
+  (i32 (UniformUnaryFrag<anyext> i16:$src)),
   (COPY $src)
 >;
 
@@ -1570,8 +1550,11 @@ defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
 defm V_PRNG_B32            : VOP1_Real_gfx9 <0x58>;
+
+let isConvergent = 1 in {
 defm V_PERMLANE16_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x059>;
 defm V_PERMLANE32_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x05a>;
+}
 
 class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
   (vt (int_amdgcn_mov_dpp8 vt:$src, timm:$dpp8)),

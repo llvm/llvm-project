@@ -7,7 +7,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -17,6 +17,7 @@ echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
 echo --skip-checkout: use local git checkout instead of downloading src.zip
 echo --local-python: use installed Python and does not try to use a specific version (3.10)
+echo --force-msvc: use MSVC compiler for stage0, even if clang-cl is present
 echo.
 echo Note: At least one variant to build is required.
 echo.
@@ -34,6 +35,7 @@ set x64=
 set arm64=
 set skip-checkout=
 set local-python=
+set force-msvc=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -164,6 +166,24 @@ set common_cmake_flags=^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
+
+if "%force-msvc%" == "" (
+  where /q clang-cl
+  if errorlevel 0 (
+    where /q lld-link
+    if errorlevel 0 (
+      set common_compiler_flags=%common_compiler_flags% -fuse-ld=lld
+      
+      set common_cmake_flags=%common_cmake_flags%^
+        -DCMAKE_C_COMPILER=clang-cl.exe ^
+        -DCMAKE_CXX_COMPILER=clang-cl.exe ^
+        -DCMAKE_LINKER=lld-link.exe ^
+        -DLLVM_ENABLE_LLD=ON ^
+        -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
+        -DCMAKE_CXX_FLAGS="%common_compiler_flags%"
+    )
+  )
+)
 
 set cmake_profile_flags=""
 

@@ -135,7 +135,7 @@ void SemaSYCL::deepTypeCheckForDevice(SourceLocation UsedAt,
       // When nullptr is discovered, this means we've gone back up a level, so
       // the history should be cleaned.
       StackForRecursion.push_back(nullptr);
-      llvm::copy(RecDecl->fields(), std::back_inserter(StackForRecursion));
+      llvm::append_range(StackForRecursion, RecDecl->fields());
     }
   } while (!StackForRecursion.empty());
 }
@@ -199,7 +199,7 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  handleSimpleAttribute<SYCLKernelAttr>(*this, D, AL);
+  handleSimpleAttribute<DeviceKernelAttr>(*this, D, AL);
 }
 
 void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {

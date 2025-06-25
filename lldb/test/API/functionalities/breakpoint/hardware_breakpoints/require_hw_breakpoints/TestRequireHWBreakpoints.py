@@ -90,7 +90,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         )
 
     # Was reported to sometimes pass on certain hardware.
-    @skipIf(oslist=["linux"], archs=["arm"])
+    @skipIf(oslist=["linux"], archs=["arm$"])
     @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_until(self):
         """Test stepping until when hardware breakpoints are required."""

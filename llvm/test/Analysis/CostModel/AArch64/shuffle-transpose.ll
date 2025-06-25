@@ -218,3 +218,39 @@ define <8 x half> @trn2.v8f16(<8 x half> %v0, <8 x half> %v1) {
   %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x half> %tmp0
 }
+
+define <4 x bfloat> @trn1.v4bf16(<4 x bfloat> %v0, <4 x bfloat> %v1) {
+; CHECK-LABEL: 'trn1.v4bf16'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x bfloat> %tmp0
+;
+  %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  ret <4 x bfloat> %tmp0
+}
+
+define <4 x bfloat> @trn2.v4bf16(<4 x bfloat> %v0, <4 x bfloat> %v1) {
+; CHECK-LABEL: 'trn2.v4bf16'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x bfloat> %tmp0
+;
+  %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x bfloat> %tmp0
+}
+
+define <8 x bfloat> @trn1.v8bf16(<8 x bfloat> %v0, <8 x bfloat> %v1) {
+; CHECK-LABEL: 'trn1.v8bf16'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x bfloat> %tmp0
+;
+  %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+  ret <8 x bfloat> %tmp0
+}
+
+define <8 x bfloat> @trn2.v8bf16(<8 x bfloat> %v0, <8 x bfloat> %v1) {
+; CHECK-LABEL: 'trn2.v8bf16'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x bfloat> %tmp0
+;
+  %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  ret <8 x bfloat> %tmp0
+}

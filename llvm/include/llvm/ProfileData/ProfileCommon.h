@@ -18,6 +18,7 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstdint>
@@ -28,13 +29,13 @@
 
 namespace llvm {
 
-extern cl::opt<bool> UseContextLessSummary;
-extern cl::opt<int> ProfileSummaryCutoffHot;
-extern cl::opt<int> ProfileSummaryCutoffCold;
-extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
-extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
-extern cl::opt<uint64_t> ProfileSummaryHotCount;
-extern cl::opt<uint64_t> ProfileSummaryColdCount;
+LLVM_ABI extern cl::opt<bool> UseContextLessSummary;
+LLVM_ABI extern cl::opt<int> ProfileSummaryCutoffHot;
+LLVM_ABI extern cl::opt<int> ProfileSummaryCutoffCold;
+LLVM_ABI extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
+LLVM_ABI extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
+LLVM_ABI extern cl::opt<uint64_t> ProfileSummaryHotCount;
+LLVM_ABI extern cl::opt<uint64_t> ProfileSummaryColdCount;
 
 namespace sampleprof {
 
@@ -63,17 +64,17 @@ protected:
   ~ProfileSummaryBuilder() = default;
 
   inline void addCount(uint64_t Count);
-  void computeDetailedSummary();
+  LLVM_ABI void computeDetailedSummary();
 
 public:
   /// A vector of useful cutoff values for detailed summary.
-  static const ArrayRef<uint32_t> DefaultCutoffs;
+  LLVM_ABI static const ArrayRef<uint32_t> DefaultCutoffs;
 
   /// Find the summary entry for a desired percentile of counts.
-  static const ProfileSummaryEntry &
+  LLVM_ABI static const ProfileSummaryEntry &
   getEntryForPercentile(const SummaryEntryVector &DS, uint64_t Percentile);
-  static uint64_t getHotCountThreshold(const SummaryEntryVector &DS);
-  static uint64_t getColdCountThreshold(const SummaryEntryVector &DS);
+  LLVM_ABI static uint64_t getHotCountThreshold(const SummaryEntryVector &DS);
+  LLVM_ABI static uint64_t getColdCountThreshold(const SummaryEntryVector &DS);
 };
 
 class InstrProfSummaryBuilder final : public ProfileSummaryBuilder {
@@ -83,11 +84,11 @@ public:
   InstrProfSummaryBuilder(std::vector<uint32_t> Cutoffs)
       : ProfileSummaryBuilder(std::move(Cutoffs)) {}
 
-  void addEntryCount(uint64_t Count);
-  void addInternalCount(uint64_t Count);
+  LLVM_ABI void addEntryCount(uint64_t Count);
+  LLVM_ABI void addInternalCount(uint64_t Count);
 
-  void addRecord(const InstrProfRecord &);
-  std::unique_ptr<ProfileSummary> getSummary();
+  LLVM_ABI void addRecord(const InstrProfRecord &);
+  LLVM_ABI std::unique_ptr<ProfileSummary> getSummary();
 };
 
 class SampleProfileSummaryBuilder final : public ProfileSummaryBuilder {
@@ -95,11 +96,11 @@ public:
   SampleProfileSummaryBuilder(std::vector<uint32_t> Cutoffs)
       : ProfileSummaryBuilder(std::move(Cutoffs)) {}
 
-  void addRecord(const sampleprof::FunctionSamples &FS,
-                 bool isCallsiteSample = false);
-  std::unique_ptr<ProfileSummary>
+  LLVM_ABI void addRecord(const sampleprof::FunctionSamples &FS,
+                          bool isCallsiteSample = false);
+  LLVM_ABI std::unique_ptr<ProfileSummary>
   computeSummaryForProfiles(const sampleprof::SampleProfileMap &Profiles);
-  std::unique_ptr<ProfileSummary> getSummary();
+  LLVM_ABI std::unique_ptr<ProfileSummary> getSummary();
 };
 
 /// This is called when a count is seen in the profile.

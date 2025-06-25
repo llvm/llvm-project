@@ -879,7 +879,7 @@ llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
 /// See applyOneOverrideOption.
 void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           const char *OverrideOpts,
-                          llvm::StringSet<> &SavedStrings,
+                          llvm::StringSet<> &SavedStrings, StringRef EnvVar,
                           raw_ostream *OS = nullptr);
 
 } // end namespace driver

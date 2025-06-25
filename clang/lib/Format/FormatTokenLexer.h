@@ -48,6 +48,7 @@ private:
 
   bool tryMergeLessLess();
   bool tryMergeGreaterGreater();
+  bool tryMergeUserDefinedLiteral();
   bool tryMergeNSStringLiteral();
   bool tryMergeJSPrivateIdentifier();
   bool tryMergeCSharpStringLiteral();
@@ -70,6 +71,8 @@ private:
   bool precedesOperand(FormatToken *Tok);
 
   bool canPrecedeRegexLiteral(FormatToken *Prev);
+
+  void tryParseJavaTextBlock();
 
   // Tries to parse a JavaScript Regex literal starting at the current token,
   // if that begins with a slash and is in a location where JavaScript allows
@@ -133,6 +136,7 @@ private:
       VariableTemplates;
 
   bool FormattingDisabled;
+  llvm::Regex FormatOffRegex; // For one line.
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;

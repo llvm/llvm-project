@@ -28,7 +28,6 @@
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
-#include "RISCVRegisterInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineInstr.h"

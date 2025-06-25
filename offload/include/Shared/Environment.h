@@ -15,15 +15,7 @@
 
 #include <stdint.h>
 
-#ifdef OMPTARGET_DEVICE_RUNTIME
-#include "DeviceTypes.h"
-#else
-#include "SourceInfo.h"
-
-using IdentTy = ident_t;
-#endif
-
-#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
+struct IdentTy;
 
 enum class DeviceDebugKind : uint32_t {
   Assertion = 1U << 0,
@@ -80,7 +72,7 @@ struct DynamicEnvironmentTy {
 struct ConfigurationEnvironmentTy {
   uint8_t UseGenericStateMachine = 2;
   uint8_t MayUseNestedParallelism = 2;
-  llvm::omp::OMPTgtExecModeFlags ExecMode = llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
+  uint8_t ExecMode = 0;
   // Information about (legal) launch configurations.
   //{
   int32_t MinThreads = -1;

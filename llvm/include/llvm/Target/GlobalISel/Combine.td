@@ -31,6 +31,8 @@ def defs;
 def pattern;
 def match;
 def apply;
+def combine;
+def empty_action;
 
 def wip_match_opcode;
 
@@ -67,18 +69,17 @@ class GIDefMatchData<string type>  {
   string Type = type;
 }
 
-class GICombineRule<dag defs, dag match, dag apply> : GICombine {
+class GICombineRule<dag defs, dag a0, dag a1 = (empty_action)> : GICombine {
   /// Defines the external interface of the match rule. This includes:
   /// * The names of the root nodes (requires at least one)
   /// See GIDefKind for details.
   dag Defs = defs;
 
-  /// Defines the things which must be true for the pattern to match
-  dag Match = match;
-
-  /// Defines the things which happen after the decision is made to apply a
-  /// combine rule.
-  dag Apply = apply;
+  // The patterns that will be used. Two types of list can exist:
+  //  match (Action0) + apply (Action1).
+  //  combine (Action0) + empty_action (Action1).
+  dag Action0 = a0;
+  dag Action1 = a1;
 
   /// Defines the predicates that are checked before the match function
   /// is called. Targets can use this to, for instance, check Subtarget
@@ -210,6 +211,7 @@ def constantfp_matchinfo : GIDefMatchData<"ConstantFP*">;
 def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
+def register_vector_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -810,9 +812,8 @@ def zext_trunc_fold: GICombineRule <
   (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
-def not_cmp_fold_matchinfo : GIDefMatchData<"SmallVector<Register, 4>">;
 def not_cmp_fold : GICombineRule<
-  (defs root:$d, not_cmp_fold_matchinfo:$info),
+  (defs root:$d, register_vector_matchinfo:$info),
   (match (wip_match_opcode G_XOR): $d,
   [{ return Helper.matchNotCmp(*${d}, ${info}); }]),
   (apply [{ Helper.applyNotCmp(*${d}, ${info}); }])
@@ -827,9 +828,8 @@ def fneg_fneg_fold: GICombineRule <
 >;
 
 // Fold (unmerge(merge x, y, z)) -> z, y, z.
-def unmerge_merge_matchinfo : GIDefMatchData<"SmallVector<Register, 8>">;
 def unmerge_merge : GICombineRule<
-  (defs root:$d, unmerge_merge_matchinfo:$info),
+  (defs root:$d, register_vector_matchinfo:$info),
   (match (wip_match_opcode G_UNMERGE_VALUES): $d,
   [{ return Helper.matchCombineUnmergeMergeToPlainValues(*${d}, ${info}); }]),
   (apply [{ Helper.applyCombineUnmergeMergeToPlainValues(*${d}, ${info}); }])
@@ -954,9 +954,8 @@ def ptr_add_with_zero: GICombineRule<
          [{ return Helper.matchPtrAddZero(*${root}); }]),
   (apply [{ Helper.applyPtrAddZero(*${root}); }])>;
 
-def regs_small_vec : GIDefMatchData<"SmallVector<Register, 4>">;
 def combine_insert_vec_elts_build_vector : GICombineRule<
-  (defs root:$root, regs_small_vec:$info),
+  (defs root:$root, register_vector_matchinfo:$info),
   (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
     [{ return Helper.matchCombineInsertVecElts(*${root}, ${info}); }]),
   (apply [{ Helper.applyCombineInsertVecElts(*${root}, ${info}); }])>;
@@ -1552,9 +1551,8 @@ def nneg_zext : GICombineRule<
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 // Combines concat operations
-def concat_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def combine_concat_vector : GICombineRule<
-  (defs root:$root, concat_matchinfo:$matchinfo),
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
   (match (wip_match_opcode G_CONCAT_VECTORS):$root,
         [{ return Helper.matchCombineConcatVectors(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineConcatVectors(*${root}, ${matchinfo}); }])>;
@@ -1566,7 +1564,7 @@ def combine_concat_vector : GICombineRule<
 // ===>
 // c = G_CONCAT_VECTORS x, y, z, undef
 def combine_shuffle_concat : GICombineRule<
-  (defs root:$root, concat_matchinfo:$matchinfo),
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
         [{ return Helper.matchCombineShuffleConcat(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
