@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/StateStack.h"
+#include "mlir/Support/StateStack.h"
 
 namespace mlir {
 
