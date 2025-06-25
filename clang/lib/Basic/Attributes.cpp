@@ -119,7 +119,6 @@ normalizeAttrScopeName(const IdentifierInfo *ScopeName,
                        AttributeCommonInfo::Syntax SyntaxUsed) {
   if (ScopeName)
     return normalizeAttrScopeName(ScopeName->getName(), SyntaxUsed);
-
   return "";
 }
 
@@ -141,12 +140,23 @@ static StringRef normalizeAttrName(StringRef AttrName,
   return AttrName;
 }
 
+StringRef AttributeCommonInfo::getNormalizedScopeName() const {
+  return normalizeAttrScopeName(getScopeName(), getSyntax());
+}
+
+StringRef
+AttributeCommonInfo::getNormalizedAttrName(StringRef ScopeName) const {
+  return normalizeAttrName(getAttrName()->getName(), ScopeName, getSyntax());
+}
+
 bool AttributeCommonInfo::isGNUScope() const {
-  return ScopeName && (ScopeName->isStr("gnu") || ScopeName->isStr("__gnu__"));
+  return AttrScope.isValid() && (AttrScope.getName()->isStr("gnu") ||
+                                 AttrScope.getName()->isStr("__gnu__"));
 }
 
 bool AttributeCommonInfo::isClangScope() const {
-  return ScopeName && (ScopeName->isStr("clang") || ScopeName->isStr("_Clang"));
+  return AttrScope.isValid() && (AttrScope.getName()->isStr("clang") ||
+                                 AttrScope.getName()->isStr("_Clang"));
 }
 
 #include "clang/Sema/AttrParsedAttrKinds.inc"
@@ -198,8 +208,16 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
+std::string
+AttributeCommonInfo::getNormalizedFullName(StringRef ScopeName,
+                                           StringRef AttrName) const {
+  return static_cast<std::string>(
+      normalizeName(AttrName, ScopeName, getSyntax()));
+}
+
 SourceRange AttributeCommonInfo::getNormalizedRange() const {
-  return hasScope() ? SourceRange(ScopeLoc, AttrRange.getEnd()) : AttrRange;
+  return hasScope() ? SourceRange(AttrScope.getNameLoc(), AttrRange.getEnd())
+                    : AttrRange;
 }
 
 static AttributeCommonInfo::Scope
@@ -239,10 +257,8 @@ static constexpr const char *AttrScopeSpellingList[] = {
 #include "clang/Basic/AttributeSpellingList.inc"
 };
 
-std::optional<std::string>
-AttributeCommonInfo::getCorrectedFullName(const TargetInfo &Target,
-                                          const LangOptions &LangOpts) const {
-  StringRef ScopeName = normalizeAttrScopeName(getScopeName(), getSyntax());
+std::optional<StringRef>
+AttributeCommonInfo::tryGetCorrectedScopeName(StringRef ScopeName) const {
   if (ScopeName.size() > 0 &&
       llvm::none_of(AttrScopeSpellingList,
                     [&](const char *S) { return S == ScopeName; })) {
@@ -251,25 +267,26 @@ AttributeCommonInfo::getCorrectedFullName(const TargetInfo &Target,
       STC.add(Scope);
 
     if (auto CorrectedScopeName = STC.getCorrection())
-      ScopeName = *CorrectedScopeName;
+      return CorrectedScopeName;
   }
+  return std::nullopt;
+}
 
-  StringRef AttrName =
-      normalizeAttrName(getAttrName()->getName(), ScopeName, getSyntax());
+std::optional<StringRef> AttributeCommonInfo::tryGetCorrectedAttrName(
+    StringRef ScopeName, StringRef AttrName, const TargetInfo &Target,
+    const LangOptions &LangOpts) const {
   if (llvm::none_of(AttrSpellingList,
                     [&](const char *A) { return A == AttrName; })) {
     SimpleTypoCorrection STC(AttrName);
     for (const auto &Attr : AttrSpellingList)
       STC.add(Attr);
 
-    if (auto CorrectedAttrName = STC.getCorrection())
-      AttrName = *CorrectedAttrName;
+    if (auto CorrectedAttrName = STC.getCorrection()) {
+      if (hasAttribute(getSyntax(), ScopeName, *CorrectedAttrName, Target,
+                       LangOpts,
+                       /*CheckPlugins=*/true))
+        return CorrectedAttrName;
+    }
   }
-
-  if (hasAttribute(getSyntax(), ScopeName, AttrName, Target, LangOpts,
-                   /*CheckPlugins=*/true))
-    return static_cast<std::string>(
-        normalizeName(AttrName, ScopeName, getSyntax()));
-
   return std::nullopt;
 }

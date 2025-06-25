@@ -5275,7 +5275,7 @@ struct FormatStyle {
     /// Remove all empty lines at the beginning and the end of namespace body.
     /// \code
     ///   namespace N1 {
-    ///   namespace N2
+    ///   namespace N2 {
     ///   function();
     ///   }
     ///   }

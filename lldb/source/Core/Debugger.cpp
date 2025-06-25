@@ -16,6 +16,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/Core/ProtocolServer.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -506,6 +507,18 @@ bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
 
 llvm::StringRef Debugger::GetSeparator() const {
   constexpr uint32_t idx = ePropertySeparator;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDisabledAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowDisabledAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDisabledAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowDisabledAnsiSuffix;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_debugger_properties[idx].default_cstr_value);
 }

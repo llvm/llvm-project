@@ -11,7 +11,7 @@
 
 #include <__bit/countl.h>
 #include <__config>
-#include <__type_traits/is_unsigned_integer.h>
+#include <__type_traits/integer_traits.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __bit_log2(_Tp __t) _NOEXCEPT {
-  static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__bit_log2 requires an unsigned integer type");
+  static_assert(__is_unsigned_integer_v<_Tp>, "__bit_log2 requires an unsigned integer type");
   return numeric_limits<_Tp>::digits - 1 - std::__countl_zero(__t);
 }
 

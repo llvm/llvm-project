@@ -113,12 +113,19 @@ public:
 /// Common base class shared among various IRBuilders.
 class IRBuilderBase {
   /// Pairs of (metadata kind, MDNode *) that should be added to all newly
-  /// created instructions, like !dbg metadata.
+  /// created instructions, excluding !dbg metadata, which is stored in the
+  /// StoredDL field.
   SmallVector<std::pair<unsigned, MDNode *>, 2> MetadataToCopy;
+  /// The DebugLoc that will be applied to instructions inserted by this
+  /// builder.
+  DebugLoc StoredDL;
 
   /// Add or update the an entry (Kind, MD) to MetadataToCopy, if \p MD is not
   /// null. If \p MD is null, remove the entry with \p Kind.
   void AddOrRemoveMetadataToCopy(unsigned Kind, MDNode *MD) {
+    assert(Kind != LLVMContext::MD_dbg &&
+           "MD_dbg metadata must be stored in StoredDL");
+
     if (!MD) {
       erase_if(MetadataToCopy, [Kind](const std::pair<unsigned, MDNode *> &KV) {
         return KV.first == Kind;
@@ -238,7 +245,9 @@ public:
 
   /// Set location information used by debugging information.
   void SetCurrentDebugLocation(DebugLoc L) {
-    AddOrRemoveMetadataToCopy(LLVMContext::MD_dbg, L.getAsMDNode());
+    // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
+    // to include optional introspection data for use in Debugify.
+    StoredDL = std::move(L);
   }
 
   /// Set nosanitize metadata.
@@ -252,8 +261,12 @@ public:
   /// not on \p Src will be dropped from MetadataToCopy.
   void CollectMetadataToCopy(Instruction *Src,
                              ArrayRef<unsigned> MetadataKinds) {
-    for (unsigned K : MetadataKinds)
-      AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
+    for (unsigned K : MetadataKinds) {
+      if (K == LLVMContext::MD_dbg)
+        SetCurrentDebugLocation(Src->getDebugLoc());
+      else
+        AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
+    }
   }
 
   /// Get location information used by debugging information.
@@ -267,6 +280,7 @@ public:
   void AddMetadataToInst(Instruction *I) const {
     for (const auto &KV : MetadataToCopy)
       I->setMetadata(KV.first, KV.second);
+    SetInstDebugLocation(I);
   }
 
   /// Get the return type of the current function that we're emitting
@@ -945,17 +959,20 @@ public:
   LLVM_ABI CallInst *CreateGCGetPointerOffset(Value *DerivedPtr,
                                               const Twine &Name = "");
 
-  /// Create a call to llvm.vscale, multiplied by \p Scaling. The type of VScale
-  /// will be the same type as that of \p Scaling.
-  LLVM_ABI Value *CreateVScale(Constant *Scaling, const Twine &Name = "");
+  /// Create a call to llvm.vscale.<Ty>().
+  LLVM_ABI Value *CreateVScale(Type *Ty, const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::vscale, {Ty}, {}, {}, Name);
+  }
 
   /// Create an expression which evaluates to the number of elements in \p EC
-  /// at runtime.
-  LLVM_ABI Value *CreateElementCount(Type *DstType, ElementCount EC);
+  /// at runtime. This can result in poison if type \p Ty is not big enough to
+  /// hold the value.
+  LLVM_ABI Value *CreateElementCount(Type *Ty, ElementCount EC);
 
   /// Create an expression which evaluates to the number of units in \p Size
-  /// at runtime.  This works for both units of bits and bytes.
-  LLVM_ABI Value *CreateTypeSize(Type *DstType, TypeSize Size);
+  /// at runtime. This works for both units of bits and bytes. This can result
+  /// in poison if type \p Ty is not big enough to hold the value.
+  LLVM_ABI Value *CreateTypeSize(Type *Ty, TypeSize Size);
 
   /// Creates a vector of type \p DstType with the linear sequence <0, 1, ...>
   LLVM_ABI Value *CreateStepVector(Type *DstType, const Twine &Name = "");

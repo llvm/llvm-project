@@ -178,8 +178,8 @@ public:
   // Get and put areas:
   // 27.6.2.2.3 Get area:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 streamsize in_avail() {
-    if (__ninp_ < __einp_)
-      return static_cast<streamsize>(__einp_ - __ninp_);
+    if (gptr() < egptr())
+      return static_cast<streamsize>(egptr() - gptr());
     return showmanyc();
   }
 
@@ -190,37 +190,42 @@ public:
   }
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sbumpc() {
-    if (__ninp_ == __einp_)
+    if (gptr() == egptr())
       return uflow();
-    return traits_type::to_int_type(*__ninp_++);
+    int_type __c = traits_type::to_int_type(*gptr());
+    this->gbump(1);
+    return __c;
   }
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sgetc() {
-    if (__ninp_ == __einp_)
+    if (gptr() == egptr())
       return underflow();
-    return traits_type::to_int_type(*__ninp_);
+    return traits_type::to_int_type(*gptr());
   }
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 streamsize sgetn(char_type* __s, streamsize __n) { return xsgetn(__s, __n); }
 
   // 27.6.2.2.4 Putback:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sputbackc(char_type __c) {
-    if (__binp_ == __ninp_ || !traits_type::eq(__c, __ninp_[-1]))
+    if (eback() == gptr() || !traits_type::eq(__c, *(gptr() - 1)))
       return pbackfail(traits_type::to_int_type(__c));
-    return traits_type::to_int_type(*--__ninp_);
+    this->gbump(-1);
+    return traits_type::to_int_type(*gptr());
   }
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sungetc() {
-    if (__binp_ == __ninp_)
+    if (eback() == gptr())
       return pbackfail();
-    return traits_type::to_int_type(*--__ninp_);
+    this->gbump(-1);
+    return traits_type::to_int_type(*gptr());
   }
 
   // 27.6.2.2.5 Put area:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sputc(char_type __c) {
-    if (__nout_ == __eout_)
+    if (pptr() == epptr())
       return overflow(traits_type::to_int_type(__c));
-    *__nout_++ = __c;
+    *pptr() = __c;
+    this->pbump(1);
     return traits_type::to_int_type(__c);
   }
 
@@ -312,17 +317,16 @@ protected:
   virtual streamsize showmanyc() { return 0; }
 
   virtual streamsize xsgetn(char_type* __s, streamsize __n) {
-    const int_type __eof = traits_type::eof();
     int_type __c;
     streamsize __i = 0;
     while (__i < __n) {
-      if (__ninp_ < __einp_) {
-        const streamsize __len = std::min(static_cast<streamsize>(INT_MAX), std::min(__einp_ - __ninp_, __n - __i));
-        traits_type::copy(__s, __ninp_, __len);
+      if (gptr() < egptr()) {
+        const streamsize __len = std::min(static_cast<streamsize>(INT_MAX), std::min(egptr() - gptr(), __n - __i));
+        traits_type::copy(__s, gptr(), __len);
         __s += __len;
         __i += __len;
         this->gbump(__len);
-      } else if ((__c = uflow()) != __eof) {
+      } else if ((__c = uflow()) != traits_type::eof()) {
         *__s = traits_type::to_char_type(__c);
         ++__s;
         ++__i;
@@ -336,7 +340,9 @@ protected:
   virtual int_type uflow() {
     if (underflow() == traits_type::eof())
       return traits_type::eof();
-    return traits_type::to_int_type(*__ninp_++);
+    int_type __c = traits_type::to_int_type(*gptr());
+    this->gbump(1);
+    return __c;
   }
 
   // 27.6.2.4.4 Putback:
@@ -345,17 +351,16 @@ protected:
   // 27.6.2.4.5 Put area:
   virtual streamsize xsputn(const char_type* __s, streamsize __n) {
     streamsize __i = 0;
-    int_type __eof = traits_type::eof();
     while (__i < __n) {
-      if (__nout_ >= __eout_) {
-        if (overflow(traits_type::to_int_type(*__s)) == __eof)
+      if (pptr() >= epptr()) {
+        if (overflow(traits_type::to_int_type(*__s)) == traits_type::eof())
           break;
         ++__s;
         ++__i;
       } else {
-        streamsize __chunk_size = std::min(__eout_ - __nout_, __n - __i);
-        traits_type::copy(__nout_, __s, __chunk_size);
-        __nout_ += __chunk_size;
+        streamsize __chunk_size = std::min(epptr() - pptr(), __n - __i);
+        traits_type::copy(pptr(), __s, __chunk_size);
+        __pbump(__chunk_size);
         __s += __chunk_size;
         __i += __chunk_size;
       }

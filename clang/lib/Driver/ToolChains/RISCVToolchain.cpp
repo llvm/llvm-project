@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVToolchain.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"

@@ -8,7 +8,7 @@
 
 #include "AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -64,16 +64,16 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   auto Spec = Target.getSpecifier();
   const MCExpr *Expr = Fixup.getValue();
 
-  if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
+  if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
     AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
-    switch (AArch64MCExpr::getSymbolLoc(Spec)) {
-    case AArch64MCExpr::VK_ABS:
-    case AArch64MCExpr::VK_SECREL:
+    switch (AArch64::getSymbolLoc(Spec)) {
+    case AArch64::S_ABS:
+    case AArch64::S_SECREL:
       // Supported
       break;
     default:
       Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
-                                          A64E->getSpecifierName() +
+                                          AArch64::getSpecifierName(*A64E) +
                                           " unsupported on COFF targets");
       return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
     }
@@ -81,9 +81,9 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
 
   switch (FixupKind) {
   default: {
-    if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
+    if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
       Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
-                                          A64E->getSpecifierName() +
+                                          AArch64::getSpecifierName(*A64E) +
                                           " unsupported on COFF targets");
     } else {
       MCFixupKindInfo Info = MAB.getFixupKindInfo(Fixup.getKind());
@@ -116,11 +116,11 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     return COFF::IMAGE_REL_ARM64_SECREL;
 
   case AArch64::fixup_aarch64_add_imm12:
-    if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
+    if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
       AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
-      if (Spec == AArch64MCExpr::VK_SECREL_LO12)
+      if (Spec == AArch64::S_SECREL_LO12)
         return COFF::IMAGE_REL_ARM64_SECREL_LOW12A;
-      if (Spec == AArch64MCExpr::VK_SECREL_HI12)
+      if (Spec == AArch64::S_SECREL_HI12)
         return COFF::IMAGE_REL_ARM64_SECREL_HIGH12A;
     }
     return COFF::IMAGE_REL_ARM64_PAGEOFFSET_12A;
@@ -130,9 +130,9 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   case AArch64::fixup_aarch64_ldst_imm12_scale4:
   case AArch64::fixup_aarch64_ldst_imm12_scale8:
   case AArch64::fixup_aarch64_ldst_imm12_scale16:
-    if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
+    if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
       AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
-      if (Spec == AArch64MCExpr::VK_SECREL_LO12)
+      if (Spec == AArch64::S_SECREL_LO12)
         return COFF::IMAGE_REL_ARM64_SECREL_LOW12L;
     }
     return COFF::IMAGE_REL_ARM64_PAGEOFFSET_12L;

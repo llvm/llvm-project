@@ -112,6 +112,38 @@ def AMDGPU_ExtPackedFp8Op :
   }];
 }
 
+def AMDGPU_ScaledExtPackedOp
+    : AMDGPU_Op<"scaled_ext_packed", [Pure]>,
+      Arguments<(
+          ins AnyTypeOf<[VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2, F8E4M3FN]>,
+                         VectorOfLengthAndType<[1, 2, 3, 4, 5, 6, 7, 8],
+                                               [F4E2M1FN]>]>:$source,
+          F32:$scale,
+          ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index)>,
+      Results<(
+          outs AnyTypeOf<[FixedVectorOfLengthAndType<[2], [F32]>,
+                          FixedVectorOfLengthAndType<[2], [F16]>,
+                          FixedVectorOfLengthAndType<[2], [BF16]>]>:$res)> {
+  let summary = "Extend a vector of packed floating point values";
+
+  let description = [{
+    Extend and scale two packed floats in `source[index]` to two floats and 
+    return them.
+
+    This rather unusual signature arises from the fact that AMD GPUs cannot
+    easily work with sub 32-bit quantities, so the compiler intrinsics for
+    extending 8-bit floats (which are, currently, the only way to work with
+    this operation) take packed vectors of 2 such floats.
+
+    If the passed-in vector has fewer than two elements, or the input is scalar,
+    the remaining values in the <2 x i8> will be filled with
+    undefined values as needed.
+  }];
+  let assemblyFormat = [{
+    attr-dict $source `[` $index `]` `,` $scale `:` type($source) `to` type($res)
+  }];
+}
+
 def AMDGPU_PackedTrunc2xFp8Op :
     AMDGPU_Op<"packed_trunc_2xfp8", [Pure, AttrSizedOperandSegments]>,
     Arguments<(ins F32:$sourceA,
@@ -135,6 +167,36 @@ def AMDGPU_PackedTrunc2xFp8Op :
     attr-dict $sourceA `,` ($sourceB^):(`undef`)?
     `into` ($existing^):(`undef`)? `[` `word` $wordIndex `]`
     `:` type($sourceA) `to` type($res) (`into` type($existing)^)?
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_PackedScaledTruncOp
+    : AMDGPU_Op<"packed_scaled_trunc", [Pure]>,
+      Arguments<(ins VectorOfLengthAndType<[1, 2], [F32, F16, BF16]>:$source,
+          F32:$scale,
+          ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index,
+          Optional<AnyTypeOf<
+              [FixedVectorOfLengthAndType<[4], [F8E5M2, F8E4M3FN]>,
+               FixedVectorOfLengthAndType<[8], [F4E2M1FN]>]>>:$existing)>,
+      Results<(
+          outs AnyTypeOf<[FixedVectorOfLengthAndType<[4], [F8E5M2, F8E4M3FN]>,
+                          FixedVectorOfLengthAndType<[8], [F4E2M1FN]>]>:$res)> {
+  let summary = "Round two floats into a packed vector of floats";
+  let description = [{
+    Scale and round the inputs `source` (which is undefined if not
+    specified) into the low or high word (bottom two or top two) elements
+    of the returned vector, keeping the other two elements of `existing`
+    unchanged if present (or undefined if it was not passed in).
+
+    The reason for this odd signature is that AMD GPUs cannot easily work with
+    sub-registers, and so the conversion intrinsics take 32-bit wide
+    packed vectors of float values.
+  }];
+  let assemblyFormat = [{
+    attr-dict $source `into` ($existing^):(`undef`)? `[` $index `]`
+    `,` $scale
+    `:` type($source) `to` type($res) (`into` type($existing)^)?
   }];
   let hasVerifier = 1;
 }

@@ -25,6 +25,7 @@
 #include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 namespace {
 
@@ -223,6 +224,27 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
       Copy->addOperand(R);
       Copy->addOperand(getConstantVPV(Part));
     } else if (RdxPhi) {
+      // If the start value is a ReductionStartVector, use the identity value
+      // (second operand) for unrolled parts. If the scaling factor is > 1,
+      // create a new ReductionStartVector with the scale factor and both
+      // operands set to the identity value.
+      if (auto *VPI = dyn_cast<VPInstruction>(RdxPhi->getStartValue())) {
+        assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
+               "unexpected start VPInstruction");
+        if (Part != 1)
+          continue;
+        VPValue *StartV;
+        if (match(VPI->getOperand(2), m_SpecificInt(1))) {
+          StartV = VPI->getOperand(1);
+        } else {
+          auto *C = VPI->clone();
+          C->setOperand(0, C->getOperand(1));
+          C->insertAfter(VPI);
+          StartV = C;
+        }
+        for (unsigned Part = 1; Part != UF; ++Part)
+          VPV2Parts[VPI][Part - 1] = StartV;
+      }
       Copy->addOperand(getConstantVPV(Part));
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
@@ -233,7 +255,6 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
 
 /// Handle non-header-phi recipes.
 void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
-  using namespace llvm::VPlanPatternMatch;
   if (match(&R, m_BranchOnCond(m_VPValue())) ||
       match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
     return;
@@ -301,7 +322,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   }
 }
 
-using namespace llvm::VPlanPatternMatch;
 void UnrollState::unrollBlock(VPBlockBase *VPB) {
   auto *VPR = dyn_cast<VPRegionBlock>(VPB);
   if (VPR) {
@@ -332,7 +352,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
                       m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
-                      m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
+                      m_VPValue(), m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));

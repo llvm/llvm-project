@@ -69,9 +69,11 @@ struct GCNRegPressure {
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
 
-  unsigned getOccupancy(const GCNSubtarget &ST) const {
+  unsigned getOccupancy(const GCNSubtarget &ST,
+                        unsigned DynamicVGPRBlockSize) const {
     return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
-             ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts())));
+                    ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
+                                                DynamicVGPRBlockSize));
   }
 
   void inc(unsigned Reg,
@@ -79,8 +81,10 @@ struct GCNRegPressure {
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
 
-  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure& O) const {
-    return getOccupancy(ST) > O.getOccupancy(ST);
+  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
+                       unsigned DynamicVGPRBlockSize) const {
+    return getOccupancy(ST, DynamicVGPRBlockSize) >
+           O.getOccupancy(ST, DynamicVGPRBlockSize);
   }
 
   /// Compares \p this GCNRegpressure to \p O, returning true if \p this is
@@ -133,7 +137,8 @@ private:
   friend GCNRegPressure max(const GCNRegPressure &P1,
                             const GCNRegPressure &P2);
 
-  friend Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST);
+  friend Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST,
+                         unsigned DynamicVGPRBlockSize);
 };
 
 inline GCNRegPressure max(const GCNRegPressure &P1, const GCNRegPressure &P2) {
@@ -402,7 +407,8 @@ GCNRegPressure getRegPressure(const MachineRegisterInfo &MRI,
 bool isEqual(const GCNRPTracker::LiveRegSet &S1,
              const GCNRPTracker::LiveRegSet &S2);
 
-Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr);
+Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr,
+                unsigned DynamicVGPRBlockSize = 0);
 
 Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
                 const MachineRegisterInfo &MRI);

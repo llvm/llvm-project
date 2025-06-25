@@ -70,6 +70,35 @@ qc.e.li s3, other_section
 same_section:
   nop
 
+.option relax
+
+# ASM: qc.li a1, %qc.abs20(0)
+# OBJ: qc.li a1, 0x0
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM192 *ABS*{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.li a1, %qc.abs20(abs_symbol)
+
+# ASM: qc.e.li s1, 0
+# OBJ-NEXT: qc.e.li s1, 0x0
+qc.e.li s1, abs_symbol
+
+# ASM: qc.li a1, %qc.abs20(undef)
+# OBJ-NEXT: qc.li a1, 0x0
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM192 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.li a1, %qc.abs20(undef)
+
+# ASM: qc.e.li s1, undef
+# OBJ-NEXT: qc.e.li s1, 0x0
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM194 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.e.li s1, undef
+
+.option norelax
+
 .section .text.other, "ax", @progbits
 
 # ASM-LABEL: other_section:
