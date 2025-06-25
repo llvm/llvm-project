@@ -1700,17 +1700,6 @@ def Offseti32imm : Operand<i32> {
   let PrintMethod = "printOffseti32imm";
 }
 
-def SDTWrapper : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
-def Wrapper    : SDNode<"NVPTXISD::Wrapper", SDTWrapper>;
-
-// Load a memory address into a u32 or u64 register.
-def MOV_ADDR : BasicNVPTXInst<(outs B32:$dst), (ins ADDR_base:$a),
-                         "mov.b32",
-                         [(set i32:$dst, (Wrapper tglobaladdr:$a))]>;
-def MOV_ADDR64 : BasicNVPTXInst<(outs B64:$dst), (ins ADDR_base:$a),
-                           "mov.b64",
-                           [(set i64:$dst, (Wrapper tglobaladdr:$a))]>;
-
 // Get pointer to local stack.
 let hasSideEffects = false in {
   def MOV_DEPOT_ADDR :    NVPTXInst<(outs B32:$d), (ins i32imm:$num),
@@ -1750,18 +1739,33 @@ def BFMOV16i : MOVi<B16, "b16", bf16, bf16imm, fpimm>;
 def FMOV32i : MOVi<B32, "b32", f32, f32imm, fpimm>;
 def FMOV64i : MOVi<B64, "b64", f64, f64imm, fpimm>;
 
-def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOV32i texternalsym:$dst)>;
-def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOV64i texternalsym:$dst)>;
+
+def to_tglobaladdr : SDNodeXForm<globaladdr, [{
+  return CurDAG->getTargetGlobalAddress(N->getGlobal(), SDLoc(N),
+                                        N->getValueType(0), N->getOffset(),
+                                        N->getTargetFlags());
+}]>;
+
+def to_texternsym : SDNodeXForm<externalsym, [{
+  return CurDAG->getTargetExternalSymbol(N->getSymbol(), N->getValueType(0),
+                                         N->getTargetFlags());
+}]>;
+
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+}]>;
+
+def : Pat<(i32 globaladdr:$dst), (IMOV32i (to_tglobaladdr $dst))>;
+def : Pat<(i64 globaladdr:$dst), (IMOV64i (to_tglobaladdr $dst))>;
+
+def : Pat<(i32 externalsym:$dst), (IMOV32i (to_texternsym $dst))>;
+def : Pat<(i64 externalsym:$dst), (IMOV64i (to_texternsym $dst))>;
 
 //---- Copy Frame Index ----
 def LEA_ADDRi :   NVPTXInst<(outs B32:$dst), (ins ADDR:$addr),
                             "add.u32 \t$dst, ${addr:add};", []>;
 def LEA_ADDRi64 : NVPTXInst<(outs B64:$dst), (ins ADDR:$addr),
                             "add.u64 \t$dst, ${addr:add};", []>;
-
-def to_tframeindex : SDNodeXForm<frameindex, [{
-  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
-}]>;
 
 def : Pat<(i32 frameindex:$fi), (LEA_ADDRi (to_tframeindex $fi), 0)>;
 def : Pat<(i64 frameindex:$fi), (LEA_ADDRi64 (to_tframeindex $fi), 0)>;
@@ -1975,26 +1979,19 @@ defm FSetNUM : FSET_FORMAT<seto, CmpNUM, CmpNUM_FTZ>;
 defm FSetNAN : FSET_FORMAT<setuo, CmpNAN, CmpNAN_FTZ>;
 
 def SDTDeclareParamProfile :
-  SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>;
+  SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
 def SDTDeclareScalarParamProfile :
-  SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>;
+  SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 def SDTLoadParamProfile : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
 def SDTLoadParamV2Profile : SDTypeProfile<2, 2, [SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisInt<3>]>;
 def SDTLoadParamV4Profile : SDTypeProfile<4, 2, [SDTCisInt<4>, SDTCisInt<5>]>;
-def SDTPrintCallProfile : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def SDTStoreParamProfile : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV2Profile : SDTypeProfile<0, 4, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV4Profile : SDTypeProfile<0, 6, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDTStoreParam32Profile : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDTCallArgProfile : SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-def SDTCallArgMarkProfile : SDTypeProfile<0, 0, []>;
-def SDTCallVoidProfile : SDTypeProfile<0, 1, []>;
-def SDTCallValProfile : SDTypeProfile<1, 0, []>;
-def SDTMoveParamProfile : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
+def SDTMoveParamProfile : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
 def SDTStoreRetvalProfile : SDTypeProfile<0, 2, [SDTCisInt<0>]>;
 def SDTStoreRetvalV2Profile : SDTypeProfile<0, 3, [SDTCisInt<0>]>;
 def SDTStoreRetvalV4Profile : SDTypeProfile<0, 5, [SDTCisInt<0>]>;
-def SDTPseudoUseParamProfile : SDTypeProfile<0, 1, []>;
 def SDTProxyRegProfile : SDTypeProfile<1, 1, []>;
 
 def DeclareParam :
@@ -2004,10 +2001,12 @@ def DeclareScalarParam :
   SDNode<"NVPTXISD::DeclareScalarParam", SDTDeclareScalarParamProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def DeclareRetParam :
-  SDNode<"NVPTXISD::DeclareRetParam", SDTDeclareParamProfile,
+  SDNode<"NVPTXISD::DeclareRetParam",
+         SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def DeclareRet :
-  SDNode<"NVPTXISD::DeclareRet", SDTDeclareScalarParamProfile,
+  SDNode<"NVPTXISD::DeclareRet",
+         SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def LoadParam :
   SDNode<"NVPTXISD::LoadParam", SDTLoadParamProfile,
@@ -2018,18 +2017,6 @@ def LoadParamV2 :
 def LoadParamV4 :
   SDNode<"NVPTXISD::LoadParamV4", SDTLoadParamV4Profile,
          [SDNPHasChain, SDNPMayLoad, SDNPOutGlue, SDNPInGlue]>;
-def PrintCall :
-  SDNode<"NVPTXISD::PrintCall", SDTPrintCallProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def PrintConvergentCall :
-  SDNode<"NVPTXISD::PrintConvergentCall", SDTPrintCallProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def PrintCallUni :
-  SDNode<"NVPTXISD::PrintCallUni", SDTPrintCallProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def PrintConvergentCallUni :
-  SDNode<"NVPTXISD::PrintConvergentCallUni", SDTPrintCallProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def StoreParam :
   SDNode<"NVPTXISD::StoreParam", SDTStoreParamProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
@@ -2038,33 +2025,6 @@ def StoreParamV2 :
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def StoreParamV4 :
   SDNode<"NVPTXISD::StoreParamV4", SDTStoreParamV4Profile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def StoreParamU32 :
-  SDNode<"NVPTXISD::StoreParamU32", SDTStoreParam32Profile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def StoreParamS32 :
-  SDNode<"NVPTXISD::StoreParamS32", SDTStoreParam32Profile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def CallArgBegin :
-  SDNode<"NVPTXISD::CallArgBegin", SDTCallArgMarkProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def CallArg :
-  SDNode<"NVPTXISD::CallArg", SDTCallArgProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def LastCallArg :
-  SDNode<"NVPTXISD::LastCallArg", SDTCallArgProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def CallArgEnd :
-  SDNode<"NVPTXISD::CallArgEnd", SDTCallVoidProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def CallVoid :
-  SDNode<"NVPTXISD::CallVoid", SDTCallVoidProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def Prototype :
-  SDNode<"NVPTXISD::Prototype", SDTCallVoidProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def CallVal :
-  SDNode<"NVPTXISD::CallVal", SDTCallValProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def MoveParam :
   SDNode<"NVPTXISD::MoveParam", SDTMoveParamProfile, []>;
@@ -2077,14 +2037,17 @@ def StoreRetvalV2 :
 def StoreRetvalV4 :
   SDNode<"NVPTXISD::StoreRetvalV4", SDTStoreRetvalV4Profile,
          [SDNPHasChain, SDNPSideEffect]>;
-def PseudoUseParam :
-  SDNode<"NVPTXISD::PseudoUseParam", SDTPseudoUseParamProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def RETURNNode :
-  SDNode<"NVPTXISD::RETURN", SDTCallArgMarkProfile,
-         [SDNPHasChain, SDNPSideEffect]>;
 def ProxyReg :
   SDNode<"NVPTXISD::ProxyReg", SDTProxyRegProfile,
+         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+
+  /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
+  ///      NumParams, Callee, Proto, InGlue)
+def SDTCallProfile : SDTypeProfile<0, 6,
+                       [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>,
+                        SDTCisVT<3, i32>, SDTCisVT<5, i32>]>;
+def call :
+  SDNode<"NVPTXISD::CALL", SDTCallProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 
 let mayLoad = true in {
@@ -2106,11 +2069,6 @@ let mayLoad = true in {
                              " \t{{$dst, $dst2, $dst3, $dst4}}, [retval0$b];"),
                   []>;
 }
-
-class LoadParamRegInst<NVPTXRegClass regclass, string opstr> :
-      NVPTXInst<(outs regclass:$dst), (ins i32imm:$b),
-                !strconcat("mov", opstr, " \t$dst, retval$b;"),
-                [(set regclass:$dst, (LoadParam (i32 0), (i32 imm:$b)))]>;
 
 let mayStore = true in {
 
@@ -2174,23 +2132,42 @@ let mayStore = true in {
                   []>;
 }
 
-let isCall=1 in {
-  multiclass CALL<string OpcStr, SDNode OpNode> {
-     def PrintCallNoRetInst : NVPTXInst<(outs), (ins),
-       OpcStr # " ", [(OpNode 0)]>;
-     def PrintCallRetInst1 : NVPTXInst<(outs), (ins),
-       OpcStr # " (retval0), ", [(OpNode 1)]>;
+/// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
+///      NumParams, Callee, Proto, InGlue)
+
+def CallOperand : Operand<i32> { let PrintMethod = "printCallOperand"; }
+
+foreach is_convergent = [0, 1] in {
+  defvar convergent_suffix = !if(is_convergent, "_conv", "");
+
+  let isCall = 1, isConvergent = is_convergent in {
+    def CALL # convergent_suffix :
+      NVPTXInst<(outs),
+                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params, 
+                     i32imm:$proto),
+                "call${rets:RetList} $addr, (${params:ParamList}), prototype_$proto;", []>;
+
+    def CALL_UNI # convergent_suffix :
+      NVPTXInst<(outs),
+                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params),
+                "call.uni${rets:RetList} $addr, (${params:ParamList});", []>;
   }
-}
 
-defm Call : CALL<"call", PrintCall>;
-defm CallUni : CALL<"call.uni", PrintCallUni>;
+  defvar call_inst = !cast<NVPTXInst>("CALL" # convergent_suffix);
+  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, globaladdr:$addr, imm:$proto),
+            (call_inst (to_tglobaladdr $addr), imm:$rets, imm:$params, imm:$proto)>;
+  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i32:$addr, imm:$proto),
+            (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
+  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i64:$addr, imm:$proto),
+            (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
 
-// Convergent call instructions.  These are identical to regular calls, except
-// they have the isConvergent bit set.
-let isConvergent=1 in {
-  defm ConvergentCall : CALL<"call", PrintConvergentCall>;
-  defm ConvergentCallUni : CALL<"call.uni", PrintConvergentCallUni>;
+  defvar call_uni_inst = !cast<NVPTXInst>("CALL_UNI" # convergent_suffix);
+  def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, globaladdr:$addr, 0),
+            (call_uni_inst (to_tglobaladdr $addr), imm:$rets, imm:$params)>;
+  def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, i32:$addr, 0),
+            (call_uni_inst $addr, imm:$rets, imm:$params)>;
+  def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, i64:$addr, 0),
+            (call_uni_inst $addr, imm:$rets, imm:$params)>;
 }
 
 def LoadParamMemI64    : LoadParamMemInst<B64, ".b64">;
@@ -2244,69 +2221,30 @@ def StoreRetvalV4I32  : StoreRetvalV4Inst<B32, ".b32">;
 def StoreRetvalV4I16  : StoreRetvalV4Inst<B16, ".b16">;
 def StoreRetvalV4I8   : StoreRetvalV4Inst<B16, ".b8">;
 
-def CallArgBeginInst : NVPTXInst<(outs), (ins), "(", [(CallArgBegin)]>;
-def CallArgEndInst1  : NVPTXInst<(outs), (ins), ");", [(CallArgEnd (i32 1))]>;
-def CallArgEndInst0  : NVPTXInst<(outs), (ins), ")", [(CallArgEnd (i32 0))]>;
-def RETURNInst       : NVPTXInst<(outs), (ins), "ret;", [(RETURNNode)]>;
-
-def CallArgParam : NVPTXInst<(outs), (ins i32imm:$a), "param$a, ",
-                             [(CallArg 1, imm:$a)]>;
-def LastCallArgParam : NVPTXInst<(outs), (ins i32imm:$a), "param$a",
-                                 [(LastCallArg 1, imm:$a)]>;
-
-def CallVoidInst :      NVPTXInst<(outs), (ins ADDR_base:$addr), "$addr, ",
-                                  [(CallVoid (Wrapper tglobaladdr:$addr))]>;
-def CallVoidInstReg :   NVPTXInst<(outs), (ins B32:$addr), "$addr, ",
-                                  [(CallVoid i32:$addr)]>;
-def CallVoidInstReg64 : NVPTXInst<(outs), (ins B64:$addr), "$addr, ",
-                                  [(CallVoid i64:$addr)]>;
-def PrototypeInst :     NVPTXInst<(outs), (ins i32imm:$val), ", prototype_$val;",
-                                  [(Prototype (i32 imm:$val))]>;
-
 def DeclareRetMemInst :
-  NVPTXInst<(outs), (ins i32imm:$align, i32imm:$size, i32imm:$num),
-            ".param .align $align .b8 retval$num[$size];",
-            [(DeclareRetParam (i32 imm:$align), (i32 imm:$size), (i32 imm:$num))]>;
+  NVPTXInst<(outs), (ins i32imm:$align, i32imm:$size),
+            ".param .align $align .b8 retval0[$size];",
+            [(DeclareRetParam imm:$align, imm:$size)]>;
 def DeclareRetScalarInst :
-  NVPTXInst<(outs), (ins i32imm:$size, i32imm:$num),
-            ".param .b$size retval$num;",
-            [(DeclareRet (i32 1), (i32 imm:$size), (i32 imm:$num))]>;
-def DeclareRetRegInst :
-  NVPTXInst<(outs), (ins i32imm:$size, i32imm:$num),
-            ".reg .b$size retval$num;",
-            [(DeclareRet (i32 2), (i32 imm:$size), (i32 imm:$num))]>;
+  NVPTXInst<(outs), (ins i32imm:$size),
+            ".param .b$size retval0;",
+            [(DeclareRet imm:$size)]>;
 
 def DeclareParamInst :
   NVPTXInst<(outs), (ins i32imm:$align, i32imm:$a, i32imm:$size),
             ".param .align $align .b8 param$a[$size];",
-            [(DeclareParam (i32 imm:$align), (i32 imm:$a), (i32 imm:$size))]>;
+            [(DeclareParam imm:$align, imm:$a, imm:$size)]>;
 def DeclareScalarParamInst :
   NVPTXInst<(outs), (ins i32imm:$a, i32imm:$size),
             ".param .b$size param$a;",
-            [(DeclareScalarParam (i32 imm:$a), (i32 imm:$size), (i32 0))]>;
-def DeclareScalarRegInst :
-  NVPTXInst<(outs), (ins i32imm:$a, i32imm:$size),
-            ".reg .b$size param$a;",
-            [(DeclareScalarParam (i32 imm:$a), (i32 imm:$size), (i32 1))]>;
+            [(DeclareScalarParam imm:$a, imm:$size)]>;
 
-class MoveParamSymbolInst<RegTyInfo t> :
-  BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
-            "mov.b" # t.Size,
-            [(set t.Ty:$dst, (MoveParam texternalsym:$src))]>;
-
-def MOV64_PARAM : MoveParamSymbolInst<I64RT>;
-def MOV32_PARAM : MoveParamSymbolInst<I32RT>;
-
-class PseudoUseParamInst<NVPTXRegClass regclass, ValueType vt> :
-  NVPTXInst<(outs), (ins regclass:$src),
-            "// Pseudo use of $src",
-            [(PseudoUseParam vt:$src)]>;
-
-def PseudoUseParamI64 : PseudoUseParamInst<B64, i64>;
-def PseudoUseParamI32 : PseudoUseParamInst<B32, i32>;
-def PseudoUseParamI16 : PseudoUseParamInst<B16, i16>;
-def PseudoUseParamF64 : PseudoUseParamInst<B64, f64>;
-def PseudoUseParamF32 : PseudoUseParamInst<B32, f32>;
+foreach t = [I32RT, I64RT] in {
+  defvar inst_name = "MOV" # t.Size # "_PARAM";
+  def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), "mov.b" # t.Size>;
+  def : Pat<(MoveParam (t.Ty externalsym:$src)),
+            (!cast<NVPTXInst>(inst_name) (t.Ty (to_texternsym $src)))>;
+}
 
 multiclass ProxyRegInst<string SzStr, NVPTXRegClass rc> {
   def NAME : BasicNVPTXInst<(outs rc:$dst), (ins rc:$src),
@@ -2860,21 +2798,6 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_NVPTXCallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_NVPTXCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPSideEffect]>;
-
-def SDT_NVPTXCall : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
-def call          : SDNode<"NVPTXISD::CALL", SDT_NVPTXCall,
-                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
-def calltarget : Operand<i32>;
-let isCall=1 in {
-   def CALL : NVPTXInst<(outs), (ins calltarget:$dst), "call \t$dst, (1);", []>;
-}
-
-def : Pat<(call tglobaladdr:$dst), (CALL tglobaladdr:$dst)>;
-def : Pat<(call texternalsym:$dst), (CALL texternalsym:$dst)>;
-
-// Pseudo instructions.
-class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
-   : NVPTXInst<outs, ins, asmstr, pattern>;
 
 def Callseq_Start :
   NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
