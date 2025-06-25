@@ -269,7 +269,7 @@ AnalysisType &Pass::getAnalysisID(AnalysisID PI, Function &F, bool *Changed) {
   else
     assert(!LocalChanged &&
            "A pass trigged a code update but the update status is lost");
-  return *(AnalysisType *) ResultPass;
+  return *(AnalysisType *)ResultPass;
 }
 
 } // end namespace llvm
