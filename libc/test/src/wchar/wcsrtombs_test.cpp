@@ -8,10 +8,13 @@
 
 #include "hdr/types/mbstate_t.h"
 #include "hdr/types/wchar_t.h"
-#include "src/__support/libc_errno.h"
 #include "src/string/memset.h"
 #include "src/wchar/wcsrtombs.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
+#include "src/__support/wchar/mbstate.h"
+
+using LlvmLibcWCSRToMBSTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST(LlvmLibcWCSRToMBSTest, SingleCharacterOneByte) {
   mbstate_t state;
@@ -85,7 +88,7 @@ TEST(LlvmLibcWCSRToMBSTest, MultiplePartialConversions) {
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 1, &state);
   written += count;
-  //ASSERT_EQ(count, static_cast<size_t>(1));
+  // ASSERT_EQ(count, static_cast<size_t>(1));
   ASSERT_EQ(wcs, wcs_start);
   ASSERT_EQ(mbs[0], expected[0]);
   ASSERT_EQ(mbs[1], '\x01');
@@ -179,8 +182,19 @@ TEST(LlvmLibcWCSRToMBSTest, InvalidWchar) {
   size_t count = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 5, &state);
   ASSERT_EQ(count, static_cast<size_t>(5));
   ASSERT_TRUE(*wcs == static_cast<wchar_t>(0x12ffff));
+  ASSERT_ERRNO_SUCCESS();
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs + count, &wcs, 5, &state); // invalid
   ASSERT_EQ(count, static_cast<size_t>(-1));
-  ASSERT_EQ(static_cast<int>(libc_errno), EILSEQ);
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+
+TEST(LlvmLibcWCSRToMBSTest, InvalidState) {
+  LIBC_NAMESPACE::internal::mbstate state{0, 0, 9}; // 9 total bytes is invalid
+  const wchar_t *wcs = L"\xFF\xAC15";
+  char mbs[5];
+  // convert the valid wchar
+  size_t count = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 5, reinterpret_cast<mbstate_t*>(&state));
+  ASSERT_EQ(count, static_cast<size_t>(-1));
+  ASSERT_ERRNO_EQ(EINVAL);
 }

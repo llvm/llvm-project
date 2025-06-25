@@ -23,13 +23,14 @@ LLVM_LIBC_FUNCTION(size_t, wcrtomb,
   static internal::mbstate internal_mbstate;
 
   // when s is nullptr, this is equivalent to wcrtomb(buf, L'\0', ps)
-  if (s == nullptr)     
+  if (s == nullptr)
     wc = L'\0';
 
   auto result = internal::wcrtomb(
       s, wc,
       ps == nullptr ? &internal_mbstate
-                    : reinterpret_cast<internal::mbstate *>(ps), 4);
+                    : reinterpret_cast<internal::mbstate *>(ps),
+      sizeof(wchar_t));
 
   if (!result.has_value()) {
     libc_errno = EILSEQ;

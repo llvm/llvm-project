@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(int, wctomb, (char *s, wchar_t wc)) {
   if (s == nullptr)
     return 0;
 
-  auto result = internal::wcrtomb(s, wc, &internal_mbstate);
+  auto result = internal::wcrtomb(s, wc, &internal_mbstate, sizeof (wchar_t));
 
   if (!result.has_value()) { // invalid wide character
     libc_errno = EILSEQ;
