@@ -602,7 +602,10 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     Scopes.push_back(GotoScope(
         ParentScope, diag::note_acc_branch_into_compute_construct,
         diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
-    BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
+    // This can be 'null' if the 'body' is a break that we diagnosed, so no
+    // reason to put the scope into place.
+    if (CC->getStructuredBlock())
+      BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
     return;
   }
 
@@ -612,7 +615,10 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     Scopes.push_back(GotoScope(
         ParentScope, diag::note_acc_branch_into_compute_construct,
         diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
-    BuildScopeInformation(CC->getLoop(), NewParentScope);
+    // This can be 'null' if the 'body' is a break that we diagnosed, so no
+    // reason to put the scope into place.
+    if (CC->getLoop())
+      BuildScopeInformation(CC->getLoop(), NewParentScope);
     return;
   }
 
@@ -998,7 +1004,8 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
   SmallVector<unsigned, 10> ToScopesError;
   SmallVector<unsigned, 10> ToScopesWarning;
   for (unsigned I = ToScope; I != CommonScope; I = Scopes[I].ParentScope) {
-    if (S.getLangOpts().MSVCCompat && JumpDiagWarning != 0 &&
+    if (S.getLangOpts().MSVCCompat && S.getLangOpts().CPlusPlus &&
+        JumpDiagWarning != 0 &&
         IsMicrosoftJumpWarning(JumpDiagError, Scopes[I].InDiag))
       ToScopesWarning.push_back(I);
     else if (IsCXX98CompatWarning(S, Scopes[I].InDiag) ||

@@ -283,8 +283,8 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
 
     auto srcMemrefType = cast<MemRefType>(op.getSrcMemref().getType());
     Value srcPtr =
-        getStridedElementPtr(b.getLoc(), srcMemrefType, adaptor.getSrcMemref(),
-                             adaptor.getIndices(), rewriter);
+        getStridedElementPtr(rewriter, b.getLoc(), srcMemrefType,
+                             adaptor.getSrcMemref(), adaptor.getIndices());
     Value ldMatrixResult = b.create<NVVM::LdMatrixOp>(
         ldMatrixResultType, srcPtr,
         /*num=*/op.getNumTiles(),
@@ -571,7 +571,7 @@ static FailureOr<LLVM::InlineAsmOp> emitMmaSparseSyncOpAsm(
       /*asm_string=*/asmStr,
       /*constraints=*/constraintStr,
       /*has_side_effects=*/true,
-      /*is_align_stack=*/false,
+      /*is_align_stack=*/false, LLVM::TailCallKind::None,
       /*asm_dialect=*/asmDialectAttr,
       /*operand_attrs=*/ArrayAttr());
 }
@@ -661,8 +661,8 @@ struct NVGPUAsyncCopyLowering
     Location loc = op.getLoc();
     auto dstMemrefType = cast<MemRefType>(op.getDst().getType());
     Value dstPtr =
-        getStridedElementPtr(b.getLoc(), dstMemrefType, adaptor.getDst(),
-                             adaptor.getDstIndices(), rewriter);
+        getStridedElementPtr(rewriter, b.getLoc(), dstMemrefType,
+                             adaptor.getDst(), adaptor.getDstIndices());
     FailureOr<unsigned> dstAddressSpace =
         getTypeConverter()->getMemRefAddressSpace(dstMemrefType);
     if (failed(dstAddressSpace))
@@ -676,8 +676,9 @@ struct NVGPUAsyncCopyLowering
       return rewriter.notifyMatchFailure(
           loc, "source memref address space not convertible to integer");
 
-    Value scrPtr = getStridedElementPtr(loc, srcMemrefType, adaptor.getSrc(),
-                                        adaptor.getSrcIndices(), rewriter);
+    Value scrPtr =
+        getStridedElementPtr(rewriter, loc, srcMemrefType, adaptor.getSrc(),
+                             adaptor.getSrcIndices());
     // Intrinsics takes a global pointer so we need an address space cast.
     auto srcPointerGlobalType = LLVM::LLVMPointerType::get(
         op->getContext(), NVVM::NVVMMemorySpace::kGlobalMemorySpace);
@@ -814,7 +815,7 @@ public:
     MemRefType mbarrierMemrefType =
         nvgpu::getMBarrierMemrefType(rewriter.getContext(), mbarType);
     return ConvertToLLVMPattern::getStridedElementPtr(
-        b.getLoc(), mbarrierMemrefType, memrefDesc, {mbarId}, rewriter);
+        rewriter, b.getLoc(), mbarrierMemrefType, memrefDesc, {mbarId});
   }
 };
 
@@ -995,8 +996,8 @@ struct NVGPUTmaAsyncLoadOpLowering
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
     auto srcMemrefType = cast<MemRefType>(op.getDst().getType());
-    Value dest = getStridedElementPtr(op->getLoc(), srcMemrefType,
-                                      adaptor.getDst(), {}, rewriter);
+    Value dest = getStridedElementPtr(rewriter, op->getLoc(), srcMemrefType,
+                                      adaptor.getDst(), {});
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
@@ -1021,8 +1022,8 @@ struct NVGPUTmaAsyncStoreOpLowering
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
     auto srcMemrefType = cast<MemRefType>(op.getSrc().getType());
-    Value dest = getStridedElementPtr(op->getLoc(), srcMemrefType,
-                                      adaptor.getSrc(), {}, rewriter);
+    Value dest = getStridedElementPtr(rewriter, op->getLoc(), srcMemrefType,
+                                      adaptor.getSrc(), {});
     SmallVector<Value> coords = adaptor.getCoordinates();
     for (auto [index, value] : llvm::enumerate(coords)) {
       coords[index] = truncToI32(b, value);
@@ -1083,8 +1084,8 @@ struct NVGPUGenerateWarpgroupDescriptorLowering
     Value leadDim = makeConst(leadDimVal);
 
     Value baseAddr = getStridedElementPtr(
-        op->getLoc(), cast<MemRefType>(op.getTensor().getType()),
-        adaptor.getTensor(), {}, rewriter);
+        rewriter, op->getLoc(), cast<MemRefType>(op.getTensor().getType()),
+        adaptor.getTensor(), {});
     Value basePtr = b.create<LLVM::PtrToIntOp>(ti64, baseAddr);
     // Just use 14 bits for base address
     Value basePtr14bit = shiftRight(shiftLeft(basePtr, 46), 50);

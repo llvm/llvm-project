@@ -10,7 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"

@@ -357,6 +357,12 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     return Store;
   }
+  // Zihintpause
+  case RISCV::BI__builtin_riscv_pause: {
+    llvm::Function *Fn = CGM.getIntrinsic(llvm::Intrinsic::riscv_pause);
+    return Builder.CreateCall(Fn, {});
+  }
+
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
     ID = Intrinsic::riscv_cv_alu_addN;
@@ -388,10 +394,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_cv_alu_exthz:
     return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
                               "exthz");
-  case RISCV::BI__builtin_riscv_cv_alu_slet:
+  case RISCV::BI__builtin_riscv_cv_alu_sle:
     return Builder.CreateZExt(Builder.CreateICmpSLE(Ops[0], Ops[1]), Int32Ty,
                               "sle");
-  case RISCV::BI__builtin_riscv_cv_alu_sletu:
+  case RISCV::BI__builtin_riscv_cv_alu_sleu:
     return Builder.CreateZExt(Builder.CreateICmpULE(Ops[0], Ops[1]), Int32Ty,
                               "sleu");
   case RISCV::BI__builtin_riscv_cv_alu_subN:
@@ -412,6 +418,9 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     // SiFive Vector builtins are handled from here.
 #include "clang/Basic/riscv_sifive_vector_builtin_cg.inc"
+
+    // Andes Vector builtins are handled from here.
+#include "clang/Basic/riscv_andes_vector_builtin_cg.inc"
   }
 
   assert(ID != Intrinsic::not_intrinsic);

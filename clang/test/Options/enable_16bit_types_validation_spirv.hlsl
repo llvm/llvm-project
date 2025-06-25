@@ -4,7 +4,7 @@
 // SPIRV: error: '-fnative-half-type' option requires target HLSL Version >= 2018, but HLSL Version is 'hlsl2016'
 
 // valid: "spirv-unknown-vulkan-library"
-// valid: define spir_func void @{{.*main.*}}() #0 {
+// valid: define hidden spir_func void @{{.*main.*}}() #0 {
 
 [numthreads(1,1,1)]
 void main()

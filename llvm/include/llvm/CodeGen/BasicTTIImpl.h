@@ -329,11 +329,11 @@ private:
     // Cost the call + mask.
     auto Cost =
         thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
-    if (VD->isMasked())
-      Cost += thisT()->getShuffleCost(
-          TargetTransformInfo::SK_Broadcast,
-          VectorType::get(IntegerType::getInt1Ty(Ctx), VF), {}, CostKind, 0,
-          nullptr, {});
+    if (VD->isMasked()) {
+      auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
+      Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
+                                      VecTy, {}, CostKind, 0, nullptr, {});
+    }
 
     // Lowering to a library call (with output pointers) may require us to emit
     // reloads for the results.
@@ -478,12 +478,12 @@ public:
   }
 
   bool isIndexedLoadLegal(TTI::MemIndexedMode M, Type *Ty) const override {
-    EVT VT = getTLI()->getValueType(DL, Ty);
+    EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isIndexedLoadLegal(getISDIndexedMode(M), VT);
   }
 
   bool isIndexedStoreLegal(TTI::MemIndexedMode M, Type *Ty) const override {
-    EVT VT = getTLI()->getValueType(DL, Ty);
+    EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isIndexedStoreLegal(getISDIndexedMode(M), VT);
   }
 
@@ -1101,11 +1101,12 @@ public:
 
   TTI::ShuffleKind improveShuffleKindFromMask(TTI::ShuffleKind Kind,
                                               ArrayRef<int> Mask,
-                                              VectorType *Ty, int &Index,
+                                              VectorType *SrcTy, int &Index,
                                               VectorType *&SubTy) const {
     if (Mask.empty())
       return Kind;
-    int NumSrcElts = Ty->getElementCount().getKnownMinValue();
+    int NumDstElts = Mask.size();
+    int NumSrcElts = SrcTy->getElementCount().getKnownMinValue();
     switch (Kind) {
     case TTI::SK_PermuteSingleSrc: {
       if (ShuffleVectorInst::isReverseMask(Mask, NumSrcElts))
@@ -1115,19 +1116,22 @@ public:
       if (isSplatMask(Mask, NumSrcElts, Index))
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
-          (Index + Mask.size()) <= (size_t)NumSrcElts) {
-        SubTy = FixedVectorType::get(Ty->getElementType(), Mask.size());
+          (Index + NumDstElts) <= NumSrcElts) {
+        SubTy = FixedVectorType::get(SrcTy->getElementType(), NumDstElts);
         return TTI::SK_ExtractSubvector;
       }
       break;
     }
     case TTI::SK_PermuteTwoSrc: {
+      if (all_of(Mask, [NumSrcElts](int M) { return M < NumSrcElts; }))
+        return improveShuffleKindFromMask(TTI::SK_PermuteSingleSrc, Mask, SrcTy,
+                                          Index, SubTy);
       int NumSubElts;
-      if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
-                                 Mask, NumSrcElts, NumSubElts, Index)) {
+      if (NumDstElts > 2 && ShuffleVectorInst::isInsertSubvectorMask(
+                                Mask, NumSrcElts, NumSubElts, Index)) {
         if (Index + NumSubElts > NumSrcElts)
           return Kind;
-        SubTy = FixedVectorType::get(Ty->getElementType(), NumSubElts);
+        SubTy = FixedVectorType::get(SrcTy->getElementType(), NumSubElts);
         return TTI::SK_InsertSubvector;
       }
       if (ShuffleVectorInst::isSelectMask(Mask, NumSrcElts))
@@ -1151,13 +1155,13 @@ public:
   }
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override {
-    switch (improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp)) {
+    switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
     case TTI::SK_Broadcast:
-      if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
+      if (auto *FVT = dyn_cast<FixedVectorType>(SrcTy))
         return getBroadcastShuffleOverhead(FVT, CostKind);
       return InstructionCost::getInvalid();
     case TTI::SK_Select:
@@ -1166,14 +1170,14 @@ public:
     case TTI::SK_Transpose:
     case TTI::SK_PermuteSingleSrc:
     case TTI::SK_PermuteTwoSrc:
-      if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
+      if (auto *FVT = dyn_cast<FixedVectorType>(SrcTy))
         return getPermuteShuffleOverhead(FVT, CostKind);
       return InstructionCost::getInvalid();
     case TTI::SK_ExtractSubvector:
-      return getExtractSubvectorOverhead(Tp, CostKind, Index,
+      return getExtractSubvectorOverhead(SrcTy, CostKind, Index,
                                          cast<FixedVectorType>(SubTp));
     case TTI::SK_InsertSubvector:
-      return getInsertSubvectorOverhead(Tp, CostKind, Index,
+      return getInsertSubvectorOverhead(DstTy, CostKind, Index,
                                         cast<FixedVectorType>(SubTp));
     }
     llvm_unreachable("Unknown TTI::ShuffleKind");
@@ -1910,6 +1914,7 @@ public:
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
       return thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
+                                     cast<VectorType>(RetTy),
                                      cast<VectorType>(Args[0]->getType()), {},
                                      CostKind, Index, cast<VectorType>(RetTy));
     }
@@ -1920,17 +1925,18 @@ public:
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
-          TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()), {},
-          CostKind, Index, cast<VectorType>(Args[1]->getType()));
+          TTI::SK_InsertSubvector, cast<VectorType>(RetTy),
+          cast<VectorType>(Args[0]->getType()), {}, CostKind, Index,
+          cast<VectorType>(Args[1]->getType()));
     }
     case Intrinsic::vector_reverse: {
-      return thisT()->getShuffleCost(TTI::SK_Reverse,
+      return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
                                      cast<VectorType>(Args[0]->getType()), {},
                                      CostKind, 0, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_splice: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
-      return thisT()->getShuffleCost(TTI::SK_Splice,
+      return thisT()->getShuffleCost(TTI::SK_Splice, cast<VectorType>(RetTy),
                                      cast<VectorType>(Args[0]->getType()), {},
                                      CostKind, Index, cast<VectorType>(RetTy));
     }
@@ -2376,7 +2382,7 @@ public:
                                           CostKind, 1, nullptr, nullptr);
       Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SearchTy,
                                           CostKind, 0, nullptr, nullptr);
-      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, std::nullopt,
+      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, SearchTy, {},
                                       CostKind, 0, nullptr);
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SearchTy, RetTy,
                                           CmpInst::ICMP_EQ, CostKind);
@@ -2408,6 +2414,11 @@ public:
                                           CmpInst::ICMP_ULT, CostKind);
       return Cost;
     }
+    case Intrinsic::experimental_memset_pattern:
+      // This cost is set to match the cost of the memset_pattern16 libcall.
+      // It should likely be re-evaluated after migration to this intrinsic
+      // is complete.
+      return TTI::TCC_Basic * 4;
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;
@@ -2956,8 +2967,8 @@ public:
     while (NumVecElts > MVTLen) {
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
-      ShuffleCost += thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
-                                             CostKind, NumVecElts, SubTy);
+      ShuffleCost += thisT()->getShuffleCost(
+          TTI::SK_ExtractSubvector, SubTy, Ty, {}, CostKind, NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
       ++LongVectorCount;
@@ -2973,7 +2984,7 @@ public:
     // By default reductions need one shuffle per reduction level.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 {}, CostKind, 0, Ty);
+                                                 Ty, {}, CostKind, 0, Ty);
     ArithCost +=
         NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
@@ -3047,8 +3058,8 @@ public:
       NumVecElts /= 2;
       auto *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
 
-      ShuffleCost += thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
-                                             CostKind, NumVecElts, SubTy);
+      ShuffleCost += thisT()->getShuffleCost(
+          TTI::SK_ExtractSubvector, SubTy, Ty, {}, CostKind, NumVecElts, SubTy);
 
       IntrinsicCostAttributes Attrs(IID, SubTy, {SubTy, SubTy}, FMF);
       MinMaxCost += getIntrinsicInstrCost(Attrs, CostKind);
@@ -3064,7 +3075,7 @@ public:
     // architecture-dependent length.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 {}, CostKind, 0, Ty);
+                                                 Ty, {}, CostKind, 0, Ty);
     IntrinsicCostAttributes Attrs(IID, Ty, {Ty, Ty}, FMF);
     MinMaxCost += NumReduxLevels * getIntrinsicInstrCost(Attrs, CostKind);
     // The last min/max should be in vector registers and we counted it above.

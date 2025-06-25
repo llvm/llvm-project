@@ -265,9 +265,22 @@ static cl::opt<bool>
                       cl::desc("Print name of local stack variable"),
                       cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClPoisonUndef("msan-poison-undef",
-                                   cl::desc("poison undef temps"), cl::Hidden,
-                                   cl::init(true));
+static cl::opt<bool>
+    ClPoisonUndef("msan-poison-undef",
+                  cl::desc("Poison fully undef temporary values. "
+                           "Partially undefined constant vectors "
+                           "are unaffected by this flag (see "
+                           "-msan-poison-undef-vectors)."),
+                  cl::Hidden, cl::init(true));
+
+static cl::opt<bool> ClPoisonUndefVectors(
+    "msan-poison-undef-vectors",
+    cl::desc("Precisely poison partially undefined constant vectors. "
+             "If false (legacy behavior), the entire vector is "
+             "considered fully initialized, which may lead to false "
+             "negatives. Fully undefined constant vectors are "
+             "unaffected by this flag (see -msan-poison-undef)."),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClHandleICmp("msan-handle-icmp",
@@ -316,14 +329,22 @@ static cl::opt<bool> ClEagerChecks(
 
 static cl::opt<bool> ClDumpStrictInstructions(
     "msan-dump-strict-instructions",
-    cl::desc("print out instructions with default strict semantics"),
+    cl::desc("print out instructions with default strict semantics i.e.,"
+             "check that all the inputs are fully initialized, and mark "
+             "the output as fully initialized. These semantics are applied "
+             "to instructions that could not be handled explicitly nor "
+             "heuristically."),
     cl::Hidden, cl::init(false));
 
-static cl::opt<bool> ClDumpStrictIntrinsics(
-    "msan-dump-strict-intrinsics",
-    cl::desc("Prints 'unknown' intrinsics that were handled heuristically. "
-             "Use -msan-dump-strict-instructions to print intrinsics that "
-             "could not be handled exactly nor heuristically."),
+// Currently, all the heuristically handled instructions are specifically
+// IntrinsicInst. However, we use the broader "HeuristicInstructions" name
+// to parallel 'msan-dump-strict-instructions', and to keep the door open to
+// handling non-intrinsic instructions heuristically.
+static cl::opt<bool> ClDumpHeuristicInstructions(
+    "msan-dump-heuristic-instructions",
+    cl::desc("Prints 'unknown' instructions that were handled heuristically. "
+             "Use -msan-dump-strict-instructions to print instructions that "
+             "could not be handled explicitly nor heuristically."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<int> ClInstrumentationWithCallThreshold(
@@ -644,6 +665,7 @@ private:
 
   // These arrays are indexed by log2(AccessSize).
   FunctionCallee MaybeWarningFn[kNumberOfAccessSizes];
+  FunctionCallee MaybeWarningVarSizeFn;
   FunctionCallee MaybeStoreOriginFn[kNumberOfAccessSizes];
 
   /// Run-time helper that generates a new origin value for a stack
@@ -918,7 +940,9 @@ void MemorySanitizer::createUserspaceApi(Module &M,
     MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
         IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty());
-
+    MaybeWarningVarSizeFn = M.getOrInsertFunction(
+        "__msan_maybe_warning_N", TLI.getAttrList(C, {}, /*Signed=*/false),
+        IRB.getVoidTy(), PtrTy, IRB.getInt64Ty(), IRB.getInt32Ty());
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 2}, /*Signed=*/false),
@@ -1173,6 +1197,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   bool PropagateShadow;
   bool PoisonStack;
   bool PoisonUndef;
+  bool PoisonUndefVectors;
 
   struct ShadowOriginAndInsertPoint {
     Value *Shadow;
@@ -1199,6 +1224,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     PropagateShadow = SanitizeFunction;
     PoisonStack = SanitizeFunction && ClPoisonStack;
     PoisonUndef = SanitizeFunction && ClPoisonUndef;
+    PoisonUndefVectors = SanitizeFunction && ClPoisonUndefVectors;
 
     // In the presence of unreachable blocks, we may see Phi nodes with
     // incoming nodes from such blocks. Since InstVisitor skips unreachable
@@ -1225,7 +1251,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Constants likely will be eliminated by follow-up passes.
     if (isa<Constant>(V))
       return false;
-
     ++SplittableBlocksCount;
     return ClInstrumentationWithCallThreshold >= 0 &&
            SplittableBlocksCount > ClInstrumentationWithCallThreshold;
@@ -1424,18 +1449,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const DataLayout &DL = F.getDataLayout();
     TypeSize TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
-    if (instrumentWithCalls(ConvertedShadow) &&
-        SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
-      FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+    if (instrumentWithCalls(ConvertedShadow) && !MS.CompileKernel) {
       // ZExt cannot convert between vector and scalar
       ConvertedShadow = convertShadowToScalar(ConvertedShadow, IRB);
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
-      CallBase *CB = IRB.CreateCall(
-          Fn, {ConvertedShadow2,
-               MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
-      CB->addParamAttr(0, Attribute::ZExt);
-      CB->addParamAttr(1, Attribute::ZExt);
+
+      if (SizeIndex < kNumberOfAccessSizes) {
+        FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+        CallBase *CB = IRB.CreateCall(
+            Fn,
+            {ConvertedShadow2,
+             MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+        CB->addParamAttr(0, Attribute::ZExt);
+        CB->addParamAttr(1, Attribute::ZExt);
+      } else {
+        FunctionCallee Fn = MS.MaybeWarningVarSizeFn;
+        Value *ShadowAlloca = IRB.CreateAlloca(ConvertedShadow2->getType(), 0u);
+        IRB.CreateStore(ConvertedShadow2, ShadowAlloca);
+        unsigned ShadowSize = DL.getTypeAllocSize(ConvertedShadow2->getType());
+        CallBase *CB = IRB.CreateCall(
+            Fn,
+            {ShadowAlloca, ConstantInt::get(IRB.getInt64Ty(), ShadowSize),
+             MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+        CB->addParamAttr(1, Attribute::ZExt);
+        CB->addParamAttr(2, Attribute::ZExt);
+      }
     } else {
       Value *Cmp = convertToBool(ConvertedShadow, IRB, "_mscmp");
       Instruction *CheckTerm = SplitBlockAndInsertIfThen(
@@ -1981,6 +2020,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
       return Shadow;
     }
+    // Handle fully undefined values
+    // (partially undefined constant vectors are handled later)
     if (UndefValue *U = dyn_cast<UndefValue>(V)) {
       Value *AllOnes = (PropagateShadow && PoisonUndef) ? getPoisonedShadow(V)
                                                         : getCleanShadow(V);
@@ -2077,6 +2118,29 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(ShadowPtr && "Could not find shadow for an argument");
       return ShadowPtr;
     }
+
+    // Check for partially-undefined constant vectors
+    // TODO: scalable vectors (this is hard because we do not have IRBuilder)
+    if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V) &&
+        cast<Constant>(V)->containsUndefOrPoisonElement() && PropagateShadow &&
+        PoisonUndefVectors) {
+      unsigned NumElems = cast<FixedVectorType>(V->getType())->getNumElements();
+      SmallVector<Constant *, 32> ShadowVector(NumElems);
+      for (unsigned i = 0; i != NumElems; ++i) {
+        Constant *Elem = cast<Constant>(V)->getAggregateElement(i);
+        ShadowVector[i] = isa<UndefValue>(Elem) ? getPoisonedShadow(Elem)
+                                                : getCleanShadow(Elem);
+      }
+
+      Value *ShadowConstant = ConstantVector::get(ShadowVector);
+      LLVM_DEBUG(dbgs() << "Partial undef constant vector: " << *V << " ==> "
+                        << *ShadowConstant << "\n");
+
+      return ShadowConstant;
+    }
+
+    // TODO: partially-undefined constant arrays, structures, and nested types
+
     // For everything else the shadow is zero.
     return getCleanShadow(V);
   }
@@ -3197,10 +3261,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   bool handleUnknownIntrinsic(IntrinsicInst &I) {
     if (handleUnknownIntrinsicUnlogged(I)) {
-      if (ClDumpStrictIntrinsics)
+      if (ClDumpHeuristicInstructions)
         dumpInst(I);
 
-      LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+      LLVM_DEBUG(dbgs() << "UNKNOWN INSTRUCTION HANDLED HEURISTICALLY: " << I
                         << "\n");
       return true;
     } else
@@ -4159,6 +4223,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  // Instrument AVX permutation intrinsic.
+  // We apply the same permutation (argument index 1) to the shadow.
+  void handleAVXVpermilvar(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow = getShadow(&I, 0);
+    insertShadowCheck(I.getArgOperand(1), &I);
+
+    // Shadows are integer-ish types but some intrinsics require a
+    // different (e.g., floating-point) type.
+    Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
+    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                       {Shadow, I.getArgOperand(1)});
+
+    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+    setOriginForNaryOp(I);
+  }
+
   // Instrument BMI / BMI2 intrinsics.
   // All of these intrinsics are Z = I(X, Y)
   // where the types of all operands and the result match, and are either i32 or
@@ -5101,6 +5182,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       [[maybe_unused]] bool Success =
           maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
       assert(Success);
+      break;
+    }
+
+    case Intrinsic::x86_avx_vpermilvar_pd:
+    case Intrinsic::x86_avx_vpermilvar_pd_256:
+    case Intrinsic::x86_avx512_vpermilvar_pd_512:
+    case Intrinsic::x86_avx_vpermilvar_ps:
+    case Intrinsic::x86_avx_vpermilvar_ps_256:
+    case Intrinsic::x86_avx512_vpermilvar_ps_512: {
+      handleAVXVpermilvar(I);
       break;
     }
 
@@ -6592,7 +6683,6 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
@@ -6625,7 +6715,6 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgBase;
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     // Parameter save area is 8 bytes from frame pointer in PPC32
     VAArgBase = 8;
     unsigned VAArgOffset = VAArgBase;
@@ -6730,7 +6819,6 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);

@@ -332,7 +332,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
 
     /// Erase a single result at `resultIndex`. Returns failure if the function
     /// cannot be updated to have the new signature.
-    LogicalResult eraseResult(unsigned resultIndex) {
+    ::llvm::LogicalResult eraseResult(unsigned resultIndex) {
       ::llvm::BitVector resultsToErase($_op.getNumResults());
       resultsToErase.set(resultIndex);
       return eraseResults(resultsToErase);

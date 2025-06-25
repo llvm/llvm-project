@@ -21,10 +21,20 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
     return error;
   }
 
-  if (!PluginManager::IsRegisteredObjectFilePluginName(name)) {
-    return Status::FromErrorStringWithFormat(
-        "plugin name '%s' is not a valid ObjectFile plugin name", name);
-    return error;
+  std::vector<llvm::StringRef> plugin_names =
+      PluginManager::GetSaveCorePluginNames();
+  if (llvm::find(plugin_names, name) == plugin_names.end()) {
+    StreamString stream;
+    stream.Printf("plugin name '%s' is not a valid ObjectFile plugin name.",
+                  name);
+
+    if (!plugin_names.empty()) {
+      stream.PutCString(" Valid names are: ");
+      std::string plugin_names_str = llvm::join(plugin_names, ", ");
+      stream.PutCString(plugin_names_str);
+      stream.PutChar('.');
+    }
+    return Status(stream.GetString().str());
   }
 
   m_plugin_name = name;
@@ -143,6 +153,27 @@ SaveCoreOptions::GetThreadsToSave() const {
     thread_collection.push_back(thread_list.FindThreadByID(tid));
 
   return thread_collection;
+}
+
+llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
+  Status error;
+  if (!m_process_sp)
+    return Status::FromErrorString("Requires a process to be set.").takeError();
+
+  error = EnsureValidConfiguration(m_process_sp);
+  if (error.Fail())
+    return error.takeError();
+
+  CoreFileMemoryRanges ranges;
+  error = m_process_sp->CalculateCoreFileSaveRanges(*this, ranges);
+  if (error.Fail())
+    return error.takeError();
+
+  uint64_t total_in_bytes = 0;
+  for (auto &core_range : ranges)
+    total_in_bytes += core_range.data.range.size();
+
+  return total_in_bytes;
 }
 
 void SaveCoreOptions::ClearProcessSpecificData() {

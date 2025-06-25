@@ -1511,8 +1511,7 @@ bool Target::IgnoreWatchpointByID(lldb::watch_id_t watch_id,
 
 ModuleSP Target::GetExecutableModule() {
   // search for the first executable in the module list
-  for (size_t i = 0; i < m_images.GetSize(); ++i) {
-    ModuleSP module_sp = m_images.GetModuleAtIndex(i);
+  for (ModuleSP module_sp : m_images.Modules()) {
     lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
     if (obj == nullptr)
       continue;
@@ -1707,6 +1706,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
         if (PlatformSP arch_platform_sp =
                 GetDebugger().GetPlatformList().GetOrCreate(other, {},
                                                             &platform_arch)) {
+          arch_platform_sp->SetLocateModuleCallback(
+              platform_sp->GetLocateModuleCallback());
           SetPlatform(arch_platform_sp);
           if (platform_arch.IsValid())
             other = platform_arch;
@@ -2268,6 +2269,17 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_si
         "byte size of %u is too large for integer scalar type", byte_size);
   }
   return 0;
+}
+
+int64_t Target::ReadSignedIntegerFromMemory(const Address &addr,
+                                            size_t integer_byte_size,
+                                            int64_t fail_value, Status &error,
+                                            bool force_live_memory) {
+  Scalar scalar;
+  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, false, scalar, error,
+                                  force_live_memory))
+    return scalar.SLongLong(fail_value);
+  return fail_value;
 }
 
 uint64_t Target::ReadUnsignedIntegerFromMemory(const Address &addr,

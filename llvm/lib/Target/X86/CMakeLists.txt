@@ -84,7 +84,7 @@ set(sources
   X86TargetTransformInfo.cpp
   X86VZeroUpper.cpp
   X86WinEHState.cpp
-  X86WinFixupBufferSecurityCheck.cpp
+  X86WinEHUnwindV2.cpp
   X86InsertWait.cpp
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp

@@ -685,6 +685,8 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
   case Intrinsic::copysign:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
   case Intrinsic::canonicalize:
   // There's a small benefit to using vector ops in the legalized code.
   case Intrinsic::round:
@@ -702,8 +704,29 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
 InstructionCost
 GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) const {
-  if (ICA.getID() == Intrinsic::fabs)
+  switch (ICA.getID()) {
+  case Intrinsic::fabs:
+    // Free source modifier in the common case.
     return 0;
+  case Intrinsic::amdgcn_workitem_id_x:
+  case Intrinsic::amdgcn_workitem_id_y:
+  case Intrinsic::amdgcn_workitem_id_z:
+    // TODO: If hasPackedTID, or if the calling context is not an entry point
+    // there may be a bit instruction.
+    return 0;
+  case Intrinsic::amdgcn_workgroup_id_x:
+  case Intrinsic::amdgcn_workgroup_id_y:
+  case Intrinsic::amdgcn_workgroup_id_z:
+  case Intrinsic::amdgcn_lds_kernel_id:
+  case Intrinsic::amdgcn_dispatch_ptr:
+  case Intrinsic::amdgcn_dispatch_id:
+  case Intrinsic::amdgcn_implicitarg_ptr:
+  case Intrinsic::amdgcn_queue_ptr:
+    // Read from an argument register.
+    return 0;
+  default:
+    break;
+  }
 
   if (!intrinsicHasPackedVectorBenefit(ICA.getID()))
     return BaseT::getIntrinsicInstrCost(ICA, CostKind);
@@ -718,10 +741,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
 
-  if (SLT == MVT::f64)
-    return LT.first * NElts * get64BitInstrCost(CostKind);
-
-  if ((ST->has16BitInsts() && (SLT == MVT::f16 || SLT == MVT::i16)) ||
+  if ((ST->hasVOP3PInsts() && (SLT == MVT::f16 || SLT == MVT::i16)) ||
       (ST->hasPackedFP32Ops() && SLT == MVT::f32))
     NElts = (NElts + 1) / 2;
 
@@ -731,6 +751,11 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   switch (ICA.getID()) {
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
+    if (SLT == MVT::f64) {
+      InstRate = get64BitInstrCost(CostKind);
+      break;
+    }
+
     if ((SLT == MVT::f32 && ST->hasFastFMAF32()) || SLT == MVT::f16)
       InstRate = getFullRateInstrCost();
     else {
@@ -740,9 +765,26 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::copysign:
     return NElts * getFullRateInstrCost();
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum: {
+    // Instruction + 2 canonicalizes. For cases that need type promotion, we the
+    // promotion takes the place of the canonicalize.
+    unsigned NumOps = 3;
+    if (const IntrinsicInst *II = ICA.getInst()) {
+      // Directly legal with ieee=0
+      // TODO: Not directly legal with strictfp
+      if (fpenvIEEEMode(*II) == KnownIEEEMode::Off)
+        NumOps = 1;
+    }
+
+    unsigned BaseRate =
+        SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();
+    InstRate = BaseRate * NumOps;
+    break;
+  }
   case Intrinsic::canonicalize: {
-    assert(SLT != MVT::f64);
-    InstRate = getFullRateInstrCost();
+    InstRate =
+        SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();
     break;
   }
   case Intrinsic::uadd_sat:
@@ -1043,6 +1085,8 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_is_private:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_make_buffer_rsrc:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1084,7 +1128,7 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
         return nullptr;
 
       // TODO: Do we need to thread more context in here?
-      KnownBits Known = computeKnownBits(MaskOp, DL, 0, nullptr, II);
+      KnownBits Known = computeKnownBits(MaskOp, DL, nullptr, II);
       if (Known.countMinLeadingOnes() < 32)
         return nullptr;
 
@@ -1114,27 +1158,48 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     II->setCalledFunction(NewDecl);
     return II;
   }
+  case Intrinsic::amdgcn_load_to_lds: {
+    Type *SrcTy = NewV->getType();
+    Module *M = II->getModule();
+    Function *NewDecl =
+        Intrinsic::getOrInsertDeclaration(M, II->getIntrinsicID(), {SrcTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
+  case Intrinsic::amdgcn_make_buffer_rsrc: {
+    Type *SrcTy = NewV->getType();
+    Type *DstTy = II->getType();
+    Module *M = II->getModule();
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {DstTy, SrcTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
   default:
     return nullptr;
   }
 }
 
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *VT, ArrayRef<int> Mask,
+                                           VectorType *DstTy, VectorType *SrcTy,
+                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
-  if (!isa<FixedVectorType>(VT))
-    return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
+  if (!isa<FixedVectorType>(SrcTy))
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                                 SubTp);
 
-  Kind = improveShuffleKindFromMask(Kind, Mask, VT, Index, SubTp);
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
   // Larger vector widths may require additional instructions, but are
   // typically cheaper than scalarized versions.
-  unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
+  unsigned NumVectorElts = cast<FixedVectorType>(SrcTy)->getNumElements();
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      DL.getTypeSizeInBits(VT->getElementType()) == 16) {
+      DL.getTypeSizeInBits(SrcTy->getElementType()) == 16) {
     bool HasVOP3P = ST->hasVOP3PInsts();
     unsigned RequestedElts =
         count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
@@ -1176,7 +1241,8 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                               SubTp);
 }
 
 /// Whether it is profitable to sink the operands of an
@@ -1421,4 +1487,21 @@ void GCNTTIImpl::collectKernelLaunchBounds(
   std::pair<unsigned, unsigned> WavesPerEU = ST->getWavesPerEU(F);
   LB.push_back({"amdgpu-waves-per-eu[0]", WavesPerEU.first});
   LB.push_back({"amdgpu-waves-per-eu[1]", WavesPerEU.second});
+}
+
+GCNTTIImpl::KnownIEEEMode
+GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
+  if (!ST->hasIEEEMode()) // Only mode on gfx12
+    return KnownIEEEMode::On;
+
+  const Function *F = I.getFunction();
+  if (!F)
+    return KnownIEEEMode::Unknown;
+
+  Attribute IEEEAttr = F->getFnAttribute("amdgpu-ieee");
+  if (IEEEAttr.isValid())
+    return IEEEAttr.getValueAsBool() ? KnownIEEEMode::On : KnownIEEEMode::Off;
+
+  return AMDGPU::isShader(F->getCallingConv()) ? KnownIEEEMode::Off
+                                               : KnownIEEEMode::On;
 }

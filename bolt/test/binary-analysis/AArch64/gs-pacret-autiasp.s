@@ -215,13 +215,42 @@ f_callclobbered_calleesaved:
         .globl  f_unreachable_instruction
         .type   f_unreachable_instruction,@function
 f_unreachable_instruction:
-// CHECK-LABEL: GS-PAUTH: Warning: unreachable instruction found in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
 // CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       add     x0, x1, x2
+// CHECK-NOT:   instructions that write to the affected registers after any authentication are:
         b       1f
         add     x0, x1, x2
 1:
         ret
         .size f_unreachable_instruction, .-f_unreachable_instruction
+
+// Without CFG, the state is reset at labels, assuming every register that can
+// be clobbered in the function was actually clobbered.
+
+        .globl  lr_untouched_nocfg
+        .type   lr_untouched_nocfg,@function
+lr_untouched_nocfg:
+// CHECK-NOT: lr_untouched_nocfg
+        adr     x2, 1f
+        br      x2
+1:
+        ret
+        .size lr_untouched_nocfg, .-lr_untouched_nocfg
+
+        .globl  lr_clobbered_nocfg
+        .type   lr_clobbered_nocfg,@function
+lr_clobbered_nocfg:
+// CHECK-LABEL: GS-PAUTH: non-protected ret found in function lr_clobbered_nocfg, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      ret
+// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+        adr     x2, 1f
+        br      x2
+1:
+        b       2f
+        bl      g   // never executed, but affects the expected worst-case scenario
+2:
+        ret
+        .size lr_clobbered_nocfg, .-lr_clobbered_nocfg
 
 /// Now do a basic sanity check on every different Authentication instruction:
 

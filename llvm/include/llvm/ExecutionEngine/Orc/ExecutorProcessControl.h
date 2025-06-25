@@ -22,7 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
-#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -36,7 +36,7 @@ namespace orc {
 class ExecutionSession;
 
 /// ExecutorProcessControl supports interaction with a JIT target process.
-class ExecutorProcessControl {
+class LLVM_ABI ExecutorProcessControl {
   friend class ExecutionSession;
 public:
 
@@ -99,7 +99,7 @@ public:
   };
 
   /// APIs for manipulating memory in the target process.
-  class MemoryAccess {
+  class LLVM_ABI MemoryAccess {
   public:
     /// Callback function for asynchronous writes.
     using WriteResultFn = unique_function<void(Error)>;
@@ -398,7 +398,8 @@ protected:
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
-class InProcessMemoryAccess : public ExecutorProcessControl::MemoryAccess {
+class LLVM_ABI InProcessMemoryAccess
+    : public ExecutorProcessControl::MemoryAccess {
 public:
   InProcessMemoryAccess(bool IsArch64Bit) : IsArch64Bit(IsArch64Bit) {}
   void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
@@ -423,51 +424,10 @@ private:
   bool IsArch64Bit;
 };
 
-/// A ExecutorProcessControl instance that asserts if any of its methods are
-/// used. Suitable for use is unit tests, and by ORC clients who haven't moved
-/// to ExecutorProcessControl-based APIs yet.
-class UnsupportedExecutorProcessControl : public ExecutorProcessControl,
-                                          private InProcessMemoryAccess {
-public:
-  UnsupportedExecutorProcessControl(
-      std::shared_ptr<SymbolStringPool> SSP = nullptr,
-      std::unique_ptr<TaskDispatcher> D = nullptr, const std::string &TT = "",
-      unsigned PageSize = 0)
-      : ExecutorProcessControl(
-            SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>(),
-            D ? std::move(D) : std::make_unique<InPlaceTaskDispatcher>()),
-        InProcessMemoryAccess(Triple(TT).isArch64Bit()) {
-    this->TargetTriple = Triple(TT);
-    this->PageSize = PageSize;
-    this->MemAccess = this;
-  }
-
-  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
-                              ArrayRef<std::string> Args) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
-                        IncomingWFRHandler OnComplete,
-                        ArrayRef<char> ArgBuffer) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Error disconnect() override { return Error::success(); }
-};
-
 /// A ExecutorProcessControl implementation targeting the current process.
-class SelfExecutorProcessControl : public ExecutorProcessControl,
-                                   private InProcessMemoryAccess,
-                                   private DylibManager {
+class LLVM_ABI SelfExecutorProcessControl : public ExecutorProcessControl,
+                                            private InProcessMemoryAccess,
+                                            private DylibManager {
 public:
   SelfExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,

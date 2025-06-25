@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // These compilers don't support __builtin_is_implicit_lifetime yet.
-// UNSUPPORTED: clang-18, clang-19, gcc-14, apple-clang-15, apple-clang-16, apple-clang-17
+// UNSUPPORTED: clang-18, clang-19, gcc-14, gcc-15, apple-clang-15, apple-clang-16, apple-clang-17
 
 // <type_traits>
 

@@ -936,9 +936,6 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, LaunchOp::kNumConfigOperands>
       sizes(LaunchOp::kNumConfigOperands);
 
-  // Actual (data) operands passed to the kernel.
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> dataOperands;
-
   // Region arguments to be created.
   SmallVector<OpAsmParser::UnresolvedOperand, 16> regionArgs(
       LaunchOp::kNumConfigRegionAttributes);
@@ -1793,6 +1790,22 @@ void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
   targetsAttr = ArrayAttr::get(getContext(), targetsVector);
 }
 
+LogicalResult GPUModuleOp::verify() {
+  auto targets = getOperation()->getAttrOfType<ArrayAttr>("targets");
+
+  if (!targets)
+    return success();
+
+  for (auto target : targets) {
+    if (auto verifyTargetAttr =
+            llvm::dyn_cast<TargetAttrVerifyInterface>(target)) {
+      if (verifyTargetAttr.verifyTarget(getOperation()).failed())
+        return failure();
+    }
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // GPUBinaryOp
 //===----------------------------------------------------------------------===//
@@ -2289,7 +2302,7 @@ void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,
                                  int64_t warpSize) {
   build(builder, result, resultTypes, laneId, warpSize,
-        /*operands=*/std::nullopt, /*argTypes=*/std::nullopt);
+        /*operands=*/{}, /*argTypes=*/{});
 }
 
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,

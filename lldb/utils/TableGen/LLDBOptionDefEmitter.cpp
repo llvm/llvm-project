@@ -150,7 +150,7 @@ static void emitOptions(std::string Command, ArrayRef<const Record *> Records,
   std::vector<CommandOption> Options(Records.begin(), Records.end());
 
   std::string ID = Command;
-  std::replace(ID.begin(), ID.end(), ' ', '_');
+  llvm::replace(ID, ' ', '_');
   // Generate the macro that the user needs to define before including the
   // *.inc file.
   std::string NeededMacro = "LLDB_OPTIONS_" + ID;

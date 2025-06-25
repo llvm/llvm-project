@@ -1747,6 +1747,52 @@ func.func @vector_mask_0d_mask(%arg0: tensor<2x4xi32>,
 
 // -----
 
+func.func @vector_mask_empty_passthru_no_return_type(%mask : vector<8xi1>,
+                                                     %passthru : vector<8xi32>) {
+  // expected-error@+1 {{'vector.mask' expects a result if passthru operand is provided}}
+  vector.mask %mask, %passthru { } : vector<8xi1>
+  return
+}
+
+// -----
+
+func.func @vector_mask_non_empty_external_return(%t: tensor<?xf32>, %idx: index,
+                                                 %m: vector<16xi1>, %ext: vector<16xf32>) -> vector<16xf32> {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{'vector.mask' op expects all the results from the MaskableOpInterface to match all the values returned by the terminator}}
+  %0 = vector.mask %m {
+    %1 =vector.transfer_read %t[%idx], %ft0 : tensor<?xf32>, vector<16xf32>
+    vector.yield %ext : vector<16xf32>
+  } : vector<16xi1> -> vector<16xf32>
+
+  return %0 : vector<16xf32>
+}
+
+// -----
+
+func.func @vector_mask_empty_passthru_empty_return_type(%mask : vector<8xi1>,
+                                                        %passthru : vector<8xi32>) {
+  // expected-error@+1 {{'vector.mask' expects a result if passthru operand is provided}}
+  vector.mask %mask, %passthru { } : vector<8xi1> -> ()
+  return
+}
+
+// -----
+
+func.func @vector_mask_non_empty_mixed_return(%t: tensor<?xf32>, %idx: index,
+                                              %m: vector<16xi1>, %ext: vector<16xf32>) -> (vector<16xf32>, vector<16xf32>) {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{'vector.mask' op expects number of results to match maskable operation number of results}}
+  %0:2 = vector.mask %m {
+    %1 =vector.transfer_read %t[%idx], %ft0 : tensor<?xf32>, vector<16xf32>
+    vector.yield %1, %ext : vector<16xf32>, vector<16xf32>
+  } : vector<16xi1> -> (vector<16xf32>, vector<16xf32>)
+
+  return %0#0, %0#1 : vector<16xf32>, vector<16xf32>
+}
+
+// -----
+
 func.func @vector_scalable_insert_unaligned(%subv: vector<4xi32>, %vec: vector<[16]xi32>) {
   // expected-error@+1 {{op failed to verify that position is a multiple of the source length.}}
   %0 = vector.scalable.insert %subv, %vec[2] : vector<4xi32> into vector<[16]xi32>
@@ -1850,7 +1896,24 @@ func.func @deinterleave_scalable_rank_fail(%vec : vector<2x[4]xf32>) {
 
 // -----
 
-func.func @invalid_from_elements(%a: f32) {
+func.func @to_elements_wrong_num_results(%a: vector<1x1x2xf32>) {
+  // expected-error @+1 {{operation defines 2 results but was provided 4 to bind}}
+  %0:4 = vector.to_elements %a : vector<1x1x2xf32>
+  return
+}
+
+// -----
+
+func.func @to_elements_wrong_result_type(%a: vector<2xf32>) -> i32 {
+  // expected-error @+3 {{use of value '%0' expects different type than prior uses: 'i32'}}
+  // expected-note @+1 {{prior use here}}
+  %0:2 = vector.to_elements %a : vector<2xf32>
+  return %0#0 : i32
+}
+
+// -----
+
+func.func @from_elements_wrong_num_operands(%a: f32) {
   // expected-error @+1 {{'vector.from_elements' number of operands and types do not match: got 1 operands and 2 types}}
   vector.from_elements %a : vector<2xf32>
   return
@@ -1859,16 +1922,15 @@ func.func @invalid_from_elements(%a: f32) {
 // -----
 
 // expected-note @+1 {{prior use here}}
-func.func @invalid_from_elements(%a: f32, %b: i32) {
+func.func @from_elements_wrong_operand_type(%a: f32, %b: i32) {
   // expected-error @+1 {{use of value '%b' expects different type than prior uses: 'f32' vs 'i32'}}
   vector.from_elements %a, %b : vector<2xf32>
   return
 }
-
 // -----
 
 func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
-  // expected-error @+1 {{'result' must be fixed-length vector of any type values, but got 'vector<[2]xf32>'}}
+  // expected-error @+1 {{'dest' must be fixed-length vector of any type values, but got 'vector<[2]xf32>'}}
   vector.from_elements %a, %b : vector<[2]xf32>
   return
 }
@@ -1909,6 +1971,15 @@ func.func @flat_transpose_scalable(%arg0: vector<[16]xf32>) -> vector<[16]xf32> 
   %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 }
      : vector<[16]xf32> -> vector<[16]xf32>
   return %0 : vector<[16]xf32>
+}
+
+// -----
+
+// expected-note @+1 {{prior use here}}
+func.func @vector_splat_type_mismatch(%a: f32) {
+  // expected-error @+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
+  %0 = vector.splat %a : vector<1xi32>
+  return
 }
 
 // -----

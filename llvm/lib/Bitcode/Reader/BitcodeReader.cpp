@@ -83,7 +83,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -101,8 +100,6 @@ static cl::opt<bool> ExpandConstantExprs(
     "expand-constant-exprs", cl::Hidden,
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -542,8 +539,7 @@ private:
       : Value(Ty, SubclassID), Opcode(Info.Opcode), Flags(Info.Flags),
         NumOperands(OpIDs.size()), BlockAddressBB(Info.BlockAddressBB),
         SrcElemTy(Info.SrcElemTy), InRange(Info.InRange) {
-    std::uninitialized_copy(OpIDs.begin(), OpIDs.end(),
-                            getTrailingObjects<unsigned>());
+    llvm::uninitialized_copy(OpIDs, getTrailingObjects());
   }
 
   BitcodeConstant &operator=(const BitcodeConstant &) = delete;
@@ -560,7 +556,7 @@ public:
   static bool classof(const Value *V) { return V->getValueID() == SubclassID; }
 
   ArrayRef<unsigned> getOperandIDs() const {
-    return ArrayRef(getTrailingObjects<unsigned>(), NumOperands);
+    return ArrayRef(getTrailingObjects(), NumOperands);
   }
 
   std::optional<ConstantRange> getInRange() const {
@@ -3860,6 +3856,10 @@ Error BitcodeReader::parseUseLists() {
         V = FunctionBBs[ID];
       } else
         V = ValueList[ID];
+
+      if (!V->hasUseList())
+        break;
+
       unsigned NumUses = 0;
       SmallDenseMap<const Use *, unsigned, 16> Order;
       for (const Use &U : V->materialized_uses()) {
@@ -3996,8 +3996,6 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   // An old bitcode file with the symbol table at the end would have
   // finished the parse greedily.
   assert(SeenValueSymbolTable);
-
-  SmallVector<uint64_t, 64> Record;
 
   while (true) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
@@ -4481,10 +4479,6 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // In preparation for the deletion of debug-intrinsics, don't allow module
-  // loading to escape intrinsics being autoupgraded to debug records.
-  TheModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
-
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
     if (Error JumpFailed = Stream.JumpToBit(ResumeBit))
@@ -6021,7 +6015,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
               FunctionType::get(FTy->getReturnType(), ArgTys, FTy->isVarArg());
 
           // Update constraint string to use label constraints.
-          std::string Constraints = IA->getConstraintString();
+          std::string Constraints = IA->getConstraintString().str();
           unsigned ArgNo = 0;
           size_t Pos = 0;
           for (const auto &CI : ConstraintInfo) {
@@ -6095,14 +6089,18 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         // seen value here, to avoid expanding a constant expression multiple
         // times.
         auto It = Args.find(BB);
+        BasicBlock *EdgeBB = ConstExprEdgeBBs.lookup({BB, CurBB});
         if (It != Args.end()) {
-          PN->addIncoming(It->second, BB);
+          // If this predecessor was also replaced with a constexpr basic
+          // block, it must be de-duplicated.
+          if (!EdgeBB) {
+            PN->addIncoming(It->second, BB);
+          }
           continue;
         }
 
         // If there already is a block for this edge (from a different phi),
         // use it.
-        BasicBlock *EdgeBB = ConstExprEdgeBBs.lookup({BB, CurBB});
         if (!EdgeBB) {
           // Otherwise, use a temporary block (that we will discard if it
           // turns out to be unnecessary).
@@ -6991,10 +6989,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   // Move the bit stream to the saved position of the deferred function body.
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
-
-  // Regardless of the debug info format we want to end up in, we need
-  // IsNewDbgInfoFormat=true to construct any debug records seen in the bitcode.
-  F->IsNewDbgInfoFormat = true;
 
   if (Error Err = parseFunctionBody(F))
     return Err;
@@ -8160,6 +8154,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ContextSizes.reserve(NumContextSizeInfoEntries);
           for (unsigned J = 0; J < NumContextSizeInfoEntries; J++) {
             assert(ContextIdIndex < PendingContextIds.size());
+            // Skip any 0 entries for MIBs without the context size info.
+            if (PendingContextIds[ContextIdIndex] == 0) {
+              // The size should also be 0 if the context was 0.
+              assert(!Record[I]);
+              ContextIdIndex++;
+              I++;
+              continue;
+            }
             // PendingContextIds read from the preceding FS_ALLOC_CONTEXT_IDS
             // should be in the same order as the total sizes.
             ContextSizes.push_back(
@@ -8177,7 +8179,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
-    case bitc::FS_COMBINED_ALLOC_INFO: {
+    case bitc::FS_COMBINED_ALLOC_INFO:
+    case bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT: {
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
       unsigned NumMIBs = Record[I++];
@@ -8186,7 +8189,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       while (MIBsRead++ < NumMIBs) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
-        auto StackIdList = parseAllocInfoContext(Record, I);
+        SmallVector<unsigned> StackIdList;
+        if (BitCode == bitc::FS_COMBINED_ALLOC_INFO)
+          StackIdList = parseAllocInfoContext(Record, I);
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       assert(Record.size() - I >= NumVersions);

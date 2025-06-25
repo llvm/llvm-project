@@ -519,7 +519,6 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
   SmallVector<Instruction *, 4> InstsInPreheader;
   for (int i = 0; i < Iterations; ++i) {
     Instruction *InstInPreheader = Inst2Replace->clone();
-    SmallVector<Value *, 4> Ops;
     for (int j = 0; j < NumOperands; ++j) {
       Instruction *I = dyn_cast<Instruction>(Inst2Replace->getOperand(j));
       if (!I)

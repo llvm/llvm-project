@@ -149,6 +149,17 @@ mlir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
 
 class DoConcurrentConversion
     : public mlir::OpRewritePattern<fir::DoConcurrentOp> {
+  /// Looks up from the operation from and returns the LocalitySpecifierOp with
+  /// name symbolName
+  static fir::LocalitySpecifierOp
+  findLocalizer(mlir::Operation *from, mlir::SymbolRefAttr symbolName) {
+    fir::LocalitySpecifierOp localizer =
+        mlir::SymbolTable::lookupNearestSymbolFrom<fir::LocalitySpecifierOp>(
+            from, symbolName);
+    assert(localizer && "localizer not found in the symbol table");
+    return localizer;
+  }
+
 public:
   using mlir::OpRewritePattern<fir::DoConcurrentOp>::OpRewritePattern;
 
@@ -162,7 +173,68 @@ public:
     assert(loop.getRegion().hasOneBlock());
     mlir::Block &loopBlock = loop.getRegion().getBlocks().front();
 
-    // Collect iteration variable(s) allocations do that we can move them
+    // Handle localization
+    if (!loop.getLocalVars().empty()) {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(&loop.getRegion().front());
+
+      std::optional<mlir::ArrayAttr> localSyms = loop.getLocalSyms();
+
+      for (auto localInfo : llvm::zip_equal(
+               loop.getLocalVars(), loop.getRegionLocalArgs(), *localSyms)) {
+        mlir::Value localVar = std::get<0>(localInfo);
+        mlir::BlockArgument localArg = std::get<1>(localInfo);
+        mlir::Attribute localizerSym = std::get<2>(localInfo);
+        mlir::SymbolRefAttr localizerName =
+            llvm::cast<mlir::SymbolRefAttr>(localizerSym);
+        fir::LocalitySpecifierOp localizer = findLocalizer(loop, localizerName);
+
+        // TODO Should this be a heap allocation instead? For now, we allocate
+        // on the stack for each loop iteration.
+        mlir::Value localAlloc =
+            rewriter.create<fir::AllocaOp>(loop.getLoc(), localizer.getType());
+
+        auto cloneLocalizerRegion = [&](mlir::Region &region,
+                                        mlir::ValueRange regionArgs,
+                                        mlir::Block::iterator insertionPoint) {
+          // It is reasonable to make this assumption since, at this stage,
+          // control-flow ops are not converted yet. Therefore, things like `if`
+          // conditions will still be represented by their encapsulating `fir`
+          // dialect ops.
+          assert(region.hasOneBlock() &&
+                 "Expected localizer region to have a single block.");
+          mlir::OpBuilder::InsertionGuard guard(rewriter);
+          rewriter.setInsertionPoint(rewriter.getInsertionBlock(),
+                                     insertionPoint);
+          mlir::IRMapping mapper;
+          mapper.map(region.getArguments(), regionArgs);
+          for (mlir::Operation &op : region.front().without_terminator())
+            (void)rewriter.clone(op, mapper);
+        };
+
+        if (!localizer.getInitRegion().empty())
+          cloneLocalizerRegion(localizer.getInitRegion(), {localVar, localArg},
+                               rewriter.getInsertionPoint());
+
+        if (localizer.getLocalitySpecifierType() ==
+            fir::LocalitySpecifierType::LocalInit)
+          cloneLocalizerRegion(localizer.getCopyRegion(), {localVar, localArg},
+                               rewriter.getInsertionPoint());
+
+        if (!localizer.getDeallocRegion().empty())
+          cloneLocalizerRegion(localizer.getDeallocRegion(), {localArg},
+                               rewriter.getInsertionBlock()->end());
+
+        rewriter.replaceAllUsesWith(localArg, localAlloc);
+      }
+
+      loop.getRegion().front().eraseArguments(loop.getNumInductionVars(),
+                                              loop.getNumLocalOperands());
+      loop.getLocalVarsMutable().clear();
+      loop.setLocalSymsAttr(nullptr);
+    }
+
+    // Collect iteration variable(s) allocations so that we can move them
     // outside the `fir.do_concurrent` wrapper.
     llvm::SmallVector<mlir::Operation *> opsToMove;
     for (mlir::Operation &op : llvm::drop_end(wrapperBlock))

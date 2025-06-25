@@ -8,7 +8,7 @@
 ; CHECK-NEXT: ;       Disable shader optimizations
 
 ; CHECK: ; Shader Flags for Module Functions
-; CHECK: ; Function main : 0x00000000
+; CHECK: ; Function main : 0x00000001
 ; The test source in this file generated from the following command:
 ; clang -cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -O0 -o - <<EOF
 ; [numthreads(1,1,1)]

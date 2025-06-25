@@ -13,6 +13,7 @@ include "TestDialect.td"
 include "TestInterfaces.td"
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
+include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -30,7 +31,8 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-
+include "mlir/Interfaces/ValueBoundsOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 
 // Include the attribute definitions.
 include "TestAttrDefs.td"
@@ -243,16 +245,6 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
-def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
-  let arguments = (ins NestedPolynomialAttr:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
-def ContainingIntPolynomialAttr2Op : TEST_Op<"containing_int_polynomial_attr2"> {
-  let arguments = (ins NestedPolynomialAttr2:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -332,6 +324,10 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
    `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
    `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
+}
+
+def SlashAttrOp : TEST_Op<"slash_attr"> {
+  let arguments = (ins SlashAttr:$attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1850,6 +1846,20 @@ def : Pat<
   (MixedVOperandOp5 $input2a, $input2b, $input1b, $attr1,
                     ConstantStrAttr<StrAttr, "MatchMultiVariadicSubSymbol">)>;
 
+def MixedVOperandOp7 : TEST_Op<"mixed_variadic_optional_in7",
+                               [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<I32>:$input1,
+    Optional<I32>:$input2,
+    I32Attr:$attr1
+  );
+}
+
+def : Pat<
+  (MixedVOperandOp7 $input1, $input2, ConstantAttr<I32Attr, "2">:$attr1),
+  (MixedVOperandOp6 $input1, (variadic $input2), $attr1),
+  [(Constraint<CPred<"$0 != Value()">> $input2)]>;
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (either)
 //===----------------------------------------------------------------------===//
@@ -1864,6 +1874,11 @@ def TestEitherOpB : TEST_Op<"either_op_b"> {
   let results = (outs I32:$output);
 }
 
+def TestEitherOpC : TEST_Op<"either_op_c"> {
+  let arguments = (ins AnyI32Attr:$attr, AnyInteger:$arg0, AnyInteger:$arg1);
+  let results = (outs I32:$output);
+}
+
 def : Pat<(TestEitherOpA (either I32:$arg1, I16:$arg2), $x),
           (TestEitherOpB $arg2, $x)>;
 
@@ -1874,6 +1889,9 @@ def : Pat<(TestEitherOpA (either (TestEitherOpB I32:$arg1, $_),
                                  (TestEitherOpB I16:$arg2, $_)),
                           $x),
           (TestEitherOpB $arg2, $x)>;
+
+def : Pat<(TestEitherOpC ConstantAttr<I32Attr, "0">, (either $arg1, I32:$arg2)),
+          (TestEitherOpB $arg1, $arg2)>;
 
 def TestEitherHelperOpA : TEST_Op<"either_helper_op_a"> {
   let arguments = (ins I32:$arg0);
@@ -2358,6 +2376,24 @@ def ForwardBufferOp : TEST_Op<"forward_buffer", [Pure]> {
 // Test ValueBoundsOpInterface
 //===----------------------------------------------------------------------===//
 
+def TestValueWithBoundsOp : TEST_Op<"value_with_bounds", [
+    DeclareOpInterfaceMethods<ValueBoundsOpInterface, ["populateBoundsForIndexValue"]>
+  ]> {
+  let description = [{
+    Creates a value with specified [min, max] range for value bounds analysis.
+
+    Example:
+
+    ```mlir
+    %0 = test.value_with_bounds { min = 4 : index, max = 5 : index}
+    ```
+  }];
+  let arguments = (ins IndexAttr:$min, IndexAttr:$max);
+  let results = (outs Index:$result);
+  let assemblyFormat = "attr-dict";
+}
+
+
 def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
   let description = [{
     Reify a bound for the given index-typed value or dimension size of a shaped
@@ -2793,6 +2829,28 @@ def TestLinalgFillOp :
 }
 
 //===----------------------------------------------------------------------===//
+// Test NVVM RequiresSM trait.
+//===----------------------------------------------------------------------===//
+
+def TestNVVMRequiresSMOp :
+    TEST_Op<"nvvm_requires_sm_80", [NVVMRequiresSM<80>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchCondOp :
+    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSMa<[90]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequirestSMArchCondMultiOp :
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Ops with Default-Valued String Attributes
 //===----------------------------------------------------------------------===//
 
@@ -3140,7 +3198,7 @@ def TestOpWithPropertiesAndInferredType
   ]> {
   let assemblyFormat = "$lhs prop-dict attr-dict";
 
-  let arguments = (ins I32Attr:$lhs, IntProp<"int64_t">:$rhs);
+  let arguments = (ins I32Attr:$lhs, IntProp<"int64_t">:$rhs, OptionalAttr<UnitAttr>: $packed);
   let results = (outs AnyType:$result);
 }
 
@@ -3155,6 +3213,20 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins
     MyStructProperty:$prop
+  );
+}
+
+// Same as above, but without a custom `hashProperty` field, checking
+// that ADL is correctly working.
+def MyStructProperty2 : Property<"MyPropStruct"> {
+  let convertToAttribute = "return $_storage.asAttribute($_ctxt);";
+  let convertFromAttribute = "return MyPropStruct::setFromAttr($_storage, $_attr, $_diag);";
+}
+
+def TestOpWithWrappedProperties2 : TEST_Op<"with_wrapped_properties2"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins
+    MyStructProperty2:$prop
   );
 }
 
@@ -3334,6 +3406,8 @@ def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
   let assemblyFormat = [{
     (`anAttr` `=` $anAttr^)?
     (`simple` `=` $simple^)?
+    (`simplei8` `=` $simplei8^)?
+    (`simpleui8` `=` $simpleui8^)?
     (`nonTrivialStorage` `=` $nonTrivialStorage^)?
     (`hasDefault` `=` $hasDefault^)?
     (`nested` `=` $nested^)?
@@ -3345,6 +3419,8 @@ def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
   let arguments = (ins
     OptionalAttr<I32Attr>:$anAttr,
     OptionalProp<I64Prop>:$simple,
+    OptionalProp<IntProp<"int8_t">>:$simplei8,
+    OptionalProp<IntProp<"uint8_t">>:$simpleui8,
     OptionalProp<StringProp>:$nonTrivialStorage,
     // Confirm that properties with default values now default to nullopt and have
     // the long syntax.
@@ -3401,6 +3477,38 @@ def OpWithPropertyPredicates : TEST_Op<"op_with_property_predicates"> {
   );
   let assemblyFormat = "attr-dict prop-dict";
 }
+
+def TestPropPatternOp1 : TEST_Op<"prop_pattern_op_1"> {
+  let arguments = (ins
+    StringProp:$tag,
+    I64Prop:$val,
+    BoolProp:$cond
+  );
+  let results = (outs I32:$results);
+  let assemblyFormat = "$tag $val $cond attr-dict";
+}
+
+def TestPropPatternOp2 : TEST_Op<"prop_pattern_op_2"> {
+  let arguments = (ins
+    I32:$input,
+    StringProp:$tag
+  );
+  let assemblyFormat = "$input $tag attr-dict";
+}
+
+def : Pat<
+  (TestPropPatternOp1 $tag, NonNegativeI64Prop:$val, ConstantProp<BoolProp, "false">),
+  (TestPropPatternOp1 $tag, (NativeCodeCall<"$0 + 1"> $val), ConstantProp<BoolProp, "true">)>;
+
+def : Pat<
+  (TestPropPatternOp2 (TestPropPatternOp1 $tag1, $val, ConstantProp<BoolProp, "true">),
+    PropConstraint<CPred<"!$_self.empty()">, "non-empty string">:$tag2),
+  (TestPropPatternOp2
+    (TestPropPatternOp1 $tag1,
+      (NativeCodeCall<"-($0)"> $val),
+      ConstantProp<BoolProp, "false">),
+    (NativeCodeCall<"$0.str() + \".\" + $1.str()"> $tag1, $tag2))
+>;
 
 //===----------------------------------------------------------------------===//
 // Test Dataflow
@@ -3497,6 +3605,60 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
   let assemblyFormat = [{
      attr-dict `:` type($index) `,` type($memref)
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test Ops bufferization
+//===----------------------------------------------------------------------===//
+
+def TestDummyTensorOp : TEST_Op<"dummy_tensor_op", [BufferizableOpInterface]> {
+  let arguments = (ins
+    Arg<TestTensorType>:$input
+  );
+  let results = (outs
+    Arg<TestTensorType>:$output
+  );
+  let extraClassDeclaration = [{
+    // BufferizableOpInterface
+    bool bufferizesToMemoryRead(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    bool bufferizesToMemoryWrite(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    mlir::bufferization::AliasingValueList getAliasingValues(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    mlir::LogicalResult bufferize(
+      mlir::RewriterBase& rewriter,
+      const mlir::bufferization::BufferizationOptions& options,
+      mlir::bufferization::BufferizationState &state);
+  }];
+
+  let extraClassDefinition = [{
+    bool test::TestDummyTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestDummyTensorOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestDummyTensorOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
+  let arguments = (ins
+    Arg<TestMemrefType>:$input
+  );
+  let results = (outs
+    Arg<TestMemrefType>:$output
+  );
 }
 
 #endif // TEST_OPS

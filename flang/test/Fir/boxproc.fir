@@ -3,7 +3,7 @@
 // RUN: %if powerpc-registered-target %{tco --target=powerpc64le-unknown-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-PPC %}
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy()
-// CHECK-AARCH64: %[[VAL_3:.*]] = alloca [36 x i8], i64 1, align 1
+// CHECK-AARCH64: %[[VAL_3:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK-X86:     %[[VAL_3:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK-PPC:     %[[VAL_3:.*]] = alloca [4{{[0-8]+}} x i8], i64 1, align 1
 // CHECK:         %[[VAL_1:.*]] = alloca { ptr }, i64 1, align 8
@@ -16,7 +16,7 @@
 // CHECK:         call void @_QPtest_proc_dummy_other(ptr %[[VAL_6]])
 
 // CHECK-LABEL: define void @_QFtest_proc_dummyPtest_proc_dummy_a(ptr
-// CHECK-SAME:              captures(none) %[[VAL_0:.*]], ptr nest captures(none) %[[VAL_1:.*]])
+// CHECK-SAME:              {{[^%]*}}%[[VAL_0:.*]], ptr nest {{[^%]*}}%[[VAL_1:.*]])
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy_other(ptr
 // CHECK-SAME:              %[[VAL_0:.*]])
@@ -63,7 +63,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 }
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy_char()
-// CHECK-AARCH64: %[[VAL_20:.*]] = alloca [36 x i8], i64 1, align 1
+// CHECK-AARCH64: %[[VAL_20:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK-X86:     %[[VAL_20:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK-PPC:     %[[VAL_20:.*]] = alloca [4{{[0-8]+}} x i8], i64 1, align 1
 // CHECK:         %[[VAL_2:.*]] = alloca { { ptr, i64 } }, i64 1, align 8
@@ -92,7 +92,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         call void @llvm.stackrestore.p0(ptr %[[VAL_27]])
 
 // CHECK-LABEL: define { ptr, i64 } @_QFtest_proc_dummy_charPgen_message(ptr
-// CHECK-SAME:                captures(none) %[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr nest captures(none) %[[VAL_2:.*]])
+// CHECK-SAME:                {{[^%]*}}%[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr nest {{[^%]*}}%[[VAL_2:.*]])
 // CHECK:         %[[VAL_3:.*]] = getelementptr { { ptr, i64 } }, ptr %[[VAL_2]], i32 0, i32 0
 // CHECK:         %[[VAL_4:.*]] = load { ptr, i64 }, ptr %[[VAL_3]], align 8
 // CHECK:         %[[VAL_5:.*]] = extractvalue { ptr, i64 } %[[VAL_4]], 0

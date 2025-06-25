@@ -411,6 +411,7 @@ declare half @llvm.trunc.f16(half %a) #0
 declare half @llvm.rint.f16(half %a) #0
 declare half @llvm.nearbyint.f16(half %a) #0
 declare half @llvm.round.f16(half %a) #0
+declare half @llvm.roundeven.f16(half %a) #0
 declare half @llvm.fmuladd.f16(half %a, half %b, half %c) #0
 
 ; CHECK-ALL-LABEL: test_sqrt:
@@ -807,6 +808,21 @@ define void @test_nearbyint(ptr %p) {
 define void @test_round(ptr %p) {
   %a = load half, ptr %p, align 2
   %r = call half @llvm.round.f16(half %a)
+  store half %r, ptr %p
+  ret void
+}
+
+; CHECK-FP16-LABEL: test_roundeven:
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: bl roundevenf
+; CHECK-FP16: vcvtb.f16.f32
+; CHECK-LIBCALL-LABEL: test_roundeven:
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl roundevenf
+; CHECK-LIBCALL: bl __aeabi_f2h
+define void @test_roundeven(ptr %p) {
+  %a = load half, ptr %p, align 2
+  %r = call half @llvm.roundeven.f16(half %a)
   store half %r, ptr %p
   ret void
 }

@@ -449,7 +449,7 @@ public:
   }
 
   static bool isVMEM(const MachineInstr &MI) {
-    return isMUBUF(MI) || isMTBUF(MI) || isImage(MI);
+    return isMUBUF(MI) || isMTBUF(MI) || isImage(MI) || isFLAT(MI);
   }
 
   bool isVMEM(uint16_t Opcode) const {
@@ -1303,6 +1303,8 @@ public:
 
   /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
   void legalizeOperandsVALUt16(MachineInstr &Inst,
+                               MachineRegisterInfo &MRI) const;
+  void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
                                MachineRegisterInfo &MRI) const;
 
   /// Replace the instructions opcode with the equivalent VALU

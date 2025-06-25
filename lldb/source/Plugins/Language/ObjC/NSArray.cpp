@@ -528,10 +528,13 @@ lldb_private::formatters::GenericNSArrayMSyntheticFrontEnd<D32, D64>::Update() {
 
 llvm::Expected<size_t> lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
     GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  size_t idx = ExtractIndexFromString(item_name);
-  if (idx == UINT32_MAX ||
-      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  uint32_t idx = *optional_idx;
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;
@@ -616,10 +619,13 @@ template <typename D32, typename D64, bool Inline>
 llvm::Expected<size_t>
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
     D32, D64, Inline>::GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx == UINT32_MAX ||
-      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  uint32_t idx = *optional_idx;
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;

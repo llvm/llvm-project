@@ -29,7 +29,7 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                           "Accelerate framework"),
                clEnumValN(TargetLibraryInfoImpl::DarwinLibSystemM,
                           "Darwin_libsystem_m", "Darwin libsystem_m"),
-               clEnumValN(TargetLibraryInfoImpl::LIBMVEC_X86, "LIBMVEC-X86",
+               clEnumValN(TargetLibraryInfoImpl::LIBMVEC, "LIBMVEC",
                           "GLIBC Vector Math library"),
                clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
                           "IBM MASS vector library"),
@@ -202,6 +202,14 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.disableAllFunctions();
     TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
     TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
+    return;
+  }
+
+  // DXIL does not support libcalls, and disabling them here prevents a number
+  // of passes from introducing libcalls into DXIL which would otherwise
+  // complicate lowering/legalization
+  if (T.isDXIL()) {
+    TLI.disableAllFunctions();
     return;
   }
 
@@ -806,6 +814,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_pclose);
     TLI.setUnavailable(LibFunc_popen);
     TLI.setUnavailable(LibFunc_pread);
+    TLI.setUnavailable(LibFunc_pvalloc);
     TLI.setUnavailable(LibFunc_pwrite);
     TLI.setUnavailable(LibFunc_read);
     TLI.setUnavailable(LibFunc_readlink);
@@ -1291,6 +1300,14 @@ static const VecDesc VecFuncs_LIBMVEC_X86[] = {
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
 
+static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
+#define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
+};
+
 static const VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
@@ -1360,8 +1377,19 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
     break;
   }
-  case LIBMVEC_X86: {
-    addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+  case LIBMVEC: {
+    switch (TargetTriple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_AARCH64);
+      break;
+    }
     break;
   }
   case MASSV: {

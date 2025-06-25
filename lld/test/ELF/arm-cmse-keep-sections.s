@@ -6,7 +6,7 @@
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj --triple=thumbv8m.main cmse-implib.s -o implib.o -I%S/Inputs/
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj --triple=thumbv8m.main cmse-secure-app.s -o secureapp.o
 /// Create the secure app and import library.
-// RUN: ld.lld -e secure_entry --section-start .gnu.sgstubs=0x1000000 --section-start SECURE1=0x10 --section-start SECURE2=0x2000000 --cmse-implib implib.o secureapp.o --out-implib=implib.lib -o secureapp --gc-sections
+// RUN: ld.lld -e secure_entry --image-base=0 --section-start .gnu.sgstubs=0x1000000 --section-start SECURE1=0x10 --section-start SECURE2=0x2000000 --cmse-implib implib.o secureapp.o --out-implib=implib.lib -o secureapp --gc-sections
 // RUN: llvm-readelf -s implib.lib | FileCheck %s
 // RUN: llvm-objdump -d --no-show-raw-insn secureapp | FileCheck %s --check-prefix=DISS
 

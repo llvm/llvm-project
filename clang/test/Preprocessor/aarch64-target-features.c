@@ -744,3 +744,46 @@
 // CHECK-SMEB16B16: __ARM_FEATURE_SME2 1
 // CHECK-SMEB16B16: __ARM_FEATURE_SME_B16B16 1
 // CHECK-SMEB16B16: __ARM_FEATURE_SVE_B16B16 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+cssc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CSSC %s
+// CHECK-CSSC: __ARM_FEATURE_CSSC 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+fp8 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FP8 %s
+// CHECK-FP8: __ARM_FEATURE_FP8 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+fp8fma -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FP8FMA %s
+// CHECK-FP8FMA: __ARM_FEATURE_FP8 1
+// CHECK-FP8FMA: __ARM_FEATURE_FP8FMA 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+fp8dot2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FP8DOT2 %s
+// CHECK-FP8DOT2: __ARM_FEATURE_FP8 1
+// CHECK-FP8DOT2: __ARM_FEATURE_FP8DOT2 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+fp8dot4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FP8DOT4 %s
+// CHECK-FP8DOT4: __ARM_FEATURE_FP8 1
+// CHECK-FP8DOT4: __ARM_FEATURE_FP8DOT4 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+ssve-fp8dot2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SSVE-FP8DOT2 %s
+// CHECK-SSVE-FP8DOT2: __ARM_FEATURE_FP8 1
+// CHECK-SSVE-FP8DOT2: __ARM_FEATURE_SME2 1
+// CHECK-SSVE-FP8DOT2: __ARM_FEATURE_SSVE_FP8DOT2 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+ssve-fp8dot4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SSVE-FP8DOT4 %s
+// CHECK-SSVE-FP8DOT4: __ARM_FEATURE_FP8 1
+// CHECK-SSVE-FP8DOT4: __ARM_FEATURE_SME2 1
+// CHECK-SSVE-FP8DOT4: __ARM_FEATURE_SSVE_FP8DOT4 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+ssve-fp8fma -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SSVE-FP8FMA %s
+// CHECK-SSVE-FP8FMA: __ARM_FEATURE_FP8 1
+// CHECK-SSVE-FP8FMA: __ARM_FEATURE_SME2 1
+// CHECK-SSVE-FP8FMA: __ARM_FEATURE_SSVE_FP8FMA 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme-f8f32 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SMEF8F32 %s
+// CHECK-SMEF8F32: __ARM_FEATURE_FP8 1
+// CHECK-SMEF8F32: __ARM_FEATURE_SME2 1
+// CHECK-SMEF8F32: __ARM_FEATURE_SME_F8F32 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme-f8f16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SMEF8F16 %s
+// CHECK-SMEF8F16: __ARM_FEATURE_FP8 1
+// CHECK-SMEF8F16: __ARM_FEATURE_SME2 1
+// CHECK-SMEF8F16: __ARM_FEATURE_SME_F8F16 1

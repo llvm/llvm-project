@@ -1004,16 +1004,10 @@ declare %struct.__neon_int64x2x3_t @llvm.aarch64.neon.ld3r.v2i64.p0(ptr) nounwin
 declare %struct.__neon_int64x2x4_t @llvm.aarch64.neon.ld4r.v2i64.p0(ptr) nounwind readonly
 
 define <16 x i8> @ld1_16b(<16 x i8> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1.b { v0 }[0], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr b1, [x0]
-; CHECK-GI-NEXT:    mov.b v0[0], v1[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1.b { v0 }[0], [x0]
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <16 x i8> %V, i8 %tmp1, i32 0
@@ -1086,20 +1080,12 @@ define <1 x i64> @ld1_1d(ptr %p) {
 }
 
 define <8 x i8> @ld1_8b(<8 x i8> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_8b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    ld1.b { v0 }[0], [x0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_8b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr b1, [x0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov.b v0[0], v1[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ld1.b { v0 }[0], [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <8 x i8> %V, i8 %tmp1, i32 0

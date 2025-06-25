@@ -15,6 +15,7 @@ import re
 # Despite the test program printing correctly. See
 # https://github.com/llvm/llvm-project/issues/137599.
 
+
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_default(self):
@@ -55,7 +56,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(response["success"])
         self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
         self.assertEqual(
-            "launchCommands and runInTerminal are mutually exclusive",
+            "'launchCommands' and 'runInTerminal' are mutually exclusive",
             self.get_dict_value(response, ["body", "error", "format"]),
         )
 
@@ -74,9 +75,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap_server.process.wait(
-            timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval
-        )
+        self.dap_server.process.wait(timeout=self.DEFAULT_TIMEOUT)
 
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
@@ -88,16 +87,18 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
-        self.set_function_breakpoints(["main"])
-        stopped_events = self.continue_to_next_stop()
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" in body:
-                    reason = body["reason"]
-                    self.assertNotEqual(
-                        reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
-                    )
+        self.dap_server.request_configurationDone()
+        self.dap_server.wait_for_stopped()
+        self.assertTrue(
+            len(self.dap_server.thread_stop_reasons) > 0,
+            "expected stopped event during launch",
+        )
+        for _, body in self.dap_server.thread_stop_reasons.items():
+            if "reason" in body:
+                reason = body["reason"]
+                self.assertNotEqual(
+                    reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
+                )
 
     @skipIfWindows
     def test_cwd(self):
@@ -329,7 +330,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIf(
-        archs=["arm", "aarch64"]
+        archs=["arm$", "aarch64"]
     )  # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
     def test_commands(self):
         """
@@ -391,14 +392,14 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue again and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the second breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
@@ -460,21 +461,21 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("launchCommands", output, launchCommands)
         # Verify the "stopCommands" here
         self.continue_to_next_stop()
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_next_stop()
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
         self.continue_to_exit()
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("exitCommands", output, exitCommands)
 
     def test_failing_launch_commands(self):
@@ -518,7 +519,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertRegex(output, re.escape(bad_path) + r".*does not exist")
 
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(archs=["arm", "aarch64"], oslist=["linux"])
+    @skipIf(archs=["arm$", "aarch64"], oslist=["linux"])
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during
@@ -529,7 +530,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         terminateCommands = ["expr 4+2"]
         self.launch(
-            program=program,
+            program,
+            stopOnEntry=True,
             terminateCommands=terminateCommands,
             disconnectAutomatically=False,
         )
@@ -543,6 +545,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         self.verify_commands("terminateCommands", output, terminateCommands)
 
+    @skipIfWindows
     def test_version(self):
         """
         Tests that "initialize" response contains the "version" string the same
@@ -563,7 +566,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         version_eval_output = version_eval_response["body"]["result"]
 
-        version_string = self.dap_server.get_initialize_value("$__lldb_version")
+        version_string = self.dap_server.get_capability("$__lldb_version")
         self.assertEqual(
             version_eval_output.splitlines(),
             version_string.splitlines(),

@@ -8,7 +8,6 @@
 
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
@@ -22,7 +21,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
@@ -31,6 +30,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -1707,12 +1707,12 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     if (Parser.getTok().isNot(AsmToken::Identifier))
       return Error(Parser.getTok().getLoc(), "unexpected token");
 
-    SystemZMCExpr::Specifier Kind = SystemZMCExpr::VK_None;
+    auto Kind = SystemZ::S_None;
     StringRef Name = Parser.getTok().getString();
     if (Name == "tls_gdcall")
-      Kind = SystemZMCExpr::VK_TLSGD;
+      Kind = SystemZ::S_TLSGD;
     else if (Name == "tls_ldcall")
-      Kind = SystemZMCExpr::VK_TLSLDM;
+      Kind = SystemZ::S_TLSLDM;
     else
       return Error(Parser.getTok().getLoc(), "unknown TLS tag");
     Parser.Lex();
@@ -1785,6 +1785,7 @@ bool SystemZAsmParser::isLabel(AsmToken &Token) {
 
 // Force static initialization.
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZAsmParser() {
   RegisterMCAsmParser<SystemZAsmParser> X(getTheSystemZTarget());
 }

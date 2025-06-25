@@ -17,12 +17,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 PrintModulePass::PrintModulePass() : OS(dbgs()) {}
 PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
@@ -33,12 +32,9 @@ PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
       EmitSummaryIndex(EmitSummaryIndex) {}
 
 PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
-  ScopedDbgInfoFormatSetter FormatSetter(M, UseNewDbgInfoFormat);
   // Remove intrinsic declarations when printing in the new format.
-  // TODO: Move this into Module::setIsNewDbgInfoFormat when we're ready to
-  // update test output.
-  if (UseNewDbgInfoFormat)
-    M.removeDebugIntrinsicDeclarations();
+  // TODO: consider removing this now that debug intrinsics are gone.
+  M.removeDebugIntrinsicDeclarations();
 
   if (llvm::isFunctionInPrintList("*")) {
     if (!Banner.empty())
@@ -75,8 +71,6 @@ PrintFunctionPass::PrintFunctionPass(raw_ostream &OS, const std::string &Banner)
 
 PreservedAnalyses PrintFunctionPass::run(Function &F,
                                          FunctionAnalysisManager &) {
-  ScopedDbgInfoFormatSetter FormatSetter(F, UseNewDbgInfoFormat);
-
   if (isFunctionInPrintList(F.getName())) {
     if (forcePrintModuleIR())
       OS << Banner << " (function: " << F.getName() << ")\n" << *F.getParent();

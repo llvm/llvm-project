@@ -8,18 +8,15 @@
 
 #include "HIPAMD.h"
 #include "AMDGPU.h"
-#include "CommonArgs.h"
 #include "HIPUtility.h"
 #include "SPIRV.h"
 #include "clang/Basic/Cuda.h"
-#include "clang/Basic/TargetID.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -82,9 +79,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
-  assert(!Inputs.empty() && "Must have at least one input.");
   bool IsThinLTO = D.getOffloadLTOMode() == LTOK_Thin;
-  addLTOOptions(TC, Args, LldArgs, Output, Inputs[0], IsThinLTO);
+  addLTOOptions(TC, Args, LldArgs, Output, Inputs, IsThinLTO);
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
@@ -106,6 +102,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (IsThinLTO) {
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
+    LldArgs.push_back(Args.MakeArgString(
+        "-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3"));
   }
 
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
@@ -420,4 +418,16 @@ void HIPAMDToolChain::checkTargetID(
       PTID.OptionalTargetID != "amdgcnspirv")
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << *PTID.OptionalTargetID;
+}
+
+SPIRVAMDToolChain::SPIRVAMDToolChain(const Driver &D,
+                                     const llvm::Triple &Triple,
+                                     const ArgList &Args)
+    : ROCMToolChain(D, Triple, Args) {
+  getProgramPaths().push_back(getDriver().Dir);
+}
+
+Tool *SPIRVAMDToolChain::buildLinker() const {
+  assert(getTriple().getArch() == llvm::Triple::spirv64);
+  return new tools::AMDGCN::Linker(*this);
 }
