@@ -102,7 +102,8 @@ void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
       OS << " in addrspace" << *AddrSpace;
     break;
   case DWARFExpr: {
-    Expr->print(OS, DumpOpts, nullptr);
+    if (Expr)
+      DWARFExpressionPrinter::print(&(*Expr), OS, DumpOpts, nullptr);
     break;
   }
   case Constant:
@@ -193,8 +194,12 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindTable &Rows) {
   return OS;
 }
 
-Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
-                             const RegisterLocations *InitialLocs) {
+Expected<UnwindTable::RowContainer>
+llvm::dwarf::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
+                       const RegisterLocations *InitialLocs) {
+  // All the unwinding rows parsed during processing of the CFI program.
+  UnwindTable::RowContainer Rows;
+
   // State consists of CFA value and register locations.
   std::vector<std::pair<UnwindLocation, RegisterLocations>> States;
   for (const CFIProgram::Instruction &Inst : CFIP) {
@@ -496,5 +501,5 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       break;
     }
   }
-  return Error::success();
+  return Rows;
 }

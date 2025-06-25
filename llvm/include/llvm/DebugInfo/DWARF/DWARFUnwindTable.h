@@ -311,6 +311,8 @@ public:
   using iterator = RowContainer::iterator;
   using const_iterator = RowContainer::const_iterator;
 
+  UnwindTable(RowContainer &&Rows) : Rows(std::move(Rows)) {}
+
   size_t size() const { return Rows.size(); }
   iterator begin() { return Rows.begin(); }
   const_iterator begin() const { return Rows.begin(); }
@@ -320,18 +322,12 @@ public:
     assert(Index < size());
     return Rows[Index];
   }
-  void insertRow(const UnwindRow &Row) { Rows.push_back(Row); }
-
-  /// Set the last address that this unwinding table refers to.
-  ///
-  /// This is used when this table is created based on a FDE.
-  void setEndAddress(uint64_t Addr) { EndAddress = Addr; }
 
   /// Dump the UnwindTable to the stream.
   ///
   /// \param OS the stream to use for output.
   ///
-  /// \param MRI register information that helps emit register names insteead
+  /// \param MRI register information that helps emit register names instead
   /// of raw register numbers.
   ///
   /// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
@@ -344,30 +340,30 @@ public:
   LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                      unsigned IndentLevel = 0) const;
 
-  /// Parse the information in the CFIProgram and update the CurrRow object
-  /// that the state machine describes.
-  ///
-  /// This is an internal implementation that emulates the state machine
-  /// described in the DWARF Call Frame Information opcodes and will push
-  /// CurrRow onto the Rows container when needed.
-  ///
-  /// \param CFIP the CFI program that contains the opcodes from a CIE or FDE.
-  ///
-  /// \param CurrRow the current row to modify while parsing the state machine.
-  ///
-  /// \param InitialLocs If non-NULL, we are parsing a FDE and this contains
-  /// the initial register locations from the CIE. If NULL, then a CIE's
-  /// opcodes are being parsed and this is not needed. This is used for the
-  /// DW_CFA_restore and DW_CFA_restore_extended opcodes.
-  LLVM_ABI Error parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
-                           const RegisterLocations *InitialLocs);
-
 private:
   RowContainer Rows;
-  /// The end address when data is extracted from a FDE. This value will be
-  /// invalid when a UnwindTable is extracted from a CIE.
-  std::optional<uint64_t> EndAddress;
 };
+
+/// Parse the information in the CFIProgram and update the CurrRow object
+/// that the state machine describes.
+///
+/// This function emulates the state machine described in the DWARF Call Frame
+/// Information opcodes and will push CurrRow onto a RowContainer when needed.
+///
+/// \param CFIP the CFI program that contains the opcodes from a CIE or FDE.
+///
+/// \param CurrRow the current row to modify while parsing the state machine.
+///
+/// \param InitialLocs If non-NULL, we are parsing a FDE and this contains
+/// the initial register locations from the CIE. If NULL, then a CIE's
+/// opcodes are being parsed and this is not needed. This is used for the
+/// DW_CFA_restore and DW_CFA_restore_extended opcodes.
+///
+/// \returns An error if the DWARF Call Frame Information opcodes have state
+/// machine errors, or the accumulated rows otherwise.
+LLVM_ABI Expected<UnwindTable::RowContainer>
+parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
+          const RegisterLocations *InitialLocs);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
 
