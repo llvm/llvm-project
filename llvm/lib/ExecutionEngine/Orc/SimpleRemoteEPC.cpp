@@ -224,7 +224,7 @@ SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
   return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
 }
 
-Expected<std::unique_ptr<ExecutorProcessControl::MemoryAccess>>
+Expected<std::unique_ptr<MemoryAccess>>
 SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
   EPCGenericMemoryAccess::FuncAddrs FAs;
   if (auto Err = SREPC.getBootstrapSymbols(
