@@ -268,6 +268,10 @@ public:
   void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
+  /// Set function attributes for a function declaration.
+  void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
+                             bool isIncompleteFunction, bool isThunk);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
@@ -340,10 +344,16 @@ public:
       clang::VisibilityAttr::VisibilityType visibility);
   cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
-
+  cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                                     GVALinkage linkage,
                                                     bool isConstantVariable);
+  void setFunctionLinkage(GlobalDecl gd, cir::FuncOp f) {
+    cir::GlobalLinkageKind l = getFunctionLinkage(gd);
+    f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), l));
+    mlir::SymbolTable::setSymbolVisibility(f,
+                                           getMLIRVisibilityFromCIRLinkage(l));
+  }
 
   cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
                                                     bool isConstant);

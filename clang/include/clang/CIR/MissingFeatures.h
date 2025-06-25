@@ -72,16 +72,18 @@ struct MissingFeatures {
 
   // FuncOp handling
   static bool opFuncOpenCLKernelMetadata() { return false; }
+  static bool opFuncAstDeclAttr() { return false; }
   static bool opFuncCallingConv() { return false; }
   static bool opFuncExtraAttrs() { return false; }
-  static bool opFuncDsoLocal() { return false; }
-  static bool opFuncLinkage() { return false; }
-  static bool opFuncVisibility() { return false; }
   static bool opFuncNoProto() { return false; }
   static bool opFuncCPUAndFeaturesAttributes() { return false; }
   static bool opFuncSection() { return false; }
-  static bool opFuncSetComdat() { return false; }
+  static bool opFuncMultipleReturnVals() { return false; }
   static bool opFuncAttributesForDefinition() { return false; }
+  static bool opFuncMaybeHandleStaticInExternC() { return false; }
+  static bool opFuncGlobalAliases() { return false; }
+  static bool setLLVMFunctionFEnvAttributes() { return false; }
+  static bool setFunctionAttributes() { return false; }
 
   // CallOp handling
   static bool opCallPseudoDtor() { return false; }
