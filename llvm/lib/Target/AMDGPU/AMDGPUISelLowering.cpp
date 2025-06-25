@@ -4078,10 +4078,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
 
-  // When the shl64_reduce optimisation code is passed through vector
-  // legalization some scalarising occurs. After ISD::AND was legalised, this
-  // resulted in the AND instructions no longer being elided, as mentioned
-  // below. The following code should make sure this takes place.
   if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     SDValue VAND = RHS.getOperand(0);
     if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
@@ -4327,10 +4323,6 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   SDLoc SL(N);
   unsigned RHSVal;
 
-  // When the shl64_reduce optimisation code is passed through vector
-  // legalization some scalarising occurs. After ISD::AND was legalised, this
-  // resulted in the AND instructions no longer being elided, as mentioned
-  // below. The following code should make sure this takes place.
   if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     SDValue VAND = RHS.getOperand(0);
     if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
