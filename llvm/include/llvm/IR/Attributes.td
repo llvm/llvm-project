@@ -389,16 +389,6 @@ def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", In
 /// pipeline to perform elide on the call or invoke instruction.
 def CoroElideSafe : EnumAttr<"coro_elide_safe", IntersectPreserve, [FnAttr]>;
 
-/// Function is marked for Windows Hot Patching
-def MarkedForWindowsSecureHotPatching
-    : StrBoolAttr<"marked_for_windows_hot_patching">;
-
-/// Global variable should not be accessed through a "__ref_" global variable in
-/// a hot patching function This attribute is applied to the global variable
-/// decl, not the hotpatched function.
-def AllowDirectAccessInHotPatchFunction
-    : StrBoolAttr<"allow_direct_access_in_hot_patch_function">;
-
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
