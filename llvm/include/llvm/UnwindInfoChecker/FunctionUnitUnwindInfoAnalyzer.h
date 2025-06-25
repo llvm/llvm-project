@@ -17,7 +17,6 @@
 #include "FunctionUnitAnalyzer.h"
 #include "UnwindInfoAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
-#include <cstdio>
 
 namespace llvm {
 

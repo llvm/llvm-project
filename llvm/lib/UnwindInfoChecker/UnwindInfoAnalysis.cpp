@@ -26,9 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/UnwindInfoChecker/UnwindInfoState.h"
-#include <cstdint>
 #include <optional>
-#include <set>
 
 using namespace llvm;
 
@@ -64,7 +62,7 @@ getUnwindRuleRefReg(const dwarf::UnwindTable::const_iterator &UnwindRow,
   case dwarf::UnwindLocation::Location::Constant:
   case dwarf::UnwindLocation::Location::Unspecified:
   case dwarf::UnwindLocation::Location::DWARFExpr:
-    // TODO here should look into expr and find the registers.
+    // TODO: here should look into expr and find the registers.
     return std::nullopt;
   case dwarf::UnwindLocation::Location::Same:
     return Reg;
@@ -89,14 +87,14 @@ UnwindInfoAnalysis::UnwindInfoAnalysis(MCContext *Context,
       continue;
 
     DWARFRegNum Reg = MCRI->getDwarfRegNum(LLVMReg, IsEH);
-    // TODO this should be `undefined` instead of `same_value`, but because
+    // TODO: this should be `undefined` instead of `same_value`, but because
     // initial frame state doesn't have any directives about callee saved
     // registers, every register is tracked. After initial frame state is
     // corrected, this should be changed.
     State.update(MCCFIInstruction::createSameValue(nullptr, Reg));
   }
 
-  // TODO Ignoring PC should be in initial frame state.
+  // TODO: Ignoring PC should be in the initial frame state.
   State.update(MCCFIInstruction::createUndefined(
       nullptr, MCRI->getDwarfRegNum(MCRI->getProgramCounter(), IsEH)));
 
@@ -112,7 +110,7 @@ UnwindInfoAnalysis::UnwindInfoAnalysis(MCContext *Context,
          "the CFA information should be describable in [Reg + Offset] in here");
   auto CFA = *MaybeCFA;
 
-  // TODO CFA register callee value is CFA's value, this should be in initial
+  // TODO: CFA register callee value is CFA's value, this should be in initial
   // frame state.
   State.update(MCCFIInstruction::createOffset(nullptr, CFA.Reg, 0));
 
@@ -134,7 +132,7 @@ void UnwindInfoAnalysis::update(const MCInst &Inst,
   for (auto &&Directive : CFIDirectives)
     State.update(Directive);
 
-  std::set<DWARFRegNum> Writes, Reads;
+  SmallSet<DWARFRegNum, 4> Writes, Reads;
   for (unsigned I = 0; I < MCInstInfo.NumImplicitUses; I++)
     Reads.insert(MCRI->getDwarfRegNum(
         getSuperReg(MCRI, MCInstInfo.implicit_uses()[I]), IsEH));
@@ -171,7 +169,8 @@ void UnwindInfoAnalysis::checkRegDiff(
     const MCInst &Inst, DWARFRegNum Reg,
     const dwarf::UnwindTable::const_iterator &PrevRow,
     const dwarf::UnwindTable::const_iterator &NextRow,
-    const std::set<DWARFRegNum> &Reads, const std::set<DWARFRegNum> &Writes) {
+    const SmallSet<DWARFRegNum, 4> &Reads,
+    const SmallSet<DWARFRegNum, 4> &Writes) {
   auto MaybePrevLoc = PrevRow->getRegisterLocations().getRegisterLocation(Reg);
   auto MaybeNextLoc = NextRow->getRegisterLocations().getRegisterLocation(Reg);
 
@@ -207,7 +206,7 @@ void UnwindInfoAnalysis::checkRegDiff(
           Inst.getLoc(),
           formatv("unknown change happened to %{0} unwinding rule values",
                   RegName));
-      //! FIXME Check if the register is changed or not
+      //! FIXME: Check if the register is changed or not
       return;
     }
 
@@ -231,7 +230,7 @@ void UnwindInfoAnalysis::checkRegDiff(
     }
     break;
   case dwarf::UnwindLocation::DWARFExpr:
-    // TODO Expressions are not supported yet, but if wanted to be supported,
+    // TODO: Expressions are not supported yet, but if wanted to be supported,
     // all the registers used in an expression should extracted and checked if
     // the instruction modifies them or not.
   default:
@@ -243,7 +242,8 @@ void UnwindInfoAnalysis::checkRegDiff(
 void UnwindInfoAnalysis::checkCFADiff(
     const MCInst &Inst, const dwarf::UnwindTable::const_iterator &PrevRow,
     const dwarf::UnwindTable::const_iterator &NextRow,
-    const std::set<DWARFRegNum> &Reads, const std::set<DWARFRegNum> &Writes) {
+    const SmallSet<DWARFRegNum, 4> &Reads,
+    const SmallSet<DWARFRegNum, 4> &Writes) {
 
   auto MaybePrevCFA = getCFARegOffsetInfo(PrevRow);
   auto MaybeNextCFA = getCFARegOffsetInfo(NextRow);
@@ -275,7 +275,7 @@ void UnwindInfoAnalysis::checkCFADiff(
   const char *PrevCFARegName = MaybeLLVMReg ? MCRI->getName(*MaybeLLVMReg) : "";
 
   if (PrevCFA.Reg != NextCFA.Reg) {
-    //! FIXME warn here
+    //! FIXME: warn here
     return;
   }
 

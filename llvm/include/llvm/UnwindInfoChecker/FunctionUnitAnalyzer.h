@@ -15,7 +15,6 @@
 #define LLVM_UNWINDINFOCHECKER_FUNCTIONUNITANALYZER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include <cstdio>
 
 namespace llvm {
 

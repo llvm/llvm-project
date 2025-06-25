@@ -38,7 +38,7 @@ inline SmallVector<MCPhysReg> getSuperRegs(const MCRegisterInfo *MCRI) {
     }
   }
 
-  std::sort(SuperRegs.begin(), SuperRegs.end());
+  sort(SuperRegs.begin(), SuperRegs.end());
   SuperRegs.resize(std::distance(
       SuperRegs.begin(), std::unique(SuperRegs.begin(), SuperRegs.end())));
   return SuperRegs;

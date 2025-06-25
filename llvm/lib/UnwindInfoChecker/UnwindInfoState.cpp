@@ -107,7 +107,7 @@ UnwindInfoState::convert(MCCFIInstruction Directive) {
                             (*MaybeCurrentRow)->getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpEscape:
-    // TODO DWARFExpressions are not supported yet.
+    // TODO: DWARFExpressions are not supported yet.
     break;
   case MCCFIInstruction::OpRestore:
     CFIP.addInstruction(dwarf::DW_CFA_restore);
@@ -132,7 +132,7 @@ UnwindInfoState::convert(MCCFIInstruction Directive) {
     CFIP.addInstruction(dwarf::DW_CFA_GNU_args_size);
     break;
   case MCCFIInstruction::OpLabel:
-    // TODO, I don't know what it is, I have to implement it.
+    // TODO: I don't know what it is, I have to implement it.
     break;
   case MCCFIInstruction::OpValOffset:
     CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),

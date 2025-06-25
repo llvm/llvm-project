@@ -26,20 +26,15 @@
 namespace llvm {
 
 class FunctionUnitStreamer : public MCStreamer {
-  std::vector<unsigned> FrameIndices;
-
-  unsigned LastDirectiveIndex;
-  std::optional<MCInst> LastInstruction;
-  std::unique_ptr<FunctionUnitAnalyzer> Analyzer;
-
+private:
   std::pair<unsigned, unsigned> updateDirectivesRange();
   void updateAnalyzer();
 
 public:
   FunctionUnitStreamer(MCContext &Context,
                        std::unique_ptr<FunctionUnitAnalyzer> Analyzer)
-      : MCStreamer(Context), LastDirectiveIndex(0),
-        LastInstruction(std::nullopt), Analyzer(std::move(Analyzer)) {
+      : MCStreamer(Context), LastInstruction(std::nullopt),
+        Analyzer(std::move(Analyzer)), LastDirectiveIndex(0) {
     assert(this->Analyzer && "Analyzer should not be null");
   }
 
@@ -64,6 +59,12 @@ public:
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) override;
+
+private:
+  std::vector<unsigned> FrameIndices;
+  std::optional<MCInst> LastInstruction;
+  std::unique_ptr<FunctionUnitAnalyzer> Analyzer;
+  unsigned LastDirectiveIndex;
 };
 
 } // namespace llvm

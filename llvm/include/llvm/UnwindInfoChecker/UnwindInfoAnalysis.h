@@ -16,6 +16,7 @@
 
 #include "UnwindInfoState.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCContext.h"
@@ -27,7 +28,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include <set>
 
 namespace llvm {
 
@@ -48,14 +48,14 @@ private:
   void checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
                     const dwarf::UnwindTable::const_iterator &PrevRow,
                     const dwarf::UnwindTable::const_iterator &NextRow,
-                    const std::set<DWARFRegNum> &Reads,
-                    const std::set<DWARFRegNum> &Writes);
+                    const SmallSet<DWARFRegNum, 4> &Reads,
+                    const SmallSet<DWARFRegNum, 4> &Writes);
 
   void checkCFADiff(const MCInst &Inst,
                     const dwarf::UnwindTable::const_iterator &PrevRow,
                     const dwarf::UnwindTable::const_iterator &NextRow,
-                    const std::set<DWARFRegNum> &Reads,
-                    const std::set<DWARFRegNum> &Writes);
+                    const SmallSet<DWARFRegNum, 4> &Reads,
+                    const SmallSet<DWARFRegNum, 4> &Writes);
 };
 
 } // namespace llvm

@@ -42,7 +42,7 @@ void FunctionUnitStreamer::updateAnalyzer() {
     return;
   }
 
-  const auto *LastFrame = &getDwarfFrameInfos()[FrameIndices.back()];
+  const MCDwarfFrameInfo *LastFrame = &getDwarfFrameInfos()[FrameIndices.back()];
 
   auto DirectivesRange = updateDirectivesRange();
   ArrayRef<MCCFIInstruction> Directives;
@@ -56,7 +56,7 @@ void FunctionUnitStreamer::updateAnalyzer() {
   if (LastInstruction) {
     Analyzer->emitInstructionAndDirectives(LastInstruction.value(), Directives);
   } else {
-    Analyzer->startFunctionUnit(false /* TODO should put isEH here */,
+    Analyzer->startFunctionUnit(false /* TODO: should put isEH here */,
                                 Directives);
   }
 }
