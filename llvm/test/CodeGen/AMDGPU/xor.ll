@@ -76,36 +76,6 @@ define amdgpu_kernel void @xor_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; VI-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: xor_v2i32:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dwordx2 s[6:7], s[2:3], 0x0
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b64 s[4:5], s[6:7], s[4:5]
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s5
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: xor_v2i32:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b64 s[0:1], s[2:3], s[4:5]
-; VIS-NEXT:    v_mov_b32_e32 v3, s1
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
 
   %a = load <2 x i32>, ptr addrspace(1) %in0
   %b = load <2 x i32>, ptr addrspace(1) %in1
@@ -160,46 +130,6 @@ define amdgpu_kernel void @xor_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; VI-NEXT:    v_xor_b32_e32 v0, v0, v4
 ; VI-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: xor_v4i32:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
-; SIS-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x0
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b32 s7, s7, s11
-; SIS-NEXT:    s_xor_b32 s6, s6, s10
-; SIS-NEXT:    s_xor_b32 s5, s5, s9
-; SIS-NEXT:    s_xor_b32 s4, s4, s8
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s5
-; SIS-NEXT:    v_mov_b32_e32 v2, s6
-; SIS-NEXT:    v_mov_b32_e32 v3, s7
-; SIS-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: xor_v4i32:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
-; VIS-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v4, s0
-; VIS-NEXT:    v_mov_b32_e32 v5, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b32 s0, s7, s11
-; VIS-NEXT:    s_xor_b32 s1, s6, s10
-; VIS-NEXT:    s_xor_b32 s2, s5, s9
-; VIS-NEXT:    s_xor_b32 s3, s4, s8
-; VIS-NEXT:    v_mov_b32_e32 v0, s3
-; VIS-NEXT:    v_mov_b32_e32 v1, s2
-; VIS-NEXT:    v_mov_b32_e32 v2, s1
-; VIS-NEXT:    v_mov_b32_e32 v3, s0
-; VIS-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VIS-NEXT:    s_endpgm
   %a = load <4 x i32>, ptr addrspace(1) %in0
   %b = load <4 x i32>, ptr addrspace(1) %in1
   %result = xor <4 x i32> %a, %b
@@ -255,44 +185,6 @@ define amdgpu_kernel void @xor_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, 
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: xor_i1:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
-; SIS-NEXT:    s_mov_b32 s7, 0xf000
-; SIS-NEXT:    s_mov_b32 s6, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dword s8, s[2:3], 0x0
-; SIS-NEXT:    s_load_dword s9, s[4:5], 0x0
-; SIS-NEXT:    s_mov_b32 s4, s0
-; SIS-NEXT:    s_mov_b32 s5, s1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    v_cmp_ge_f32_e64 s[0:1], s8, 0
-; SIS-NEXT:    v_cmp_ge_f32_e64 s[2:3], s9, 1.0
-; SIS-NEXT:    v_mov_b32_e32 v0, s9
-; SIS-NEXT:    v_mov_b32_e32 v1, s8
-; SIS-NEXT:    s_xor_b64 vcc, s[0:1], s[2:3]
-; SIS-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; SIS-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: xor_i1:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dword s6, s[2:3], 0x0
-; VIS-NEXT:    s_load_dword s4, s[4:5], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    v_cmp_ge_f32_e64 s[0:1], s6, 0
-; VIS-NEXT:    v_cmp_ge_f32_e64 s[2:3], s4, 1.0
-; VIS-NEXT:    v_mov_b32_e32 v2, s4
-; VIS-NEXT:    v_mov_b32_e32 v3, s6
-; VIS-NEXT:    s_xor_b64 vcc, s[0:1], s[2:3]
-; VIS-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
-; VIS-NEXT:    flat_store_dword v[0:1], v2
-; VIS-NEXT:    s_endpgm
 
   %a = load float, ptr addrspace(1) %in0
   %b = load float, ptr addrspace(1) %in1
@@ -348,48 +240,6 @@ define amdgpu_kernel void @v_xor_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0
 ; VI-NEXT:    v_and_b32_e32 v2, 1, v2
 ; VI-NEXT:    flat_store_byte v[0:1], v2
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: v_xor_i1:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
-; SIS-NEXT:    s_mov_b32 s7, 0xf000
-; SIS-NEXT:    s_mov_b32 s6, -1
-; SIS-NEXT:    s_mov_b32 s14, s6
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_mov_b32 s12, s2
-; SIS-NEXT:    s_mov_b32 s13, s3
-; SIS-NEXT:    s_mov_b32 s15, s7
-; SIS-NEXT:    s_mov_b32 s10, s6
-; SIS-NEXT:    s_mov_b32 s11, s7
-; SIS-NEXT:    buffer_load_ubyte v0, off, s[12:15], 0 glc
-; SIS-NEXT:    s_waitcnt vmcnt(0)
-; SIS-NEXT:    buffer_load_ubyte v1, off, s[8:11], 0 glc
-; SIS-NEXT:    s_waitcnt vmcnt(0)
-; SIS-NEXT:    s_mov_b32 s4, s0
-; SIS-NEXT:    s_mov_b32 s5, s1
-; SIS-NEXT:    v_xor_b32_e32 v0, v0, v1
-; SIS-NEXT:    v_and_b32_e32 v0, 1, v0
-; SIS-NEXT:    buffer_store_byte v0, off, s[4:7], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: v_xor_i1:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    v_mov_b32_e32 v0, s2
-; VIS-NEXT:    v_mov_b32_e32 v1, s3
-; VIS-NEXT:    v_mov_b32_e32 v2, s4
-; VIS-NEXT:    v_mov_b32_e32 v3, s5
-; VIS-NEXT:    flat_load_ubyte v4, v[0:1] glc
-; VIS-NEXT:    s_waitcnt vmcnt(0)
-; VIS-NEXT:    flat_load_ubyte v2, v[2:3] glc
-; VIS-NEXT:    s_waitcnt vmcnt(0)
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    v_xor_b32_e32 v2, v4, v2
-; VIS-NEXT:    v_and_b32_e32 v2, 1, v2
-; VIS-NEXT:    flat_store_byte v[0:1], v2
-; VIS-NEXT:    s_endpgm
   %a = load volatile i1, ptr addrspace(1) %in0
   %b = load volatile i1, ptr addrspace(1) %in1
   %xor = xor i1 %a, %b
@@ -437,34 +287,6 @@ define amdgpu_kernel void @vector_xor_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; VI-NEXT:    v_xor_b32_e32 v2, v4, v2
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: vector_xor_i32:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dword s6, s[2:3], 0x0
-; SIS-NEXT:    s_load_dword s4, s[4:5], 0x0
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b32 s4, s6, s4
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: vector_xor_i32:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dword s2, s[2:3], 0x0
-; VIS-NEXT:    s_load_dword s3, s[4:5], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b32 s0, s2, s3
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dword v[0:1], v2
-; VIS-NEXT:    s_endpgm
   %a = load i32, ptr addrspace(1) %in0
   %b = load i32, ptr addrspace(1) %in1
   %result = xor i32 %a, %b
@@ -496,28 +318,6 @@ define amdgpu_kernel void @scalar_xor_i32(ptr addrspace(1) %out, i32 %a, i32 %b)
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: scalar_xor_i32:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_mov_b32 s7, 0xf000
-; SIS-NEXT:    s_mov_b32 s6, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_mov_b32 s4, s0
-; SIS-NEXT:    s_xor_b32 s0, s2, s3
-; SIS-NEXT:    s_mov_b32 s5, s1
-; SIS-NEXT:    v_mov_b32_e32 v0, s0
-; SIS-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: scalar_xor_i32:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b32 s2, s2, s3
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    v_mov_b32_e32 v2, s2
-; VIS-NEXT:    flat_store_dword v[0:1], v2
-; VIS-NEXT:    s_endpgm
   %result = xor i32 %a, %b
   store i32 %result, ptr addrspace(1) %out
   ret void
@@ -547,28 +347,6 @@ define amdgpu_kernel void @scalar_not_i32(ptr addrspace(1) %out, i32 %a) {
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: scalar_not_i32:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dword s6, s[4:5], 0xb
-; SIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_not_b32 s4, s6
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: scalar_not_i32:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_not_b32 s2, s2
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    v_mov_b32_e32 v2, s2
-; VIS-NEXT:    flat_store_dword v[0:1], v2
-; VIS-NEXT:    s_endpgm
   %result = xor i32 %a, -1
   store i32 %result, ptr addrspace(1) %out
   ret void
@@ -606,30 +384,6 @@ define amdgpu_kernel void @vector_not_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; VI-NEXT:    v_not_b32_e32 v2, v2
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: vector_not_i32:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dword s4, s[2:3], 0x0
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_not_b32 s4, s4
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: vector_not_i32:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dword s2, s[2:3], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_not_b32 s0, s2
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dword v[0:1], v2
-; VIS-NEXT:    s_endpgm
   %a = load i32, ptr addrspace(1) %in0
   %b = load i32, ptr addrspace(1) %in1
   %result = xor i32 %a, -1
@@ -679,36 +433,6 @@ define amdgpu_kernel void @vector_xor_i64(ptr addrspace(1) %out, ptr addrspace(1
 ; VI-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: vector_xor_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dwordx2 s[6:7], s[2:3], 0x0
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b64 s[4:5], s[6:7], s[4:5]
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s5
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: vector_xor_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b64 s[0:1], s[2:3], s[4:5]
-; VIS-NEXT:    v_mov_b32_e32 v3, s1
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
   %a = load i64, ptr addrspace(1) %in0
   %b = load i64, ptr addrspace(1) %in1
   %result = xor i64 %a, %b
@@ -744,32 +468,6 @@ define amdgpu_kernel void @scalar_xor_i64(ptr addrspace(1) %out, i64 %a, i64 %b)
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: scalar_xor_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
-; SIS-NEXT:    s_mov_b32 s7, 0xf000
-; SIS-NEXT:    s_mov_b32 s6, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_mov_b32 s4, s0
-; SIS-NEXT:    s_mov_b32 s5, s1
-; SIS-NEXT:    s_xor_b64 s[0:1], s[2:3], s[8:9]
-; SIS-NEXT:    v_mov_b32_e32 v0, s0
-; SIS-NEXT:    v_mov_b32_e32 v1, s1
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: scalar_xor_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_xor_b64 s[0:1], s[2:3], s[4:5]
-; VIS-NEXT:    v_mov_b32_e32 v3, s1
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
   %result = xor i64 %a, %b
   store i64 %result, ptr addrspace(1) %out
   ret void
@@ -801,30 +499,6 @@ define amdgpu_kernel void @scalar_not_i64(ptr addrspace(1) %out, i64 %a) {
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: scalar_not_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_mov_b32 s7, 0xf000
-; SIS-NEXT:    s_mov_b32 s6, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_mov_b32 s4, s0
-; SIS-NEXT:    s_mov_b32 s5, s1
-; SIS-NEXT:    s_not_b64 s[0:1], s[2:3]
-; SIS-NEXT:    v_mov_b32_e32 v0, s0
-; SIS-NEXT:    v_mov_b32_e32 v1, s1
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: scalar_not_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_not_b64 s[0:1], s[2:3]
-; VIS-NEXT:    v_mov_b32_e32 v3, s1
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
   %result = xor i64 %a, -1
   store i64 %result, ptr addrspace(1) %out
   ret void
@@ -864,32 +538,6 @@ define amdgpu_kernel void @vector_not_i64(ptr addrspace(1) %out, ptr addrspace(1
 ; VI-NEXT:    v_not_b32_e32 v1, v1
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: vector_not_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_not_b64 s[4:5], s[4:5]
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s5
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: vector_not_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_not_b64 s[0:1], s[2:3]
-; VIS-NEXT:    v_mov_b32_e32 v3, s1
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
   %a = load i64, ptr addrspace(1) %in0
   %b = load i64, ptr addrspace(1) %in1
   %result = xor i64 %a, -1
@@ -956,57 +604,6 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; VI-NEXT:  .LBB14_4:
 ; VI-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; VI-NEXT:    s_branch .LBB14_2
-; SIS-LABEL: xor_cf:
-; SIS:       ; %bb.0: ; %entry
-; SIS-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
-; SIS-NEXT:    s_mov_b64 s[10:11], 0
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    v_cmp_ne_u64_e64 s[8:9], s[4:5], 0
-; SIS-NEXT:    s_and_b64 vcc, exec, s[8:9]
-; SIS-NEXT:    s_cbranch_vccz .LBB12_4
-; SIS-NEXT:  ; %bb.1: ; %else
-; SIS-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x0
-; SIS-NEXT:    s_andn2_b64 vcc, exec, s[10:11]
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_mov_b64 vcc, vcc
-; SIS-NEXT:    s_cbranch_vccnz .LBB12_3
-; SIS-NEXT:  .LBB12_2: ; %if
-; SIS-NEXT:    s_xor_b64 s[8:9], s[4:5], s[6:7]
-; SIS-NEXT:  .LBB12_3: ; %endif
-; SIS-NEXT:    v_mov_b32_e32 v0, s8
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    v_mov_b32_e32 v1, s9
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; SIS-NEXT:  .LBB12_4:
-; SIS-NEXT:    ; implicit-def: $sgpr8_sgpr9
-; SIS-NEXT:    s_branch .LBB12_2
-; VIS-LABEL: xor_cf:
-; VIS:       ; %bb.0: ; %entry
-; VIS-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
-; VIS-NEXT:    s_mov_b64 s[8:9], 0
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; VIS-NEXT:    s_cbranch_scc0 .LBB12_4
-; VIS-NEXT:  ; %bb.1: ; %else
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; VIS-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; VIS-NEXT:    s_cbranch_vccnz .LBB12_3
-; VIS-NEXT:  .LBB12_2: ; %if
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b64 s[2:3], s[4:5], s[6:7]
-; VIS-NEXT:  .LBB12_3: ; %endif
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    v_mov_b32_e32 v2, s2
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    v_mov_b32_e32 v3, s3
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
-; VIS-NEXT:  .LBB12_4:
-; VIS-NEXT:    ; implicit-def: $sgpr2_sgpr3
-; VIS-NEXT:    s_branch .LBB12_2
 entry:
   %0 = icmp eq i64 %a, 0
   br i1 %0, label %if, label %else
@@ -1053,32 +650,6 @@ define amdgpu_kernel void @scalar_xor_literal_i64(ptr addrspace(1) %out, [8 x i3
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: scalar_xor_literal_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
-; SIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b32 s4, s7, 0xf237b
-; SIS-NEXT:    s_xor_b32 s5, s6, 0x3039
-; SIS-NEXT:    v_mov_b32_e32 v0, s5
-; SIS-NEXT:    v_mov_b32_e32 v1, s4
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: scalar_xor_literal_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x4c
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b32 s1, s1, 0xf237b
-; VIS-NEXT:    s_xor_b32 s0, s0, 0x3039
-; VIS-NEXT:    v_mov_b32_e32 v2, s2
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    v_mov_b32_e32 v3, s3
-; VIS-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
-; VIS-NEXT:    s_endpgm
   %or = xor i64 %a, 4261135838621753
   store i64 %or, ptr addrspace(1) %out
   ret void
@@ -1127,47 +698,6 @@ define amdgpu_kernel void @scalar_xor_literal_multi_use_i64(ptr addrspace(1) %ou
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: scalar_xor_literal_multi_use_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SIS-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x13
-; SIS-NEXT:    s_movk_i32 s8, 0x3039
-; SIS-NEXT:    s_mov_b32 s9, 0xf237b
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s5
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_add_u32 s0, s6, 0x3039
-; SIS-NEXT:    s_addc_u32 s1, s7, 0xf237b
-; SIS-NEXT:    s_waitcnt expcnt(0)
-; SIS-NEXT:    v_mov_b32_e32 v0, s0
-; SIS-NEXT:    v_mov_b32_e32 v1, s1
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_waitcnt vmcnt(0)
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: scalar_xor_literal_multi_use_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4c
-; VIS-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
-; VIS-NEXT:    s_movk_i32 s6, 0x3039
-; VIS-NEXT:    s_mov_b32 s7, 0xf237b
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b64 s[0:1], s[0:1], s[6:7]
-; VIS-NEXT:    v_mov_b32_e32 v0, s4
-; VIS-NEXT:    v_mov_b32_e32 v3, s1
-; VIS-NEXT:    v_mov_b32_e32 v1, s5
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    s_add_u32 s0, s2, 0x3039
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_addc_u32 s1, s3, 0xf237b
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
-; VIS-NEXT:    s_waitcnt vmcnt(0)
-; VIS-NEXT:    s_endpgm
   %or = xor i64 %a, 4261135838621753
   store i64 %or, ptr addrspace(1) %out
 
@@ -1202,30 +732,6 @@ define amdgpu_kernel void @scalar_xor_inline_imm_i64(ptr addrspace(1) %out, [8 x
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: scalar_xor_inline_imm_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
-; SIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b32 s4, s6, 63
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s7
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: scalar_xor_inline_imm_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x4c
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b32 s0, s0, 63
-; VIS-NEXT:    v_mov_b32_e32 v2, s2
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v3, s3
-; VIS-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
-; VIS-NEXT:    s_endpgm
   %or = xor i64 %a, 63
   store i64 %or, ptr addrspace(1) %out
   ret void
@@ -1257,30 +763,6 @@ define amdgpu_kernel void @scalar_xor_neg_inline_imm_i64(ptr addrspace(1) %out, 
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: scalar_xor_neg_inline_imm_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
-; SIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b64 s[4:5], s[6:7], -8
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s5
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: scalar_xor_neg_inline_imm_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x4c
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b64 s[0:1], s[0:1], -8
-; VIS-NEXT:    v_mov_b32_e32 v0, s2
-; VIS-NEXT:    v_mov_b32_e32 v3, s1
-; VIS-NEXT:    v_mov_b32_e32 v1, s3
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
 
   %or = xor i64 %a, -8
   store i64 %or, ptr addrspace(1) %out
@@ -1321,32 +803,6 @@ define amdgpu_kernel void @vector_xor_i64_neg_inline_imm(ptr addrspace(1) %out, 
 ; VI-NEXT:    v_xor_b32_e32 v1, -1, v1
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: vector_xor_i64_neg_inline_imm:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b64 s[4:5], s[4:5], -8
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s5
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: vector_xor_i64_neg_inline_imm:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b64 s[0:1], s[2:3], -8
-; VIS-NEXT:    v_mov_b32_e32 v3, s1
-; VIS-NEXT:    v_mov_b32_e32 v2, s0
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
   %loada = load i64, ptr addrspace(1) %a, align 8
   %or = xor i64 %loada, -8
   store i64 %or, ptr addrspace(1) %out
@@ -1387,34 +843,6 @@ define amdgpu_kernel void @vector_xor_literal_i64(ptr addrspace(1) %out, ptr add
 ; VI-NEXT:    v_xor_b32_e32 v0, 0xdf77987f, v0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-; SIS-LABEL: vector_xor_literal_i64:
-; SIS:       ; %bb.0:
-; SIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
-; SIS-NEXT:    s_mov_b32 s3, 0xf000
-; SIS-NEXT:    s_mov_b32 s2, -1
-; SIS-NEXT:    s_waitcnt lgkmcnt(0)
-; SIS-NEXT:    s_xor_b32 s5, s5, 0x146f
-; SIS-NEXT:    s_xor_b32 s4, s4, 0xdf77987f
-; SIS-NEXT:    v_mov_b32_e32 v0, s4
-; SIS-NEXT:    v_mov_b32_e32 v1, s5
-; SIS-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SIS-NEXT:    s_endpgm
-; VIS-LABEL: vector_xor_literal_i64:
-; VIS:       ; %bb.0:
-; VIS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; VIS-NEXT:    v_mov_b32_e32 v0, s0
-; VIS-NEXT:    v_mov_b32_e32 v1, s1
-; VIS-NEXT:    s_waitcnt lgkmcnt(0)
-; VIS-NEXT:    s_xor_b32 s0, s3, 0x146f
-; VIS-NEXT:    s_xor_b32 s1, s2, 0xdf77987f
-; VIS-NEXT:    v_mov_b32_e32 v2, s1
-; VIS-NEXT:    v_mov_b32_e32 v3, s0
-; VIS-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VIS-NEXT:    s_endpgm
 
   %loada = load i64, ptr addrspace(1) %a, align 8
   %or = xor i64 %loada, 22470723082367
