@@ -87,7 +87,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
   spirv.func @dot_bf16(%arg0: vector<4xbf16>, %arg1: vector<4xbf16>) "None" {
-    // CHECK: spirv.Dot %{{.+}}, %{{.+}} : vector<4xbf16> -> f16
+    // CHECK: spirv.Dot %{{.+}}, %{{.+}} : vector<4xbf16> -> bf16
     %0 = spirv.Dot %arg0, %arg1 : vector<4xbf16> -> bf16
     spirv.Return
   }
