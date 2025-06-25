@@ -3676,6 +3676,24 @@ LLVMOpcode LLVMGetInstructionOpcode(LLVMValueRef Inst);
 LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst);
 
 /**
+ * Get whether or not an icmp instruction has the samesign flag.
+ *
+ * This is only valid for instructions that correspond to llvm::ICmpInst.
+ *
+ * @see llvm::ICmpInst::hasSameSign()
+ */
+LLVMBool LLVMGetICmpSameSign(LLVMValueRef Inst);
+
+/**
+ * Set the samesign flag on an icmp instruction.
+ *
+ * This is only valid for instructions that correspond to llvm::ICmpInst.
+ *
+ * @see llvm::ICmpInst::setSameSign()
+ */
+void LLVMSetICmpSameSign(LLVMValueRef Inst, LLVMBool SameSign);
+
+/**
  * Obtain the float predicate of an instruction.
  *
  * This is only valid for instructions that correspond to llvm::FCmpInst.

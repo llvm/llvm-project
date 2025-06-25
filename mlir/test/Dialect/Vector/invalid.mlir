@@ -1975,6 +1975,15 @@ func.func @flat_transpose_scalable(%arg0: vector<[16]xf32>) -> vector<[16]xf32> 
 
 // -----
 
+// expected-note @+1 {{prior use here}}
+func.func @vector_splat_type_mismatch(%a: f32) {
+  // expected-error @+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
+  %0 = vector.splat %a : vector<1xi32>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.load
 //===----------------------------------------------------------------------===//

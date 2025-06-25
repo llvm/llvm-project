@@ -21,6 +21,7 @@ include "mlir/Dialect/Vector/IR/Vector.td"
 include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/IndexingMapOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -33,6 +34,7 @@ include "mlir/IR/EnumAttr.td"
 // than the current set: {*, +}.
 def Vector_ContractionOp :
   Vector_Op<"contract", [
+      IndexingMapOpInterface,
       Pure,
       PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
       PredOpTrait<"third operand acc and result have same element type",
@@ -206,6 +208,16 @@ def Vector_ContractionOp :
           getIteratorTypes()
               .template getAsValueRange<IteratorTypeAttr, IteratorType>();
       return {range.begin(), range.end()};
+    }
+
+    //===------------------------------------------------------------------===//
+    // IndexingMapOpInterface interface methods implementation.
+    //===------------------------------------------------------------------===//
+    ArrayRef<int64_t> getShape(OpOperand * opOperand) {
+      Type t = opOperand->get().getType();
+      if (auto vt = dyn_cast<VectorType>(t))
+        return vt.getShape();
+      return {};
     }
   }];
 
@@ -2908,8 +2920,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
   ]> {
   let summary = "vector splat or broadcast operation";
   let description = [{
-    Broadcast the operand to all elements of the result vector. The operand is
-    required to be of integer/index/float type.
+    Broadcast the operand to all elements of the result vector. The type of the
+    operand must match the element type of the vector type.
 
     Example:
 
@@ -2919,8 +2931,7 @@ def Vector_SplatOp : Vector_Op<"splat", [
     ```
   }];
 
-  let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
-                                 "integer/index/float type">:$input);
+  let arguments = (ins AnyType:$input);
   let results = (outs AnyVectorOfAnyRank:$aggregate);
 
   let builders = [

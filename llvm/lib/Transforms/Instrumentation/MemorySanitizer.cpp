@@ -665,6 +665,7 @@ private:
 
   // These arrays are indexed by log2(AccessSize).
   FunctionCallee MaybeWarningFn[kNumberOfAccessSizes];
+  FunctionCallee MaybeWarningVarSizeFn;
   FunctionCallee MaybeStoreOriginFn[kNumberOfAccessSizes];
 
   /// Run-time helper that generates a new origin value for a stack
@@ -939,7 +940,9 @@ void MemorySanitizer::createUserspaceApi(Module &M,
     MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
         IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty());
-
+    MaybeWarningVarSizeFn = M.getOrInsertFunction(
+        "__msan_maybe_warning_N", TLI.getAttrList(C, {}, /*Signed=*/false),
+        IRB.getVoidTy(), PtrTy, IRB.getInt64Ty(), IRB.getInt32Ty());
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 2}, /*Signed=*/false),
@@ -1248,7 +1251,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Constants likely will be eliminated by follow-up passes.
     if (isa<Constant>(V))
       return false;
-
     ++SplittableBlocksCount;
     return ClInstrumentationWithCallThreshold >= 0 &&
            SplittableBlocksCount > ClInstrumentationWithCallThreshold;
@@ -1447,18 +1449,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const DataLayout &DL = F.getDataLayout();
     TypeSize TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
-    if (instrumentWithCalls(ConvertedShadow) &&
-        SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
-      FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+    if (instrumentWithCalls(ConvertedShadow) && !MS.CompileKernel) {
       // ZExt cannot convert between vector and scalar
       ConvertedShadow = convertShadowToScalar(ConvertedShadow, IRB);
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
-      CallBase *CB = IRB.CreateCall(
-          Fn, {ConvertedShadow2,
-               MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
-      CB->addParamAttr(0, Attribute::ZExt);
-      CB->addParamAttr(1, Attribute::ZExt);
+
+      if (SizeIndex < kNumberOfAccessSizes) {
+        FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+        CallBase *CB = IRB.CreateCall(
+            Fn,
+            {ConvertedShadow2,
+             MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+        CB->addParamAttr(0, Attribute::ZExt);
+        CB->addParamAttr(1, Attribute::ZExt);
+      } else {
+        FunctionCallee Fn = MS.MaybeWarningVarSizeFn;
+        Value *ShadowAlloca = IRB.CreateAlloca(ConvertedShadow2->getType(), 0u);
+        IRB.CreateStore(ConvertedShadow2, ShadowAlloca);
+        unsigned ShadowSize = DL.getTypeAllocSize(ConvertedShadow2->getType());
+        CallBase *CB = IRB.CreateCall(
+            Fn,
+            {ShadowAlloca, ConstantInt::get(IRB.getInt64Ty(), ShadowSize),
+             MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+        CB->addParamAttr(1, Attribute::ZExt);
+        CB->addParamAttr(2, Attribute::ZExt);
+      }
     } else {
       Value *Cmp = convertToBool(ConvertedShadow, IRB, "_mscmp");
       Instruction *CheckTerm = SplitBlockAndInsertIfThen(
@@ -4209,15 +4225,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument AVX permutation intrinsic.
   // We apply the same permutation (argument index 1) to the shadow.
-  void handleAVXPermutation(IntrinsicInst &I) {
-    assert(I.arg_size() == 2);
-    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
-    [[maybe_unused]] auto ArgVectorSize =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(I.getType() == I.getArgOperand(0)->getType());
+  void handleAVXVpermilvar(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Shadow = getShadow(&I, 0);
     insertShadowCheck(I.getArgOperand(1), &I);
@@ -4227,38 +4235,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
     CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
                                        {Shadow, I.getArgOperand(1)});
-
-    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
-    setOriginForNaryOp(I);
-  }
-  // Instrument AVX permutation intrinsic.
-  // We apply the same permutation (argument index 1) to the shadows.
-  void handleAVXVpermil2var(IntrinsicInst &I) {
-    assert(I.arg_size() == 3);
-    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
-    [[maybe_unused]] auto ArgVectorSize =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(cast<FixedVectorType>(I.getArgOperand(2)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
-    assert(I.getType() == I.getArgOperand(0)->getType());
-    assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
-    IRBuilder<> IRB(&I);
-    Value *AShadow = getShadow(&I, 0);
-    Value *Idx = I.getArgOperand(1);
-    Value *BShadow = getShadow(&I, 2);
-    insertShadowCheck(Idx, &I);
-
-    // Shadows are integer-ish types but some intrinsics require a
-    // different (e.g., floating-point) type.
-    AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
-    BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
-    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                       {AShadow, Idx, BShadow});
 
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
     setOriginForNaryOp(I);
@@ -5208,52 +5184,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(Success);
       break;
     }
-    case Intrinsic::x86_avx2_permd:
-    case Intrinsic::x86_avx2_permps:
-    case Intrinsic::x86_ssse3_pshuf_b_128:
-    case Intrinsic::x86_avx2_pshuf_b:
-    case Intrinsic::x86_avx512_pshuf_b_512:
-    case Intrinsic::x86_avx512_permvar_df_256:
-    case Intrinsic::x86_avx512_permvar_df_512:
-    case Intrinsic::x86_avx512_permvar_di_256:
-    case Intrinsic::x86_avx512_permvar_di_512:
-    case Intrinsic::x86_avx512_permvar_hi_128:
-    case Intrinsic::x86_avx512_permvar_hi_256:
-    case Intrinsic::x86_avx512_permvar_hi_512:
-    case Intrinsic::x86_avx512_permvar_qi_128:
-    case Intrinsic::x86_avx512_permvar_qi_256:
-    case Intrinsic::x86_avx512_permvar_qi_512:
-    case Intrinsic::x86_avx512_permvar_sf_512:
-    case Intrinsic::x86_avx512_permvar_si_512:
+
     case Intrinsic::x86_avx_vpermilvar_pd:
     case Intrinsic::x86_avx_vpermilvar_pd_256:
     case Intrinsic::x86_avx512_vpermilvar_pd_512:
     case Intrinsic::x86_avx_vpermilvar_ps:
     case Intrinsic::x86_avx_vpermilvar_ps_256:
     case Intrinsic::x86_avx512_vpermilvar_ps_512: {
-      handleAVXPermutation(I);
+      handleAVXVpermilvar(I);
       break;
     }
-    case Intrinsic::x86_avx512_vpermi2var_d_128:
-    case Intrinsic::x86_avx512_vpermi2var_d_256:
-    case Intrinsic::x86_avx512_vpermi2var_d_512:
-    case Intrinsic::x86_avx512_vpermi2var_hi_128:
-    case Intrinsic::x86_avx512_vpermi2var_hi_256:
-    case Intrinsic::x86_avx512_vpermi2var_hi_512:
-    case Intrinsic::x86_avx512_vpermi2var_pd_128:
-    case Intrinsic::x86_avx512_vpermi2var_pd_256:
-    case Intrinsic::x86_avx512_vpermi2var_pd_512:
-    case Intrinsic::x86_avx512_vpermi2var_ps_128:
-    case Intrinsic::x86_avx512_vpermi2var_ps_256:
-    case Intrinsic::x86_avx512_vpermi2var_ps_512:
-    case Intrinsic::x86_avx512_vpermi2var_q_128:
-    case Intrinsic::x86_avx512_vpermi2var_q_256:
-    case Intrinsic::x86_avx512_vpermi2var_q_512:
-    case Intrinsic::x86_avx512_vpermi2var_qi_128:
-    case Intrinsic::x86_avx512_vpermi2var_qi_256:
-    case Intrinsic::x86_avx512_vpermi2var_qi_512:
-      handleAVXVpermil2var(I);
-      break;
 
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
     case Intrinsic::x86_avx512fp16_mask_sub_sh_round:

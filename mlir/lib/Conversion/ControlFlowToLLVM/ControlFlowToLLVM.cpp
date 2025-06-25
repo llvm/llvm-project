@@ -79,7 +79,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
         abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
                                                       "abort", abortFuncTy);
       }
-      rewriter.create<LLVM::CallOp>(loc, abortFunc, std::nullopt);
+      rewriter.create<LLVM::CallOp>(loc, abortFunc, ValueRange());
       rewriter.create<LLVM::UnreachableOp>(loc);
     } else {
       rewriter.create<LLVM::BrOp>(loc, ValueRange(), continuationBlock);

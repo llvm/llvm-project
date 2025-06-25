@@ -1081,7 +1081,7 @@ public:
 
     if (isADR(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_LO21 ||
         RelType == ELF::R_AARCH64_TLSDESC_ADR_PREL21) {
-      return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64::S_ABS, Ctx);
     } else if (isADRP(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21 ||
                RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21_NC ||
                RelType == ELF::R_AARCH64_TLSDESC_ADR_PAGE21 ||
@@ -1089,7 +1089,7 @@ public:
                RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
       // Never emit a GOT reloc, we handled this in
       // RewriteInstance::readRelocations().
-      return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE, Ctx);
     } else {
       switch (RelType) {
       case ELF::R_AARCH64_ADD_ABS_LO12_NC:
@@ -1103,18 +1103,18 @@ public:
       case ELF::R_AARCH64_TLSDESC_LD64_LO12:
       case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
       case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_LO12, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_LO12, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G3:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G3, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G3, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G2:
       case ELF::R_AARCH64_MOVW_UABS_G2_NC:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G2_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G2_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G1:
       case ELF::R_AARCH64_MOVW_UABS_G1_NC:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G1_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G1_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G0:
       case ELF::R_AARCH64_MOVW_UABS_G0_NC:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G0_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G0_NC, Ctx);
       default:
         break;
       }
@@ -2028,7 +2028,7 @@ public:
     Inst.setOpcode(AArch64::MOVZXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createExpr(
-        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G3, *Ctx)));
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G3, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x30));
     Seq.emplace_back(Inst);
 
@@ -2037,7 +2037,7 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createExpr(
-        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G2_NC, *Ctx)));
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G2_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x20));
     Seq.emplace_back(Inst);
 
@@ -2046,7 +2046,7 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createExpr(
-        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G1_NC, *Ctx)));
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G1_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x10));
     Seq.emplace_back(Inst);
 
@@ -2055,7 +2055,7 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createExpr(
-        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G0_NC, *Ctx)));
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G0_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0));
     Seq.emplace_back(Inst);
 
