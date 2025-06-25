@@ -1349,7 +1349,8 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
          m_asm_info_up && m_context_up && m_disasm_up && m_instr_printer_up);
 }
 
-bool DisassemblerLLVMC::MCDisasmInstance::GetMCInst(const uint8_t *opcode_data,                                                     size_t opcode_data_len,
+bool DisassemblerLLVMC::MCDisasmInstance::GetMCInst(const uint8_t *opcode_data,
+                                                    size_t opcode_data_len,
                                                     lldb::addr_t pc,
                                                     llvm::MCInst &mc_inst,
                                                     size_t &size) const {
