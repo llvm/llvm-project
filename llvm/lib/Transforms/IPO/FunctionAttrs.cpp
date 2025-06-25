@@ -57,6 +57,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -675,11 +676,19 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
       [](Value *Length,
          std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
     auto *ConstantLength = dyn_cast<ConstantInt>(Length);
-    if (ConstantLength && Offset &&
-        ConstantLength->getValue().isStrictlyPositive()) {
-      return ConstantRange(
-          APInt(64, *Offset, true),
-          APInt(64, *Offset + ConstantLength->getSExtValue(), true));
+    if (ConstantLength && Offset) {
+      int64_t Off = *Offset;
+      int64_t Len = ConstantLength->getSExtValue();
+
+      // Reject zero or negative lengths
+      if (Len <= 0)
+        return std::nullopt;
+
+      int64_t High;
+      if (llvm::AddOverflow(Off, Len, High))
+        return std::nullopt;
+
+      return ConstantRange(APInt(64, Off, true), APInt(64, High, true));
     }
     return std::nullopt;
   };
