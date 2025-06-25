@@ -121,7 +121,7 @@ static bool hasSuitableConstructorForRelocation(Sema &SemaRef,
 
   CXXMethodDecl *Decl =
       LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false);
-  return Decl && Decl->isUserProvided() == AllowUserDefined &&
+  return Decl && (AllowUserDefined || !Decl->isUserProvided()) &&
          !Decl->isDeleted();
 }
 
@@ -137,7 +137,7 @@ static bool hasSuitableMoveAssignmentOperatorForRelocation(
   if (!Decl)
     return false;
 
-  return Decl && Decl->isUserProvided() == AllowUserDefined &&
+  return Decl && (AllowUserDefined || !Decl->isUserProvided()) &&
          !Decl->isDeleted();
 }
 
