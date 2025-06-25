@@ -26,21 +26,21 @@ UnwindInfoState::getCurrentUnwindRow() const {
   return --Table.end();
 }
 
-void UnwindInfoState::update(const MCCFIInstruction &CFIDirective) {
-  auto DwarfOperations = convert(CFIDirective);
-  if (!DwarfOperations) {
+void UnwindInfoState::update(const MCCFIInstruction &Directive) {
+  auto MaybeCFIP = convert(Directive);
+  if (!MaybeCFIP) {
     Context->reportError(
-        CFIDirective.getLoc(),
+        Directive.getLoc(),
         "couldn't apply this directive to the unwinding information state");
   }
+  auto CFIP = *MaybeCFIP;
 
-  auto LastRow = getCurrentUnwindRow();
+  auto MaybeLastRow = getCurrentUnwindRow();
   dwarf::UnwindRow Row =
-      LastRow.has_value() ? *(LastRow.value()) : dwarf::UnwindRow();
-  if (Error Err =
-          parseRows(DwarfOperations.value(), Row, nullptr).moveInto(Table)) {
+      MaybeLastRow.has_value() ? *(MaybeLastRow.value()) : dwarf::UnwindRow();
+  if (Error Err = parseRows(CFIP, Row, nullptr).moveInto(Table)) {
     Context->reportError(
-        CFIDirective.getLoc(),
+        Directive.getLoc(),
         formatv("could not parse this CFI directive due to: {0}",
                 toString(std::move(Err))));
 
@@ -51,104 +51,91 @@ void UnwindInfoState::update(const MCCFIInstruction &CFIDirective) {
 }
 
 std::optional<dwarf::CFIProgram>
-UnwindInfoState::convert(MCCFIInstruction CFIDirective) {
-  //! FIXME, this way of instantiating CFI program does not look right, either
-  //! refactor CFIProgram to not depend on the Code/Data Alignment or add a new
-  //! type that is independent from this and is also feedable to UnwindTable.
-  auto DwarfOperations = dwarf::CFIProgram(
-      1 /* TODO */, 1 /* TODO */, Context->getTargetTriple().getArch());
+UnwindInfoState::convert(MCCFIInstruction Directive) {
+  auto CFIP = dwarf::CFIProgram(
+      /* CodeAlignmentFactor */ 1, /* DataAlignmentFactor */ 1,
+      Context->getTargetTriple().getArch());
 
-  switch (CFIDirective.getOperation()) {
+  auto MaybeCurrentRow = getCurrentUnwindRow();
+  switch (Directive.getOperation()) {
   case MCCFIInstruction::OpSameValue:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_same_value,
-                                   CFIDirective.getRegister());
+    CFIP.addInstruction(dwarf::DW_CFA_same_value, Directive.getRegister());
     break;
   case MCCFIInstruction::OpRememberState:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_remember_state);
+    CFIP.addInstruction(dwarf::DW_CFA_remember_state);
     break;
   case MCCFIInstruction::OpRestoreState:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_restore_state);
+    CFIP.addInstruction(dwarf::DW_CFA_restore_state);
     break;
   case MCCFIInstruction::OpOffset:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_offset,
-                                   CFIDirective.getRegister(),
-                                   CFIDirective.getOffset());
+    CFIP.addInstruction(dwarf::DW_CFA_offset, Directive.getRegister(),
+                        Directive.getOffset());
     break;
   case MCCFIInstruction::OpLLVMDefAspaceCfa:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_LLVM_def_aspace_cfa,
-                                   CFIDirective.getRegister());
+    CFIP.addInstruction(dwarf::DW_CFA_LLVM_def_aspace_cfa,
+                        Directive.getRegister());
     break;
   case MCCFIInstruction::OpDefCfaRegister:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_def_cfa_register,
-                                   CFIDirective.getRegister());
+    CFIP.addInstruction(dwarf::DW_CFA_def_cfa_register,
+                        Directive.getRegister());
     break;
   case MCCFIInstruction::OpDefCfaOffset:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_def_cfa_offset,
-                                   CFIDirective.getOffset());
+    CFIP.addInstruction(dwarf::DW_CFA_def_cfa_offset, Directive.getOffset());
     break;
   case MCCFIInstruction::OpDefCfa:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_def_cfa,
-                                   CFIDirective.getRegister(),
-                                   CFIDirective.getOffset());
+    CFIP.addInstruction(dwarf::DW_CFA_def_cfa, Directive.getRegister(),
+                        Directive.getOffset());
     break;
   case MCCFIInstruction::OpRelOffset:
-    if (!getCurrentUnwindRow()) // TODO maybe replace it with assert
-      return std::nullopt;
+    assert(
+        MaybeCurrentRow &&
+        "Cannot define relative offset to a non-existing CFA unwinding rule");
 
-    DwarfOperations.addInstruction(
-        dwarf::DW_CFA_offset, CFIDirective.getRegister(),
-        CFIDirective.getOffset() -
-            getCurrentUnwindRow().value()->getCFAValue().getOffset());
+    CFIP.addInstruction(dwarf::DW_CFA_offset, Directive.getRegister(),
+                        Directive.getOffset() -
+                            (*MaybeCurrentRow)->getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpAdjustCfaOffset:
-    if (!getCurrentUnwindRow()) // TODO maybe replace it with assert
-      return std::nullopt;
+    assert(MaybeCurrentRow &&
+           "Cannot adjust CFA offset of a non-existing CFA unwinding rule");
 
-    DwarfOperations.addInstruction(
-        dwarf::DW_CFA_def_cfa_offset,
-        CFIDirective.getOffset() +
-            getCurrentUnwindRow().value()->getCFAValue().getOffset());
+    CFIP.addInstruction(dwarf::DW_CFA_def_cfa_offset,
+                        Directive.getOffset() +
+                            (*MaybeCurrentRow)->getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpEscape:
-    // TODO It's now feasible but for now, I ignore it
+    // TODO DWARFExpressions are not supported yet.
     break;
   case MCCFIInstruction::OpRestore:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_restore);
+    CFIP.addInstruction(dwarf::DW_CFA_restore);
     break;
   case MCCFIInstruction::OpUndefined:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_undefined,
-                                   CFIDirective.getRegister());
+    CFIP.addInstruction(dwarf::DW_CFA_undefined, Directive.getRegister());
     break;
   case MCCFIInstruction::OpRegister:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_register,
-                                   CFIDirective.getRegister(),
-                                   CFIDirective.getRegister2());
+    CFIP.addInstruction(dwarf::DW_CFA_register, Directive.getRegister(),
+                        Directive.getRegister2());
     break;
   case MCCFIInstruction::OpWindowSave:
-    // TODO make sure these are the same.
-    DwarfOperations.addInstruction(dwarf::DW_CFA_GNU_window_save);
+    CFIP.addInstruction(dwarf::DW_CFA_GNU_window_save);
     break;
   case MCCFIInstruction::OpNegateRAState:
-    // TODO make sure these are the same.
-    DwarfOperations.addInstruction(dwarf::DW_CFA_AARCH64_negate_ra_state);
+    CFIP.addInstruction(dwarf::DW_CFA_AARCH64_negate_ra_state);
     break;
   case MCCFIInstruction::OpNegateRAStateWithPC:
-    // TODO make sure these are the same.
-    DwarfOperations.addInstruction(
-        dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc);
+    CFIP.addInstruction(dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc);
     break;
   case MCCFIInstruction::OpGnuArgsSize:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_GNU_args_size);
+    CFIP.addInstruction(dwarf::DW_CFA_GNU_args_size);
     break;
   case MCCFIInstruction::OpLabel:
     // TODO, I don't know what it is, I have to implement it.
     break;
   case MCCFIInstruction::OpValOffset:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_val_offset,
-                                   CFIDirective.getRegister(),
-                                   CFIDirective.getOffset());
+    CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),
+                        Directive.getOffset());
     break;
   }
 
-  return DwarfOperations;
+  return CFIP;
 }
