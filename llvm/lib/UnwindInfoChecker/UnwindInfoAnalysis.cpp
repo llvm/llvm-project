@@ -25,7 +25,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/UnwindInfoChecker/UnwindInfoHistory.h"
+#include "llvm/UnwindInfoChecker/UnwindInfoState.h"
 #include <cstdint>
 #include <optional>
 #include <set>

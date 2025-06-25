@@ -14,7 +14,7 @@
 #ifndef LLVM_UNWINDINFOCHECKER_UNWINDINFOANALYSIS_H
 #define LLVM_UNWINDINFOCHECKER_UNWINDINFOANALYSIS_H
 
-#include "UnwindInfoHistory.h"
+#include "UnwindInfoState.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
