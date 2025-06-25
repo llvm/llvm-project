@@ -831,9 +831,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // preceding operands.
     Value *RuntimeVF =
         getRuntimeVF(State.Builder, State.Builder.getInt64Ty(), State.VF);
-    Type *ElemTy = State.TypeAnalysis.inferScalarType(getOperand(0));
-    Value *RuntimeBitwidth = Builder.CreateMul(
-        Builder.getInt64(ElemTy->getScalarSizeInBits()), RuntimeVF);
     unsigned LastOpIdx = getNumOperands() - 1;
     Value *Res = nullptr;
     for (int Idx = LastOpIdx; Idx >= 0; --Idx) {
@@ -842,7 +839,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       Value *Current = Builder.CreateAdd(
           Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
       if (Res) {
-        Value *Cmp = Builder.CreateICmpNE(TrailingZeros, RuntimeBitwidth);
+        Value *Cmp = Builder.CreateICmpNE(TrailingZeros, RuntimeVF);
         Res = Builder.CreateSelect(Cmp, Current, Res);
       } else {
         Res = Current;
