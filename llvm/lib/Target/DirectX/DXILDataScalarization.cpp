@@ -308,9 +308,8 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     NeedsTransform = true;
   } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
     Type *AllocatedType = Alloca->getAllocatedType();
-    // OrigGEPType might just be a pointer lets make sure
-    // to add the allocated type so we have a size
-    if (AllocatedType != OrigGEPType) {
+    // Only transform if the allocated type is an array
+    if (AllocatedType != OrigGEPType && isa<ArrayType>(AllocatedType)) {
       NewGEPType = AllocatedType;
       NeedsTransform = true;
     }
