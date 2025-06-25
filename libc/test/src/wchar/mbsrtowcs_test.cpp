@@ -8,6 +8,7 @@
 
 #include "hdr/types/wchar_t.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/wchar/mbstate.h"
 #include "src/string/memset.h"
 #include "src/wchar/mbsrtowcs.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -21,6 +22,7 @@ TEST_F(LlvmLibcMBSRToWCSTest, OneByteOneCharacter) {
   const char *ch = "A";
   wchar_t dest[2];
   size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &ch, 2, mb);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_TRUE(dest[0] == L'A');
   ASSERT_TRUE(dest[1] == L'\0');
   // Should not count null terminator in number
@@ -33,6 +35,7 @@ TEST_F(LlvmLibcMBSRToWCSTest, MultiByteOneCharacter) {
   const char *src = "\xf0\x9f\x98\xb9"; // laughing cat emoji 😹
   wchar_t dest[2];
   size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 2, nullptr);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(static_cast<int>(dest[0]), 128569);
   ASSERT_TRUE(dest[1] == L'\0');
   // Should not count null terminator in number
@@ -46,6 +49,7 @@ TEST_F(LlvmLibcMBSRToWCSTest, MultiByteTwoCharacters) {
   const char *src = "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
   wchar_t dest[3];
   size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 3, nullptr);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(static_cast<int>(dest[0]), 128569);
   ASSERT_EQ(static_cast<int>(dest[1]), 128569);
   ASSERT_TRUE(dest[2] == L'\0');
@@ -62,6 +66,7 @@ TEST_F(LlvmLibcMBSRToWCSTest, ReadLessThanStringLength) {
   const char *check = src;
   wchar_t dest[3];
   size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 3, nullptr);
+  ASSERT_ERRNO_SUCCESS();
   // Should have read 3 emojis
   ASSERT_EQ(static_cast<int>(n), 3);
   ASSERT_EQ(static_cast<int>(dest[0]), 128569);
@@ -98,8 +103,24 @@ TEST_F(LlvmLibcMBSRToWCSTest, NullDestination) {
   const char *src =
       "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
   size_t n = LIBC_NAMESPACE::mbsrtowcs(nullptr, &src, 5, nullptr);
+  ASSERT_ERRNO_SUCCESS();
   // Null destination should still return correct number of read chars
   ASSERT_EQ(static_cast<int>(n), 4);
+}
+
+TEST_F(LlvmLibcMBSRToWCSTest, InvalidMBState) {
+  mbstate_t *mb;
+  LIBC_NAMESPACE::internal::mbstate inv;
+  inv.total_bytes = 6;
+  mb = reinterpret_cast<mbstate_t *>(&inv);
+  // Four laughing cat emojis "😹😹😹😹"
+  const char *src =
+      "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
+  wchar_t dest[3];
+  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 3, mb);
+  // Should fail from invalid mbstate
+  ASSERT_EQ(static_cast<int>(n), -1);
+  ASSERT_ERRNO_EQ(EINVAL);
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)

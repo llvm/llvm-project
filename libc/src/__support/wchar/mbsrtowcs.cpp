@@ -25,9 +25,9 @@ ErrorOr<size_t> mbsrtowcs(wchar_t *__restrict dst, const char **__restrict src,
   // Converting characters until we reach error or null terminator
   for (; i < len; ++i, ++dst) {
     auto check = mbrtowc(dst, *src, 4, ps);
-    // Encoding error
+    // Encoding error/invalid mbstate
     if (!check.has_value())
-      return Error(-1);
+      return Error(check.error());
     // Successfully encoded, check for null terminator
     if (*dst == L'\0') {
       *src = nullptr;
