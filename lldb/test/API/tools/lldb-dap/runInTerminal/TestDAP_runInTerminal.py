@@ -26,6 +26,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         with open(fifo_file, "r") as file:
             return file.readline()
 
+    @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
@@ -73,6 +74,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
         self.continue_to_exit()
 
+    @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminalWithObjectEnv(self):
