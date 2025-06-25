@@ -1725,14 +1725,15 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     // Build expressions that emulate the effect of declval<T>() and
     // declval<U>().
-    if (LhsT->isObjectType() || LhsT->isFunctionType())
-      LhsT = Self.Context.getRValueReferenceType(LhsT);
-    if (RhsT->isObjectType() || RhsT->isFunctionType())
-      RhsT = Self.Context.getRValueReferenceType(RhsT);
-    OpaqueValueExpr Lhs(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
-                        Expr::getValueKindForType(LhsT));
-    OpaqueValueExpr Rhs(KeyLoc, RhsT.getNonLValueExprType(Self.Context),
-                        Expr::getValueKindForType(RhsT));
+    auto createDeclValExpr = [&](QualType Ty) -> OpaqueValueExpr {
+      if (Ty->isObjectType() || Ty->isFunctionType())
+        Ty = Self.Context.getRValueReferenceType(Ty);
+      return {KeyLoc, Ty.getNonLValueExprType(Self.Context),
+              Expr::getValueKindForType(Ty)};
+    };
+
+    auto Lhs = createDeclValExpr(LhsT);
+    auto Rhs = createDeclValExpr(RhsT);
 
     // Attempt the assignment in an unevaluated context within a SFINAE
     // trap at translation unit scope.
@@ -1956,6 +1957,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
             TypeTrait::UTT_IsCppTriviallyRelocatable)
       .Case("is_replaceable", TypeTrait::UTT_IsReplaceable)
       .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
+      .Case("is_assignable", TypeTrait::BTT_IsAssignable)
       .Default(std::nullopt);
 }
 
@@ -2285,6 +2287,32 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
+                                        QualType T, QualType U) {
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+
+  auto createDeclValExpr = [&](QualType Ty) -> OpaqueValueExpr {
+    if (Ty->isObjectType() || Ty->isFunctionType())
+      Ty = SemaRef.Context.getRValueReferenceType(Ty);
+    return {Loc, Ty.getNonLValueExprType(SemaRef.Context),
+            Expr::getValueKindForType(Ty)};
+  };
+
+  auto LHS = createDeclValExpr(T);
+  auto RHS = createDeclValExpr(U);
+
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::ContextRAII TUContext(SemaRef,
+                              SemaRef.Context.getTranslationUnitDecl());
+  SemaRef.BuildBinOp(/*S=*/nullptr, Loc, BO_Assign, &LHS, &RHS);
+
+  if (!D || D->isInvalidDecl())
+    return;
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2304,6 +2332,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsTriviallyCopyable:
     DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case BTT_IsAssignable:
+    DiagnoseNonAssignableReason(*this, E->getBeginLoc(), Args[0], Args[1]);
     break;
   default:
     break;
