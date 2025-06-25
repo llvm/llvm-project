@@ -535,6 +535,12 @@ TARGET_BUILTIN(__builtin_ppc_bcdadd_p, "iiV16UcV16Uc", "",
 TARGET_BUILTIN(__builtin_ppc_bcdsub_p, "iiV16UcV16Uc", "",
                "isa-v207-instructions")
 
+// P9 Binary-coded decimal (BCD) builtins.                                                
+TARGET_BUILTIN(__builtin_ppc_national2packed, "V16UcV16UcUc", "t", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_packed2national, "V16UcV16Uc", "", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_packed2zoned, "V16UcV16UcUc", "t", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_zoned2packed, "V16UcV16UcUc", "t", "power9-vector")
+
 TARGET_BUILTIN(__builtin_altivec_vclzlsbb, "SiV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzlsbb, "SiV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vprtybw, "V4UiV4Ui", "", "power9-vector")

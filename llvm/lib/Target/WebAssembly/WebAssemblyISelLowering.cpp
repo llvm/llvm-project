@@ -3239,52 +3239,79 @@ static SDValue performBitcastCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performSETCCCombine(SDNode *N,
-                                   TargetLowering::DAGCombinerInfo &DCI) {
-  auto &DAG = DCI.DAG;
-
+template <int MatchRHS, ISD::CondCode MatchCond, bool RequiresNegate,
+          Intrinsic::ID Intrin>
+static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
+  SDValue Cond = N->getOperand(2);
+  if (MatchCond != cast<CondCodeSDNode>(Cond)->get())
+    return SDValue();
 
+  if (MatchRHS != cast<ConstantSDNode>(RHS)->getSExtValue())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Ret = DAG.getZExtOrTrunc(
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                  {DAG.getConstant(Intrin, DL, MVT::i32),
+                   DAG.getSExtOrTrunc(LHS->getOperand(0), DL, VecVT)}),
+      DL, MVT::i1);
+  if (RequiresNegate)
+    Ret = DAG.getNOT(DL, Ret, MVT::i1);
+  return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
+}
+
+static SDValue performSETCCCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalarInteger())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  if (LHS->getOpcode() != ISD::BITCAST)
+    return SDValue();
+
+  EVT FromVT = LHS->getOperand(0).getValueType();
+  if (!FromVT.isFixedLengthVector() || FromVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  unsigned NumElts = FromVT.getVectorNumElements();
+  if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
+    return SDValue();
+
+  if (!cast<ConstantSDNode>(N->getOperand(1)))
+    return SDValue();
+
+  EVT VecVT = FromVT.changeVectorElementType(MVT::getIntegerVT(128 / NumElts));
+  auto &DAG = DCI.DAG;
   // setcc (iN (bitcast (vNi1 X))), 0, ne
   //   ==> any_true (vNi1 X)
+  if (auto Match = TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
+          N, VecVT, DAG)) {
+    return Match;
+  }
   // setcc (iN (bitcast (vNi1 X))), 0, eq
   //   ==> xor (any_true (vNi1 X)), -1
+  if (auto Match = TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(
+          N, VecVT, DAG)) {
+    return Match;
+  }
   // setcc (iN (bitcast (vNi1 X))), -1, eq
   //   ==> all_true (vNi1 X)
+  if (auto Match = TryMatchTrue<-1, ISD::SETEQ, false, Intrinsic::wasm_alltrue>(
+          N, VecVT, DAG)) {
+    return Match;
+  }
   // setcc (iN (bitcast (vNi1 X))), -1, ne
   //   ==> xor (all_true (vNi1 X)), -1
-  if (DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-      (Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
-      (isNullConstant(RHS) || isAllOnesConstant(RHS)) &&
-      LHS->getOpcode() == ISD::BITCAST) {
-    EVT FromVT = LHS->getOperand(0).getValueType();
-    if (FromVT.isFixedLengthVector() &&
-        FromVT.getVectorElementType() == MVT::i1) {
-      int Intrin = isNullConstant(RHS) ? Intrinsic::wasm_anytrue
-                                       : Intrinsic::wasm_alltrue;
-      unsigned NumElts = FromVT.getVectorNumElements();
-      if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
-        return SDValue();
-      EVT Width = MVT::getIntegerVT(128 / NumElts);
-      SDValue Ret = DAG.getZExtOrTrunc(
-          DAG.getNode(
-              ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-              {DAG.getConstant(Intrin, DL, MVT::i32),
-               DAG.getSExtOrTrunc(LHS->getOperand(0), DL,
-                                  FromVT.changeVectorElementType(Width))}),
-          DL, MVT::i1);
-      if ((isNullConstant(RHS) && (Cond == ISD::SETEQ)) ||
-          (isAllOnesConstant(RHS) && (Cond == ISD::SETNE))) {
-        Ret = DAG.getNOT(DL, Ret, MVT::i1);
-      }
-      return DAG.getZExtOrTrunc(Ret, DL, VT);
-    }
+  if (auto Match = TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(
+          N, VecVT, DAG)) {
+    return Match;
   }
-
   return SDValue();
 }
 
