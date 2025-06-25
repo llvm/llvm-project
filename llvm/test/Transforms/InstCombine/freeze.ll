@@ -880,7 +880,7 @@ exit:                                             ; preds = %loop
 ; The recurrence for the GEP offset can't produce undef so the freeze should be
 ; pushed through to the ptr, but this is not currently supported.
 define void @fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
-; CHECK-LABEL: @fold_phi_phi_gep(
+; CHECK-LABEL: @fold_phi_gep_phi_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
