@@ -77,7 +77,10 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     case DW_FORM_strp:
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
-      m_value.uval = data.GetMaxU64(offset_ptr, 4);
+      if (m_unit->GetFormat() == DwarfFormat::DWARF32)
+        m_value.uval = data.GetMaxU64(offset_ptr, 4);
+      else if (m_unit->GetFormat() == DwarfFormat::DWARF64)
+        m_value.uval = data.GetMaxU64(offset_ptr, 8);
       break;
     case DW_FORM_addrx1:
     case DW_FORM_strx1:
@@ -121,8 +124,12 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
       assert(m_unit);
       if (m_unit->GetVersion() <= 2)
         ref_addr_size = m_unit->GetAddressByteSize();
-      else
-        ref_addr_size = 4;
+      else {
+        if (m_unit->GetFormat() == DwarfFormat::DWARF32)
+          ref_addr_size = 4;
+        else if (m_unit->GetFormat() == DwarfFormat::DWARF64)
+          ref_addr_size = 8;
+      }
       m_value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
       break;
     case DW_FORM_indirect:
@@ -165,17 +172,18 @@ static FormSize g_form_sizes[] = {
     {1, 1}, // 0x0b DW_FORM_data1
     {1, 1}, // 0x0c DW_FORM_flag
     {0, 0}, // 0x0d DW_FORM_sdata
-    {1, 4}, // 0x0e DW_FORM_strp
+    {0, 0}, // 0x0e DW_FORM_strp (4 bytes for DWARF32, 8 bytes for DWARF64)
     {0, 0}, // 0x0f DW_FORM_udata
     {0, 0}, // 0x10 DW_FORM_ref_addr (addr size for DWARF2 and earlier, 4 bytes
             // for DWARF32, 8 bytes for DWARF32 in DWARF 3 and later
-    {1, 1},  // 0x11 DW_FORM_ref1
-    {1, 2},  // 0x12 DW_FORM_ref2
-    {1, 4},  // 0x13 DW_FORM_ref4
-    {1, 8},  // 0x14 DW_FORM_ref8
-    {0, 0},  // 0x15 DW_FORM_ref_udata
-    {0, 0},  // 0x16 DW_FORM_indirect
-    {1, 4},  // 0x17 DW_FORM_sec_offset
+    {1, 1}, // 0x11 DW_FORM_ref1
+    {1, 2}, // 0x12 DW_FORM_ref2
+    {1, 4}, // 0x13 DW_FORM_ref4
+    {1, 8}, // 0x14 DW_FORM_ref8
+    {0, 0}, // 0x15 DW_FORM_ref_udata
+    {0, 0}, // 0x16 DW_FORM_indirect
+    {0,
+     0}, // 0x17 DW_FORM_sec_offset (4 bytes for DWARF32, 8 bytes for DWARF64)
     {0, 0},  // 0x18 DW_FORM_exprloc
     {1, 0},  // 0x19 DW_FORM_flag_present
     {0, 0},  // 0x1a DW_FORM_strx (ULEB128)
@@ -183,8 +191,8 @@ static FormSize g_form_sizes[] = {
     {1, 4},  // 0x1c DW_FORM_ref_sup4
     {0, 0},  // 0x1d DW_FORM_strp_sup (4 bytes for DWARF32, 8 bytes for DWARF64)
     {1, 16}, // 0x1e DW_FORM_data16
-    {1, 4},  // 0x1f DW_FORM_line_strp
-    {1, 8},  // 0x20 DW_FORM_ref_sig8
+    {0, 0}, // 0x1f DW_FORM_line_strp (4 bytes for DWARF32, 8 bytes for DWARF64)
+    {1, 8}, // 0x20 DW_FORM_ref_sig8
 };
 
 std::optional<uint8_t> DWARFFormValue::GetFixedSize(dw_form_t form,
@@ -251,8 +259,12 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
                   // get this wrong
     if (unit->GetVersion() <= 2)
       ref_addr_size = unit->GetAddressByteSize();
-    else
-      ref_addr_size = 4;
+    else {
+      if (unit->GetFormat() == DwarfFormat::DWARF32)
+        ref_addr_size = 4;
+      else if (unit->GetFormat() == DwarfFormat::DWARF64)
+        ref_addr_size = 8;
+    }
     *offset_ptr += ref_addr_size;
     return true;
 
@@ -288,7 +300,10 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
     case DW_FORM_line_strp:
-      *offset_ptr += 4;
+      if (unit->GetFormat() == DwarfFormat::DWARF32)
+        *offset_ptr += 4;
+      else if (unit->GetFormat() == DwarfFormat::DWARF64)
+        *offset_ptr += 8;
       return true;
 
     // 4 byte values
