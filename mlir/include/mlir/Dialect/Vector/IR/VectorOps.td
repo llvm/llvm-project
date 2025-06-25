@@ -886,9 +886,9 @@ def Vector_InsertOp :
      AllTypesMatch<["dest", "result"]>]> {
   let summary = "insert operation";
   let description = [{
-    Inserts an n-D value-to-store vector into an (n + k)-D destination vector
-    at a specified k-D position. When n = 0, value-to-store degenerates to
-    a scalar element inserted into the (0 + k)-D destination vector.
+    Inserts an (n - k)-D sub-vector (value-to-store) into an n-D destination
+    vector at a specified k-D position. When n = 0, value-to-store degenerates
+    to a scalar element inserted into the n-D destination vector.
 
     Static and dynamic indices must be greater or equal to zero and less than
     the size of the corresponding dimension. The result is undefined if any
