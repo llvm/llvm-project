@@ -63,7 +63,7 @@ def fdis(debugger, args, exe_ctx, result, dict):
 
     res = lldb.SBCommandReturnObject()
     debugger.GetCommandInterpreter().HandleCommand("disassemble -b " + args, exe_ctx, res)
-    if (len(res.GetError()) > 0):
+    if len(res.GetError()) > 0:
         result.SetError(res.GetError())
         result.SetStatus(lldb.eReturnStatusFailed)
         return
