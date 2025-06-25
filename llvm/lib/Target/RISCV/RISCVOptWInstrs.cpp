@@ -797,25 +797,9 @@ bool RISCVOptWInstrs::convertZExtLoads(MachineFunction &MF,
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      unsigned WOpc;
-      int UsersWidth;
-      // LBU is intentionally not converted to LB, as there is a compressed
-      // form of LBU in Zcb but no compressed LB.
-      switch (MI.getOpcode()) {
-      default:
-        continue;
-      case RISCV::LWU:
-        WOpc = RISCV::LW;
-        UsersWidth = 32;
-        break;
-      }
-
-      if (hasAllNBitUsers(MI, ST, MRI, UsersWidth)) {
+      if (MI.getOpcode() == RISCV::LWU && hasAllWUsers(MI, ST, MRI) {
         LLVM_DEBUG(dbgs() << "Replacing " << MI);
-        MI.setDesc(TII.get(WOpc));
-        MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
-        MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
-        MI.clearFlag(MachineInstr::MIFlag::IsExact);
+        MI.setDesc(TII.get(RISCV::LW));
         LLVM_DEBUG(dbgs() << "     with " << MI);
         MadeChange = true;
       }
