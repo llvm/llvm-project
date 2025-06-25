@@ -1960,13 +1960,6 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     return builder.getConstant(
         loc, builder.getAttr<cir::IntAttr>(
                  cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
-  } else if (e->getKind() == UETT_VectorElements) {
-    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
-                                   "sizeof operator for VectorElements",
-                                   e->getStmtClassName());
-    return builder.getConstant(
-        loc, builder.getAttr<cir::IntAttr>(
-                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
   }
 
   return builder.getConstant(
