@@ -2,7 +2,7 @@
 Test lldb-dap runInTerminal reverse request
 """
 
-from lldbsuite.test.decorators import skipIfBuildType, skipIfWindows, skipIf, no_match
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 import lldbdap_testcase
 import os
