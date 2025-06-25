@@ -6598,18 +6598,7 @@ struct TransposeToShapeCast final
   LogicalResult matchAndRewrite(vector::TransposeOp transpose,
                                 PatternRewriter &rewriter) const override {
 
-    // This folder does
-    //    shape_cast(transpose) -> shape_cast
-    // But another pattern, ConvertIllegalShapeCastOpsToTransposes, does
-    //    shape_cast -> shape_cast(transpose)
-    // i.e. the complete opposite. When paired, these 2 patterns can cause
-    // infinite cycles in pattern rewriting.
-    // ConvertIllegalShapeCastOpsToTransposes only matches on scalable
-    // vectors, so by disabling this folder for scalable vectors the
-    // cycle is avoided.
-    // TODO: Check if ConvertIllegalShapeCastOpsToTransposes is
-    // still needed. If it's not, then we can fold here.
-    if (!isOrderPreserving(transpose) || transpose.getType().isScalable()) {
+    if (!isOrderPreserving(transpose)) {
       return rewriter.notifyMatchFailure(
           transpose, "not order preserving, so not semantically a 'copy'");
     }
