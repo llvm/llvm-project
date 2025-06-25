@@ -797,6 +797,8 @@ bool RISCVOptWInstrs::convertZExtLoads(MachineFunction &MF,
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      // LW is compressible while LWU isn't, and making this change reduces
+      // unnecessary diffs versus RV32.
       if (MI.getOpcode() == RISCV::LWU && hasAllWUsers(MI, ST, MRI) {
         LLVM_DEBUG(dbgs() << "Replacing " << MI);
         MI.setDesc(TII.get(RISCV::LW));
