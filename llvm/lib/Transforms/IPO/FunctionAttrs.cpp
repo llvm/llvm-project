@@ -57,7 +57,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -677,21 +676,23 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
          std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
     auto *ConstantLength = dyn_cast<ConstantInt>(Length);
     if (ConstantLength && Offset) {
-      int64_t Off = *Offset;
       int64_t Len = ConstantLength->getSExtValue();
 
       // Reject zero or negative lengths
       if (Len <= 0)
         return std::nullopt;
 
-      int64_t High;
-      if (llvm::AddOverflow(Off, Len, High))
+      APInt Low(64, *Offset, true);
+      bool Overflow;
+      APInt High = Low.sadd_ov(APInt(64, Len, true), Overflow);
+      if (Overflow)
         return std::nullopt;
 
-      return ConstantRange(APInt(64, Off, true), APInt(64, High, true));
+      return ConstantRange(Low, High);
     }
     return std::nullopt;
   };
+
   if (auto *SI = dyn_cast<StoreInst>(I)) {
     if (SI->isSimple() && &SI->getOperandUse(1) == ArgUse.U) {
       // Get the fixed type size of "SI". Since the access range of a write
