@@ -1589,8 +1589,10 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let mayStore = 1;
 }
 
+let SubtargetPredicate = isNotGFX1250Plus in {
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
+}
 
 // "_soft" waitcnts are waitcnts that are either relaxed into their non-soft
 // counterpart, or completely removed.
