@@ -140,6 +140,51 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Similar as the example above, but the memory access is done via
+// memref.assume_alignment. Hoisting is safe as the only users of the
+// "allignment" Op are the xfer Ops within the loop that we want to hoist.
+
+// CHECK-LABEL:   func.func @hoist_basic_vector_xfer_pair_with_assume_align(
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?x?xf32>,
+// CHECK-SAME:      %[[LB:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[UB:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[STEP:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[IN:[a-zA-Z0-9]+]]: vector<1xf32>) {
+func.func @hoist_basic_vector_xfer_pair_with_assume_align(
+    %mem: memref<?x?xf32>, %lb : index, %ub : index, %step: index, %in: vector<1xf32>) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[AA:.*]] = memref.assume_alignment %[[MEM]], 4 : memref<?x?xf32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[AA]][%[[C0]], %[[C0]]], %[[PAD]] : memref<?x?xf32>, vector<1xf32>
+// CHECK:           %[[SCF:.*]] = scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]]  iter_args(%[[INIT:.*]] = %[[READ]]) -> (vector<1xf32>) {
+// CHECK:             %[[USE:.*]] = "some_use"(%[[INIT]]) : (vector<1xf32>) -> vector<1xf32>
+// CHECK:           }
+// CHECK:           vector.transfer_write %[[SCF]], %[[AA]][%[[C0]], %[[C0]]] : vector<1xf32>, memref<?x?xf32>
+
+  %aa = memref.assume_alignment %mem, 4 : memref<?x?xf32>
+  scf.for %i = %lb to %ub step %step {
+      %r0 = vector.transfer_read %aa[%c0, %c0], %pad: memref<?x?xf32>, vector<1xf32>
+      %u0 = "some_use"(%r0) : (vector<1xf32>) -> vector<1xf32>
+      vector.transfer_write %u0, %aa[%c0, %c0] : vector<1xf32>, memref<?x?xf32>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 ///----------------------------------------------------------------------------------------
 /// Tests for vector.transfer_read + vector.transfer_write pairs
 ///

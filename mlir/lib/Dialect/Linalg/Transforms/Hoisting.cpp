@@ -307,32 +307,41 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       //   3. no other operations in the loop access the same memref except
       //      for transfer_read/transfer_write accessing statically disjoint
       //      slices.
+
+      // Check 1.
       if (transferRead.getIndices() != transferWrite.getIndices() ||
           transferRead.getVectorType() != transferWrite.getVectorType() ||
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();
 
-      // Check 2. for xfer_read
-      auto *source = transferRead.getBase().getDefiningOp();
-      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
-        return WalkResult::advance();
-
+      // Check 2. Note, since both xfer Ops share the source, we only need to
+      // look at one of them.
       auto base = transferRead.getBase();
+      auto *source = base.getDefiningOp();
+      if (source) {
+        // NOTE: We treat `memref.assume_alignment` as a special case:
+        //  1. If it has exactly two uses then these have to be the xfer Ops
+        //    being looked at.
+        //  2. Otherwise, there are other users that we should take into
+        //    account
+        // In the case of 1., it is safe to look past AssumeAlignmentOp,
+        // i.e. at the defining Op of the input MemRef, provided that:
+        //  * the original MemRef has only one use (i.e.
+        //  `memref.assume_alignment`)
+        if (auto assume = dyn_cast<memref::AssumeAlignmentOp>(source)) {
+          Value memPreAlignment = assume.getMemref();
+          if (base.hasNUses(2) && memPreAlignment.hasOneUse())
+            source = memPreAlignment.getDefiningOp();
+        }
+        if (isa_and_nonnull<ViewLikeOpInterface>(source))
+          return WalkResult::advance();
+      }
+
       for (auto *user : base.getUsers())
         if (isa_and_nonnull<ViewLikeOpInterface>(user))
           return WalkResult::advance();
 
-      // Check 2. for xfer_wrire
-      source = transferWrite.getBase().getDefiningOp();
-      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
-        return WalkResult::advance();
-
-      base = transferWrite.getBase();
-      for (auto *user : base.getUsers())
-        if (isa_and_nonnull<ViewLikeOpInterface>(user))
-          return WalkResult::advance();
-
-      // Check 1. + 3.
+      // Check 3.
       // TODO: may want to memoize this information for performance but it
       // likely gets invalidated often.
       DominanceInfo dom(loop);
@@ -371,7 +380,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // Hoist write after.
       transferWrite->moveAfter(loop);
 
-      // Rewrite `loop` with new yields by cloning and erase the original loop.
+      // Rewrite `loop` with new yields by cloning and erase the original
+      // loop.
       IRRewriter rewriter(transferRead.getContext());
       NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
                                      ArrayRef<BlockArgument> newBBArgs) {
