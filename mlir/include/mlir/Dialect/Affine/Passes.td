@@ -414,6 +414,23 @@ def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"
   let constructor = "mlir::affine::createSimplifyAffineStructuresPass()";
 }
 
+def SimplifyAffineMinMax : InterfacePass<"affine-simplify-min-max", "FunctionOpInterface"> {
+  let summary = "Simplify affine min/max/apply";
+  let description = [{
+    Apply the SimplifyAffineMaxOp, SimplifyAffineMinOp and SimplifyAffineApplyOp
+    patterns in addition to AffineMin/Max canonicalization patterns until a
+    fixed point is reached.
+    These patterns apply ValueBoundsOp interface on AffineMin/Max ops and
+    additional simplifications such as:
+    ```
+       min(x, y, cst) / cst -> 1
+    ```
+    when x, y, cst are all >= 0.
+    This is typically useful to extract more static informationfrom IR after
+    tiling but can also come at a cost due to Presburger-style analysis.
+  }];
+}
+
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
   let summary = "Lower affine operations operating on indices into more fundamental operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsPass()";
