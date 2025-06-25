@@ -31,8 +31,8 @@ TEST(ValueTest, getNumUses) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *op0 = createOp(&context, /*operands=*/ArrayRef<Value>(),
-                            builder.getIntegerType(16));
+  Operation *op0 =
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
 
   Value v0 = op0->getResult(0);
   EXPECT_EQ(v0.getNumUses(), (unsigned)0);
@@ -52,8 +52,8 @@ TEST(ValueTest, hasNUses) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *op0 = createOp(&context, /*operands=*/ArrayRef<Value>(),
-                            builder.getIntegerType(16));
+  Operation *op0 =
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value v0 = op0->getResult(0);
   EXPECT_TRUE(v0.hasNUses(0));
   EXPECT_FALSE(v0.hasNUses(1));
@@ -76,8 +76,8 @@ TEST(ValueTest, hasNUsesOrMore) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *op0 = createOp(&context, /*operands=*/ArrayRef<Value>(),
-                            builder.getIntegerType(16));
+  Operation *op0 =
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value v0 = op0->getResult(0);
   EXPECT_TRUE(v0.hasNUsesOrMore(0));
   EXPECT_FALSE(v0.hasNUsesOrMore(1));

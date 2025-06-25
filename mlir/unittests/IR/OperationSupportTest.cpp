@@ -32,8 +32,8 @@ TEST(OperandStorageTest, NonResizable) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *useOp = createOp(&context, /*operands=*/ArrayRef<Value>(),
-                              builder.getIntegerType(16));
+  Operation *useOp =
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
@@ -56,8 +56,8 @@ TEST(OperandStorageTest, Resizable) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *useOp = createOp(&context, /*operands=*/ArrayRef<Value>(),
-                              builder.getIntegerType(16));
+  Operation *useOp =
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -84,8 +84,8 @@ TEST(OperandStorageTest, RangeReplace) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *useOp = createOp(&context, /*operands=*/ArrayRef<Value>(),
-                              builder.getIntegerType(16));
+  Operation *useOp =
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -120,8 +120,8 @@ TEST(OperandStorageTest, MutableRange) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *useOp = createOp(&context, /*operands=*/ArrayRef<Value>(),
-                              builder.getIntegerType(16));
+  Operation *useOp =
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -159,7 +159,7 @@ TEST(OperandStorageTest, RangeErase) {
 
   Type type = builder.getNoneType();
   Operation *useOp =
-      createOp(&context, /*operands=*/ArrayRef<Value>(), {type, type});
+      createOp(&context, /*operands=*/std::nullopt, {type, type});
   Value operand1 = useOp->getResult(0);
   Value operand2 = useOp->getResult(1);
 
@@ -189,8 +189,8 @@ TEST(OperationOrderTest, OrderIsAlwaysValid) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *containerOp = createOp(&context, /*operands=*/ArrayRef<Value>(),
-                                    /*resultTypes=*/ArrayRef<Type>(),
+  Operation *containerOp = createOp(&context, /*operands=*/std::nullopt,
+                                    /*resultTypes=*/std::nullopt,
                                     /*numRegions=*/1);
   Region &region = containerOp->getRegion(0);
   Block *block = new Block();
