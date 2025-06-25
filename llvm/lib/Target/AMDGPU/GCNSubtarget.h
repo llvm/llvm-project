@@ -113,6 +113,7 @@ protected:
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
+  bool GFX1250Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
   bool SGPRInitBug = false;
@@ -201,6 +202,7 @@ protected:
 
   bool HasNoSdstCMPX = false;
   bool HasVscnt = false;
+  bool HasWaitXcnt = false;
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
@@ -260,6 +262,7 @@ protected:
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
   bool HasPointSampleAccel = false;
+  bool HasSetPrioIncWgInst = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -686,13 +689,15 @@ public:
     return GFX10_BEncoding;
   }
 
+  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
+
+  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
+
   bool hasExportInsts() const {
-    return !hasGFX940Insts();
+    return !hasGFX940Insts() && !hasGFX1250Insts();
   }
 
-  bool hasVINTERPEncoding() const {
-    return GFX11Insts;
-  }
+  bool hasVINTERPEncoding() const { return GFX11Insts && !hasGFX1250Insts(); }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
@@ -1285,7 +1290,7 @@ public:
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
-  bool needsAlignedVGPRs() const { return GFX90AInsts; }
+  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return GFX11Insts; }
@@ -1367,6 +1372,10 @@ public:
     return HasMinimum3Maximum3PKF16;
   }
 
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1250.
+  bool hasWaitXCnt() const { return HasWaitXcnt; }
+
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
@@ -1384,7 +1393,8 @@ public:
 
   /// Return the maximum number of waves per SIMD for kernels using \p VGPRs
   /// VGPRs
-  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
+  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs,
+                                    unsigned DynamicVGPRBlockSize) const;
 
   /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
   /// be achieved when the only function running on a CU is \p F, each workgroup
@@ -1458,6 +1468,11 @@ public:
   /// \returns true if VADDR and SADDR fields in VSCRATCH can use negative
   /// values.
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
+
+  bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  // \returns true if target has S_SETPRIO_INC_WG instruction.
+  bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending.
@@ -1537,8 +1552,8 @@ public:
   unsigned getMaxNumSGPRs(const Function &F) const;
 
   /// \returns VGPR allocation granularity supported by the subtarget.
-  unsigned getVGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(this);
+  unsigned getVGPRAllocGranule(unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getVGPRAllocGranule(this, DynamicVGPRBlockSize);
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.
@@ -1558,20 +1573,24 @@ public:
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
-  unsigned getAddressableNumVGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this);
+  unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this, DynamicVGPRBlockSize);
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
   /// the specified number of waves \p WavesPerEU.
-  unsigned getMinNumVGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU);
+  unsigned getMinNumVGPRs(unsigned WavesPerEU,
+                          unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU,
+                                           DynamicVGPRBlockSize);
   }
 
   /// \returns the maximum number of VGPRs that can be used and still achieved
   /// at least the specified number of waves \p WavesPerEU.
-  unsigned getMaxNumVGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU);
+  unsigned getMaxNumVGPRs(unsigned WavesPerEU,
+                          unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU,
+                                           DynamicVGPRBlockSize);
   }
 
   /// \returns max num VGPRs. This is the common utility function
@@ -1674,6 +1693,9 @@ public:
   }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
+  unsigned getDynamicVGPRBlockSize() const {
+    return DynamicVGPRBlockSize32 ? 32 : 16;
+  }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated

@@ -29,6 +29,23 @@ functions:
     return_type: wint_t
     arguments:
       - type: int
+  - name: mbrtowc
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
+      - type: mbstate_t *__restrict
+  - name: mbtowc
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
   - name: wmemset
     standards:
       - stdc
@@ -150,6 +167,14 @@ functions:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
+  - name: wcrtomb
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: wchar_t
+      - type: mbstate_t *__restrict
   - name: wcscpy
     standards:
       - stdc
@@ -157,3 +182,18 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcpcpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+  - name: wcpncpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t

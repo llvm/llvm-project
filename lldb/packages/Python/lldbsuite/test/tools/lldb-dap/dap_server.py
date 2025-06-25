@@ -179,9 +179,13 @@ class DebugCommunication(object):
     @classmethod
     def validate_response(cls, command, response):
         if command["command"] != response["command"]:
-            raise ValueError("command mismatch in response")
+            raise ValueError(
+                f"command mismatch in response {command['command']} != {response['command']}"
+            )
         if command["seq"] != response["request_seq"]:
-            raise ValueError("seq mismatch in response")
+            raise ValueError(
+                f"seq mismatch in response {command['seq']} != {response['request_seq']}"
+            )
 
     def _read_packet_thread(self):
         done = False
@@ -404,8 +408,8 @@ class DebugCommunication(object):
                 self.reverse_requests.append(response_or_request)
                 if response_or_request["command"] == "runInTerminal":
                     subprocess.Popen(
-                        response_or_request["arguments"]["args"],
-                        env=response_or_request["arguments"]["env"],
+                        response_or_request["arguments"].get("args"),
+                        env=response_or_request["arguments"].get("env", {}),
                     )
                     self.send_packet(
                         {
@@ -494,7 +498,7 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_capability(self, key):
+    def get_capability(self, key: str):
         """Get a value for the given key if it there is a key/value pair in
         the capabilities reported by the adapter.
         """
@@ -1050,8 +1054,12 @@ class DebugCommunication(object):
             self._update_verified_breakpoints(response["body"]["breakpoints"])
         return response
 
-    def request_setExceptionBreakpoints(self, filters):
+    def request_setExceptionBreakpoints(
+        self, *, filters: list[str] = [], filter_options: list[dict] = []
+    ):
         args_dict = {"filters": filters}
+        if filter_options:
+            args_dict["filterOptions"] = filter_options
         command_dict = {
             "command": "setExceptionBreakpoints",
             "type": "request",
