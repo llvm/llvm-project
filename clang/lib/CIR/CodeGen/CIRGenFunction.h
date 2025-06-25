@@ -68,6 +68,10 @@ public:
   mlir::Value cxxThisValue = nullptr;
   clang::CharUnits cxxThisAlignment;
 
+  /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
+  /// expression.
+  Address cxxDefaultInitExprThis = Address::invalid();
+
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
 
@@ -490,7 +494,26 @@ public:
   static bool
   isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
 
+  /// A scope within which we are constructing the fields of an object which
+  /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
+  /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
+  class FieldConstructionScope {
+  public:
+    FieldConstructionScope(CIRGenFunction &cgf, Address thisAddr)
+        : cgf(cgf), oldCXXDefaultInitExprThis(cgf.cxxDefaultInitExprThis) {
+      cgf.cxxDefaultInitExprThis = thisAddr;
+    }
+    ~FieldConstructionScope() {
+      cgf.cxxDefaultInitExprThis = oldCXXDefaultInitExprThis;
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    Address oldCXXDefaultInitExprThis;
+  };
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
+  LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
@@ -844,6 +867,9 @@ public:
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
+                               clang::Expr *init);
+
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
   /// Emit the computation of the specified expression of scalar type.
@@ -939,6 +965,13 @@ public:
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  /// Like emitLValueForField, excpet that if the Field is a reference, this
+  /// will return the address of the reference and not the address of the value
+  /// stored in the reference.
+  LValue emitLValueForFieldInitialization(LValue base,
+                                          const clang::FieldDecl *field,
+                                          llvm::StringRef fieldName);
 
   LValue emitMemberExpr(const MemberExpr *e);
 

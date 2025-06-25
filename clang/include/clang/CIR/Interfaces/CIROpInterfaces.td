@@ -138,13 +138,13 @@ let cppNamespace = "::cir" in {
       InterfaceMethod<"",
       "void", "setDSOLocal", (ins "bool":$val), [{}],
       /*defaultImplementation=*/[{
-        $_op.setDsolocal(val);
+        $_op.setDsoLocal(val);
       }]
       >,
       InterfaceMethod<"",
       "bool", "isDSOLocal", (ins), [{}],
       /*defaultImplementation=*/[{
-        return $_op.getDsolocal();
+        return $_op.getDsoLocal();
       }]
       >,
       InterfaceMethod<"",

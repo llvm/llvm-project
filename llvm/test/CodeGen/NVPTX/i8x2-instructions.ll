@@ -33,13 +33,11 @@ define <2 x i8> @test_bitcast_i16_2xi8(i16 %a) {
 ; CHECK-LABEL: test_bitcast_i16_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [test_bitcast_i16_2xi8_param_0];
 ; CHECK-NEXT:    shr.u16 %rs2, %rs1, 8;
-; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.v2.b16 [func_retval0], {%rs1, %rs2};
 ; CHECK-NEXT:    ret;
   %res = bitcast i16 %a to <2 x i8>
   ret <2 x i8> %res
