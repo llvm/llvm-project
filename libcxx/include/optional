@@ -999,7 +999,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, const 
 
 template < class _Tp,
            class _Up,
-           enable_if_t<__is_convertible_to_bool_v<decltype(std::declval<const _Tp&>() != std::declval<const _Up&>())>, int> = 0>
+           enable_if_t<__is_convertible_to_bool_v<decltype(std::declval<const _Tp&>() != std::declval<const _Up&>())>,
+                       int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const optional<_Tp>& __x, const optional<_Up>& __y) {
   if (static_cast<bool>(__x) != static_cast<bool>(__y))
     return true;
