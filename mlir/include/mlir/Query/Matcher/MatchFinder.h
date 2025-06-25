@@ -21,9 +21,7 @@
 
 namespace mlir::query::matcher {
 
-/// Finds and collects matches from the IR. After construction
-/// `collectMatches` can be used to traverse the IR and apply
-/// matchers.
+/// A class that provides utilities to find operations in the IR.
 class MatchFinder {
 
 public:

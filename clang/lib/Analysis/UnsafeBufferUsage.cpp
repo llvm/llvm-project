@@ -115,6 +115,10 @@ private:
 };
 } // namespace
 
+#define SIZED_CONTAINER_OR_VIEW_LIST                                           \
+  "span", "array", "vector", "basic_string_view", "basic_string",              \
+      "initializer_list",
+
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
 class MatchDescendantVisitor : public DynamicRecursiveASTVisitor {
@@ -463,6 +467,8 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
+//   7. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
+//      SIZED_CONTAINER_OR_VIEW_LIST.
 static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
                                         ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
@@ -560,6 +566,32 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
         }
     }
   }
+  // Check form 7:
+  auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
+    if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
+      const auto *MD = MC->getMethodDecl();
+      const auto *RD = MC->getRecordDecl();
+
+      if (RD && MD)
+        if (auto *II = RD->getDeclName().getAsIdentifierInfo();
+            II && RD->isInStdNamespace())
+          return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                    II->getName()) &&
+                 MD->getName() == MethodName;
+    }
+    return false;
+  };
+
+  if (IsMethodCallToSizedObject(Arg0, "begin") &&
+      IsMethodCallToSizedObject(Arg1, "end"))
+    return AreSameDRE(
+        // We know Arg0 and Arg1 are `CXXMemberCallExpr`s:
+        cast<CXXMemberCallExpr>(Arg0)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts(),
+        cast<CXXMemberCallExpr>(Arg1)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts());
   return false;
 }
 
@@ -1058,8 +1090,7 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
     return false; // not an snprintf call
 
   // Pattern 1:
-  static StringRef SizedObjs[] = {"span", "array", "vector",
-                                  "basic_string_view", "basic_string"};
+  static StringRef SizedObjs[] = {SIZED_CONTAINER_OR_VIEW_LIST};
   Buf = Buf->IgnoreParenImpCasts();
   Size = Size->IgnoreParenImpCasts();
   if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Buf))
@@ -1826,9 +1857,8 @@ private:
     auto *method = cast<CXXMethodDecl>(callee);
     if (method->getNameAsString() == "data" &&
         method->getParent()->isInStdNamespace() &&
-        (method->getParent()->getName() == "span" ||
-         method->getParent()->getName() == "array" ||
-         method->getParent()->getName() == "vector"))
+        llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                           method->getParent()->getName()))
       return true;
     return false;
   }

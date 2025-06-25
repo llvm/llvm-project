@@ -295,6 +295,8 @@ C23 Feature Support
   type. Fixes #GH140887
 - Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
   which clarified how Clang is handling underspecified object declarations.
+- Clang now accepts single variadic parameter in type-name. It's a part of
+  `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -720,6 +722,7 @@ Bug Fixes in This Version
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
+- Fixed a bug when use unicode character name in macro concatenation. (#GH145240) 
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1067,6 +1070,9 @@ impact the linker behaviour like the other `-static-*` flags.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash in ``UnixAPIMisuseChecker`` and ``MallocChecker`` when analyzing
+  code with non-standard ``getline`` or ``getdelim`` function signatures. (#GH144884)
 
 Improvements
 ^^^^^^^^^^^^
