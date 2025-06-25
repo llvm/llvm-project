@@ -33,7 +33,7 @@ LLVM_LIBC_FUNCTION(size_t, wcrtomb,
       sizeof(wchar_t));
 
   if (!result.has_value()) {
-    libc_errno = EILSEQ;
+    libc_errno = result.error();
     return -1;
   }
 
