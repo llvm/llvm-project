@@ -22,7 +22,7 @@ func.func @mem_use_outside(%mem: memref<?x?xf32>, %lb : index, %ub : index, %ste
 // CHECK:               %[[USE:.*]] = "val_use"(%[[VAL_5]]) : (vector<1xf32>) -> vector<1xf32>
 // CHECK:               scf.yield %[[USE]] : vector<1xf32>
 // CHECK:             }
-// CHECK:             vector.transfer_write %[[SCF]], %[[MEM]]{{\[}}%[[I]], %[[I]]] : vector<1xf32>, memref<?x?xf32>
+// CHECK:             vector.transfer_write %[[SCF]], %[[MEM]][%[[I]], %[[I]]] : vector<1xf32>, memref<?x?xf32>
 // CHECK:             "mem_use"(%[[MEM]]) : (memref<?x?xf32>) -> ()
 // CHECK:           }
   scf.for %i = %lb to %ub step %step {
@@ -225,7 +225,6 @@ module attributes {transform.with_named_sequence} {
 ///
 /// TODO: Document
 ///----------------------------------------------------------------------------------------
-
 
 // CHECK-LABEL: func @hoist_vector_transfer_pairs_disjoint(
 //  CHECK-SAME:   %[[MEMREF0:[a-zA-Z0-9]*]]: memref<?x?xf32>,
