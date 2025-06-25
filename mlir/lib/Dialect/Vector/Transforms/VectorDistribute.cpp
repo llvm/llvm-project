@@ -1167,23 +1167,19 @@ struct WarpOpInsertStridedSlice : public WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           insertOp, "distributed dimension must be fully inserted");
     SmallVector<int64_t> newSourceDistShape(
-        insertOp.getSourceVectorType().getShape()),
-        newDestDistShape(insertOp.getDestVectorType().getShape());
+        insertOp.getSourceVectorType().getShape());
     newSourceDistShape[sourceDistributedDim] =
-        distributedType.getDimSize(destDistributedDim);
-    newDestDistShape[destDistributedDim] =
         distributedType.getDimSize(destDistributedDim);
     auto newSourceTy =
         VectorType::get(newSourceDistShape, distributedType.getElementType());
-    auto newDestTy =
-        VectorType::get(newDestDistShape, distributedType.getElementType());
+    VectorType newDestTy = distributedType;
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, {insertOp.getValueToStore(), insertOp.getDest()},
         {newSourceTy, newDestTy}, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
-    auto distributedSource = newWarpOp->getResult(newRetIndices[0]);
-    auto distributedDest = newWarpOp->getResult(newRetIndices[1]);
+    Value distributedSource = newWarpOp->getResult(newRetIndices[0]);
+    Value distributedDest = newWarpOp->getResult(newRetIndices[1]);
     // Create a new insert strided slice op that inserts distributed source into
     // distributed dest.
     Value newInsert = rewriter.create<vector::InsertStridedSliceOp>(
