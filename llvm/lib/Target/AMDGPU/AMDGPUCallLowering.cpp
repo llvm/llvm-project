@@ -1612,8 +1612,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-void AMDGPUCallLowering::addOriginalExecToReturn(MachineFunction &MF,
-                                                 MachineInstrBuilder &Ret) const {
+void AMDGPUCallLowering::addOriginalExecToReturn(
+    MachineFunction &MF, MachineInstrBuilder &Ret) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const MachineInstr *Setup = TII->getWholeWaveFunctionSetup(MF);
