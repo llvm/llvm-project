@@ -165,14 +165,6 @@ concept __concat_indirectly_readable =
                                        iterator_t<_Rs>> &&
      ...);
 
-template <bool _Const, class... _Rs>
-concept __concat_is_random_access =
-    (random_access_range<__maybe_const<_Const, _Rs>> && ...) && (sized_range<__maybe_const<_Const, _Rs>> && ...);
-
-template <bool _Const, class... _Rs>
-concept __concat_is_bidirectional =
-    ((bidirectional_range<__maybe_const<_Const, _Rs>> && ...) && (common_range<__maybe_const<_Const, _Rs>> && ...));
-
 template <class... _Rs>
 concept __concatable = requires {
   typename __concat_reference_t<_Rs...>;
@@ -188,6 +180,16 @@ concept __all_bidirectional = (bidirectional_range<__maybe_const<_Const, _Views>
 
 template <bool _Const, class... _Views>
 concept __all_forward = (forward_range<__maybe_const<_Const, _Views>> && ...);
+
+template <bool _Const, class... _First, class _Tail>
+concept __concat_is_random_access =
+    (__all_random_access<_Const, _First> && ... && __all_random_access<_Const, _Tail>) &&
+    (common_range<__maybe_const<_Const, _First>> && ...);
+
+template <bool _Const, class... _First, class _Tail>
+concept __concat_is_bidirectional =
+    (__all_bidirectional<_Const, _First> && ... && __all_random_access<_Const, _Tail>) &&
+    (common_range<__maybe_const<_Const, _First>> && ...);
 
 #  endif // _LIBCPP_STD_VER >= 23
 
