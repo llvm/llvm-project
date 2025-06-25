@@ -115,8 +115,6 @@ private:
   using TypeIdxMap = llvm::DenseMap<QualType, serialization::TypeIdx,
                                     serialization::UnsafeQualTypeDenseMapInfo>;
 
-  using LocSeq = SourceLocationSequence;
-
   /// The bitstream writer used to emit this precompiled header.
   llvm::BitstreamWriter &Stream;
 
@@ -733,16 +731,14 @@ public:
   void AddFileID(FileID FID, RecordDataImpl &Record);
 
   /// Emit a source location.
-  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
-                         LocSeq *Seq = nullptr);
+  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding
-  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
+  getRawSourceLocationEncoding(SourceLocation Loc);
 
   /// Emit a source range.
-  void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
-                      LocSeq *Seq = nullptr);
+  void AddSourceRange(SourceRange Range, RecordDataImpl &Record);
 
   /// Emit a reference to an identifier.
   void AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Record);

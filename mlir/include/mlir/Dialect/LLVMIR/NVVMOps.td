@@ -965,19 +965,21 @@ def NVVM_ElectSyncOp : NVVM_Op<"elect.sync">
   let summary = "Elect one leader thread";
   let description = [{
     The `elect.sync` instruction elects one predicated active leader
-    thread from among a set of threads specified in membermask.
-    The membermask is set to `0xFFFFFFFF` for the current version
-    of this Op. The predicate result is set to `True` for the
-    leader thread, and `False` for all other threads.
+    thread from among a set of threads specified in the `membermask`.
+    When the `membermask` is not provided explicitly, a default value
+    of `0xFFFFFFFF` is used. The predicate result is set to `True` for
+    the leader thread, and `False` for all other threads.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync)
   }];
 
+  let arguments = (ins Optional<I32>:$membermask);
   let results = (outs I1:$pred);
-  let assemblyFormat = "attr-dict `->` type(results)";  
+  let assemblyFormat = "($membermask^)? attr-dict `->` type(results)";
   string llvmBuilder = [{
     auto *resultTuple = createIntrinsicCall(builder,
-        llvm::Intrinsic::nvvm_elect_sync, {builder.getInt32(0xFFFFFFFF)});
+        llvm::Intrinsic::nvvm_elect_sync,
+        {$membermask ? $membermask : builder.getInt32(0xFFFFFFFF)});
     // Extract the second value into $pred
     $pred = builder.CreateExtractValue(resultTuple, 1);
   }];
