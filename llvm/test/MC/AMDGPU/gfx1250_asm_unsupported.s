@@ -1,5 +1,43 @@
 ; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
+;; Export, S_WAIT_EXPCNT and S_WAIT_EVENT
+
+export mrt0 off, off, off, off
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+export mrt7 v1, v1, v1, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+export mrtz v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+export pos0 v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+export pos3 v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp mrt0 off, off, off, off
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp mrt7 v1, v1, v1, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp mrtz v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp pos0 v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp pos3 v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_event 0x3141
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_expcnt 0x1234
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; Ray Tracing: DS_BVH_STACK ops
 
 ds_bvh_stack_rtn_b32 v255, v254, v253, v[249:252]
