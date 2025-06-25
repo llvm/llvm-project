@@ -1125,21 +1125,17 @@ static void addAliasScopeMetadataImpl(CallBase *CB, Function *F,
   const Function *CalledFunc = CB ? CB->getCalledFunction() : F;
   SmallVector<const Argument *, 4> NoAliasArgs;
 
-  std::function<bool(const Argument *, Attribute::AttrKind)> paramHasAttr;
   if (CB) {
-    paramHasAttr = [&](const Argument *Arg, Attribute::AttrKind Attr) -> bool {
-      return CB->paramHasAttr(Arg->getArgNo(), Attr);
-    };
+    for (const Argument &Arg : CalledFunc->args())
+      if (CB->paramHasAttr(Arg.getArgNo(), Attribute::NoAlias) &&
+          !Arg.use_empty())
+        NoAliasArgs.push_back(&Arg);
 
   } else {
-    paramHasAttr = [&](const Argument *Arg, Attribute::AttrKind Attr) -> bool {
-      return Arg->hasAttribute(Attr);
-    };
+    for (const Argument &Arg : CalledFunc->args())
+      if (Arg.hasAttribute(Attribute::NoAlias) && !Arg.use_empty())
+        NoAliasArgs.push_back(&Arg);
   }
-
-  for (const Argument &Arg : CalledFunc->args())
-    if (paramHasAttr(&Arg, Attribute::NoAlias) && !Arg.use_empty())
-      NoAliasArgs.push_back(&Arg);
 
   if (NoAliasArgs.empty())
     return;
@@ -1275,7 +1271,10 @@ static void addAliasScopeMetadataImpl(CallBase *CB, Function *F,
         // completely describe the aliasing properties using alias.scope
         // metadata (and, thus, won't add any).
         if (const Argument *A = dyn_cast<Argument>(V)) {
-          if (!paramHasAttr(A, Attribute::NoAlias))
+          if (CB) {
+            if (!CB->paramHasAttr(A->getArgNo(), Attribute::NoAlias))
+              UsesAliasingPtr = true;
+          } else if (!A->hasAttribute(Attribute::NoAlias))
             UsesAliasingPtr = true;
         } else {
           UsesAliasingPtr = true;
