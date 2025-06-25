@@ -5794,7 +5794,7 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
-    if ( StructuredData::ObjectSP object_sp = GetCorefileProcessMetadata()) {
+    if (StructuredData::ObjectSP object_sp = GetCorefileProcessMetadata()) {
       StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
       StructuredData::Array *threads;
       if (!dict->GetValueForKeyAsArray("threads", threads) || !threads) {
