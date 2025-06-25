@@ -2023,6 +2023,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  Error unloadBinaryImpl(DeviceImageTy *Image) override {
+    AMDGPUDeviceImageTy &AMDImage = static_cast<AMDGPUDeviceImageTy &>(*Image);
+
+    // Unload the executable of the image.
+    return AMDImage.unloadExecutable();
+  }
+
   /// Deinitialize the device and release its resources.
   Error deinitImpl() override {
     // Deinitialize the stream and event pools.
@@ -2034,19 +2041,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     if (auto Err = AMDGPUSignalManager.deinit())
       return Err;
-
-    // Close modules if necessary.
-    if (!LoadedImages.empty()) {
-      // Each image has its own module.
-      for (DeviceImageTy *Image : LoadedImages) {
-        AMDGPUDeviceImageTy &AMDImage =
-            static_cast<AMDGPUDeviceImageTy &>(*Image);
-
-        // Unload the executable of the image.
-        if (auto Err = AMDImage.unloadExecutable())
-          return Err;
-      }
-    }
 
     // Invalidate agent reference.
     Agent = {0};

@@ -1610,7 +1610,7 @@ def GlobalOp : CIR_Op<"global",
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
-                       UnitAttr:$dsolocal,
+                       UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
@@ -1618,7 +1618,7 @@ def GlobalOp : CIR_Op<"global",
     (`` $global_visibility^)?
     $linkage
     (`comdat` $comdat^)?
-    (`dsolocal` $dsolocal^)?
+    (`dso_local` $dso_local^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
     attr-dict
@@ -2372,6 +2372,35 @@ def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
+  let summary = "Extract the real part of a complex value";
+  let description = [{
+    `cir.complex.real` operation takes an operand of `!cir.complex` type and
+    yields the real part of it.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    ```
+  }];
+
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins CIR_ComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
@@ -2390,6 +2419,43 @@ def AssumeOp : CIR_Op<"assume"> {
 
   let assemblyFormat = [{
     $predicate `:` type($predicate) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Branch Probability Operations
+//===----------------------------------------------------------------------===//
+
+def ExpectOp : CIR_Op<"expect",
+  [Pure, AllTypesMatch<["result", "val", "expected"]>]> {
+  let summary = "Tell the optimizer that two values are likely to be equal.";
+  let description = [{
+    The `cir.expect` operation may take 2 or 3 arguments.
+
+    When the argument `prob` is missing, this operation effectively models the
+    `__builtin_expect` builtin function. It tells the optimizer that `val` and
+    `expected` are likely to be equal.
+
+    When the argument `prob` is present, this operation effectively models the
+    `__builtin_expect_with_probability` builtin function. It tells the
+    optimizer that `val` and `expected` are equal to each other with a certain
+    probability.
+
+    `val` and `expected` must be integers and their types must match.
+
+    The result of this operation is always equal to `val`.
+  }];
+
+  let arguments = (ins
+    CIR_AnyFundamentalIntType:$val,
+    CIR_AnyFundamentalIntType:$expected,
+    OptionalAttr<F64Attr>:$prob
+  );
+
+  let results = (outs CIR_AnyFundamentalIntType:$result);
+
+  let assemblyFormat = [{
+    `(` $val`,` $expected (`,` $prob^)? `)` `:` type($val) attr-dict
   }];
 }
 

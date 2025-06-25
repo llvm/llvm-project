@@ -4845,8 +4845,7 @@ cc_library(
     ]),
     hdrs = glob(["include/mlir/Support/*.h"]),
     includes = ["include"],
-    deps = ["//llvm:Support"],
-)
+    deps = ["//llvm:Support"],)
 
 cc_library(
     name = "Debug",
@@ -10169,6 +10168,7 @@ td_library(
     ]),
     includes = ["include"],
     deps = [
+        ":LinalgOpsTdFiles",
         ":SCFTdFiles",
         ":TransformDialectTdFiles",
     ],
