@@ -10,7 +10,6 @@ define void @test(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB0_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
