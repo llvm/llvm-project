@@ -382,6 +382,13 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     }
   }
 
+  // If we didn't make the submodule visible here, Clang wouldn't allow LLDB to
+  // pick any of the decls in the submodules during C++ name lookup.
+  if (submodule)
+    m_compiler_instance->makeModuleVisible(
+        submodule, clang::Module::NameVisibilityKind::AllVisible,
+        /*ImportLoc=*/{});
+
   clang::Module *requested_module = DoGetModule(clang_path, true);
 
   if (requested_module != nullptr) {

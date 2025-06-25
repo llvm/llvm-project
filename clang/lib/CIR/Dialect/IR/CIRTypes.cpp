@@ -558,8 +558,30 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-// FuncType Definitions
+// ComplexType Definitions
 //===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+cir::ComplexType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                                    mlir::DataLayoutEntryListRef params) const {
+  // C17 6.2.5p13:
+  //   Each complex type has the same representation and alignment requirements
+  //   as an array type containing exactly two elements of the corresponding
+  //   real type.
+
+  return dataLayout.getTypeSizeInBits(getElementType()) * 2;
+}
+
+uint64_t
+cir::ComplexType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                  mlir::DataLayoutEntryListRef params) const {
+  // C17 6.2.5p13:
+  //   Each complex type has the same representation and alignment requirements
+  //   as an array type containing exactly two elements of the corresponding
+  //   real type.
+
+  return dataLayout.getTypeABIAlignment(getElementType());
+}
 
 FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
   assert(results.size() == 1 && "expected exactly one result type");

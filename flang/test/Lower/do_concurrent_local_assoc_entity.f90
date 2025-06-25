@@ -18,7 +18,7 @@ end subroutine local_assoc
 ! CHECK-NEXT:   %[[SHAPE:.*]] = fir.shape %[[C8]]
 ! CHECK-NEXT:   %[[TMP_ALLOC:.*]] = fir.allocmem !{{.*}} {bindc_name = ".tmp", {{.*}}}
 ! CHECK:        %[[TMP_DECL:.*]]:2 = hlfir.declare %[[TMP_ALLOC]](%[[SHAPE]])
-! CHECK-NEXT:   %[[C1:.*]] = arith.constant 1 : index
+! CHECK:        %[[C1:.*]] = arith.constant 1 : index
 ! CHECK-NEXT:   %[[C8:.*]] = arith.constant 8 : index
 ! CHECK-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[C1]], %[[C8]]
 ! CHECK-NEXT:   %[[TMP_BOX:.*]] = fir.embox %[[TMP_DECL]]#0(%[[SHAPE_SHIFT]])

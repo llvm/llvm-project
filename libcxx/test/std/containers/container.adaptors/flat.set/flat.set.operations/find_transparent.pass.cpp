@@ -16,6 +16,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_set>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -90,6 +91,15 @@ void test() {
     auto it = m.find(Transparent<int>{3});
     assert(it != m.end());
     assert(transparent_used);
+  }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_set<std::string, std::less<>>;
+    M m{"alpha", "beta", "epsilon", "eta", "gamma"};
+    auto it = m.find("beta");
+    assert(it == m.begin() + 1);
+    auto it2 = m.find("beta2");
+    assert(it2 == m.end());
   }
 }
 

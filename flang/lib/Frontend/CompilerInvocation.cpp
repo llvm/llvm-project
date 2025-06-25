@@ -20,22 +20,21 @@
 #include "flang/Support/Version.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
-#include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
@@ -309,19 +308,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
-  // -mprefer_vector_width option
-  if (const llvm::opt::Arg *a = args.getLastArg(
-          clang::driver::options::OPT_mprefer_vector_width_EQ)) {
-    llvm::StringRef s = a->getValue();
-    unsigned width;
-    if (s == "none")
-      opts.PreferVectorWidth = "none";
-    else if (s.getAsInteger(10, width))
-      diags.Report(clang::diag::err_drv_invalid_value)
-          << a->getAsString(args) << a->getValue();
-    else
-      opts.PreferVectorWidth = s.str();
-  }
+  opts.Reciprocals = clang::driver::tools::parseMRecipOption(diags, args);
+
+  opts.PreferVectorWidth =
+      clang::driver::tools::parseMPreferVectorWidthOption(diags, args);
 
   // -fembed-offload-object option
   for (auto *a :
@@ -450,6 +440,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.PICLevel = picLevel;
     if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
       opts.IsPIE = 1;
+  }
+
+  if (args.hasArg(clang::driver::options::OPT_fprofile_generate)) {
+    opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+  }
+
+  if (auto A = args.getLastArg(clang::driver::options::OPT_fprofile_use_EQ)) {
+    opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+    opts.ProfileInstrumentUsePath = A->getValue();
   }
 
   // -mcmodel option.
@@ -985,9 +984,22 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
 /// Parses all diagnostics related arguments and populates the variables
 /// options accordingly. Returns false if new errors are generated.
+/// FC1 driver entry point for parsing diagnostic arguments.
 static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
+
+  auto &features{res.getFrontendOpts().features};
+  // The order of these flags (-pedantic -W<feature> -w) is important and is
+  // chosen to match clang's behavior.
+
+  // -pedantic
+  if (args.hasArg(clang::driver::options::OPT_pedantic)) {
+    features.WarnOnAllNonstandard();
+    features.WarnOnAllUsage();
+    res.setEnableConformanceChecks();
+    res.setEnableUsageChecks();
+  }
 
   // -Werror option
   // TODO: Currently throws a Diagnostic for anything other than -W<error>,
@@ -998,22 +1010,26 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     for (const auto &wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
-      } else {
-        const unsigned diagID =
-            diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                                  "Only `-Werror` is supported currently.");
-        diags.Report(diagID);
+        // -W(no-)<feature>
+      } else if (!features.EnableWarning(wArg)) {
+        const unsigned diagID = diags.getCustomDiagID(
+            clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
+        diags.Report(diagID) << wArg;
       }
     }
   }
 
+  // -w
+  if (args.hasArg(clang::driver::options::OPT_w)) {
+    features.DisableAllWarnings();
+    res.setDisableWarnings();
+  }
+
   // Default to off for `flang -fc1`.
-  res.getFrontendOpts().showColors =
-      parseShowColorsArgs(args, /*defaultDiagColor=*/false);
-
-  // Honor color diagnostics.
-  res.getDiagnosticOpts().ShowColors = res.getFrontendOpts().showColors;
-
+  bool showColors{parseShowColorsArgs(args, false)};
+  diags.getDiagnosticOptions().ShowColors = showColors;
+  res.getDiagnosticOpts().ShowColors = showColors;
+  res.getFrontendOpts().showColors = showColors;
   return diags.getNumErrors() == numErrorsBefore;
 }
 
@@ -1088,16 +1104,6 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         Fortran::common::LanguageFeature::OpenACC);
   }
 
-  // -pedantic
-  if (args.hasArg(clang::driver::options::OPT_pedantic)) {
-    res.setEnableConformanceChecks();
-    res.setEnableUsageChecks();
-  }
-
-  // -w
-  if (args.hasArg(clang::driver::options::OPT_w))
-    res.setDisableWarnings();
-
   // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
@@ -1106,6 +1112,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     // We only allow f2018 as the given standard
     if (standard == "f2018") {
       res.setEnableConformanceChecks();
+      res.getFrontendOpts().features.WarnOnAllNonstandard();
     } else {
       const unsigned diagID =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
@@ -1712,16 +1719,7 @@ void CompilerInvocation::setFortranOpts() {
   if (frontendOptions.needProvenanceRangeToCharBlockMappings)
     fortranOptions.needProvenanceRangeToCharBlockMappings = true;
 
-  if (getEnableConformanceChecks())
-    fortranOptions.features.WarnOnAllNonstandard();
-
-  if (getEnableUsageChecks())
-    fortranOptions.features.WarnOnAllUsage();
-
-  if (getDisableWarnings()) {
-    fortranOptions.features.DisableAllNonstandardWarnings();
-    fortranOptions.features.DisableAllUsageWarnings();
-  }
+  fortranOptions.features = frontendOptions.features;
 }
 
 std::unique_ptr<Fortran::semantics::SemanticsContext>

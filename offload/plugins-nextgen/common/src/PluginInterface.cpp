@@ -858,13 +858,12 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   for (auto *Image : LoadedImages) {
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (!Handler.hasProfilingGlobals(*this, *Image))
-      continue;
-
-    GPUProfGlobals profdata;
     auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
     if (!ProfOrErr)
       return ProfOrErr.takeError();
+
+    if (ProfOrErr->empty())
+      continue;
 
     // Dump out profdata
     if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
@@ -910,8 +909,9 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (!PostJITImageOrErr) {
     auto Err = PostJITImageOrErr.takeError();
     REPORT("Failure to jit IR image %p on device %d: %s\n", InputTgtImage,
-           DeviceId, toString(std::move(Err)).data());
-    return nullptr;
+           DeviceId, toStringWithoutConsuming(Err).data());
+    return Plugin::error(ErrorCode::COMPILE_FAILURE, std::move(Err),
+                         "failure to jit IR image");
   }
 
   // Load the binary and allocate the image object. Use the next available id
@@ -1579,14 +1579,14 @@ Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
 }
 
 Error GenericDeviceTy::printInfo() {
-  InfoQueueTy InfoQueue;
+  auto Info = obtainInfoImpl();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = obtainInfoImpl(InfoQueue))
+  if (auto Err = Info.takeError())
     return Err;
 
   // Print all info entries.
-  InfoQueue.print();
+  Info->print();
 
   return Plugin::success();
 }

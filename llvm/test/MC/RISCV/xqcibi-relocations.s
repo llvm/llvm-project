@@ -74,6 +74,17 @@ same_section:
 same_section_extern:
   nop
 
+.option relax
+
+# ASM: qc.bnei t3, 14, same_section
+# OBJ: qc.bnei t3, 0xe, 0x28 <same_section>
+qc.bnei t3, 14, same_section
+
+# ASM: qc.e.bgeui s2, 24, same_section
+# OBJ-NEXT: qc.e.bgeui s2, 0x18, 0x28 <same_section>
+qc.e.bgeui s2, 24, same_section
+
+.option norelax
 
 .section .text.second, "ax", @progbits
 

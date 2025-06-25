@@ -698,7 +698,7 @@ public:
   ///     applications, thus the N-way merging should be in code path.
   /// The DebugLoc attached to this instruction will be overwritten by the
   /// merged DebugLoc.
-  LLVM_ABI void applyMergedLocation(DILocation *LocA, DILocation *LocB);
+  LLVM_ABI void applyMergedLocation(DebugLoc LocA, DebugLoc LocB);
 
   /// Updates the debug location given that the instruction has been hoisted
   /// from a block to a predecessor of that block.

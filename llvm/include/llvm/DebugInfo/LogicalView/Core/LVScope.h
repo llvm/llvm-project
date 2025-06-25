@@ -325,10 +325,6 @@ public:
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   virtual void printWarnings(raw_ostream &OS, bool Full = true) const {}
   virtual void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) {}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 // Class to represent a DWARF Union/Structure/Class.
@@ -419,6 +415,9 @@ class LLVM_ABI LVScopeCompileUnit final : public LVScope {
   // Compilation directory name.
   size_t CompilationDirectoryIndex = 0;
 
+  // Source language.
+  LVSourceLanguage SourceLanguage{};
+
   // Used by the CodeView Reader.
   codeview::CPUType CompilationCPUType = codeview::CPUType::X64;
 
@@ -474,7 +473,7 @@ class LLVM_ABI LVScopeCompileUnit final : public LVScope {
 
   // Record scope sizes indexed by lexical level.
   // Setting an initial size that will cover a very deep nested scopes.
-  const size_t TotalInitialSize = 8;
+  static constexpr size_t TotalInitialSize = 8;
   using LVTotalsEntry = std::pair<unsigned, float>;
   SmallVector<LVTotalsEntry> Totals;
   // Maximum seen lexical level. It is used to control how many entries
@@ -511,7 +510,7 @@ public:
   void addMapping(LVLine *Line, LVSectionIndex SectionIndex);
   LVLineRange lineRange(LVLocation *Location) const;
 
-  LVNameInfo NameNone = {UINT64_MAX, 0};
+  static constexpr LVNameInfo NameNone = {UINT64_MAX, 0};
   void addPublicName(LVScope *Scope, LVAddress LowPC, LVAddress HighPC) {
     PublicNames.emplace(std::piecewise_construct, std::forward_as_tuple(Scope),
                         std::forward_as_tuple(LowPC, HighPC - LowPC));
@@ -548,6 +547,9 @@ public:
   void setProducer(StringRef ProducerName) override {
     ProducerIndex = getStringPool().getIndex(ProducerName);
   }
+
+  LVSourceLanguage getSourceLanguage() const override { return SourceLanguage; }
+  void setSourceLanguage(LVSourceLanguage SL) override { SourceLanguage = SL; }
 
   void setCPUType(codeview::CPUType Type) { CompilationCPUType = Type; }
   codeview::CPUType getCPUType() { return CompilationCPUType; }
