@@ -3661,4 +3661,57 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   );
 }
 
+def TestCreateTensorOp : TEST_Op<"create_tensor_op", [BufferizableOpInterface]> {
+  let arguments = (ins);
+  let results = (outs Arg<TestTensorType>:$output);
+  let extraClassDeclaration = [{
+    // BufferizableOpInterface
+    bool bufferizesToMemoryRead(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    bool bufferizesToMemoryWrite(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    bool bufferizesToAllocation(mlir::Value value);
+
+    mlir::bufferization::AliasingValueList getAliasingValues(mlir::OpOperand&,
+      const mlir::bufferization::AnalysisState&);
+
+    mlir::LogicalResult bufferize(
+      mlir::RewriterBase& rewriter,
+      const mlir::bufferization::BufferizationOptions& options,
+      mlir::bufferization::BufferizationState &state);
+
+    mlir::FailureOr<mlir::bufferization::BufferLikeType> getBufferType(
+      mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+      const mlir::bufferization::BufferizationState &,
+      llvm::SmallVector<::mlir::Value> &);
+  }];
+
+  let extraClassDefinition = [{
+    bool test::TestCreateTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestCreateTensorOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestCreateTensorOp::bufferizesToAllocation(mlir::Value value) {
+      return false;
+    }
+
+    ::mlir::bufferization::AliasingValueList
+    test::TestCreateTensorOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
+  let arguments = (ins);
+  let results = (outs Arg<TestMemrefType>:$output);
+}
+
 #endif // TEST_OPS
