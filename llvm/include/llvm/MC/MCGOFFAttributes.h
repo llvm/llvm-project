@@ -80,24 +80,11 @@ struct PRAttr {
   uint32_t SortKey = 0;
 };
 
-// Class names and other values depending on AMODE64 or AMODE31, and other
-// environment properties. For now, only the 64 bit XPLINK case is defined.
-
-// GOFF classes.
+// Predefined GOFF class names.
 constexpr StringLiteral CLASS_CODE = "C_CODE64";
 constexpr StringLiteral CLASS_WSA = "C_WSA64";
 constexpr StringLiteral CLASS_DATA = "C_DATA64";
 constexpr StringLiteral CLASS_PPA2 = "C_@@QPPA2";
-
-// Addres and residency mode.
-constexpr GOFF::ESDAmode AMODE = GOFF::ESD_AMODE_64;
-constexpr GOFF::ESDRmode RMODE = GOFF::ESD_RMODE_64;
-
-// Linkage.
-constexpr GOFF::ESDLinkageType LINKAGE = GOFF::ESD_LT_XPLink;
-
-// Loadding behavior.
-constexpr GOFF::ESDLoadingBehavior LOADBEHAVIOR = GOFF::ESD_LB_Initial;
 
 } // namespace GOFF
 } // namespace llvm

@@ -2795,9 +2795,9 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));
-  TextLD->setLDAttributes(GOFF::LDAttr{false, GOFF::ESD_EXE_CODE,
-                                       GOFF::ESD_BST_Strong, GOFF::LINKAGE,
-                                       GOFF::AMODE, GOFF::ESD_BSC_Section});
+  TextLD->setLDAttributes(GOFF::LDAttr{
+      false, GOFF::ESD_EXE_CODE, GOFF::ESD_BST_Strong, GOFF::ESD_LT_XPLink,
+      GOFF::ESD_AMODE_64, GOFF::ESD_BSC_Section});
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);
 }
@@ -2813,14 +2813,14 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
 
   MCSectionGOFF *WSA = getContext().getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
-      GOFF::EDAttr{false, GOFF::RMODE, GOFF::ESD_NS_Parts,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::LOADBEHAVIOR, GOFF::ESD_RQ_0, GOFF::ESD_ALIGN_Fullword,
-                   0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Fullword, 0},
       static_cast<MCSectionGOFF *>(TextSection)->getParent());
   return getContext().getGOFFSection(SectionKind::getData(), Name,
                                      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
-                                                  GOFF::LINKAGE,
+                                                  GOFF::ESD_LT_XPLink,
                                                   GOFF::ESD_BSC_Section, 0},
                                      WSA);
 }
@@ -2846,13 +2846,13 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
         GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope});
     MCSectionGOFF *ED = getContext().getGOFFSection(
         SectionKind::getMetadata(), GOFF::CLASS_WSA,
-        GOFF::EDAttr{false, GOFF::RMODE, GOFF::ESD_NS_Parts,
+        GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                      GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
                      GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, Align, 0},
         SD);
     return getContext().getGOFFSection(Kind, Symbol->getName(),
                                        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
-                                                    GOFF::LINKAGE,
+                                                    GOFF::ESD_LT_XPLink,
                                                     PRBindingScope, 0},
                                        ED);
   }
