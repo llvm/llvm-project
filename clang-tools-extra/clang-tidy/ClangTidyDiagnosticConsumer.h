@@ -292,6 +292,21 @@ public:
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;
 
+  void BeginSourceFile(const LangOptions &LangOpts,
+                       const Preprocessor *PP = nullptr) override {
+    DiagnosticConsumer::BeginSourceFile(LangOpts, PP);
+
+    assert(!InSourceFile);
+    InSourceFile = true;
+  }
+
+  void EndSourceFile() override {
+    assert(InSourceFile);
+    InSourceFile = false;
+
+    DiagnosticConsumer::EndSourceFile();
+  }
+
   // Retrieve the diagnostics that were captured.
   std::vector<ClangTidyError> take();
 
@@ -326,6 +341,7 @@ private:
   bool LastErrorRelatesToUserCode = false;
   bool LastErrorPassesLineFilter = false;
   bool LastErrorWasIgnored = false;
+  bool InSourceFile = false;
 };
 
 } // end namespace tidy
