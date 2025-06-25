@@ -1079,7 +1079,6 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
 bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                                        SourceLocation Loc) {
   // Define some common error handling functions
-
   bool HadError = false;
   auto ReportError = [this, Loc, &HadError]() {
     HadError = true;
@@ -1091,11 +1090,18 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       ReportError();
   };
 
+  auto VerifySpace = [ReportError](uint32_t Space) {
+    // [0xfffffff0, 0xffffffff] is reserverd system namespace
+    if (0xfffffff0 <= Space)
+      ReportError();
+  };
+
   // Iterate through the elements and do basic validations
   for (const llvm::hlsl::rootsig::RootElement &Elem : D->getRootElements()) {
     if (const auto *Descriptor =
             std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
       VerifyRegister(Descriptor->Reg.Number);
+      VerifySpace(Descriptor->Space);
     }
   }
 

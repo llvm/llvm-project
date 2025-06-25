@@ -21,3 +21,6 @@ void bad_root_signature_4() {}
 
 [RootSignature("CBV(b4294967295)")]  // expected-error {{finns error}}
 void bad_root_signature_5() {}
+
+[RootSignature("CBV(b0, space = 4294967280)")]  // expected-error {{finns error}}
+void bad_root_signature_5() {}
