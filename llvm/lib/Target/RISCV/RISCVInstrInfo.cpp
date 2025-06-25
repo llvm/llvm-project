@@ -1449,36 +1449,45 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
-  if (isFromLoadImm(MRI, LHS, C0) && MRI.hasOneUse(LHS.getReg())) {
-    // Might be case 1.
-    // Signed integer overflow is UB. (UINT64_MAX is bigger so we don't need
-    // to worry about unsigned overflow here)
-    if (C0 < INT64_MAX)
-      if (Register RegZ = searchConst(C0 + 1)) {
-        reverseBranchCondition(Cond);
-        Cond[1] = MachineOperand::CreateReg(RHS.getReg(), /*isDef=*/false);
-        Cond[2] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
-        // We might extend the live range of Z, clear its kill flag to
-        // account for this.
-        MRI.clearKillFlags(RegZ);
-        modifyBranch();
-        return true;
-      }
-  } else if (isFromLoadImm(MRI, RHS, C0) && MRI.hasOneUse(RHS.getReg())) {
-    // Might be case 2.
-    // For unsigned cases, we don't want C1 to wrap back to UINT64_MAX
-    // when C0 is zero.
-    if ((CC == RISCVCC::COND_GE || CC == RISCVCC::COND_LT) || C0)
-      if (Register RegZ = searchConst(C0 - 1)) {
-        reverseBranchCondition(Cond);
-        Cond[1] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
-        Cond[2] = MachineOperand::CreateReg(LHS.getReg(), /*isDef=*/false);
-        // We might extend the live range of Z, clear its kill flag to
-        // account for this.
-        MRI.clearKillFlags(RegZ);
-        modifyBranch();
-        return true;
-      }
+  // Might be case 1.
+  // Don't change 0 to 1 since we can use x0.
+  // For unsigned cases changing -1U to 0 would be incorrect.
+  // The incorrect case for signed would be INT_MAX, but isFromLoadImm can't
+  // return that.
+  if (isFromLoadImm(MRI, LHS, C0) && C0 != 0 && LHS.getReg().isVirtual() &&
+      MRI.hasOneUse(LHS.getReg()) &&
+      (CC == RISCVCC::COND_GE || CC == RISCVCC::COND_LT || C0 != -1)) {
+    assert(isInt<12>(C0) && "Unexpected immediate");
+    if (Register RegZ = searchConst(C0 + 1)) {
+      reverseBranchCondition(Cond);
+      Cond[1] = MachineOperand::CreateReg(RHS.getReg(), /*isDef=*/false);
+      Cond[2] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
+      // We might extend the live range of Z, clear its kill flag to
+      // account for this.
+      MRI.clearKillFlags(RegZ);
+      modifyBranch();
+      return true;
+    }
+  }
+
+  // Might be case 2.
+  // For signed cases we don't want to change 0 since we can use x0.
+  // For unsigned cases changing 0 to -1U would be incorrect.
+  // The incorrect case for signed would be INT_MIN, but isFromLoadImm can't
+  // return that.
+  if (isFromLoadImm(MRI, RHS, C0) && C0 != 0 && RHS.getReg().isVirtual() &&
+      MRI.hasOneUse(RHS.getReg())) {
+    assert(isInt<12>(C0) && "Unexpected immediate");
+    if (Register RegZ = searchConst(C0 - 1)) {
+      reverseBranchCondition(Cond);
+      Cond[1] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
+      Cond[2] = MachineOperand::CreateReg(LHS.getReg(), /*isDef=*/false);
+      // We might extend the live range of Z, clear its kill flag to
+      // account for this.
+      MRI.clearKillFlags(RegZ);
+      modifyBranch();
+      return true;
+    }
   }
 
   return false;

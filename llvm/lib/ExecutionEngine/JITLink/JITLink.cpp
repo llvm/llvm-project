@@ -421,15 +421,21 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     raw_string_ostream ErrStream(ErrMsg);
     Section &Sec = B.getSection();
     ErrStream << "In graph " << G.getName() << ", section " << Sec.getName()
-              << ": relocation target ";
-    if (E.getTarget().hasName()) {
-      ErrStream << "\"" << E.getTarget().getName() << "\"";
-    } else
-      ErrStream << E.getTarget().getSection().getName() << " + "
-                << formatv("{0:x}", E.getOffset());
-    ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
-              << " is out of range of " << G.getEdgeKindName(E.getKind())
-              << " fixup at " << formatv("{0:x}", B.getFixupAddress(E)) << " (";
+              << ": relocation target "
+              << formatv("{0:x}", E.getTarget().getAddress() + E.getAddend())
+              << " (";
+    if (E.getTarget().hasName())
+      ErrStream << E.getTarget().getName();
+    else
+      ErrStream << "<anonymous symbol>";
+    if (E.getAddend()) {
+      // Target address includes non-zero added, so break down the arithmetic.
+      ErrStream << formatv(":{0:x}", E.getTarget().getAddress()) << " + "
+                << formatv("{0:x}", E.getAddend());
+    }
+    ErrStream << ") is out of range of " << G.getEdgeKindName(E.getKind())
+              << " fixup at address "
+              << formatv("{0:x}", E.getTarget().getAddress()) << " (";
 
     Symbol *BestSymbolForBlock = nullptr;
     for (auto *Sym : Sec.symbols())

@@ -18,5 +18,5 @@ void use() {
 }
 
 // CIR: cir.global external @locallyDefined = #cir.int<0> : !s32i
-// CIR: cir.global "private" internal dsolocal @_ZN12_GLOBAL__N_112usedInternalE = #cir.int<0> : !s32i
+// CIR: cir.global "private" internal dso_local @_ZN12_GLOBAL__N_112usedInternalE = #cir.int<0> : !s32i
 // CIR: cir.global "private" external @usedExternal : !s32i

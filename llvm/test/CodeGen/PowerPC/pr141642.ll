@@ -2,6 +2,7 @@
 ; RUN:  FileCheck %s
 ; CHECK-NOT: lxvdsx
 ; CHECK-NOT: LD_SPLAT
+; REQUIRES: asserts
 
 define weak_odr dso_local void @unpack(ptr noalias noundef %packed_in) local_unnamed_addr {
 entry:

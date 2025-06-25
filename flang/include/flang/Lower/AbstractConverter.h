@@ -26,6 +26,7 @@
 
 namespace mlir {
 class SymbolTable;
+class StateStack;
 }
 
 namespace fir {
@@ -360,6 +361,8 @@ public:
   /// always be provided to the builder helper creating globals and
   /// functions in order to be in sync).
   virtual mlir::SymbolTable *getMLIRSymbolTable() = 0;
+
+  virtual mlir::StateStack &getStateStack() = 0;
 
 private:
   /// Options controlling lowering behavior.

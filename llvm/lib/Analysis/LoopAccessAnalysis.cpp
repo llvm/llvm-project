@@ -190,9 +190,9 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 
 /// Returns \p A + \p B, if it is guaranteed not to unsigned wrap. Otherwise
 /// return nullptr. \p A and \p B must have the same type.
-static const SCEV *addSCEVOverflow(const SCEV *A, const SCEV *B,
-                                   ScalarEvolution &SE) {
-  if (!SE.willNotOverflow(Instruction::Add, false, A, B))
+static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
+                                     ScalarEvolution &SE) {
+  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getAddExpr(A, B);
 }
@@ -201,7 +201,7 @@ static const SCEV *addSCEVOverflow(const SCEV *A, const SCEV *B,
 /// return nullptr. \p A and \p B must have the same type.
 static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
                                    ScalarEvolution &SE) {
-  if (!SE.willNotOverflow(Instruction::Mul, false, A, B))
+  if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getMulExpr(A, B);
 }
@@ -240,11 +240,11 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
   const SCEV *OffsetAtLastIter =
-      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, false), SE);
+      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
   if (!OffsetAtLastIter)
     return false;
 
-  const SCEV *OffsetEndBytes = addSCEVOverflow(
+  const SCEV *OffsetEndBytes = addSCEVNoOverflow(
       OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
   if (!OffsetEndBytes)
     return false;
@@ -253,7 +253,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
     // For positive steps, check if
     //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
     // while making sure none of the computations unsigned wrap themselves.
-    const SCEV *EndBytes = addSCEVOverflow(StartOffset, OffsetEndBytes, SE);
+    const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
     if (!EndBytes)
       return false;
     return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes,
