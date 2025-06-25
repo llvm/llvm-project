@@ -11,6 +11,7 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
@@ -286,12 +287,21 @@ public:
     }
     // Remove flags not for DXIL.
     cleanModuleFlags(M);
+
+    // dx.rootsignatures will have been parsed from its metadata form as its
+    // binary form as part of the RootSignatureAnalysisWrapper, so safely
+    // remove it as it is not recognized in DXIL
+    if (NamedMDNode *RootSignature = M.getNamedMetadata("dx.rootsignatures"))
+      RootSignature->eraseFromParent();
+
     return true;
   }
 
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
@@ -305,6 +315,7 @@ char DXILPrepareModule::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
 INITIALIZE_PASS_END(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module", false,
                     false)
 
