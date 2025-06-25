@@ -45,3 +45,17 @@ void bad_root_signature_8() {}
 // expected-error@+1 {{finns error}}
 [RootSignature("DescriptorTable(UAV(u0, numDescriptors = 0), Sampler(s0, numDescriptors = 0))")]
 void bad_root_signature_9() {}
+
+#define ErroneousStaticSampler \
+  "StaticSampler(s0" \
+  "  maxAnisotropy = 17," \
+  ")"
+
+// expected-error@+2 {{finns error}}
+// expected-error@+1 {{finns error}}
+[RootSignature("StaticSampler(s0, maxAnisotropy = 17, mipLODBias = -16.000001)")]
+void bad_root_signature_10() {}
+
+// expected-error@+1 {{finns error}}
+[RootSignature("StaticSampler(s0, mipLODBias = 15.990001)")]
+void bad_root_signature_11() {}

@@ -45,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
+#include <cmath>
 #include <iterator>
 #include <utility>
 
@@ -1110,6 +1111,14 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                    std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
       VerifyRegister(Sampler->Reg.Number);
       VerifySpace(Sampler->Space);
+
+      assert(!std::isnan(Sampler->MaxLOD) && !std::isnan(Sampler->MinLOD) &&
+             "By construction, parseFloatParam can't produce a NaN from a float_literal token");
+
+      if (16 < Sampler->MaxAnisotropy)
+        ReportError();
+      if (Sampler->MipLODBias < -16.f || 15.99 < Sampler->MipLODBias)
+        ReportError();
     } else if (const auto *Clause =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
                        &Elem)) {
