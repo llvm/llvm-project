@@ -642,7 +642,7 @@ struct WithVirtual { // #sl-Virtual
 static_assert(__is_standard_layout(WithVirtual));
 // expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::WithVirtual)'}} \
 // expected-note@-1 {{'WithVirtual' is not standard-layout}} \
-// expected-note@-1 {{because it has a virtual function}} \
+// expected-note@-1 {{because it has a virtual function 'foo'}} \
 // expected-note@#sl-Virtual-Foo {{'foo' defined here}} \
 // expected-note@#sl-Virtual {{'WithVirtual' defined here}}
 
@@ -667,7 +667,7 @@ static_assert(__is_standard_layout(VB));
 // expected-note@-1 {{'VB' is not standard-layout}} \
 // expected-note@-1 {{because it has a virtual base 'VirtualBase'}} \
 // expected-note@-1 {{because it has a non-standard-layout base 'VirtualBase'}} \
-// expected-note@-1 {{because it has a virtual function}}
+// expected-note@-1 {{because it has a virtual function '~VB'}} \
 // expected-note@#sl-VB {{'VB' defined here}}
 // expected-note@#sl-VB {{'~VB' defined here}}
 

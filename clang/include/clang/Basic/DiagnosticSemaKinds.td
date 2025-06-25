@@ -1797,7 +1797,6 @@ def note_unsatisfied_trait_reason
            "%MixedAccess{has mixed access specifiers}|"
            "%MixedAccessField{field %1 has a different access specifier than field %2}|"
            "%MultipleDataBase{has multiple base classes with data members}|"
-           "%VirtualFunction{has a virtual function}|"
            "%NonStandardLayoutMember{has a non-standard-layout member %1 of type %2}|"
            "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"

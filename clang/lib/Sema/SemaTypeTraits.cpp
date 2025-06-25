@@ -2453,14 +2453,25 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
         << diag::TraitNotSatisfiedReason::MultipleDataBase;
   }
   if (D->isPolymorphic()) {
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::VirtualFunction;
-
-    for (const CXXMethodDecl *Method : D->methods()) {
-      if (Method->isVirtual()) {
-        SemaRef.Diag(Method->getLocation(), diag::note_defined_here) << Method;
+    // Find the best location to point “defined here” at.
+    const CXXMethodDecl *VirtualMD = nullptr;
+    // First, look for a virtual method.
+    for (const auto *M : D->methods()) {
+      if (M->isVirtual()) {
+        VirtualMD = M;
         break;
       }
+    }
+    if (VirtualMD) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << VirtualMD;
+      SemaRef.Diag(VirtualMD->getLocation(), diag::note_defined_here)
+          << VirtualMD;
+    } else {
+      // If no virtual method, point to the record declaration itself.
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << D;
+      SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
     }
   }
   for (const FieldDecl *Field : D->fields()) {
