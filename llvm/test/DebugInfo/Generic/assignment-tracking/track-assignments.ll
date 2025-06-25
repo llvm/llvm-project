@@ -1,5 +1,5 @@
 ; RUN: opt -passes='declare-to-assign,verify' %s -S -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; This test checks that `trackAssignments` is working correctly by using the
 ;; pass-wrapper `declare-to-assign`. Each function checks some specific

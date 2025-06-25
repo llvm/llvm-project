@@ -814,6 +814,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_pclose);
     TLI.setUnavailable(LibFunc_popen);
     TLI.setUnavailable(LibFunc_pread);
+    TLI.setUnavailable(LibFunc_pvalloc);
     TLI.setUnavailable(LibFunc_pwrite);
     TLI.setUnavailable(LibFunc_read);
     TLI.setUnavailable(LibFunc_readlink);

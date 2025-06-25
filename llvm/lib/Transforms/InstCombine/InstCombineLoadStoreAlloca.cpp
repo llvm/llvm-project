@@ -288,10 +288,10 @@ bool PointerReplacer::collectUsers() {
       /// TODO: Handle poison and null pointers for PHI and select.
       // If all incoming values are available, mark this PHI as
       // replacable and push it's users into the worklist.
-      bool IsReplacable = true;
+      bool IsReplaceable = true;
       if (all_of(PHI->incoming_values(), [&](Value *V) {
             if (!isa<Instruction>(V))
-              return IsReplacable = false;
+              return IsReplaceable = false;
             return isAvailable(cast<Instruction>(V));
           })) {
         UsersToReplace.insert(PHI);
@@ -302,7 +302,7 @@ bool PointerReplacer::collectUsers() {
       // Either an incoming value is not an instruction or not all
       // incoming values are available. If this PHI was already
       // visited prior to this iteration, return false.
-      if (!IsReplacable || !ValuesToRevisit.insert(PHI))
+      if (!IsReplaceable || !ValuesToRevisit.insert(PHI))
         return false;
 
       // Push PHI back into the stack, followed by unavailable
@@ -365,7 +365,7 @@ void PointerReplacer::replacePointer(Value *V) {
     if (Visited.insert(I).second) {
       for (auto *U : I->users()) {
         auto *UserInst = cast<Instruction>(U);
-        if (UsersToReplace.contains(UserInst))
+        if (UsersToReplace.contains(UserInst) && !Visited.contains(UserInst))
           Worklist.push_back(UserInst);
       }
       // Otherwise, users of I have already been pushed into

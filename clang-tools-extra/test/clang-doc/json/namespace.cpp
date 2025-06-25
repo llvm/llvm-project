@@ -9,7 +9,6 @@ void myFunction(int Param);
 namespace NestedNamespace {
 } // namespace NestedNamespace
 
-// FIXME: Global variables are not mapped or serialized.
 static int Global;
 
 enum Color {
@@ -25,7 +24,7 @@ typedef int MyTypedef;
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "Location": {
 // CHECK-NEXT:          "Filename": "{{.*}}namespace.cpp",
-// CHECK-NEXT:          "LineNumber": 15
+// CHECK-NEXT:          "LineNumber": 14
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "Members": [
 // CHECK-NEXT:          {
@@ -88,7 +87,7 @@ typedef int MyTypedef;
 // CHECK-NEXT:      "IsUsing": false,
 // CHECK-NEXT:      "Location": {
 // CHECK-NEXT:        "Filename": "{{.*}}namespace.cpp",
-// CHECK-NEXT:        "LineNumber": 21
+// CHECK-NEXT:        "LineNumber": 20
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "Name": "MyTypedef",
 // CHECK-NEXT:      "TypeDeclaration": "",
@@ -103,5 +102,23 @@ typedef int MyTypedef;
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "USR": "0000000000000000000000000000000000000000"
-// CHECK-NOT:     "Variables": [
+// CHECK-NEXT:   "Variables": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "IsStatic": true,
+// CHECK-NEXT:       "Location": {
+// CHECK-NEXT:         "Filename": "{{.*}}namespace.cpp",
+// CHECK-NEXT:         "LineNumber": 12
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "Name": "Global",
+// CHECK-NEXT:       "Type": {
+// COM:                FIXME: IsBuiltIn emits as its default value
+// CHECK-NEXT:         "IsBuiltIn": false,
+// CHECK-NEXT:         "IsTemplate": false,
+// CHECK-NEXT:         "Name": "int",
+// CHECK-NEXT:         "QualName": "int",
+// CHECK-NEXT:         "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:   ]
 // CHECK-NEXT:  }
