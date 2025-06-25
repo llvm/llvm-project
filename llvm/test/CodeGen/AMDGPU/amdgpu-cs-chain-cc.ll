@@ -6,7 +6,7 @@
 
 declare amdgpu_gfx void @use(...)
 
-define amdgpu_cs_chain void @amdgpu_cs_chain_no_stack({ptr, i32, <4 x i32>} inreg %a, {ptr, i32, <4 x i32>} %b) {
+define amdgpu_cs_chain void @amdgpu_cs_chain_no_stack({ptr, i32, <4 x i32>} inreg %a, {ptr, i32, <4 x i32>} %b) #0 {
 ; GISEL-GFX11-LABEL: amdgpu_cs_chain_no_stack:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -29,7 +29,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_no_stack({ptr, i32, <4 x i32>} inre
   ret void
 }
 
-define amdgpu_cs_chain void @amdgpu_cs_chain_simple_call(<4 x i32> inreg %sgpr, <4 x i32> %vgpr) {
+define amdgpu_cs_chain void @amdgpu_cs_chain_simple_call(<4 x i32> inreg %sgpr, <4 x i32> %vgpr) #0 {
 ; GISEL-GFX11-LABEL: amdgpu_cs_chain_simple_call:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -97,7 +97,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_simple_call(<4 x i32> inreg %sgpr, 
   ret void
 }
 
-define amdgpu_cs_chain void @amdgpu_cs_chain_spill(<24 x i32> inreg %sgprs, <24 x i32> %vgprs) {
+define amdgpu_cs_chain void @amdgpu_cs_chain_spill(<24 x i32> inreg %sgprs, <24 x i32> %vgprs) #0 {
 ; GISEL-GFX11-LABEL: amdgpu_cs_chain_spill:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -357,7 +357,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_spill(<24 x i32> inreg %sgprs, <24 
   ret void
 }
 
-define amdgpu_cs_chain void @alloca_and_call() {
+define amdgpu_cs_chain void @alloca_and_call() #0 {
 ; GISEL-GFX11-LABEL: alloca_and_call:
 ; GISEL-GFX11:       ; %bb.0: ; %.entry
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -416,7 +416,7 @@ define amdgpu_cs_chain void @alloca_and_call() {
   ret void
 }
 
-define amdgpu_cs void @cs_to_chain(<3 x i32> inreg %a, <3 x i32> %b) {
+define amdgpu_cs void @cs_to_chain(<3 x i32> inreg %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: cs_to_chain:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v10, v2
@@ -502,7 +502,7 @@ define amdgpu_cs void @cs_to_chain(<3 x i32> inreg %a, <3 x i32> %b) {
 }
 
 ; Chain call with SGPR arguments that we cannot prove are uniform.
-define amdgpu_cs void @cs_to_chain_nonuniform(<3 x i32> %a, <3 x i32> %b) {
+define amdgpu_cs void @cs_to_chain_nonuniform(<3 x i32> %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: cs_to_chain_nonuniform:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    v_readfirstlane_b32 s0, v0
@@ -574,7 +574,7 @@ define amdgpu_cs void @cs_to_chain_nonuniform(<3 x i32> %a, <3 x i32> %b) {
   unreachable
 }
 
-define amdgpu_cs_chain void @chain_to_chain(<3 x i32> inreg %a, <3 x i32> %b) {
+define amdgpu_cs_chain void @chain_to_chain(<3 x i32> inreg %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: chain_to_chain:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -639,7 +639,7 @@ define amdgpu_cs_chain void @chain_to_chain(<3 x i32> inreg %a, <3 x i32> %b) {
   unreachable
 }
 
-define amdgpu_cs_chain void @chain_to_chain_wwm(<3 x i32> inreg %a, <3 x i32> %b) {
+define amdgpu_cs_chain void @chain_to_chain_wwm(<3 x i32> inreg %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: chain_to_chain_wwm:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -721,7 +721,7 @@ define amdgpu_cs_chain void @chain_to_chain_wwm(<3 x i32> inreg %a, <3 x i32> %b
   unreachable
 }
 
-define amdgpu_cs_chain void @chain_to_chain_use_all_v0_v7(<3 x i32> inreg %a, <3 x i32> %b) {
+define amdgpu_cs_chain void @chain_to_chain_use_all_v0_v7(<3 x i32> inreg %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: chain_to_chain_use_all_v0_v7:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -786,7 +786,7 @@ define amdgpu_cs_chain void @chain_to_chain_use_all_v0_v7(<3 x i32> inreg %a, <3
   unreachable
 }
 
-define amdgpu_cs_chain void @chain_to_chain_fewer_args(<3 x i32> inreg %a, <3 x i32> %b) {
+define amdgpu_cs_chain void @chain_to_chain_fewer_args(<3 x i32> inreg %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: chain_to_chain_fewer_args:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -853,7 +853,7 @@ define amdgpu_cs_chain void @chain_to_chain_fewer_args(<3 x i32> inreg %a, <3 x 
   unreachable
 }
 
-define amdgpu_cs_chain void @chain_to_chain_more_args(<3 x i32> inreg %a, <3 x i32> %b) {
+define amdgpu_cs_chain void @chain_to_chain_more_args(<3 x i32> inreg %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: chain_to_chain_more_args:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -926,7 +926,7 @@ define amdgpu_cs_chain void @chain_to_chain_more_args(<3 x i32> inreg %a, <3 x i
   unreachable
 }
 
-define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) {
+define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) #0 {
 ; GISEL-GFX11-LABEL: amdgpu_cs_chain_dont_realign_stack:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1002,3 +1002,5 @@ declare amdgpu_cs_chain void @chain_callee(<3 x i32> inreg, <3 x i32>)
 declare amdgpu_cs_chain void @chain_callee_4(<4 x i32> inreg, <4 x i32>)
 declare i32 @llvm.amdgcn.set.inactive(i32, i32)
 declare i32 @llvm.amdgcn.wwm(i32)
+
+attributes #0 = { nounwind }

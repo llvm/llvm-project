@@ -199,8 +199,8 @@ define nofpclass(nan inf) { double, double } @aggregate() {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, aggregate@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate@gotpcrel32@hi+12

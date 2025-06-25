@@ -8,7 +8,7 @@
 
 declare amdgpu_gfx void @foo()
 
-define amdgpu_cs_chain void @test_alloca() {
+define amdgpu_cs_chain void @test_alloca() #0 {
 ; GFX12-LABEL: test_alloca:
 ; GFX12:       ; %bb.0: ; %.entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -43,7 +43,7 @@ SW_C:                                             ; preds = %.entry
   ret void
 }
 
-define amdgpu_cs_chain void @test_alloca_var_uniform(i32 inreg %count) {
+define amdgpu_cs_chain void @test_alloca_var_uniform(i32 inreg %count) #0 {
 ; GFX12-LABEL: test_alloca_var_uniform:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -81,7 +81,7 @@ define amdgpu_cs_chain void @test_alloca_var_uniform(i32 inreg %count) {
   ret void
 }
 
-define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
+define amdgpu_cs_chain void @test_alloca_var(i32 %count) #0 {
 ; GFX12-LABEL: test_alloca_var:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -142,7 +142,7 @@ define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
   ret void
 }
 
-define amdgpu_cs_chain void @test_alloca_and_call() {
+define amdgpu_cs_chain void @test_alloca_and_call() #0 {
 ; GFX12-LABEL: test_alloca_and_call:
 ; GFX12:       ; %bb.0: ; %.entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -194,7 +194,7 @@ SW_C:                                             ; preds = %.entry
   ret void
 }
 
-define amdgpu_cs_chain void @test_alloca_and_call_var_uniform(i32 inreg %count) {
+define amdgpu_cs_chain void @test_alloca_and_call_var_uniform(i32 inreg %count) #0 {
 ; GFX12-LABEL: test_alloca_and_call_var_uniform:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -248,7 +248,7 @@ define amdgpu_cs_chain void @test_alloca_and_call_var_uniform(i32 inreg %count) 
   ret void
 }
 
-define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
+define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) #0 {
 ; GFX12-LABEL: test_alloca_and_call_var:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -325,7 +325,7 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
   ret void
 }
 
-define amdgpu_cs_chain void @test_call_and_alloca() {
+define amdgpu_cs_chain void @test_call_and_alloca() #0 {
 ; GFX12-LABEL: test_call_and_alloca:
 ; GFX12:       ; %bb.0: ; %.entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -376,7 +376,7 @@ SW_C:                                             ; preds = %.entry
   ret void
 }
 
-define amdgpu_cs_chain void @test_call_and_alloca_var_uniform(i32 inreg %count) {
+define amdgpu_cs_chain void @test_call_and_alloca_var_uniform(i32 inreg %count) #0 {
 ; GFX12-LABEL: test_call_and_alloca_var_uniform:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -430,7 +430,7 @@ define amdgpu_cs_chain void @test_call_and_alloca_var_uniform(i32 inreg %count) 
   ret void
 }
 
-define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
+define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) #0 {
 ; GFX12-LABEL: test_call_and_alloca_var:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -508,3 +508,5 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
   store i32 0, ptr addrspace(5) %v, align 4
   ret void
 }
+
+attributes #0 = { nounwind }

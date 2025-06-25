@@ -4,6 +4,8 @@
 ; Verify that the debug locations in this function are correct, in particular
 ; that the location for %cast doesn't appear in the block of %lab.
 
+
+
 define void @_Z12lane_pc_testj() #0 !dbg !9 {
 ; GCN-LABEL: _Z12lane_pc_testj:
 ; GCN:       .Lfunc_begin0:
@@ -12,6 +14,16 @@ define void @_Z12lane_pc_testj() #0 !dbg !9 {
 ; GCN-NEXT:    .cfi_sections .debug_frame
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0:
+; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GCN-NEXT:    .cfi_undefined 1536
+; GCN-NEXT:    .cfi_undefined 1537
+; GCN-NEXT:    .cfi_undefined 1538
+; GCN-NEXT:    .cfi_undefined 36
+; GCN-NEXT:    .cfi_undefined 37
+; GCN-NEXT:    .cfi_undefined 38
+; GCN-NEXT:    .cfi_undefined 39
+; GCN-NEXT:    .cfi_undefined 40
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:  ; %bb.1: ; %lab
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
