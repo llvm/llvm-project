@@ -71,10 +71,10 @@ constexpr bool test() {
 
   // check when input is an output range, which should be well-formed
   {
-    std::vector<int> v{1,2,3};
+    std::vector<int> v{1, 2, 3};
     auto r = std::views::counted(std::back_inserter(v), 3);
     static_assert(!std::ranges::input_range<decltype(r)>);
-  } 
+  }
 
   return true;
 }
