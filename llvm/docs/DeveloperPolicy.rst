@@ -90,7 +90,7 @@ Here are some tips to enable a successful code review:
 
 * Identify 2-3 individuals to review the patch. Look through the relevant
   :ref:`Maintainers` file or browse git blame for likely stakeholders for the
-  code want to modify.
+  code you want to modify.
 
 * Make sure your patch is based on a recent commit from ``main``, rather than a
   previous release branch. If you want to make changes to a release branch, land
