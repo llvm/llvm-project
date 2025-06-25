@@ -1905,7 +1905,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecTernaryOpLowering,
                CIRToLLVMComplexCreateOpLowering,
                CIRToLLVMComplexRealOpLowering,
-               CIRToLLVMComplexImagOpLowering
+               CIRToLLVMComplexImagOpLowering,
+               CIRToLLVMComplexEqualOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2224,6 +2225,43 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
   mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
       op, resultLLVMTy, adaptor.getOperand(), llvm::ArrayRef<std::int64_t>{1});
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexEqualOpLowering::matchAndRewrite(
+    cir::ComplexEqualOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value lhs = adaptor.getLhs();
+  mlir::Value rhs = adaptor.getRhs();
+
+  auto complexType = mlir::cast<cir::ComplexType>(op.getLhs().getType());
+  mlir::Type complexElemTy =
+      getTypeConverter()->convertType(complexType.getElementType());
+
+  mlir::Location loc = op.getLoc();
+  auto lhsReal =
+      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 0);
+  auto lhsImag =
+      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 1);
+  auto rhsReal =
+      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 0);
+  auto rhsImag =
+      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 1);
+
+  if (complexElemTy.isInteger()) {
+    auto realCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::eq, lhsReal, rhsReal);
+    auto imagCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::eq, lhsImag, rhsImag);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, realCmp, imagCmp);
+    return mlir::success();
+  }
+
+  auto realCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+      loc, mlir::LLVM::FCmpPredicate::oeq, lhsReal, rhsReal);
+  auto imagCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+      loc, mlir::LLVM::FCmpPredicate::oeq, lhsImag, rhsImag);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, realCmp, imagCmp);
   return mlir::success();
 }
 
