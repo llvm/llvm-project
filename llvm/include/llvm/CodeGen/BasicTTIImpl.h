@@ -1116,7 +1116,7 @@ public:
       if (isSplatMask(Mask, NumSrcElts, Index))
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
-          (Index + NumDstElts) <= (size_t)NumSrcElts) {
+          (Index + NumDstElts) <= NumSrcElts) {
         SubTy = FixedVectorType::get(SrcTy->getElementType(), NumDstElts);
         return TTI::SK_ExtractSubvector;
       }
