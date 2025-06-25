@@ -294,8 +294,8 @@ LogicalResult LoadNdOp::verify() {
   auto valueShape = getShapeOf(valueTy);
 
   if (getTranspose()) {
-    // Make sure the transpose value is valid, and apply it
     auto trans = getTranspose().value();
+    // Make sure the transpose value is valid, and apply it
     if (llvm::all_of(trans, [&](size_t s) { return s < tdescShape.size(); }))
       tdescShape = applyPermutation(tdescShape, trans);
     else
