@@ -83,7 +83,7 @@ endif()
 
 # If the dynamic check fails, we might be cross compiling: if that's the case,
 # check the version in the headers, otherwise, fail with a message
-if(NOT Z3_VERSION_STRING AND (
+if(NOT Z3_VERSION_STRING AND (CMAKE_CROSSCOMPILING AND
                               Z3_INCLUDE_DIR AND
                               EXISTS "${Z3_INCLUDE_DIR}/z3_version.h"))
   # TODO: print message warning that we couldn't find a compatible lib?
