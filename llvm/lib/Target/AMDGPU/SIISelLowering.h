@@ -468,7 +468,6 @@ public:
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   const LLT Ty) const override;
-  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
 
@@ -548,8 +547,6 @@ public:
                                  const TargetRegisterInfo *TRI,
                                  const TargetInstrInfo *TII,
                                  MCRegister &PhysReg, int &Cost) const override;
-
-  bool isProfitableToHoist(Instruction *I) const override;
 
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,
