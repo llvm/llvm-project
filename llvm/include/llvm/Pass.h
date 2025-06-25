@@ -175,11 +175,6 @@ public:
   /// longer used.
   virtual void releaseMemory();
 
-  /// getAdjustedAnalysisPointer - This method is used when a pass implements
-  /// an analysis interface through multiple inheritance.  If needed, it should
-  /// override this to adjust the this pointer as needed for the specified pass
-  /// info.
-  virtual void *getAdjustedAnalysisPointer(AnalysisID ID);
   virtual ImmutablePass *getAsImmutablePass();
   virtual PMDataManager *getAsPMDataManager();
 
