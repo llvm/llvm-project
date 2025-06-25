@@ -1240,12 +1240,15 @@ struct WarpOpExtractStridedSlice : public WarpDistributionPattern {
     int64_t distributedDim = getDistributedDim(yieldedType, distributedType);
     assert(distributedDim != -1 && "could not find distributed dimension");
 
-    // Distributed dimension must be fully extracted.
+    int64_t numOfExtractedDims =
+        static_cast<int64_t>(extractOp.getSizes().size());
+    // If the distributed dim is included in the extracted dims,  then we make
+    // sure distributed dim is fully extracted. If distributed dim is not
+    // included in extracted dims, it is guaranteed to be fully extracted (i.e.
+    // distributed dim comes after all the extracted dims)
     // TODO: Partial extraction from distributed dimension require cross lane
     // communication.
-    int64_t extractedDimsRank =
-        static_cast<int64_t>(extractOp.getSizes().size());
-    if (distributedDim < extractedDimsRank) {
+    if (distributedDim < numOfExtractedDims) {
       int64_t distributedDimOffset =
           llvm::cast<IntegerAttr>(extractOp.getOffsets()[distributedDim])
               .getInt();
