@@ -4093,9 +4093,10 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
                                      LHSAND, Zero);
             SDValue Hi =
                 DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
-            SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
-            SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
-            SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
+            SDValue LoAnd =
+                DAG.getNode(ISD::AND, SL, MVT::i32, Lo, RHSAND->getOperand(0));
+            SDValue HiAnd =
+                DAG.getNode(ISD::AND, SL, MVT::i32, Hi, RHSAND->getOperand(0));
             SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
             if (AndIndex == 0 || AndIndex == 1)
               return DAG.getNode(ISD::SHL, SL, MVT::i32, Trunc,
