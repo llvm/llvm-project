@@ -109,7 +109,7 @@ subroutine s9()
   integer sum
 
   sum = 0
-!ERROR: Derived type variable 'v' with ultimate ALLOCATABLE component not allowed in a LOCAL_INIT locality-spec
+!ERROR: Derived type variable 'v' with ultimate ALLOCATABLE component '%l1_2%l2_3%a' not allowed in a LOCAL_INIT locality-spec
   do concurrent (i = 1:10) local_init(v)
     sum = sum + i
   end do
