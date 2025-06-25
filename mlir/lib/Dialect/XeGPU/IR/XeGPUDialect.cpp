@@ -323,7 +323,7 @@ LogicalResult TensorDescType::verify(
 
   // for gather and scatter ops, Low-precision types are packed in 32-bit units.
   unsigned bitWidth = elementType.getIntOrFloatBitWidth();
-  int packingFactor =
+  int chunkAlignmentFactor =
       bitWidth < targetinfo::packedSizeInBitsForGatherScatter
           ? targetinfo::packedSizeInBitsForGatherScatter / bitWidth
           : 1;
@@ -342,10 +342,10 @@ LogicalResult TensorDescType::verify(
     if (chunkSize > 1) {
       if (shape.back() != chunkSize)
         return emitError() << "expected tensor shape[1] to match chunk size";
-      if (shape.back() % packingFactor != 0)
-        return emitError()
-               << "expected tensor shape[1] to be a multiple of packing factor "
-               << packingFactor;
+      if (shape.back() % chunkAlignmentFactor != 0)
+        return emitError() << "expected tensor shape[1] to be a multiple of "
+                              "chunk alignment factor "
+                           << chunkAlignmentFactor;
     }
   }
 
@@ -365,7 +365,7 @@ LogicalResult TensorDescType::verify(
       if (rank > 1 && laneData[0] != 1)
         return emitError()
                << "cannot map over non-contiguous scattered row elements";
-      if (laneData[rank - 1] != packingFactor)
+      if (laneData[rank - 1] != chunkAlignmentFactor)
         return emitError() << "work item data mapping must match the number of "
                               "contiguous elements";
     }
