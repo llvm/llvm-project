@@ -1438,7 +1438,13 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
   MachineInstr *WaitcntInstr = nullptr;
   MachineInstr *WaitcntVsCntInstr = nullptr;
 
-  LLVM_DEBUG(dbgs() << "PreGFX12::applyPreexistingWaitcnt at: " << *It);
+  LLVM_DEBUG({
+    dbgs() << "PreGFX12::applyPreexistingWaitcnt at: ";
+    if (It == OldWaitcntInstr.getParent()->instr_end())
+      dbgs() << "end of block\n";
+    else
+      dbgs() << *It;
+  });
 
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
@@ -1594,7 +1600,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   MachineInstr *WaitcntDepctrInstr = nullptr;
   MachineInstr *WaitInstrs[NUM_EXTENDED_INST_CNTS] = {};
 
-  LLVM_DEBUG(dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: " << *It);
+  LLVM_DEBUG({
+    dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: ";
+    if (It == OldWaitcntInstr.getParent()->instr_end())
+      dbgs() << "end of block\n";
+    else
+      dbgs() << *It;
+  });
 
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
