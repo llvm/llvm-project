@@ -31,7 +31,8 @@ using namespace llvm;
 
 static cl::opt<int>
     HotPercentileCutoff("lower-allow-check-percentile-cutoff-hot",
-                        cl::desc("Hot percentile cutoff."));
+                        cl::desc("Hot percentile cutoff."),
+                      cl::init(0));
 
 static cl::opt<float>
     RandomRate("lower-allow-check-random-rate",
@@ -84,15 +85,12 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   };
 
   auto GetCutoff = [&](const IntrinsicInst *II) -> unsigned {
-    if (HotPercentileCutoff.getNumOccurrences())
-      return HotPercentileCutoff;
-    else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
+    if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
       auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
       if (Kind->getZExtValue() < cutoffs.size())
         return cutoffs[Kind->getZExtValue()];
     }
-
-    return 0;
+    return HotPercentileCutoff;
   };
 
   auto ShouldRemoveHot = [&](const BasicBlock &BB, unsigned int cutoff) {
