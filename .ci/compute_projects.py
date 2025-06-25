@@ -53,16 +53,16 @@ DEPENDENTS_TO_TEST = {
     "mlir": {"flang"},
     # Test everything if ci scripts are changed.
     ".ci": {
-        "llvm",
-        "clang",
-        "lld",
-        "lldb",
-        "bolt",
-        "clang-tools-extra",
-        "mlir",
-        "polly",
-        "flang",
-        "libclc",
+#        "llvm",
+#        "clang",
+#        "lld",
+#        "lldb",
+#        "bolt",
+#        "clang-tools-extra",
+#        "mlir",
+#        "polly",
+#        "flang",
+#        "libclc",
         "openmp",
     },
 }
@@ -77,12 +77,12 @@ DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
 DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
     "clang-tools-extra": {"libc"},
-    ".ci": {"compiler-rt", "libc"},
+    # ".ci": {"compiler-rt", "libc"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
     "clang": {"libcxx", "libcxxabi", "libunwind"},
-    ".ci": {"libcxx", "libcxxabi", "libunwind"},
+    # ".ci": {"libcxx", "libcxxabi", "libunwind"},
 }
 
 EXCLUDE_LINUX = {
@@ -170,6 +170,7 @@ def _exclude_projects(current_projects: Set[str], platform: str) -> Set[str]:
 def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
     projects_to_test = set()
     for modified_project in modified_projects:
+        sys.stderr.write("HELLO " +  modified_project)
         if modified_project in RUNTIMES:
             continue
         # Skip all projects where we cannot run tests.
@@ -207,6 +208,8 @@ def _compute_runtimes_to_test(modified_projects: Set[str], platform: str) -> Set
     for modified_project in modified_projects:
         if modified_project in DEPENDENT_RUNTIMES_TO_TEST:
             runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_TEST[modified_project])
+#        if modified_project in RUNTIMES:
+#            runtimes_to_test.add(modified_project)
     return _exclude_projects(runtimes_to_test, platform)
 
 

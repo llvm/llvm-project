@@ -197,6 +197,16 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
+    def test_exclude_libc_from_projects(self):
+        env_variables = compute_projects.get_env_variables(
+            ["libc/CMakeLists.txt"], "Linux"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "libc")
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-libc")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
     def test_exclude_docs(self):
         env_variables = compute_projects.get_env_variables(
             ["llvm/docs/CIBestPractices.rst"], "Linux"
