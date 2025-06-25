@@ -857,10 +857,10 @@ class TestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.createTestTarget(file_path=exe)
-        
+
         # Ensure transcript saving is disabled (this is the default)
         self.runCmd("settings set interpreter.save-transcript false")
-        
+
         # Request transcript in statistics dump and check for warning
         interpreter = self.dbg.GetCommandInterpreter()
         res = lldb.SBCommandReturnObject()
@@ -870,7 +870,7 @@ class TestCase(TestBase):
         self.assertIn(
             "transcript requested but none was saved. Enable with "
             "'settings set interpreter.save-transcript true'",
-            res.GetError()
+            res.GetError(),
         )
 
     def verify_stats(self, stats, expectation, options):
