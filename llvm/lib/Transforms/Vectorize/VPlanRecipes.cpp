@@ -336,9 +336,9 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     return TargetTransformInfo::PR_None;
   };
 
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
-                                         PhiType, VF, GetExtendKind(ExtAR),
-                                         GetExtendKind(ExtBR), Opcode);
+  return Ctx.TTI.getPartialReductionCost(
+      getOpcode(), InputTypeA, InputTypeB, PhiType, VF, GetExtendKind(ExtAR),
+      GetExtendKind(ExtBR), Opcode, Ctx.CostKind);
 }
 
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
@@ -415,7 +415,63 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
+  assert((getNumOperandsForOpcode(Opcode) == -1u ||
+          getNumOperandsForOpcode(Opcode) == getNumOperands()) &&
+         "number of operands does not match opcode");
 }
+
+#ifndef NDEBUG
+unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
+  if (Instruction::isUnaryOp(Opcode) || Instruction::isCast(Opcode))
+    return 1;
+
+  if (Instruction::isBinaryOp(Opcode))
+    return 2;
+
+  switch (Opcode) {
+  case VPInstruction::StepVector:
+    return 0;
+  case Instruction::Alloca:
+  case Instruction::ExtractValue:
+  case Instruction::Freeze:
+  case Instruction::Load:
+  case VPInstruction::AnyOf:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::Not:
+    return 1;
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::Store:
+  case VPInstruction::ActiveLaneMask:
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::FirstOrderRecurrenceSplice:
+  case VPInstruction::LogicalAnd:
+  case VPInstruction::PtrAdd:
+  case VPInstruction::WideIVStep:
+    return 2;
+  case Instruction::Select:
+  case VPInstruction::ComputeAnyOfResult:
+  case VPInstruction::ReductionStartVector:
+    return 3;
+  case VPInstruction::ComputeFindLastIVResult:
+    return 4;
+  case Instruction::Call:
+  case Instruction::GetElementPtr:
+  case Instruction::PHI:
+  case Instruction::Switch:
+    // Cannot determine the number of operands from the opcode.
+    return -1u;
+  }
+  llvm_unreachable("all cases should be handled above");
+}
+#endif
 
 bool VPInstruction::doesGeneratePerAllLanes() const {
   return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);
@@ -642,7 +698,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    [[maybe_unused]] RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = RdxDesc.getRecurrenceKind();
     assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
     assert(!PhiR->isInLoop() &&
@@ -652,14 +708,17 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // sentinel value, followed by one operand for each part of the reduction.
     unsigned UF = getNumOperands() - 3;
     Value *ReducedPartRdx = State.get(getOperand(3));
-    for (unsigned Part = 1; Part < UF; ++Part) {
-      ReducedPartRdx = createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx,
+    RecurKind MinMaxKind = RecurrenceDescriptor::isSignedRecurrenceKind(RK)
+                               ? RecurKind::SMax
+                               : RecurKind::UMax;
+    for (unsigned Part = 1; Part < UF; ++Part)
+      ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
                                       State.get(getOperand(3 + Part)));
-    }
 
     Value *Start = State.get(getOperand(1), true);
     Value *Sentinel = getOperand(2)->getLiveInIRValue();
-    return createFindLastIVReduction(Builder, ReducedPartRdx, Start, Sentinel);
+    return createFindLastIVReduction(Builder, ReducedPartRdx, RK, Start,
+                                     Sentinel);
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -822,6 +881,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
 
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                  cast<VectorType>(VectorTy),
                                   cast<VectorType>(VectorTy), Mask,
                                   Ctx.CostKind, VF.getKnownMinValue() - 1);
   }
@@ -865,7 +925,7 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == Instruction::PHI;
+  return getOpcode() == Instruction::PHI || isScalarCast();
 }
 
 void VPInstruction::execute(VPTransformState &State) {
@@ -1100,7 +1160,7 @@ void VPInstructionWithType::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
+  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
   printAsOperand(O, SlotTracker);
   O << " = ";
 
@@ -2633,14 +2693,16 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     scalarizeInstruction(UI, this, *State.Lane, State);
     // Insert scalar instance packing it into a vector.
     if (State.VF.isVector() && shouldPack()) {
+      Value *WideValue;
       // If we're constructing lane 0, initialize to start from poison.
       if (State.Lane->isFirstLane()) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-        Value *Poison =
-            PoisonValue::get(VectorType::get(UI->getType(), State.VF));
-        State.set(this, Poison);
+        WideValue = PoisonValue::get(VectorType::get(UI->getType(), State.VF));
+      } else {
+        WideValue = State.get(this);
       }
-      State.packScalarIntoVectorizedValue(this, *State.Lane);
+      State.set(this, State.packScalarIntoVectorizedValue(this, WideValue,
+                                                          *State.Lane));
     }
     return;
   }
@@ -2869,9 +2931,9 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost +=
-         Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
+  return Cost += Ctx.TTI.getShuffleCost(
+             TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+             cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
@@ -2985,9 +3047,9 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       cast<VectorType>(Ty), {}, Ctx.CostKind,
-                                       0);
+  return Cost + Ctx.TTI.getShuffleCost(
+                    TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+                    cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3098,9 +3160,9 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       cast<VectorType>(Ty), {}, Ctx.CostKind,
-                                       0);
+  return Cost + Ctx.TTI.getShuffleCost(
+                    TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+                    cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3478,7 +3540,7 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
 
   return Cost + IG->getNumMembers() *
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                           VectorTy, std::nullopt, Ctx.CostKind,
+                                           VectorTy, VectorTy, {}, Ctx.CostKind,
                                            0);
 }
 
@@ -3545,8 +3607,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   if (CurrentPart == 0) {
     // The recipe represents the first part of the pointer induction. Create the
     // GEP to increment the phi across all unrolled parts.
-    Value *NumUnrolledElems =
-        State.get(&getParent()->getPlan()->getVFxUF(), true);
+    Value *NumUnrolledElems = State.get(getOperand(2), true);
 
     Value *InductionGEP = GetElementPtrInst::Create(
         State.Builder.getInt8Ty(), NewPointerPhi,
@@ -3582,7 +3643,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  assert((getNumOperands() == 2 || getNumOperands() == 4) &&
+  assert((getNumOperands() == 3 || getNumOperands() == 5) &&
          "unexpected number of operands");
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
@@ -3590,11 +3651,13 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   getStartValue()->printAsOperand(O, SlotTracker);
   O << ", ";
   getStepValue()->printAsOperand(O, SlotTracker);
-  if (getNumOperands() == 4) {
-    O << ", ";
-    getOperand(2)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(2)->printAsOperand(O, SlotTracker);
+  if (getNumOperands() == 5) {
     O << ", ";
     getOperand(3)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    getOperand(4)->printAsOperand(O, SlotTracker);
   }
 }
 #endif

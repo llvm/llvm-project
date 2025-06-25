@@ -74,7 +74,7 @@ struct MissingFeatures {
   static bool opFuncOpenCLKernelMetadata() { return false; }
   static bool opFuncCallingConv() { return false; }
   static bool opFuncExtraAttrs() { return false; }
-  static bool opFuncDsolocal() { return false; }
+  static bool opFuncDsoLocal() { return false; }
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
   static bool opFuncNoProto() { return false; }
@@ -149,6 +149,7 @@ struct MissingFeatures {
   static bool cxxabiUseARMGuardVarABI() { return false; }
   static bool cxxabiAppleARM64CXXABI() { return false; }
   static bool cxxabiStructorImplicitParam() { return false; }
+  static bool isDiscreteBitFieldABI() { return false; }
 
   // Address class
   static bool addressOffset() { return false; }
@@ -239,6 +240,9 @@ struct MissingFeatures {
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
+  static bool nonFineGrainedBitfields() { return false; }
+  static bool armComputeVolatileBitfields() { return false; }
+  static bool ctorMemcpyizer() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

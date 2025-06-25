@@ -134,6 +134,16 @@ bool MapASTVisitor::VisitTypeAliasDecl(const TypeAliasDecl *D) {
   return mapDecl(D, /*isDefinition=*/true);
 }
 
+bool MapASTVisitor::VisitConceptDecl(const ConceptDecl *D) {
+  return mapDecl(D, true);
+}
+
+bool MapASTVisitor::VisitVarDecl(const VarDecl *D) {
+  if (D->isCXXClassMember())
+    return true;
+  return mapDecl(D, D->isThisDeclarationADefinition());
+}
+
 comments::FullComment *
 MapASTVisitor::getComment(const NamedDecl *D, const ASTContext &Context) const {
   RawComment *Comment = Context.getRawCommentForDeclNoCache(D);

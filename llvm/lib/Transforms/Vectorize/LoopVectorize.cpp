@@ -1364,36 +1364,33 @@ public:
       return;
     }
 
-    if (!ForceTailFoldingStyle.getNumOccurrences()) {
-      ChosenTailFoldingStyle = {
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
-      return;
-    }
+    // Default to TTI preference, but allow command line override.
+    ChosenTailFoldingStyle = {
+        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
+        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
+    if (ForceTailFoldingStyle.getNumOccurrences())
+      ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
+                                ForceTailFoldingStyle.getValue()};
 
-    // Set styles when forced.
-    ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
-                              ForceTailFoldingStyle.getValue()};
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override forced styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
                       TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
-    if (!EVLIsLegal) {
-      // If for some reason EVL mode is unsupported, fallback to
-      // DataWithoutLaneMask to try to vectorize the loop with folded tail
-      // in a generic way.
-      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                                TailFoldingStyle::DataWithoutLaneMask};
-      LLVM_DEBUG(
-          dbgs()
-          << "LV: Preference for VP intrinsics indicated. Will "
-             "not try to generate VP Intrinsics "
-          << (UserIC > 1
-                  ? "since interleave count specified is greater than 1.\n"
-                  : "due to non-interleaving reasons.\n"));
-    }
+    if (EVLIsLegal)
+      return;
+    // If for some reason EVL mode is unsupported, fallback to
+    // DataWithoutLaneMask to try to vectorize the loop with folded tail
+    // in a generic way.
+    ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
+                              TailFoldingStyle::DataWithoutLaneMask};
+    LLVM_DEBUG(
+        dbgs() << "LV: Preference for VP intrinsics indicated. Will "
+                  "not try to generate VP Intrinsics "
+               << (UserIC > 1
+                       ? "since interleave count specified is greater than 1.\n"
+                       : "due to non-interleaving reasons.\n"));
   }
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
@@ -2432,7 +2429,7 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else if (VF.isScalable() &&
+  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
              !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
              Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee
@@ -3107,14 +3104,14 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
     // is correct.  The easiest form of the later is to require that all values
     // stored are the same.
     return !(Legal->isInvariant(getLoadStorePointerOperand(I)) &&
-             TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
+             Legal->isInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem:
     // If the divisor is loop-invariant no predication is needed.
-    return !TheLoop->isLoopInvariant(I->getOperand(1));
+    return !Legal->isInvariant(I->getOperand(1));
   }
 }
 
@@ -5346,8 +5343,8 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
-    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
-                               CostKind, 0);
+    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                               VectorTy, {}, CostKind, 0);
   return Cost;
 }
 
@@ -5364,8 +5361,8 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS,
                                CostKind) +
-           TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy, {},
-                              CostKind);
+           TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
+                              VectorTy, {}, CostKind);
   }
   StoreInst *SI = cast<StoreInst>(I);
 
@@ -5431,8 +5428,8 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
     assert(!Legal->isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
-            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
-                               CostKind, 0);
+            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                               VectorTy, {}, CostKind, 0);
   }
   return Cost;
 }
@@ -6174,6 +6171,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       SmallVector<int> Mask(VF.getKnownMinValue());
       std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                cast<VectorType>(VectorTy),
                                 cast<VectorType>(VectorTy), Mask, CostKind,
                                 VF.getKnownMinValue() - 1);
     }
@@ -7829,7 +7827,7 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
     VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep(),
                                                            *PSE.getSE());
     return new VPWidenPointerInductionRecipe(
-        Phi, Operands[0], Step, *II,
+        Phi, Operands[0], Step, &Plan.getVFxUF(), *II,
         LoopVectorizationPlanner::getDecisionAndClampRange(
             [&](ElementCount VF) {
               return CM.isScalarAfterVectorization(Phi, VF);
@@ -8240,7 +8238,7 @@ bool VPRecipeBuilder::getScaledReductions(
           [&](ElementCount VF) {
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), A->getType(), B->getType(), PHI->getType(),
-                VF, OpAExtend, OpBExtend, BinOp->getOpcode());
+                VF, OpAExtend, OpBExtend, BinOp->getOpcode(), CM.CostKind);
             return Cost.isValid();
           },
           Range)) {
@@ -9273,12 +9271,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
                                {PhiR, NewExitingVPV}, Flags, ExitDL);
     }
-    // Update all users outside the vector region.
-    OrigExitingVPV->replaceUsesWithIf(
-        FinalReductionResult, [FinalReductionResult](VPUser &User, unsigned) {
-          auto *Parent = cast<VPRecipeBase>(&User)->getParent();
-          return FinalReductionResult != &User && !Parent->getParent();
-        });
+    // Update all users outside the vector region. Also replace redundant
+    // ExtractLastElement.
+    for (auto *U : to_vector(OrigExitingVPV->users())) {
+      auto *Parent = cast<VPRecipeBase>(U)->getParent();
+      if (FinalReductionResult == U || Parent->getParent())
+        continue;
+      U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
+      if (match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                       m_VPValue())))
+        cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
+    }
 
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
     // with a boolean reduction phi node to check if the condition is true in

@@ -234,14 +234,12 @@ def S8I  : Store_II8<0x04, "s8i", truncstorei8, addr_ish1, mem8>;
 def S16I : Store_II8<0x05, "s16i", truncstorei16, addr_ish2, mem16>;
 def S32I : Store_II8<0x06, "s32i", store, addr_ish4, mem32>;
 
+let AddedComplexity = 10 in
 def L32R : RI16_Inst<0x01, (outs AR:$t), (ins L32Rtarget:$label),
-                    "l32r\t$t, $label", []> {
+                    "l32r\t$t, $label", [(set AR:$t, (load (Xtensa_pcrel_wrapper tconstpool:$label)))]> {
   bits<16> label;
   let imm16 = label;
 }
-
-// pcrel addr loading using L32R
-def : Pat<(Xtensa_pcrel_wrapper tconstpool : $in), (L32R tconstpool : $in)>;
 
 // FrameIndexes are legalized when they are operands from load/store
 // instructions. The same not happens for stack address copies, so an
@@ -563,6 +561,26 @@ def RSR : RSR_Inst<0x00, 0x03, 0x00, (outs AR:$t), (ins SR:$sr),
 def XSR : RSR_Inst<0x00, 0x01, 0x06, (outs AR:$ard, SR:$srd), (ins AR:$t, SR:$sr),
                   "xsr\t$t, $sr", []> {
   let Constraints = "$ard = $t, $srd = $sr";
+}
+
+//===----------------------------------------------------------------------===//
+// User Registers read/write instructions
+//===----------------------------------------------------------------------===//
+
+def WUR : RRR_Inst<0x00, 0x03, 0x0F, (outs UR:$ur), (ins AR:$t),
+                  "wur\t$t, $ur", []> {
+  bits<8> ur;
+
+  let r = ur{7-4};
+  let s = ur{3-0};
+}
+
+def RUR : RRR_Inst<0x00, 0x03, 0x0E, (outs AR:$r), (ins UR:$ur),
+                  "rur\t$r, $ur", []> {
+  bits<8> ur;
+
+  let s = ur{7-4};
+  let t = ur{3-0};
 }
 
 //===----------------------------------------------------------------------===//
@@ -997,6 +1015,300 @@ let Predicates = [HasDiv32] in {
   def REMS : ArithLogic_RRR<0x0F, 0x02, "rems", srem>;
   def REMU : ArithLogic_RRR<0x0E, 0x02, "remu", urem>;
 }
+
+//===----------------------------------------------------------------------===//
+// Floating-Point Instructions
+//===----------------------------------------------------------------------===//
+
+class FPArith_RRR<bits<4> oper2, bits<4> oper1, string instrAsm,
+                 SDPatternOperator opNode, bit isComm = 0>
+  : RRR_Inst<0x00, oper1, oper2, (outs FPR:$r), (ins FPR:$s, FPR:$t),
+             instrAsm#"\t$r, $s, $t",
+            [(set FPR:$r, (opNode FPR:$s, FPR:$t))]> {
+  let isCommutable = isComm;
+  let isReMaterializable = 0;
+  let Predicates = [HasSingleFloat];
+}
+
+def ADD_S : FPArith_RRR<0x00, 0x0A, "add.s", fadd, 1>;
+def SUB_S : FPArith_RRR<0x01, 0x0A, "sub.s", fsub>;
+def MUL_S : FPArith_RRR<0x02, 0x0A, "mul.s", fmul, 1>;
+
+// FP load instructions
+let mayLoad = 1, usesCustomInserter = 1, Predicates = [HasSingleFloat] in {
+  def LSI : RRI8_Inst<0x03, (outs FPR:$t), (ins mem32:$addr),
+                     "lsi\t$t, $addr", []> {
+    bits<12> addr;
+
+    let r = 0x00;
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+
+  def LSIP : RRI8_Inst<0x03, (outs FPR:$t), (ins mem32:$addr),
+                      "lsip\t$t, $addr", []> {
+    bits<12> addr;
+
+    let r = 0x08;
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+
+  def LSX : RRR_Inst<0x00, 0x08, 0x00, (outs), (ins FPR:$r, AR:$s, AR:$t),
+                    "lsx\t$r, $s, $t", []>;
+
+  def LSXP : RRR_Inst<0x00, 0x08, 0x01, (outs), (ins FPR:$r, AR:$s, AR:$t),
+                     "lsxp\t$r, $s, $t", []>;
+}
+
+def : Pat<(f32 (load addr_ish4:$addr)), (f32 (LSI mem32:$addr))>;
+
+// FP store instructions
+let mayStore = 1, usesCustomInserter = 1, Predicates = [HasSingleFloat] in {
+  def SSI : RRI8_Inst<0x03, (outs), (ins FPR:$t, mem32:$addr),
+                     "ssi\t$t, $addr", []> {
+    bits<12> addr;
+
+    let r = 0x04;
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+
+  def SSIP : RRI8_Inst<0x03, (outs), (ins FPR:$t, mem32:$addr),
+                      "ssip\t$t, $addr", []> {
+    bits<12> addr;
+
+    let r = 0x0C;
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+
+  def SSX: RRR_Inst<0x00, 0x08, 0x04, (outs), (ins FPR:$r, AR:$s, AR:$t),
+                   "ssx\t$r, $s, $t", []>;
+
+  def SSXP: RRR_Inst<0x00, 0x08, 0x05, (outs), (ins FPR:$r, AR:$s, AR:$t),
+                    "ssxp\t$r, $s, $t", []>;
+}
+
+def : Pat<(store FPR:$t, addr_ish4:$addr), (SSI FPR:$t, mem32:$addr)>;
+
+// FP compare instructions
+let isCompare = 1, Predicates = [HasSingleFloat] in {
+  class FCompare <bits<4> oper2, bits<4> oper1, string instrAsm,
+                 SDPatternOperator opNode, bit isComm = 0>
+    : RRR_Inst<0x00, oper1, oper2, (outs BR:$r), (ins FPR:$s, FPR:$t),
+               instrAsm#"\t$r, $s, $t",
+              [(set BR:$r, (opNode FPR:$s, FPR:$t))]> {
+    let isCommutable = isComm;
+    let isReMaterializable = 0;
+    let Predicates = [HasSingleFloat];
+  }
+}
+
+def OEQ_S :  FCompare<0x02, 0x0b, "oeq.s", Xtensa_cmpoeq, 1>;
+def OLT_S :  FCompare<0x04, 0x0b, "olt.s", Xtensa_cmpolt, 0>;
+def OLE_S :  FCompare<0x06, 0x0b, "ole.s", Xtensa_cmpole, 0>;
+
+def UEQ_S :  FCompare<0x03, 0x0b, "ueq.s", Xtensa_cmpueq, 1>;
+def ULT_S :  FCompare<0x05, 0x0b, "ult.s", Xtensa_cmpult, 0>;
+def ULE_S :  FCompare<0x07, 0x0b, "ule.s", Xtensa_cmpule, 0>;
+def UN_S  :  FCompare<0x01, 0x0b, "un.s",  Xtensa_cmpuo, 1>;
+
+def ABS_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                    "abs.s\t$r, $s",
+                    [(set FPR:$r, (fabs FPR:$s))]>, Requires<[HasSingleFloat]> {
+  let t = 0x01;
+}
+
+def : Pat<(fabs FPR:$s), (ABS_S $s)>;
+
+def ADDEXP_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                       "addexp.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x0E;
+}
+
+def ADDEXPM_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                        "addexpm.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x0F;
+}
+
+def CEIL_S : RRR_Inst<0x00, 0x0A, 0x0B, (outs AR:$r), (ins FPR:$s, uimm4:$imm),
+                     "ceil.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]> {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def CONST_S : RRR_Inst<0x00, 0x0a, 0x0f, (outs FPR:$r), (ins uimm4:$imm),
+                      "const.s\t$r, $imm", []>, Requires<[HasSingleFloat]> {
+  bits<4> imm;
+
+  let t = 0x03;
+  let s = imm{3-0};
+}
+
+def DIV0_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                     "div0.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x7;
+}
+
+def DIVN_S : RRR_Inst<0x00, 0x0A, 0x07, (outs FPR:$r), (ins FPR:$s, FPR:$t),
+                     "divn.s\t$r, $s, $t", []>, Requires<[HasSingleFloat]>;
+
+def FLOAT_S : RRR_Inst<0x00, 0x0A, 0x0c, (outs FPR:$r), (ins AR:$s, uimm4:$imm),
+                      "float.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]> {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def : Pat<(f32 (sint_to_fp AR:$s)), (FLOAT_S AR:$s, 0)>;
+
+def FLOOR_S : RRR_Inst<0x00, 0x0A, 0x0A, (outs AR:$r), (ins FPR:$s, uimm4:$imm),
+                      "floor.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]> {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def MADDN_S : RRR_Inst<0x00, 0x0A, 0x06, (outs FPR:$r), (ins FPR:$s, FPR:$t),
+                      "maddn.s\t$r, $s, $t", []>, Requires<[HasSingleFloat]> {
+  let isCommutable = 0;
+}
+
+// FP multipy-add
+def MADD_S : RRR_Inst<0x00, 0x0A, 0x04, (outs FPR:$r), (ins FPR:$a, FPR:$s, FPR:$t),
+                     "madd.s\t$r, $s, $t",
+                     [(set FPR:$r, (Xtensa_madd FPR:$a, FPR:$s, FPR:$t))]>,
+                     Requires<[HasSingleFloat]> {
+  let isCommutable = 0;
+  let isReMaterializable = 0;
+  let Constraints = "$r = $a";
+}
+
+// fmadd: r1 * r2 + r3
+def : Pat<(fma FPR:$r1, FPR:$r2, FPR:$r3),
+          (MADD_S $r3, $r1, $r2)>;
+
+def MKDADJ_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                       "mkdadj.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x0D;
+}
+
+def MKSADJ_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                       "mksadj.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x0C;
+}
+
+// FP move instructions
+def MOV_S : RRR_Inst<0x00, 0x0A, 0x0f, (outs FPR:$r), (ins FPR:$s),
+                    "mov.s\t$r, $s",
+                    [(set FPR:$r, (Xtensa_movs FPR:$s))]>, Requires<[HasSingleFloat]> {
+  let t = 0x00;
+}
+
+def MOVEQZ_S : RRR_Inst<0x00, 0x0B, 0x08, (outs FPR:$r), (ins FPR:$s, AR:$t),
+                       "moveqz.s\t$r, $s, $t", []>, Requires<[HasSingleFloat]>;
+
+def MOVF_S   : RRR_Inst<0x00, 0x0B, 0x0C, (outs FPR:$r), (ins FPR:$s, BR:$t),
+                       "movf.s\t$r, $s, $t", []>, Requires<[HasBoolean, HasSingleFloat]>;
+
+def MOVGEZ_S : RRR_Inst<0x00, 0x0B, 0x0B, (outs FPR:$r), (ins FPR:$s, AR:$t),
+                       "movgez.s\t$r, $s, $t", []>, Requires<[HasSingleFloat]>;
+
+def MOVLTZ_S : RRR_Inst<0x00, 0x0B, 0x0A, (outs FPR:$r), (ins FPR:$s, AR:$t),
+                       "movltz.s\t$r, $s, $t", []>, Requires<[HasSingleFloat]>;
+
+def MOVNEZ_S : RRR_Inst<0x00, 0x0B, 0x09, (outs FPR:$r), (ins FPR:$s, AR:$t),
+                       "movnez.s\t$r, $s, $t", []>, Requires<[HasSingleFloat]>;
+
+def MOVT_S   : RRR_Inst<0x00, 0x0B, 0x0D, (outs FPR:$r), (ins FPR:$s, BR:$t),
+                       "movt.s\t$r, $s, $t", []>, Requires<[HasBoolean, HasSingleFloat]>;
+
+// FP multipy-sub
+def MSUB_S : RRR_Inst<0x00, 0x0A, 0x05, (outs FPR:$r), (ins FPR:$a, FPR:$s, FPR:$t),
+                     "msub.s\t$r, $s, $t",
+                     [(set FPR:$r, (Xtensa_msub FPR:$a, FPR:$s, FPR:$t))]>, Requires<[HasSingleFloat]> {
+  let isCommutable = 0;
+  let isReMaterializable = 0;
+  let Constraints = "$r = $a";
+}
+
+def NEXP01_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                       "nexp01.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x0B;
+}
+
+def NEG_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                    "neg.s\t$r, $s",
+                    [(set FPR:$r, (fneg FPR:$s))]>, Requires<[HasSingleFloat]> {
+  let t = 0x06;
+}
+
+def RECIP0_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                       "recip0.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x08;
+}
+
+def RFR : RRR_Inst<0x00, 0x0A, 0x0f, (outs AR:$r), (ins FPR:$s),
+                  "rfr\t$r, $s",
+                  [(set AR:$r, (bitconvert FPR:$s))]>, Requires<[HasSingleFloat]> {
+  let t = 0x04;
+}
+
+def ROUND_S : RRR_Inst<0x00, 0x0A, 0x08, (outs AR:$r), (ins FPR:$s, uimm4:$imm),
+                      "round.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]> {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def RSQRT0_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                       "rsqrt0.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x0A;
+}
+
+def SQRT0_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+                      "sqrt0.s\t$r, $s", []>, Requires<[HasSingleFloat]> {
+  let t = 0x09;
+}
+
+def TRUNC_S : RRR_Inst<0x00, 0x0A, 0x09, (outs AR:$r), (ins FPR:$s, uimm4:$imm),
+                      "trunc.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]>  {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def : Pat<(i32 (fp_to_sint FPR:$s)), (TRUNC_S FPR:$s, 0)>;
+
+def UFLOAT_S : RRR_Inst<0x00, 0x0A, 0x0D, (outs FPR:$r), (ins AR:$s, uimm4:$imm),
+                       "ufloat.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]>  {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def : Pat<(f32 (uint_to_fp AR:$s)), (UFLOAT_S AR:$s, 0)>;
+
+def UTRUNC_S : RRR_Inst<0x00, 0x0A, 0x0e, (outs AR:$r), (ins FPR:$s, uimm4:$imm),
+                       "utrunc.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]>  {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def : Pat<(i32 (fp_to_uint FPR:$s)), (UTRUNC_S FPR:$s, 0)>;
+
+def WFR : RRR_Inst<0x00, 0x0A, 0x0f, (outs FPR:$r), (ins AR:$s),
+                  "wfr\t$r, $s",
+                  [(set FPR:$r, (bitconvert AR:$s))]>, Requires<[HasSingleFloat]>  {
+  let t = 0x05;
+}
+
+let AddedComplexity = 10 in
+def : Pat<(f32 (load (Xtensa_pcrel_wrapper tconstpool:$in))),
+          (WFR (L32R tconstpool:$in))>;
 
 //===----------------------------------------------------------------------===//
 // Region Protection feature instructions
