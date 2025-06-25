@@ -1081,20 +1081,27 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                                        SourceLocation Loc) {
   // Define some common error handling functions
   bool HadError = false;
-  auto ReportError = [this, Loc, &HadError]() {
+  auto ReportError = [this, Loc, &HadError](uint32_t LowerBound, uint32_t UpperBound) {
     HadError = true;
-    this->Diag(Loc, diag::err_hlsl_invalid_parameter);
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_parameter)
+      << LowerBound << UpperBound;
+  };
+
+  auto ReportFloatError = [this, Loc, &HadError](float LowerBound, float UpperBound) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_parameter)
+      << std::to_string(LowerBound) << std::to_string(UpperBound);
   };
 
   auto VerifyRegister = [ReportError](uint32_t Register) {
     if (Register == ~0u)
-      ReportError();
+      ReportError(0, 0xfffffffe);
   };
 
   auto VerifySpace = [ReportError](uint32_t Space) {
-    // [0xfffffff0, 0xffffffff] is reserverd system namespace
+    // [0xfffffff0, 0xffffffff] is reserved system namespace
     if (0xfffffff0 <= Space)
-      ReportError();
+      ReportError(0, 0xffffffef);
   };
 
   // Iterate through the elements and do basic validations
@@ -1116,17 +1123,21 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
              "By construction, parseFloatParam can't produce a NaN from a float_literal token");
 
       if (16 < Sampler->MaxAnisotropy)
-        ReportError();
+        ReportError(0, 16);
       if (Sampler->MipLODBias < -16.f || 15.99 < Sampler->MipLODBias)
-        ReportError();
+        ReportFloatError(-16.f, 15.99);
     } else if (const auto *Clause =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
                        &Elem)) {
       VerifyRegister(Clause->Reg.Number);
       VerifySpace(Clause->Space);
 
-      if (Clause->NumDescriptors == 0)
-        ReportError();
+      if (Clause->NumDescriptors == 0) {
+        // NumDescriptor could techincally be ~0u but that is reserved for
+        // unbounded, so the diagnostic will not report that as a valid int
+        // value
+        ReportError(1, 0xfffffffe);
+      }
     }
   }
 
