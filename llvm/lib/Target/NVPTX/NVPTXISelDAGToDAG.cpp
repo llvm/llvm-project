@@ -163,10 +163,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryStoreParam(N))
       return;
     break;
-  case ISD::INTRINSIC_WO_CHAIN:
-    if (tryIntrinsicNoChain(N))
-      return;
-    break;
   case ISD::INTRINSIC_W_CHAIN:
     if (tryIntrinsicChain(N))
       return;
@@ -900,14 +896,6 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
                 OrderingToString(NVPTX::Ordering(FenceOrdering))));
   }
   return {InstructionOrdering, Scope};
-}
-
-bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
-  unsigned IID = N->getConstantOperandVal(0);
-  switch (IID) {
-  default:
-    return false;
-  }
 }
 
 void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {

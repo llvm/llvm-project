@@ -1741,11 +1741,14 @@ def FMOV64i : MOVi<B64, "b64", f64, f64imm, fpimm>;
 
 
 def to_tglobaladdr : SDNodeXForm<globaladdr, [{
-  return CurDAG->getTargetGlobalAddress(N->getGlobal(), SDLoc(N), N->getValueType(0), N->getOffset(), N->getTargetFlags());
+  return CurDAG->getTargetGlobalAddress(N->getGlobal(), SDLoc(N),
+                                        N->getValueType(0), N->getOffset(),
+                                        N->getTargetFlags());
 }]>;
 
 def to_texternsym : SDNodeXForm<externalsym, [{
-  return CurDAG->getTargetExternalSymbol(N->getSymbol(), N->getValueType(0), N->getTargetFlags());
+  return CurDAG->getTargetExternalSymbol(N->getSymbol(), N->getValueType(0),
+                                         N->getTargetFlags());
 }]>;
 
 def to_tframeindex : SDNodeXForm<frameindex, [{
@@ -2139,30 +2142,32 @@ foreach is_convergent = [0, 1] in {
 
   let isCall = 1, isConvergent = is_convergent in {
     def CALL # convergent_suffix :
-      NVPTXInst<(outs), (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params, i32imm:$proto),
+      NVPTXInst<(outs),
+                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params, 
+                     i32imm:$proto),
                 "call${rets:RetList} $addr, (${params:ParamList}), prototype_$proto;", []>;
 
     def CALL_UNI # convergent_suffix :
-      NVPTXInst<(outs), (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params),
+      NVPTXInst<(outs),
+                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params),
                 "call.uni${rets:RetList} $addr, (${params:ParamList});", []>;
   }
 
-  defvar inst = !cast<NVPTXInst>("CALL" # convergent_suffix);
-  defvar inst_uni = !cast<NVPTXInst>("CALL_UNI" # convergent_suffix);
-
+  defvar call_inst = !cast<NVPTXInst>("CALL" # convergent_suffix);
   def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, globaladdr:$addr, imm:$proto),
-            (inst (to_tglobaladdr $addr), imm:$rets, imm:$params, imm:$proto)>;
+            (call_inst (to_tglobaladdr $addr), imm:$rets, imm:$params, imm:$proto)>;
   def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i32:$addr, imm:$proto),
-            (inst $addr, imm:$rets, imm:$params, imm:$proto)>;
+            (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
   def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i64:$addr, imm:$proto),
-            (inst $addr, imm:$rets, imm:$params, imm:$proto)>;
+            (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
 
+  defvar call_uni_inst = !cast<NVPTXInst>("CALL_UNI" # convergent_suffix);
   def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, globaladdr:$addr, 0),
-            (inst_uni (to_tglobaladdr $addr), imm:$rets, imm:$params)>;
+            (call_uni_inst (to_tglobaladdr $addr), imm:$rets, imm:$params)>;
   def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, i32:$addr, 0),
-            (inst_uni $addr, imm:$rets, imm:$params)>;
+            (call_uni_inst $addr, imm:$rets, imm:$params)>;
   def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, i64:$addr, 0),
-            (inst_uni $addr, imm:$rets, imm:$params)>;
+            (call_uni_inst $addr, imm:$rets, imm:$params)>;
 }
 
 def LoadParamMemI64    : LoadParamMemInst<B64, ".b64">;
