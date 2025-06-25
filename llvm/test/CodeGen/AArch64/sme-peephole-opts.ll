@@ -11,11 +11,12 @@ define void @test0(ptr %callee) nounwind {
 ; CHECK-LABEL: test0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #72]
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    bl callee_sm
 ; CHECK-NEXT:    bl callee_sm
@@ -36,11 +37,12 @@ define void @test1() nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #72]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    bl callee
@@ -62,12 +64,12 @@ define void @test2() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #80]
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbz w19, #0, .LBB2_2
@@ -90,10 +92,9 @@ define void @test2() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:  // %bb.7:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB2_8:
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -107,12 +108,12 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #80]
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbnz w19, #0, .LBB3_2
@@ -146,10 +147,9 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:  // %bb.11:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB3_12:
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -164,11 +164,12 @@ define void @test4() nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #72]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    fmov s0, wzr
 ; CHECK-NEXT:    bl callee_farg
@@ -191,13 +192,14 @@ define void @test5(float %f) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #88]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
 ; CHECK-NEXT:    bl callee_farg
@@ -220,13 +222,14 @@ define float @test6(float %f) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: test6:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #88]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
 ; CHECK-NEXT:    bl callee_farg_fret
@@ -279,11 +282,12 @@ define void @test8() nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: test8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #72]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart sm
@@ -322,14 +326,10 @@ define void @test10() "aarch64_pstate_sm_body" {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    rdsvl x9, #1
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    lsr x9, x9, #3
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    .cfi_offset b8, -40
@@ -340,6 +340,11 @@ define void @test10() "aarch64_pstate_sm_body" {
 ; CHECK-NEXT:    .cfi_offset b13, -80
 ; CHECK-NEXT:    .cfi_offset b14, -88
 ; CHECK-NEXT:    .cfi_offset b15, -96
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    lsr x8, x8, #3
+; CHECK-NEXT:    str x8, [sp, #72]
+; CHECK-NEXT:    str x9, [sp, #80]
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    .cfi_restore vg
@@ -375,13 +380,13 @@ define void @test11(ptr %p) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: test11:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #80]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart sm
@@ -390,10 +395,9 @@ define void @test11(ptr %p) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -411,14 +415,10 @@ define void @test12() "aarch64_pstate_sm_body" {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    rdsvl x9, #1
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    lsr x9, x9, #3
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    .cfi_offset b8, -40
@@ -429,6 +429,11 @@ define void @test12() "aarch64_pstate_sm_body" {
 ; CHECK-NEXT:    .cfi_offset b13, -80
 ; CHECK-NEXT:    .cfi_offset b14, -88
 ; CHECK-NEXT:    .cfi_offset b15, -96
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    lsr x8, x8, #3
+; CHECK-NEXT:    str x8, [sp, #72]
+; CHECK-NEXT:    str x9, [sp, #80]
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    .cfi_offset vg, -24
@@ -467,15 +472,17 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: test13:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [x9, #88]
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
@@ -490,8 +497,8 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload

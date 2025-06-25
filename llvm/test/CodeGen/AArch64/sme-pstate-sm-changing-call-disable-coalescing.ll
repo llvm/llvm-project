@@ -16,15 +16,17 @@ define void @dont_coalesce_arg_i8(i8 %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    str x8, [x9, #88]
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl use_i8
@@ -32,8 +34,8 @@ define void @dont_coalesce_arg_i8(i8 %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -49,15 +51,17 @@ define void @dont_coalesce_arg_i16(i16 %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    str x8, [x9, #88]
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl use_i16
@@ -65,8 +69,8 @@ define void @dont_coalesce_arg_i16(i16 %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -82,15 +86,17 @@ define void @dont_coalesce_arg_i32(i32 %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    str x8, [x9, #88]
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl use_i32
@@ -98,8 +104,8 @@ define void @dont_coalesce_arg_i32(i32 %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -115,15 +121,17 @@ define void @dont_coalesce_arg_i64(i64 %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    str x8, [x9, #88]
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl use_i64
@@ -131,8 +139,8 @@ define void @dont_coalesce_arg_i64(i64 %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -148,19 +156,21 @@ define void @dont_coalesce_arg_f16(half %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str h0, [sp, #14] // 2-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr h0, [sp, #14] // 2-byte Folded Reload
@@ -171,8 +181,8 @@ define void @dont_coalesce_arg_f16(half %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -188,19 +198,21 @@ define void @dont_coalesce_arg_f32(float %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
@@ -211,8 +223,8 @@ define void @dont_coalesce_arg_f32(float %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -228,19 +240,21 @@ define void @dont_coalesce_arg_f64(double %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
@@ -251,8 +265,8 @@ define void @dont_coalesce_arg_f64(double %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -273,19 +287,21 @@ define void @dont_coalesce_arg_v1i8(<1 x i8> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
@@ -296,8 +312,8 @@ define void @dont_coalesce_arg_v1i8(<1 x i8> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -314,19 +330,21 @@ define void @dont_coalesce_arg_v1i16(<1 x i16> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
@@ -337,8 +355,8 @@ define void @dont_coalesce_arg_v1i16(<1 x i16> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -355,19 +373,21 @@ define void @dont_coalesce_arg_v1i32(<1 x i32> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v1i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
@@ -378,8 +398,8 @@ define void @dont_coalesce_arg_v1i32(<1 x i32> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -396,19 +416,21 @@ define void @dont_coalesce_arg_v1i64(<1 x i64> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
@@ -419,8 +441,8 @@ define void @dont_coalesce_arg_v1i64(<1 x i64> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -437,19 +459,21 @@ define void @dont_coalesce_arg_v1f16(<1 x half> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v1f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str h0, [sp, #14] // 2-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr h0, [sp, #14] // 2-byte Folded Reload
@@ -460,8 +484,8 @@ define void @dont_coalesce_arg_v1f16(<1 x half> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -478,19 +502,21 @@ define void @dont_coalesce_arg_v1f32(<1 x float> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v1f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
@@ -501,8 +527,8 @@ define void @dont_coalesce_arg_v1f32(<1 x float> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -519,19 +545,21 @@ define void @dont_coalesce_arg_v1f64(<1 x double> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
@@ -542,8 +570,8 @@ define void @dont_coalesce_arg_v1f64(<1 x double> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -564,19 +592,21 @@ define void @dont_coalesce_arg_v16i8(<16 x i8> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -587,8 +617,8 @@ define void @dont_coalesce_arg_v16i8(<16 x i8> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -604,19 +634,21 @@ define void @dont_coalesce_arg_v8i16(<8 x i16> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -627,8 +659,8 @@ define void @dont_coalesce_arg_v8i16(<8 x i16> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -644,19 +676,21 @@ define void @dont_coalesce_arg_v4i32(<4 x i32> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -667,8 +701,8 @@ define void @dont_coalesce_arg_v4i32(<4 x i32> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -684,19 +718,21 @@ define void @dont_coalesce_arg_v2i64(<2 x i64> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -707,8 +743,8 @@ define void @dont_coalesce_arg_v2i64(<2 x i64> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -724,19 +760,21 @@ define void @dont_coalesce_arg_v8f16(<8 x half> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -747,8 +785,8 @@ define void @dont_coalesce_arg_v8f16(<8 x half> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -764,19 +802,21 @@ define void @dont_coalesce_arg_v8bf16(<8 x bfloat> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v8bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -787,8 +827,8 @@ define void @dont_coalesce_arg_v8bf16(<8 x bfloat> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -804,19 +844,21 @@ define void @dont_coalesce_arg_v4f32(<4 x float> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -827,8 +869,8 @@ define void @dont_coalesce_arg_v4f32(<4 x float> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -844,19 +886,21 @@ define void @dont_coalesce_arg_v2f64(<2 x double> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -867,8 +911,8 @@ define void @dont_coalesce_arg_v2f64(<2 x double> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -887,23 +931,25 @@ define void @dont_coalesce_arg_v8i1(<8 x i1> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    addvl x9, sp, #1
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    and z1.b, z1.b, #0x1
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z1.b, #0
 ; CHECK-NEXT:    str p0, [x8, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    str x8, [x9, #104]
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
@@ -914,8 +960,8 @@ define void @dont_coalesce_arg_v8i1(<8 x i1> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    str p0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #72] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -935,22 +981,21 @@ define void @dont_coalesce_res_i8(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #80]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_i8
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -964,22 +1009,21 @@ define void @dont_coalesce_res_i16(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #80]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_i16
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -993,22 +1037,21 @@ define void @dont_coalesce_res_i32(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #80]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_i32
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1022,22 +1065,21 @@ define void @dont_coalesce_res_i64(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #80]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_i64
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1051,25 +1093,24 @@ define void @dont_coalesce_res_f16(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_f16
 ; CHECK-NEXT:    str h0, [sp, #14] // 2-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr h0, [sp, #14] // 2-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1084,24 +1125,23 @@ define void @dont_coalesce_res_f32(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_f32
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1116,24 +1156,23 @@ define void @dont_coalesce_res_f64(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_f64
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1152,24 +1191,23 @@ define void @dont_coalesce_res_v1i8(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v1i8
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1185,24 +1223,23 @@ define void @dont_coalesce_res_v1i16(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v1i16
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1218,24 +1255,23 @@ define void @dont_coalesce_res_v1i32(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v1i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v1i32
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1251,24 +1287,23 @@ define void @dont_coalesce_res_v1i64(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v1i64
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1284,25 +1319,24 @@ define void @dont_coalesce_res_v1f16(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v1f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v1f16
 ; CHECK-NEXT:    str h0, [sp, #14] // 2-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr h0, [sp, #14] // 2-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1318,24 +1352,23 @@ define void @dont_coalesce_res_v1f32(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v1f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v1f32
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1351,24 +1384,23 @@ define void @dont_coalesce_res_v1f64(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v1f64
 ; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1388,25 +1420,24 @@ define void @dont_coalesce_res_v16i8(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v16i8
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1421,25 +1452,24 @@ define void @dont_coalesce_res_v8i16(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v8i16
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1454,25 +1484,24 @@ define void @dont_coalesce_res_v4i32(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v4i32
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1487,25 +1516,24 @@ define void @dont_coalesce_res_v2i64(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v2i64
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1520,25 +1548,24 @@ define void @dont_coalesce_res_v8f16(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v8f16
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1553,25 +1580,24 @@ define void @dont_coalesce_res_v4f32(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v4f32
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112
@@ -1586,25 +1612,24 @@ define void @dont_coalesce_res_v2f64(ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_res_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x8, [sp, #96]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v2f64
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #112

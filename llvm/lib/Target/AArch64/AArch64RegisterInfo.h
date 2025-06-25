@@ -127,6 +127,8 @@ public:
   bool hasBasePointer(const MachineFunction &MF) const;
   unsigned getBaseRegister() const;
 
+  bool requiresSaveVG(const MachineFunction &MF) const;
+
   bool isArgumentRegister(const MachineFunction &MF,
                           MCRegister Reg) const override;
 

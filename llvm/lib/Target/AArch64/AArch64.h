@@ -60,6 +60,7 @@ FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 FunctionPass *createAArch64CollectLOHPass();
 FunctionPass *createSMEABIPass();
 FunctionPass *createSMEPeepholeOptPass();
+FunctionPass *createMachineSMEABIPass();
 ModulePass *createSVEIntrinsicOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
@@ -111,8 +112,14 @@ void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry&);
 void initializeSMEABIPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
+void initializeMachineSMEABIPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
+
+namespace AArch64 {
+enum TargetIndex { SAVED_VG_SLOT, SAVED_STREAMING_VG_SLOT };
+}
+
 } // end namespace llvm
 
 #endif

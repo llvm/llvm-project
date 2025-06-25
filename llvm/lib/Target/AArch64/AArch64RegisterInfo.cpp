@@ -673,6 +673,18 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   return false;
 }
 
+bool AArch64RegisterInfo::requiresSaveVG(const MachineFunction &MF) const {
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  // For Darwin platforms we don't save VG for non-SVE functions, even if SME
+  // is enabled with streaming mode changes.
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (ST.isTargetDarwin())
+    return ST.hasSVE();
+  return true;
+}
+
 bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
                                              MCRegister Reg) const {
   CallingConv::ID CC = MF.getFunction().getCallingConv();

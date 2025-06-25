@@ -128,18 +128,18 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_inout_za
 ; CHECK-LABEL: test_lazy_save_and_conditional_smstart:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-112]! // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #64
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    cntd x10
 ; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    str x10, [x29, #32]
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stur x9, [x29, #-80]
 ; CHECK-NEXT:    sub x9, x29, #80
@@ -167,7 +167,7 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_inout_za
 ; CHECK-NEXT:  .LBB3_6:
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    sub sp, x29, #64
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload

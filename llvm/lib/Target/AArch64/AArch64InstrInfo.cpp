@@ -3688,6 +3688,14 @@ static unsigned offsetExtendOpcode(unsigned Opcode) {
   }
 }
 
+ArrayRef<std::pair<int, const char *>>
+AArch64InstrInfo::getSerializableTargetIndices() const {
+  static constexpr std::pair<int, const char *> TargetIndices[] = {
+      {AArch64::SAVED_VG_SLOT, "saved-vg-slot"},
+      {AArch64::SAVED_STREAMING_VG_SLOT, "saved-streaming-vg-slot"}};
+  return TargetIndices;
+}
+
 MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
                                                  const ExtAddrMode &AM) const {
 

@@ -372,14 +372,13 @@ entry:
 define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, i16 %P4) "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: svecc_call:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp x29, x30, [sp, #-48]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #-48]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x27, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w27, -16
-; CHECK-NEXT:    .cfi_offset w28, -24
+; CHECK-NEXT:    stp x30, x28, [sp, #8] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x27, x19, [sp, #24] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w27, -24
+; CHECK-NEXT:    .cfi_offset w28, -32
 ; CHECK-NEXT:    .cfi_offset w30, -40
 ; CHECK-NEXT:    .cfi_offset w29, -48
 ; CHECK-NEXT:    addvl sp, sp, #-18
@@ -420,12 +419,15 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 48 - 48 * VG
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 48 - 56 * VG
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 48 - 64 * VG
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    addvl x10, sp, #18
 ; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str x9, [x10, #40]
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    .cfi_offset vg, -32
+; CHECK-NEXT:    .cfi_offset vg, -8
 ; CHECK-NEXT:    tbz w19, #0, .LBB7_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    smstop sm
@@ -479,9 +481,9 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-NEXT:    .cfi_restore z13
 ; CHECK-NEXT:    .cfi_restore z14
 ; CHECK-NEXT:    .cfi_restore z15
-; CHECK-NEXT:    ldp x27, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x28, [sp, #24] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp], #48 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x27, x19, [sp, #24] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x28, [sp, #8] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp], #48 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
 ; CHECK-NEXT:    .cfi_restore w27
@@ -500,9 +502,9 @@ declare ptr @memset(ptr, i32, i32)
 ; objects, we emit correct offsets for all objects except for these VLA objects.
 
 ; CHECK-FRAMELAYOUT-LABEL: Function: vastate
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-8], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Spill, Align: 16, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 16, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-24], Type: Spill, Align: 8, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-40], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-56], Type: Spill, Align: 8, Size: 8
@@ -521,17 +523,15 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp d15, d14, [sp, #-112]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #64
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset w19, -24
+; CHECK-NEXT:    .cfi_offset w20, -32
 ; CHECK-NEXT:    .cfi_offset w30, -40
 ; CHECK-NEXT:    .cfi_offset w29, -48
 ; CHECK-NEXT:    .cfi_offset b8, -56
@@ -547,6 +547,8 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    mov w20, w0
 ; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    cntd x10
+; CHECK-NEXT:    str x10, [x29, #32]
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stur x9, [x29, #-80]
 ; CHECK-NEXT:    sub x9, x29, #80
@@ -554,7 +556,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    stur wzr, [x29, #-68]
 ; CHECK-NEXT:    sturh w8, [x29, #-72]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x9
-; CHECK-NEXT:    .cfi_offset vg, -32
+; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl other
 ; CHECK-NEXT:    smstart sm
@@ -570,7 +572,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    sub sp, x29, #64
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 112
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload

@@ -299,6 +299,9 @@ public:
   MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
                                  const ExtAddrMode &AM) const override;
 
+  ArrayRef<std::pair<int, const char *>>
+  getSerializableTargetIndices() const override;
+
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
       int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,

@@ -2529,8 +2529,8 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       }
 
       // Check that an instruction has register operands only as expected.
-      if (MCOI.OperandType == MCOI::OPERAND_REGISTER &&
-          !MO->isReg() && !MO->isFI())
+      if (MCOI.OperandType == MCOI::OPERAND_REGISTER && !MO->isReg() &&
+          !MO->isFI() && !MO->isTargetIndex())
         report("Expected a register operand.", MO, MONum);
       if (MO->isReg()) {
         if (MCOI.OperandType == MCOI::OPERAND_IMMEDIATE ||

@@ -803,6 +803,9 @@ bool AArch64PassConfig::addILPOpts() {
 }
 
 void AArch64PassConfig::addPreRegAlloc() {
+  // Insert VG saves for the unwinder.
+  addPass(createMachineSMEABIPass());
+
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableDeadRegisterElimination)
