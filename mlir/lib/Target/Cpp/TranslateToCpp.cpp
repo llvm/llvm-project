@@ -9,7 +9,6 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -1004,7 +1003,7 @@ static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
   os << "class " << classOp.getSymName() << " {\n";
   os << "public:\n";
   os.indent();
-  
+
   for (Operation &op : classOp) {
     if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
       return failure();
