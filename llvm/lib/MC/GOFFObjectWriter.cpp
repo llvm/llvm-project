@@ -271,7 +271,7 @@ public:
 
 class GOFFWriter {
   GOFFOstream OS;
-  [[maybe_unused]] MCAssembler &Asm;
+  MCAssembler &Asm;
 
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
@@ -282,12 +282,13 @@ class GOFFWriter {
   void defineSymbols();
 
 public:
-  GOFFWriter(raw_pwrite_stream &OS);
+  GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm);
   uint64_t writeObject();
 };
 } // namespace
 
-GOFFWriter::GOFFWriter(raw_pwrite_stream &OS) : OS(OS) {}
+GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm)
+    : OS(OS), Asm(Asm) {}
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
   if (Section.isSD()) {
@@ -445,7 +446,7 @@ GOFFObjectWriter::GOFFObjectWriter(
 GOFFObjectWriter::~GOFFObjectWriter() {}
 
 uint64_t GOFFObjectWriter::writeObject() {
-  uint64_t Size = GOFFWriter(OS).writeObject();
+  uint64_t Size = GOFFWriter(OS, *Asm).writeObject();
   return Size;
 }
 

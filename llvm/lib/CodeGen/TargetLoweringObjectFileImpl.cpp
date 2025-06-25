@@ -2838,9 +2838,14 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     GOFF::ESDBindingScope SDBindingScope =
         PRBindingScope == GOFF::ESD_BSC_Section ? GOFF::ESD_BSC_Section
                                                 : GOFF::ESD_BSC_Unspecified;
+    MaybeAlign Alignment;
+    if (auto *F = dyn_cast<Function>(GO))
+      Alignment = F->getAlign();
+    else if (auto *V = dyn_cast<GlobalVariable>(GO))
+      Alignment = V->getAlign();
     GOFF::ESDAlignment Align =
-        GO->getAlign() ? static_cast<GOFF::ESDAlignment>(Log2(*GO->getAlign()))
-                       : GOFF::ESD_ALIGN_Doubleword;
+        Alignment ? static_cast<GOFF::ESDAlignment>(Log2(*Alignment))
+                  : GOFF::ESD_ALIGN_Doubleword;
     MCSectionGOFF *SD = getContext().getGOFFSection(
         SectionKind::getMetadata(), Symbol->getName(),
         GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope});
