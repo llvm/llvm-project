@@ -1768,7 +1768,8 @@ def note_unsatisfied_trait
            "%TriviallyRelocatable{trivially relocatable}|"
            "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
-           "%Empty{empty}"
+           "%Empty{empty}|"
+           "%StandardLayout{standard-layout}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1792,6 +1793,12 @@ def note_unsatisfied_trait_reason
            "%VirtualFunction{has a virtual function %1}|"
            "%NonEmptyBase{has a base class %1 that is not empty}|"
            "%NonZeroLengthField{field %1 is a non-zero-length bit-field}|"
+           "%NonStandardLayoutBase{has a non-standard-layout base %1}|"
+           "%MixedAccess{has mixed access specifiers}|"
+           "%MixedAccessField{field %1 has a different access specifier than field %2}|"
+           "%MultipleDataBase{has multiple base classes with data members}|"
+           "%NonStandardLayoutMember{has a non-standard-layout member %1 of type %2}|"
+           "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
