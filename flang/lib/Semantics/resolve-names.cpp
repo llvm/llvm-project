@@ -7283,6 +7283,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
         SayWithDecl(name, symbol,
             "Derived type variable '%s' with ultimate ALLOCATABLE component not allowed in a %s locality-spec"_err_en_US,
             specName);
+        return false;
       }
     }
   }
