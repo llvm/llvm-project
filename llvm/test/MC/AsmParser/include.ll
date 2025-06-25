@@ -1,6 +1,4 @@
-; RUN: llc -I %p/Inputs -filetype asm -o - %s | FileCheck %s
-; UNSUPPORTED: target={{.*}}-zos{{.*}},target=nvptx{{.*}}
-; REQUIRES: default_triple
+; RUN: llc -mtriple=x86_64 -I %p/Inputs -filetype asm -o - %s | FileCheck %s
 
 module asm ".include \22module.x\22"
 

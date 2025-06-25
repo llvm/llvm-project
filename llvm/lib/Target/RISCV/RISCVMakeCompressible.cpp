@@ -207,7 +207,7 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
   case RISCV::LW:
   case RISCV::LW_INX:
   case RISCV::LD:
-    return STI.hasStdExtCOrZca();
+    return STI.hasStdExtZca();
   case RISCV::LD_RV32:
     return STI.hasStdExtZclsd();
   case RISCV::FLW:
@@ -231,7 +231,7 @@ static bool isCompressibleStore(const MachineInstr &MI) {
   case RISCV::SW:
   case RISCV::SW_INX:
   case RISCV::SD:
-    return STI.hasStdExtCOrZca();
+    return STI.hasStdExtZca();
   case RISCV::SD_RV32:
     return STI.hasStdExtZclsd();
   case RISCV::FSW:
@@ -415,7 +415,7 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
   // This optimization only makes sense if compressed instructions are emitted.
-  if (!STI.hasStdExtCOrZca())
+  if (!STI.hasStdExtZca())
     return false;
 
   for (MachineBasicBlock &MBB : Fn) {

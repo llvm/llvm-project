@@ -4994,7 +4994,6 @@ recurse:
   case Expr::ParenListExprClass:
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:
-  case Expr::TypoExprClass: // This should no longer exist in the AST by now.
   case Expr::RecoveryExprClass:
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
@@ -6620,7 +6619,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
                            V.getStructField(Fields.back()->getFieldIndex())))) {
       Fields.pop_back();
     }
-    llvm::ArrayRef<CXXBaseSpecifier> Bases(RD->bases_begin(), RD->bases_end());
+    ArrayRef<CXXBaseSpecifier> Bases(RD->bases_begin(), RD->bases_end());
     if (Fields.empty()) {
       while (!Bases.empty() &&
              isZeroInitialized(Bases.back().getType(),

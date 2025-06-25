@@ -47,7 +47,7 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
 /// The max limit of the search depth in DecomposeGEPExpression() and
 /// getUnderlyingObject().
-constexpr unsigned MaxLookupSearchDepth = 6;
+constexpr unsigned MaxLookupSearchDepth = 10;
 
 /// Determine which bits of V are known to be either zero or one and return
 /// them in the KnownZero/KnownOne bit sets.
@@ -998,6 +998,11 @@ isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS, const Value *RHS,
 LLVM_ABI void
 findValuesAffectedByCondition(Value *Cond, bool IsAssume,
                               function_ref<void(Value *)> InsertAffected);
+
+/// Returns the inner value X if the expression has the form f(X)
+/// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
+LLVM_ABI Value *stripNullTest(Value *V);
+LLVM_ABI const Value *stripNullTest(const Value *V);
 
 } // end namespace llvm
 

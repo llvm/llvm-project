@@ -1714,12 +1714,14 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPNumThreadsClause(Expr *NumThreads,
+  OMPClause *RebuildOMPNumThreadsClause(OpenMPNumThreadsClauseModifier Modifier,
+                                        Expr *NumThreads,
                                         SourceLocation StartLoc,
                                         SourceLocation LParenLoc,
+                                        SourceLocation ModifierLoc,
                                         SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNumThreadsClause(NumThreads, StartLoc,
-                                                          LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPNumThreadsClause(
+        Modifier, NumThreads, StartLoc, LParenLoc, ModifierLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'safelen' clause.
@@ -10461,7 +10463,8 @@ TreeTransform<Derived>::TransformOMPNumThreadsClause(OMPNumThreadsClause *C) {
   if (NumThreads.isInvalid())
     return nullptr;
   return getDerived().RebuildOMPNumThreadsClause(
-      NumThreads.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      C->getModifier(), NumThreads.get(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getModifierLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -13118,12 +13121,6 @@ ExprResult
 TreeTransform<Derived>::TransformOpaqueValueExpr(OpaqueValueExpr *E) {
   assert((!E->getSourceExpr() || getDerived().AlreadyTransformed(E->getType())) &&
          "opaque value expression requires transformation");
-  return E;
-}
-
-template<typename Derived>
-ExprResult
-TreeTransform<Derived>::TransformTypoExpr(TypoExpr *E) {
   return E;
 }
 
@@ -16228,7 +16225,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
   return getDerived().RebuildSizeOfPackExpr(
       E->getOperatorLoc(), E->getPack(), E->getPackLoc(), E->getRParenLoc(),
       /*Length=*/static_cast<unsigned>(Args.size()),
-      /*PartialArgs=*/std::nullopt);
+      /*PartialArgs=*/{});
 }
 
 template <typename Derived>

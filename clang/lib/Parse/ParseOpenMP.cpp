@@ -576,6 +576,7 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
     return DeclGroupPtrTy();
   }
 
+  Scope *OuterScope = getCurScope();
   // Enter scope.
   DeclarationNameInfo DirName;
   SourceLocation Loc = Tok.getLocation();
@@ -614,12 +615,17 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
     IsCorrect = false;
   }
 
+  // This needs to be called within the scope because
+  // processImplicitMapsWithDefaultMappers may add clauses when analyzing nested
+  // types. The scope used for calling ActOnOpenMPDeclareMapperDirective,
+  // however, needs to be the outer one, otherwise declared mappers don't become
+  // visible.
+  DeclGroupPtrTy DG = Actions.OpenMP().ActOnOpenMPDeclareMapperDirective(
+      OuterScope, Actions.getCurLexicalContext(), MapperId, MapperType,
+      Range.getBegin(), VName, AS, MapperVarRef.get(), Clauses);
   // Exit scope.
   Actions.OpenMP().EndOpenMPDSABlock(nullptr);
   OMPDirectiveScope.Exit();
-  DeclGroupPtrTy DG = Actions.OpenMP().ActOnOpenMPDeclareMapperDirective(
-      getCurScope(), Actions.getCurLexicalContext(), MapperId, MapperType,
-      Range.getBegin(), VName, AS, MapperVarRef.get(), Clauses);
   if (!IsCorrect)
     return DeclGroupPtrTy();
 
@@ -3190,7 +3196,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     if ((CKind == OMPC_ordered || CKind == OMPC_partial) &&
         PP.LookAhead(/*N=*/0).isNot(tok::l_paren))
       Clause = ParseOpenMPClause(CKind, WrongDirective);
-    else if (CKind == OMPC_grainsize || CKind == OMPC_num_tasks)
+    else if (CKind == OMPC_grainsize || CKind == OMPC_num_tasks ||
+             CKind == OMPC_num_threads)
       Clause = ParseOpenMPSingleExprWithArgClause(DKind, CKind, WrongDirective);
     else
       Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
@@ -3600,8 +3607,7 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
       while (Tok.isNot(tok::r_paren)) {
         SourceLocation Loc = Tok.getLocation();
         ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
-        ExprResult PTExpr = Actions.CorrectDelayedTyposInExpr(
-            ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+        ExprResult PTExpr = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
         PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
                                              /*DiscardedValue=*/false);
         if (PTExpr.isUsable()) {
@@ -3662,8 +3668,7 @@ OMPClause *Parser::ParseOpenMPInteropClause(OpenMPClauseKind Kind,
 
   // Parse the variable.
   SourceLocation VarLoc = Tok.getLocation();
-  ExprResult InteropVarExpr =
-      Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+  ExprResult InteropVarExpr = ParseAssignmentExpression();
   if (!InteropVarExpr.isUsable()) {
     SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
               StopBeforeMatch);
@@ -3977,6 +3982,33 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
       Arg.push_back(OMPC_NUMTASKS_unknown);
       KLoc.emplace_back();
     }
+  } else if (Kind == OMPC_num_threads) {
+    // Parse optional <num_threads modifier> ':'
+    OpenMPNumThreadsClauseModifier Modifier =
+        static_cast<OpenMPNumThreadsClauseModifier>(getOpenMPSimpleClauseType(
+            Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok),
+            getLangOpts()));
+    if (getLangOpts().OpenMP >= 60) {
+      if (NextToken().is(tok::colon)) {
+        Arg.push_back(Modifier);
+        KLoc.push_back(Tok.getLocation());
+        // Parse modifier
+        ConsumeAnyToken();
+        // Parse ':'
+        ConsumeAnyToken();
+      } else {
+        if (Modifier == OMPC_NUMTHREADS_strict) {
+          Diag(Tok, diag::err_modifier_expected_colon) << "strict";
+          // Parse modifier
+          ConsumeAnyToken();
+        }
+        Arg.push_back(OMPC_NUMTHREADS_unknown);
+        KLoc.emplace_back();
+      }
+    } else {
+      Arg.push_back(OMPC_NUMTHREADS_unknown);
+      KLoc.emplace_back();
+    }
   } else {
     assert(Kind == OMPC_if);
     KLoc.push_back(Tok.getLocation());
@@ -4000,7 +4032,8 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
   bool NeedAnExpression = (Kind == OMPC_schedule && DelimLoc.isValid()) ||
                           (Kind == OMPC_dist_schedule && DelimLoc.isValid()) ||
                           Kind == OMPC_if || Kind == OMPC_device ||
-                          Kind == OMPC_grainsize || Kind == OMPC_num_tasks;
+                          Kind == OMPC_grainsize || Kind == OMPC_num_tasks ||
+                          Kind == OMPC_num_threads;
   if (NeedAnExpression) {
     SourceLocation ELoc = Tok.getLocation();
     ExprResult LHS(ParseCastExpression(CastParseKind::AnyCastExpr, false,
@@ -4288,8 +4321,7 @@ ExprResult Parser::ParseOpenMPIteratorsExpr() {
     // Parse <begin>
     SourceLocation Loc = Tok.getLocation();
     ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
-    ExprResult Begin = Actions.CorrectDelayedTyposInExpr(
-        ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+    ExprResult Begin = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
     Begin = Actions.ActOnFinishFullExpr(Begin.get(), Loc,
                                         /*DiscardedValue=*/false);
     // Parse ':'.
@@ -4300,8 +4332,7 @@ ExprResult Parser::ParseOpenMPIteratorsExpr() {
     // Parse <end>
     Loc = Tok.getLocation();
     LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
-    ExprResult End = Actions.CorrectDelayedTyposInExpr(
-        ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+    ExprResult End = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
     End = Actions.ActOnFinishFullExpr(End.get(), Loc,
                                       /*DiscardedValue=*/false);
 
@@ -4314,8 +4345,7 @@ ExprResult Parser::ParseOpenMPIteratorsExpr() {
       // Parse <step>
       Loc = Tok.getLocation();
       LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
-      Step = Actions.CorrectDelayedTyposInExpr(
-          ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+      Step = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
       Step = Actions.ActOnFinishFullExpr(Step.get(), Loc,
                                          /*DiscardedValue=*/false);
     }
@@ -4797,7 +4827,6 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
       Tail = ParseOpenMPIteratorsExpr();
     }
-    Tail = Actions.CorrectDelayedTyposInExpr(Tail);
     Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
                                        /*DiscardedValue=*/false);
     if (Tail.isUsable() || Data.AllocateAlignment) {
@@ -4858,8 +4887,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     ColonProtectionRAIIObject ColonRAII(*this, MayHaveTail);
     if (!ParseOpenMPReservedLocator(Kind, Data, getLangOpts())) {
       // Parse variable
-      ExprResult VarExpr =
-          Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+      ExprResult VarExpr = ParseAssignmentExpression();
       if (VarExpr.isUsable()) {
         Vars.push_back(VarExpr.get());
       } else {
@@ -4896,6 +4924,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     SourceLocation ELoc = ConsumeToken();
 
     if (getLangOpts().OpenMP >= 52 && Kind == OMPC_linear) {
+      bool Malformed = false;
       while (Tok.isNot(tok::r_paren)) {
         if (Tok.is(tok::identifier)) {
           // identifier could be a linear kind (val, uval, ref) or step
@@ -4932,6 +4961,11 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
             ModifierFound = true;
           } else {
             StepFound = parseStepSize(*this, Data, Kind, Tok.getLocation());
+            if (!StepFound) {
+              Malformed = true;
+              SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                        StopBeforeMatch);
+            }
           }
         } else {
           // parse an integer expression as step size
@@ -4943,7 +4977,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         if (Tok.is(tok::r_paren) || Tok.is(tok::annot_pragma_openmp_end))
           break;
       }
-      if (!StepFound && !ModifierFound)
+      if (!Malformed && !StepFound && !ModifierFound)
         Diag(ELoc, diag::err_expected_expression);
     } else {
       // for OMPC_aligned and OMPC_linear (with OpenMP <= 5.1)

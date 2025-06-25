@@ -219,7 +219,7 @@ getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
   bool Is64Bit = TT.getArch() == Triple::x86_64;
   if (CM) {
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel", false);
+      reportFatalUsageError("target does not support the tiny CodeModel");
     return *CM;
   }
   if (JIT)
@@ -554,7 +554,6 @@ bool X86PassConfig::addPreISel() {
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
-    addPass(createX86WinFixupBufferSecurityCheckPass());
     addPass(createX86FixupSetCC());
     addPass(createX86OptimizeLEAs());
     addPass(createX86CallFrameOptimization());

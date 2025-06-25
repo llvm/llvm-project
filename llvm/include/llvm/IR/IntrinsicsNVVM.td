@@ -1341,9 +1341,11 @@ foreach scope = ["cta", "cluster", "gpu", "sys"] in {
         Intrinsic<[], [], [IntrNoCallback],
         "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
 
+  // The imm-arg 'size' can only be 128.
   def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope :
         Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
-                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>],
+                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>,
+                   Range<ArgIndex<1>, 128, 129>],
                   "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
 }
 
@@ -1989,10 +1991,12 @@ def int_nvvm_is_explicit_cluster
               "llvm.nvvm.is_explicit_cluster">;
 
 // Setmaxnreg inc/dec intrinsics
+// The imm-arg should be in the range: 24 <= val <= 256
 foreach op = ["dec", "inc"] in
   def int_nvvm_setmaxnreg_ # op # _sync_aligned_u32
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
-              [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects,
+               ImmArg<ArgIndex<0>>, Range<ArgIndex<0>, 24, 257>]>;
 
 // Exit
 def int_nvvm_exit : NVVMBuiltin,
@@ -2009,32 +2013,10 @@ class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
                     !foreach(i, !range(flags),
                         ImmArg<ArgIndex<!add(i, !size(param_types))>>))>;
 
-// Intrinsics for Tensor Copy using TMA
-// G2S -> From Global to Shared memory variants
-// S2G -> From Shared to Global memory variants
+// TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
 foreach dim = 1...5 in {
   defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
-
   foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-    defvar is_im2col = !eq(mode, "im2col");
-    defvar num_im2col_offsets = !if(is_im2col, !add(dim, -2), 0);
-    defvar im2col_offsets_args = !listsplat(llvm_i16_ty, num_im2col_offsets);
-
-    def int_nvvm_cp_async_bulk_tensor_g2s_ # mode # _ # dim # d :
-      DefaultAttrsIntrinsicFlags<[],
-          !listconcat([llvm_shared_cluster_ptr_ty,  // dst_shared_cluster_ptr
-                       llvm_shared_ptr_ty,          // mbarrier_smem_ptr
-                       llvm_ptr_ty],                // tensormap_ptr
-                      tensor_dim_args,              // actual tensor dims
-                      im2col_offsets_args,          // im2col offsets
-                      [llvm_i16_ty,                 // cta_mask
-                       llvm_i64_ty]),               // cache_hint
-          [llvm_i1_ty,                              // Flag for cta_mask
-           llvm_i1_ty],                             // Flag for cache_hint
-          [IntrConvergent,
-           WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>]>;
-
     def int_nvvm_cp_async_bulk_tensor_s2g_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],
           !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
@@ -2045,16 +2027,6 @@ foreach dim = 1...5 in {
           [IntrConvergent,
            ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
            NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
-
-    def int_nvvm_cp_async_bulk_tensor_prefetch_ # mode # _ # dim # d :
-      DefaultAttrsIntrinsicFlags<[],
-          !listconcat([llvm_ptr_ty],        // tensormap_ptr
-                       tensor_dim_args,     // actual tensor dims
-                       im2col_offsets_args, // im2col offsets
-                      [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                     // Flag for cache_hint
-          [IntrConvergent,
-           ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
     // Intrinsics for TMA Copy with reduction
     foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in
@@ -2067,6 +2039,48 @@ foreach dim = 1...5 in {
           [llvm_i1_ty],                       // Flag for cache_hint
           [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
            NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
+  }
+}
+
+// TMA Tensor Copy Intrinsics: G2S -> From Global to Shared memory variants
+foreach dim = 1...5 in {
+  defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
+
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    defvar is_im2col = !eq(mode, "im2col");
+    defvar num_im2col_offsets = !if(is_im2col, !add(dim, -2), 0);
+    defvar im2col_offsets_args = !listsplat(llvm_i16_ty, num_im2col_offsets);
+
+    defvar g2s_params = !listconcat(
+                          [llvm_shared_cluster_ptr_ty, // dst_ptr
+                           llvm_shared_ptr_ty,  // mbarrier_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                          tensor_dim_args,      // actual tensor dims
+                          im2col_offsets_args,  // im2col offsets
+                          [llvm_i16_ty,         // cta_mask
+                           llvm_i64_ty]);       // cache_hint
+    defvar g2s_flags = [llvm_i1_ty,             // Flag for cta_mask
+                        llvm_i1_ty,             // Flag for cache_hint
+                        llvm_i32_ty];           // Flag for cta_group
+    defvar cta_group_idx = !add(
+                             !size(g2s_params),
+                             !sub(!size(g2s_flags), 1));
+    defvar g2s_props = [IntrConvergent,
+                        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+                        // Allowed values for cta_group are {0,1,2} i.e [0, 3).
+                        Range<ArgIndex<cta_group_idx>, 0, 3>];
+    def int_nvvm_cp_async_bulk_tensor_g2s_ # mode # _ # dim # d :
+      DefaultAttrsIntrinsicFlags<[], g2s_params, g2s_flags, g2s_props>;
+
+    def int_nvvm_cp_async_bulk_tensor_prefetch_ # mode # _ # dim # d :
+      DefaultAttrsIntrinsicFlags<[],
+          !listconcat([llvm_ptr_ty],        // tensormap_ptr
+                       tensor_dim_args,     // actual tensor dims
+                       im2col_offsets_args, // im2col offsets
+                      [llvm_i64_ty]),       // cache_hint
+          [llvm_i1_ty],                     // Flag for cache_hint
+          [IntrConvergent,
+           ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
   }
 }
 

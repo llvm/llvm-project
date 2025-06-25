@@ -92,6 +92,7 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_FRAMEWORK_DIR=XXX_framework_dir",
     "CMAKE_CXX_COMPILER=c++",  # XXX use bin/clang++ instead?
     "HOST_OS=$host_os",  # XXX
+    "Python3_ROOT_DIR=",  # FIXME
   ]
 
   if (is_debug) {

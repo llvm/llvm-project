@@ -265,9 +265,22 @@ static cl::opt<bool>
                       cl::desc("Print name of local stack variable"),
                       cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClPoisonUndef("msan-poison-undef",
-                                   cl::desc("poison undef temps"), cl::Hidden,
-                                   cl::init(true));
+static cl::opt<bool>
+    ClPoisonUndef("msan-poison-undef",
+                  cl::desc("Poison fully undef temporary values. "
+                           "Partially undefined constant vectors "
+                           "are unaffected by this flag (see "
+                           "-msan-poison-undef-vectors)."),
+                  cl::Hidden, cl::init(true));
+
+static cl::opt<bool> ClPoisonUndefVectors(
+    "msan-poison-undef-vectors",
+    cl::desc("Precisely poison partially undefined constant vectors. "
+             "If false (legacy behavior), the entire vector is "
+             "considered fully initialized, which may lead to false "
+             "negatives. Fully undefined constant vectors are "
+             "unaffected by this flag (see -msan-poison-undef)."),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClHandleICmp("msan-handle-icmp",
@@ -652,6 +665,7 @@ private:
 
   // These arrays are indexed by log2(AccessSize).
   FunctionCallee MaybeWarningFn[kNumberOfAccessSizes];
+  FunctionCallee MaybeWarningVarSizeFn;
   FunctionCallee MaybeStoreOriginFn[kNumberOfAccessSizes];
 
   /// Run-time helper that generates a new origin value for a stack
@@ -926,7 +940,9 @@ void MemorySanitizer::createUserspaceApi(Module &M,
     MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
         IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty());
-
+    MaybeWarningVarSizeFn = M.getOrInsertFunction(
+        "__msan_maybe_warning_N", TLI.getAttrList(C, {}, /*Signed=*/false),
+        IRB.getVoidTy(), PtrTy, IRB.getInt64Ty(), IRB.getInt32Ty());
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 2}, /*Signed=*/false),
@@ -1181,6 +1197,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   bool PropagateShadow;
   bool PoisonStack;
   bool PoisonUndef;
+  bool PoisonUndefVectors;
 
   struct ShadowOriginAndInsertPoint {
     Value *Shadow;
@@ -1207,6 +1224,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     PropagateShadow = SanitizeFunction;
     PoisonStack = SanitizeFunction && ClPoisonStack;
     PoisonUndef = SanitizeFunction && ClPoisonUndef;
+    PoisonUndefVectors = SanitizeFunction && ClPoisonUndefVectors;
 
     // In the presence of unreachable blocks, we may see Phi nodes with
     // incoming nodes from such blocks. Since InstVisitor skips unreachable
@@ -1233,7 +1251,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Constants likely will be eliminated by follow-up passes.
     if (isa<Constant>(V))
       return false;
-
     ++SplittableBlocksCount;
     return ClInstrumentationWithCallThreshold >= 0 &&
            SplittableBlocksCount > ClInstrumentationWithCallThreshold;
@@ -1432,18 +1449,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const DataLayout &DL = F.getDataLayout();
     TypeSize TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
-    if (instrumentWithCalls(ConvertedShadow) &&
-        SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
-      FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+    if (instrumentWithCalls(ConvertedShadow) && !MS.CompileKernel) {
       // ZExt cannot convert between vector and scalar
       ConvertedShadow = convertShadowToScalar(ConvertedShadow, IRB);
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
-      CallBase *CB = IRB.CreateCall(
-          Fn, {ConvertedShadow2,
-               MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
-      CB->addParamAttr(0, Attribute::ZExt);
-      CB->addParamAttr(1, Attribute::ZExt);
+
+      if (SizeIndex < kNumberOfAccessSizes) {
+        FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+        CallBase *CB = IRB.CreateCall(
+            Fn,
+            {ConvertedShadow2,
+             MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+        CB->addParamAttr(0, Attribute::ZExt);
+        CB->addParamAttr(1, Attribute::ZExt);
+      } else {
+        FunctionCallee Fn = MS.MaybeWarningVarSizeFn;
+        Value *ShadowAlloca = IRB.CreateAlloca(ConvertedShadow2->getType(), 0u);
+        IRB.CreateStore(ConvertedShadow2, ShadowAlloca);
+        unsigned ShadowSize = DL.getTypeAllocSize(ConvertedShadow2->getType());
+        CallBase *CB = IRB.CreateCall(
+            Fn,
+            {ShadowAlloca, ConstantInt::get(IRB.getInt64Ty(), ShadowSize),
+             MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+        CB->addParamAttr(1, Attribute::ZExt);
+        CB->addParamAttr(2, Attribute::ZExt);
+      }
     } else {
       Value *Cmp = convertToBool(ConvertedShadow, IRB, "_mscmp");
       Instruction *CheckTerm = SplitBlockAndInsertIfThen(
@@ -1989,6 +2020,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
       return Shadow;
     }
+    // Handle fully undefined values
+    // (partially undefined constant vectors are handled later)
     if (UndefValue *U = dyn_cast<UndefValue>(V)) {
       Value *AllOnes = (PropagateShadow && PoisonUndef) ? getPoisonedShadow(V)
                                                         : getCleanShadow(V);
@@ -2086,8 +2119,27 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return ShadowPtr;
     }
 
-    // TODO: Partially undefined vectors are handled by the fall-through case
-    //       below (see partial-poison.ll); this causes false negatives.
+    // Check for partially-undefined constant vectors
+    // TODO: scalable vectors (this is hard because we do not have IRBuilder)
+    if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V) &&
+        cast<Constant>(V)->containsUndefOrPoisonElement() && PropagateShadow &&
+        PoisonUndefVectors) {
+      unsigned NumElems = cast<FixedVectorType>(V->getType())->getNumElements();
+      SmallVector<Constant *, 32> ShadowVector(NumElems);
+      for (unsigned i = 0; i != NumElems; ++i) {
+        Constant *Elem = cast<Constant>(V)->getAggregateElement(i);
+        ShadowVector[i] = isa<UndefValue>(Elem) ? getPoisonedShadow(Elem)
+                                                : getCleanShadow(Elem);
+      }
+
+      Value *ShadowConstant = ConstantVector::get(ShadowVector);
+      LLVM_DEBUG(dbgs() << "Partial undef constant vector: " << *V << " ==> "
+                        << *ShadowConstant << "\n");
+
+      return ShadowConstant;
+    }
+
+    // TODO: partially-undefined constant arrays, structures, and nested types
 
     // For everything else the shadow is zero.
     return getCleanShadow(V);
