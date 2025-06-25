@@ -531,9 +531,7 @@ LogicalResult TransposeLoadOp::verify() {
   if (!hasWorkgroupMemorySpace(srcType.getMemorySpace()))
     return emitOpError("source memory address space must be Workgroup");
 
-  auto transferType = dyn_cast<VectorType>(getType());
-  if (!transferType)
-    return emitOpError("destination type must be a vector type");
+  auto transferType = cast<VectorType>(getType());
   size_t numElements = transferType.getNumElements();
   size_t elementTypeSize =
       transferType.getElementType().getIntOrFloatBitWidth();
