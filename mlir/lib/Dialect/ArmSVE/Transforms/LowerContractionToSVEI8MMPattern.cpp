@@ -9,6 +9,11 @@
 // This file implements lowering patterns from vector.contract to operations
 // that map to instructions from the SVE FEAT_I8MM extension.
 //
+// TODO: There may be opportunities to unify this with a similar pattern
+// for Neon. See:
+//   https://github.com/llvm/llvm-project/issues/145559
+//   LowerContractionToNeonI8MMPattern.cpp
+//
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
