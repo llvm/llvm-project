@@ -452,6 +452,7 @@ def AArch64fmlsidx : PatFrags<(ops node:$acc, node:$op1, node:$op2, node:$idx),
                               [(AArch64fmla_p (SVEAllActive), node:$acc, (AArch64fneg_mt(SVEAllActive), node:$op1, (undef)), (int_aarch64_sve_dup_laneq node:$op2, node:$idx)),
                                (int_aarch64_sve_fmls_lane node:$acc, node:$op1, node:$op2, node:$idx)]>;
 
+
 def AArch64fnmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                               [(int_aarch64_sve_fnmla_u node:$pg, node:$za, node:$zn, node:$zm),
                                (AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef))),
@@ -574,7 +575,6 @@ def AArch64fmul : PatFrags<(ops node:$op1, node:$op2),
 
 def AArch64fmulidx : PatFrags<(ops node:$op1, node:$op2, node:$idx),
                               [(AArch64fmul node:$op1, (int_aarch64_sve_dup_laneq node:$op2, node:$idx)),
-                               (AArch64fmul (int_aarch64_sve_dup_laneq node:$op2, node:$idx), node:$op1),
                                (int_aarch64_sve_fmul_lane node:$op1, node:$op2, node:$idx)]>;
 
 def AArch64fsub : PatFrags<(ops node:$op1, node:$op2),
@@ -902,9 +902,9 @@ let Predicates = [HasSVE_or_SME] in {
             (FMLA_ZZZI_D $Acc, $L, $R, 0)>;
   def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, nxv2f64:$L, (AArch64trn2 nxv2f64:$R, nxv2f64:$R))),
             (FMLA_ZZZI_D $Acc, $L, $R, 1)>;
-  def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, (AArch64fneg_mt (SVEAllActive), nxv2f64:$L, (undef)), (AArch64trn1 nxv2f64:$R, nxv2f64:$R))),
+  def : Pat<(nxv2f64 (AArch64fmls_p (SVEAllActive), nxv2f64:$Acc, nxv2f64:$L, (AArch64trn1 nxv2f64:$R, nxv2f64:$R))),
             (FMLS_ZZZI_D $Acc, $L, $R, 0)>;
-  def : Pat<(nxv2f64 (AArch64fmla_p (SVEAllActive), nxv2f64:$Acc, (AArch64fneg_mt (SVEAllActive), nxv2f64:$L, (undef)), (AArch64trn2 nxv2f64:$R, nxv2f64:$R))),
+  def : Pat<(nxv2f64 (AArch64fmls_p (SVEAllActive), nxv2f64:$Acc, nxv2f64:$L, (AArch64trn2 nxv2f64:$R, nxv2f64:$R))),
             (FMLS_ZZZI_D $Acc, $L, $R, 1)>;
 } // End HasSVE_or_SME
 
