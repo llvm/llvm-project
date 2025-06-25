@@ -553,7 +553,7 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
 //        size.
 //   4. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
 //      SIZED_CONTAINER_OR_VIEW_LIST.
-//   5. `isPtrBufferSafe` returns true of the two arguments of the span
+//   5. `isPtrBufferSafe` returns true for the two arguments of the span
 //      constructor
 static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
                                         ASTContext &Ctx) {
