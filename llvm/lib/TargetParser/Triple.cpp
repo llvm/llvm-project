@@ -1018,10 +1018,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
 ///
 /// This stores the string representation and parses the various pieces into
 /// enum members.
-Triple::Triple(const Twine &Str)
-    : Data(Str.str()), Arch(UnknownArch), SubArch(NoSubArch),
-      Vendor(UnknownVendor), OS(UnknownOS), Environment(UnknownEnvironment),
-      ObjectFormat(UnknownObjectFormat) {
+Triple::Triple(const Twine &Str) : Data(Str.str()) {
   // Do minimal parsing by hand here.
   SmallVector<StringRef, 4> Components;
   StringRef(Data).split(Components, '-', /*MaxSplit*/ 3);
