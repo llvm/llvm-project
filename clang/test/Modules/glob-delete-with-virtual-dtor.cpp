@@ -5,7 +5,7 @@
 #include "glob-delete-with-virtual-dtor.h"
 
 static void call_in_module_function(void) {
-    in_pch_tests();
+    in_h_tests();
 }
 
 void out_of_module_tests() {

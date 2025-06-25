@@ -1,5 +1,4 @@
-
-class H { 
+class H {
   void operator delete(void *);
 public:
   virtual ~H();
@@ -13,7 +12,7 @@ public:
 };
 S::~S() { }
 
-void in_pch_tests() {
+void in_h_tests() {
   H* h = new H();
   ::delete h;
 }

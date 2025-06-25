@@ -1,5 +1,4 @@
-
-class H { 
+class H {
   void operator delete(void *);
 public:
   virtual ~H();
