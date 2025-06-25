@@ -67,26 +67,34 @@ fcvt.s.w ft0, a0
 # CHECK-NEXT: [5]   - Andes45FMV
 # CHECK-NEXT: [6]   - Andes45LSU
 # CHECK-NEXT: [7]   - Andes45MDU
+# CHECK-NEXT: [8]   - Andes45VALU
+# CHECK-NEXT: [9]   - Andes45VDIV
+# CHECK-NEXT: [10]  - Andes45VFDIV
+# CHECK-NEXT: [11]  - Andes45VFMIS
+# CHECK-NEXT: [12]  - Andes45VLSU
+# CHECK-NEXT: [13]  - Andes45VMAC
+# CHECK-NEXT: [14]  - Andes45VMASK
+# CHECK-NEXT: [15]  - Andes45VPERMUT
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -      -     56.00  4.00   4.00   2.00    -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -     56.00  4.00   4.00   2.00    -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     fadd.s	ft0, fa0, fa1
-# CHECK-NEXT:  -      -      -     19.00   -      -      -      -      -     fdiv.s	ft0, fa0, fa1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     fadd.s	ft0, fa0, fa1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     fmul.s	ft0, fa0, fa1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     fmadd.s	ft0, fa0, fa1, fa2
-# CHECK-NEXT:  -      -      -     19.00   -      -      -      -      -     fdiv.s	ft0, fa0, fa1
-# CHECK-NEXT:  -      -      -     18.00   -      -      -      -      -     fsqrt.s	ft0, fa0
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fsgnj.s	ft0, fa0, fa1
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fmv.x.w	a0, fa0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -     fmin.s	ft0, fa0, fa1
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -     fclass.s	a0, fa0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -     feq.s	a0, fa0, fa1
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -     fcvt.s.w	ft0, a0
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fadd.s	ft0, fa0, fa1
+# CHECK-NEXT:  -      -      -     19.00   -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv.s	ft0, fa0, fa1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fadd.s	ft0, fa0, fa1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fmul.s	ft0, fa0, fa1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fmadd.s	ft0, fa0, fa1, fa2
+# CHECK-NEXT:  -      -      -     19.00   -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv.s	ft0, fa0, fa1
+# CHECK-NEXT:  -      -      -     18.00   -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt.s	ft0, fa0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -     fsgnj.s	ft0, fa0, fa1
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -     fmv.x.w	a0, fa0
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     fmin.s	ft0, fa0, fa1
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     fclass.s	a0, fa0
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     feq.s	a0, fa0, fa1
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     fcvt.s.w	ft0, a0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789
