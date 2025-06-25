@@ -823,21 +823,21 @@ AArch64TargetInfo::getTargetBuiltins() const {
 
 std::optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                  ArmStreamingKind IsArmStreamingFunction,
+                                  ArmStreamingKind Mode,
                                   llvm::StringMap<bool> *FeatureMap) const {
-  if (IsArmStreamingFunction == ArmStreamingKind::NotStreaming &&
+  if (Mode == ArmStreamingKind::NotStreaming &&
       (LangOpts.VScaleMin || LangOpts.VScaleMax))
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleMin ? LangOpts.VScaleMin : 1,
         LangOpts.VScaleMax ? LangOpts.VScaleMax : 16);
 
-  if (IsArmStreamingFunction == ArmStreamingKind::Streaming &&
+  if (Mode == ArmStreamingKind::Streaming &&
       (LangOpts.VScaleStreamingMin || LangOpts.VScaleStreamingMax))
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleStreamingMin ? LangOpts.VScaleStreamingMin : 1,
         LangOpts.VScaleStreamingMax ? LangOpts.VScaleStreamingMax : 16);
 
-  if (IsArmStreamingFunction == ArmStreamingKind::StreamingCompatible &&
+  if (Mode == ArmStreamingKind::StreamingCompatible &&
       ((LangOpts.VScaleMin && LangOpts.VScaleStreamingMin) ||
        (LangOpts.VScaleMax && LangOpts.VScaleStreamingMax))) {
     unsigned Min =
@@ -852,7 +852,7 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
   if (hasFeature("sve") || (FeatureMap && (FeatureMap->lookup("sve"))))
     return std::pair<unsigned, unsigned>(1, 16);
 
-  if (IsArmStreamingFunction == ArmStreamingKind::Streaming &&
+  if (Mode == ArmStreamingKind::Streaming &&
       (hasFeature("sme") || (FeatureMap && (FeatureMap->lookup("sme")))))
     return std::pair<unsigned, unsigned>(1, 16);
 
