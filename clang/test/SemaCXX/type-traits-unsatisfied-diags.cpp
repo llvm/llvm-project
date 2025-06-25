@@ -559,3 +559,78 @@ static_assert(__is_assignable(C1, C1));
 // expected-note@#ama-C1 {{implicitly declared private here}} \
 // expected-note@#a-C1 {{'C1' defined here}}
 }
+
+namespace is_empty_tests {
+    // Non-static data member.
+    struct A { int x; }; // #e-A
+    static_assert(__is_empty(A));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::A)'}} \
+    // expected-note@-1 {{'A' is not empty}} \
+    // expected-note@-1 {{because it has a non-static data member 'x' of type 'int'}} \
+    // expected-note@#e-A {{'A' defined here}}
+
+    // Reference member.
+    struct R {int &r; }; // #e-R
+    static_assert(__is_empty(R));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::R)'}} \
+    // expected-note@-1 {{'R' is not empty}} \
+    // expected-note@-1 {{because it has a non-static data member 'r' of type 'int &'}} \
+    // expected-note@#e-R {{'R' defined here}}
+
+    // Virtual function.
+    struct VirtualFunc {virtual void f(); }; // #e-VirtualFunc
+    static_assert(__is_empty(VirtualFunc));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::VirtualFunc)'}} \
+    // expected-note@-1 {{'VirtualFunc' is not empty}} \
+    // expected-note@-1 {{because it has a virtual function 'f'}} \
+    // expected-note@#e-VirtualFunc {{'VirtualFunc' defined here}}
+
+    // Virtual base class.
+    struct EB {};
+    struct VB: virtual EB {}; // #e-VB
+    static_assert(__is_empty(VB));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::VB)'}} \
+    // expected-note@-1 {{'VB' is not empty}} \
+    // expected-note@-1 {{because it has a virtual base 'EB'}} \
+    // expected-note@#e-VB {{'VB' defined here}}
+
+    // Non-empty base class.
+    struct Base { int b; }; // #e-Base
+    struct Derived : Base {}; // #e-Derived
+    static_assert(__is_empty(Derived));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::Derived)'}} \
+    // expected-note@-1 {{'Derived' is not empty}} \
+    // expected-note@-1 {{because it has a base class 'Base' that is not empty}} \
+    // expected-note@#e-Derived {{'Derived' defined here}} 
+
+    // Combination of the above.
+    struct Multi : Base, virtual EB { // #e-Multi
+        int z;
+        virtual void g();
+    };
+    static_assert(__is_empty(Multi));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::Multi)'}} \
+    // expected-note@-1 {{'Multi' is not empty}} \
+    // expected-note@-1 {{because it has a non-static data member 'z' of type 'int'}} \
+    // expected-note@-1 {{because it has a virtual function 'g'}} \
+    // expected-note@-1 {{because it has a base class 'Base' that is not empty}} \
+    // expected-note@-1 {{because it has a virtual base 'EB'}} \
+    // expected-note@#e-Multi {{'Multi' defined here}}
+
+    // Zero-width bit-field.
+    struct BitField { int : 0; }; // #e-BitField
+    static_assert(__is_empty(BitField)); // no diagnostics  
+
+    // Dependent bit-field width. 
+    template <int N>
+    struct DependentBitField { int : N; }; // #e-DependentBitField
+
+    static_assert(__is_empty(DependentBitField<0>)); // no diagnostics
+
+    static_assert(__is_empty(DependentBitField<2>)); 
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::DependentBitField<2>)'}} \
+    // expected-note@-1 {{'DependentBitField<2>' is not empty}} \
+    // expected-note@-1 {{because it field '' is a non-zero-length bit-field}} \
+    // expected-note@#e-DependentBitField {{'DependentBitField<2>' defined here}}
+
+}
