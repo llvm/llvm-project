@@ -84,18 +84,19 @@ namespace llvm {
       assert(begin <= end);
     }
 
-    /// Construct an ArrayRef from a SmallVector. This is templated in order to
-    /// avoid instantiating SmallVectorTemplateCommon<T> whenever we
-    /// copy-construct an ArrayRef.
-    template<typename U>
-    /*implicit*/ ArrayRef(const SmallVectorTemplateCommon<T, U> &Vec)
-      : Data(Vec.data()), Length(Vec.size()) {
-    }
-
-    /// Construct an ArrayRef from a std::vector.
-    template<typename A>
-    /*implicit*/ ArrayRef(const std::vector<T, A> &Vec)
-      : Data(Vec.data()), Length(Vec.size()) {}
+    /// Construct an ArrayRef from a type that has a data() method that returns
+    /// a pointer convertible to const T *.
+    template <
+        typename C,
+        typename = std::enable_if_t<
+            std::conjunction_v<
+                std::is_convertible<
+                    decltype(std::declval<const C &>().data()) *,
+                    const T *const *>,
+                std::is_integral<decltype(std::declval<const C &>().size())>>,
+            void>>
+    /*implicit*/ constexpr ArrayRef(const C &V)
+        : Data(V.data()), Length(V.size()) {}
 
     /// Construct an ArrayRef from a std::array
     template <size_t N>
@@ -122,32 +123,6 @@ namespace llvm {
 #if LLVM_GNUC_PREREQ(9, 0, 0)
 #pragma GCC diagnostic pop
 #endif
-
-    /// Construct an ArrayRef<const T*> from ArrayRef<T*>. This uses SFINAE to
-    /// ensure that only ArrayRefs of pointers can be converted.
-    template <typename U>
-    ArrayRef(const ArrayRef<U *> &A,
-             std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
-                 * = nullptr)
-        : Data(A.data()), Length(A.size()) {}
-
-    /// Construct an ArrayRef<const T*> from a SmallVector<T*>. This is
-    /// templated in order to avoid instantiating SmallVectorTemplateCommon<T>
-    /// whenever we copy-construct an ArrayRef.
-    template <typename U, typename DummyT>
-    /*implicit*/ ArrayRef(
-        const SmallVectorTemplateCommon<U *, DummyT> &Vec,
-        std::enable_if_t<std::is_convertible<U *const *, T const *>::value> * =
-            nullptr)
-        : Data(Vec.data()), Length(Vec.size()) {}
-
-    /// Construct an ArrayRef<const T*> from std::vector<T*>. This uses SFINAE
-    /// to ensure that only vectors of pointers can be converted.
-    template <typename U, typename A>
-    ArrayRef(const std::vector<U *, A> &Vec,
-             std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
-                 * = nullptr)
-        : Data(Vec.data()), Length(Vec.size()) {}
 
     /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
     /// to ensure that this is only used for iterator ranges over plain pointer
