@@ -2376,7 +2376,7 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
           << FirstField;
 
       // No need to check further fields, as we already found mixed access.
-      return;
+      break;
     }
   }
   if (hasMultipleDataBaseClassesWithFields(D)) {
