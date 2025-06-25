@@ -19,11 +19,17 @@ body:             |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $agpr0
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $agpr0
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr14
   ; GCN-NEXT:   $sgpr4_sgpr5 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   $vgpr63 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr63, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION offset $agpr0, 0
   ; GCN-NEXT:   $exec = S_MOV_B64 -1
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr62, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr62, 256
   ; GCN-NEXT:   $exec = S_MOV_B64 killed $sgpr4_sgpr5
   ; GCN-NEXT:   renamable $vgpr62 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr15, 0, killed $vgpr62

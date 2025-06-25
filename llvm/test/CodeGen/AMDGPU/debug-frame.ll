@@ -22,6 +22,8 @@ define hidden void @func_no_clobber() #0 {
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; CHECK-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -33,9 +35,183 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX900:       .Lfunc_begin2:
 ; GFX900-NEXT:    .cfi_startproc
 ; GFX900-NEXT:  ; %bb.0:
+; GFX900-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX900-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GFX900-NEXT:    .cfi_undefined 2560
+; GFX900-NEXT:    .cfi_undefined 2561
+; GFX900-NEXT:    .cfi_undefined 2562
+; GFX900-NEXT:    .cfi_undefined 2563
+; GFX900-NEXT:    .cfi_undefined 2564
+; GFX900-NEXT:    .cfi_undefined 2565
+; GFX900-NEXT:    .cfi_undefined 2566
+; GFX900-NEXT:    .cfi_undefined 2567
+; GFX900-NEXT:    .cfi_undefined 2568
+; GFX900-NEXT:    .cfi_undefined 2569
+; GFX900-NEXT:    .cfi_undefined 2570
+; GFX900-NEXT:    .cfi_undefined 2571
+; GFX900-NEXT:    .cfi_undefined 2572
+; GFX900-NEXT:    .cfi_undefined 2573
+; GFX900-NEXT:    .cfi_undefined 2574
+; GFX900-NEXT:    .cfi_undefined 2575
+; GFX900-NEXT:    .cfi_undefined 2576
+; GFX900-NEXT:    .cfi_undefined 2577
+; GFX900-NEXT:    .cfi_undefined 2578
+; GFX900-NEXT:    .cfi_undefined 2579
+; GFX900-NEXT:    .cfi_undefined 2580
+; GFX900-NEXT:    .cfi_undefined 2581
+; GFX900-NEXT:    .cfi_undefined 2582
+; GFX900-NEXT:    .cfi_undefined 2583
+; GFX900-NEXT:    .cfi_undefined 2584
+; GFX900-NEXT:    .cfi_undefined 2585
+; GFX900-NEXT:    .cfi_undefined 2586
+; GFX900-NEXT:    .cfi_undefined 2587
+; GFX900-NEXT:    .cfi_undefined 2588
+; GFX900-NEXT:    .cfi_undefined 2589
+; GFX900-NEXT:    .cfi_undefined 2590
+; GFX900-NEXT:    .cfi_undefined 2591
+; GFX900-NEXT:    .cfi_undefined 2592
+; GFX900-NEXT:    .cfi_undefined 2593
+; GFX900-NEXT:    .cfi_undefined 2594
+; GFX900-NEXT:    .cfi_undefined 2595
+; GFX900-NEXT:    .cfi_undefined 2596
+; GFX900-NEXT:    .cfi_undefined 2597
+; GFX900-NEXT:    .cfi_undefined 2598
+; GFX900-NEXT:    .cfi_undefined 2599
+; GFX900-NEXT:    .cfi_undefined 2608
+; GFX900-NEXT:    .cfi_undefined 2609
+; GFX900-NEXT:    .cfi_undefined 2610
+; GFX900-NEXT:    .cfi_undefined 2611
+; GFX900-NEXT:    .cfi_undefined 2612
+; GFX900-NEXT:    .cfi_undefined 2613
+; GFX900-NEXT:    .cfi_undefined 2614
+; GFX900-NEXT:    .cfi_undefined 2615
+; GFX900-NEXT:    .cfi_undefined 2624
+; GFX900-NEXT:    .cfi_undefined 2625
+; GFX900-NEXT:    .cfi_undefined 2626
+; GFX900-NEXT:    .cfi_undefined 2627
+; GFX900-NEXT:    .cfi_undefined 2628
+; GFX900-NEXT:    .cfi_undefined 2629
+; GFX900-NEXT:    .cfi_undefined 2630
+; GFX900-NEXT:    .cfi_undefined 2631
+; GFX900-NEXT:    .cfi_undefined 2640
+; GFX900-NEXT:    .cfi_undefined 2641
+; GFX900-NEXT:    .cfi_undefined 2642
+; GFX900-NEXT:    .cfi_undefined 2643
+; GFX900-NEXT:    .cfi_undefined 2644
+; GFX900-NEXT:    .cfi_undefined 2645
+; GFX900-NEXT:    .cfi_undefined 2646
+; GFX900-NEXT:    .cfi_undefined 2647
+; GFX900-NEXT:    .cfi_undefined 2656
+; GFX900-NEXT:    .cfi_undefined 2657
+; GFX900-NEXT:    .cfi_undefined 2658
+; GFX900-NEXT:    .cfi_undefined 2659
+; GFX900-NEXT:    .cfi_undefined 2660
+; GFX900-NEXT:    .cfi_undefined 2661
+; GFX900-NEXT:    .cfi_undefined 2662
+; GFX900-NEXT:    .cfi_undefined 2663
+; GFX900-NEXT:    .cfi_undefined 2672
+; GFX900-NEXT:    .cfi_undefined 2673
+; GFX900-NEXT:    .cfi_undefined 2674
+; GFX900-NEXT:    .cfi_undefined 2675
+; GFX900-NEXT:    .cfi_undefined 2676
+; GFX900-NEXT:    .cfi_undefined 2677
+; GFX900-NEXT:    .cfi_undefined 2678
+; GFX900-NEXT:    .cfi_undefined 2679
+; GFX900-NEXT:    .cfi_undefined 2688
+; GFX900-NEXT:    .cfi_undefined 2689
+; GFX900-NEXT:    .cfi_undefined 2690
+; GFX900-NEXT:    .cfi_undefined 2691
+; GFX900-NEXT:    .cfi_undefined 2692
+; GFX900-NEXT:    .cfi_undefined 2693
+; GFX900-NEXT:    .cfi_undefined 2694
+; GFX900-NEXT:    .cfi_undefined 2695
+; GFX900-NEXT:    .cfi_undefined 2704
+; GFX900-NEXT:    .cfi_undefined 2705
+; GFX900-NEXT:    .cfi_undefined 2706
+; GFX900-NEXT:    .cfi_undefined 2707
+; GFX900-NEXT:    .cfi_undefined 2708
+; GFX900-NEXT:    .cfi_undefined 2709
+; GFX900-NEXT:    .cfi_undefined 2710
+; GFX900-NEXT:    .cfi_undefined 2711
+; GFX900-NEXT:    .cfi_undefined 2720
+; GFX900-NEXT:    .cfi_undefined 2721
+; GFX900-NEXT:    .cfi_undefined 2722
+; GFX900-NEXT:    .cfi_undefined 2723
+; GFX900-NEXT:    .cfi_undefined 2724
+; GFX900-NEXT:    .cfi_undefined 2725
+; GFX900-NEXT:    .cfi_undefined 2726
+; GFX900-NEXT:    .cfi_undefined 2727
+; GFX900-NEXT:    .cfi_undefined 2736
+; GFX900-NEXT:    .cfi_undefined 2737
+; GFX900-NEXT:    .cfi_undefined 2738
+; GFX900-NEXT:    .cfi_undefined 2739
+; GFX900-NEXT:    .cfi_undefined 2740
+; GFX900-NEXT:    .cfi_undefined 2741
+; GFX900-NEXT:    .cfi_undefined 2742
+; GFX900-NEXT:    .cfi_undefined 2743
+; GFX900-NEXT:    .cfi_undefined 2752
+; GFX900-NEXT:    .cfi_undefined 2753
+; GFX900-NEXT:    .cfi_undefined 2754
+; GFX900-NEXT:    .cfi_undefined 2755
+; GFX900-NEXT:    .cfi_undefined 2756
+; GFX900-NEXT:    .cfi_undefined 2757
+; GFX900-NEXT:    .cfi_undefined 2758
+; GFX900-NEXT:    .cfi_undefined 2759
+; GFX900-NEXT:    .cfi_undefined 2768
+; GFX900-NEXT:    .cfi_undefined 2769
+; GFX900-NEXT:    .cfi_undefined 2770
+; GFX900-NEXT:    .cfi_undefined 2771
+; GFX900-NEXT:    .cfi_undefined 2772
+; GFX900-NEXT:    .cfi_undefined 2773
+; GFX900-NEXT:    .cfi_undefined 2774
+; GFX900-NEXT:    .cfi_undefined 2775
+; GFX900-NEXT:    .cfi_undefined 2784
+; GFX900-NEXT:    .cfi_undefined 2785
+; GFX900-NEXT:    .cfi_undefined 2786
+; GFX900-NEXT:    .cfi_undefined 2787
+; GFX900-NEXT:    .cfi_undefined 2788
+; GFX900-NEXT:    .cfi_undefined 2789
+; GFX900-NEXT:    .cfi_undefined 2790
+; GFX900-NEXT:    .cfi_undefined 2791
+; GFX900-NEXT:    .cfi_undefined 2800
+; GFX900-NEXT:    .cfi_undefined 2801
+; GFX900-NEXT:    .cfi_undefined 2802
+; GFX900-NEXT:    .cfi_undefined 2803
+; GFX900-NEXT:    .cfi_undefined 2804
+; GFX900-NEXT:    .cfi_undefined 2805
+; GFX900-NEXT:    .cfi_undefined 2806
+; GFX900-NEXT:    .cfi_undefined 2807
+; GFX900-NEXT:    .cfi_undefined 36
+; GFX900-NEXT:    .cfi_undefined 37
+; GFX900-NEXT:    .cfi_undefined 38
+; GFX900-NEXT:    .cfi_undefined 39
+; GFX900-NEXT:    .cfi_undefined 40
+; GFX900-NEXT:    .cfi_undefined 41
+; GFX900-NEXT:    .cfi_undefined 42
+; GFX900-NEXT:    .cfi_undefined 43
+; GFX900-NEXT:    .cfi_undefined 44
+; GFX900-NEXT:    .cfi_undefined 45
+; GFX900-NEXT:    .cfi_undefined 46
+; GFX900-NEXT:    .cfi_undefined 47
+; GFX900-NEXT:    .cfi_undefined 48
+; GFX900-NEXT:    .cfi_undefined 49
+; GFX900-NEXT:    .cfi_undefined 50
+; GFX900-NEXT:    .cfi_undefined 51
+; GFX900-NEXT:    .cfi_undefined 52
+; GFX900-NEXT:    .cfi_undefined 53
+; GFX900-NEXT:    .cfi_undefined 54
+; GFX900-NEXT:    .cfi_undefined 55
+; GFX900-NEXT:    .cfi_undefined 56
+; GFX900-NEXT:    .cfi_undefined 57
+; GFX900-NEXT:    .cfi_undefined 58
+; GFX900-NEXT:    .cfi_undefined 59
+; GFX900-NEXT:    .cfi_undefined 60
+; GFX900-NEXT:    .cfi_undefined 61
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_mov_b32 s40, s33
+; GFX900-NEXT:    .cfi_register 65, 72
 ; GFX900-NEXT:    s_mov_b32 s33, s32
+; GFX900-NEXT:    .cfi_def_cfa_register 65
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
@@ -268,6 +444,7 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX900-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_addk_i32 s32, 0x7100
 ; GFX900-NEXT:    s_mov_b32 s32, s33
+; GFX900-NEXT:    .cfi_def_cfa_register 64
 ; GFX900-NEXT:    s_mov_b32 s33, s40
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -276,9 +453,183 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-DIS:       .Lfunc_begin2:
 ; GFX90A-V2A-DIS-NEXT:    .cfi_startproc
 ; GFX90A-V2A-DIS-NEXT:  ; %bb.0:
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2560
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2561
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2562
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2563
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2564
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2565
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2566
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2567
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2568
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2569
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2570
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2571
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2572
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2573
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2574
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2575
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2576
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2577
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2578
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2579
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2580
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2581
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2582
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2583
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2584
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2585
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2586
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2587
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2588
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2589
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2590
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2591
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2592
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2593
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2594
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2595
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2596
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2597
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2598
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2599
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2608
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2609
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2610
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2611
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2612
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2613
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2614
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2615
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2624
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2625
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2626
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2627
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2628
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2629
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2630
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2631
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2640
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2641
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2642
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2643
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2644
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2645
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2646
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2647
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2656
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2657
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2658
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2659
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2660
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2661
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2662
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2663
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2672
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2673
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2674
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2675
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2676
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2677
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2678
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2679
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2688
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2689
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2690
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2691
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2692
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2693
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2694
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2695
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2704
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2705
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2706
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2707
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2708
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2709
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2710
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2711
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2720
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2721
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2722
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2723
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2724
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2725
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2726
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2727
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2736
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2737
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2738
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2739
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2740
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2741
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2742
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2743
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2752
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2753
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2754
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2755
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2756
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2757
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2758
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2759
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2768
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2769
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2770
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2771
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2772
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2773
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2774
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2775
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2784
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2785
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2786
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2787
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2788
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2789
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2790
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2791
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2800
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2801
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2802
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2803
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2804
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2805
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2806
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2807
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 36
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 37
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 38
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 39
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 40
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 41
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 42
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 43
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 44
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 45
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 46
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 47
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 48
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 49
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 50
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 51
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 52
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 53
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 54
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 55
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 56
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 57
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 58
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 59
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 60
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 61
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s40, s33
+; GFX90A-V2A-DIS-NEXT:    .cfi_register 65, 72
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s32
+; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 65
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
@@ -511,6 +862,7 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
 ; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x7100
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s32, s33
+; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 64
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s40
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    s_setpc_b64 s[30:31]
@@ -519,9 +871,215 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-EN:       .Lfunc_begin2:
 ; GFX90A-V2A-EN-NEXT:    .cfi_startproc
 ; GFX90A-V2A-EN-NEXT:  ; %bb.0:
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2560
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2561
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2562
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2563
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2564
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2565
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2566
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2567
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2568
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2569
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2570
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2571
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2572
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2573
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2574
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2575
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2576
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2577
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2578
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2579
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2580
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2581
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2582
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2583
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2584
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2585
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2586
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2587
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2588
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2589
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2590
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2591
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2592
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2593
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2594
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2595
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2596
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2597
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2598
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2599
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2608
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2609
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2610
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2611
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2612
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2613
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2614
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2615
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2624
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2625
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2626
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2627
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2628
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2629
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2630
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2631
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2640
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2641
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2642
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2643
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2644
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2645
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2646
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2647
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2656
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2657
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2658
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2659
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2660
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2661
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2662
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2663
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2672
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2673
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2674
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2675
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2676
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2677
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2678
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2679
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2688
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2689
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2690
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2691
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2692
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2693
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2694
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2695
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2704
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2705
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2706
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2707
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2708
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2709
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2710
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2711
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2720
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2721
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2722
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2723
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2724
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2725
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2726
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2727
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2736
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2737
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2738
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2739
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2740
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2741
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2742
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2743
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2752
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2753
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2754
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2755
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2756
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2757
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2758
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2759
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2768
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2769
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2770
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2771
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2772
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2773
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2774
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2775
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2784
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2785
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2786
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2787
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2788
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2789
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2790
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2791
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2800
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2801
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2802
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2803
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2804
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2805
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2806
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2807
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3072
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3073
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3074
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3075
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3076
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3077
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3078
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3079
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3080
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3081
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3082
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3083
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3084
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3085
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3086
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3087
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3088
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3089
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3090
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3091
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3092
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3093
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3094
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3095
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3096
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3097
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3098
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3099
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3100
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3101
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3102
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3103
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 36
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 37
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 38
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 39
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 40
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 41
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 42
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 43
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 44
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 45
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 46
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 47
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 48
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 49
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 50
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 51
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 52
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 53
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 54
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 55
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 56
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 57
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 58
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 59
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 60
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 61
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s40, s33
+; GFX90A-V2A-EN-NEXT:    .cfi_register 65, 72
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s32
+; GFX90A-V2A-EN-NEXT:    .cfi_def_cfa_register 65
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
@@ -754,6 +1312,7 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v41, a1 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v40, a0 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s32, s33
+; GFX90A-V2A-EN-NEXT:    .cfi_def_cfa_register 64
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s40
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    s_setpc_b64 s[30:31]
@@ -762,9 +1321,183 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; WAVE32:       .Lfunc_begin2:
 ; WAVE32-NEXT:    .cfi_startproc
 ; WAVE32-NEXT:  ; %bb.0:
+; WAVE32-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; WAVE32-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; WAVE32-NEXT:    .cfi_undefined 1536
+; WAVE32-NEXT:    .cfi_undefined 1537
+; WAVE32-NEXT:    .cfi_undefined 1538
+; WAVE32-NEXT:    .cfi_undefined 1539
+; WAVE32-NEXT:    .cfi_undefined 1540
+; WAVE32-NEXT:    .cfi_undefined 1541
+; WAVE32-NEXT:    .cfi_undefined 1542
+; WAVE32-NEXT:    .cfi_undefined 1543
+; WAVE32-NEXT:    .cfi_undefined 1544
+; WAVE32-NEXT:    .cfi_undefined 1545
+; WAVE32-NEXT:    .cfi_undefined 1546
+; WAVE32-NEXT:    .cfi_undefined 1547
+; WAVE32-NEXT:    .cfi_undefined 1548
+; WAVE32-NEXT:    .cfi_undefined 1549
+; WAVE32-NEXT:    .cfi_undefined 1550
+; WAVE32-NEXT:    .cfi_undefined 1551
+; WAVE32-NEXT:    .cfi_undefined 1552
+; WAVE32-NEXT:    .cfi_undefined 1553
+; WAVE32-NEXT:    .cfi_undefined 1554
+; WAVE32-NEXT:    .cfi_undefined 1555
+; WAVE32-NEXT:    .cfi_undefined 1556
+; WAVE32-NEXT:    .cfi_undefined 1557
+; WAVE32-NEXT:    .cfi_undefined 1558
+; WAVE32-NEXT:    .cfi_undefined 1559
+; WAVE32-NEXT:    .cfi_undefined 1560
+; WAVE32-NEXT:    .cfi_undefined 1561
+; WAVE32-NEXT:    .cfi_undefined 1562
+; WAVE32-NEXT:    .cfi_undefined 1563
+; WAVE32-NEXT:    .cfi_undefined 1564
+; WAVE32-NEXT:    .cfi_undefined 1565
+; WAVE32-NEXT:    .cfi_undefined 1566
+; WAVE32-NEXT:    .cfi_undefined 1567
+; WAVE32-NEXT:    .cfi_undefined 1568
+; WAVE32-NEXT:    .cfi_undefined 1569
+; WAVE32-NEXT:    .cfi_undefined 1570
+; WAVE32-NEXT:    .cfi_undefined 1571
+; WAVE32-NEXT:    .cfi_undefined 1572
+; WAVE32-NEXT:    .cfi_undefined 1573
+; WAVE32-NEXT:    .cfi_undefined 1574
+; WAVE32-NEXT:    .cfi_undefined 1575
+; WAVE32-NEXT:    .cfi_undefined 1584
+; WAVE32-NEXT:    .cfi_undefined 1585
+; WAVE32-NEXT:    .cfi_undefined 1586
+; WAVE32-NEXT:    .cfi_undefined 1587
+; WAVE32-NEXT:    .cfi_undefined 1588
+; WAVE32-NEXT:    .cfi_undefined 1589
+; WAVE32-NEXT:    .cfi_undefined 1590
+; WAVE32-NEXT:    .cfi_undefined 1591
+; WAVE32-NEXT:    .cfi_undefined 1600
+; WAVE32-NEXT:    .cfi_undefined 1601
+; WAVE32-NEXT:    .cfi_undefined 1602
+; WAVE32-NEXT:    .cfi_undefined 1603
+; WAVE32-NEXT:    .cfi_undefined 1604
+; WAVE32-NEXT:    .cfi_undefined 1605
+; WAVE32-NEXT:    .cfi_undefined 1606
+; WAVE32-NEXT:    .cfi_undefined 1607
+; WAVE32-NEXT:    .cfi_undefined 1616
+; WAVE32-NEXT:    .cfi_undefined 1617
+; WAVE32-NEXT:    .cfi_undefined 1618
+; WAVE32-NEXT:    .cfi_undefined 1619
+; WAVE32-NEXT:    .cfi_undefined 1620
+; WAVE32-NEXT:    .cfi_undefined 1621
+; WAVE32-NEXT:    .cfi_undefined 1622
+; WAVE32-NEXT:    .cfi_undefined 1623
+; WAVE32-NEXT:    .cfi_undefined 1632
+; WAVE32-NEXT:    .cfi_undefined 1633
+; WAVE32-NEXT:    .cfi_undefined 1634
+; WAVE32-NEXT:    .cfi_undefined 1635
+; WAVE32-NEXT:    .cfi_undefined 1636
+; WAVE32-NEXT:    .cfi_undefined 1637
+; WAVE32-NEXT:    .cfi_undefined 1638
+; WAVE32-NEXT:    .cfi_undefined 1639
+; WAVE32-NEXT:    .cfi_undefined 1648
+; WAVE32-NEXT:    .cfi_undefined 1649
+; WAVE32-NEXT:    .cfi_undefined 1650
+; WAVE32-NEXT:    .cfi_undefined 1651
+; WAVE32-NEXT:    .cfi_undefined 1652
+; WAVE32-NEXT:    .cfi_undefined 1653
+; WAVE32-NEXT:    .cfi_undefined 1654
+; WAVE32-NEXT:    .cfi_undefined 1655
+; WAVE32-NEXT:    .cfi_undefined 1664
+; WAVE32-NEXT:    .cfi_undefined 1665
+; WAVE32-NEXT:    .cfi_undefined 1666
+; WAVE32-NEXT:    .cfi_undefined 1667
+; WAVE32-NEXT:    .cfi_undefined 1668
+; WAVE32-NEXT:    .cfi_undefined 1669
+; WAVE32-NEXT:    .cfi_undefined 1670
+; WAVE32-NEXT:    .cfi_undefined 1671
+; WAVE32-NEXT:    .cfi_undefined 1680
+; WAVE32-NEXT:    .cfi_undefined 1681
+; WAVE32-NEXT:    .cfi_undefined 1682
+; WAVE32-NEXT:    .cfi_undefined 1683
+; WAVE32-NEXT:    .cfi_undefined 1684
+; WAVE32-NEXT:    .cfi_undefined 1685
+; WAVE32-NEXT:    .cfi_undefined 1686
+; WAVE32-NEXT:    .cfi_undefined 1687
+; WAVE32-NEXT:    .cfi_undefined 1696
+; WAVE32-NEXT:    .cfi_undefined 1697
+; WAVE32-NEXT:    .cfi_undefined 1698
+; WAVE32-NEXT:    .cfi_undefined 1699
+; WAVE32-NEXT:    .cfi_undefined 1700
+; WAVE32-NEXT:    .cfi_undefined 1701
+; WAVE32-NEXT:    .cfi_undefined 1702
+; WAVE32-NEXT:    .cfi_undefined 1703
+; WAVE32-NEXT:    .cfi_undefined 1712
+; WAVE32-NEXT:    .cfi_undefined 1713
+; WAVE32-NEXT:    .cfi_undefined 1714
+; WAVE32-NEXT:    .cfi_undefined 1715
+; WAVE32-NEXT:    .cfi_undefined 1716
+; WAVE32-NEXT:    .cfi_undefined 1717
+; WAVE32-NEXT:    .cfi_undefined 1718
+; WAVE32-NEXT:    .cfi_undefined 1719
+; WAVE32-NEXT:    .cfi_undefined 1728
+; WAVE32-NEXT:    .cfi_undefined 1729
+; WAVE32-NEXT:    .cfi_undefined 1730
+; WAVE32-NEXT:    .cfi_undefined 1731
+; WAVE32-NEXT:    .cfi_undefined 1732
+; WAVE32-NEXT:    .cfi_undefined 1733
+; WAVE32-NEXT:    .cfi_undefined 1734
+; WAVE32-NEXT:    .cfi_undefined 1735
+; WAVE32-NEXT:    .cfi_undefined 1744
+; WAVE32-NEXT:    .cfi_undefined 1745
+; WAVE32-NEXT:    .cfi_undefined 1746
+; WAVE32-NEXT:    .cfi_undefined 1747
+; WAVE32-NEXT:    .cfi_undefined 1748
+; WAVE32-NEXT:    .cfi_undefined 1749
+; WAVE32-NEXT:    .cfi_undefined 1750
+; WAVE32-NEXT:    .cfi_undefined 1751
+; WAVE32-NEXT:    .cfi_undefined 1760
+; WAVE32-NEXT:    .cfi_undefined 1761
+; WAVE32-NEXT:    .cfi_undefined 1762
+; WAVE32-NEXT:    .cfi_undefined 1763
+; WAVE32-NEXT:    .cfi_undefined 1764
+; WAVE32-NEXT:    .cfi_undefined 1765
+; WAVE32-NEXT:    .cfi_undefined 1766
+; WAVE32-NEXT:    .cfi_undefined 1767
+; WAVE32-NEXT:    .cfi_undefined 1776
+; WAVE32-NEXT:    .cfi_undefined 1777
+; WAVE32-NEXT:    .cfi_undefined 1778
+; WAVE32-NEXT:    .cfi_undefined 1779
+; WAVE32-NEXT:    .cfi_undefined 1780
+; WAVE32-NEXT:    .cfi_undefined 1781
+; WAVE32-NEXT:    .cfi_undefined 1782
+; WAVE32-NEXT:    .cfi_undefined 1783
+; WAVE32-NEXT:    .cfi_undefined 36
+; WAVE32-NEXT:    .cfi_undefined 37
+; WAVE32-NEXT:    .cfi_undefined 38
+; WAVE32-NEXT:    .cfi_undefined 39
+; WAVE32-NEXT:    .cfi_undefined 40
+; WAVE32-NEXT:    .cfi_undefined 41
+; WAVE32-NEXT:    .cfi_undefined 42
+; WAVE32-NEXT:    .cfi_undefined 43
+; WAVE32-NEXT:    .cfi_undefined 44
+; WAVE32-NEXT:    .cfi_undefined 45
+; WAVE32-NEXT:    .cfi_undefined 46
+; WAVE32-NEXT:    .cfi_undefined 47
+; WAVE32-NEXT:    .cfi_undefined 48
+; WAVE32-NEXT:    .cfi_undefined 49
+; WAVE32-NEXT:    .cfi_undefined 50
+; WAVE32-NEXT:    .cfi_undefined 51
+; WAVE32-NEXT:    .cfi_undefined 52
+; WAVE32-NEXT:    .cfi_undefined 53
+; WAVE32-NEXT:    .cfi_undefined 54
+; WAVE32-NEXT:    .cfi_undefined 55
+; WAVE32-NEXT:    .cfi_undefined 56
+; WAVE32-NEXT:    .cfi_undefined 57
+; WAVE32-NEXT:    .cfi_undefined 58
+; WAVE32-NEXT:    .cfi_undefined 59
+; WAVE32-NEXT:    .cfi_undefined 60
+; WAVE32-NEXT:    .cfi_undefined 61
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-NEXT:    s_mov_b32 s40, s33
+; WAVE32-NEXT:    .cfi_register 65, 72
 ; WAVE32-NEXT:    s_mov_b32 s33, s32
+; WAVE32-NEXT:    .cfi_def_cfa_register 65
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
@@ -999,6 +1732,7 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; WAVE32-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444
 ; WAVE32-NEXT:    s_addk_i32 s32, 0x3880
 ; WAVE32-NEXT:    s_mov_b32 s32, s33
+; WAVE32-NEXT:    .cfi_def_cfa_register 64
 ; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
 ; WAVE32-NEXT:    s_mov_b32 s33, s40
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
@@ -1046,13 +1780,224 @@ define hidden void @func_call_clobber() #0 {
 ; GFX900:       .Lfunc_begin3:
 ; GFX900-NEXT:    .cfi_startproc
 ; GFX900-NEXT:  ; %bb.0: ; %entry
+; GFX900-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX900-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GFX900-NEXT:    .cfi_undefined 2560
+; GFX900-NEXT:    .cfi_undefined 2561
+; GFX900-NEXT:    .cfi_undefined 2562
+; GFX900-NEXT:    .cfi_undefined 2563
+; GFX900-NEXT:    .cfi_undefined 2564
+; GFX900-NEXT:    .cfi_undefined 2565
+; GFX900-NEXT:    .cfi_undefined 2566
+; GFX900-NEXT:    .cfi_undefined 2567
+; GFX900-NEXT:    .cfi_undefined 2568
+; GFX900-NEXT:    .cfi_undefined 2569
+; GFX900-NEXT:    .cfi_undefined 2570
+; GFX900-NEXT:    .cfi_undefined 2571
+; GFX900-NEXT:    .cfi_undefined 2572
+; GFX900-NEXT:    .cfi_undefined 2573
+; GFX900-NEXT:    .cfi_undefined 2574
+; GFX900-NEXT:    .cfi_undefined 2575
+; GFX900-NEXT:    .cfi_undefined 2576
+; GFX900-NEXT:    .cfi_undefined 2577
+; GFX900-NEXT:    .cfi_undefined 2578
+; GFX900-NEXT:    .cfi_undefined 2579
+; GFX900-NEXT:    .cfi_undefined 2580
+; GFX900-NEXT:    .cfi_undefined 2581
+; GFX900-NEXT:    .cfi_undefined 2582
+; GFX900-NEXT:    .cfi_undefined 2583
+; GFX900-NEXT:    .cfi_undefined 2584
+; GFX900-NEXT:    .cfi_undefined 2585
+; GFX900-NEXT:    .cfi_undefined 2586
+; GFX900-NEXT:    .cfi_undefined 2587
+; GFX900-NEXT:    .cfi_undefined 2588
+; GFX900-NEXT:    .cfi_undefined 2589
+; GFX900-NEXT:    .cfi_undefined 2590
+; GFX900-NEXT:    .cfi_undefined 2591
+; GFX900-NEXT:    .cfi_undefined 2592
+; GFX900-NEXT:    .cfi_undefined 2593
+; GFX900-NEXT:    .cfi_undefined 2594
+; GFX900-NEXT:    .cfi_undefined 2595
+; GFX900-NEXT:    .cfi_undefined 2596
+; GFX900-NEXT:    .cfi_undefined 2597
+; GFX900-NEXT:    .cfi_undefined 2598
+; GFX900-NEXT:    .cfi_undefined 2599
+; GFX900-NEXT:    .cfi_undefined 2608
+; GFX900-NEXT:    .cfi_undefined 2609
+; GFX900-NEXT:    .cfi_undefined 2610
+; GFX900-NEXT:    .cfi_undefined 2611
+; GFX900-NEXT:    .cfi_undefined 2612
+; GFX900-NEXT:    .cfi_undefined 2613
+; GFX900-NEXT:    .cfi_undefined 2614
+; GFX900-NEXT:    .cfi_undefined 2615
+; GFX900-NEXT:    .cfi_undefined 2624
+; GFX900-NEXT:    .cfi_undefined 2625
+; GFX900-NEXT:    .cfi_undefined 2626
+; GFX900-NEXT:    .cfi_undefined 2627
+; GFX900-NEXT:    .cfi_undefined 2628
+; GFX900-NEXT:    .cfi_undefined 2629
+; GFX900-NEXT:    .cfi_undefined 2630
+; GFX900-NEXT:    .cfi_undefined 2631
+; GFX900-NEXT:    .cfi_undefined 2640
+; GFX900-NEXT:    .cfi_undefined 2641
+; GFX900-NEXT:    .cfi_undefined 2642
+; GFX900-NEXT:    .cfi_undefined 2643
+; GFX900-NEXT:    .cfi_undefined 2644
+; GFX900-NEXT:    .cfi_undefined 2645
+; GFX900-NEXT:    .cfi_undefined 2646
+; GFX900-NEXT:    .cfi_undefined 2647
+; GFX900-NEXT:    .cfi_undefined 2656
+; GFX900-NEXT:    .cfi_undefined 2657
+; GFX900-NEXT:    .cfi_undefined 2658
+; GFX900-NEXT:    .cfi_undefined 2659
+; GFX900-NEXT:    .cfi_undefined 2660
+; GFX900-NEXT:    .cfi_undefined 2661
+; GFX900-NEXT:    .cfi_undefined 2662
+; GFX900-NEXT:    .cfi_undefined 2663
+; GFX900-NEXT:    .cfi_undefined 2672
+; GFX900-NEXT:    .cfi_undefined 2673
+; GFX900-NEXT:    .cfi_undefined 2674
+; GFX900-NEXT:    .cfi_undefined 2675
+; GFX900-NEXT:    .cfi_undefined 2676
+; GFX900-NEXT:    .cfi_undefined 2677
+; GFX900-NEXT:    .cfi_undefined 2678
+; GFX900-NEXT:    .cfi_undefined 2679
+; GFX900-NEXT:    .cfi_undefined 2688
+; GFX900-NEXT:    .cfi_undefined 2689
+; GFX900-NEXT:    .cfi_undefined 2690
+; GFX900-NEXT:    .cfi_undefined 2691
+; GFX900-NEXT:    .cfi_undefined 2692
+; GFX900-NEXT:    .cfi_undefined 2693
+; GFX900-NEXT:    .cfi_undefined 2694
+; GFX900-NEXT:    .cfi_undefined 2695
+; GFX900-NEXT:    .cfi_undefined 2704
+; GFX900-NEXT:    .cfi_undefined 2705
+; GFX900-NEXT:    .cfi_undefined 2706
+; GFX900-NEXT:    .cfi_undefined 2707
+; GFX900-NEXT:    .cfi_undefined 2708
+; GFX900-NEXT:    .cfi_undefined 2709
+; GFX900-NEXT:    .cfi_undefined 2710
+; GFX900-NEXT:    .cfi_undefined 2711
+; GFX900-NEXT:    .cfi_undefined 2720
+; GFX900-NEXT:    .cfi_undefined 2721
+; GFX900-NEXT:    .cfi_undefined 2722
+; GFX900-NEXT:    .cfi_undefined 2723
+; GFX900-NEXT:    .cfi_undefined 2724
+; GFX900-NEXT:    .cfi_undefined 2725
+; GFX900-NEXT:    .cfi_undefined 2726
+; GFX900-NEXT:    .cfi_undefined 2727
+; GFX900-NEXT:    .cfi_undefined 2736
+; GFX900-NEXT:    .cfi_undefined 2737
+; GFX900-NEXT:    .cfi_undefined 2738
+; GFX900-NEXT:    .cfi_undefined 2739
+; GFX900-NEXT:    .cfi_undefined 2740
+; GFX900-NEXT:    .cfi_undefined 2741
+; GFX900-NEXT:    .cfi_undefined 2742
+; GFX900-NEXT:    .cfi_undefined 2743
+; GFX900-NEXT:    .cfi_undefined 2752
+; GFX900-NEXT:    .cfi_undefined 2753
+; GFX900-NEXT:    .cfi_undefined 2754
+; GFX900-NEXT:    .cfi_undefined 2755
+; GFX900-NEXT:    .cfi_undefined 2756
+; GFX900-NEXT:    .cfi_undefined 2757
+; GFX900-NEXT:    .cfi_undefined 2758
+; GFX900-NEXT:    .cfi_undefined 2759
+; GFX900-NEXT:    .cfi_undefined 2768
+; GFX900-NEXT:    .cfi_undefined 2769
+; GFX900-NEXT:    .cfi_undefined 2770
+; GFX900-NEXT:    .cfi_undefined 2771
+; GFX900-NEXT:    .cfi_undefined 2772
+; GFX900-NEXT:    .cfi_undefined 2773
+; GFX900-NEXT:    .cfi_undefined 2774
+; GFX900-NEXT:    .cfi_undefined 2775
+; GFX900-NEXT:    .cfi_undefined 2784
+; GFX900-NEXT:    .cfi_undefined 2785
+; GFX900-NEXT:    .cfi_undefined 2786
+; GFX900-NEXT:    .cfi_undefined 2787
+; GFX900-NEXT:    .cfi_undefined 2788
+; GFX900-NEXT:    .cfi_undefined 2789
+; GFX900-NEXT:    .cfi_undefined 2790
+; GFX900-NEXT:    .cfi_undefined 2791
+; GFX900-NEXT:    .cfi_undefined 2800
+; GFX900-NEXT:    .cfi_undefined 2801
+; GFX900-NEXT:    .cfi_undefined 2802
+; GFX900-NEXT:    .cfi_undefined 2803
+; GFX900-NEXT:    .cfi_undefined 2804
+; GFX900-NEXT:    .cfi_undefined 2805
+; GFX900-NEXT:    .cfi_undefined 2806
+; GFX900-NEXT:    .cfi_undefined 2807
+; GFX900-NEXT:    .cfi_undefined 32
+; GFX900-NEXT:    .cfi_undefined 33
+; GFX900-NEXT:    .cfi_undefined 34
+; GFX900-NEXT:    .cfi_undefined 35
+; GFX900-NEXT:    .cfi_undefined 36
+; GFX900-NEXT:    .cfi_undefined 37
+; GFX900-NEXT:    .cfi_undefined 38
+; GFX900-NEXT:    .cfi_undefined 39
+; GFX900-NEXT:    .cfi_undefined 40
+; GFX900-NEXT:    .cfi_undefined 41
+; GFX900-NEXT:    .cfi_undefined 42
+; GFX900-NEXT:    .cfi_undefined 43
+; GFX900-NEXT:    .cfi_undefined 44
+; GFX900-NEXT:    .cfi_undefined 45
+; GFX900-NEXT:    .cfi_undefined 46
+; GFX900-NEXT:    .cfi_undefined 47
+; GFX900-NEXT:    .cfi_undefined 48
+; GFX900-NEXT:    .cfi_undefined 49
+; GFX900-NEXT:    .cfi_undefined 50
+; GFX900-NEXT:    .cfi_undefined 51
+; GFX900-NEXT:    .cfi_undefined 52
+; GFX900-NEXT:    .cfi_undefined 53
+; GFX900-NEXT:    .cfi_undefined 54
+; GFX900-NEXT:    .cfi_undefined 55
+; GFX900-NEXT:    .cfi_undefined 56
+; GFX900-NEXT:    .cfi_undefined 57
+; GFX900-NEXT:    .cfi_undefined 58
+; GFX900-NEXT:    .cfi_undefined 59
+; GFX900-NEXT:    .cfi_undefined 60
+; GFX900-NEXT:    .cfi_undefined 61
+; GFX900-NEXT:    .cfi_undefined 72
+; GFX900-NEXT:    .cfi_undefined 73
+; GFX900-NEXT:    .cfi_undefined 74
+; GFX900-NEXT:    .cfi_undefined 75
+; GFX900-NEXT:    .cfi_undefined 76
+; GFX900-NEXT:    .cfi_undefined 77
+; GFX900-NEXT:    .cfi_undefined 78
+; GFX900-NEXT:    .cfi_undefined 79
+; GFX900-NEXT:    .cfi_undefined 88
+; GFX900-NEXT:    .cfi_undefined 89
+; GFX900-NEXT:    .cfi_undefined 90
+; GFX900-NEXT:    .cfi_undefined 91
+; GFX900-NEXT:    .cfi_undefined 92
+; GFX900-NEXT:    .cfi_undefined 93
+; GFX900-NEXT:    .cfi_undefined 94
+; GFX900-NEXT:    .cfi_undefined 95
+; GFX900-NEXT:    .cfi_undefined 1096
+; GFX900-NEXT:    .cfi_undefined 1097
+; GFX900-NEXT:    .cfi_undefined 1098
+; GFX900-NEXT:    .cfi_undefined 1099
+; GFX900-NEXT:    .cfi_undefined 1100
+; GFX900-NEXT:    .cfi_undefined 1101
+; GFX900-NEXT:    .cfi_undefined 1102
+; GFX900-NEXT:    .cfi_undefined 1103
+; GFX900-NEXT:    .cfi_undefined 1112
+; GFX900-NEXT:    .cfi_undefined 1113
+; GFX900-NEXT:    .cfi_undefined 1114
+; GFX900-NEXT:    .cfi_undefined 1115
+; GFX900-NEXT:    .cfi_undefined 1116
+; GFX900-NEXT:    .cfi_undefined 1117
+; GFX900-NEXT:    .cfi_undefined 1118
+; GFX900-NEXT:    .cfi_undefined 1119
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_mov_b32 s16, s33
 ; GFX900-NEXT:    s_mov_b32 s33, s32
 ; GFX900-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_offset 2600, 0
 ; GFX900-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX900-NEXT:    v_writelane_b32 v40, s16, 2
+; GFX900-NEXT:    .cfi_llvm_vector_registers 65, 2600, 2, 32
+; GFX900-NEXT:    .cfi_def_cfa_register 65
 ; GFX900-NEXT:    s_addk_i32 s32, 0x400
 ; GFX900-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX900-NEXT:    s_getpc_b64 s[16:17]
@@ -1067,6 +2012,7 @@ define hidden void @func_call_clobber() #0 {
 ; GFX900-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX900-NEXT:    .cfi_def_cfa_register 64
 ; GFX900-NEXT:    s_mov_b32 s33, s4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -1075,13 +2021,256 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-DIS:       .Lfunc_begin3:
 ; GFX90A-V2A-DIS-NEXT:    .cfi_startproc
 ; GFX90A-V2A-DIS-NEXT:  ; %bb.0: ; %entry
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2560
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2561
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2562
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2563
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2564
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2565
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2566
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2567
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2568
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2569
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2570
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2571
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2572
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2573
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2574
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2575
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2576
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2577
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2578
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2579
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2580
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2581
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2582
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2583
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2584
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2585
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2586
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2587
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2588
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2589
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2590
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2591
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2592
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2593
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2594
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2595
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2596
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2597
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2598
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2599
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2608
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2609
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2610
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2611
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2612
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2613
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2614
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2615
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2624
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2625
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2626
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2627
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2628
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2629
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2630
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2631
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2640
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2641
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2642
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2643
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2644
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2645
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2646
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2647
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2656
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2657
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2658
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2659
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2660
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2661
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2662
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2663
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2672
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2673
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2674
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2675
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2676
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2677
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2678
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2679
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2688
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2689
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2690
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2691
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2692
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2693
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2694
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2695
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2704
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2705
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2706
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2707
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2708
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2709
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2710
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2711
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2720
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2721
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2722
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2723
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2724
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2725
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2726
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2727
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2736
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2737
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2738
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2739
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2740
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2741
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2742
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2743
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2752
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2753
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2754
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2755
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2756
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2757
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2758
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2759
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2768
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2769
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2770
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2771
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2772
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2773
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2774
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2775
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2784
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2785
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2786
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2787
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2788
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2789
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2790
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2791
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2800
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2801
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2802
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2803
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2804
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2805
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2806
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 2807
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3072
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3073
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3074
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3075
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3076
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3077
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3078
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3079
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3080
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3081
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3082
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3083
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3084
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3085
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3086
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3087
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3088
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3089
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3090
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3091
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3092
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3093
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3094
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3095
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3096
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3097
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3098
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3099
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3100
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3101
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3102
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 3103
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 32
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 33
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 34
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 35
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 36
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 37
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 38
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 39
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 40
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 41
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 42
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 43
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 44
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 45
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 46
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 47
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 48
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 49
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 50
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 51
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 52
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 53
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 54
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 55
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 56
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 57
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 58
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 59
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 60
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 61
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 72
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 73
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 74
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 75
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 76
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 77
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 78
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 79
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 88
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 89
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 90
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 91
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 92
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 93
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 94
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 95
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1096
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1097
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1098
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1099
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1100
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1101
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1102
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1103
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1112
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1113
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1114
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1115
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1116
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1117
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1118
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1119
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s16, s33
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s32
 ; GFX90A-V2A-DIS-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_offset 2600, 0
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s16, 2
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_registers 65, 2600, 2, 32
+; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 65
 ; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX90A-V2A-DIS-NEXT:    s_getpc_b64 s[16:17]
@@ -1096,6 +2285,7 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-DIS-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 64
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s4
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    s_setpc_b64 s[30:31]
@@ -1104,13 +2294,256 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-EN:       .Lfunc_begin3:
 ; GFX90A-V2A-EN-NEXT:    .cfi_startproc
 ; GFX90A-V2A-EN-NEXT:  ; %bb.0: ; %entry
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2560
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2561
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2562
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2563
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2564
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2565
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2566
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2567
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2568
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2569
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2570
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2571
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2572
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2573
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2574
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2575
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2576
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2577
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2578
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2579
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2580
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2581
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2582
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2583
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2584
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2585
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2586
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2587
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2588
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2589
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2590
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2591
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2592
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2593
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2594
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2595
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2596
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2597
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2598
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2599
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2608
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2609
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2610
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2611
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2612
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2613
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2614
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2615
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2624
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2625
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2626
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2627
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2628
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2629
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2630
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2631
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2640
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2641
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2642
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2643
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2644
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2645
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2646
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2647
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2656
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2657
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2658
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2659
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2660
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2661
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2662
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2663
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2672
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2673
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2674
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2675
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2676
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2677
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2678
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2679
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2688
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2689
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2690
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2691
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2692
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2693
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2694
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2695
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2704
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2705
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2706
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2707
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2708
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2709
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2710
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2711
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2720
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2721
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2722
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2723
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2724
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2725
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2726
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2727
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2736
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2737
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2738
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2739
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2740
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2741
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2742
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2743
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2752
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2753
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2754
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2755
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2756
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2757
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2758
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2759
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2768
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2769
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2770
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2771
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2772
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2773
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2774
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2775
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2784
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2785
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2786
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2787
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2788
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2789
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2790
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2791
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2800
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2801
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2802
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2803
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2804
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2805
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2806
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2807
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3072
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3073
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3074
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3075
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3076
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3077
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3078
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3079
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3080
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3081
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3082
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3083
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3084
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3085
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3086
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3087
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3088
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3089
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3090
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3091
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3092
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3093
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3094
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3095
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3096
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3097
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3098
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3099
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3100
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3101
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3102
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3103
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 32
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 33
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 34
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 35
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 36
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 37
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 38
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 39
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 40
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 41
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 42
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 43
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 44
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 45
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 46
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 47
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 48
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 49
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 50
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 51
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 52
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 53
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 54
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 55
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 56
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 57
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 58
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 59
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 60
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 61
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 72
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 73
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 74
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 75
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 76
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 77
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 78
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 79
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 88
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 89
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 90
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 91
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 92
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 93
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 94
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 95
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1096
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1097
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1098
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1099
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1100
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1101
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1102
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1103
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1112
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1113
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1114
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1115
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1116
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1117
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1118
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1119
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s16, s33
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s32
 ; GFX90A-V2A-EN-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_offset 2600, 0
 ; GFX90A-V2A-EN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s16, 2
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_registers 65, 2600, 2, 32
+; GFX90A-V2A-EN-NEXT:    .cfi_def_cfa_register 65
 ; GFX90A-V2A-EN-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX90A-V2A-EN-NEXT:    s_getpc_b64 s[16:17]
@@ -1125,6 +2558,7 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-EN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX90A-V2A-EN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX90A-V2A-EN-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX90A-V2A-EN-NEXT:    .cfi_def_cfa_register 64
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s4
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    s_setpc_b64 s[30:31]
@@ -1133,19 +2567,230 @@ define hidden void @func_call_clobber() #0 {
 ; WAVE32:       .Lfunc_begin3:
 ; WAVE32-NEXT:    .cfi_startproc
 ; WAVE32-NEXT:  ; %bb.0: ; %entry
+; WAVE32-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; WAVE32-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; WAVE32-NEXT:    .cfi_undefined 1536
+; WAVE32-NEXT:    .cfi_undefined 1537
+; WAVE32-NEXT:    .cfi_undefined 1538
+; WAVE32-NEXT:    .cfi_undefined 1539
+; WAVE32-NEXT:    .cfi_undefined 1540
+; WAVE32-NEXT:    .cfi_undefined 1541
+; WAVE32-NEXT:    .cfi_undefined 1542
+; WAVE32-NEXT:    .cfi_undefined 1543
+; WAVE32-NEXT:    .cfi_undefined 1544
+; WAVE32-NEXT:    .cfi_undefined 1545
+; WAVE32-NEXT:    .cfi_undefined 1546
+; WAVE32-NEXT:    .cfi_undefined 1547
+; WAVE32-NEXT:    .cfi_undefined 1548
+; WAVE32-NEXT:    .cfi_undefined 1549
+; WAVE32-NEXT:    .cfi_undefined 1550
+; WAVE32-NEXT:    .cfi_undefined 1551
+; WAVE32-NEXT:    .cfi_undefined 1552
+; WAVE32-NEXT:    .cfi_undefined 1553
+; WAVE32-NEXT:    .cfi_undefined 1554
+; WAVE32-NEXT:    .cfi_undefined 1555
+; WAVE32-NEXT:    .cfi_undefined 1556
+; WAVE32-NEXT:    .cfi_undefined 1557
+; WAVE32-NEXT:    .cfi_undefined 1558
+; WAVE32-NEXT:    .cfi_undefined 1559
+; WAVE32-NEXT:    .cfi_undefined 1560
+; WAVE32-NEXT:    .cfi_undefined 1561
+; WAVE32-NEXT:    .cfi_undefined 1562
+; WAVE32-NEXT:    .cfi_undefined 1563
+; WAVE32-NEXT:    .cfi_undefined 1564
+; WAVE32-NEXT:    .cfi_undefined 1565
+; WAVE32-NEXT:    .cfi_undefined 1566
+; WAVE32-NEXT:    .cfi_undefined 1567
+; WAVE32-NEXT:    .cfi_undefined 1568
+; WAVE32-NEXT:    .cfi_undefined 1569
+; WAVE32-NEXT:    .cfi_undefined 1570
+; WAVE32-NEXT:    .cfi_undefined 1571
+; WAVE32-NEXT:    .cfi_undefined 1572
+; WAVE32-NEXT:    .cfi_undefined 1573
+; WAVE32-NEXT:    .cfi_undefined 1574
+; WAVE32-NEXT:    .cfi_undefined 1575
+; WAVE32-NEXT:    .cfi_undefined 1584
+; WAVE32-NEXT:    .cfi_undefined 1585
+; WAVE32-NEXT:    .cfi_undefined 1586
+; WAVE32-NEXT:    .cfi_undefined 1587
+; WAVE32-NEXT:    .cfi_undefined 1588
+; WAVE32-NEXT:    .cfi_undefined 1589
+; WAVE32-NEXT:    .cfi_undefined 1590
+; WAVE32-NEXT:    .cfi_undefined 1591
+; WAVE32-NEXT:    .cfi_undefined 1600
+; WAVE32-NEXT:    .cfi_undefined 1601
+; WAVE32-NEXT:    .cfi_undefined 1602
+; WAVE32-NEXT:    .cfi_undefined 1603
+; WAVE32-NEXT:    .cfi_undefined 1604
+; WAVE32-NEXT:    .cfi_undefined 1605
+; WAVE32-NEXT:    .cfi_undefined 1606
+; WAVE32-NEXT:    .cfi_undefined 1607
+; WAVE32-NEXT:    .cfi_undefined 1616
+; WAVE32-NEXT:    .cfi_undefined 1617
+; WAVE32-NEXT:    .cfi_undefined 1618
+; WAVE32-NEXT:    .cfi_undefined 1619
+; WAVE32-NEXT:    .cfi_undefined 1620
+; WAVE32-NEXT:    .cfi_undefined 1621
+; WAVE32-NEXT:    .cfi_undefined 1622
+; WAVE32-NEXT:    .cfi_undefined 1623
+; WAVE32-NEXT:    .cfi_undefined 1632
+; WAVE32-NEXT:    .cfi_undefined 1633
+; WAVE32-NEXT:    .cfi_undefined 1634
+; WAVE32-NEXT:    .cfi_undefined 1635
+; WAVE32-NEXT:    .cfi_undefined 1636
+; WAVE32-NEXT:    .cfi_undefined 1637
+; WAVE32-NEXT:    .cfi_undefined 1638
+; WAVE32-NEXT:    .cfi_undefined 1639
+; WAVE32-NEXT:    .cfi_undefined 1648
+; WAVE32-NEXT:    .cfi_undefined 1649
+; WAVE32-NEXT:    .cfi_undefined 1650
+; WAVE32-NEXT:    .cfi_undefined 1651
+; WAVE32-NEXT:    .cfi_undefined 1652
+; WAVE32-NEXT:    .cfi_undefined 1653
+; WAVE32-NEXT:    .cfi_undefined 1654
+; WAVE32-NEXT:    .cfi_undefined 1655
+; WAVE32-NEXT:    .cfi_undefined 1664
+; WAVE32-NEXT:    .cfi_undefined 1665
+; WAVE32-NEXT:    .cfi_undefined 1666
+; WAVE32-NEXT:    .cfi_undefined 1667
+; WAVE32-NEXT:    .cfi_undefined 1668
+; WAVE32-NEXT:    .cfi_undefined 1669
+; WAVE32-NEXT:    .cfi_undefined 1670
+; WAVE32-NEXT:    .cfi_undefined 1671
+; WAVE32-NEXT:    .cfi_undefined 1680
+; WAVE32-NEXT:    .cfi_undefined 1681
+; WAVE32-NEXT:    .cfi_undefined 1682
+; WAVE32-NEXT:    .cfi_undefined 1683
+; WAVE32-NEXT:    .cfi_undefined 1684
+; WAVE32-NEXT:    .cfi_undefined 1685
+; WAVE32-NEXT:    .cfi_undefined 1686
+; WAVE32-NEXT:    .cfi_undefined 1687
+; WAVE32-NEXT:    .cfi_undefined 1696
+; WAVE32-NEXT:    .cfi_undefined 1697
+; WAVE32-NEXT:    .cfi_undefined 1698
+; WAVE32-NEXT:    .cfi_undefined 1699
+; WAVE32-NEXT:    .cfi_undefined 1700
+; WAVE32-NEXT:    .cfi_undefined 1701
+; WAVE32-NEXT:    .cfi_undefined 1702
+; WAVE32-NEXT:    .cfi_undefined 1703
+; WAVE32-NEXT:    .cfi_undefined 1712
+; WAVE32-NEXT:    .cfi_undefined 1713
+; WAVE32-NEXT:    .cfi_undefined 1714
+; WAVE32-NEXT:    .cfi_undefined 1715
+; WAVE32-NEXT:    .cfi_undefined 1716
+; WAVE32-NEXT:    .cfi_undefined 1717
+; WAVE32-NEXT:    .cfi_undefined 1718
+; WAVE32-NEXT:    .cfi_undefined 1719
+; WAVE32-NEXT:    .cfi_undefined 1728
+; WAVE32-NEXT:    .cfi_undefined 1729
+; WAVE32-NEXT:    .cfi_undefined 1730
+; WAVE32-NEXT:    .cfi_undefined 1731
+; WAVE32-NEXT:    .cfi_undefined 1732
+; WAVE32-NEXT:    .cfi_undefined 1733
+; WAVE32-NEXT:    .cfi_undefined 1734
+; WAVE32-NEXT:    .cfi_undefined 1735
+; WAVE32-NEXT:    .cfi_undefined 1744
+; WAVE32-NEXT:    .cfi_undefined 1745
+; WAVE32-NEXT:    .cfi_undefined 1746
+; WAVE32-NEXT:    .cfi_undefined 1747
+; WAVE32-NEXT:    .cfi_undefined 1748
+; WAVE32-NEXT:    .cfi_undefined 1749
+; WAVE32-NEXT:    .cfi_undefined 1750
+; WAVE32-NEXT:    .cfi_undefined 1751
+; WAVE32-NEXT:    .cfi_undefined 1760
+; WAVE32-NEXT:    .cfi_undefined 1761
+; WAVE32-NEXT:    .cfi_undefined 1762
+; WAVE32-NEXT:    .cfi_undefined 1763
+; WAVE32-NEXT:    .cfi_undefined 1764
+; WAVE32-NEXT:    .cfi_undefined 1765
+; WAVE32-NEXT:    .cfi_undefined 1766
+; WAVE32-NEXT:    .cfi_undefined 1767
+; WAVE32-NEXT:    .cfi_undefined 1776
+; WAVE32-NEXT:    .cfi_undefined 1777
+; WAVE32-NEXT:    .cfi_undefined 1778
+; WAVE32-NEXT:    .cfi_undefined 1779
+; WAVE32-NEXT:    .cfi_undefined 1780
+; WAVE32-NEXT:    .cfi_undefined 1781
+; WAVE32-NEXT:    .cfi_undefined 1782
+; WAVE32-NEXT:    .cfi_undefined 1783
+; WAVE32-NEXT:    .cfi_undefined 32
+; WAVE32-NEXT:    .cfi_undefined 33
+; WAVE32-NEXT:    .cfi_undefined 34
+; WAVE32-NEXT:    .cfi_undefined 35
+; WAVE32-NEXT:    .cfi_undefined 36
+; WAVE32-NEXT:    .cfi_undefined 37
+; WAVE32-NEXT:    .cfi_undefined 38
+; WAVE32-NEXT:    .cfi_undefined 39
+; WAVE32-NEXT:    .cfi_undefined 40
+; WAVE32-NEXT:    .cfi_undefined 41
+; WAVE32-NEXT:    .cfi_undefined 42
+; WAVE32-NEXT:    .cfi_undefined 43
+; WAVE32-NEXT:    .cfi_undefined 44
+; WAVE32-NEXT:    .cfi_undefined 45
+; WAVE32-NEXT:    .cfi_undefined 46
+; WAVE32-NEXT:    .cfi_undefined 47
+; WAVE32-NEXT:    .cfi_undefined 48
+; WAVE32-NEXT:    .cfi_undefined 49
+; WAVE32-NEXT:    .cfi_undefined 50
+; WAVE32-NEXT:    .cfi_undefined 51
+; WAVE32-NEXT:    .cfi_undefined 52
+; WAVE32-NEXT:    .cfi_undefined 53
+; WAVE32-NEXT:    .cfi_undefined 54
+; WAVE32-NEXT:    .cfi_undefined 55
+; WAVE32-NEXT:    .cfi_undefined 56
+; WAVE32-NEXT:    .cfi_undefined 57
+; WAVE32-NEXT:    .cfi_undefined 58
+; WAVE32-NEXT:    .cfi_undefined 59
+; WAVE32-NEXT:    .cfi_undefined 60
+; WAVE32-NEXT:    .cfi_undefined 61
+; WAVE32-NEXT:    .cfi_undefined 72
+; WAVE32-NEXT:    .cfi_undefined 73
+; WAVE32-NEXT:    .cfi_undefined 74
+; WAVE32-NEXT:    .cfi_undefined 75
+; WAVE32-NEXT:    .cfi_undefined 76
+; WAVE32-NEXT:    .cfi_undefined 77
+; WAVE32-NEXT:    .cfi_undefined 78
+; WAVE32-NEXT:    .cfi_undefined 79
+; WAVE32-NEXT:    .cfi_undefined 88
+; WAVE32-NEXT:    .cfi_undefined 89
+; WAVE32-NEXT:    .cfi_undefined 90
+; WAVE32-NEXT:    .cfi_undefined 91
+; WAVE32-NEXT:    .cfi_undefined 92
+; WAVE32-NEXT:    .cfi_undefined 93
+; WAVE32-NEXT:    .cfi_undefined 94
+; WAVE32-NEXT:    .cfi_undefined 95
+; WAVE32-NEXT:    .cfi_undefined 1096
+; WAVE32-NEXT:    .cfi_undefined 1097
+; WAVE32-NEXT:    .cfi_undefined 1098
+; WAVE32-NEXT:    .cfi_undefined 1099
+; WAVE32-NEXT:    .cfi_undefined 1100
+; WAVE32-NEXT:    .cfi_undefined 1101
+; WAVE32-NEXT:    .cfi_undefined 1102
+; WAVE32-NEXT:    .cfi_undefined 1103
+; WAVE32-NEXT:    .cfi_undefined 1112
+; WAVE32-NEXT:    .cfi_undefined 1113
+; WAVE32-NEXT:    .cfi_undefined 1114
+; WAVE32-NEXT:    .cfi_undefined 1115
+; WAVE32-NEXT:    .cfi_undefined 1116
+; WAVE32-NEXT:    .cfi_undefined 1117
+; WAVE32-NEXT:    .cfi_undefined 1118
+; WAVE32-NEXT:    .cfi_undefined 1119
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-NEXT:    s_mov_b32 s16, s33
 ; WAVE32-NEXT:    s_mov_b32 s33, s32
 ; WAVE32-NEXT:    s_or_saveexec_b32 s17, -1
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_offset 1576, 0
 ; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s17
 ; WAVE32-NEXT:    v_writelane_b32 v40, s16, 2
+; WAVE32-NEXT:    .cfi_llvm_vector_registers 65, 1576, 2, 32
+; WAVE32-NEXT:    .cfi_def_cfa_register 65
+; WAVE32-NEXT:    v_writelane_b32 v40, s30, 0
 ; WAVE32-NEXT:    s_addk_i32 s32, 0x200
 ; WAVE32-NEXT:    s_getpc_b64 s[16:17]
 ; WAVE32-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; WAVE32-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
-; WAVE32-NEXT:    v_writelane_b32 v40, s30, 0
 ; WAVE32-NEXT:    v_writelane_b32 v40, s31, 1
 ; WAVE32-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; WAVE32-NEXT:    v_readlane_b32 s31, v40, 1
@@ -1156,6 +2801,7 @@ define hidden void @func_call_clobber() #0 {
 ; WAVE32-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s5
+; WAVE32-NEXT:    .cfi_def_cfa_register 64
 ; WAVE32-NEXT:    s_mov_b32 s33, s4
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-NEXT:    s_setpc_b64 s[30:31]
@@ -1169,6 +2815,8 @@ define hidden void @func_spill_vgpr_to_vmem() #0 {
 ; GFX900:       .Lfunc_begin4:
 ; GFX900-NEXT:    .cfi_startproc
 ; GFX900-NEXT:  ; %bb.0: ; %entry
+; GFX900-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX900-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
@@ -1193,6 +2841,8 @@ define hidden void @func_spill_vgpr_to_vmem() #0 {
 ; GFX90A-V2A-DIS:       .Lfunc_begin4:
 ; GFX90A-V2A-DIS-NEXT:    .cfi_startproc
 ; GFX90A-V2A-DIS-NEXT:  ; %bb.0: ; %entry
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
@@ -1221,6 +2871,12 @@ define hidden void @func_spill_vgpr_to_vmem() #0 {
 ; GFX90A-V2A-EN:       .Lfunc_begin4:
 ; GFX90A-V2A-EN-NEXT:    .cfi_startproc
 ; GFX90A-V2A-EN-NEXT:  ; %bb.0: ; %entry
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2560
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2561
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3072
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3073
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
@@ -1248,6 +2904,8 @@ define hidden void @func_spill_vgpr_to_vmem() #0 {
 ; WAVE32:       .Lfunc_begin4:
 ; WAVE32-NEXT:    .cfi_startproc
 ; WAVE32-NEXT:  ; %bb.0: ; %entry
+; WAVE32-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; WAVE32-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
@@ -1281,6 +2939,8 @@ define hidden void @func_spill_vgpr_to_agpr() #2 {
 ; GFX900:       .Lfunc_begin5:
 ; GFX900-NEXT:    .cfi_startproc
 ; GFX900-NEXT:  ; %bb.0:
+; GFX900-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX900-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
@@ -1305,6 +2965,8 @@ define hidden void @func_spill_vgpr_to_agpr() #2 {
 ; GFX90A-V2A-DIS:       .Lfunc_begin5:
 ; GFX90A-V2A-DIS-NEXT:    .cfi_startproc
 ; GFX90A-V2A-DIS-NEXT:  ; %bb.0:
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
@@ -1333,6 +2995,12 @@ define hidden void @func_spill_vgpr_to_agpr() #2 {
 ; GFX90A-V2A-EN:       .Lfunc_begin5:
 ; GFX90A-V2A-EN-NEXT:    .cfi_startproc
 ; GFX90A-V2A-EN-NEXT:  ; %bb.0:
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2560
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 2561
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3072
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3073
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
@@ -1360,6 +3028,8 @@ define hidden void @func_spill_vgpr_to_agpr() #2 {
 ; WAVE32:       .Lfunc_begin5:
 ; WAVE32-NEXT:    .cfi_startproc
 ; WAVE32-NEXT:  ; %bb.0:
+; WAVE32-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; WAVE32-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill

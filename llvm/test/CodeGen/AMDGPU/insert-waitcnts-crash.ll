@@ -9,26 +9,237 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr30, $sgpr31, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr2
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr3
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr5
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr6
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr7
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr9
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr10
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr11
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr12
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr13
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr14
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr15
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr16
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr17
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr18
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr19
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr20
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr21
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr22
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr23
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr24
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr25
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr26
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr27
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr28
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr29
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr30
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr31
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr32
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr33
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr34
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr35
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr36
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr37
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr38
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr39
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr48
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr49
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr50
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr51
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr52
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr53
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr54
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr55
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr64
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr65
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr66
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr67
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr68
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr69
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr70
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr71
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr80
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr81
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr82
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr83
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr84
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr85
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr86
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr87
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr96
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr97
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr98
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr99
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr100
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr101
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr102
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr103
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr112
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr113
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr114
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr115
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr116
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr117
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr118
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr119
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr128
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr129
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr130
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr131
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr132
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr133
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr134
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr135
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr144
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr145
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr146
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr147
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr148
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr149
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr150
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr151
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr160
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr161
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr162
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr163
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr164
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr165
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr166
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr167
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr176
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr177
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr178
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr179
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr180
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr181
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr182
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr183
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr192
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr193
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr194
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr195
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr196
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr197
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr198
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr199
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr208
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr209
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr210
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr211
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr212
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr213
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr214
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr215
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr224
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr225
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr226
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr227
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr228
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr229
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr230
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr231
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr240
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr241
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr242
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr243
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr244
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr245
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr246
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr247
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr1
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr2
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr3
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr5
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr6
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr7
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr9
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr10
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr11
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr12
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr13
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr14
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr15
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr16
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr17
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr18
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr19
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr20
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr21
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr22
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr23
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr24
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr25
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr26
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; CHECK-NEXT:   S_WAITCNT 0
   ; CHECK-NEXT:   $sgpr16 = S_MOV_B32 $sgpr33
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 $sgpr32
   ; CHECK-NEXT:   $sgpr17 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr40, 0
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr17
-  ; CHECK-NEXT:   $sgpr32 = frame-setup S_ADDK_I32 $sgpr32, 512, implicit-def dead $scc
   ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr16, 2, undef $vgpr40
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr33, $vgpr40, 2, 32
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33
+  ; CHECK-NEXT:   $sgpr32 = frame-setup S_ADDK_I32 $sgpr32, 512, implicit-def dead $scc
   ; CHECK-NEXT:   BUNDLE implicit-def $sgpr16_sgpr17, implicit-def $sgpr16, implicit-def $scc, implicit-def $sgpr17 {
   ; CHECK-NEXT:     $sgpr16_sgpr17 = S_GETPC_B64
   ; CHECK-NEXT:     $sgpr16 = S_ADD_U32 internal $sgpr16, target-flags(amdgpu-gotprel32-lo) @bar + 4, implicit-def $scc
   ; CHECK-NEXT:     $sgpr17 = S_ADDC_U32 internal $sgpr17, target-flags(amdgpu-gotprel32-hi) @bar + 12, implicit-def $scc, implicit internal $scc
   ; CHECK-NEXT:   }
+  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, $vgpr40
+  ; CHECK-NEXT:   renamable $sgpr16_sgpr17 = S_LOAD_DWORDX2_IMM killed renamable $sgpr16_sgpr17, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; CHECK-NEXT:   S_WAITCNT 49279
   ; CHECK-NEXT:   S_WAITCNT_VSCNT undef $sgpr_null, 0
   ; CHECK-NEXT:   BUFFER_GL1_INV implicit $exec
   ; CHECK-NEXT:   BUFFER_GL0_INV implicit $exec
-  ; CHECK-NEXT:   renamable $sgpr16_sgpr17 = S_LOAD_DWORDX2_IMM killed renamable $sgpr16_sgpr17, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, $vgpr40
   ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, $vgpr40
-  ; CHECK-NEXT:   S_WAITCNT 49279
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, @bar, csr_amdgpu, implicit killed $sgpr4_sgpr5, implicit killed $sgpr6_sgpr7, implicit killed $sgpr8_sgpr9, implicit killed $sgpr10_sgpr11, implicit killed $sgpr12, implicit killed $sgpr13, implicit killed $sgpr14, implicit killed $sgpr15, implicit killed $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
@@ -46,6 +257,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   $sgpr5 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr5
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_register $sgpr32
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 killed $sgpr4
   ; CHECK-NEXT:   S_WAITCNT 16240
   ; CHECK-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31, implicit undef $vgpr0
