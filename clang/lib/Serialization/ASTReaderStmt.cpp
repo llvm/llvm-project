@@ -2040,7 +2040,7 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
   else
     E->Base = nullptr;
 
-  E->OperatorLoc = readSourceLocation();
+  E->CXXDependentScopeMemberExprBits.OperatorLoc = readSourceLocation().getRawEncoding();
 
   if (HasFirstQualifierFoundInScope)
     *E->getTrailingObjects<NamedDecl *>() = readDeclAs<NamedDecl>();

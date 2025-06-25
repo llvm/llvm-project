@@ -1054,8 +1054,10 @@ protected:
     /// the trailing objects.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFirstQualifierFoundInScope : 1;
-
-
+    
+    /// The location of the '->' or '.' operator.
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long OperatorLoc : SourceLocation::Bits;
   };
 
   class OverloadExprBitfields {

@@ -1508,7 +1508,7 @@ CXXDependentScopeMemberExpr::CXXDependentScopeMemberExpr(
       (TemplateArgs != nullptr) || TemplateKWLoc.isValid();
   CXXDependentScopeMemberExprBits.HasFirstQualifierFoundInScope =
       FirstQualifierFoundInScope != nullptr;
-  this->OperatorLoc = OperatorLoc;
+  CXXDependentScopeMemberExprBits.OperatorLoc = OperatorLoc.getRawEncoding();
 
   if (TemplateArgs) {
     auto Deps = TemplateArgumentDependence::None;

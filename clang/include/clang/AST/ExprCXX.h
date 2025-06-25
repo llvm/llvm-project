@@ -3842,9 +3842,6 @@ class CXXDependentScopeMemberExpr final
   /// FIXME: could also be a template-id
   DeclarationNameInfo MemberNameInfo;
 
-      /// The location of the '->' or '.' operator.
-      SourceLocation OperatorLoc;
-
   // CXXDependentScopeMemberExpr is followed by several trailing objects,
   // some of which optional. They are in order:
   //
@@ -3924,7 +3921,7 @@ public:
 
   /// Retrieve the location of the '->' or '.' operator.
   SourceLocation getOperatorLoc() const {
-    return OperatorLoc;
+    return SourceLocation::getFromRawEncoding(CXXDependentScopeMemberExprBits.OperatorLoc);
   }
 
   /// Retrieve the nested-name-specifier that qualifies the member name.
