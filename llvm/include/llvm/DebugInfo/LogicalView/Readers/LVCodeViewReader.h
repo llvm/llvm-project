@@ -193,17 +193,11 @@ public:
                    llvm::object::COFFObjectFile &Obj, ScopedPrinter &W,
                    StringRef ExePath)
       : LVBinaryReader(Filename, FileFormatName, W, LVBinaryType::COFF),
-        Input(&Obj), ExePath(ExePath), LogicalVisitor(this, W, Input) {
-    // CodeView does not have the concept of 'tombstone' address.
-    setTombstoneAddress(MaxAddress);
-  }
+        Input(&Obj), ExePath(ExePath), LogicalVisitor(this, W, Input) {}
   LVCodeViewReader(StringRef Filename, StringRef FileFormatName,
                    llvm::pdb::PDBFile &Pdb, ScopedPrinter &W, StringRef ExePath)
       : LVBinaryReader(Filename, FileFormatName, W, LVBinaryType::COFF),
-        Input(&Pdb), ExePath(ExePath), LogicalVisitor(this, W, Input) {
-    // CodeView does not have the concept of 'tombstone' address.
-    setTombstoneAddress(MaxAddress);
-  }
+        Input(&Pdb), ExePath(ExePath), LogicalVisitor(this, W, Input) {}
   LVCodeViewReader(const LVCodeViewReader &) = delete;
   LVCodeViewReader &operator=(const LVCodeViewReader &) = delete;
   ~LVCodeViewReader() = default;
