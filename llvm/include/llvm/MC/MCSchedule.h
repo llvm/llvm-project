@@ -325,9 +325,7 @@ struct MCSchedModel {
   const MCSchedClassDesc *SchedClassTable;
   unsigned NumProcResourceKinds;
   unsigned NumSchedClasses;
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const StringTable *SchedClassNames;
-#endif
   // Instruction itinerary tables used by InstrItineraryData.
   friend class InstrItineraryData;
   const InstrItinerary *InstrItineraries;
