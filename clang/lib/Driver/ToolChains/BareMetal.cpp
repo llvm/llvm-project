@@ -339,15 +339,15 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   };
 
   switch (GetCXXStdlibType(DriverArgs)) {
-    case ToolChain::CST_Libcxx: {
-      SmallString<128> P(D.Dir);
-      llvm::sys::path::append(P, "..", "include");
-      AddCXXIncludePath(P);
-      break;
-    }
-    case ToolChain::CST_Libstdcxx:
-      // We only support libc++ toolchain installation.
-      break;
+  case ToolChain::CST_Libcxx: {
+    SmallString<128> P(D.Dir);
+    llvm::sys::path::append(P, "..", "include");
+    AddCXXIncludePath(P);
+    break;
+  }
+  case ToolChain::CST_Libstdcxx:
+    // We only support libc++ toolchain installation.
+    break;
   }
 
   std::string SysRoot(computeSysRoot());
@@ -498,7 +498,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     AddRunTimeLibs(TC, D, CmdArgs, Args);
 
-    CmdArgs.push_back("-lc");
+    if (!Args.hasArg(options::OPT_nolibc)) {
+      CmdArgs.push_back("-lc");
+    }
   }
 
   if (D.isUsingLTO())
