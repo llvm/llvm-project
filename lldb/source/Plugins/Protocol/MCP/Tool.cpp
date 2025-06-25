@@ -130,13 +130,15 @@ DebuggerListTool::Call(const protocol::ToolArguments &args) {
 
     os << "- debugger " << i << '\n';
 
-    const TargetList &target_list = debugger_sp->GetTargetList();
+    TargetList &target_list = debugger_sp->GetTargetList();
     const size_t num_targets = target_list.GetNumTargets();
     for (size_t j = 0; j < num_targets; ++j) {
       lldb::TargetSP target_sp = target_list.GetTargetAtIndex(j);
       if (!target_sp)
         continue;
       os << "    - target " << j;
+      if (target_sp == target_list.GetSelectedTarget())
+        os << " (selected)";
       // Append the module path if we have one.
       if (Module *exe_module = target_sp->GetExecutableModulePointer())
         os << " " << exe_module->GetFileSpec().GetPath();

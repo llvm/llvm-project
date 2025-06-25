@@ -46,9 +46,10 @@ public:
   using mcp::Tool::Tool;
 
   virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const llvm::json::Value *args) override {
+  Call(const ToolArguments &args) override {
     std::string argument;
-    if (const json::Object *args_obj = args->getAsObject()) {
+    if (const json::Object *args_obj =
+            std::get<json::Value>(args).getAsObject()) {
       if (const json::Value *s = args_obj->get("arguments")) {
         argument = s->getAsString().value_or("");
       }
@@ -66,7 +67,7 @@ public:
   using mcp::Tool::Tool;
 
   virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const llvm::json::Value *args) override {
+  Call(const ToolArguments &args) override {
     return llvm::createStringError("error");
   }
 };
@@ -77,7 +78,7 @@ public:
   using mcp::Tool::Tool;
 
   virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const llvm::json::Value *args) override {
+  Call(const ToolArguments &args) override {
     mcp::protocol::TextResult text_result;
     text_result.content.emplace_back(mcp::protocol::TextContent{{"failed"}});
     text_result.isError = true;
