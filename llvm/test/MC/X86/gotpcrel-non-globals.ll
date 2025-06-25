@@ -2,7 +2,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-; Check that we submit the `@bar_*` symbols, and that we don't submit multiple symbols.
+; Check that we emit the `@bar_*` symbols, and that we don't emit multiple symbols.
 
 ; CHECK-LABEL: .Lrel_0:
 ; CHECK: .long   foo_0@GOTPCREL+0
