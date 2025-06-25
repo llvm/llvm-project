@@ -653,25 +653,19 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   }
 
   if (show_bytes) {
-    auto max_byte_width = max_opcode_byte_size * 3 + 1;
     if (m_opcode.GetType() == Opcode::eTypeBytes) {
       // x86_64 and i386 are the only ones that use bytes right now so pad out
       // the byte dump to be able to always show 15 bytes (3 chars each) plus a
       // space
       if (max_opcode_byte_size > 0)
-        // make RISC-V opcode dump look like llvm-objdump
-        if (exe_ctx &&
-            exe_ctx->GetTargetSP()->GetArchitecture().GetTriple().isRISCV())
-          m_opcode.DumpRISCV(&ss, max_byte_width);
-        else
-          m_opcode.Dump(&ss, max_byte_width);
+        m_opcode.Dump(&ss, max_opcode_byte_size * 3 + 1);
       else
         m_opcode.Dump(&ss, 15 * 3 + 1);
     } else {
       // Else, we have ARM or MIPS which can show up to a uint32_t 0x00000000
       // (10 spaces) plus two for padding...
       if (max_opcode_byte_size > 0)
-        m_opcode.Dump(&ss, max_byte_width);
+        m_opcode.Dump(&ss, max_opcode_byte_size * 3 + 1);
       else
         m_opcode.Dump(&ss, 12);
     }

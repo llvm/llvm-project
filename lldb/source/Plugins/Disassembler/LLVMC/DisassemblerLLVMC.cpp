@@ -488,8 +488,13 @@ public:
           break;
 
         default:
-          m_opcode.SetOpcodeBytes(data.PeekData(data_offset, min_op_byte_size),
-                                  min_op_byte_size);
+          if (arch.GetTriple().isRISCV())
+            m_opcode.SetOpcode16_32TupleBytes(
+                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size,
+                byte_order);
+          else
+            m_opcode.SetOpcodeBytes(
+                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size);
           got_op = true;
           break;
         }
@@ -531,8 +536,11 @@ public:
                                                 pc, inst, inst_size);
           m_opcode.Clear();
           if (inst_size != 0) {
-            m_opcode.SetOpcodeBytes(opcode_data, inst_size);
-            m_is_valid = true;
+            if (arch.GetTriple().isRISCV())
+              m_opcode.SetOpcode16_32TupleBytes(opcode_data, inst_size,
+                                                byte_order);
+            else
+              m_opcode.SetOpcodeBytes(opcode_data, inst_size);
           }
         }
       }

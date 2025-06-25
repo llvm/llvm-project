@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-int Opcode::Dump(Stream *s, uint32_t min_byte_width) {
+int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
   const uint32_t previous_bytes = s->GetWrittenBytes();
   switch (m_type) {
   case Opcode::eTypeInvalid:
@@ -37,6 +37,28 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) {
   case Opcode::eType32:
     s->Printf("0x%8.8x", m_data.inst32);
     break;
+
+  case Opcode::eType16_32Tuples: {
+    const bool format_as_words = (m_data.inst.length % 4) == 0;
+    uint32_t i = 0;
+    while (i < m_data.inst.length) {
+      if (i > 0)
+        s->PutChar(' ');
+      if (format_as_words) {
+        // Format as words; print 1 or more UInt32 values.
+        s->Printf("%2.2x%2.2x%2.2x%2.2x", m_data.inst.bytes[i + 3],
+                                          m_data.inst.bytes[i + 2],
+                                          m_data.inst.bytes[i + 1],
+                                          m_data.inst.bytes[i + 0]);
+        i += 4;
+      } else {
+        // Format as halfwords; print 1 or more UInt16 values.
+        s->Printf("%2.2x%2.2x", m_data.inst.bytes[i + 1],
+                                m_data.inst.bytes[i + 0]);
+        i += 2;
+      }
+    }
+  } break;
 
   case Opcode::eType64:
     s->Printf("0x%16.16" PRIx64, m_data.inst64);
@@ -69,6 +91,7 @@ lldb::ByteOrder Opcode::GetDataByteOrder() const {
   case Opcode::eType8:
   case Opcode::eType16:
   case Opcode::eType16_2:
+  case Opcode::eType16_32Tuples:
   case Opcode::eType32:
   case Opcode::eType64:
     return endian::InlHostByteOrder();
@@ -76,44 +99,6 @@ lldb::ByteOrder Opcode::GetDataByteOrder() const {
     break;
   }
   return eByteOrderInvalid;
-}
-
-// make RISC-V byte dumps look like llvm-objdump, instead of just dumping bytes
-int Opcode::DumpRISCV(Stream *s, uint32_t min_byte_width) {
-  const uint32_t previous_bytes = s->GetWrittenBytes();
-  // if m_type is not bytes, call Dump
-  if (m_type != Opcode::eTypeBytes)
-    return Dump(s, min_byte_width);
-
-  // Logic taken from from RISCVPrettyPrinter in llvm-objdump.cpp
-  for (uint32_t i = 0; i < m_data.inst.length;) {
-    if (i > 0)
-      s->PutChar(' ');
-    // if size % 4 == 0, print as 1 or 2 32 bit values (32 or 64 bit inst)
-    if (!(m_data.inst.length % 4)) {
-      s->Printf("%2.2x%2.2x%2.2x%2.2x", m_data.inst.bytes[i + 3],
-                                        m_data.inst.bytes[i + 2],
-                                        m_data.inst.bytes[i + 1],
-                                        m_data.inst.bytes[i + 0]);
-      i += 4;
-    // else if size % 2 == 0, print as 1 or 3 16 bit values (16 or 48 bit inst)
-    } else if (!(m_data.inst.length % 2)) {
-      s->Printf("%2.2x%2.2x", m_data.inst.bytes[i + 1],
-                              m_data.inst.bytes[i + 0]);
-      i += 2;
-    // else fall back and print bytes
-    } else {
-      s->Printf("%2.2x", m_data.inst.bytes[i]);
-      ++i;
-    }
-  }
-
-  uint32_t bytes_written_so_far = s->GetWrittenBytes() - previous_bytes;
-  // Add spaces to make sure bytes display comes out even in case opcodes aren't
-  // all the same size.
-  if (bytes_written_so_far < min_byte_width)
-    s->Printf("%*s", min_byte_width - bytes_written_so_far, "");
-  return s->GetWrittenBytes() - previous_bytes;
 }
 
 uint32_t Opcode::GetData(DataExtractor &data) const {
@@ -150,6 +135,9 @@ uint32_t Opcode::GetData(DataExtractor &data) const {
         swap_buf[2] = m_data.inst.bytes[3];
         swap_buf[3] = m_data.inst.bytes[2];
         buf = swap_buf;
+        break;
+      case Opcode::eType16_32Tuples:
+        buf = GetOpcodeDataBytes();
         break;
       case Opcode::eType32:
         *(uint32_t *)swap_buf = llvm::byteswap<uint32_t>(m_data.inst32);
