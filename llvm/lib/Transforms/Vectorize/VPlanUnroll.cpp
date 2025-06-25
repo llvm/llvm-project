@@ -498,23 +498,24 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
         continue;
 
       VPBuilder Builder(RepR);
-      SmallVector<VPValue *> LaneDefs;
-      // Stores to invariant addresses need to store the last lane only.
-      if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
-          vputils::isSingleScalar(RepR->getOperand(1))) {
-        cloneForLane(Plan, Builder, IdxTy, RepR, VPLane::getLastLaneForVF(VF));
+      if (RepR->getNumUsers() == 0) {
+        if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+            vputils::isSingleScalar(RepR->getOperand(1))) {
+          // Stores to invariant addresses need to store the last lane only.
+          cloneForLane(Plan, Builder, IdxTy, RepR,
+                       VPLane::getLastLaneForVF(VF));
+        } else {
+          // Create single-scalar version of RepR for all lanes.
+          for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
+            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I));
+        }
         RepR->eraseFromParent();
         continue;
       }
-
       /// Create single-scalar version of RepR for all lanes.
+      SmallVector<VPValue *> LaneDefs;
       for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
         LaneDefs.push_back(cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I)));
-
-      if (RepR->getNumUsers() == 0) {
-        RepR->eraseFromParent();
-        continue;
-      }
 
       /// Users that only demand the first lane can use the definition for lane
       /// 0.

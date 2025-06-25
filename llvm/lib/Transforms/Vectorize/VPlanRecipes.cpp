@@ -670,17 +670,19 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::BuildStructVector: {
     // For struct types, we need to build a new 'wide' struct type, where each
-    // element is widened, i.e. we crate a struct of vectors .
+    // element is widened, i.e., we create a struct of vectors.
     auto *StructTy =
         cast<StructType>(State.TypeAnalysis.inferScalarType(getOperand(0)));
     Value *Res = PoisonValue::get(toVectorizedTy(StructTy, State.VF));
-    for (const auto &[Idx, Op] : enumerate(operands())) {
-      for (unsigned I = 0; I != StructTy->getNumElements(); I++) {
-        Value *ScalarValue = Builder.CreateExtractValue(State.get(Op, true), I);
-        Value *VectorValue = Builder.CreateExtractValue(Res, I);
+    for (const auto &[LaneIndex, Op] : enumerate(operands())) {
+      for (unsigned FieldIndex = 0; FieldIndex != StructTy->getNumElements();
+           FieldIndex++) {
+        Value *ScalarValue =
+            Builder.CreateExtractValue(State.get(Op, true), FieldIndex);
+        Value *VectorValue = Builder.CreateExtractValue(Res, FieldIndex);
         VectorValue =
-            Builder.CreateInsertElement(VectorValue, ScalarValue, Idx);
-        Res = Builder.CreateInsertValue(Res, VectorValue, I);
+            Builder.CreateInsertElement(VectorValue, ScalarValue, LaneIndex);
+        Res = Builder.CreateInsertValue(Res, VectorValue, FieldIndex);
       }
     }
     return Res;
@@ -2727,25 +2729,22 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   Instruction *UI = getUnderlyingInstr();
 
   if (!State.Lane) {
-    assert(IsSingleScalar &&
-           "VPReplicateRecipes outside replicate regions must be unrolled");
+    assert(IsSingleScalar && "VPReplicateRecipes outside replicate regions "
+                             "must have already been unrolled");
     scalarizeInstruction(UI, this, VPLane(0), State);
     return;
   }
 
   assert((State.VF.isScalar() || !isSingleScalar()) &&
          "uniform recipe shouldn't be predicated");
+  assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
   scalarizeInstruction(UI, this, *State.Lane, State);
   // Insert scalar instance packing it into a vector.
   if (State.VF.isVector() && shouldPack()) {
-    Value *WideValue;
-    // If we're constructing lane 0, initialize to start from poison.
-    if (State.Lane->isFirstLane()) {
-      assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-      WideValue = PoisonValue::get(VectorType::get(UI->getType(), State.VF));
-    } else {
-      WideValue = State.get(this);
-    }
+    Value *WideValue =
+        State.Lane->isFirstLane()
+            ? PoisonValue::get(VectorType::get(UI->getType(), State.VF))
+            : State.get(this);
     State.set(this, State.packScalarIntoVectorizedValue(this, WideValue,
                                                         *State.Lane));
   }

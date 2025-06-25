@@ -221,12 +221,16 @@ struct Recipe_match {
   }
 
   bool match(const VPRecipeBase *R) const {
+    if (std::tuple_size<Ops_t>::value == 0) {
+      assert(Opcode == VPInstruction::BuildVector &&
+             "can only match BuildVector with empty ops");
+      auto *VPI = dyn_cast<VPInstruction>(R);
+      return VPI && VPI->getOpcode() == VPInstruction::BuildVector;
+    }
+
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    auto *VPI = dyn_cast<VPInstruction>(R);
-    if (VPI && VPI->getOpcode() == VPInstruction::BuildVector)
-      return true;
     assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
            "recipe with matched opcode does not have the expected number of "
            "operands");
@@ -312,6 +316,8 @@ using AllBinaryRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
                        VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
 
+/// BuildVector is matches only its opcode, w/o matching its operands as the
+/// number of operands is not fixed.
 inline ZeroOpVPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
   return ZeroOpVPInstruction_match<VPInstruction::BuildVector>();
 }
