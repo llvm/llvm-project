@@ -166,3 +166,35 @@ func.func @swizzle_scalable_vec(%arg0 : vector<[4]xf32>) -> vector<[4]xf32> {
   %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : vector<[4]xf32>
   func.return %0 : vector<[4]xf32>
 }
+
+// -----
+
+func.func @transpose_load_addrspace(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 1>) -> vector<4xf16> {
+  // expected-error@+1 {{'amdgpu.transpose_load' op source memory address space must be Workgroup}}
+  %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf16, 1> -> vector<4xf16>
+  func.return %0 : vector<4xf16>
+}
+
+// -----
+
+func.func @transpose_load_addrspace(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 1>) -> vector<4xf16> {
+  // expected-error@+1 {{'amdgpu.transpose_load' op source memory address space must be Workgroup}}
+  %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf16, 1> -> vector<4xf16>
+  func.return %0 : vector<4xf16>
+}
+
+// -----
+
+func.func @transpose_load_elem(%idx1 : index, %idx2 : index, %mem : memref<128x32xf32, 3>) -> vector<4xf32> {
+  // expected-error@+1 {{'amdgpu.transpose_load' op Unsupported element type size for transpose load: 32 bits}}
+  %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf32, 3> -> vector<4xf32>
+  func.return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @transpose_load_vector(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 3>) -> vector<2xf16> {
+  // expected-error@+1 {{'amdgpu.transpose_load' op Transferring type size mismatch: expected num of elements: 4}}
+  %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf16, 3> -> vector<2xf16>
+  func.return %0 : vector<2xf16>
+}
