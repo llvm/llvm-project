@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s --validate-cfi --filetype=null 2>&1 \
+# RUN: not llvm-mc %s --validate-cfi --filetype=null 2>&1 \
 # RUN:   | FileCheck %s 
         .text
         .globl  f
@@ -9,7 +9,7 @@ f:
         .cfi_undefined %rax
 
         pushq   %rbp
-        # CHECK: warning: Unknown change happened to %RBP unwinding rule
+        # CHECK: warning: unknown change happened to %RBP unwinding rule structure
         .cfi_def_cfa_offset 17
         .cfi_offset %rbp, -16
 

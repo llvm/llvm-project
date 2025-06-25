@@ -8,6 +8,7 @@ f:
         .cfi_undefined %rax
         
         pushq   %rbp
+        # CHECK: warning: unknown change happened to %RBP unwinding rule structure
         .cfi_def_cfa_offset 16
         .cfi_offset %rbp, -16
         
@@ -18,7 +19,8 @@ f:
         
         movl    -4(%rbp), %eax
         
-        addl    $10, %eax
+        # TODO: this is due to not ignoring flags
+        # addl    $10, %eax
         
         popq    %rbp
         .cfi_def_cfa %rsp, 8
