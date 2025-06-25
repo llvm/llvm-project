@@ -1264,7 +1264,10 @@ protected:
     /// bit is set to true.
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsUnique : 1;
-
+    
+     /// The location of the non-type template parameter reference.
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long Loc : SourceLocation::Bits;
   };
 
   class ConvertVectorExprBitfields {

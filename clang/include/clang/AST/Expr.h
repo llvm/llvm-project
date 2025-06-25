@@ -1175,8 +1175,6 @@ public:
 /// context.
 class OpaqueValueExpr : public Expr {
   friend class ASTStmtReader;
-
-  SourceLocation Loc;
   Expr *SourceExpr;
 
 public:
@@ -1184,7 +1182,7 @@ public:
                   ExprObjectKind OK = OK_Ordinary, Expr *SourceExpr = nullptr)
       : Expr(OpaqueValueExprClass, T, VK, OK), SourceExpr(SourceExpr) {
     setIsUnique(false);
-    this->Loc = Loc;
+    OpaqueValueExprBits.Loc = Loc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -1197,7 +1195,7 @@ public:
     : Expr(OpaqueValueExprClass, Empty) {}
 
   /// Retrieve the location of this expression.
-  SourceLocation getLocation() const { return Loc; }
+  SourceLocation getLocation() const { return SourceLocation::getFromRawEncoding(OpaqueValueExprBits.Loc); }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return SourceExpr ? SourceExpr->getBeginLoc() : getLocation();

@@ -2305,7 +2305,7 @@ void ASTStmtReader::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
 void ASTStmtReader::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   VisitExpr(E);
   E->SourceExpr = Record.readSubExpr();
-  E->Loc = readSourceLocation();
+  E->OpaqueValueExprBits.Loc = readSourceLocation().getRawEncoding();
   E->setIsUnique(Record.readInt());
 }
 
