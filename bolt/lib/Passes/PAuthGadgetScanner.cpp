@@ -1320,8 +1320,15 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
 }
 
 /// While BOLT already marks some of the branch instructions as tail calls,
-/// this function tries to improve the coverage by including less obvious cases
-/// when it is possible to do without introducing too many false positives.
+/// this function tries to detect less obvious cases, assuming false positives
+/// are acceptable as long as there are not too many of them.
+///
+/// It is possible that not all the instructions classified as tail calls by
+/// this function are safe to be considered as such for the purpose of code
+/// transformations performed by BOLT. The intention of this function is to
+/// spot some of actually missed tail calls (and likely a number of unrelated
+/// indirect branch instructions) as long as this doesn't increase the amount
+/// of false positive reports unacceptably.
 static bool shouldAnalyzeTailCallInst(const BinaryContext &BC,
                                       const BinaryFunction &BF,
                                       const MCInstReference &Inst) {
