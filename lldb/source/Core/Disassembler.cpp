@@ -665,7 +665,7 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
           m_opcode.DumpRISCV(&ss, max_byte_width);
         else
           m_opcode.Dump(&ss, max_byte_width);
-       else
+      else
         m_opcode.Dump(&ss, 15 * 3 + 1);
     } else {
       // Else, we have ARM or MIPS which can show up to a uint32_t 0x00000000

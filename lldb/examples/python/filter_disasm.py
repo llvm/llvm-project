@@ -13,9 +13,9 @@ import subprocess
 
 filter_program = "crustfilt"
 
+
 def __lldb_init_module(debugger, dict):
-    debugger.HandleCommand(
-        'command script add -f filter_disasm.fdis fdis')
+    debugger.HandleCommand("command script add -f filter_disasm.fdis fdis")
     print("Disassembly filter command (fdis) loaded")
     print("Filter program set to %s" % filter_program)
 
@@ -47,22 +47,22 @@ def fdis(debugger, args, exe_ctx, result, dict):
     """
 
     global filter_program
-    args_list = args.split(' ')
+    args_list = args.split(" ")
     result.Clear()
 
-    if len(args_list) == 1 and args_list[0] == 'get':
+    if len(args_list) == 1 and args_list[0] == "get":
         result.PutCString(filter_program)
         result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
         return
 
-    if len(args_list) == 2 and args_list[0] == 'set':
+    if len(args_list) == 2 and args_list[0] == "set":
         filter_program = args_list[1]
         result.PutCString("Filter program set to %s" % filter_program)
         result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
         return
 
     res = lldb.SBCommandReturnObject()
-    debugger.GetCommandInterpreter().HandleCommand('disassemble -b ' + args, exe_ctx, res)
+    debugger.GetCommandInterpreter().HandleCommand("disassemble -b " + args, exe_ctx, res)
     if (len(res.GetError()) > 0):
         result.SetError(res.GetError())
         result.SetStatus(lldb.eReturnStatusFailed)

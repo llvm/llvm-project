@@ -608,7 +608,7 @@ public:
         llvm::MCInst inst;
         size_t inst_size = 0;
         bool valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc,
-                                             inst, inst_size);
+                                              inst, inst_size);
  
         if (valid && inst_size > 0) {
           mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
@@ -1347,8 +1347,7 @@ bool DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
   llvm::ArrayRef<uint8_t> data(opcode_data, opcode_data_len);
   llvm::MCDisassembler::DecodeStatus status;
 
-  status = m_disasm_up->getInstruction(mc_inst, size, data, pc,
-                                       llvm::nulls());
+  status = m_disasm_up->getInstruction(mc_inst, size, data, pc, llvm::nulls());
   if (status == llvm::MCDisassembler::Success)
     return true;
   else
