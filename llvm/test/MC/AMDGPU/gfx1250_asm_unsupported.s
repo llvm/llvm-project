@@ -1,5 +1,37 @@
 ; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
+;; LDS-direct and parameter-load, VINTERP
+
+ds_direct_load v1 wait_va_vdst:15
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_param_load v1, attr0.x wait_va_vdst:15
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_direct_load v1 wait_va_vdst:15 wait_vm_vsrc:1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_param_load v1, attr0.x wait_va_vdst:15 wait_vm_vsrc:1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p10_f32 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p2_f32 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p10_f16_f32 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p2_f16_f32 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p10_rtz_f16_f32 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p2_rtz_f16_f32 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; Export, S_WAIT_EXPCNT and S_WAIT_EVENT
 
 export mrt0 off, off, off, off
