@@ -1297,7 +1297,7 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
 }
 
 // -----
-// CHECK-PROP-LABEL: func.func @vector_extract_strided_slice_2d_distr_outer(
+// CHECK-PROP-LABEL: func.func @vector_extract_strided_slice_2d_distr_inner(
 //  CHECK-RPOP-SAME: %[[LANEID:.*]]: index
 //       CHECK-PROP: %[[W:.*]] = gpu.warp_execute_on_lane_0{{.*}} -> (vector<64x1xf32>) {
 //       CHECK-PROP: %[[VEC:.*]] = "some_def"() : () -> vector<64x32xf32>
@@ -1305,7 +1305,7 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
 //       CHECK-PROP: %[[EXTRACT:.*]] = vector.extract_strided_slice %[[W]]
 //  CHECK-PROP-SAME: {offsets = [8], sizes = [24], strides = [1]} : vector<64x1xf32> to vector<24x1xf32>
 //       CHECK-PROP: return %[[EXTRACT]] : vector<24x1xf32>
-func.func @vector_extract_strided_slice_2d_distr_outer(%laneid: index) -> (vector<24x1xf32>) {
+func.func @vector_extract_strided_slice_2d_distr_inner(%laneid: index) -> (vector<24x1xf32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<24x1xf32>) {
     %0 = "some_def"() : () -> (vector<64x32xf32>)
     %1 = vector.extract_strided_slice %0 { offsets = [8], sizes = [24], strides = [1]}
@@ -1316,7 +1316,7 @@ func.func @vector_extract_strided_slice_2d_distr_outer(%laneid: index) -> (vecto
 }
 
 // -----
-// CHECK-PROP-LABEL: func.func @vector_extract_strided_slice_2d_distr_inner(
+// CHECK-PROP-LABEL: func.func @vector_extract_strided_slice_2d_distr_outer(
 //  CHECK-PROP-SAME: %[[LANEID:.*]]: index
 //       CHECK-PROP: %[[W:.*]] = gpu.warp_execute_on_lane_0{{.*}} -> (vector<1x64xf32>) {
 //       CHECK-PROP: %[[VEC:.*]] = "some_def"() : () -> vector<32x64xf32>
@@ -1324,7 +1324,7 @@ func.func @vector_extract_strided_slice_2d_distr_outer(%laneid: index) -> (vecto
 //       CHECK-PROP: %[[EXTRACT:.*]] = vector.extract_strided_slice %[[W]]
 //  CHECK-PROP-SAME: {offsets = [0, 12], sizes = [1, 8], strides = [1, 1]} : vector<1x64xf32> to vector<1x8xf32>
 //       CHECK-PROP: return %[[EXTRACT]] : vector<1x8xf32>
-func.func @vector_extract_strided_slice_2d_distr_inner(%laneid: index) -> (vector<1x8xf32>) {
+func.func @vector_extract_strided_slice_2d_distr_outer(%laneid: index) -> (vector<1x8xf32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x8xf32>) {
     %0 = "some_def"() : () -> (vector<32x64xf32>)
     %1 = vector.extract_strided_slice %0 { offsets = [0, 12], sizes = [32, 8], strides = [1, 1]}
