@@ -2351,14 +2351,10 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
   return success();
 }
 
-/// For example,
-/// ```
+/// BEFORE:
 /// %0 = vector.extract %arg0[0] : vector<4xf32> from vector<1x4xf32>
-/// ```
-/// becomes
-/// ```
+/// AFTER:
 /// %0 = vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
-/// ```
 struct ExtractToShapeCast final : public OpRewritePattern<vector::ExtractOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
@@ -2368,8 +2364,8 @@ struct ExtractToShapeCast final : public OpRewritePattern<vector::ExtractOp> {
     if (!outType)
       return failure();
 
-    // Negative values in `position` indicates poison, cannot convert to
-    // shape_cast
+    // Negative values in `position` indicates poison, which cannot be
+    // represented with a shape_cast
     if (llvm::any_of(extractOp.getMixedPosition(),
                      [](OpFoldResult v) { return !isConstantIntValue(v, 0); }))
       return failure();
@@ -2902,14 +2898,10 @@ struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
   }
 };
 
-/// For example,
-/// ```
+/// BEFORE:
 /// %0 = vector.broadcast %arg0 : vector<4xi8> to vector<1x1x4xi8>
-/// ```
-/// becomes
-/// ```
+/// AFTER:
 /// %0 = vector.shape_cast %arg0 : vector<4xi8> to vector<1x1x4xi8>
-/// ```
 struct BroadcastToShapeCast final
     : public OpRewritePattern<vector::BroadcastOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -6465,16 +6457,12 @@ static bool isOrderPreserving(TransposeOp transpose) {
   return true;
 }
 
-/// For example,
-/// ```
+/// BEFORE:
 /// %0 = vector.transpose %arg0, [0, 2, 1] :
 ///                   vector<2x1x2xf32> to vector<2x2x1xf32>
-/// ```
-/// becomes
-/// ```
+/// AFTER:
 /// %0 = vector.shape_cast %arg0 :
 ///                   vector<2x1x2xf32> to vector<2x2x1xf32>
-/// ```
 struct TransposeToShapeCast final
     : public OpRewritePattern<vector::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
