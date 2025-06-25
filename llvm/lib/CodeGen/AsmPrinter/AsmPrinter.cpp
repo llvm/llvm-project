@@ -2142,16 +2142,20 @@ void AsmPrinter::emitFunctionBody() {
 }
 
 /// Compute the number of Global Variables that uses a Constant.
-static unsigned getNumGlobalVariableUses(const Constant *C) {
-  if (!C)
+static unsigned getNumGlobalVariableUses(const Constant *C,
+                                         bool &HasNonGlobalUsers) {
+  if (!C) {
+    HasNonGlobalUsers = true;
     return 0;
+  }
 
   if (isa<GlobalVariable>(C))
     return 1;
 
   unsigned NumUses = 0;
   for (const auto *CU : C->users())
-    NumUses += getNumGlobalVariableUses(dyn_cast<Constant>(CU));
+    NumUses +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(CU), HasNonGlobalUsers);
 
   return NumUses;
 }
@@ -2162,7 +2166,8 @@ static unsigned getNumGlobalVariableUses(const Constant *C) {
 /// candidates are skipped and are emitted later in case at least one cstexpr
 /// isn't replaced by a PC relative GOT entry access.
 static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
-                                     unsigned &NumGOTEquivUsers) {
+                                     unsigned &NumGOTEquivUsers,
+                                     bool &HasNonGlobalUsers) {
   // Global GOT equivalents are unnamed private globals with a constant
   // pointer initializer to another global symbol. They must point to a
   // GlobalVariable or Function, i.e., as GlobalValue.
@@ -2174,7 +2179,8 @@ static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
   // To be a got equivalent, at least one of its users need to be a constant
   // expression used by another global variable.
   for (const auto *U : GV->users())
-    NumGOTEquivUsers += getNumGlobalVariableUses(dyn_cast<Constant>(U));
+    NumGOTEquivUsers +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(U), HasNonGlobalUsers);
 
   return NumGOTEquivUsers > 0;
 }
@@ -2192,9 +2198,13 @@ void AsmPrinter::computeGlobalGOTEquivs(Module &M) {
 
   for (const auto &G : M.globals()) {
     unsigned NumGOTEquivUsers = 0;
-    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers))
+    bool HasNonGlobalUsers = false;
+    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers, HasNonGlobalUsers))
       continue;
-
+    // If non-global variables use it, we still need to emit it.
+    // Add 1 here, then emit it in `emitGlobalGOTEquivs`.
+    if (HasNonGlobalUsers)
+      NumGOTEquivUsers += 1;
     const MCSymbol *GOTEquivSym = getSymbol(&G);
     GlobalGOTEquivs[GOTEquivSym] = std::make_pair(&G, NumGOTEquivUsers);
   }
