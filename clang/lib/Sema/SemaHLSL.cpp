@@ -1115,6 +1115,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                        &Elem)) {
       VerifyRegister(Clause->Reg.Number);
       VerifySpace(Clause->Space);
+
+      if (Clause->NumDescriptors == 0)
+        ReportError();
     }
   }
 
@@ -1181,7 +1184,10 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                        &Elem)) {
       RangeInfo Info;
       Info.LowerBound = Clause->Reg.Number;
-      assert(0 < Clause->NumDescriptors && "Verified as part of TODO(#129940)");
+      // Relevant error will have already been reported above and needs to be
+      // fixed before we can conduct range analysis, so shortcut error return
+      if (Clause->NumDescriptors == 0)
+        return true;
       Info.UpperBound = Clause->NumDescriptors == RangeInfo::Unbounded
                             ? RangeInfo::Unbounded
                             : Info.LowerBound + Clause->NumDescriptors -

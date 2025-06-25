@@ -40,3 +40,8 @@ void bad_root_signature_7() {}
 // expected-error@+1 {{finns error}}
 [RootSignature("DescriptorTable(SRV(t4294967295, space = 4294967280))")]
 void bad_root_signature_8() {}
+
+// expected-error@+2 {{finns error}}
+// expected-error@+1 {{finns error}}
+[RootSignature("DescriptorTable(UAV(u0, numDescriptors = 0), Sampler(s0, numDescriptors = 0))")]
+void bad_root_signature_9() {}
