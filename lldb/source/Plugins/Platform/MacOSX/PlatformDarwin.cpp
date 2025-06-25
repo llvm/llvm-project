@@ -1155,8 +1155,6 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
                          "Failed to resolve SDK path: {0}");
         }
       }
-      // getSDKfortriple()
-      // would not work for internal/public variants.
     }
   }
 
