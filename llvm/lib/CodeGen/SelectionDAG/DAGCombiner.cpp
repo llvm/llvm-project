@@ -20133,6 +20133,27 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     }
   }
 
+  // Loading a smaller fixed vector type from a stored larger fixed vector type
+  // can be substituted with an extract_subvector, provided the smaller type
+  // entirely contained in the larger type, and an extract_element would be
+  // legal for the given offset.
+  if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, LDType) &&
+      LDType.isFixedLengthVector() && STType.isFixedLengthVector() &&
+      !ST->isTruncatingStore() && LD->getExtensionType() == ISD::NON_EXTLOAD &&
+      LDType.getVectorElementType() == STType.getVectorElementType() &&
+      (Offset * 8 + LDType.getFixedSizeInBits() <=
+       STType.getFixedSizeInBits()) &&
+      (Offset % LDType.getScalarStoreSize() == 0)) {
+    unsigned EltOffset = Offset / LDType.getScalarStoreSize();
+    // The extract index must be a multiple of the result's element count.
+    if (EltOffset % LDType.getVectorElementCount().getFixedValue() == 0) {
+      SDLoc DL(LD);
+      SDValue VecIdx = DAG.getVectorIdxConstant(EltOffset, DL);
+      Val = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LDType, Val, VecIdx);
+      return ReplaceLd(LD, Val, Chain);
+    }
+  }
+
   // TODO: Deal with nonzero offset.
   if (LD->getBasePtr().isUndef() || Offset != 0)
     return SDValue();
