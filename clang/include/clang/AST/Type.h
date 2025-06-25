@@ -6410,9 +6410,11 @@ public:
   ~SpirvOperand() {}
 
   SpirvOperand &operator=(const SpirvOperand &Other) {
-    this->Kind = Other.Kind;
-    this->ResultType = Other.ResultType;
-    this->Value = Other.Value;
+    if (this != &Other) {
+      this->Kind = Other.Kind;
+      this->ResultType = Other.ResultType;
+      this->Value = Other.Value;
+    }
     return *this;
   }
 
