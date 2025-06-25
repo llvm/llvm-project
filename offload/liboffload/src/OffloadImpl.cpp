@@ -13,6 +13,8 @@
 
 #include "OffloadImpl.hpp"
 #include "Helpers.hpp"
+// Required for operator<< implementation of ol_device_info_t
+#include "OffloadPrint.hpp"
 #include "PluginManager.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
@@ -264,13 +266,16 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
     return "";
   };
-  auto GetInfoXyz = [&](std::vector<std::string> Names) {
-    if (!Device->Device)
-      return ol_dimensions_t{0, 0, 0};
+  auto GetInfoXyz = [&](std::vector<std::string> Names) -> Error {
+    if (Device == OffloadContext::get().HostDevice())
+      return ReturnValue(ol_dimensions_t{0u, 0u, 0u});
+
+    assert(Device->Device &&
+           "liboffload device handle contains a null plugin device");
 
     auto Info = Device->Device->obtainInfoImpl();
     if (auto Err = Info.takeError())
-      return ol_dimensions_t{0, 0, 0};
+      return Err;
 
     for (auto Name : Names) {
       if (auto Entry = Info->get(Name)) {
@@ -283,11 +288,14 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
           Out.y = std::get<size_t>((*Y)->Value);
         if (auto Z = Node->get("z"))
           Out.z = std::get<size_t>((*Z)->Value);
-        return Out;
+        return ReturnValue(Out);
       }
     }
 
-    return ol_dimensions_t{0, 0, 0};
+    std::string ErrBuffer;
+    llvm::raw_string_ostream(ErrBuffer)
+        << "plugin did not provide information for " << PropName;
+    return Plugin::error(ErrorCode::UNIMPLEMENTED, ErrBuffer.c_str());
   };
 
   switch (PropName) {
@@ -305,8 +313,8 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return ReturnValue(
         GetInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
-    return ReturnValue(GetInfoXyz({"Workgroup Max Size per Dimension" /*AMD*/,
-                                   "Maximum Block Dimensions" /*CUDA*/}));
+    return GetInfoXyz({"Workgroup Max Size per Dimension" /*AMD*/,
+                       "Maximum Block Dimensions" /*CUDA*/});
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
