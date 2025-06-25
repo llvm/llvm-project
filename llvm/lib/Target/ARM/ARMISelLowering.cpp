@@ -6186,7 +6186,7 @@ static void ExpandREAD_REGISTER(SDNode *N, SmallVectorImpl<SDValue> &Results,
 
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Read.getValue(0),
                     Read.getValue(1)));
-  Results.push_back(Read.getOperand(0));
+  Results.push_back(Read.getValue(2)); // Chain
 }
 
 /// \p BC is a bitcast that is about to be turned into a VMOVDRR.
