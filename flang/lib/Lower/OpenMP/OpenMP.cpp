@@ -1616,7 +1616,7 @@ genLoopNestClauses(lower::AbstractConverter &converter,
 
   llvm::SmallVector<int64_t> sizeValues;
   auto *ompCons{eval.getIf<parser::OpenMPConstruct>()};
-  collectTileSizesFromOpenMPConstruct (ompCons, sizeValues, semaCtx);
+  collectTileSizesFromOpenMPConstruct(ompCons, sizeValues, semaCtx);
   if (sizeValues.size() > 0)
     clauseOps.tileSizes = sizeValues;
 }
