@@ -687,8 +687,13 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   }
   auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
                                               global.getSymbol());
+  // The type of the global cannot be trusted to be the same as the one
+  // of the variable as some existing programs map common blocks to
+  // BIND(C) module variables (e.g. mpi_argv_null in MPI and MPI_F08).
+  mlir::Type varAddrType = fir::ReferenceType::get(converter.genType(sym));
+  mlir::Value cast = builder.createConvert(loc, varAddrType, addrOf);
   Fortran::lower::StatementContext stmtCtx;
-  mapSymbolAttributes(converter, var, symMap, stmtCtx, addrOf);
+  mapSymbolAttributes(converter, var, symMap, stmtCtx, cast);
 }
 
 //===----------------------------------------------------------------===//
