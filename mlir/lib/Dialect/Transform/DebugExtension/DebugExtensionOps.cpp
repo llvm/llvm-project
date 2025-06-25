@@ -19,7 +19,7 @@ using namespace mlir;
 #include "mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.cpp.inc"
 
 DiagnosedSilenceableFailure
-transform::DebugEmitRemarkAtOp::apply(transform::TransformRewriter &rewriter,
+transform::EmitRemarkAtOp::apply(transform::TransformRewriter &rewriter,
                                       transform::TransformResults &results,
                                       transform::TransformState &state) {
   if (isa<TransformHandleTypeInterface>(getAt().getType())) {
@@ -52,7 +52,7 @@ transform::DebugEmitRemarkAtOp::apply(transform::TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
-DiagnosedSilenceableFailure transform::DebugEmitParamAsRemarkOp::apply(
+DiagnosedSilenceableFailure transform::EmitParamAsRemarkOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   std::string str;

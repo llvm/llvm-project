@@ -17,7 +17,7 @@ from typing import Union
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
-class DebugEmitParamAsRemarkOp(DebugEmitParamAsRemarkOp):
+class EmitParamAsRemarkOp(EmitParamAsRemarkOp):
     def __init__(
         self,
         param: Attribute,
@@ -47,16 +47,11 @@ def emit_param_as_remark(
     loc=None,
     ip=None,
 ):
-    return DebugEmitParamAsRemarkOp(
-        param, anchor=anchor, message=message, loc=loc, ip=ip
-    )
-
-
-del debug_emit_param_as_remark
+    return EmitParamAsRemarkOp(param, anchor=anchor, message=message, loc=loc, ip=ip)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
-class DebugEmitRemarkAtOp(DebugEmitRemarkAtOp):
+class EmitRemarkAtOp(EmitRemarkAtOp):
     def __init__(
         self,
         at: Union[Operation, Value],
@@ -83,7 +78,4 @@ def emit_remark_at(
     loc=None,
     ip=None,
 ):
-    return DebugEmitRemarkAtOp(at, message, loc=loc, ip=ip)
-
-
-del debug_emit_remark_at
+    return EmitRemarkAtOp(at, message, loc=loc, ip=ip)
