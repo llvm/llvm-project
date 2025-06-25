@@ -1356,8 +1356,7 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     SourceLocation StrTokSpellingLoc = SM.getSpellingLoc(StrTokLoc);
 
     // Re-lex the token to get its length and original spelling.
-    std::pair<FileID, unsigned> LocInfo =
-        SM.getDecomposedLoc(StrTokSpellingLoc);
+    FileIDAndOffset LocInfo = SM.getDecomposedLoc(StrTokSpellingLoc);
     bool Invalid = false;
     StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
     if (Invalid) {

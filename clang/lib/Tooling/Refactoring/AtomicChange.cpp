@@ -196,7 +196,7 @@ combineReplacementsInChanges(llvm::StringRef FilePath,
 AtomicChange::AtomicChange(const SourceManager &SM,
                            SourceLocation KeyPosition) {
   const FullSourceLoc FullKeyPosition(KeyPosition, SM);
-  std::pair<FileID, unsigned> FileIDAndOffset =
+  FileIDAndOffset FileIDAndOffset =
       FullKeyPosition.getSpellingLoc().getDecomposedLoc();
   OptionalFileEntryRef FE = SM.getFileEntryRefForID(FileIDAndOffset.first);
   assert(FE && "Cannot create AtomicChange with invalid location.");

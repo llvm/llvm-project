@@ -16391,7 +16391,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
           // Returns true if the token beginning at this Loc is `const`.
           auto isLocAtConst = [&](SourceLocation Loc, const SourceManager &SM,
                                   const LangOptions &LangOpts) {
-            std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+            FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
             if (LocInfo.first.isInvalid())
               return false;
 
