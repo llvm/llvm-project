@@ -2993,10 +2993,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         return replaceInstUsesWith(GEP, V);
       return &GEP;
     }
-
-    // TODO: 1) Scalarize splat operands, 2) scalarize entire instruction if
-    // possible (decide on canonical form for pointer broadcast), 3) exploit
-    // undef elements to decrease demanded bits
   }
 
   // Eliminate unneeded casts for indices, and replace indices which displace
@@ -3056,6 +3052,32 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *NewGEP =
         Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
     return replaceInstUsesWith(GEP, NewGEP);
+  }
+
+  // Scalarize vector operands; prefer splat-of-gep.as canonical form.
+  // Note that this looses information about undef lanes; we run it after
+  // demanded bits to partially mitigate that loss.
+  if (GEPType->isVectorTy() && llvm::any_of(GEP.operands(), [](Value *Op) {
+        return Op->getType()->isVectorTy() && getSplatValue(Op);
+      })) {
+    SmallVector<Value *> NewOps;
+    for (auto &Op : GEP.operands()) {
+      if (Op->getType()->isVectorTy())
+        if (Value *Scalar = getSplatValue(Op)) {
+          NewOps.push_back(Scalar);
+          continue;
+        }
+      NewOps.push_back(Op);
+    }
+
+    Value *Res = Builder.CreateGEP(GEP.getSourceElementType(), NewOps[0],
+                                   ArrayRef(NewOps).drop_front(), GEP.getName(),
+                                   GEP.getNoWrapFlags());
+    if (!Res->getType()->isVectorTy()) {
+      ElementCount EC = cast<VectorType>(GEPType)->getElementCount();
+      Res = Builder.CreateVectorSplat(EC, Res);
+    }
+    return replaceInstUsesWith(GEP, Res);
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.

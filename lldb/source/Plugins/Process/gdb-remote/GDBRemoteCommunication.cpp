@@ -1128,8 +1128,8 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     Socket *accepted_socket = nullptr;
     error = sock_up->Accept(/*timeout=*/std::nullopt, accepted_socket);
     if (accepted_socket) {
-      SetConnection(
-          std::make_unique<ConnectionFileDescriptor>(accepted_socket));
+      SetConnection(std::make_unique<ConnectionFileDescriptor>(
+          std::unique_ptr<Socket>(accepted_socket)));
     }
   }
 
@@ -1137,20 +1137,6 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 }
 
 void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
-
-llvm::Error
-GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
-                                       GDBRemoteCommunication &server) {
-  llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
-  if (!pair)
-    return pair.takeError();
-
-  client.SetConnection(
-      std::make_unique<ConnectionFileDescriptor>(pair->first.release()));
-  server.SetConnection(
-      std::make_unique<ConnectionFileDescriptor>(pair->second.release()));
-  return llvm::Error::success();
-}
 
 GDBRemoteCommunication::ScopedTimeout::ScopedTimeout(
     GDBRemoteCommunication &gdb_comm, std::chrono::seconds timeout)

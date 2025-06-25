@@ -409,6 +409,7 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
     break;
   case InfoType::IT_concept:
+  case InfoType::IT_variable:
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
