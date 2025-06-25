@@ -261,7 +261,8 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
                                     ScanningOutputFormat::Make, CASOptions(),
                                     nullptr, nullptr, nullptr);
   {
-    DependencyScanningWorkerFilesystem DepFS(Service, std::move(CASFS));
+    DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
+                                             std::move(CASFS));
     std::optional<ObjectRef> CASContents;
     auto Buf = DepFS.getBufferForFile(Path, /*FileSize*/ -1,
                                       /*RequiresNullTerminator*/ false,
@@ -279,7 +280,7 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
     // Check that even though we pass a new InMemoryFileSystem instance here the
     // DependencyScanningService's SharedCache cached the file's buffer and
     // cas::ObjectRef and will be able to provide it.
-    DependencyScanningWorkerFilesystem DepFS(Service,
+    DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
                                              new llvm::vfs::InMemoryFileSystem);
     DepFS.setCurrentWorkingDirectory("/root");
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
