@@ -2304,7 +2304,9 @@ public:
 
   /// Check whether the next pp-token is one of the specificed token kind. this
   /// method should have no observable side-effect on the lexed tokens.
-  template <tok::TokenKind K, tok::TokenKind... Ks> bool isNextPPTokenOneOf() {
+  template <typename... Ts> bool isNextPPTokenOneOf(Ts... Ks) {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
     // Do some quick tests for rejection cases.
     std::optional<Token> Val;
     if (CurLexer)
@@ -2335,7 +2337,7 @@ public:
 
     // Okay, we found the token and return.  Otherwise we found the end of the
     // translation unit.
-    return Val->is(K) || (... || Val->is(Ks));
+    return Val->isOneOf(Ks...);
   }
 
 private:
