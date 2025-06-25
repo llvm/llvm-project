@@ -100,12 +100,10 @@ func.func @negative_transpose_to_shape_cast(%arg : vector<1x4x4x1xi8>) -> vector
 
 // -----
 
-// Currently the conversion shape_cast(transpose) -> shape_cast is disabled for
-// scalable vectors because of bad interaction with ConvertIllegalShapeCastOpsToTransposes
-// CHECK-LABEL: @negative_shape_cast_of_transpose_scalable
-//       CHECK:  vector.transpose
-//       CHECK:  vector.shape_cast
-func.func @negative_shape_cast_of_transpose_scalable(%arg : vector<[4]x1xi8>) -> vector<[4]xi8> {
+// CHECK-LABEL: @shape_cast_of_transpose_scalable
+//  CHECK-NEXT:  vector.shape_cast
+//  CHECK-NEXT:  return
+func.func @shape_cast_of_transpose_scalable(%arg : vector<[4]x1xi8>) -> vector<[4]xi8> {
   %0 = vector.transpose %arg, [1, 0] : vector<[4]x1xi8> to vector<1x[4]xi8>
   %1 = vector.shape_cast %0 : vector<1x[4]xi8> to vector<[4]xi8>
   return %1 : vector<[4]xi8>
@@ -113,12 +111,10 @@ func.func @negative_shape_cast_of_transpose_scalable(%arg : vector<[4]x1xi8>) ->
 
 // -----
 
-// The conversion transpose(shape_cast) -> shape_cast is currently disabled for scalable
-// vectors.
-// CHECK-LABEL: @negative_transpose_of_shape_cast_scalable
-//       CHECK: vector.shape_cast
-//       CHECK: vector.transpose
-func.func @negative_transpose_of_shape_cast_scalable(%arg : vector<[4]xi8>) -> vector<[4]x1xi8> {
+// CHECK-LABEL: @transpose_of_shape_cast_scalable
+//  CHECK-NEXT: vector.shape_cast
+//  CHECK-NEXT: return
+func.func @transpose_of_shape_cast_scalable(%arg : vector<[4]xi8>) -> vector<[4]x1xi8> {
   %0 = vector.shape_cast %arg : vector<[4]xi8> to vector<1x[4]xi8>
   %1 = vector.transpose %0, [1, 0] : vector<1x[4]xi8> to vector<[4]x1xi8>
   return %1 : vector<[4]x1xi8>
