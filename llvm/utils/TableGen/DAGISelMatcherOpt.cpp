@@ -282,8 +282,8 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 #endif
 
         if (ResultsMatch) {
-          const SmallVectorImpl<MVT::SimpleValueType> &VTs = EN->getVTList();
-          const SmallVectorImpl<unsigned> &Operands = EN->getOperandList();
+          ArrayRef<MVT::SimpleValueType> VTs = EN->getVTList();
+          ArrayRef<unsigned> Operands = EN->getOperandList();
           MatcherPtr->reset(new MorphNodeToMatcher(
               EN->getInstruction(), VTs, Operands, EN->hasChain(),
               EN->hasInGlue(), EN->hasOutGlue(), EN->hasMemRefs(),

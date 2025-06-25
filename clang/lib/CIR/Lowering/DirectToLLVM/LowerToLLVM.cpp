@@ -989,6 +989,22 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMExpectOpLowering::matchAndRewrite(
+    cir::ExpectOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // TODO(cir): do not generate LLVM intrinsics under -O0
+  assert(!cir::MissingFeatures::optInfoAttr());
+
+  std::optional<llvm::APFloat> prob = op.getProb();
+  if (prob)
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ExpectWithProbabilityOp>(
+        op, adaptor.getVal(), adaptor.getExpected(), prob.value());
+  else
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ExpectOp>(op, adaptor.getVal(),
+                                                      adaptor.getExpected());
+  return mlir::success();
+}
+
 /// Convert the `cir.func` attributes to `llvm.func` attributes.
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out
@@ -1016,7 +1032,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
 
   cir::FuncType fnType = op.getFunctionType();
-  assert(!cir::MissingFeatures::opFuncDsolocal());
+  assert(!cir::MissingFeatures::opFuncDsoLocal());
   bool isDsoLocal = false;
   mlir::TypeConverter::SignatureConversion signatureConversion(
       fnType.getNumInputs());
@@ -1103,7 +1119,7 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const bool isConst = false;
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
-  const bool isDsoLocal = op.getDsolocal();
+  const bool isDsoLocal = op.getDsoLocal();
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -1157,7 +1173,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const bool isConst = false;
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
-  const bool isDsoLocal = op.getDsolocal();
+  const bool isDsoLocal = op.getDsoLocal();
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -1868,6 +1884,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMCallOpLowering,
                CIRToLLVMCmpOpLowering,
                CIRToLLVMConstantOpLowering,
+               CIRToLLVMExpectOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,

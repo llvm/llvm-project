@@ -2129,7 +2129,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
   // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
-  if (!Subtarget->hasSVE() || ResVT.getVectorElementType() != MVT::i1)
+  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
+      ResVT.getVectorElementType() != MVT::i1)
     return true;
 
   // Only support illegal types if the result is scalable and min elements > 1.
@@ -2299,6 +2300,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FSQRT, VT, Default);
   setOperationAction(ISD::FSUB, VT, Default);
   setOperationAction(ISD::FTRUNC, VT, Default);
+  setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Default);
   setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Default);
   setOperationAction(ISD::LOAD, VT, PreferNEON ? Legal : Default);
   setOperationAction(ISD::MGATHER, VT, PreferSVE ? Default : Expand);
@@ -18139,7 +18141,8 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                                 /*IsEqual=*/false))
     return While;
 
-  if (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming()))
+  if (!N->getValueType(0).isScalableVector() ||
+      (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming())))
     return SDValue();
 
   if (!N->hasNUsesOfValue(2, 0))

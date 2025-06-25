@@ -247,11 +247,11 @@ define <2 x i1> @test13_vector2(i64 %X, <2 x ptr> %P) nounwind {
 
 define <2 x i1> @test13_fixed_fixed(i64 %X, ptr %P, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: @test13_fixed_fixed(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 3, i64 0>
-; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw <2 x i64> [[Y:%.*]], splat (i64 4)
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], [[B_IDX]]
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds <2 x i64>, ptr [[P:%.*]], i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[A1]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr> [[DOTSPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds <2 x i64>, ptr [[P]], <2 x i64> [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x ptr> [[DOTSPLAT]], [[B]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds <2 x i64>, ptr %P, <2 x i64> zeroinitializer, i64 %X
