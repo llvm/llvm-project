@@ -2171,6 +2171,29 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
       .Default([&](VPRecipeBase *R) { return nullptr; });
 }
 
+// Replace VF operands with EVL in recipes that use VF.
+static void replaceVFWithEVL(VPValue &VF, VPValue &EVL) {
+  for (VPUser *U : to_vector(VF.users())) {
+    if (auto *VEP = dyn_cast<VPVectorEndPointerRecipe>(U)) {
+      VPValue *Ptr = VEP->getPtr();
+      GEPNoWrapFlags NewFlags = VEP->getGEPNoWrapFlags();
+      // Replacing VF with EVL ensures that VPVectorEndPointer will not compute
+      // out-of-bounds, as long as the original pointer had the inbounds flag.
+      if (!NewFlags.isInBounds()) {
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(
+                Ptr->getUnderlyingValue()->stripPointerCasts()))
+          if (GEP->isInBounds())
+            NewFlags = GEPNoWrapFlags::inBounds();
+      }
+      auto *NewVEP = new VPVectorEndPointerRecipe(
+          Ptr, &EVL, VEP->getIndexedTy(), NewFlags, VEP->getDebugLoc());
+      NewVEP->insertBefore(VEP);
+      VEP->replaceAllUsesWith(NewVEP);
+      VEP->eraseFromParent();
+    }
+  }
+}
+
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
@@ -2198,12 +2221,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
   }
 
-  for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
-      R->setOperand(1, &EVL);
-  }
-
   SmallVector<VPRecipeBase *> ToErase;
+  replaceVFWithEVL(Plan.getVF(), EVL);
 
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {

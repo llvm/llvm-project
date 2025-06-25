@@ -1707,8 +1707,12 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPVectorEndPointerSC)
 
+  VPValue *getPtr() const { return getOperand(0); }
+
   VPValue *getVFValue() { return getOperand(1); }
   const VPValue *getVFValue() const { return getOperand(1); }
+
+  Type *getIndexedTy() const { return IndexedTy; };
 
   void execute(VPTransformState &State) override;
 
@@ -1734,7 +1738,7 @@ public:
   }
 
   VPVectorEndPointerRecipe *clone() override {
-    return new VPVectorEndPointerRecipe(getOperand(0), getVFValue(), IndexedTy,
+    return new VPVectorEndPointerRecipe(getPtr(), getVFValue(), IndexedTy,
                                         getGEPNoWrapFlags(), getDebugLoc());
   }
 
