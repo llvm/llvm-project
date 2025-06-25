@@ -497,10 +497,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
     if (llvm::omp::isAllowedClauseForDirective(last.id, node->id, version)) {
       last.clauses.push_back(node);
       return true;
-    } else {
-      //      llvm::errs() << "** OVERRIDING isAllowedClauseForDirective **\n";
-      last.clauses.push_back(node);
-      return true;
     }
   }
 

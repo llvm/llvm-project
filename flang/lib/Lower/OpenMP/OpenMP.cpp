@@ -49,6 +49,7 @@
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
 using namespace Fortran::utils::openmp;
+using namespace Fortran::semantics;
 
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
@@ -1602,6 +1603,7 @@ genLoopNestClauses(lower::AbstractConverter &converter,
       int64_t collapseValue = evaluate::ToInt64(collapse.v).value();
       clauseOps.numCollapse = firOpBuilder.getI64IntegerAttr(collapseValue);
     } else if (clause.id == llvm::omp::Clause::OMPC_sizes) {
+      // This case handles the stand-alone tiling construct
       const auto &sizes = std::get<clause::Sizes>(clause.u);
       llvm::SmallVector<int64_t> sizeValues;
       for (auto &size : sizes.v) {
@@ -1611,6 +1613,12 @@ genLoopNestClauses(lower::AbstractConverter &converter,
       clauseOps.tileSizes = sizeValues;
     }
   }
+
+  llvm::SmallVector<int64_t> sizeValues;
+  auto *ompCons{eval.getIf<parser::OpenMPConstruct>()};
+  collectTileSizesFromOpenMPConstruct (ompCons, sizeValues, semaCtx);
+  if (sizeValues.size() > 0)
+    clauseOps.tileSizes = sizeValues;
 }
 
 static void genLoopClauses(
@@ -3893,21 +3901,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       std::get<parser::OmpBeginLoopDirective>(loopConstruct.t);
   List<Clause> clauses = makeClauses(
       std::get<parser::OmpClauseList>(beginLoopDirective.t), semaCtx);
-
-  const auto &innerOptional =
-      std::get<std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
-          loopConstruct.t);
-  if (innerOptional.has_value()) {
-    const auto &innerLoopDirective = innerOptional.value().value();
-    const auto &innerBegin =
-        std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
-    const auto &innerDirective =
-        std::get<parser::OmpLoopDirective>(innerBegin.t);
-    if (innerDirective.v == llvm::omp::Directive::OMPD_tile) {
-      clauses.append(
-          makeClauses(std::get<parser::OmpClauseList>(innerBegin.t), semaCtx));
-    }
-  }
 
   if (auto &endLoopDirective =
           std::get<std::optional<parser::OmpEndLoopDirective>>(

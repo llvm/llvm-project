@@ -14,6 +14,7 @@
 
 #include "ClauseFinder.h"
 #include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Evaluate/fold.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
@@ -25,9 +26,30 @@
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Utils/OpenMP.h>
+#include <flang/Semantics/type.h>
 #include <llvm/Support/CommandLine.h>
 
 #include <iterator>
+
+using namespace Fortran::semantics;
+
+template <typename T>
+MaybeIntExpr
+EvaluateIntExpr(SemanticsContext &context, const T &expr) {
+  if (MaybeExpr maybeExpr{
+          Fold(context.foldingContext(), AnalyzeExpr(context, expr))}) {
+    if (auto *intExpr{Fortran::evaluate::UnwrapExpr<SomeIntExpr>(*maybeExpr)}) {
+      return std::move(*intExpr);
+    }
+  }
+  return std::nullopt;
+}
+
+template <typename T>
+std::optional<std::int64_t>
+EvaluateInt64(SemanticsContext &context, const T &expr) {
+  return Fortran::evaluate::ToInt64(EvaluateIntExpr(context, expr));
+}
 
 llvm::cl::opt<bool> treatIndexAsSection(
     "openmp-treat-index-as-section",
@@ -584,6 +606,43 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
   }
 }
 
+// Populates the sizes vector with values if the given OpenMPConstruct
+// Contains a loop construct with an inner tiling construct.
+void collectTileSizesFromOpenMPConstruct(
+    const parser::OpenMPConstruct *ompCons,
+    llvm::SmallVectorImpl<int64_t> &tileSizes,
+    SemanticsContext &semaCtx) {
+  if (!ompCons)
+    return;
+
+  if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
+    const auto &innerOptional = std::get<
+        std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
+        ompLoop->t);
+    if (innerOptional.has_value()) {
+      const auto &innerLoopDirective = innerOptional.value().value();
+      const auto &innerBegin =
+          std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
+      const auto &innerDirective =
+          std::get<parser::OmpLoopDirective>(innerBegin.t).v;
+
+      if (innerDirective == llvm::omp::Directive::OMPD_tile) {
+        // Get the size values from parse tree and convert to a vector
+        const auto &innerClauseList{
+            std::get<parser::OmpClauseList>(innerBegin.t)};
+        for (const auto &clause : innerClauseList.v)
+          if (const auto tclause{
+                  std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
+            for (auto &tval : tclause->v) {
+              if (const auto v{EvaluateInt64(semaCtx, tval)})
+                tileSizes.push_back(*v);
+            }
+          }
+      }
+    }
+  }
+}
+
 bool collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
@@ -605,11 +664,34 @@ bool collectLoopRelatedInfo(
     collapseValue = evaluate::ToInt64(clause->v).value();
     found = true;
   }
+
+  // Collect sizes from tile directive if present
   std::int64_t sizesLengthValue = 0l;
-  if (auto *clause =
-          ClauseFinder::findUniqueClause<omp::clause::Sizes>(clauses)) {
-    sizesLengthValue = clause->v.size();
-    found = true;
+  if (auto *ompCons{eval.getIf<parser::OpenMPConstruct>()}) {
+    if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
+      const auto &innerOptional = std::get<
+          std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
+          ompLoop->t);
+      if (innerOptional.has_value()) {
+        const auto &innerLoopDirective = innerOptional.value().value();
+        const auto &innerBegin =
+            std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
+        const auto &innerDirective =
+            std::get<parser::OmpLoopDirective>(innerBegin.t).v;
+
+        if (innerDirective == llvm::omp::Directive::OMPD_tile) {
+          // Get the size values from parse tree and convert to a vector
+          const auto &innerClauseList{
+              std::get<parser::OmpClauseList>(innerBegin.t)};
+          for (const auto &clause : innerClauseList.v)
+            if (const auto tclause{
+                    std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
+              sizesLengthValue = tclause->v.size();
+              found = true;
+            }
+        }
+      }
+    }
   }
 
   collapseValue = collapseValue - sizesLengthValue;
