@@ -588,14 +588,32 @@ static const llvm::GlobalValue *getAliasedGlobal(const llvm::GlobalValue *GV) {
 }
 
 static bool checkAliasedGlobal(
-    const ASTContext &Context, DiagnosticsEngine &Diags, SourceLocation Location,
-    bool IsIFunc, const llvm::GlobalValue *Alias, const llvm::GlobalValue *&GV,
+    const CodeGenModule *CGM, const ASTContext &Context,
+    DiagnosticsEngine &Diags, SourceLocation Location, bool IsIFunc,
+    const llvm::GlobalValue *Alias, const llvm::GlobalValue *&GV,
     const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames,
     SourceRange AliasRange) {
   GV = getAliasedGlobal(Alias);
   if (!GV) {
     Diags.Report(Location, diag::err_cyclic_alias) << IsIFunc;
     return false;
+  }
+
+  // Only resolve unique internal linkage symbols for C code
+  if (!CGM->getLangOpts().CPlusPlus) {
+    for (const auto &[Decl, Name] : MangledDeclNames) {
+      if (const auto *ND = dyn_cast<NamedDecl>(Decl.getDecl())) {
+        IdentifierInfo *II = ND->getIdentifier();
+        if (II && II->getName() == GV->getName() &&
+            Name.contains(llvm::FunctionSamples::UniqSuffix)) {
+          GlobalDecl GD;
+          if (CGM->lookupRepresentativeDecl(Name, GD)) {
+            GV = CGM->getModule().getNamedValue(Name);
+            break;
+          }
+        }
+      }
+    }
   }
 
   if (GV->hasCommonLinkage()) {
@@ -687,8 +705,8 @@ void CodeGenModule::checkAliases() {
     StringRef MangledName = getMangledName(GD);
     llvm::GlobalValue *Alias = GetGlobalValue(MangledName);
     const llvm::GlobalValue *GV = nullptr;
-    if (!checkAliasedGlobal(getContext(), Diags, Location, IsIFunc, Alias, GV,
-                            MangledDeclNames, Range)) {
+    if (!checkAliasedGlobal(this, getContext(), Diags, Location, IsIFunc, Alias,
+                            GV, MangledDeclNames, Range)) {
       Error = true;
       continue;
     }
@@ -4038,6 +4056,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     CXXGlobalInits.push_back(nullptr);
   }
 
+  const auto *ND = dyn_cast<NamedDecl>(GD.getDecl());
   StringRef MangledName = getMangledName(GD);
   if (GetGlobalValue(MangledName) != nullptr) {
     // The value has already been used and should therefore be emitted.
@@ -4045,6 +4064,12 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   } else if (MustBeEmitted(Global)) {
     // The value must be emitted, but cannot be emitted eagerly.
     assert(!MayBeEmittedEagerly(Global));
+    addDeferredDeclToEmit(GD);
+  } else if (!getLangOpts().CPlusPlus && ND &&
+             GetGlobalValue(ND->getName()) != nullptr &&
+             MangledName.contains(llvm::FunctionSamples::UniqSuffix)) {
+    // Emit static C function that is mangled with
+    // -funique-internal-linkage-names.
     addDeferredDeclToEmit(GD);
   } else {
     // Otherwise, remember that we saw a deferred decl with this name.  The
@@ -6188,6 +6213,21 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
     GV = cast<llvm::GlobalValue>(GetAddrOfFunction(GD, Ty, /*ForVTable=*/false,
                                                    /*DontDefer=*/true,
                                                    ForDefinition));
+
+  if (!getLangOpts().CPlusPlus &&
+      getCXXABI().getMangleContext().shouldMangleDeclName(D)) {
+    // -funique-internal-linkage-names may change the symbol name of C function.
+    // Replace all uses of old symbol with the emitted global value.
+    if (IdentifierInfo *II = D->getIdentifier()) {
+      if (II->getName() != GV->getName() &&
+          GV->getName().contains(llvm::FunctionSamples::UniqSuffix)) {
+        if (llvm::GlobalValue *GVDef =
+                getModule().getNamedValue(D->getName())) {
+          GVDef->replaceAllUsesWith(GV);
+        }
+      }
+    }
+  }
 
   // Already emitted.
   if (!GV->isDeclaration())
