@@ -385,3 +385,46 @@ struct LazyLitMatrix<index_by<Indices...>, init> {
 }
 
 }
+
+namespace GH135190 {
+template <typename T>
+concept A = __is_same_as(T, int) || __is_same_as(T, double) ;
+
+template <typename T>
+concept B = A<T> && __is_same_as(T, double);
+
+template <class... Ts>
+requires(A<Ts> && ...)
+constexpr int g() {
+    return 1;
+}
+
+template <class... Ts>
+requires(B<Ts> && ...)
+constexpr int g() {
+    return 2;
+}
+
+static_assert(g<double>() == 2);
+
+
+template <class... Ts>
+concept all_A = (A<Ts> && ...);
+
+template <class... Ts>
+concept all_B = (B<Ts> && ...);
+
+template <class... Ts>
+requires all_A<Ts...>
+constexpr int h() {
+    return 1;
+}
+
+template <class... Ts>
+requires all_B<Ts...>
+constexpr int h() {
+    return 2;
+}
+
+static_assert(h<double>() == 2);
+}

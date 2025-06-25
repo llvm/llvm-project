@@ -1258,4 +1258,13 @@ template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
 ([](auto) { return true; }) < PerfectSquare <class T>;
 // expected-error@-1 {{declaration of 'T' shadows template parameter}} \
 // expected-error@-1 {{a concept definition cannot refer to itself}}
+
+}
+namespace GH61811{
+template <class T> struct A { static const int x = 42; };
+template <class Ta> concept A42 = A<Ta>::x == 42;
+template <class Tv> concept Void = __is_same_as(Tv, void);
+template <class Tb, class Ub> concept A42b = Void<Tb> || A42<Ub>;
+template <class Tc> concept R42c = A42b<Tc, Tc&>;
+static_assert (R42c<void>);
 }
