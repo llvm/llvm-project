@@ -441,7 +441,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   SDLoc DL(N);
   SDValue RegClass = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   unsigned NumRegs = EltVT.getSizeInBits() / 32;
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().isAMDGCN();
+  bool IsGCN = TM.getTargetTriple().isAMDGCN();
 
   if (NumVectorElts == 1) {
     CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, EltVT, N->getOperand(0),
