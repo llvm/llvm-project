@@ -735,7 +735,7 @@ public:
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding
-  getRawSourceLocationEncoding(SourceLocation loc);
+  getRawSourceLocationEncoding(SourceLocation Loc);
 
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record);
