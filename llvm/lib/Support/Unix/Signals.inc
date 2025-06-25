@@ -413,9 +413,9 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
     raise(Sig);
 #endif
 
-  // Signal sent from another process, do not assume that continuing the
-  // execution would re-raise it.
-  if (Info->si_pid != getpid())
+  // Signal sent from another userspace process, do not assume that continuing
+  // the execution would re-raise it.
+  if (Info->si_pid != getpid() && Info->si_pid != 0)
     raise(Sig);
 }
 
