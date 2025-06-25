@@ -44,8 +44,8 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
-#include <cstddef>
 #include <cmath>
+#include <cstddef>
 #include <iterator>
 #include <utility>
 
@@ -1081,16 +1081,18 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                                        SourceLocation Loc) {
   // Define some common error handling functions
   bool HadError = false;
-  auto ReportError = [this, Loc, &HadError](uint32_t LowerBound, uint32_t UpperBound) {
+  auto ReportError = [this, Loc, &HadError](uint32_t LowerBound,
+                                            uint32_t UpperBound) {
     HadError = true;
     this->Diag(Loc, diag::err_hlsl_invalid_rootsig_parameter)
-      << LowerBound << UpperBound;
+        << LowerBound << UpperBound;
   };
 
-  auto ReportFloatError = [this, Loc, &HadError](float LowerBound, float UpperBound) {
+  auto ReportFloatError = [this, Loc, &HadError](float LowerBound,
+                                                 float UpperBound) {
     HadError = true;
     this->Diag(Loc, diag::err_hlsl_invalid_rootsig_parameter)
-      << std::to_string(LowerBound) << std::to_string(UpperBound);
+        << std::to_string(LowerBound) << std::to_string(UpperBound);
   };
 
   auto VerifyRegister = [ReportError](uint32_t Register) {
@@ -1111,7 +1113,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       VerifyRegister(Descriptor->Reg.Number);
       VerifySpace(Descriptor->Space);
     } else if (const auto *Constants =
-                 std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
+                   std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
       VerifyRegister(Constants->Reg.Number);
       VerifySpace(Constants->Space);
     } else if (const auto *Sampler =
@@ -1120,7 +1122,8 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       VerifySpace(Sampler->Space);
 
       assert(!std::isnan(Sampler->MaxLOD) && !std::isnan(Sampler->MinLOD) &&
-             "By construction, parseFloatParam can't produce a NaN from a float_literal token");
+             "By construction, parseFloatParam can't produce a NaN from a "
+             "float_literal token");
 
       if (16 < Sampler->MaxAnisotropy)
         ReportError(0, 16);
