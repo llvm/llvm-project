@@ -155,7 +155,8 @@ void CompositeType::getExtensions(
             .getExtensions(extensions, storage);
       })
       .Case<TensorArmType>([&](TensorArmType type) {
-        extensions.push_back({Extension::SPV_ARM_tensors});
+        static constexpr Extension ext{Extension::SPV_ARM_tensors};
+        extensions.push_back(ext);
         return llvm::cast<ScalarType>(type.getElementType())
             .getExtensions(extensions, storage);
       })
@@ -181,7 +182,8 @@ void CompositeType::getCapabilities(
             .getCapabilities(capabilities, storage);
       })
       .Case<TensorArmType>([&](TensorArmType type) {
-        capabilities.push_back({Capability::TensorsARM});
+        static constexpr Capability cap{Capability::TensorsARM};
+        capabilities.push_back(cap);
         return llvm::cast<ScalarType>(type.getElementType())
             .getCapabilities(capabilities, storage);
       })
@@ -712,9 +714,8 @@ bool SPIRVType::classof(Type type) {
     return true;
   if (auto vectorType = llvm::dyn_cast<VectorType>(type))
     return CompositeType::isValid(vectorType);
-  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type)) {
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type))
     return llvm::isa<ScalarType>(tensorArmType.getElementType());
-  }
   return false;
 }
 
@@ -1273,12 +1274,6 @@ TensorArmType TensorArmType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
 
 Type TensorArmType::getElementType() const { return getImpl()->elementType; }
 ArrayRef<int64_t> TensorArmType::getShape() const { return getImpl()->shape; }
-
-unsigned TensorArmType::getNumElements() const {
-  ArrayRef<int64_t> shape = getShape();
-  return std::accumulate(shape.begin(), shape.end(), unsigned(1),
-                         std::multiplies<unsigned>());
-}
 
 void TensorArmType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,

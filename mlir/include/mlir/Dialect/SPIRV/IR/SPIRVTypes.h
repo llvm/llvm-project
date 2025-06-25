@@ -486,6 +486,15 @@ class TensorArmType
 public:
   using Base::Base;
 
+  using ShapedType::Trait<TensorArmType>::getElementTypeBitWidth;
+  using ShapedType::Trait<TensorArmType>::getRank;
+  using ShapedType::Trait<TensorArmType>::getNumElements;
+  using ShapedType::Trait<TensorArmType>::isDynamicDim;
+  using ShapedType::Trait<TensorArmType>::hasStaticShape;
+  using ShapedType::Trait<TensorArmType>::getNumDynamicDims;
+  using ShapedType::Trait<TensorArmType>::getDimSize;
+  using ShapedType::Trait<TensorArmType>::getDynamicDimIndex;
+
   static constexpr StringLiteral name = "spirv.arm.tensor";
 
   // TensorArm supports minimum rank of 1, hence an empty shape here means
@@ -500,7 +509,6 @@ public:
 
   Type getElementType() const;
   ArrayRef<int64_t> getShape() const;
-  unsigned getNumElements() const;
   bool hasRank() const { return !getShape().empty(); }
   operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 
