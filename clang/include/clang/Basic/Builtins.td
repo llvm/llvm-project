@@ -5116,6 +5116,24 @@ def ArithmeticFence : LangBuiltin<"ALL_LANGUAGES"> {
   let Prototype = "void(...)";
 }
 
+def AddNUW : Builtin {
+  let Spellings = ["__builtin_add_nuw"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void(...)";
+}
+
+def AddNSW : Builtin {
+  let Spellings = ["__builtin_add_nsw"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void(...)";
+}
+
+def AddNW : Builtin {
+  let Spellings = ["__builtin_add_nuw_nsw"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void(...)";
+}
+
 def CountedByRef : Builtin {
   let Spellings = ["__builtin_counted_by_ref"];
   let Attributes = [NoThrow, CustomTypeChecking];

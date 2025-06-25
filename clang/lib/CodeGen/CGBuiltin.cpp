@@ -6289,6 +6289,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Str = CGM.GetAddrOfConstantCString(Name, "");
     return RValue::get(Str.getPointer());
   }
+
+  case Builtin::BI__builtin_add_nuw:
+  case Builtin::BI__builtin_add_nsw:
+  case Builtin::BI__builtin_add_nuw_nsw: {
+    bool NXW = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_add_nuw_nsw;
+    bool NUW = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_add_nuw || NXW;
+    bool NSW = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_add_nsw || NXW;
+    llvm::Value *X = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Y = EmitScalarExpr(E->getArg(1));
+    return RValue::get(Builder.CreateAdd(X, Y, "add", NUW, NSW));
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
