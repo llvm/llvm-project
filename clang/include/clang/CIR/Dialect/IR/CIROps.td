@@ -2372,6 +2372,35 @@ def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
+  let summary = "Extract the real part of a complex value";
+  let description = [{
+    `cir.complex.real` operation takes an operand of `!cir.complex` type and
+    yields the real part of it.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    ```
+  }];
+
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins CIR_ComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
