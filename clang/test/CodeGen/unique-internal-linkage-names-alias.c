@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -funique-internal-linkage-names -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux %s -emit-llvm -funique-internal-linkage-names -o - | FileCheck %s
 
 struct A;
 static long foo(const struct A*p);
