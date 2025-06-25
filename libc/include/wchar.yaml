@@ -175,6 +175,13 @@ functions:
       - type: char *__restrict
       - type: wchar_t
       - type: mbstate_t *__restrict
+  - name: wctomb
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *
+      - type: wchar_t
   - name: wcscpy
     standards:
       - stdc
