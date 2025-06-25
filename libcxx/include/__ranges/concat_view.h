@@ -88,9 +88,6 @@ struct __last_view<_View> {
   using type _LIBCPP_NODEBUG = _View;
 };
 
-template <bool _Const, class... _Views>
-concept __all_forward = (forward_range<__maybe_const<_Const, _Views>> && ...);
-
 template <bool _Const, class... _Tp>
 struct __apply_drop_first;
 
