@@ -1836,8 +1836,7 @@ define <4 x double> @test_v8f64_2346 (<8 x double> %v) {
 define <2 x double> @test_v8f64_34 (<8 x double> %v) {
 ; ALL-LABEL: test_v8f64_34:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [3,4]
-; ALL-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    valignq {{.*#+}} zmm0 = zmm0[3,4,5,6,7,0,1,2]
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    ret{{[l|q]}}

@@ -288,29 +288,13 @@ define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX2-SLOW-LABEL: combine_vec_ashr_trunc_lshr:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX2-SLOW-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vzeroupper
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-ALL-LABEL: combine_vec_ashr_trunc_lshr:
-; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,3,5,7]
-; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-ALL-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-ALL-NEXT:    vzeroupper
-; AVX2-FAST-ALL-NEXT:    retq
-;
-; AVX2-FAST-PERLANE-LABEL: combine_vec_ashr_trunc_lshr:
-; AVX2-FAST-PERLANE:       # %bb.0:
-; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX2-FAST-PERLANE-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-PERLANE-NEXT:    vzeroupper
-; AVX2-FAST-PERLANE-NEXT:    retq
+; AVX2-LABEL: combine_vec_ashr_trunc_lshr:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,3,5,7]
+; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_ashr_trunc_lshr:
 ; AVX512:       # %bb.0:
@@ -389,29 +373,13 @@ define <4 x i32> @combine_vec_ashr_trunc_ashr(<4 x i64> %x) {
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX2-SLOW-LABEL: combine_vec_ashr_trunc_ashr:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX2-SLOW-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vzeroupper
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-ALL-LABEL: combine_vec_ashr_trunc_ashr:
-; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,3,5,7]
-; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-ALL-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-ALL-NEXT:    vzeroupper
-; AVX2-FAST-ALL-NEXT:    retq
-;
-; AVX2-FAST-PERLANE-LABEL: combine_vec_ashr_trunc_ashr:
-; AVX2-FAST-PERLANE:       # %bb.0:
-; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX2-FAST-PERLANE-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-PERLANE-NEXT:    vzeroupper
-; AVX2-FAST-PERLANE-NEXT:    retq
+; AVX2-LABEL: combine_vec_ashr_trunc_ashr:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,3,5,7]
+; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_ashr_trunc_ashr:
 ; AVX512:       # %bb.0:

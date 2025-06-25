@@ -88,12 +88,9 @@ define <2 x i32> @test5(<8 x i32> %v) {
 ; AVX512-LABEL: test5:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxdq %ymm0, %zmm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rcx
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [6,8,0,0]
+; AVX512-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %x = sext <8 x i32> %v to <8 x i64>
@@ -185,13 +182,9 @@ define <2 x i32> @test10(<8 x i32> %v) {
 ;
 ; AVX512-LABEL: test10:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rcx
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    valignd {{.*#+}} zmm0 = zmm0[3,4,5,6,7,8,9,10,11,12,13,14,15,0,1,2]
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %x = zext <8 x i32> %v to <8 x i64>
