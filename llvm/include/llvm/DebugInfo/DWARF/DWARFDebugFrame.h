@@ -334,7 +334,6 @@ public:
     assert(Index < size());
     return Rows[Index];
   }
-  void insertRow(UnwindRow Row) { Rows.push_back(Row); }
 
   /// Dump the UnwindTable to the stream.
   ///

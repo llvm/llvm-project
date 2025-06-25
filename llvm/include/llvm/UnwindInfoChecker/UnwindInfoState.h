@@ -32,7 +32,7 @@ public:
 
 private:
   MCContext *Context;
-  dwarf::UnwindTable Table;
+  dwarf::UnwindTable::RowContainer Table;
 
   std::optional<dwarf::CFIProgram> convert(MCCFIInstruction CFIDirective);
 };

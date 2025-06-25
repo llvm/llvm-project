@@ -37,7 +37,8 @@ void UnwindInfoState::update(const MCCFIInstruction &CFIDirective) {
   auto LastRow = getCurrentUnwindRow();
   dwarf::UnwindRow Row =
       LastRow.has_value() ? *(LastRow.value()) : dwarf::UnwindRow();
-  if (Error Err = Table.parseRows(DwarfOperations.value(), Row, nullptr)) {
+  if (Error Err =
+          parseRows(DwarfOperations.value(), Row, nullptr).moveInto(Table)) {
     Context->reportError(
         CFIDirective.getLoc(),
         formatv("could not parse this CFI directive due to: {0}",
@@ -46,7 +47,7 @@ void UnwindInfoState::update(const MCCFIInstruction &CFIDirective) {
     // Proceed the analysis by ignoring this CFI directive.
     return;
   }
-  Table.insertRow(Row);
+  Table.push_back(Row);
 }
 
 std::optional<dwarf::CFIProgram>
