@@ -48,7 +48,7 @@ private:
   std::vector<lldb_private::RegisterInfo> m_register_infos;
   // For each register set, an array of register numbers included.
   std::map<size_t, std::vector<uint32_t>> m_regset_regnum_collection;
-  // Bytes of the register contents.
+  /// Bytes of the register contents.
   std::vector<uint8_t> m_register_data;
 };
 
