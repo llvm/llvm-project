@@ -3735,6 +3735,7 @@ def Visibility : InheritableAttr {
                            ["default", "hidden", "internal", "protected"],
                            ["Default", "Hidden", "Hidden", "Protected"]>];
   let MeaningfulToClassTemplateDefinition = 1;
+  let PragmaAttributeSupport = 1;
   let Documentation = [Undocumented];
 }
 

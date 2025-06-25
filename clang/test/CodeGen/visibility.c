@@ -72,3 +72,13 @@ __private_extern__ int test4 = 10;
 // CHECK-HIDDEN-LABEL: define hidden void @test5()
 __attribute__((availability(macosx,introduced=10.5,deprecated=10.6)))
 __private_extern__ void test5(void) {}
+
+
+#pragma clang attribute push([[gnu::visibility("hidden")]], apply_to=function)
+
+// CHECK-DEFAULT-LABEL: define hidden void @func()
+// CHECK-PROTECTED-LABEL: define hidden void @func()
+// CHECK-HIDDEN-LABEL: define hidden void @func()
+void func(void) {}
+
+#pragma clang attribute pop
