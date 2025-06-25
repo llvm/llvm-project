@@ -741,6 +741,9 @@ let SubtargetPredicate = isGFX1250Plus in {
     defm V_CVT_PK_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_fp8",
       VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
       int_amdgcn_cvt_pk_f16_fp8>;
+    defm V_CVT_PK_F16_BF8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_bf8",
+      VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
+      int_amdgcn_cvt_pk_f16_bf8>;
   }
 } // End SubtargetPredicate = isGFX1250Plus
 
@@ -1078,6 +1081,7 @@ defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00b>;
 
 defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
+defm V_CVT_PK_F16_BF8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x076>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

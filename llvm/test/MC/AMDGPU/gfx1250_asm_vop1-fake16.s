@@ -46,6 +46,15 @@ v_cvt_f32_bf16 v5, src_scc
 v_cvt_f32_bf16 v127, 0x8000
 // GFX1250: v_cvt_f32_bf16_e32 v127, 0x8000         ; encoding: [0xff,0xe4,0xfe,0x7e,0x00,0x80,0x00,0x00]
 
+v_cvt_pk_f16_bf8 v1, v2
+// GFX1250: v_cvt_pk_f16_bf8 v1, v2                 ; encoding: [0x02,0xed,0x02,0x7e]
+
+v_cvt_pk_f16_bf8 v1, s2
+// GFX1250: v_cvt_pk_f16_bf8 v1, s2                 ; encoding: [0x02,0xec,0x02,0x7e]
+
+v_cvt_pk_f16_bf8 v1, 100
+// GFX1250: v_cvt_pk_f16_bf8 v1, 0x64               ; encoding: [0xff,0xec,0x02,0x7e,0x64,0x00,0x00,0x00]
+
 v_cvt_pk_f16_fp8 v1, v2
 // GFX1250: v_cvt_pk_f16_fp8 v1, v2                 ; encoding: [0x02,0xeb,0x02,0x7e]
 
