@@ -351,10 +351,10 @@ public:
   Triple() = default;
 
   LLVM_ABI explicit Triple(std::string &&Str);
-  LLVM_ABI explicit Triple(StringRef Str) : Triple(Str.str()) {}
+  explicit Triple(StringRef Str) : Triple(Str.str()) {}
+  explicit Triple(const char *Str) : Triple(std::string(Str)) {}
+  explicit Triple(const std::string &Str) : Triple(std::string(Str)) {}
   LLVM_ABI explicit Triple(const Twine &Str);
-  LLVM_ABI explicit Triple(const char *Str) : Triple(std::string(Str)) {}
-  LLVM_ABI explicit Triple(const std::string &Str) : Triple(std::string(Str)) {}
 
   LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,
                   const Twine &OSStr);
