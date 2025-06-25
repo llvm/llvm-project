@@ -5026,6 +5026,9 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
             "!prof brunch_weights operand is not a const int");
     }
+  } else {
+    Check(ProfName == "VP", "expected either branch_weights or VP profile name",
+          MD);
   }
 }
 
