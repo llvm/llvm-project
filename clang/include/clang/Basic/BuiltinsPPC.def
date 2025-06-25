@@ -515,10 +515,6 @@ TARGET_BUILTIN(__builtin_altivec_vctzh, "V8UsV8Us", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzw, "V4UiV4Ui", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzd, "V2ULLiV2ULLi", "", "power9-vector")
 
-//P9 BCD builtins
-TARGET_BUILTIN(__builtin_ppc_bcdcopysign, "V16UcV16UcV16Uc", "", "power9-vector")
-TARGET_BUILTIN(__builtin_ppc_bcdsetsign, "V16UcV16UcUc", "t", "power9-vector")
-
 // P7 BCD builtins.
 TARGET_BUILTIN(__builtin_cdtbcd, "UiUi", "", "isa-v206-instructions")
 TARGET_BUILTIN(__builtin_cbcdtd, "UiUi", "", "isa-v206-instructions")
@@ -538,6 +534,10 @@ TARGET_BUILTIN(__builtin_ppc_bcdadd_p, "iiV16UcV16Uc", "",
                "isa-v207-instructions")
 TARGET_BUILTIN(__builtin_ppc_bcdsub_p, "iiV16UcV16Uc", "",
                "isa-v207-instructions")
+
+//P9 BCD builtins
+TARGET_BUILTIN(__builtin_ppc_bcdcopysign, "V16UcV16UcV16Uc", "", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_bcdsetsign, "V16UcV16UcUc", "t", "power9-vector")
 
 TARGET_BUILTIN(__builtin_altivec_vclzlsbb, "SiV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzlsbb, "SiV16Uc", "", "power9-vector")
