@@ -262,8 +262,7 @@ bool RegisterContextUnifiedCore::ReadRegister(
     lldb_private::RegisterValue &value) {
   if (!reg_info)
     return false;
-  ProcessSP process_sp(m_thread.GetProcess());
-  if (process_sp) {
+  if (ProcessSP process_sp = m_thread.GetProcess()) {
     DataExtractor regdata(m_register_data.data(), m_register_data.size(),
                           process_sp->GetByteOrder(),
                           process_sp->GetAddressByteSize());
