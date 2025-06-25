@@ -124,7 +124,8 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
     "021f 0000 1000"
   };
   // clang-format on
-  const unsigned num_of_expected_outputs = sizeof(expected_outputs) / sizeof(char *);
+  const unsigned num_of_expected_outputs =
+      sizeof(expected_outputs) / sizeof(char *);
 
   EXPECT_EQ(num_of_instructions, num_of_expected_outputs);
 

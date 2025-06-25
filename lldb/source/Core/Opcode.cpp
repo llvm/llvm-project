@@ -47,14 +47,13 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
       if (format_as_words) {
         // Format as words; print 1 or more UInt32 values.
         s->Printf("%2.2x%2.2x%2.2x%2.2x", m_data.inst.bytes[i + 3],
-                                          m_data.inst.bytes[i + 2],
-                                          m_data.inst.bytes[i + 1],
-                                          m_data.inst.bytes[i + 0]);
+                  m_data.inst.bytes[i + 2], m_data.inst.bytes[i + 1],
+                  m_data.inst.bytes[i + 0]);
         i += 4;
       } else {
         // Format as halfwords; print 1 or more UInt16 values.
         s->Printf("%2.2x%2.2x", m_data.inst.bytes[i + 1],
-                                m_data.inst.bytes[i + 0]);
+                  m_data.inst.bytes[i + 0]);
         i += 2;
       }
     }
