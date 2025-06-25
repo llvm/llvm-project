@@ -2880,6 +2880,7 @@ public:
   static CXXDestructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   void setOperatorDelete(FunctionDecl *OD, Expr *ThisArg);
+  void setOperatorGlobalDelete(FunctionDecl *OD);
 
   const FunctionDecl *getOperatorDelete() const {
     return getCanonicalDecl()->OperatorDelete;
@@ -2887,15 +2888,6 @@ public:
 
   const FunctionDecl *getOperatorGlobalDelete() const {
     return getCanonicalDecl()->OperatorGlobalDelete;
-  }
-
-  void setOperatorGlobalDelete(FunctionDecl *OD) {
-    assert(!OD ||
-           (OD->getDeclName().getCXXOverloadedOperator() == OO_Delete &&
-            OD->isUsableAsGlobalAllocationFunctionInConstantEvaluation()));
-    auto *Canonical = cast<CXXDestructorDecl>(getCanonicalDecl());
-    if (!Canonical->OperatorGlobalDelete)
-      Canonical->OperatorGlobalDelete = OD;
   }
 
   Expr *getOperatorDeleteThisArg() const {
