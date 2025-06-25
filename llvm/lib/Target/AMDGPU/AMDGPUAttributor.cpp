@@ -1442,36 +1442,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   return Changed;
 }
-
-class AMDGPUAttributorLegacy : public ModulePass {
-public:
-  AMDGPUAttributorLegacy() : ModulePass(ID) {}
-
-  /// doInitialization - Virtual method overridden by subclasses to do
-  /// any necessary initialization before any pass is run.
-  bool doInitialization(Module &) override {
-    auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-    if (!TPC)
-      report_fatal_error("TargetMachine is required");
-
-    TM = &TPC->getTM<TargetMachine>();
-    return false;
-  }
-
-  bool runOnModule(Module &M) override {
-    AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM, /*Options=*/{},
-                   /*LTOPhase=*/ThinOrFullLTOPhase::None);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<CycleInfoWrapperPass>();
-  }
-
-  StringRef getPassName() const override { return "AMDGPU Attributor"; }
-  TargetMachine *TM;
-  static char ID;
-};
 } // namespace
 
 PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
@@ -1485,14 +1455,3 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
                                                : PreservedAnalyses::all();
 }
-
-char AMDGPUAttributorLegacy::ID = 0;
-
-Pass *llvm::createAMDGPUAttributorLegacyPass() {
-  return new AMDGPUAttributorLegacy();
-}
-INITIALIZE_PASS_BEGIN(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
-INITIALIZE_PASS_END(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                    false, false)

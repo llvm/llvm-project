@@ -466,9 +466,7 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   return PI.ReturnCode;
 }
 
-Error DataAggregator::preprocessProfile(BinaryContext &BC) {
-  this->BC = &BC;
-
+void DataAggregator::parsePerfData(BinaryContext &BC) {
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -480,11 +478,6 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     if (!NoData.match(ErrBuf))
       ErrorCallback(ReturnCode, ErrBuf);
   };
-
-  if (opts::ReadPreAggregated) {
-    parsePreAggregated();
-    goto heatmap;
-  }
 
   if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
     outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
@@ -534,22 +527,28 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
              << '\n';
 
   deleteTempFiles();
+}
 
-heatmap:
+Error DataAggregator::preprocessProfile(BinaryContext &BC) {
+  this->BC = &BC;
+
+  if (opts::ReadPreAggregated) {
+    parsePreAggregated();
+  } else {
+    parsePerfData(BC);
+  }
+
   // Sort parsed traces for faster processing.
   llvm::sort(Traces, llvm::less_first());
 
-  if (!opts::HeatmapMode)
-    return Error::success();
+  if (opts::HeatmapMode) {
+    if (std::error_code EC = printLBRHeatMap())
+      return errorCodeToError(EC);
+    if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
+      exit(0);
+  }
 
-  if (std::error_code EC = printLBRHeatMap())
-    return errorCodeToError(EC);
-
-  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Optional)
-    return Error::success();
-
-  assert(opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive);
-  exit(0);
+  return Error::success();
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {
@@ -835,13 +834,8 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
 
   LLVM_DEBUG(dbgs() << "Processing " << FTs->size() << " fallthroughs for "
                     << FromFunc->getPrintName() << ":" << Trace << '\n');
-  for (auto [From, To] : *FTs) {
-    if (BAT) {
-      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
-      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
-    }
+  for (const auto &[From, To] : *FTs)
     doIntraBranch(*ParentFunc, From, To, Count, false);
-  }
 
   return true;
 }

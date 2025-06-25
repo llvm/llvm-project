@@ -364,13 +364,12 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     VectorValue = GetBroadcastInstrs(ScalarValue);
     set(Def, VectorValue);
   } else {
-    // Initialize packing with insertelements to start from undef.
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    Value *Undef = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
-    set(Def, Undef);
+    // Initialize packing with insertelements to start from poison.
+    VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
-      packScalarIntoVectorizedValue(Def, Lane);
-    VectorValue = get(Def);
+      VectorValue = packScalarIntoVectorizedValue(Def, VectorValue, Lane);
+    set(Def, VectorValue);
   }
   Builder.restoreIP(OldIP);
   return VectorValue;
@@ -398,10 +397,10 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
     Builder.SetCurrentDebugLocation(DL);
 }
 
-void VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
-                                                     const VPLane &Lane) {
+Value *VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
+                                                       Value *WideValue,
+                                                       const VPLane &Lane) {
   Value *ScalarInst = get(Def, Lane);
-  Value *WideValue = get(Def);
   Value *LaneExpr = Lane.getAsRuntimeExpr(Builder, VF);
   if (auto *StructTy = dyn_cast<StructType>(WideValue->getType())) {
     // We must handle each element of a vectorized struct type.
@@ -415,7 +414,7 @@ void VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
   } else {
     WideValue = Builder.CreateInsertElement(WideValue, ScalarInst, LaneExpr);
   }
-  set(Def, WideValue);
+  return WideValue;
 }
 
 BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState &State) {
@@ -466,7 +465,7 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
            "Predecessor basic-block not found building successor.");
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
     auto *PredBBTerminator = PredBB->getTerminator();
-    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
+    LLVM_DEBUG(dbgs() << "LV: draw edge from " << PredBB->getName() << '\n');
 
     auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
     if (isa<UnreachableInst>(PredBBTerminator)) {
@@ -580,8 +579,8 @@ VPBasicBlock *VPBasicBlock::clone() {
 }
 
 void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
-  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-                    << " in BB:" << BB->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB: " << getName()
+                    << " in BB: " << BB->getName() << '\n');
 
   State->CFG.PrevVPBB = this;
 
@@ -590,7 +589,7 @@ void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
     Recipe.execute(*State);
   }
 
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *BB);
+  LLVM_DEBUG(dbgs() << "LV: filled BB: " << *BB);
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {

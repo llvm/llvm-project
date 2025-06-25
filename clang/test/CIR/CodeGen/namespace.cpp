@@ -20,7 +20,7 @@ namespace test {
   }
 }
 
-// CHECK-DAG: cir.global "private" internal dsolocal @_ZN12_GLOBAL__N_12g1E = #cir.int<1> : !s32i
+// CHECK-DAG: cir.global "private" internal dso_local @_ZN12_GLOBAL__N_12g1E = #cir.int<1> : !s32i
 // CHECK-DAG: cir.global external @_ZN4test2g2E = #cir.int<2> : !s32i
 // CHECK-DAG: cir.global external @_ZN4test5test22g3E = #cir.int<3> : !s32i
 // CHECK-DAG: cir.func @_ZN12_GLOBAL__N_12f1Ev()

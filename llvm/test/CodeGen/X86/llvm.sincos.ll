@@ -3,8 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel  | FileCheck %s --check-prefixes=X64,FASTISEL-X64
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=0 -fast-isel=0  | FileCheck %s --check-prefixes=X86,SDAG-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=0 -fast-isel=0  | FileCheck %s --check-prefixes=X64,SDAG-X64
-; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefixes=X86,GISEL-X86
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefixes=X64,GISEL-X64
+; TODO: The below RUN line will fails GISEL selection and will fallback to DAG selection due to lack of support for loads/stores in i686 mode, support is expected soon enough, for this reason the llvm/test/CodeGen/X86/GlobalISel/llvm.sincos.mir test is added for now because of the lack of support for i686 in GlobalISel.
+; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefixes=GISEL-X86
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=1 -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X64
 
 define { float, float } @test_sincos_f32(float %Val) nounwind {
 ; X86-LABEL: test_sincos_f32:
@@ -32,6 +33,35 @@ define { float, float } @test_sincos_f32(float %Val) nounwind {
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: test_sincos_f32:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $28, %esp
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; GISEL-X86-NEXT:    movl %eax, (%esp)
+; GISEL-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    calll sincosf
+; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fxch %st(1)
+; GISEL-X86-NEXT:    addl $28, %esp
+; GISEL-X86-NEXT:    retl
+;
+; GISEL-X64-LABEL: test_sincos_f32:
+; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; GISEL-X64-NEXT:    movq %rsp, %rsi
+; GISEL-X64-NEXT:    callq sincosf
+; GISEL-X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; GISEL-X64-NEXT:    movl (%rsp), %ecx
+; GISEL-X64-NEXT:    movd %eax, %xmm0
+; GISEL-X64-NEXT:    movd %ecx, %xmm1
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %res = call { float, float } @llvm.sincos.f32(float %Val)
   ret { float, float } %res
 }
@@ -62,6 +92,34 @@ define { double, double } @test_sincos_f64(double %Val) nounwind  {
 ; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: test_sincos_f64:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $44, %esp
+; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    calll sincos
+; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    addl $44, %esp
+; GISEL-X86-NEXT:    retl
+;
+; GISEL-X64-LABEL: test_sincos_f64:
+; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    subq $24, %rsp
+; GISEL-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; GISEL-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; GISEL-X64-NEXT:    callq sincos
+; GISEL-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; GISEL-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; GISEL-X64-NEXT:    movq %rax, %xmm0
+; GISEL-X64-NEXT:    movq %rcx, %xmm1
+; GISEL-X64-NEXT:    addq $24, %rsp
+; GISEL-X64-NEXT:    retq
   %res = call { double, double } @llvm.sincos.f64(double %Val)
   ret { double, double } %res
 }
@@ -94,6 +152,36 @@ define { x86_fp80, x86_fp80 } @test_sincos_f80(x86_fp80 %Val) nounwind {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    addq $56, %rsp
 ; X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: test_sincos_f80:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $60, %esp
+; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    fstpt (%esp)
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    calll sincosl
+; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fxch %st(1)
+; GISEL-X86-NEXT:    addl $60, %esp
+; GISEL-X86-NEXT:    retl
+;
+; GISEL-X64-LABEL: test_sincos_f80:
+; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    subq $56, %rsp
+; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; GISEL-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; GISEL-X64-NEXT:    fstpt (%rsp)
+; GISEL-X64-NEXT:    callq sincosl
+; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fxch %st(1)
+; GISEL-X64-NEXT:    addq $56, %rsp
+; GISEL-X64-NEXT:    retq
   %res = call { x86_fp80, x86_fp80 } @llvm.sincos.f80(x86_fp80 %Val)
   ret { x86_fp80, x86_fp80 } %res
 }

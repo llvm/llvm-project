@@ -1712,22 +1712,21 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   MatchableInfo::AsmOperand *Op = &II->AsmOperands[AsmOpIdx];
 
   // Map this token to an operand.
-  unsigned Idx;
-  if (!Operands.hasOperandNamed(OperandName, Idx))
+  std::optional<unsigned> Idx = Operands.findOperandNamed(OperandName);
+  if (!Idx)
     PrintFatalError(II->TheDef->getLoc(),
                     "error: unable to find operand: '" + OperandName + "'");
-
   // If the instruction operand has multiple suboperands, but the parser
   // match class for the asm operand is still the default "ImmAsmOperand",
   // then handle each suboperand separately.
-  if (Op->SubOpIdx == -1 && Operands[Idx].MINumOperands > 1) {
-    const Record *Rec = Operands[Idx].Rec;
+  if (Op->SubOpIdx == -1 && Operands[*Idx].MINumOperands > 1) {
+    const Record *Rec = Operands[*Idx].Rec;
     assert(Rec->isSubClassOf("Operand") && "Unexpected operand!");
     const Record *MatchClass = Rec->getValueAsDef("ParserMatchClass");
     if (MatchClass && MatchClass->getValueAsString("Name") == "Imm") {
       // Insert remaining suboperands after AsmOpIdx in II->AsmOperands.
       StringRef Token = Op->Token; // save this in case Op gets moved
-      for (unsigned SI = 1, SE = Operands[Idx].MINumOperands; SI != SE; ++SI) {
+      for (unsigned SI = 1, SE = Operands[*Idx].MINumOperands; SI != SE; ++SI) {
         MatchableInfo::AsmOperand NewAsmOp(/*IsIsolatedToken=*/true, Token);
         NewAsmOp.SubOpIdx = SI;
         II->AsmOperands.insert(II->AsmOperands.begin() + AsmOpIdx + SI,
@@ -1740,7 +1739,7 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   }
 
   // Set up the operand class.
-  Op->Class = getOperandClass(Operands[Idx], Op->SubOpIdx);
+  Op->Class = getOperandClass(Operands[*Idx], Op->SubOpIdx);
   Op->OrigSrcOpName = OperandName;
 
   // If the named operand is tied, canonicalize it to the untied operand.
@@ -1752,14 +1751,14 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   //   "inc $dst"
   // so that we know how to provide the $dst operand when filling in the result.
   int OITied = -1;
-  if (Operands[Idx].MINumOperands == 1)
-    OITied = Operands[Idx].getTiedRegister();
+  if (Operands[*Idx].MINumOperands == 1)
+    OITied = Operands[*Idx].getTiedRegister();
   if (OITied != -1) {
     // The tied operand index is an MIOperand index, find the operand that
     // contains it.
-    std::pair<unsigned, unsigned> Idx = Operands.getSubOperandNumber(OITied);
-    OperandName = Operands[Idx.first].Name;
-    Op->SubOpIdx = Idx.second;
+    auto [OpIdx, SubopIdx] = Operands.getSubOperandNumber(OITied);
+    OperandName = Operands[OpIdx].Name;
+    Op->SubOpIdx = SubopIdx;
   }
 
   Op->SrcOpName = OperandName;

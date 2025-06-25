@@ -2883,8 +2883,9 @@ Parser::validateOperationOperands(SMRange loc, std::optional<StringRef> name,
                                   SmallVectorImpl<ast::Expr *> &operands) {
   return validateOperationOperandsOrResults(
       "operand", loc, odsOp ? odsOp->getLoc() : std::optional<SMRange>(), name,
-      operands, odsOp ? odsOp->getOperands() : std::nullopt, valueTy,
-      valueRangeTy);
+      operands,
+      odsOp ? odsOp->getOperands() : ArrayRef<pdll::ods::OperandOrResult>(),
+      valueTy, valueRangeTy);
 }
 
 LogicalResult
@@ -2893,7 +2894,9 @@ Parser::validateOperationResults(SMRange loc, std::optional<StringRef> name,
                                  SmallVectorImpl<ast::Expr *> &results) {
   return validateOperationOperandsOrResults(
       "result", loc, odsOp ? odsOp->getLoc() : std::optional<SMRange>(), name,
-      results, odsOp ? odsOp->getResults() : std::nullopt, typeTy, typeRangeTy);
+      results,
+      odsOp ? odsOp->getResults() : ArrayRef<pdll::ods::OperandOrResult>(),
+      typeTy, typeRangeTy);
 }
 
 void Parser::checkOperationResultTypeInferrence(SMRange loc, StringRef opName,

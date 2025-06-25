@@ -159,37 +159,59 @@ static bool TagIsRecordType(dw_tag_t tag) {
   }
 }
 
-/// Get the object parameter DIE if one exists, otherwise returns
-/// a default DWARFDIE. If \c containing_decl_ctx is not a valid
-/// C++ declaration context for class methods, assume no object
-/// parameter exists for the given \c subprogram.
 DWARFDIE
-DWARFASTParserClang::GetCXXObjectParameter(const DWARFDIE &subprogram,
-                                           const DWARFDIE &decl_ctx_die) {
+DWARFASTParserClang::GetObjectParameter(const DWARFDIE &subprogram,
+                                        const DWARFDIE &decl_ctx_die) {
   assert(subprogram);
   assert(subprogram.Tag() == DW_TAG_subprogram ||
          subprogram.Tag() == DW_TAG_inlined_subroutine ||
          subprogram.Tag() == DW_TAG_subroutine_type);
 
-  if (!decl_ctx_die.IsStructUnionOrClass())
+  // The DW_AT_object_pointer may be either encoded as a reference to a DIE,
+  // in which case that's the object parameter we want. Or it can be a constant
+  // index of the parameter.
+  std::optional<size_t> object_pointer_index;
+  DWARFFormValue form_value;
+  if (subprogram.GetDIE()->GetAttributeValue(
+          subprogram.GetCU(), DW_AT_object_pointer, form_value,
+          /*end_attr_offset_ptr=*/nullptr, /*check_elaborating_dies=*/true)) {
+    if (auto ref = form_value.Reference())
+      return ref;
+
+    object_pointer_index = form_value.Unsigned();
+  }
+
+  // Try to find the DW_TAG_formal_parameter via object_pointer_index.
+  DWARFDIE object_pointer;
+  size_t param_index = 0;
+  for (const auto &child : subprogram.children()) {
+    if (child.Tag() != DW_TAG_formal_parameter)
+      continue;
+
+    if (param_index == object_pointer_index.value_or(0)) {
+      object_pointer = child;
+      break;
+    }
+
+    ++param_index;
+  }
+
+  // No formal parameter found for object pointer index.
+  // Nothing to be done.
+  if (!object_pointer)
     return {};
 
-  if (DWARFDIE object_parameter =
-          subprogram.GetAttributeValueAsReferenceDIE(DW_AT_object_pointer))
-    return object_parameter;
+  // We found the object pointer encoded via DW_AT_object_pointer.
+  // No need for the remaining heuristics.
+  if (object_pointer_index)
+    return object_pointer;
 
   // If no DW_AT_object_pointer was specified, assume the implicit object
   // parameter is the first parameter to the function, is called "this" and is
   // artificial (which is what most compilers would generate).
-  auto children = subprogram.children();
-  auto it = llvm::find_if(children, [](const DWARFDIE &child) {
-    return child.Tag() == DW_TAG_formal_parameter;
-  });
 
-  if (it == children.end())
+  if (!decl_ctx_die.IsStructUnionOrClass())
     return {};
-
-  DWARFDIE object_pointer = *it;
 
   if (!object_pointer.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
     return {};
@@ -1297,7 +1319,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   clang::CallingConv calling_convention =
       ConvertDWARFCallingConventionToClang(attrs);
 
-  const DWARFDIE object_parameter = GetCXXObjectParameter(die, decl_ctx_die);
+  const DWARFDIE object_parameter = GetObjectParameter(die, decl_ctx_die);
 
   // clang_type will get the function prototype clang type after this
   // call
@@ -2405,7 +2427,7 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
   assert(containing_decl_ctx);
 
   const unsigned cv_quals =
-      GetCXXMethodCVQuals(die, GetCXXObjectParameter(die, decl_ctx_die));
+      GetCXXMethodCVQuals(die, GetObjectParameter(die, decl_ctx_die));
 
   ParseChildParameters(containing_decl_ctx, die, is_variadic,
                        has_template_params, param_types, param_names);
