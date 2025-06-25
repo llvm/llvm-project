@@ -274,7 +274,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  LV: vectorizing VPBB:ir-bb<for.body.preheader> in BB:for.body.preheader
+; CHECK-NEXT:  LV: vectorizing VPBB:{{[ ]*}}ir-bb<for.body.preheader> in BB:for.body.preheader
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  for.body.preheader: ; preds = %entry
 ; CHECK-NEXT:    %0 = zext i32 %n to i64
@@ -683,7 +683,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  LV: vectorizing VPBB:ir-bb<for.body.preheader> in BB:for.body.preheader
+; CHECK-NEXT:  LV: vectorizing VPBB:{{[ ]*}}ir-bb<for.body.preheader> in BB:for.body.preheader
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  for.body.preheader: ; preds = %entry
 ; CHECK-NEXT:    %0 = zext i32 %n to i64
