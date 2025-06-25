@@ -368,7 +368,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     diag(E->getBeginLoc(),
          "suspicious usage of 'sizeof(char*)'; do you mean 'strlen'?")
         << E->getSourceRange();
-  } else if (const auto *E = Result.Nodes.getNodeAs<Stmt>("loop-expr")) {
+  } else if (Result.Nodes.getNodeAs<Stmt>("loop-expr")) {
     auto *SizeofArgTy = Result.Nodes.getNodeAs<Type>("sizeof-arg-type");
     if (const auto member = dyn_cast<MemberPointerType>(SizeofArgTy))
       SizeofArgTy = member->getPointeeType().getTypePtr();
