@@ -740,9 +740,11 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     if (emitSpecialLLVMGlobal(GV))
       return;
 
-    // Skip the emission of global equivalents. The symbol can be emitted later
-    // on by emitGlobalGOTEquivs in case it turns out to be needed.
-    if (GlobalGOTEquivs.count(getSymbol(GV)))
+    // Skip the emission of global equivalents if they are only used by global
+    // values. The symbol can be emitted later on by emitGlobalGOTEquivs in case
+    // it turns out to be needed.
+    if (GlobalGOTEquivs.contains(getSymbol(GV)) &&
+        !GlobalGOTEquivs[getSymbol(GV)].HasNonGlobalUsers)
       return;
 
     if (isVerbose()) {
@@ -2142,16 +2144,20 @@ void AsmPrinter::emitFunctionBody() {
 }
 
 /// Compute the number of Global Variables that uses a Constant.
-static unsigned getNumGlobalVariableUses(const Constant *C) {
-  if (!C)
+static unsigned getNumGlobalVariableUses(const Constant *C,
+                                         bool &HasNonGlobalUsers) {
+  if (!C) {
+    HasNonGlobalUsers = true;
     return 0;
+  }
 
   if (isa<GlobalVariable>(C))
     return 1;
 
   unsigned NumUses = 0;
   for (const auto *CU : C->users())
-    NumUses += getNumGlobalVariableUses(dyn_cast<Constant>(CU));
+    NumUses +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(CU), HasNonGlobalUsers);
 
   return NumUses;
 }
@@ -2162,7 +2168,8 @@ static unsigned getNumGlobalVariableUses(const Constant *C) {
 /// candidates are skipped and are emitted later in case at least one cstexpr
 /// isn't replaced by a PC relative GOT entry access.
 static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
-                                     unsigned &NumGOTEquivUsers) {
+                                     unsigned &NumGOTEquivUsers,
+                                     bool &HasNonGlobalUsers) {
   // Global GOT equivalents are unnamed private globals with a constant
   // pointer initializer to another global symbol. They must point to a
   // GlobalVariable or Function, i.e., as GlobalValue.
@@ -2174,7 +2181,8 @@ static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
   // To be a got equivalent, at least one of its users need to be a constant
   // expression used by another global variable.
   for (const auto *U : GV->users())
-    NumGOTEquivUsers += getNumGlobalVariableUses(dyn_cast<Constant>(U));
+    NumGOTEquivUsers +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(U), HasNonGlobalUsers);
 
   return NumGOTEquivUsers > 0;
 }
@@ -2192,11 +2200,13 @@ void AsmPrinter::computeGlobalGOTEquivs(Module &M) {
 
   for (const auto &G : M.globals()) {
     unsigned NumGOTEquivUsers = 0;
-    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers))
+    bool HasNonGlobalUsers = false;
+    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers, HasNonGlobalUsers))
       continue;
 
     const MCSymbol *GOTEquivSym = getSymbol(&G);
-    GlobalGOTEquivs[GOTEquivSym] = std::make_pair(&G, NumGOTEquivUsers);
+    GlobalGOTEquivs[GOTEquivSym] =
+        AsmPrinter::GOTEquivUse{&G, NumGOTEquivUsers, HasNonGlobalUsers};
   }
 }
 
@@ -2209,9 +2219,9 @@ void AsmPrinter::emitGlobalGOTEquivs() {
 
   SmallVector<const GlobalVariable *, 8> FailedCandidates;
   for (auto &I : GlobalGOTEquivs) {
-    const GlobalVariable *GV = I.second.first;
-    unsigned Cnt = I.second.second;
-    if (Cnt)
+    const GlobalVariable *GV = I.second.GV;
+    unsigned Cnt = I.second.NumUses;
+    if (Cnt > 0 && !I.second.HasNonGlobalUsers)
       FailedCandidates.push_back(GV);
   }
   GlobalGOTEquivs.clear();
@@ -3992,9 +4002,10 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   //    .long 42
   //  foo:
   //    .long bar@GOTPCREL+<gotpcrelcst>
-  AsmPrinter::GOTEquivUsePair Result = AP.GlobalGOTEquivs[GOTEquivSym];
-  const GlobalVariable *GV = Result.first;
-  int NumUses = (int)Result.second;
+  AsmPrinter::GOTEquivUse Result = AP.GlobalGOTEquivs[GOTEquivSym];
+  const GlobalVariable *GV = Result.GV;
+  bool HasNonGlobalUsers = Result.HasNonGlobalUsers;
+  int NumUses = (int)Result.NumUses;
   const GlobalValue *FinalGV = dyn_cast<GlobalValue>(GV->getOperand(0));
   const MCSymbol *FinalSym = AP.getSymbol(FinalGV);
   *ME = AP.getObjFileLowering().getIndirectSymViaGOTPCRel(
@@ -4003,7 +4014,8 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   // Update GOT equivalent usage information
   --NumUses;
   if (NumUses >= 0)
-    AP.GlobalGOTEquivs[GOTEquivSym] = std::make_pair(GV, NumUses);
+    AP.GlobalGOTEquivs[GOTEquivSym] =
+        AsmPrinter::GOTEquivUse{GV, (unsigned)NumUses, HasNonGlobalUsers};
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
