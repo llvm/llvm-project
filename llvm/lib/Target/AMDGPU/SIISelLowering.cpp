@@ -960,6 +960,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   setTargetDAGCombine({ISD::ADD,
+                       ISD::BITCAST,
                        ISD::BUILD_VECTOR,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -15544,7 +15545,6 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
 
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
-  BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(N);
 
   EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
@@ -15552,10 +15552,9 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
   unsigned EltSize = EltVT.getSizeInBits();
 
   // Skip if:
-  //  - Value type isn't multiplication of 64 bit (e.g., v3i32), or
-  //  - BuildVector instruction has non-constants, or
-  //  - Element type has already been combined into i64 elements
-  if ((SizeBits % 64) != 0 || !BVN->isConstant() || EltVT == MVT::i64)
+  //  - Value type isn't multiple of 64 bit (e.g., v3i32), or
+  //  - Element type has already been combined into 64b elements
+  if ((SizeBits % 64) != 0 || EltVT == MVT::i64 || EltVT == MVT::f64)
     return SDValue();
 
   // Construct the 64b values.
@@ -15563,6 +15562,7 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
   uint64_t ImmVal = 0;
   uint64_t ImmSize = 0;
   for (SDValue Opand : N->ops()) {
+    // Build_vector with constants only.
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(Opand);
     if (!C)
       return SDValue();
@@ -15594,8 +15594,7 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
     unsigned NewNumElts = SizeBits / 64;
     LLVMContext &Ctx = *DAG.getContext();
     EVT NewVT = EVT::getVectorVT(Ctx, MVT::i64, NewNumElts);
-    SDValue BV = DAG.getBuildVector(
-        NewVT, SL, ArrayRef(VectorConsts.begin(), VectorConsts.end()));
+    SDValue BV = DAG.getBuildVector(NewVT, SL, VectorConsts);
     return DAG.getBitcast(VT, BV);
   }
   return SDValue();
@@ -15742,6 +15741,14 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
+  case ISD::BITCAST: {
+    // Avoid undoing build_vector with 64b elements if subtarget supports 64b
+    // movs (i.e., avoid inf loop through combines).
+    const GCNSubtarget *ST = getSubtarget();
+    if (ST->hasMovB64())
+      return SDValue();
+    break;
+  }
   case ISD::LOAD: {
     if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widened;
