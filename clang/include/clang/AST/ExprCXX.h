@@ -4618,8 +4618,6 @@ public:
 class SubstNonTypeTemplateParmExpr : public Expr {
   friend class ASTReader;
   friend class ASTStmtReader;
-      /// The location of the non-type template parameter reference.
-      SourceLocation NameLoc;
 
   /// The replacement expression.
   Stmt *Replacement;
@@ -4648,12 +4646,12 @@ public:
         AssociatedDeclAndRef(AssociatedDecl, RefParam), Index(Index),
         PackIndex(PackIndex.toInternalRepresentation()), Final(Final) {
     assert(AssociatedDecl != nullptr);
-    NameLoc = Loc;
+    SubstNonTypeTemplateParmExprBits.NameLoc = Loc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
   SourceLocation getNameLoc() const {
-    return NameLoc;
+    return SourceLocation::getFromRawEncoding(SubstNonTypeTemplateParmExprBits.NameLoc);
   }
   SourceLocation getBeginLoc() const { return getNameLoc(); }
   SourceLocation getEndLoc() const { return getNameLoc(); }

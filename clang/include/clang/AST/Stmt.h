@@ -1130,11 +1130,12 @@ protected:
   class SubstNonTypeTemplateParmExprBitfields {
     friend class ASTStmtReader;
     friend class SubstNonTypeTemplateParmExpr;
-
+    
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
-
-
+    /// The location of the non-type template parameter reference.
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long NameLoc : SourceLocation::Bits;
   };
 
   class LambdaExprBitfields {

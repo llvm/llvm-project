@@ -2227,7 +2227,7 @@ void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
   E->Index = CurrentUnpackingBits->getNextBits(/*Width=*/12);
   E->PackIndex = Record.readUnsignedOrNone().toInternalRepresentation();
   E->Final = CurrentUnpackingBits->getNextBit();
-  E->NameLoc = readSourceLocation();
+  E->SubstNonTypeTemplateParmExprBits.NameLoc = readSourceLocation().getRawEncoding();
   E->Replacement = Record.readSubExpr();
 }
 
