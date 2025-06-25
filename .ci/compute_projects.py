@@ -229,6 +229,8 @@ def _compute_runtimes_to_build(
     for modified_project in modified_projects:
         if modified_project in DEPENDENT_RUNTIMES_TO_BUILD:
             runtimes_to_build.update(DEPENDENT_RUNTIMES_TO_BUILD[modified_project])
+        if modified_project in RUNTIMES:
+            runtimes_to_build.add(modified_project)
     return _exclude_projects(runtimes_to_build, platform)
 
 
