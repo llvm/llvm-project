@@ -339,7 +339,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
-    requires(forward_range<__maybe_const<_Const, _Views>> && ...)
+    requires(__all_forward_Const, _Views> && ...)
   {
     auto __tmp = *this;
     ++*this;
