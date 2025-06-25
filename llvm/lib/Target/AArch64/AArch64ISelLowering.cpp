@@ -13404,30 +13404,6 @@ static bool isUZP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
   return true;
 }
 
-/// isDUPQMask - matches a splat of equivalent lanes within 128b segments in
-/// the first vector operand.
-static std::optional<unsigned> isDUPQMask(ArrayRef<int> M, EVT VT) {
-  assert(VT.getFixedSizeInBits() % 128 == 0 && "Unsupported SVE vector size");
-  unsigned Lane = (unsigned)M[0];
-  unsigned Segments = VT.getFixedSizeInBits() / 128;
-  unsigned SegmentElts = VT.getVectorNumElements() / Segments;
-
-  // Make sure there's no size changes.
-  if (SegmentElts * Segments != M.size())
-    return std::nullopt;
-
-  // Check the first index corresponds to one of the lanes in the first segment.
-  if (Lane >= SegmentElts)
-    return std::nullopt;
-
-  // Check that all lanes match the first, adjusted for segment.
-  for (unsigned I = 0; I < M.size(); ++I)
-    if ((unsigned)M[I] != (Lane + ((I / SegmentElts) * SegmentElts)))
-      return std::nullopt;
-
-  return Lane;
-}
-
 /// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
@@ -30029,8 +30005,15 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
     }
 
-    if (Subtarget->hasSVE2p1()) {
-      if (std::optional<unsigned> Lane = isDUPQMask(ShuffleMask, VT)) {
+    if ((Subtarget->hasSVE2p1() || Subtarget->hasSME2p1()) &&
+        Subtarget->isSVEorStreamingSVEAvailable()) {
+      assert(VT.getFixedSizeInBits() % AArch64::SVEBitsPerBlock == 0 &&
+             "Unsupported SVE vector size");
+
+      unsigned Segments = VT.getFixedSizeInBits() / AArch64::SVEBitsPerBlock;
+      unsigned SegmentElts = VT.getVectorNumElements() / Segments;
+      if (std::optional<unsigned> Lane =
+              isDUPQMask(ShuffleMask, Segments, SegmentElts)) {
         SDValue IID =
             DAG.getConstant(Intrinsic::aarch64_sve_dup_laneq, DL, MVT::i64);
         return convertFromScalableVector(
