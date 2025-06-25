@@ -172,26 +172,18 @@ bool LanguageFeatureControl::EnableWarning(std::string_view input) {
   return false;
 }
 
-template <typename T, size_t ENUM_SIZE>
-static void replaceCliCanonicalSpelling(
-    std::unordered_map<std::string, LanguageFeatureOrWarning> &cliOptions,
-    std::array<std::string, ENUM_SIZE> &canonicalSpelling, T t,
-    std::string &input) {
-  cliOptions.erase(canonicalSpelling[EnumToInt(t)]);
-  cliOptions.insert({std::string{input}, {t}});
-  canonicalSpelling[EnumToInt(t)] = std::move(input);
-}
-
 void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     LanguageFeature f, std::string input) {
-  replaceCliCanonicalSpelling(
-      cliOptions_, languageFeatureCliCanonicalSpelling_, f, input);
+  cliOptions_.erase(languageFeatureCliCanonicalSpelling_[EnumToInt(f)]);
+  cliOptions_.insert({input, {f}});
+  languageFeatureCliCanonicalSpelling_[EnumToInt(f)] = std::move(input);
 }
 
 void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     UsageWarning w, std::string input) {
-  replaceCliCanonicalSpelling(
-      cliOptions_, usageWarningCliCanonicalSpelling_, w, input);
+  cliOptions_.erase(usageWarningCliCanonicalSpelling_[EnumToInt(w)]);
+  cliOptions_.insert({input, {w}});
+  usageWarningCliCanonicalSpelling_[EnumToInt(w)] = std::move(input);
 }
 
 std::vector<const char *> LanguageFeatureControl::GetNames(

@@ -278,15 +278,14 @@ static std::string HintLanguageControlFlag(
     std::optional<common::LanguageFeature> feature,
     std::optional<common::UsageWarning> warning) {
   if (hintFlagPtr) {
-    std::string flag{};
+    std::string flag;
     if (warning) {
       flag = hintFlagPtr->getDefaultCliSpelling(*warning);
     } else if (feature) {
       flag = hintFlagPtr->getDefaultCliSpelling(*feature);
     }
     if (!flag.empty()) {
-
-      return " [-Wno-" + flag + "]";
+      return " [-W" + flag + "]";
     }
   }
   return "";

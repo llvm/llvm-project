@@ -12,17 +12,17 @@ module m
 !    PUBLIC, PRIVATE, NOPASS, PASS, POINTER
 
   type :: procComponentType
-    !WARNING: Attribute 'PUBLIC' cannot be used more than once [-Wno-redundant-attribute]
+    !WARNING: Attribute 'PUBLIC' cannot be used more than once [-Wredundant-attribute]
     procedure(publicProc), public, pointer, public :: publicField
-    !WARNING: Attribute 'PRIVATE' cannot be used more than once [-Wno-redundant-attribute]
+    !WARNING: Attribute 'PRIVATE' cannot be used more than once [-Wredundant-attribute]
     procedure(privateProc), private, pointer, private :: privateField
-    !WARNING: Attribute 'NOPASS' cannot be used more than once [-Wno-redundant-attribute]
+    !WARNING: Attribute 'NOPASS' cannot be used more than once [-Wredundant-attribute]
     procedure(nopassProc), nopass, pointer, nopass :: noPassField
-    !WARNING: Attribute 'PASS' cannot be used more than once [-Wno-redundant-attribute]
+    !WARNING: Attribute 'PASS' cannot be used more than once [-Wredundant-attribute]
     procedure(passProc), pass, pointer, pass :: passField
     !ERROR: Attributes 'PASS' and 'NOPASS' conflict with each other
     procedure(passNopassProc), pass, pointer, nopass :: passNopassField
-    !WARNING: Attribute 'POINTER' cannot be used more than once [-Wno-redundant-attribute]
+    !WARNING: Attribute 'POINTER' cannot be used more than once [-Wredundant-attribute]
     procedure(pointerProc), pointer, public, pointer :: pointerField
     !ERROR: Procedure component 'nonpointerfield' must have POINTER attribute
     procedure(publicProc), public :: nonpointerField
