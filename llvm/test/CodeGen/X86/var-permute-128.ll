@@ -170,25 +170,26 @@ define <2 x i64> @var_shuffle_zero_v2i64(<2 x i64> %v, <2 x i64> %indices) nounw
 ; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [3,3]
 ; AVX512-NEXT:    vpcmpnleuq %zmm2, %zmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm1 {%k1}
-; AVX512-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpblendmq %zmm3, %zmm1, %zmm3 {%k1}
+; AVX512-NEXT:    vpaddq %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpermilpd %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpleuq %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shuffle_zero_v2i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa64 %xmm2, %xmm1 {%k1}
-; AVX512VL-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [3,3]
+; AVX512VL-NEXT:    vpcmpnleuq %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpblendmq %xmm3, %xmm1, %xmm3 {%k1}
+; AVX512VL-NEXT:    vpaddq %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpermilpd %xmm3, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpcmpleuq %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
   %cmp = icmp ugt <2 x i64> %indices, <i64 3, i64 3>
   %or = select <2 x i1> %cmp, <2 x i64> <i64 -1, i64 -1>, <2 x i64> %indices
@@ -355,24 +356,26 @@ define <4 x i32> @var_shuffle_zero_v4i32(<4 x i32> %v, <4 x i32> %indices) nounw
 ; AVX512-LABEL: var_shuffle_zero_v4i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
-; AVX512-NEXT:    vpermilps %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [3,3,3,3]
+; AVX512-NEXT:    vpcmpnleud %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpblendmd %zmm3, %zmm1, %zmm3 {%k1}
+; AVX512-NEXT:    vpermilps %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpleud %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shuffle_zero_v4i32:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm1 {%k1}
-; AVX512VL-NEXT:    vpermilps %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [3,3,3,3]
+; AVX512VL-NEXT:    vpcmpnleud %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpblendmd %xmm3, %xmm1, %xmm3 {%k1}
+; AVX512VL-NEXT:    vpermilps %xmm3, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpcmpleud %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
   %cmp = icmp ugt <4 x i32> %indices, <i32 3, i32 3, i32 3, i32 3>
   %or = select <4 x i1> %cmp, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %indices
@@ -600,12 +603,12 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ;
 ; AVX512VL-LABEL: var_shuffle_zero_v8i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqu16 %xmm2, %xmm1 {%k1}
-; AVX512VL-NEXT:    vpermw %xmm0, %xmm1, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovdqu16 %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [7,7,7,7,7,7,7,7]
+; AVX512VL-NEXT:    vpcmpnleuw %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpcmpleuw %xmm2, %xmm1, %k2
+; AVX512VL-NEXT:    vmovdqu16 %xmm3, %xmm1 {%k1}
+; AVX512VL-NEXT:    vpermw %xmm0, %xmm1, %xmm0 {%k2} {z}
 ; AVX512VL-NEXT:    retq
   %cmp = icmp ugt <8 x i16> %indices, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   %or = select <8 x i1> %cmp, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %indices
@@ -923,12 +926,12 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ;
 ; AVX512VL-LABEL: var_shuffle_zero_v16i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqu8 %xmm2, %xmm1 {%k1}
-; AVX512VL-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    vpbroadcastb {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512VL-NEXT:    vpcmpnleub %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpcmpleub %xmm2, %xmm1, %k2
+; AVX512VL-NEXT:    vmovdqu8 %xmm3, %xmm1 {%k1}
+; AVX512VL-NEXT:    vpshufb %xmm1, %xmm0, %xmm0 {%k2} {z}
 ; AVX512VL-NEXT:    retq
   %cmp = icmp ugt <16 x i8> %indices, <i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15>
   %or = select <16 x i1> %cmp, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %indices
@@ -1139,25 +1142,25 @@ define <2 x double> @var_shuffle_zero_v2f64(<2 x double> %v, <2 x i64> %indices)
 ; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [3,3]
 ; AVX512-NEXT:    vpcmpnleuq %zmm2, %zmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm1 {%k1}
-; AVX512-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpblendmq %zmm3, %zmm1, %zmm3 {%k1}
+; AVX512-NEXT:    vpaddq %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpermilpd %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpleuq %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vmovapd %zmm0, %zmm0 {%k1} {z}
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shuffle_zero_v2f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa64 %xmm2, %xmm1 {%k1}
-; AVX512VL-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovapd %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [3,3]
+; AVX512VL-NEXT:    vpcmpnleuq %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpblendmq %xmm3, %xmm1, %xmm3 {%k1}
+; AVX512VL-NEXT:    vpaddq %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpcmpleuq %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vpermilpd %xmm3, %xmm0, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
   %cmp = icmp ugt <2 x i64> %indices, <i64 3, i64 3>
   %or = select <2 x i1> %cmp, <2 x i64> <i64 -1, i64 -1>, <2 x i64> %indices
@@ -1324,24 +1327,25 @@ define <4 x float> @var_shuffle_zero_v4f32(<4 x float> %v, <4 x i32> %indices) n
 ; AVX512-LABEL: var_shuffle_zero_v4f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmovdqa32 %zmm2, %zmm1 {%k1}
-; AVX512-NEXT:    vpermilps %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [3,3,3,3]
+; AVX512-NEXT:    vpcmpnleud %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpblendmd %zmm3, %zmm1, %zmm3 {%k1}
+; AVX512-NEXT:    vpermilps %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpleud %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vmovaps %zmm0, %zmm0 {%k1} {z}
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shuffle_zero_v4f32:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm1 {%k1}
-; AVX512VL-NEXT:    vpermilps %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [3,3,3,3]
+; AVX512VL-NEXT:    vpcmpnleud %xmm2, %xmm1, %k1
+; AVX512VL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpcmpleud %xmm2, %xmm1, %k2
+; AVX512VL-NEXT:    vmovdqa32 %xmm3, %xmm1 {%k1}
+; AVX512VL-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 {%k2} {z}
 ; AVX512VL-NEXT:    retq
   %cmp = icmp ugt <4 x i32> %indices, <i32 3, i32 3, i32 3, i32 3>
   %or = select <4 x i1> %cmp, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %indices

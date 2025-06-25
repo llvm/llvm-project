@@ -5415,6 +5415,20 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
     }
   }
 
+  // Match not(insert_subvector(undef, setcc(), c))
+  // --> insert_subvector(undef, not(setcc()), c)
+  if (V.getOpcode() == ISD::INSERT_SUBVECTOR && V.getOperand(0).isUndef() &&
+      V.getOperand(1).getOpcode() == ISD::SETCC &&
+      V.getValueType().getScalarType() == MVT::i1) {
+    SDValue Cond = V.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    CC = ISD::getSetCCInverse(CC, Cond.getOperand(0).getValueType());
+    SDValue NotSub = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(),
+                                  Cond.getOperand(0), Cond.getOperand(1), CC);
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(V), V.getValueType(),
+                       V.getOperand(0), NotSub, V.getOperand(2));
+  }
+
   // Match not(concat_vectors(not(X), not(Y))) -> concat_vectors(X, Y).
   SmallVector<SDValue, 2> CatOps;
   if (collectConcatOps(V.getNode(), CatOps, DAG)) {
@@ -48049,19 +48063,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Check if the first operand is all zeros and Cond type is vXi1.
-  // If this an avx512 target we can improve the use of zero masking by
-  // swapping the operands and inverting the condition.
-  if (N->getOpcode() == ISD::VSELECT && Cond.hasOneUse() &&
-      Subtarget.hasAVX512() && CondVT.getVectorElementType() == MVT::i1 &&
-      ISD::isBuildVectorAllZeros(LHS.getNode()) &&
-      !ISD::isBuildVectorAllZeros(RHS.getNode())) {
-    // Invert the cond to not(cond) : xor(op,allones)=not(op)
-    SDValue CondNew = DAG.getNOT(DL, Cond, CondVT);
-    // Vselect cond, op1, op2 = Vselect not(cond), op2, op1
-    return DAG.getSelect(DL, VT, CondNew, RHS, LHS);
-  }
-
   // Attempt to convert a (vXi1 bitcast(iX Cond)) selection mask before it might
   // get split by legalization.
   if (N->getOpcode() == ISD::VSELECT && Cond.getOpcode() == ISD::BITCAST &&
@@ -48125,11 +48126,14 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return V;
 
   // select(~Cond, X, Y) -> select(Cond, Y, X)
-  if (CondVT.getScalarType() != MVT::i1) {
+  if (CondVT.getScalarType() != MVT::i1 ||
+      (ISD::isBuildVectorAllZeros(LHS.getNode()) &&
+       !ISD::isBuildVectorAllZeros(RHS.getNode())))
     if (SDValue CondNot = IsNOT(Cond, DAG))
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
 
+  if (CondVT.getScalarType() != MVT::i1) {
     // select(pcmpeq(and(X,Pow2),0),A,B) -> select(pcmpeq(and(X,Pow2),Pow2),B,A)
     if (Cond.getOpcode() == X86ISD::PCMPEQ &&
         Cond.getOperand(0).getOpcode() == ISD::AND &&
