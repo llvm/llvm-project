@@ -3791,6 +3791,47 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
   }
 };
 
+struct FoldReifiedShape : public OpRewritePattern<tensor::PadOp> {
+  using OpRewritePattern<tensor::PadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::PadOp padOp,
+                                PatternRewriter &rewriter) const override {
+    if (padOp.getNofold()) {
+      return rewriter.notifyMatchFailure(padOp, "skipping unfoldable pad");
+    }
+
+    ReifiedRankedShapedTypeDims reifiedResultShapes;
+    if (failed(reifyResultShapes(rewriter, padOp, reifiedResultShapes)))
+      return failure();
+
+    SmallVector<int64_t> newShape;
+    for (const auto &[s, ofr] : llvm::zip_equal(
+             padOp.getResultType().getShape(), reifiedResultShapes.front())) {
+      std::optional<int64_t> maybeCst = getConstantIntValue(ofr);
+      // Reification does not add static information, just use existing shape.
+      if (!maybeCst.has_value()) {
+        newShape.push_back(s);
+        continue;
+      }
+      int64_t cst = *maybeCst;
+      assert((ShapedType::isDynamic(s) || s == cst) && "constants must agree!");
+      newShape.push_back(cst);
+    }
+    if (newShape == padOp.getResultType().getShape())
+      return failure();
+
+    Type oldType = padOp.getResultType();
+    Type newType =
+        RankedTensorType::Builder(padOp.getResultType()).setShape(newShape);
+    Location loc = padOp->getLoc();
+    Operation *newPad = rewriter.clone(*padOp);
+    newPad->getResult(0).setType(newType);
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(padOp, oldType,
+                                                newPad->getResult(0));
+    return success();
+  }
+};
+
 } // namespace
 
 LogicalResult
@@ -3820,7 +3861,7 @@ void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<FoldStaticZeroPadding, FoldSourceTensorCast, FoldTargetTensorCast,
               FoldOrthogonalPaddings, FoldStaticPadding,
-              FoldConsecutiveConstantPadding>(context);
+              FoldConsecutiveConstantPadding, FoldReifiedShape>(context);
 }
 
 /// Return the padding value of the PadOp if it constant. In this context,
