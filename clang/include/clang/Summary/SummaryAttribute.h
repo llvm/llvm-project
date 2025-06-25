@@ -5,9 +5,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 namespace clang {
-enum SummaryAttrKind {
-  NO_WRITE_GLOBAL,
-};
+enum SummaryAttrKind { NO_WRITE_GLOBAL, NO_WRITE_PTR_PARAMETER };
 
 class FunctionSummary;
 class SummaryContext;
@@ -46,6 +44,22 @@ public:
 
   static bool classof(const SummaryAttr *A) {
     return A->getKind() == NO_WRITE_GLOBAL;
+  }
+  friend class SummaryContext;
+};
+
+// FIXME: create a macro for attr declarations?
+class NoWritePtrParameterAttr : public SummaryAttr {
+  NoWritePtrParameterAttr()
+      : SummaryAttr(NO_WRITE_PTR_PARAMETER, "no_write_ptr_parameter") {}
+
+public:
+  bool infer(const FunctionDecl *FD) const override final;
+  bool merge(const FunctionSummary &Caller,
+             const FunctionSummary *Callee) const override final;
+
+  static bool classof(const SummaryAttr *A) {
+    return A->getKind() == NO_WRITE_PTR_PARAMETER;
   }
   friend class SummaryContext;
 };

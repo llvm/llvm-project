@@ -74,7 +74,10 @@ template <typename T> void SummaryContext::registerAttr() {
   KindToAttribute[Kind] = Attributes.emplace_back(std::move(attr)).get();
 }
 
-SummaryContext::SummaryContext() { registerAttr<NoWriteGlobalAttr>(); }
+SummaryContext::SummaryContext() {
+  registerAttr<NoWriteGlobalAttr>();
+  registerAttr<NoWritePtrParameterAttr>();
+}
 
 void SummaryContext::CreateSummary(SmallVector<char> ID,
                                    std::set<const SummaryAttr *> Attrs,
