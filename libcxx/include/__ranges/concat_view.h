@@ -170,10 +170,12 @@ public:
 template <class... _Views>
 concat_view(_Views&&...) -> concat_view<views::all_t<_Views>...>;
 
-template <input_range... _Views>
-  requires(view<_Views> && ...) && (sizeof...(_Views) > 0) && __concatable<_Views...>
-template <bool _Const>
-class concat_view<_Views...>::__iterator {
+template <bool _Const, typename... _Views>
+struct __concat_view_iterator_category {};
+
+template <bool _Const, typename... _Views>
+  requires __all_forward<_Const, _Views...>
+struct __concat_view_iterator_category<_Const, _Views...> {
 private:
   constexpr static bool __derive_pack_random_iterator =
       __derived_from_pack<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
@@ -194,6 +196,13 @@ public:
               _If<__derive_pack_bidirectional_iterator,
                   bidirectional_iterator_tag,
                   _If<__derive_pack_forward_iterator, forward_iterator_tag, input_iterator_tag > > > >;
+};
+
+template <input_range... _Views>
+  requires(view<_Views> && ...) && (sizeof...(_Views) > 0) && __concatable<_Views...>
+template <bool _Const>
+class concat_view<_Views...>::__iterator : public __concat_view_iterator_category<_Const, _Views...> {
+public:
   using iterator_concept =
       _If<__concat_is_random_access<_Const, _Views...>,
           random_access_iterator_tag,
