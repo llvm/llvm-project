@@ -97,10 +97,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS,  G_FCOSH,  G_FACOS,
-                               G_FSIN,   G_FSINH,   G_FASIN, G_FTAN,   G_FTANH,
-                               G_FATAN,  G_FATAN2,  G_FPOW,  G_FEXP,   G_FEXP2,
-                               G_FEXP10, G_FLOG,    G_FLOG2, G_FLOG10, G_FPOWI})
+  getActionDefinitionsBuilder(
+      {G_LROUND, G_LLROUND, G_FCOS,  G_FCOSH, G_FACOS,  G_FSIN,  G_FSINH,
+       G_FASIN,  G_FTAN,    G_FTANH, G_FATAN, G_FATAN2, G_FPOW,  G_FEXP,
+       G_FEXP2,  G_FEXP10,  G_FLOG,  G_FLOG2, G_FLOG10, G_FPOWI, G_FSINCOS})
       .libcall();
 
   getActionDefinitionsBuilder(G_FSQRT)
