@@ -39,8 +39,6 @@ def testDebugEmitParamAsRemark(target):
 
 @run
 def testDebugEmitRemarkAtOp(target):
-    i0 = IntegerAttr.get(IntegerType.get_signless(32), 0)
-    i0_param = transform.ParamConstantOp(transform.AnyParamType.get(), i0)
     debug.emit_remark_at(target, "some text")
     # CHECK-LABEL: TEST: testDebugEmitRemarkAtOp
     # CHECK: ^{{.*}}(%[[ARG0:.+]]: !transform.any_op):
