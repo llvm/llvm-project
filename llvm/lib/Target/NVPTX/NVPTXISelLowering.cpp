@@ -3513,9 +3513,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Val = DAG.getBuildVector(VT, dl, StoreVals);
     }
 
-    SDValue RetSymbol =
-        DAG.getNode(NVPTXISD::Wrapper, dl, MVT::i32,
-                    DAG.getTargetExternalSymbol("func_retval0", MVT::i32));
+    SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
     SDValue Ptr =
         DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
 

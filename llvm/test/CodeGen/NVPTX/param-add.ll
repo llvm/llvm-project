@@ -29,7 +29,7 @@ define i32 @test(%struct.1float alignstack(32) %data) {
 ; CHECK-NEXT:    st.param.b8 [param0+3], %r4;
 ; CHECK-NEXT:    .param .b32 retval0;
 ; CHECK-NEXT:    call.uni (retval0), callee, (param0);
-; CHECK-NEXT:    ld.param.b32 %r14, [retval0];
+; CHECK-NEXT:    ld.param.b32 %r5, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;

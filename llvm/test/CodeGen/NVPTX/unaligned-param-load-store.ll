@@ -43,11 +43,7 @@ define %s_i8i16p @test_s_i8i16p(%s_i8i16p %a) {
 ; CHECK-NEXT:    st.param.b8 [param0+4], %rs4;
 ; CHECK-NEXT:    st.param.b64 [param0+8], %rd1;
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[16];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_s_i8i16p,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_s_i8i16p, (param0);
 ; CHECK-NEXT:    ld.param.b16 %rs7, [retval0];
 ; CHECK-NEXT:    ld.param.b8 %rs8, [retval0+2];
 ; CHECK-NEXT:    ld.param.b8 %rs9, [retval0+3];
@@ -98,11 +94,7 @@ define %s_i8i32p @test_s_i8i32p(%s_i8i32p %a) {
 ; CHECK-NEXT:    st.param.b8 [param0+8], %r9;
 ; CHECK-NEXT:    st.param.b64 [param0+16], %rd1;
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[24];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_s_i8i32p,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_s_i8i32p, (param0);
 ; CHECK-NEXT:    ld.param.b32 %r14, [retval0];
 ; CHECK-NEXT:    ld.param.b8 %rs2, [retval0+4];
 ; CHECK-NEXT:    ld.param.b8 %rs3, [retval0+5];
@@ -180,11 +172,7 @@ define %s_i8i64p @test_s_i8i64p(%s_i8i64p %a) {
 ; CHECK-NEXT:    st.param.b8 [param0+16], %rd30;
 ; CHECK-NEXT:    st.param.b64 [param0+24], %rd3;
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[32];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_s_i8i64p,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_s_i8i64p, (param0);
 ; CHECK-NEXT:    ld.param.b64 %rd31, [retval0];
 ; CHECK-NEXT:    ld.param.b8 %rs2, [retval0+8];
 ; CHECK-NEXT:    ld.param.b8 %rs3, [retval0+9];
@@ -269,11 +257,7 @@ define %s_i8f16p @test_s_i8f16p(%s_i8f16p %a) {
 ; CHECK-NEXT:    st.param.b8 [param0+4], %rs4;
 ; CHECK-NEXT:    st.param.b64 [param0+8], %rd1;
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[16];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_s_i8f16p,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_s_i8f16p, (param0);
 ; CHECK-NEXT:    ld.param.b16 %rs7, [retval0];
 ; CHECK-NEXT:    ld.param.b8 %rs8, [retval0+2];
 ; CHECK-NEXT:    ld.param.b8 %rs9, [retval0+3];
@@ -324,11 +308,7 @@ define %s_i8f16x2p @test_s_i8f16x2p(%s_i8f16x2p %a) {
 ; CHECK-NEXT:    st.param.b8 [param0+8], %r9;
 ; CHECK-NEXT:    st.param.b64 [param0+16], %rd1;
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[24];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_s_i8f16x2p,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_s_i8f16x2p, (param0);
 ; CHECK-NEXT:    ld.param.b32 %r14, [retval0];
 ; CHECK-NEXT:    ld.param.b8 %rs2, [retval0+4];
 ; CHECK-NEXT:    ld.param.b8 %rs3, [retval0+5];
@@ -387,11 +367,7 @@ define %s_i8f32p @test_s_i8f32p(%s_i8f32p %a) {
 ; CHECK-NEXT:    st.param.b8 [param0+8], %r9;
 ; CHECK-NEXT:    st.param.b64 [param0+16], %rd1;
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[24];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_s_i8f32p,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_s_i8f32p, (param0);
 ; CHECK-NEXT:    ld.param.b32 %r14, [retval0];
 ; CHECK-NEXT:    ld.param.b8 %rs2, [retval0+4];
 ; CHECK-NEXT:    ld.param.b8 %rs3, [retval0+5];
@@ -469,11 +445,7 @@ define %s_i8f64p @test_s_i8f64p(%s_i8f64p %a) {
 ; CHECK-NEXT:    st.param.b8 [param0+16], %rd30;
 ; CHECK-NEXT:    st.param.b64 [param0+24], %rd3;
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[32];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_s_i8f64p,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_s_i8f64p, (param0);
 ; CHECK-NEXT:    ld.param.b64 %rd31, [retval0];
 ; CHECK-NEXT:    ld.param.b8 %rs2, [retval0+8];
 ; CHECK-NEXT:    ld.param.b8 %rs3, [retval0+9];
