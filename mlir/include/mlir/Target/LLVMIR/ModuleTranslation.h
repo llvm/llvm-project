@@ -16,9 +16,9 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/StateStack.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Support/StateStack.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
