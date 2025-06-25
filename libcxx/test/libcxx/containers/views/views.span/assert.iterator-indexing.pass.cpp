@@ -9,7 +9,7 @@
 
 // Make sure that std::span's iterators check for OOB accesses when the debug mode is enabled.
 
-// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators-in-span
 // UNSUPPORTED: libcpp-hardening-mode=none
 
 #include <span>

@@ -113,6 +113,15 @@
 #  define _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
 #endif
 
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#  ifndef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING_VIEW
+#    define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING_VIEW
+#  endif
+#  ifndef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN
+#    define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN
+#  endif
+#endif
+
 // Tracks the bounds of the array owned by std::unique_ptr<T[]>, allowing it to trap when accessed out-of-bounds.
 // Note that limited bounds checking is also available outside of this ABI configuration, but only some categories
 // of types can be checked.

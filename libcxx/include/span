@@ -240,7 +240,7 @@ public:
   using const_pointer   = const _Tp*;
   using reference       = _Tp&;
   using const_reference = const _Tp&;
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN
   using iterator = __bounded_iter<pointer>;
 #    else
   using iterator = __wrap_iter<pointer>;
@@ -383,14 +383,14 @@ public:
 
   // [span.iter], span iterator support
   _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() const noexcept {
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN
     return std::__make_bounded_iter(data(), data(), data() + size());
 #    else
     return iterator(data());
 #    endif
   }
   _LIBCPP_HIDE_FROM_ABI constexpr iterator end() const noexcept {
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN
     return std::__make_bounded_iter(data() + size(), data(), data() + size());
 #    else
     return iterator(data() + size());
@@ -423,7 +423,7 @@ public:
   using const_pointer   = const _Tp*;
   using reference       = _Tp&;
   using const_reference = const _Tp&;
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN
   using iterator = __bounded_iter<pointer>;
 #    else
   using iterator = __wrap_iter<pointer>;
@@ -548,14 +548,14 @@ public:
 
   // [span.iter], span iterator support
   _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() const noexcept {
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN
     return std::__make_bounded_iter(data(), data(), data() + size());
 #    else
     return iterator(data());
 #    endif
   }
   _LIBCPP_HIDE_FROM_ABI constexpr iterator end() const noexcept {
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_SPAN
     return std::__make_bounded_iter(data() + size(), data(), data() + size());
 #    else
     return iterator(data() + size());
