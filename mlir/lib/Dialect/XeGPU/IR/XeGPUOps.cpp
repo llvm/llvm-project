@@ -635,9 +635,8 @@ LogicalResult ConvertLayoutOp::verify() {
 }
 
 OpFoldResult ConvertLayoutOp::fold(FoldAdaptor adaptor) {
-  llvm::dbgs() << "\nSource from adaptor: " << adaptor.getSource() << "\n";
   if (getInputLayout() == getTargetLayout())
-    return adaptor.getSource();
+    return getSource();
   return {};
 }
 

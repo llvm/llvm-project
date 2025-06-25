@@ -390,6 +390,31 @@ struct WgToSgElementwiseOp : public ConversionPattern {
   }
 };
 
+struct WgToSgConvertLayoutOp
+    : public OpConversionPattern<xegpu::ConvertLayoutOp> {
+  using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::LayoutAttr input = op.getInputLayout();
+    xegpu::LayoutAttr target = op.getTargetLayout();
+    if (input.getSgLayout() == target.getSgLayout() &&
+        input.getSgData() == target.getSgData()) {
+      input = input.dropSgLayoutAndData();
+      target = target.dropSgLayoutAndData();
+      SmallVector<Value> newOps;
+      for (auto src : adaptor.getSource()) {
+        auto newOp = rewriter.create<xegpu::ConvertLayoutOp>(
+            op.getLoc(), src.getType(), src, input, target);
+        newOps.push_back(newOp);
+      }
+      rewriter.replaceOpWithMultiple(op, newOps);
+      return success();
+    }
+    return failure();
+  }
+};
+
 // Handles UnrealizedConversionCastOp generated during
 // SCFStructuralTypeConversions (step 1). This op may appear as either a
 // target or source materialization for Vector values, e.g.:
@@ -473,8 +498,8 @@ namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
                WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
-               UnrealizedConversionCastOpPattern, WgToSgElementwiseOp>(
-      patterns.getContext());
+               UnrealizedConversionCastOpPattern, WgToSgElementwiseOp,
+               WgToSgConvertLayoutOp>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -580,6 +605,11 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     auto layout = xegpu::getLayoutAttr(op.getResult());
     return isLegal(layout);
   });
+
+  target.addDynamicallyLegalOp<xegpu::ConvertLayoutOp>(
+      [=](xegpu::ConvertLayoutOp op) -> bool {
+        return isLegal(op.getInputLayout()) && isLegal(op.getTargetLayout());
+      });
 
   target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
       [=](Operation *op) -> std::optional<bool> {
