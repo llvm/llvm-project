@@ -694,7 +694,7 @@ public:
   bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
 
   bool hasExportInsts() const {
-    return !hasGFX940Insts();
+    return !hasGFX940Insts() && !hasGFX1250Insts();
   }
 
   bool hasVINTERPEncoding() const {
