@@ -9,7 +9,8 @@ entry:
   ret void
 }
 
-; CHECK-NOT: !dx.rootsignature
+; CHECK-NOT: !dx.rootsignatures
+; CHECK-NOT: {{^!}}
 
 !dx.rootsignatures = !{!2} ; list of function/root signature pairs
 !2 = !{ ptr @main, !3, i32 2 } ; function, root signature
