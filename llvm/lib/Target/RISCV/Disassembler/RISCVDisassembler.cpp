@@ -535,6 +535,19 @@ static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
+template <int Bits>
+static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
+                               const MCDisassembler *Decoder) {
+  if (Imm & ~((1LL << Bits) - 1))
+    return MCDisassembler::Fail;
+
+  // Imm is a signed immediate, so sign extend it.
+  if (Imm & (1 << (Bits - 1)))
+    Imm |= ~((1LL << Bits) - 1);
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
 
 static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
@@ -576,6 +589,9 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
 static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
+template <int Bits>
+static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
+                               const MCDisassembler *Decoder);
 
 #include "RISCVGenDisassemblerTables.inc"
 
@@ -790,6 +806,8 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXmipscmov32,
      {RISCV::FeatureVendorXMIPSCMov},
      "MIPS mips.ccmov"},
+    {DecoderTableXmipscbop32, {RISCV::FeatureVendorXMIPSCBOP},
+     "MIPS mips.pref"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     // Standard Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},

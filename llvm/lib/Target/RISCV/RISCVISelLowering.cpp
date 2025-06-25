@@ -682,7 +682,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit())
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
 
-  if (Subtarget.hasStdExtZicbop()) {
+  if (Subtarget.hasStdExtZicbop() || Subtarget.hasVendorXMIPSCBOP()) {
     setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
   }
 

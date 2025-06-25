@@ -1,5 +1,14 @@
 # RUN: not llvm-mc -triple=riscv64 < %s 2>&1 | FileCheck %s -check-prefixes=CHECK-FEATURE
-# RUN: not llvm-mc -triple=riscv64 -mattr=+xmipslsp,+xmipscmov < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipsbcop < %s 2>&1 | FileCheck %s
+
+mips.perf   8, 512(a0)
+# CHECK: error: invalid operand for instruction
+
+mips.perf	8
+# CHECK: error: too few operands for instruction
+
+mips.perf	8, 511(a0)
+# CHECK-FEATURE: error: instruction requires the following: 'Xmipscbop' (MIPS hardware prefetch)
 
 mips.ccmov x0, x1, 0x10
 # CHECK: error: invalid operand for instruction
