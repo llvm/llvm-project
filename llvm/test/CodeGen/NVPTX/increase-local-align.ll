@@ -67,7 +67,7 @@ define void @test6() {
 
 define void @test7() {
 ; COMMON-LABEL: define void @test7() {
-; COMMON-NEXT:    [[A:%.*]] = alloca i32, align 2
+; COMMON-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; COMMON-NEXT:    ret void
 ;
   %a = alloca i32, align 2
