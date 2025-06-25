@@ -23,29 +23,28 @@ namespace internal {
 
 ErrorOr<size_t> wcsrtombs(char *__restrict dst, const wchar_t **__restrict src,
                           size_t len, mbstate *__restrict ps) {
-  static_assert(sizeof(wchar_t) == 4);
-
   if (src == nullptr)
     return Error(-1);
-  
+
   // ignore len parameter when theres no destination string
   if (dst == nullptr)
     len = SIZE_MAX;
 
   size_t bytes_written = 0;
   while (bytes_written < len) {
-    char buf[4];
     auto result =
-        internal::wcrtomb(dst + bytes_written, **src, ps, len - bytes_written);
+        internal::wcrtomb(dst == nullptr ? nullptr : dst + bytes_written, **src,
+                          ps, len - bytes_written);
     if (!result.has_value())
       return result; // forward the error
 
-    if (result.value() == -1) // couldn't complete the conversion
+    // couldn't complete conversion
+    if (result.value() == static_cast<size_t>(-1))
       return len;
 
     // terminate the loop after converting the null wide character
     if (**src == L'\0') {
-      *src = '\0';
+      *src = nullptr;
       return bytes_written;
     }
 

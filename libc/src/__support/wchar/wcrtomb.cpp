@@ -20,18 +20,22 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
-                        mbstate *__restrict ps, size_t max_written) {
+ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc, mbstate *__restrict ps,
+                        size_t max_written) {
   static_assert(sizeof(wchar_t) == 4);
 
   CharacterConverter cr(ps);
 
+  char buf[sizeof(wchar_t) / sizeof(char)];
   if (s == nullptr)
-    return Error(-1);
+    s = buf;
 
-  int status = cr.push(static_cast<char32_t>(wc));
-  if (status != 0)
-    return Error(status);
+  // if cr isnt empty, it should be represented in mbstate already
+  if (cr.isEmpty()) {
+    int status = cr.push(static_cast<char32_t>(wc));
+    if (status != 0)
+      return Error(status);
+  }
 
   size_t count = 0;
   while (!cr.isEmpty() && count < max_written) {

@@ -81,7 +81,7 @@ add_libc_test(
   SRCS
     wcsrtombs_test.cpp
   DEPENDS
-    libc.src.wchar.wcrtomb
+    libc.src.wchar.wcsrtombs
     libc.src.string.memset
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t

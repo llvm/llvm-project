@@ -49,6 +49,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcsrtombs
+  SRCS
+    wcsrtombs.cpp
+  HDRS
+    wcsrtombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.wcsrtombs
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
   mbrtowc
   SRCS
     mbrtowc.cpp
