@@ -4,7 +4,7 @@
 define float @align_back_prop(ptr addrspace(1) align 4 %x) {
 ; CHECK-LABEL: define float @align_back_prop(
 ; CHECK-SAME: ptr addrspace(1) align 8 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[FAT_PTR:%.*]] = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[X]], i16 0, i32 256, i32 0)
+; CHECK-NEXT:    [[FAT_PTR:%.*]] = call align 8 ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[X]], i16 0, i32 256, i32 0)
 ; CHECK-NEXT:    [[Y:%.*]] = load float, ptr addrspace(7) [[FAT_PTR]], align 8
 ; CHECK-NEXT:    ret float [[Y]]
 ;
@@ -16,7 +16,7 @@ define float @align_back_prop(ptr addrspace(1) align 4 %x) {
 define float @align_foward_prop(ptr addrspace(1) align 8 %x) {
 ; CHECK-LABEL: define float @align_foward_prop(
 ; CHECK-SAME: ptr addrspace(1) align 8 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FAT_PTR:%.*]] = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[X]], i16 0, i32 256, i32 0)
+; CHECK-NEXT:    [[FAT_PTR:%.*]] = call align 8 ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[X]], i16 0, i32 256, i32 0)
 ; CHECK-NEXT:    [[Y:%.*]] = load float, ptr addrspace(7) [[FAT_PTR]], align 8
 ; CHECK-NEXT:    ret float [[Y]]
 ;
@@ -28,7 +28,7 @@ define float @align_foward_prop(ptr addrspace(1) align 8 %x) {
 define float @align_mix_prop(ptr addrspace(1) align 4 %x) {
 ; CHECK-LABEL: define float @align_mix_prop(
 ; CHECK-SAME: ptr addrspace(1) align 8 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FAT_PTR:%.*]] = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[X]], i16 0, i32 256, i32 0)
+; CHECK-NEXT:    [[FAT_PTR:%.*]] = call align 8 ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[X]], i16 0, i32 256, i32 0)
 ; CHECK-NEXT:    [[Y:%.*]] = load float, ptr addrspace(7) [[FAT_PTR]], align 8
 ; CHECK-NEXT:    [[Z:%.*]] = load float, ptr addrspace(1) [[X]], align 8
 ; CHECK-NEXT:    ret float [[Z]]

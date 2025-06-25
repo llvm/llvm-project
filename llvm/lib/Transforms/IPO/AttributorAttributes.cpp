@@ -5373,14 +5373,8 @@ struct AAAlignFloating : AAAlignImpl {
     bool Stripped;
     bool UsedAssumedInformation = false;
     SmallVector<AA::ValueAndContext> Values;
-    const auto &AligmentCBs = A.getAlignmentCallback(getIRPosition());
-    if (!AligmentCBs.empty()) {
-      for (const auto &CB : AligmentCBs) {
-        CB(getIRPosition(), this, Values);
-      }
-    } else if (!A.getAssumedSimplifiedValues(getIRPosition(), *this, Values,
-                                             AA::AnyScope,
-                                             UsedAssumedInformation)) {
+    if (!A.getAssumedSimplifiedValues(getIRPosition(), *this, Values,
+                                      AA::AnyScope, UsedAssumedInformation)) {
       Values.push_back({getAssociatedValue(), getCtxI()});
       Stripped = false;
     } else {
@@ -5510,7 +5504,34 @@ struct AAAlignCallSiteReturned final
   using Base = AACalleeToCallSite<AAAlign, AAAlignImpl>;
   AAAlignCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
+  ChangeStatus updateImpl(Attributor &A) override {
+    SmallVector<AA::ValueAndContext> Values;
+    const auto &AligmentCBs = A.getAlignmentCallback(getIRPosition());
 
+    if (!AligmentCBs.empty()) {
+      for (const auto &CB : AligmentCBs) {
+        CB(getIRPosition(), this, Values);
+      }
+
+      if (!Values.empty()) {
+        StateType T;
+        for (const auto &VAC : Values) {
+          const auto *AA = A.getAAFor<AAAlign>(
+              *this, IRPosition::value(*VAC.getValue()), DepClassTy::REQUIRED);
+          if (AA && this != AA) {
+            const AAAlign::StateType &DS = AA->getState();
+            T ^= DS;
+          }
+          if (!T.isValidState())
+            return indicatePessimisticFixpoint();
+        }
+
+        return clampStateAndIndicateChange(getState(), T);
+      }
+    }
+
+    return Base::updateImpl(A);
+  }
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
 };

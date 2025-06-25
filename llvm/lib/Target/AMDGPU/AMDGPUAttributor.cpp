@@ -138,18 +138,6 @@ static bool funcRequiresHostcallPtr(const Function &F) {
          F.hasFnAttribute(Attribute::SanitizeMemTag);
 }
 
-static bool isAlignAndMakeBuffer(const AbstractAttribute *AA,
-                                 const Instruction *I) {
-  if (isa<AAAlign>(AA)) {
-    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
-      if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
-        return true;
-    }
-  }
-
-  return false;
-}
-
 namespace {
 class AMDGPUInformationCache : public InformationCache {
 public:
@@ -250,7 +238,11 @@ public:
   bool shouldTrackUse(const AbstractAttribute *QueryingAA,
                       Value &AssociatedValue, const Use *U,
                       const Instruction *I) const override {
-    return isAlignAndMakeBuffer(QueryingAA, I);
+    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+      if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+        return true;
+    }
+    return false;
   }
 
 private:
@@ -1452,7 +1444,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
             IRPosition::value(*CmpX->getPointerOperand()));
       } else if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc) {
-          IRPosition IRP = IRPosition::inst(*II);
+          IRPosition IRP = IRPosition::value(*II);
 
           Attributor::AlignmentCallbackTy ACB =
               [](const IRPosition &IRP, const AbstractAttribute *AA,
