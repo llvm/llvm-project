@@ -12,6 +12,8 @@
 
 #include <cassert>
 #include <type_traits>
+#include <vector>
+#include "check_assertion.h"
 
 constexpr int buff[] = {1, 2, 3, 4};
 
@@ -66,6 +68,13 @@ constexpr bool test() {
       static_assert(noexcept(View()));
     }
   }
+
+  // check when input is an output range, which should be well-formed
+  {
+    std::vector<int> v{1,2,3};
+    auto r = std::views::counted(std::back_inserter(v), 3);
+    static_assert(!std::ranges::input_range<decltype(r)>);
+  } 
 
   return true;
 }
