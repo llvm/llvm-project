@@ -3153,8 +3153,8 @@ LogicalResult InsertOp::verify() {
 // from the source attribute. Returns the starting position in the destination
 // vector where elements should be inserted.
 static int64_t calculateInsertPositionAndExtractValues(
-    VectorType destTy, const ArrayRef<int64_t> &positions, Attribute srcAttr,
-    SmallVector<Attribute> &valueToInsert) {
+    VectorType destTy, ArrayRef<int64_t> positions, Attribute srcAttr,
+    SmallVectorImpl<Attribute> &valueToInsert) {
   llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
   copy(positions, completePositions.begin());
   int64_t insertBeginPosition =
@@ -3227,26 +3227,25 @@ public:
   }
 };
 
-// Pattern to optimize a chain of constant insertions into a poison vector.
-//
-// This pattern identifies chains of vector.insert operations that:
-// 1. Start from an ub.poison operation.
-// 2. Insert only constant values at static positions.
-// 3. Completely initialize all elements in the resulting vector.
-//
-// When these conditions are met, the entire chain can be replaced with a
-// single arith.constant operation containing a dense elements attribute.
-//
-// Example transformation:
-//   %poison = ub.poison : vector<2xi32>
-//   %0 = vector.insert %c1, %poison[0] : i32 into vector<2xi32>
-//   %1 = vector.insert %c2, %0[1] : i32 into vector<2xi32>
-// ->
-//   %result = arith.constant dense<[1, 2]> : vector<2xi32>
-
-// TODO: Support the case where only some elements of the poison vector are set.
-//       Currently, MLIR doesn't support partial poison vectors.
-
+/// Pattern to optimize a chain of constant insertions into a poison vector.
+///
+/// This pattern identifies chains of vector.insert operations that:
+/// 1. Start from an ub.poison operation.
+/// 2. Insert only constant values at static positions.
+/// 3. Completely initialize all elements in the resulting vector.
+/// 4. All intermediate insert operations have only one use.
+///
+/// When these conditions are met, the entire chain can be replaced with a
+/// single arith.constant operation containing a dense elements attribute.
+///
+/// Example transformation:
+///   %poison = ub.poison : vector<2xi32>
+///   %0 = vector.insert %c1, %poison[0] : i32 into vector<2xi32>
+///   %1 = vector.insert %c2, %0[1] : i32 into vector<2xi32>
+/// ->
+///   %result = arith.constant dense<[1, 2]> : vector<2xi32>
+/// TODO: Support the case where only some elements of the poison vector are
+/// set. Currently, MLIR doesn't support partial poison vectors.
 class InsertConstantToPoison final : public OpRewritePattern<InsertOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -3287,12 +3286,18 @@ public:
 
       firstInsertOp = previousInsertOp;
       previousInsertOp = previousInsertOp.getDest().getDefiningOp<InsertOp>();
+
+      // Check that intermediate inserts have only one use to avoid an explosion
+      // of constants.
+      if (previousInsertOp && !previousInsertOp->hasOneUse())
+        return failure();
     }
 
     if (!firstInsertOp.getDest().getDefiningOp<ub::PoisonOp>())
       return failure();
 
-    // Need to make sure all elements are initialized.
+    // Currently, MLIR doesn't support partial poison vectors, so we can only
+    // optimize when the entire vector is completely initialized.
     int64_t vectorSize = destTy.getNumElements();
     int64_t initializedCount = 0;
     SmallVector<bool> initialized(vectorSize, false);
@@ -3320,7 +3325,7 @@ public:
         break;
     }
 
-    // some positions are not initialized.
+    // Some positions are not initialized.
     if (initializedCount != vectorSize)
       return failure();
 
