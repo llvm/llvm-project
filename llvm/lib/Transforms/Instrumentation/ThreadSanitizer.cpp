@@ -728,6 +728,7 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     Value *C = IRB.CreateCall(TsanAtomicLoad[Idx], Args);
     Value *Cast = IRB.CreateBitOrPointerCast(C, OrigTy);
     I->replaceAllUsesWith(Cast);
+    I->eraseFromParent();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     Value *Addr = SI->getPointerOperand();
     int Idx =

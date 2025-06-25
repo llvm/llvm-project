@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCall.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -66,6 +67,67 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
+  assert(!cir::MissingFeatures::builtinCallF128());
+
+  // If the builtin has been declared explicitly with an assembler label,
+  // disable the specialized emitting below. Ideally we should communicate the
+  // rename in IR, or at least avoid generating the intrinsic calls that are
+  // likely to get lowered to the renamed library functions.
+  unsigned builtinIDIfNoAsmLabel = fd->hasAttr<AsmLabelAttr>() ? 0 : builtinID;
+
+  assert(!cir::MissingFeatures::builtinCallMathErrno());
+  assert(!cir::MissingFeatures::builtinCall());
+
+  mlir::Location loc = getLoc(e->getExprLoc());
+
+  switch (builtinIDIfNoAsmLabel) {
+  default:
+    break;
+
+  case Builtin::BI__assume:
+  case Builtin::BI__builtin_assume: {
+    if (e->getArg(0)->HasSideEffects(getContext()))
+      return RValue::get(nullptr);
+
+    mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
+    builder.create<cir::AssumeOp>(loc, argValue);
+    return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_complex: {
+    mlir::Value real = emitScalarExpr(e->getArg(0));
+    mlir::Value imag = emitScalarExpr(e->getArg(1));
+    mlir::Value complex = builder.createComplexCreate(loc, real, imag);
+    return RValue::get(complex);
+  }
+
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability: {
+    mlir::Value argValue = emitScalarExpr(e->getArg(0));
+    mlir::Value expectedValue = emitScalarExpr(e->getArg(1));
+
+    mlir::FloatAttr probAttr;
+    if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_expect_with_probability) {
+      llvm::APFloat probability(0.0);
+      const Expr *probArg = e->getArg(2);
+      [[maybe_unused]] bool evalSucceeded =
+          probArg->EvaluateAsFloat(probability, cgm.getASTContext());
+      assert(evalSucceeded &&
+             "probability should be able to evaluate as float");
+      bool loseInfo = false; // ignored
+      probability.convert(llvm::APFloat::IEEEdouble(),
+                          llvm::RoundingMode::Dynamic, &loseInfo);
+      probAttr = mlir::FloatAttr::get(mlir::Float64Type::get(&getMLIRContext()),
+                                      probability);
+    }
+
+    auto result = builder.create<cir::ExpectOp>(getLoc(e->getSourceRange()),
+                                                argValue.getType(), argValue,
+                                                expectedValue, probAttr);
+    return RValue::get(result);
+  }
+  }
+
   cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
   return getUndefRValue(e->getType());
 }
@@ -87,4 +149,15 @@ cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *fd,
   GlobalDecl d(fd);
   mlir::Type type = convertType(fd->getType());
   return getOrCreateCIRFunction(name, type, d, /*forVTable=*/false);
+}
+
+mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
+  mlir::Value argValue = evaluateExprAsBool(e);
+  if (!sanOpts.has(SanitizerKind::Builtin))
+    return argValue;
+
+  assert(!cir::MissingFeatures::sanitizers());
+  cgm.errorNYI(e->getSourceRange(),
+               "emitCheckedArgForAssume: sanitizers are NYI");
+  return {};
 }
