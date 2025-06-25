@@ -2322,7 +2322,7 @@ static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc,
       continue;
     if (Field->isBitField()) {
       S.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::ZeroLengthField << Field
+          << diag::TraitNotSatisfiedReason::NonZeroLengthField << Field
           << Field->getSourceRange();
       continue;
     }
