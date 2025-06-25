@@ -51,7 +51,7 @@ bool CharacterConverter::isValidState() {
       state->total_bytes == 0 ? 0
                               : MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 1];
   return state->bytes_stored <= state->total_bytes &&
-         state->bytes_stored >= 0 && state->partial <= max_utf32_value;
+         state->partial <= max_utf32_value;
 }
 
 int CharacterConverter::push(char8_t utf8_byte) {
