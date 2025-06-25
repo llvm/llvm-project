@@ -77,11 +77,8 @@ def fdis(debugger, args, exe_ctx, result, dict):
         result.SetStatus(lldb.eReturnStatusFailed)
         return
 
-    print(proc.stderr)
-    if proc.stderr:
-        pass
-        #result.SetError(proc.stderr)
-        #result.SetStatus(lldb.eReturnStatusFailed)
-    else:
-        result.PutCString(proc.stdout)
-        result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
+    if proc.returncode:
+        result.PutCString("warning: {} returned non-zero value {}".format(filter_program, proc.returncode))
+
+    result.PutCString(proc.stdout)
+    result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
