@@ -14,6 +14,23 @@
 
 #include <stddef.h> // size_t
 
+// https://libc.llvm.org/compiler_support.html
+// Support for [[likely]] / [[unlikely]]
+//  [X] GCC 12.2
+//  [X] Clang 12
+//  [ ] Clang 11
+#define LIBC_ATTR_LIKELY [[likely]]
+#define LIBC_ATTR_UNLIKELY [[unlikely]]
+
+#if defined(LIBC_COMPILER_IS_CLANG)
+#if LIBC_COMPILER_CLANG_VER < 1200
+#undef LIBC_ATTR_LIKELY
+#undef LIBC_ATTR_UNLIKELY
+#define LIBC_ATTR_LIKELY
+#define LIBC_ATTR_UNLIKELY
+#endif
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 
 namespace {
@@ -100,17 +117,19 @@ LIBC_INLINE auto misaligned(CPtr a) {
                                                             size_t size) {
   if (size >= 8) {
     if (const size_t offset = distance_to_align_up<kWordSize>(dst))
-        [[unlikely]] {
-      copy_bytes_and_bump_pointers(dst, src, offset);
-      size -= offset;
-    }
+      LIBC_ATTR_UNLIKELY {
+        copy_bytes_and_bump_pointers(dst, src, offset);
+        size -= offset;
+      }
     const auto src_alignment = distance_to_align_down<kWordSize>(src);
-    if (src_alignment == 0) [[likely]] {
-      // Both `src` and `dst` are now word-aligned.
-      copy_blocks_and_update_args<64, AssumeWordAligned>(dst, src, size);
-      copy_blocks_and_update_args<16, AssumeWordAligned>(dst, src, size);
-      copy_blocks_and_update_args<4, AssumeWordAligned>(dst, src, size);
-    } else {
+    if (src_alignment == 0)
+      LIBC_ATTR_LIKELY {
+        // Both `src` and `dst` are now word-aligned.
+        copy_blocks_and_update_args<64, AssumeWordAligned>(dst, src, size);
+        copy_blocks_and_update_args<16, AssumeWordAligned>(dst, src, size);
+        copy_blocks_and_update_args<4, AssumeWordAligned>(dst, src, size);
+      }
+    else {
       // `dst` is aligned but `src` is not.
       LIBC_LOOP_NOUNROLL
       while (size >= kWordSize) {
@@ -145,32 +164,36 @@ LIBC_INLINE auto misaligned(CPtr a) {
 //   make sure to restrict unrolling to word loads/stores.
 [[maybe_unused]] LIBC_INLINE void inline_memcpy_arm_mid_end(Ptr dst, CPtr src,
                                                             size_t size) {
-  if (misaligned(bitwise_or(src, dst))) [[unlikely]] {
-    if (size < 8) [[unlikely]] {
-      if (size & 1)
-        copy_and_bump_pointers<1>(dst, src);
-      if (size & 2)
-        copy_and_bump_pointers<2>(dst, src);
-      if (size & 4)
-        copy_and_bump_pointers<4>(dst, src);
-      return;
+  if (misaligned(bitwise_or(src, dst)))
+    LIBC_ATTR_UNLIKELY {
+      if (size < 8)
+        LIBC_ATTR_UNLIKELY {
+          if (size & 1)
+            copy_and_bump_pointers<1>(dst, src);
+          if (size & 2)
+            copy_and_bump_pointers<2>(dst, src);
+          if (size & 4)
+            copy_and_bump_pointers<4>(dst, src);
+          return;
+        }
+      if (misaligned(src))
+        LIBC_ATTR_UNLIKELY {
+          const size_t offset = distance_to_align_up<kWordSize>(dst);
+          if (offset & 1)
+            copy_and_bump_pointers<1>(dst, src);
+          if (offset & 2)
+            copy_and_bump_pointers<2>(dst, src);
+          size -= offset;
+        }
     }
-    if (misaligned(src)) [[unlikely]] {
-      const size_t offset = distance_to_align_up<kWordSize>(dst);
-      if (offset & 1)
-        copy_and_bump_pointers<1>(dst, src);
-      if (offset & 2)
-        copy_and_bump_pointers<2>(dst, src);
-      size -= offset;
-    }
-  }
   copy_blocks_and_update_args<64, ForceWordLdStChain>(dst, src, size);
   copy_blocks_and_update_args<16, ForceWordLdStChain>(dst, src, size);
   copy_blocks_and_update_args<4, AssumeUnaligned>(dst, src, size);
   if (size & 1)
     copy_and_bump_pointers<1>(dst, src);
-  if (size & 2) [[unlikely]]
-    copy_and_bump_pointers<2>(dst, src);
+  if (size & 2)
+    LIBC_ATTR_UNLIKELY
+  copy_and_bump_pointers<2>(dst, src);
 }
 
 [[maybe_unused]] LIBC_INLINE void inline_memcpy_arm(void *__restrict dst_,
@@ -186,5 +209,9 @@ LIBC_INLINE auto misaligned(CPtr a) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
+
+// Cleanup local macros
+#undef LIBC_ATTR_LIKELY
+#undef LIBC_ATTR_UNLIKELY
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ARM_INLINE_MEMCPY_H
