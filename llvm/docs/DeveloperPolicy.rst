@@ -92,8 +92,7 @@ Here are some tips to enable a successful code review:
   :ref:`Maintainers` file or browse git blame for likely stakeholders for the
   code you want to modify.
 
-* Make sure your patch is based on a recent commit from ``main``, rather than a
-  previous release branch. If you want to make changes to a release branch, land
+* To avoid precommit CI failures due to merge conflicts, base your patches on a recent commit from ``main``. If you want to make changes to a release branch, land
   a change in ``main`` first and ask a release manager to backport it.
 
 See :doc:`CodeReview` for more info on what to expect.
