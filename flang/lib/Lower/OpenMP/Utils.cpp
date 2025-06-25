@@ -34,8 +34,7 @@
 using namespace Fortran::semantics;
 
 template <typename T>
-MaybeIntExpr
-EvaluateIntExpr(SemanticsContext &context, const T &expr) {
+MaybeIntExpr EvaluateIntExpr(SemanticsContext &context, const T &expr) {
   if (MaybeExpr maybeExpr{
           Fold(context.foldingContext(), AnalyzeExpr(context, expr))}) {
     if (auto *intExpr{Fortran::evaluate::UnwrapExpr<SomeIntExpr>(*maybeExpr)}) {
@@ -46,8 +45,8 @@ EvaluateIntExpr(SemanticsContext &context, const T &expr) {
 }
 
 template <typename T>
-std::optional<std::int64_t>
-EvaluateInt64(SemanticsContext &context, const T &expr) {
+std::optional<std::int64_t> EvaluateInt64(SemanticsContext &context,
+                                          const T &expr) {
   return Fortran::evaluate::ToInt64(EvaluateIntExpr(context, expr));
 }
 
@@ -610,8 +609,7 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 // Contains a loop construct with an inner tiling construct.
 void collectTileSizesFromOpenMPConstruct(
     const parser::OpenMPConstruct *ompCons,
-    llvm::SmallVectorImpl<int64_t> &tileSizes,
-    SemanticsContext &semaCtx) {
+    llvm::SmallVectorImpl<int64_t> &tileSizes, SemanticsContext &semaCtx) {
   if (!ompCons)
     return;
 
