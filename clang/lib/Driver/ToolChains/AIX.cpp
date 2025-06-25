@@ -311,7 +311,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") + SanRTSymbolList));
       else
         ToolChain.getDriver().Diag(diag::err_drv_missing_sanitizer_file)
-            << sanitizer << "c++ import";
+            << sanitizer << "C++ import";
     }
   }
 

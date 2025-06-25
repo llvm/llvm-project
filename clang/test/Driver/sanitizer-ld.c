@@ -1454,7 +1454,7 @@
 // RUN:     -resource-dir=/missing_resource_dir \
 // RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
 // RUN:     | FileCheck --check-prefixes=CHECK-MISSING-CXX-IMPORT-AIX %s
-// CHECK-MISSING-CXX-IMPORT-AIX: {{.*}}error: cannot link 'AddressSanitizer': c++ import file
+// CHECK-MISSING-CXX-IMPORT-AIX: {{.*}}error: cannot link 'AddressSanitizer': C++ import file
 // missing from resource directories
 
 // RUN: %clang -fsanitize=address -shared -### %s 2>&1 \
