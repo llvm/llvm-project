@@ -24,12 +24,12 @@ define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v4, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v4, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func_f32@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func_f32@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v4, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
@@ -71,12 +71,12 @@ define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v6, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v6, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func_v2f32@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func_v2f32@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v6, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -122,12 +122,12 @@ define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v6, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v6, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func_f64@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func_f64@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v6, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -200,13 +200,13 @@ define nofpclass(nan inf) { double, double } @aggregate() {
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, aggregate@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
-; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
@@ -237,12 +237,12 @@ define { float, float } @aggregate_use(float %z) {
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v41, s16, 2
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_writelane_b32 v41, s30, 0
+; CHECK-NEXT:    v_writelane_b32 v41, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, aggregate_f32@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate_f32@rel32@hi+12
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_writelane_b32 v41, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_max_f32_e32 v2, v40, v40
@@ -295,12 +295,12 @@ define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) 
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v24, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v24, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v24, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func_v5f64@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func_v5f64@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v24, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v22, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v23, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]

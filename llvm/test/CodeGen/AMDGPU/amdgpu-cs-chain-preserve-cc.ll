@@ -420,6 +420,7 @@ define amdgpu_cs_chain_preserve void @chain_preserve_to_chain_use_all_v0_v7(<3 x
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX11-NEXT:    s_clause 0x1
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v11, off offset:4
+; GISEL-GFX11-NEXT:    ; meta instruction
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v16, off
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v11, v8
 ; GISEL-GFX11-NEXT:    s_mov_b32 s3, s0
@@ -461,6 +462,7 @@ define amdgpu_cs_chain_preserve void @chain_preserve_to_chain_use_all_v0_v7(<3 x
 ; DAGISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX11-NEXT:    s_clause 0x1
 ; DAGISEL-GFX11-NEXT:    scratch_store_b32 off, v11, off offset:4
+; DAGISEL-GFX11-NEXT:    ; meta instruction
 ; DAGISEL-GFX11-NEXT:    scratch_store_b32 off, v16, off
 ; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v11, v8
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s3, s0
