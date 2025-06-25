@@ -89,6 +89,7 @@ add_libc_test(
     libc.src.string.memset
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t
+    libc.src.__support.wchar.mbstate
     libc.src.__support.libc_errno
 )
 

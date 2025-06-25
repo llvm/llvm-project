@@ -22,9 +22,6 @@ namespace internal {
 
 ErrorOr<size_t> wcsrtombs(char *__restrict dst, const wchar_t **__restrict src,
                           size_t len, mbstate *__restrict ps) {
-  if (src == nullptr)
-    return Error(-1);
-
   // ignore len parameter when theres no destination string
   if (dst == nullptr)
     len = SIZE_MAX;

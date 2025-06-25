@@ -22,6 +22,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, SingleCharacterOneByte) {
   const wchar_t *wcs = L"U";
   char mbs[] = {0, 0};
   size_t cnt = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 2, &state);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(cnt, static_cast<size_t>(1));
   ASSERT_EQ(mbs[0], 'U');
   ASSERT_EQ(mbs[1], '\0');
@@ -42,6 +43,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, MultipleCompleteConversions) {
   char expected[6] = {'\xC3', '\xBF', '\xEA', '\xB0', '\x95', '\x00'};
 
   size_t cnt1 = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 2, &state);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(cnt1, static_cast<size_t>(2));
   ASSERT_EQ(wcs, wcs_start + 1);
   ASSERT_EQ(mbs[0], expected[0]);
@@ -49,6 +51,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, MultipleCompleteConversions) {
   ASSERT_EQ(mbs[2], '\x01'); // not modified
 
   size_t cnt2 = LIBC_NAMESPACE::wcsrtombs(mbs + cnt1, &wcs, 3, &state);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(cnt2, static_cast<size_t>(3));
   ASSERT_EQ(wcs, wcs_start + 2);
   ASSERT_EQ(mbs[0], expected[0]);
@@ -60,6 +63,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, MultipleCompleteConversions) {
 
   // all that is left in the string is the null terminator
   size_t cnt3 = LIBC_NAMESPACE::wcsrtombs(mbs + cnt1 + cnt2, &wcs, 50, &state);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(cnt3, static_cast<size_t>(0));
   ASSERT_EQ(wcs, nullptr);
   ASSERT_EQ(mbs[0], expected[0]);
@@ -87,6 +91,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, MultiplePartialConversions) {
   size_t count = 0;
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 1, &state);
+  ASSERT_ERRNO_SUCCESS();
   written += count;
   // ASSERT_EQ(count, static_cast<size_t>(1));
   ASSERT_EQ(wcs, wcs_start);
@@ -94,6 +99,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, MultiplePartialConversions) {
   ASSERT_EQ(mbs[1], '\x01');
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs + written, &wcs, 2, &state);
+  ASSERT_ERRNO_SUCCESS();
   written += count;
   ASSERT_EQ(count, static_cast<size_t>(2));
   ASSERT_EQ(wcs, wcs_start + 1);
@@ -103,6 +109,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, MultiplePartialConversions) {
   ASSERT_EQ(mbs[3], '\x01');
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs + written, &wcs, 3, &state);
+  ASSERT_ERRNO_SUCCESS();
   written += count;
   ASSERT_EQ(count, static_cast<size_t>(2));
   ASSERT_EQ(wcs, nullptr);
@@ -126,6 +133,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, NullDestination) {
   // null destination means the conversion isnt stored, but all the side effects
   // still occur. the len parameter is also ignored
   size_t count = LIBC_NAMESPACE::wcsrtombs(nullptr, &wcs, 3, &state);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(count, static_cast<size_t>(7));
   ASSERT_EQ(wcs, nullptr);
 }
@@ -144,6 +152,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, NullState) {
   size_t count = 0;
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 1, nullptr);
+  ASSERT_ERRNO_SUCCESS();
   written += count;
   ASSERT_EQ(count, static_cast<size_t>(1));
   ASSERT_EQ(wcs, wcs_start);
@@ -151,6 +160,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, NullState) {
   ASSERT_EQ(mbs[1], '\x01');
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs + written, &wcs, 2, nullptr);
+  ASSERT_ERRNO_SUCCESS();
   written += count;
   ASSERT_EQ(count, static_cast<size_t>(2));
   ASSERT_EQ(wcs, wcs_start + 1);
@@ -160,6 +170,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, NullState) {
   ASSERT_EQ(mbs[3], '\x01');
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs + written, &wcs, 3, nullptr);
+  ASSERT_ERRNO_SUCCESS();
   written += count;
   ASSERT_EQ(count, static_cast<size_t>(2));
   ASSERT_EQ(wcs, nullptr);
@@ -180,9 +191,9 @@ TEST_F(LlvmLibcWCSRToMBSTest, InvalidWchar) {
   char mbs[15];
   // convert the valid wchar
   size_t count = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 5, &state);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(count, static_cast<size_t>(5));
   ASSERT_TRUE(*wcs == static_cast<wchar_t>(0x12ffff));
-  ASSERT_ERRNO_SUCCESS();
 
   count = LIBC_NAMESPACE::wcsrtombs(mbs + count, &wcs, 5, &state); // invalid
   ASSERT_EQ(count, static_cast<size_t>(-1));
@@ -204,10 +215,7 @@ TEST_F(LlvmLibcWCSRToMBSTest, InvalidState) {
 TEST_F(LlvmLibcWCSRToMBSTest, NullSrc) {
   // Passing in a nullptr should crash the program.
   char mbs[] = {0, 0};
-  EXPECT_DEATH(
-      [&mbs] {
-        LIBC_NAMESPACE::wcsrtombs(mbs, nullptr, 2, nullptr);
-      },
-      WITH_SIGNAL(-1));
+  EXPECT_DEATH([&mbs] { LIBC_NAMESPACE::wcsrtombs(mbs, nullptr, 2, nullptr); },
+               WITH_SIGNAL(-1));
 }
 #endif // LIBC_HAS_ADDRESS_SANITIZER

@@ -26,21 +26,21 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc, mbstate *__restrict ps,
   static_assert(sizeof(wchar_t) == 4);
 
   CharacterConverter cr(ps);
-  
+
   if (!cr.isValidState())
     return Error(EINVAL);
-  
+
   char buf[sizeof(wchar_t) / sizeof(char)];
   if (s == nullptr)
     s = buf;
-  
+
   // if cr isnt empty, it should be represented in mbstate already
   if (cr.isEmpty()) {
     int status = cr.push(static_cast<char32_t>(wc));
     if (status != 0)
       return Error(EILSEQ);
   }
-  
+
   size_t count = 0;
   while (!cr.isEmpty() && count < max_written) {
     auto utf8 = cr.pop_utf8(); // can never fail as long as the push succeeded
