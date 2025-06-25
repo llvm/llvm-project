@@ -186,7 +186,7 @@ enum class DescriptorRangeType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
+LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
@@ -740,15 +740,30 @@ struct RootDescriptor : public v1::RootDescriptor {
   }
 };
 
-struct DescriptorRange : public v1::DescriptorRange {
+struct DescriptorRange {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
   uint32_t Flags;
+  uint32_t OffsetInDescriptorsFromTableStart;
   void swapBytes() {
-    v1::DescriptorRange::swapBytes();
+    sys::swapByteOrder(RangeType);
+    sys::swapByteOrder(NumDescriptors);
+    sys::swapByteOrder(BaseShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
     sys::swapByteOrder(Flags);
   }
 };
 } // namespace v2
 } // namespace RTS0
+
+// D3D_ROOT_SIGNATURE_VERSION
+enum class RootSignatureVersion {
+  V1_0 = 0x1,
+  V1_1 = 0x2,
+};
 
 } // namespace dxbc
 } // namespace llvm
