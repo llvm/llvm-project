@@ -845,7 +845,7 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     const auto *Info = AMDGPU::getGcnBufferFormatInfo(Format, *LSO.STM);
 
     // TODO: Support merging 8-bit tbuffer load/store instructions
-    // Use 2-byte element size if both tbuffer formats are 16-bit.
+    // Use 2-byte element size if the tbuffer format is 16-bit.
     if (Info && Info->BitsPerComp == 16)
       EltSize = 2;
   }
