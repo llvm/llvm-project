@@ -362,6 +362,11 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
 
   computeKnownBits(Op0, DemandedElts, Known2, Q, Depth + 1);
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
+
+  if (!Add && NSW && !KnownOut.isNonNegative() &&
+      isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+          .value_or(false))
+    KnownOut.makeNonNegative();
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
@@ -7486,6 +7491,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::FCmp:
   case Instruction::GetElementPtr:
     return false;
+  case Instruction::AddrSpaceCast:
+    return true;
   default: {
     const auto *CE = dyn_cast<ConstantExpr>(Op);
     if (isa<CastInst>(Op) || (CE && CE->isCast()))

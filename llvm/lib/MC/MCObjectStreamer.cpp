@@ -225,6 +225,10 @@ void MCObjectStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
 
 void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::emitLabel(Symbol, Loc);
+  // If Symbol is a non-redefiniable variable, emitLabel has reported an error.
+  // Bail out.
+  if (Symbol->isVariable())
+    return;
 
   getAssembler().registerSymbol(*Symbol);
 

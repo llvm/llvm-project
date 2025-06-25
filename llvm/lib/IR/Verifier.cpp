@@ -5517,7 +5517,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   Call.getOperand(Elem.Begin + 1)->getType()->isPointerTy(),
               "arguments to separate_storage assumptions should be pointers",
               Call);
-        return;
+        continue;
       }
       Check(Elem.Tag->getKey() == "ignore" ||
                 Attribute::isExistingAttribute(Elem.Tag->getKey()),
@@ -5534,7 +5534,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         if (ArgCount == 3)
           Check(Call.getOperand(Elem.Begin + 2)->getType()->isIntegerTy(),
                 "third argument should be an integer if present", Call);
-        return;
+        continue;
       }
       Check(ArgCount <= 2, "too many arguments", Call);
       if (Kind == Attribute::None)
@@ -6059,6 +6059,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::vastart: {
     Check(Call.getFunction()->isVarArg(),
           "va_start called in a non-varargs function");
+    break;
+  }
+  case Intrinsic::get_dynamic_area_offset: {
+    auto *IntTy = dyn_cast<IntegerType>(Call.getType());
+    Check(IntTy && DL.getPointerSizeInBits(DL.getAllocaAddrSpace()) ==
+                       IntTy->getBitWidth(),
+          "get_dynamic_area_offset result type must be scalar integer matching "
+          "alloca address space width",
+          Call);
     break;
   }
   case Intrinsic::vector_reduce_and:

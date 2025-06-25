@@ -819,3 +819,15 @@ func.func @acc_loop_container() {
   } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
   return
 }
+
+// -----
+
+%value = memref.alloc() : memref<f32>
+// expected-error @below {{no data clause modifiers are allowed}}
+%0 = acc.private varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier zero>}
+
+// -----
+
+%value = memref.alloc() : memref<f32>
+// expected-error @below {{invalid data clause modifiers: alwaysin}}
+%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier zero,capture,always>}

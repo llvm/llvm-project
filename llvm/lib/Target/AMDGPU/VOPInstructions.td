@@ -1552,12 +1552,17 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
             ""));
 }
 
-multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> {
+multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag,
+                    list<Predicate> predicates = []> {
   def _e64 : VOP3InstBase<OpName, P, node>;
-  let SubtargetPredicate = isGFX11Plus in {
-    if P.HasExtVOP3DPP then
-      def _e64_dpp : VOP3_DPP_Pseudo <OpName, P>;
-  } // end SubtargetPredicate = isGFX11Plus
+  if P.HasExtVOP3DPP then
+    def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
+      let SubtargetPredicate = isGFX11Plus;
+    }
+  else if P.HasExt64BitDPP then
+    def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
+      let OtherPredicates = !listconcat(predicates, [HasDPALU_DPP]);
+    }
 }
 
 class UniformUnaryFragOrOp<SDPatternOperator Op> {
@@ -1960,6 +1965,17 @@ multiclass VOP3Only_Realtriple_gfx12<bits<10> op, bit isSingle = 0> :
 // following alternative is more explicit
 multiclass VOP3Only_Real_Base_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
+
+multiclass VOP3Only_Realtriple_with_name_gfx12_not_gfx1250<bits<10> op, string opName,
+                                                           string asmName, string pseudo_mnemonic = "",
+                                                           bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX12Not12_50Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
+  VOP3_Real_Base<GFX1250Gen, op, NAME, 1/*IsSingle*/>;
+
+multiclass VOP3Only_Realtriple_gfx1250<bits<10> op, bit isSingle = 0> :
+  VOP3_Realtriple<GFX1250Gen, op, isSingle>;
 
 multiclass VOP3_Realtriple_t16_gfx12<bits<10> op, string asmName, string opName = NAME,
                                      string pseudo_mnemonic = "", bit isSingle = 0> :

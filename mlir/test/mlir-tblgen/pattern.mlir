@@ -586,11 +586,37 @@ func.func @testMatchMultiVariadicSubSymbol(%arg0: i32, %arg1: i32, %arg2: i32, %
 
 // CHECK-LABEL: @testMatchMixedVaradicOptional
 func.func @testMatchMixedVaradicOptional(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
-  // CHECK: "test.mixed_variadic_in6"(%arg0, %arg1, %arg2) <{attr1 = 2 : i32}> : (i32, i32, i32) -> () 
+  // CHECK: "test.mixed_variadic_in6"(%arg0, %arg1, %arg2) <{attr1 = 2 : i32}> : (i32, i32, i32) -> ()
   "test.mixed_variadic_optional_in7"(%arg0, %arg1, %arg2) {attr1 = 2 : i32, operandSegmentSizes = array<i32: 2, 1>} : (i32, i32, i32) -> ()
   // CHECK: test.mixed_variadic_optional_in7
   "test.mixed_variadic_optional_in7"(%arg0, %arg1) {attr1 = 2 : i32, operandSegmentSizes = array<i32: 2, 0>} : (i32, i32) -> ()
 
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// Test patterns that operate on properties
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @testSimplePropertyRewrite
+func.func @testSimplePropertyRewrite() {
+  // CHECK-NEXT: test.prop_pattern_op_1 "o1" 2 true
+  test.prop_pattern_op_1 "o1" 1 false
+  // Pattern not applied when predicate not met
+  // CHECK-NEXT: test.prop_pattern_op_1 "o2" -1 false
+  test.prop_pattern_op_1 "o2" -1 false
+  // Pattern not applied when constant doesn't match
+  // CHCEK-NEXT: test.prop_pattern_op_1 "o3" 1 true
+  test.prop_pattern_op_1 "o3" 1 true
+  return
+}
+
+// CHECK-LABEL: @testNestedPropertyRewrite
+func.func @testNestedPropertyRewrite() {
+  // CHECK: %[[v:.*]] = test.prop_pattern_op_1 "s1" -2 false
+  // CHECK: test.prop_pattern_op_2 %[[v]] "s1.t1"
+  %v = test.prop_pattern_op_1 "s1" 1 false
+  test.prop_pattern_op_2 %v "t1"
   return
 }
 

@@ -8381,6 +8381,15 @@ bool ASTReader::LoadExternalSpecializationsImpl(
   if (It == SpecLookups.end())
     return false;
 
+  llvm::TimeTraceScope TimeScope("Load External Specializations for ", [&] {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    auto *ND = cast<NamedDecl>(D);
+    ND->getNameForDiagnostic(OS, ND->getASTContext().getPrintingPolicy(),
+                             /*Qualified=*/true);
+    return Name;
+  });
+
   Deserializing LookupResults(this);
   auto HashValue = StableHashForTemplateArguments(TemplateArgs);
 
@@ -9720,6 +9729,10 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
 
 bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
   return ThisDeclarationWasADefinitionSet.contains(FD);
+}
+
+bool ASTReader::hasInitializerWithSideEffects(const VarDecl *VD) const {
+  return InitSideEffectVars.count(VD);
 }
 
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {
@@ -11457,7 +11470,9 @@ void OMPClauseReader::VisitOMPFinalClause(OMPFinalClause *C) {
 
 void OMPClauseReader::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
   VisitOMPClauseWithPreInit(C);
+  C->setModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
   C->setNumThreads(Record.readSubExpr());
+  C->setModifierLoc(Record.readSourceLocation());
   C->setLParenLoc(Record.readSourceLocation());
 }
 

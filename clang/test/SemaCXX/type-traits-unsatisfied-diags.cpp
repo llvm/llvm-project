@@ -488,3 +488,74 @@ static_assert(__is_trivially_copyable(S12));
 // expected-note@-1 {{'S12' is not trivially copyable}} \
 // expected-note@#tc-S12 {{'S12' defined here}}
 }
+
+namespace assignable {
+struct S1;
+static_assert(__is_assignable(S1&, const S1&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(assignable::S1 &, const assignable::S1 &)'}} \
+// expected-error@-1 {{no viable overloaded '='}} \
+// expected-note@-1 {{type 'S1' is incomplete}}
+
+static_assert(__is_assignable(void, int));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(void, int)'}} \
+// expected-error@-1 {{expression is not assignable}}
+
+static_assert(__is_assignable(int, int));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(int, int)'}} \
+// expected-error@-1 {{expression is not assignable}}
+
+static_assert(__is_assignable(int*, int));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(int *, int)'}} \
+// expected-error@-1 {{expression is not assignable}}
+
+static_assert(__is_assignable(int[], int));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(int[], int)'}} \
+// expected-error@-1 {{expression is not assignable}}
+
+static_assert(__is_assignable(int&, void));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(int &, void)'}} \
+// expected-error@-1 {{assigning to 'int' from incompatible type 'void'}}
+
+static_assert(__is_assignable(int*&, float*));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(int *&, float *)'}} \
+// expected-error@-1 {{incompatible pointer types assigning to 'int *' from 'float *'}}
+
+static_assert(__is_assignable(const int&, int));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(const int &, int)'}} \
+// expected-error@-1 {{read-only variable is not assignable}}
+
+struct S2 {}; // #a-S2
+static_assert(__is_assignable(const S2, S2));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(const assignable::S2, assignable::S2)'}} \
+// expected-error@-1 {{no viable overloaded '='}} \
+// expected-note@#a-S2 {{candidate function (the implicit copy assignment operator) not viable: 'this' argument has type 'const S2', but method is not marked const}} \
+// expected-note@#a-S2 {{candidate function (the implicit move assignment operator) not viable: 'this' argument has type 'const S2', but method is not marked const}} \
+// expected-note@#a-S2 {{'S2' defined here}}
+
+struct S3 { // #a-S3
+    S3& operator=(const S3&) = delete; // #aca-S3
+    S3& operator=(S3&&) = delete;  // #ama-S3
+};
+static_assert(__is_assignable(S3, const S3&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(assignable::S3, const assignable::S3 &)'}} \
+// expected-error@-1 {{overload resolution selected deleted operator '='}} \
+// expected-note@#aca-S3 {{candidate function has been explicitly deleted}} \
+// expected-note@#ama-S3 {{candidate function not viable: 1st argument ('const S3') would lose const qualifier}} \
+// expected-note@#a-S3 {{'S3' defined here}}
+static_assert(__is_assignable(S3, S3&&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(assignable::S3, assignable::S3 &&)'}} \
+// expected-error@-1 {{overload resolution selected deleted operator '='}} \
+// expected-note@#aca-S3 {{candidate function has been explicitly deleted}} \
+// expected-note@#ama-S3 {{candidate function has been explicitly deleted}} \
+// expected-note@#a-S3 {{'S3' defined here}}
+
+class C1 { // #a-C1
+    C1& operator=(const C1&) = default;
+    C1& operator=(C1&&) = default; // #ama-C1
+};
+static_assert(__is_assignable(C1, C1));
+// expected-error@-1 {{static assertion failed due to requirement '__is_assignable(assignable::C1, assignable::C1)'}} \
+// expected-error@-1 {{'operator=' is a private member of 'assignable::C1'}} \
+// expected-note@#ama-C1 {{implicitly declared private here}} \
+// expected-note@#a-C1 {{'C1' defined here}}
+}

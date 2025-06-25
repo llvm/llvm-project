@@ -1105,6 +1105,7 @@ public:
                                               VectorType *&SubTy) const {
     if (Mask.empty())
       return Kind;
+    int NumDstElts = Mask.size();
     int NumSrcElts = SrcTy->getElementCount().getKnownMinValue();
     switch (Kind) {
     case TTI::SK_PermuteSingleSrc: {
@@ -1115,16 +1116,19 @@ public:
       if (isSplatMask(Mask, NumSrcElts, Index))
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
-          (Index + Mask.size()) <= (size_t)NumSrcElts) {
-        SubTy = FixedVectorType::get(SrcTy->getElementType(), Mask.size());
+          (Index + NumDstElts) <= NumSrcElts) {
+        SubTy = FixedVectorType::get(SrcTy->getElementType(), NumDstElts);
         return TTI::SK_ExtractSubvector;
       }
       break;
     }
     case TTI::SK_PermuteTwoSrc: {
+      if (all_of(Mask, [NumSrcElts](int M) { return M < NumSrcElts; }))
+        return improveShuffleKindFromMask(TTI::SK_PermuteSingleSrc, Mask, SrcTy,
+                                          Index, SubTy);
       int NumSubElts;
-      if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
-                                 Mask, NumSrcElts, NumSubElts, Index)) {
+      if (NumDstElts > 2 && ShuffleVectorInst::isInsertSubvectorMask(
+                                Mask, NumSrcElts, NumSubElts, Index)) {
         if (Index + NumSubElts > NumSrcElts)
           return Kind;
         SubTy = FixedVectorType::get(SrcTy->getElementType(), NumSubElts);
