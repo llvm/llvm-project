@@ -929,10 +929,6 @@ cmake_dependent_option(LLVM_LINK_LLVM_DYLIB "Link tools against the libllvm dyna
                        "${LLVM_LINK_LLVM_DYLIB_default}"
                        "CAN_BUILD_LLVM_DYLIB" OFF)
 
-message("LLVM_LINK_LLVM_DYLIB_default ${LLVM_LINK_LLVM_DYLIB_default}")
-message("BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS}")
-message("LLVM_LINK_LLVM_DYLIB ${LLVM_LINK_LLVM_DYLIB}")
-
 set(LLVM_BUILD_LLVM_DYLIB_default OFF)
 if(LLVM_LINK_LLVM_DYLIB OR LLVM_BUILD_LLVM_C_DYLIB)
   set(LLVM_BUILD_LLVM_DYLIB_default ON)
