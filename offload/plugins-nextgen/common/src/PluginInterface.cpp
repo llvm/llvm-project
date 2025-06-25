@@ -854,17 +854,14 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
       return Err;
   }
 
-  LoadedImages.erase(
-      std::find(LoadedImages.begin(), LoadedImages.end(), Image));
-
   return unloadBinaryImpl(Image);
 }
 
 Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
-  while (!LoadedImages.empty()) {
-    if (auto Err = unloadBinary(LoadedImages.back()))
+  for (auto &I : LoadedImages)
+    if (auto Err = unloadBinary(I))
       return Err;
-  }
+  LoadedImages.clear();
 
   if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
     // TODO: Write this by default into a file.
