@@ -1078,6 +1078,27 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
 
 bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                                        SourceLocation Loc) {
+  // Define some common error handling functions
+
+  bool HadError = false;
+  auto ReportError = [this, Loc, &HadError]() {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_parameter);
+  };
+
+  auto VerifyRegister = [ReportError](uint32_t Register) {
+    if (Register == ~0u)
+      ReportError();
+  };
+
+  // Iterate through the elements and do basic validations
+  for (const llvm::hlsl::rootsig::RootElement &Elem : D->getRootElements()) {
+    if (const auto *Descriptor =
+            std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
+      VerifyRegister(Descriptor->Reg.Number);
+    }
+  }
+
   // The following conducts analysis on resource ranges to detect and report
   // any overlaps in resource ranges.
   //
@@ -1247,7 +1268,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
         ReportOverlap(&Info, Overlapping.value());
   }
 
-  return HadOverlap;
+  return HadError | HadOverlap;
 }
 
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {

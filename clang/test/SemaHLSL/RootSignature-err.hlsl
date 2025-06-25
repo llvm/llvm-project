@@ -18,3 +18,6 @@ void bad_root_signature_3() {}
 
 [RootSignature("DescriptorTable(), invalid")] // expected-error {{expected end of stream to denote end of parameters, or, another valid parameter of RootSignature}}
 void bad_root_signature_4() {}
+
+[RootSignature("CBV(b4294967295)")]  // expected-error {{finns error}}
+void bad_root_signature_5() {}
