@@ -60,6 +60,33 @@ define i32 @load_i32_with_folded_gep_offset_nuw(ptr %p) {
   ret i32 %t
 }
 
+@global_data = hidden local_unnamed_addr global [12 x i8] c"Hello world\00", align 1
+
+define hidden signext i8 @global_load_i32_with_folded_gep_offset_nonconst_nuw(i32 noundef %idx) local_unnamed_addr {
+; CHECK-LABEL: global_load_i32_with_folded_gep_offset_nonconst_nuw:
+; CHECK:         .functype global_load_i32_with_folded_gep_offset_nonconst_nuw (i32) -> (i32)
+; CHECK:    i32.const $push0=, global_data
+; CHECK:    i32.add $push1=, $0, $pop0
+; CHECK:    i32.load8_s $push2=, 0($pop1)
+; CHECK:    return $pop2
+entry:
+  %arrayidx = getelementptr inbounds nuw [12 x i8], ptr @global_data, i32 0, i32 %idx
+  %0 = load i8, ptr %arrayidx, align 1
+  ret i8 %0
+}
+
+define hidden signext i8 @global_load_i32_with_folded_gep_offset_const_nuw() local_unnamed_addr {
+; CHECK-LABEL: global_load_i32_with_folded_gep_offset_const_nuw:
+; CHECK:         .functype global_load_i32_with_folded_gep_offset_const_nuw () -> (i32)
+; CHECK:    i32.const $push0=, 0
+; CHECK:    i32.load8_s $push1=, global_data+2($pop0)
+; CHECK:    return $pop1
+entry:
+  %0 = load i8, ptr getelementptr inbounds nuw (i8, ptr @global_data, i32 2), align 1
+  ret i8 %0
+}
+
+
 ; We can't fold a negative offset though, even with an inbounds gep.
 
 ; CHECK-LABEL: load_i32_with_unfolded_gep_negative_offset:
