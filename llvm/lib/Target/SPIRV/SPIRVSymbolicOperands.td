@@ -319,6 +319,7 @@ defm SPV_INTEL_ternary_bitwise_function : ExtensionOperand<120>;
 defm SPV_INTEL_subgroup_matrix_multiply_accumulate : ExtensionOperand<121>;
 defm SPV_INTEL_2d_block_io : ExtensionOperand<122>;
 defm SPV_INTEL_int4 : ExtensionOperand<123>;
+defm SPV_KHR_float_controls2 : ExtensionOperand<124>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -526,6 +527,7 @@ defm Subgroup2DBlockTransformINTEL : CapabilityOperand<6229, 0, 0, [SPV_INTEL_2d
 defm Subgroup2DBlockTransposeINTEL : CapabilityOperand<6230, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
 defm Int4TypeINTEL : CapabilityOperand<5112, 0, 0, [SPV_INTEL_int4], []>;
 defm Int4CooperativeMatrixINTEL : CapabilityOperand<5114, 0, 0, [SPV_INTEL_int4], [Int4TypeINTEL, CooperativeMatrixKHR]>;
+defm FloatControls2 : CapabilityOperand<6029, 0, 0, [SPV_KHR_float_controls2], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -723,6 +725,7 @@ defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
 defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
+defm FPFastMathDefault : ExecutionModeOperand<6028, [FloatControls2]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define StorageClass enum values and at the same time
@@ -1065,6 +1068,9 @@ defm NotInf : FPFastMathModeOperand<0x2, [Kernel]>;
 defm NSZ : FPFastMathModeOperand<0x4, [Kernel]>;
 defm AllowRecip : FPFastMathModeOperand<0x8, [Kernel]>;
 defm Fast : FPFastMathModeOperand<0x10, [Kernel]>;
+defm AllowContract : FPFastMathModeOperand<0x10000, [FloatControls2]>;
+defm AllowReassoc : FPFastMathModeOperand<0x20000, [FloatControls2]>;
+defm AllowTransform : FPFastMathModeOperand<0x40000, [FloatControls2]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define FPRoundingMode enum values and at the same time
@@ -1239,7 +1245,7 @@ defm XfbBuffer : DecorationOperand<36, 0, 0, [], [TransformFeedback]>;
 defm XfbStride : DecorationOperand<37, 0, 0, [], [TransformFeedback]>;
 defm FuncParamAttr : DecorationOperand<38, 0, 0, [], [Kernel]>;
 defm FPRoundingMode : DecorationOperand<39, 0, 0, [], []>;
-defm FPFastMathMode : DecorationOperand<40, 0, 0, [], [Kernel]>;
+defm FPFastMathMode : DecorationOperand<40, 0, 0, [], [Kernel, FloatControls2]>;
 defm LinkageAttributes : DecorationOperand<41, 0, 0, [], [Linkage]>;
 defm NoContraction : DecorationOperand<42, 0, 0, [], [Shader]>;
 defm InputAttachmentIndex : DecorationOperand<43, 0, 0, [], [InputAttachment]>;

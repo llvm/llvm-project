@@ -920,6 +920,9 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+  } else if (Dec == SPIRV::Decoration::FPFastMathMode) {
+    Reqs.addRequirements(SPIRV::Capability::FloatControls2);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
   }
 }
 
@@ -1876,10 +1879,13 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   // Collect requirements for OpExecutionMode instructions.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
-    bool RequireFloatControls = false, RequireFloatControls2 = false,
+    bool RequireFloatControls = false, RequireIntelFloatControls2 = false,
+         RequireKHRFloatControls2 = false,
          VerLower14 = !ST.isAtLeastSPIRVVer(VersionTuple(1, 4));
-    bool HasFloatControls2 =
+    bool HasIntelFloatControls2 =
         ST.canUseExtension(SPIRV::Extension::SPV_INTEL_float_controls2);
+    bool HasKHRFloatControls2 =
+        ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
       MDNode *MDN = cast<MDNode>(Node->getOperand(i));
       const MDOperand &MDOp = MDN->getOperand(1);
@@ -1892,7 +1898,6 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           switch (EM) {
           case SPIRV::ExecutionMode::DenormPreserve:
           case SPIRV::ExecutionMode::DenormFlushToZero:
-          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
           case SPIRV::ExecutionMode::RoundingModeRTE:
           case SPIRV::ExecutionMode::RoundingModeRTZ:
             RequireFloatControls = VerLower14;
@@ -1903,12 +1908,25 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           case SPIRV::ExecutionMode::RoundingModeRTNINTEL:
           case SPIRV::ExecutionMode::FloatingPointModeALTINTEL:
           case SPIRV::ExecutionMode::FloatingPointModeIEEEINTEL:
-            if (HasFloatControls2) {
-              RequireFloatControls2 = true;
+            if (HasIntelFloatControls2) {
+              RequireIntelFloatControls2 = true;
               MAI.Reqs.getAndAddRequirements(
                   SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
             }
             break;
+          // ContractionOff and SignedZeroInfNanPreserve are deprecated.
+          // FPFastMathDefault with the appropriate flags should be used
+          // instead.
+          case SPIRV::ExecutionMode::ContractionOff:
+          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
+          case SPIRV::ExecutionMode::FPFastMathDefault: {
+            if (HasKHRFloatControls2) {
+              RequireKHRFloatControls2 = true;
+              MAI.Reqs.getAndAddRequirements(
+                  SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
+            }
+            break;
+          }
           default:
             MAI.Reqs.getAndAddRequirements(
                 SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
@@ -1919,8 +1937,10 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
     if (RequireFloatControls &&
         ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls))
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls);
-    if (RequireFloatControls2)
+    if (RequireIntelFloatControls2)
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_float_controls2);
+    if (RequireKHRFloatControls2)
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;
@@ -1970,14 +1990,44 @@ static unsigned getFastMathFlags(const MachineInstr &I) {
     Flags |= SPIRV::FPFastMathMode::NSZ;
   if (I.getFlag(MachineInstr::MIFlag::FmArcp))
     Flags |= SPIRV::FPFastMathMode::AllowRecip;
+  if (I.getFlag(MachineInstr::MIFlag::FmContract))
+    Flags |= SPIRV::FPFastMathMode::AllowContract;
   if (I.getFlag(MachineInstr::MIFlag::FmReassoc))
-    Flags |= SPIRV::FPFastMathMode::Fast;
+    // LLVM reassoc maps to SPIRV transform, see
+    // https://github.com/KhronosGroup/SPIRV-Registry/issues/326 for details.
+    // Because we are enabling AllowTransform, we must enable AllowReassoc and
+    // AllowContract too, as required by SPIRV spec. Also, we used to map
+    // MIFlag::FmReassoc to FPFastMathMode::Fast, which now should instead by
+    // replaced by turning all the other bits instead. Therefore, we're enabling
+    // every bit here except None and Fast.
+    Flags |= SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+             SPIRV::FPFastMathMode::NSZ | SPIRV::FPFastMathMode::AllowRecip |
+             SPIRV::FPFastMathMode::AllowTransform |
+             SPIRV::FPFastMathMode::AllowReassoc |
+             SPIRV::FPFastMathMode::AllowContract;
+
+  // Error out if SPIRV::FPFastMathMode::Fast is enabled.
+  if (Flags & SPIRV::FPFastMathMode::Fast)
+    report_fatal_error("FPFastMathMode::Fast flag is deprecated and it is not "
+                       "valid to use anymore.");
+
+  // Error out if AllowTransform is enabled without AllowReassoc and
+  // AllowContract.
+  if ((Flags & SPIRV::FPFastMathMode::AllowTransform) &&
+      !(Flags & SPIRV::FPFastMathMode::AllowReassoc) &&
+      !(Flags & SPIRV::FPFastMathMode::AllowContract))
+    report_fatal_error(
+        "FPFastMathMode::AllowTransform flag requires AllowReassoc and "
+        "AllowContract flags to be enabled as well.");
+
   return Flags;
 }
 
-static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
-                                   const SPIRVInstrInfo &TII,
-                                   SPIRV::RequirementHandler &Reqs) {
+static void handleMIFlagDecoration(
+    MachineInstr &I, const SPIRVSubtarget &ST, const SPIRVInstrInfo &TII,
+    SPIRV::RequirementHandler &Reqs, const SPIRVGlobalRegistry *GR,
+    const SmallVector<SPIRV::FPFastMathDefaultInfo, 4>
+        &FPFastMathDefaultInfoVec) {
   if (I.getFlag(MachineInstr::MIFlag::NoSWrap) && TII.canUseNSW(I) &&
       getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
                                      SPIRV::Decoration::NoSignedWrap, ST, Reqs)
@@ -1995,9 +2045,46 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   }
   if (!TII.canUseFastMathFlags(I))
     return;
+
   unsigned FMFlags = getFastMathFlags(I);
-  if (FMFlags == SPIRV::FPFastMathMode::None)
-    return;
+  if (FMFlags == SPIRV::FPFastMathMode::None) {
+    // We also need to check if any FPFastMathDefault info was set for the types
+    // used in this instruction.
+    if (FPFastMathDefaultInfoVec.empty())
+      return;
+
+    // There are three types of instructions that can use fast math flags:
+    // 1. Arithmetic instructions (FAdd, FMul, FSub, FDiv, FRem, etc.)
+    // 2. Relational instructions (FCmp, FOrd, FUnord, etc.)
+    // 3. Extended instructions (ExtInst)
+    // For arithmetic instructions, the floating point type can be in the
+    // result type or in the operands, but they all must be the same.
+    // For the relational and logical instructions, the floating point type can
+    // only be in the operands 1 and 2, not the result type. Also, the operands
+    // must have the same type.
+    // For the extended instructions, the floating point type can be in the
+    // result type or in the operands. It's unclear if the operands
+    // and the result type must be the same. Let's assume they must be.
+    // Therefore, for 1. and 2., we can check the first operand type,
+    // and for 3. we can check the result type.
+    assert(I.getNumOperands() >= 3 && "Expected at least 3 operands");
+    Register ResReg = I.getOpcode() == SPIRV::OpExtInst
+                          ? I.getOperand(1).getReg()
+                          : I.getOperand(2).getReg();
+    SPIRVType *ResType = GR->getSPIRVTypeForVReg(ResReg, I.getMF());
+    const Type *Ty = GR->getTypeForSPIRVType(ResType);
+
+    // Match instruction type with the FPFastMathDefaultInfoVec.
+    for (const auto &Elem : FPFastMathDefaultInfoVec) {
+      if (Ty == Elem.Ty) {
+        FMFlags = Elem.FastMathFlags;
+        break;
+      }
+    }
+
+    if (FMFlags == SPIRV::FPFastMathMode::None)
+      return;
+  }
   Register DstReg = I.getOperand(0).getReg();
   buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
 }
@@ -2005,14 +2092,17 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
 // Walk all functions and add decorations related to MI flags.
 static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
                            MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
-                           SPIRV::ModuleAnalysisInfo &MAI) {
+                           SPIRV::ModuleAnalysisInfo &MAI,
+                           const SPIRVGlobalRegistry *GR) {
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     MachineFunction *MF = MMI->getMachineFunction(*F);
     if (!MF)
       continue;
+
     for (auto &MBB : *MF)
       for (auto &MI : MBB)
-        handleMIFlagDecoration(MI, ST, TII, MAI.Reqs);
+        handleMIFlagDecoration(MI, ST, TII, MAI.Reqs, GR,
+                               MAI.FPFastMathDefaultInfoMap[&(*F)]);
   }
 }
 
@@ -2058,6 +2148,108 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
   }
 }
 
+static void collectFPFastMathDefaults(const Module &M,
+                                      SPIRV::ModuleAnalysisInfo &MAI) {
+  // Store the FPFastMathDefaultInfo in the FPFastMathDefaultInfoMap.
+  // We need the entry point (function) as the key, and the target
+  // type and flags as the value.
+  // We also need to check ContractionOff and SignedZeroInfNanPreserve
+  // execution modes, as they are now deprecated and must be replaced
+  // with FPFastMathDefaultInfo.
+  auto Node = M.getNamedMetadata("spirv.ExecutionMode");
+  if (Node) {
+    for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+
+      MDNode *MDN = cast<MDNode>(Node->getOperand(i));
+      assert(MDN->getNumOperands() >= 2 && "Expected at least 2 operands");
+      const Function *F = cast<Function>(
+          cast<ConstantAsMetadata>(MDN->getOperand(0))->getValue());
+      const auto EM =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(MDN->getOperand(1))->getValue())
+              ->getZExtValue();
+      if (EM == SPIRV::ExecutionMode::FPFastMathDefault) {
+        assert(MDN->getNumOperands() == 4 &&
+               "Expected 4 operands for FPFastMathDefault");
+
+        const Type *T = cast<ValueAsMetadata>(MDN->getOperand(2))->getType();
+        unsigned Flags =
+            cast<ConstantInt>(
+                cast<ConstantAsMetadata>(MDN->getOperand(3))->getValue())
+                ->getZExtValue();
+        SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec =
+            MAI.FPFastMathDefaultInfoMap[F];
+        FPFastMathDefaultInfoVec.emplace_back(T, Flags);
+      } else if (EM == SPIRV::ExecutionMode::ContractionOff) {
+        assert(MDN->getNumOperands() == 4 &&
+               "Expected 2 operands for ContractionOff");
+
+        // We need to save this info for every possible FP type, i.e. {half,
+        // float, double, fp128}.
+        constexpr size_t NumFPTypes = 4;
+        for (size_t i = 0; i < NumFPTypes; ++i) {
+          Type *TargetType = nullptr;
+          switch (i) {
+          case 0:
+            TargetType = Type::getHalfTy(M.getContext());
+            break;
+          case 1:
+            TargetType = Type::getFloatTy(M.getContext());
+            break;
+          case 2:
+            TargetType = Type::getDoubleTy(M.getContext());
+            break;
+          case 3:
+            TargetType = Type::getFP128Ty(M.getContext());
+            break;
+          }
+          assert(TargetType && "Invalid target type for FPFastMathDefault");
+
+          SmallVector<SPIRV::FPFastMathDefaultInfo, 4>
+              &FPFastMathDefaultInfoVec = MAI.FPFastMathDefaultInfoMap[F];
+          FPFastMathDefaultInfoVec.emplace_back(TargetType,
+                                                SPIRV::FPFastMathMode::None);
+          assert(FPFastMathDefaultInfoVec.size() == i + 1 &&
+                 "Expected one FPFastMathDefaultInfo per FP type");
+          MAI.FPFastMathDefaultInfoMap[F][i].ContractionOff = true;
+        }
+      } else if (EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve) {
+        assert(MDN->getNumOperands() == 4 &&
+               "Expected 2 operands for SignedZeroInfNanPreserve");
+        // We need to save this info for every possible FP type, i.e. {half,
+        // float, double, fp128}.
+        constexpr size_t NumFPTypes = 4;
+        for (size_t i = 0; i < NumFPTypes; ++i) {
+          Type *TargetType = nullptr;
+          switch (i) {
+          case 0:
+            TargetType = Type::getHalfTy(M.getContext());
+            break;
+          case 1:
+            TargetType = Type::getFloatTy(M.getContext());
+            break;
+          case 2:
+            TargetType = Type::getDoubleTy(M.getContext());
+            break;
+          case 3:
+            TargetType = Type::getFP128Ty(M.getContext());
+            break;
+          }
+          assert(TargetType && "Invalid target type for FPFastMathDefault");
+
+          SmallVector<SPIRV::FPFastMathDefaultInfo, 4>
+              &FPFastMathDefaultInfoVec = MAI.FPFastMathDefaultInfoMap[F];
+          FPFastMathDefaultInfoVec.emplace_back(TargetType,
+                                                SPIRV::FPFastMathMode::None);
+          assert(FPFastMathDefaultInfoVec.size() == i + 1 &&
+                 "Expected one FPFastMathDefaultInfo per FP type");
+          MAI.FPFastMathDefaultInfoMap[F][i].ContractionOff = true;
+        }
+      }
+    }
+  }
+}
+
 struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -2079,8 +2271,9 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   patchPhis(M, GR, *TII, MMI);
 
   addMBBNames(M, *TII, MMI, *ST, MAI);
-  addDecorations(M, *TII, MMI, *ST, MAI);
+  addDecorations(M, *TII, MMI, *ST, MAI, GR);
 
+  collectFPFastMathDefaults(M, MAI);
   collectReqs(M, MAI, MMI, *ST);
 
   // Process type/const/global var/func decl instructions, number their

@@ -131,6 +131,29 @@ using LocalToGlobalRegTable = std::map<Register, MCRegister>;
 using RegisterAliasMapTy =
     std::map<const MachineFunction *, LocalToGlobalRegTable>;
 
+struct FPFastMathDefaultInfo {
+  const Type *Ty = nullptr;
+  unsigned FastMathFlags = 0;
+  // These can be represented with FastMathFlags, but since both ContractionOff
+  // and SignedZeroInfNanPreserve execution modes are deprecated, we will need
+  // to replace them with FPFastMath appropriate flags. However, we have no
+  // guarantee about the order in which we will process execution modes.
+  // Therefore it could happen that we first process ContractionOff, setting
+  // AllowContraction bit to 0, and then we process FPFastMathDefault enabling
+  // AllowContraction bit, effectively invalidating ContractionOff. Because of
+  // that, it's best to keep separate bits for the two deprecated options, and
+  // we will combine them later when we emit OpExecutionMode instructions.
+  bool ContractionOff = false;
+  bool SignedZeroInfNanPreserve = false;
+
+  FPFastMathDefaultInfo() = default;
+  FPFastMathDefaultInfo(const Type *Ty, unsigned FastMathFlags)
+      : Ty(Ty), FastMathFlags(FastMathFlags) {}
+  bool operator==(const FPFastMathDefaultInfo &Other) const {
+    return Ty == Other.Ty && FastMathFlags == Other.FastMathFlags;
+  }
+};
+
 // The struct contains results of the module analysis and methods
 // to access them.
 struct ModuleAnalysisInfo {
@@ -159,6 +182,9 @@ struct ModuleAnalysisInfo {
   InstrList MS[NUM_MODULE_SECTIONS];
   // The table maps MBB number to SPIR-V unique ID register.
   DenseMap<std::pair<const MachineFunction *, int>, MCRegister> BBNumToRegMap;
+  // The table maps function pointers to their default FP fast math info.
+  DenseMap<const Function *, SmallVector<FPFastMathDefaultInfo, 4>>
+      FPFastMathDefaultInfoMap;
 
   MCRegister getFuncReg(const Function *F) {
     assert(F && "Function is null");

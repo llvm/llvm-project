@@ -172,6 +172,9 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD) {
+  bool NoContractionFound = false;
+  bool HasFPFastMathMode = false;
+  unsigned FPFastMathFlags = SPIRV::FPFastMathMode::None;
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
     if (!OpMD)
@@ -183,6 +186,24 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
     if (!DecorationId)
       report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
                          "element of the decoration");
+
+    // NoContraction decoration is deprecated, and should be replaced with
+    // FPFastMathMode with appropriate flags. However, a instruction can have
+    // both NoContraction and FPFastMathMode decorations, and there is no
+    // guarantee about the order in which we will encounter them, so we store
+    // the information of both and will handle them separately after the loop so
+    // that we can combine them, if needed.
+    if (DecorationId->getZExtValue() ==
+        static_cast<uint32_t>(SPIRV::Decoration::NoContraction)) {
+      NoContractionFound = true;
+      continue; // NoContraction is handled separately.
+    } else if (DecorationId->getZExtValue() ==
+               static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
+      HasFPFastMathMode = true;
+      FPFastMathFlags = mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
+                            ->getZExtValue();
+      continue; // FPFastMathMode is handled separately.
+    }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(Reg)
                    .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
@@ -195,6 +216,17 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       else
         report_fatal_error("Unexpected operand of the decoration");
     }
+  }
+  // If we have NoContraction decoration, we should set the
+  // FPFastMathMode::NoContraction flag.
+  if (NoContractionFound)
+    FPFastMathFlags &= ~SPIRV::FPFastMathMode::AllowContract;
+
+  if (NoContractionFound || HasFPFastMathMode) {
+    MIRBuilder.buildInstr(SPIRV::OpDecorate)
+        .addUse(Reg)
+        .addImm(static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode))
+        .addImm(FPFastMathFlags);
   }
 }
 
@@ -522,6 +554,8 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
     return Type::getFloatTy(Ctx);
   else if (TypeName.consume_front("double"))
     return Type::getDoubleTy(Ctx);
+  else if (TypeName.consume_front("fp128"))
+    return Type::getFP128Ty(Ctx);
 
   // Unable to recognize SPIRV type name
   return nullptr;

@@ -142,7 +142,24 @@ bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI) const {
   case SPIRV::OpFMulV:
   case SPIRV::OpFDivV:
   case SPIRV::OpFRemV:
+  case SPIRV::OpFNegateV:
+  case SPIRV::OpFNegate:
   case SPIRV::OpFMod:
+  case SPIRV::OpOrdered:
+  case SPIRV::OpUnordered:
+  case SPIRV::OpFOrdEqual:
+  case SPIRV::OpFOrdNotEqual:
+  case SPIRV::OpFOrdLessThan:
+  case SPIRV::OpFOrdLessThanEqual:
+  case SPIRV::OpFOrdGreaterThan:
+  case SPIRV::OpFOrdGreaterThanEqual:
+  case SPIRV::OpFUnordEqual:
+  case SPIRV::OpFUnordNotEqual:
+  case SPIRV::OpFUnordLessThan:
+  case SPIRV::OpFUnordLessThanEqual:
+  case SPIRV::OpFUnordGreaterThan:
+  case SPIRV::OpFUnordGreaterThanEqual:
+  case SPIRV::OpExtInst:
     return true;
   default:
     return false;

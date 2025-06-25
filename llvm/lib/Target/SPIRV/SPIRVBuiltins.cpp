@@ -697,7 +697,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -1125,11 +1126,21 @@ static unsigned getNumSizeComponents(SPIRVType *imgType) {
 
 static bool generateExtInst(const SPIRV::IncomingCall *Call,
                             MachineIRBuilder &MIRBuilder,
-                            SPIRVGlobalRegistry *GR) {
+                            SPIRVGlobalRegistry *GR, const CallBase &CB) {
   // Lookup the extended instruction number in the TableGen records.
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   uint32_t Number =
       SPIRV::lookupExtendedBuiltin(Builtin->Name, Builtin->Set)->Number;
+  // fmin_common and fmax_common are now deprecated, and we should use fmin and
+  // fmax with NotInf and NotNaN flags instead. Keep original number to add
+  // later the NoNans and NoInfs flags.
+  uint32_t OrigNumber = Number;
+  if (Number == SPIRV::OpenCLExtInst::fmin_common ||
+      Number == SPIRV::OpenCLExtInst::fmax_common) {
+    Number = (Number == SPIRV::OpenCLExtInst::fmin_common)
+                 ? SPIRV::OpenCLExtInst::fmin
+                 : SPIRV::OpenCLExtInst::fmax;
+  }
 
   // Build extended instruction.
   auto MIB =
@@ -1141,6 +1152,13 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
 
   for (auto Argument : Call->Arguments)
     MIB.addUse(Argument);
+  MIB.getInstr()->copyIRFlags(CB);
+  if (OrigNumber == SPIRV::OpenCLExtInst::fmin_common ||
+      OrigNumber == SPIRV::OpenCLExtInst::fmax_common) {
+    // Add NoNans and NoInfs flags to fmin/fmax instruction.
+    MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoNans);
+    MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoInfs);
+  }
   return true;
 }
 
@@ -2844,7 +2862,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  MachineIRBuilder &MIRBuilder,
                                  const Register OrigRet, const Type *OrigRetTy,
                                  const SmallVectorImpl<Register> &Args,
-                                 SPIRVGlobalRegistry *GR) {
+                                 SPIRVGlobalRegistry *GR, const CallBase &CB) {
   LLVM_DEBUG(dbgs() << "Lowering builtin call: " << DemangledCall << "\n");
 
   // Lookup the builtin in the TableGen records.
@@ -2867,7 +2885,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   // Match the builtin with implementation based on the grouping.
   switch (Call->Builtin->Group) {
   case SPIRV::Extended:
-    return generateExtInst(Call.get(), MIRBuilder, GR);
+    return generateExtInst(Call.get(), MIRBuilder, GR, CB);
   case SPIRV::Relational:
     return generateRelationalInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Group:
