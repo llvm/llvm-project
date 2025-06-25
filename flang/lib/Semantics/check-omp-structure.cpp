@@ -762,10 +762,13 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
   SetLoopInfo(x);
 
-  if (const auto &doConstruct{
-          std::get<std::optional<parser::DoConstruct>>(x.t)}) {
-    const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
-    CheckNoBranching(doBlock, beginDir.v, beginDir.source);
+  auto &optLoopCons = std::get<1>(x.t);
+  if(optLoopCons.has_value()) {
+    if (const auto &doConstruct{
+            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+      const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
+      CheckNoBranching(doBlock, beginDir.v, beginDir.source);
+    }
   }
   CheckLoopItrVariableIsInt(x);
   CheckAssociatedLoopConstraints(x);
@@ -779,6 +782,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       (beginDir.v == llvm::omp::Directive::OMPD_distribute_simd)) {
     CheckDistLinear(x);
   }
+  if (beginDir.v == llvm::omp::Directive::OMPD_tile) {
+    const auto &clauses{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+    for (auto &clause : clauses.v) {
+
+    }
+  }
 }
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {
@@ -786,12 +795,15 @@ const parser::Name OmpStructureChecker::GetLoopIndex(
   return std::get<Bounds>(x->GetLoopControl()->u).name.thing;
 }
 void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
-  if (const auto &loopConstruct{
-          std::get<std::optional<parser::DoConstruct>>(x.t)}) {
-    const parser::DoConstruct *loop{&*loopConstruct};
-    if (loop && loop->IsDoNormal()) {
-      const parser::Name &itrVal{GetLoopIndex(loop)};
-      SetLoopIv(itrVal.symbol);
+  auto &optLoopCons = std::get<1>(x.t);
+  if (optLoopCons.has_value()) {
+    if (const auto &loopConstruct{
+            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+      const parser::DoConstruct *loop{&*loopConstruct};
+      if (loop && loop->IsDoNormal()) {
+        const parser::Name &itrVal{GetLoopIndex(loop)};
+        SetLoopIv(itrVal.symbol);
+      }
     }
   }
 }
@@ -857,8 +869,10 @@ void OmpStructureChecker::CheckIteratorModifier(const parser::OmpIterator &x) {
 
 void OmpStructureChecker::CheckLoopItrVariableIsInt(
     const parser::OpenMPLoopConstruct &x) {
-  if (const auto &loopConstruct{
-          std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+  auto &optLoopCons = std::get<1>(x.t);
+  if (optLoopCons.has_value()) {
+    if (const auto &loopConstruct{
+          std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
 
     for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
       if (loop->IsDoNormal()) {
@@ -878,6 +892,7 @@ void OmpStructureChecker::CheckLoopItrVariableIsInt(
       const auto it{block.begin()};
       loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
                                : nullptr;
+      }
     }
   }
 }
@@ -1077,8 +1092,10 @@ void OmpStructureChecker::CheckDistLinear(
 
     // Match the loop index variables with the collected symbols from linear
     // clauses.
+    auto &optLoopCons = std::get<1>(x.t);
+    if (optLoopCons.has_value()) {
     if (const auto &loopConstruct{
-            std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
       for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
         if (loop->IsDoNormal()) {
           const parser::Name &itrVal{GetLoopIndex(loop)};
@@ -1096,6 +1113,7 @@ void OmpStructureChecker::CheckDistLinear(
         const auto it{block.begin()};
         loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
                                  : nullptr;
+        }
       }
     }
 

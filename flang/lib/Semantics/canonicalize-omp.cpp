@@ -8,6 +8,7 @@
 
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Parser/parse-tree.h"
 
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
@@ -106,6 +107,12 @@ private:
     return nullptr;
   }
 
+  void missingDoConstruct(parser::OmpLoopDirective &dir) {
+    messages_.Say(dir.source,
+      "A DO loop must follow the %s directive"_err_en_US,
+      parser::ToUpperCaseLetters(dir.source.ToString()));
+  }
+
   void RewriteOpenMPLoopConstruct(parser::OpenMPLoopConstruct &x,
       parser::Block &block, parser::Block::iterator it) {
     // Check the sequence of DoConstruct and OmpEndLoopDirective
@@ -135,30 +142,61 @@ private:
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
-          std::get<std::optional<parser::DoConstruct>>(x.t) =
+          std::get<std::optional<std::variant<parser::DoConstruct, common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t) =
               std::move(*doCons);
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
-          if (nextIt != block.end()) {
-            if (auto *endDir{
-                    GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
-              std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
-                  std::move(*endDir);
-              block.erase(nextIt);
-            }
+          if (auto *endDir{
+                  GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
+            std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
+                std::move(*endDir);
+            nextIt = block.erase(nextIt);
           }
         } else {
           messages_.Say(dir.source,
               "DO loop after the %s directive must have loop control"_err_en_US,
               parser::ToUpperCaseLetters(dir.source.ToString()));
         }
+      } else if (auto *ompLoopCons{
+                     GetOmpIf<parser::OpenMPLoopConstruct>(*nextIt)}) {
+        // We should allow UNROLL and TILE constructs to be inserted between an OpenMP Loop Construct and the DO loop itself
+        auto &beginDirective =
+            std::get<parser::OmpBeginLoopDirective>(ompLoopCons->t);
+        auto &beginLoopDirective =
+        std::get<parser::OmpLoopDirective>(beginDirective.t);
+        // iterate through the remaining block items to find the end directive for the unroll/tile directive.
+        parser::Block::iterator endIt;
+        endIt = nextIt;
+        while(endIt != block.end()) {
+          if (auto *endDir{
+            GetConstructIf<parser::OmpEndLoopDirective>(*endIt)}) {
+              auto &endLoopDirective = std::get<parser::OmpLoopDirective>(endDir->t);
+              if(endLoopDirective.v == dir.v) {
+                std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
+                std::move(*endDir);
+                endIt = block.erase(endIt);
+                continue;
+              }
+            }
+            ++endIt;
+          }
+        if ((beginLoopDirective.v == llvm::omp::Directive::OMPD_unroll ||
+            beginLoopDirective.v == llvm::omp::Directive::OMPD_tile)) {
+          RewriteOpenMPLoopConstruct(*ompLoopCons, block, nextIt);
+          auto &ompLoop = std::get<std::optional<std::variant<parser::DoConstruct, common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t);
+          ompLoop = std::optional<std::variant<parser::DoConstruct, common::Indirection<parser::OpenMPLoopConstruct>>>{
+            std::variant<parser::DoConstruct, common::Indirection<parser::OpenMPLoopConstruct>>{
+            common::Indirection{std::move(*ompLoopCons)}}};
+          nextIt = block.erase(nextIt);
+        }
       } else {
-        messages_.Say(dir.source,
-            "A DO loop must follow the %s directive"_err_en_US,
-            parser::ToUpperCaseLetters(dir.source.ToString()));
+        missingDoConstruct(dir);
       }
       // If we get here, we either found a loop, or issued an error message.
       return;
+    }
+    if (nextIt == block.end()) {
+      missingDoConstruct(dir);
     }
   }
 
