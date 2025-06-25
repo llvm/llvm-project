@@ -3282,8 +3282,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // and a 1. If the input is all zero, it is fully initialized iff
   // !is_zero_poison.
   //
-  // e.g., if 0/1 are initialized bits with concrete value 0/1, and ? is an
-  //       uninitialized bit:
+  // e.g., for ctlz, with little-endian, if 0/1 are initialized bits with
+  // concrete value 0/1, and ? is an uninitialized bit:
   //       - 0001 0??? is fully initialized
   //       - 000? ???? is fully uninitialized (*)
   //       - ???? ???? is fully uninitialized
