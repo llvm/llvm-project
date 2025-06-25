@@ -31,7 +31,7 @@ namespace tensor {
 FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
     OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp);
 
-/// Method to swap an `tensor.insert_slice`s with its consumer when the
+/// Method to swap `tensor.insert_slice`s with their consumers when the
 /// consumer implements the `TilingInterface`. The size of `sliceOps` and
 /// `consumerOperands` is expected to be the same. Every entry in
 /// `consumerOperands` represents a use of the the corresponding

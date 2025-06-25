@@ -22,7 +22,10 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/Support/Debug.h"
 #include <optional>
+
+#define DEBUG_TYPE "linalg-tiling-interface-impl"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -170,9 +173,11 @@ struct LinalgOpTilingInterface
           OpFoldResult seenOffset = it->second;
           OpFoldResult seenSize = mappedSizes.lookup(position);
           if (seenOffset != offset || seenSize != size) {
-            return linalgOp->emitOpError(
-                "inconsistent iteration space mapping from offsets/sizes of "
-                "operands/results");
+            LLVM_DEBUG({
+              llvm::dbgs() << "inconsistent iteration space mapping from "
+                              "offsets/sizes of operands/results";
+            });
+            return failure();
           }
         } else {
           mappedOffsets[position] = offset;
@@ -874,8 +879,11 @@ struct PackOpTiling
       ArrayRef<SmallVector<OpFoldResult>> allSizes,
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
-    if (operandNumbers.size() != 1 || operandNumbers[0] != 0)
-      return op->emitOpError("unsupporeted operands for consumer fusion");
+    if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
+      LLVM_DEBUG(
+          { llvm::dbgs() << "unsupported operands for consumer fusion"; });
+      return failure();
+    }
 
     ArrayRef<OpFoldResult> offsets(allOffsets[0]);
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
@@ -943,8 +951,11 @@ struct PackOpTiling
       Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
       ArrayRef<SmallVector<OpFoldResult>> allOffsets,
       ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
-    if (operandNumbers.size() != 1 || operandNumbers[0] != 0)
-      return op->emitOpError("unhandled operands for consumer fusion");
+    if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
+      LLVM_DEBUG(
+          { llvm ::dbgs() << "unhandled operands for consumer fusion"; });
+      return failure();
+    }
 
     ArrayRef<OpFoldResult> offsets(allOffsets[0]);
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
@@ -1228,7 +1239,8 @@ struct UnPackOpTiling
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
     if (operandNumbers.size() != 1) {
-      return op->emitOpError("unable to handle multiple operands");
+      LLVM_DEBUG({ llvm::dbgs() << "unable to handle multiple operands"; });
+      return failure();
     }
     auto unPackOp = cast<UnPackOp>(op);
     unsigned operandNumber = operandNumbers[0];
@@ -1293,7 +1305,8 @@ struct UnPackOpTiling
       ArrayRef<SmallVector<OpFoldResult>> allOffsets,
       ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
     if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
-      return op->emitOpError("unhandled operands for consumer fusion");
+      LLVM_DEBUG({ llvm::dbgs() << "unhandled operands for consumer fusion"; });
+      return failure();
     }
     auto unPackOp = cast<UnPackOp>(op);
     ArrayRef<OpFoldResult> offsets(allOffsets[0]);

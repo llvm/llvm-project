@@ -2060,15 +2060,16 @@ static FailureOr<SmallVector<OpOperand *>> getUntiledConsumerOperandsFromSlices(
                 [&](auto op) {
                   return getUntiledConsumerFromSlice(rewriter, op, loops);
                 })
-            .Default([](Operation *op) {
-              return op->emitOpError("unhandled slice type");
+            .Default([&](Operation *op) {
+              return rewriter.notifyMatchFailure(op, "unhandled slice type");
             });
     if (failed(fusedOperand)) {
       return failure();
     }
     if (!fusedOperands.empty() &&
         fusedOperand.value()->getOwner() != fusedOperands.front()->getOwner()) {
-      return fusedOperands.front()->getOwner()->emitOpError(
+      return rewriter.notifyMatchFailure(
+          fusedOperand.value()->getOwner(),
           "all candidate slices must be to the same consumer");
     }
     fusedOperands.push_back(fusedOperand.value());
@@ -2125,23 +2126,23 @@ mlir::scf::tileAndFuseConsumerOfSlices(
     RewriterBase &rewriter, ArrayRef<Operation *> candidateSlices,
     MutableArrayRef<LoopLikeOpInterface> loops) {
   if (candidateSlices.empty()) {
-    return emitError(rewriter.getUnknownLoc(),
-                     "no candidate slices provided for consumer fusion");
+    return rewriter.notifyMatchFailure(
+        rewriter.getUnknownLoc(),
+        "no candidate slices provided for consumer fusion");
   }
   // Return if `loops` is empty, return an error for now. Caller is expected
   // to handle this case.
   if (loops.empty()) {
-    return candidateSlices.front()->emitOpError(
+    return rewriter.notifyMatchFailure(
+        candidateSlices.front(),
         "cannot call tile and fuse consumer with an empty loop nest");
   }
 
-  if (!(llvm::all_of(
-            candidateSlices,
-            [](Operation *op) { return isa<tensor::InsertSliceOp>(op); }) ||
-        llvm::all_of(candidateSlices, [](Operation *op) {
-          return isa<tensor::ParallelInsertSliceOp>(op);
-        }))) {
-    return candidateSlices.front()->emitOpError(
+  if (!(llvm::all_of(candidateSlices, llvm::IsaPred<tensor::InsertSliceOp>) ||
+        llvm::all_of(candidateSlices,
+                     llvm::IsaPred<tensor::ParallelInsertSliceOp>))) {
+    return rewriter.notifyMatchFailure(
+        candidateSlices.front(),
         "candidates slices need to be all `tensor.extract_slice`s or "
         "`tensor.parallel_insert_slice`s");
   }
@@ -2261,8 +2262,14 @@ mlir::scf::tileAndFuseConsumerOfSlices(
     for (auto candidateSliceOp : clonedInsertSlices) {
       SmallVector<OpFoldResult> offsets = candidateSliceOp.getMixedOffsets();
       SmallVector<OpFoldResult> sizes = candidateSliceOp.getMixedSizes();
+      SmallVector<OpFoldResult> strides = candidateSliceOp.getMixedStrides();
 
       // 9. Check all insert stride is 1.
+      if (!llvm::all_of(strides, isOneInteger)) {
+        return rewriter.notifyMatchFailure(
+            candidateSliceOp, "containingOp's result yield with stride");
+      }
+
       allOffsets.emplace_back(std::move(offsets));
       allSizes.emplace_back(std::move(sizes));
     }

@@ -202,7 +202,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Method to generate the tiled implementation of an operation that uses
-          exactly tiles of the given operands.
+          the exact tiles of the given operands.
 
           This method is required to allow operations to be "tiled and fused"
           with an (already tiled) producer. Given tiles of the producer, this

@@ -17,6 +17,9 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "tensor-swap-slices"
 
 using namespace mlir;
 
@@ -43,12 +46,16 @@ FailureOr<TilingResult> tensor::replaceInsertSlicesWithTiledConsumer(
     OpBuilder &builder, ArrayRef<tensor::InsertSliceOp> sliceOps,
     ArrayRef<OpOperand *> consumerOperands) {
   if (sliceOps.empty()) {
-    return emitError(builder.getUnknownLoc(),
-                     "expected candidate slices list to be non-empty");
+    LLVM_DEBUG(
+        { llvm::dbgs() << "expected candidate slices list to be non-empty"; });
+    return failure();
   }
   if (sliceOps.size() != consumerOperands.size()) {
-    return sliceOps.front()->emitOpError(
-        "expected as many operands as the number of slices passed");
+    LLVM_DEBUG({
+      llvm::dbgs()
+          << "expected as many operands as the number of slices passed";
+    });
+    return failure();
   }
   auto consumerOp =
       dyn_cast<TilingInterface>(consumerOperands.front()->getOwner());
@@ -56,8 +63,11 @@ FailureOr<TilingResult> tensor::replaceInsertSlicesWithTiledConsumer(
     return failure();
   for (auto opOperand : consumerOperands.drop_front()) {
     if (opOperand->getOwner() != consumerOp) {
-      return consumerOp->emitOpError(
-          "expected all consumer operands to be from the same operation");
+      LLVM_DEBUG({
+        llvm::dbgs()
+            << "expected all consumer operands to be from the same operation";
+      });
+      return failure();
     }
   }
 

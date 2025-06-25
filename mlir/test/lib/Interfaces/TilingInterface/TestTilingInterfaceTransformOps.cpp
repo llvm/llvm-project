@@ -21,6 +21,9 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "test-tiling-interface"
 
 #define GET_OP_CLASSES
 #include "TestTilingInterfaceTransformOps.h.inc"
@@ -182,7 +185,7 @@ static LogicalResult applyFuseConsumer(
         scf::tileAndFuseConsumerOfSlices(rewriter, slices, loops);
 
     if (failed(fuseConsumerResults))
-      return failure();
+      return slices.front()->emitOpError("failed to fuse consumer of slice");
 
     // Report back the relevant handles to the transform op.
     for (OpOperand *origConsumerOperand :

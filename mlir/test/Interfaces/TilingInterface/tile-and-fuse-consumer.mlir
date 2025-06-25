@@ -688,7 +688,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Check that when the given operand tiles are incosistent, tiling fails.
+// Check that when the given operand tiles are inconsistent, tiling fails.
 
 func.func @multi_slice_fusion2(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : tensor<?xf32>, %arg3 : index) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
@@ -881,6 +881,7 @@ func.func @multi_slice_fusion_invalid(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<
 	      linalg.yield %0: f32
     } -> tensor<?x?xf32>
     scf.forall.in_parallel {
+      // expected-error @below {{failed to fuse consumer of slice}}
       tensor.parallel_insert_slice %generic0 into %init0[%iv0, %iv1] [%tilesize0, %tilesize1] [1, 1]
           : tensor<?x?xf32> into tensor<?x?xf32>
       tensor.parallel_insert_slice %generic1 into %init1[%iv0, %iv1] [%tilesize0, %tilesize1] [1, 1]
@@ -888,7 +889,6 @@ func.func @multi_slice_fusion_invalid(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<
     }
   }
   %empty = tensor.empty(%dim0, %dim1) : tensor<?x?xf32>
-  // expected-error @below {{inconsistent iteration space mapping from offsets/sizes of operands/results}}
   %result = linalg.generic {
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>, affine_map<(d0, d1) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel"]}
