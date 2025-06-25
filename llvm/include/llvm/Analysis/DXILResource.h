@@ -387,7 +387,7 @@ public:
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  const StringRef getName() const { return Name; }
+  StringRef getName() const { return Name; }
 
   bool hasSymbol() const { return Symbol; }
   LLVM_ABI GlobalVariable *createSymbol(Module &M, StructType *Ty);

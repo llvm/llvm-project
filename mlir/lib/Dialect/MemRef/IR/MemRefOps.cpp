@@ -1567,11 +1567,23 @@ LogicalResult GlobalOp::verify() {
     // Check that the type of the initial value is compatible with the type of
     // the global variable.
     if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(initValue)) {
-      Type initType = elementsAttr.getType();
-      Type tensorType = getTensorTypeFromMemRefType(memrefType);
-      if (initType != tensorType)
-        return emitOpError("initial value expected to be of type ")
-               << tensorType << ", but was of type " << initType;
+      // Check the element types match.
+      auto initElementType =
+          cast<TensorType>(elementsAttr.getType()).getElementType();
+      auto memrefElementType = memrefType.getElementType();
+
+      if (initElementType != memrefElementType)
+        return emitOpError("initial value element expected to be of type ")
+               << memrefElementType << ", but was of type " << initElementType;
+
+      // Check the shapes match, given that memref globals can only produce
+      // statically shaped memrefs and elements literal type must have a static
+      // shape we can assume both types are shaped.
+      auto initShape = elementsAttr.getShapedType().getShape();
+      auto memrefShape = memrefType.getShape();
+      if (initShape != memrefShape)
+        return emitOpError("initial value shape expected to be ")
+               << memrefShape << " but was " << initShape;
     }
   }
 

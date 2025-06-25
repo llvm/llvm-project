@@ -121,7 +121,7 @@ static bool hasSuitableConstructorForRelocation(Sema &SemaRef,
 
   CXXMethodDecl *Decl =
       LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false);
-  return Decl && Decl->isUserProvided() == AllowUserDefined &&
+  return Decl && (AllowUserDefined || !Decl->isUserProvided()) &&
          !Decl->isDeleted();
 }
 
@@ -137,7 +137,7 @@ static bool hasSuitableMoveAssignmentOperatorForRelocation(
   if (!Decl)
     return false;
 
-  return Decl && Decl->isUserProvided() == AllowUserDefined &&
+  return Decl && (AllowUserDefined || !Decl->isUserProvided()) &&
          !Decl->isDeleted();
 }
 
@@ -1725,14 +1725,15 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     // Build expressions that emulate the effect of declval<T>() and
     // declval<U>().
-    if (LhsT->isObjectType() || LhsT->isFunctionType())
-      LhsT = Self.Context.getRValueReferenceType(LhsT);
-    if (RhsT->isObjectType() || RhsT->isFunctionType())
-      RhsT = Self.Context.getRValueReferenceType(RhsT);
-    OpaqueValueExpr Lhs(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
-                        Expr::getValueKindForType(LhsT));
-    OpaqueValueExpr Rhs(KeyLoc, RhsT.getNonLValueExprType(Self.Context),
-                        Expr::getValueKindForType(RhsT));
+    auto createDeclValExpr = [&](QualType Ty) -> OpaqueValueExpr {
+      if (Ty->isObjectType() || Ty->isFunctionType())
+        Ty = Self.Context.getRValueReferenceType(Ty);
+      return {KeyLoc, Ty.getNonLValueExprType(Self.Context),
+              Expr::getValueKindForType(Ty)};
+    };
+
+    auto Lhs = createDeclValExpr(LhsT);
+    auto Rhs = createDeclValExpr(RhsT);
 
     // Attempt the assignment in an unevaluated context within a SFINAE
     // trap at translation unit scope.
@@ -1956,6 +1957,8 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
             TypeTrait::UTT_IsCppTriviallyRelocatable)
       .Case("is_replaceable", TypeTrait::UTT_IsReplaceable)
       .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
+      .Case("is_assignable", TypeTrait::BTT_IsAssignable)
+      .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Default(std::nullopt);
 }
 
@@ -2285,6 +2288,100 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
+                                        QualType T, QualType U) {
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+
+  auto createDeclValExpr = [&](QualType Ty) -> OpaqueValueExpr {
+    if (Ty->isObjectType() || Ty->isFunctionType())
+      Ty = SemaRef.Context.getRValueReferenceType(Ty);
+    return {Loc, Ty.getNonLValueExprType(SemaRef.Context),
+            Expr::getValueKindForType(Ty)};
+  };
+
+  auto LHS = createDeclValExpr(T);
+  auto RHS = createDeclValExpr(U);
+
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::ContextRAII TUContext(SemaRef,
+                              SemaRef.Context.getTranslationUnitDecl());
+  SemaRef.BuildBinOp(/*S=*/nullptr, Loc, BO_Assign, &LHS, &RHS);
+
+  if (!D || D->isInvalidDecl())
+    return;
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc,
+                                  const CXXRecordDecl *D) {
+  // Non-static data members (ignore zero-width bit‐fields).
+  for (const auto *Field : D->fields()) {
+    if (Field->isZeroLengthBitField())
+      continue;
+    if (Field->isBitField()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonZeroLengthField << Field
+          << Field->getSourceRange();
+      continue;
+    }
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NonEmptyMember << Field
+        << Field->getType() << Field->getSourceRange();
+  }
+
+  // Virtual functions.
+  for (const auto *M : D->methods()) {
+    if (M->isVirtual()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << M
+          << M->getSourceRange();
+      break;
+    }
+  }
+
+  // Virtual bases and non-empty bases.
+  for (const auto &B : D->bases()) {
+    const auto *BR = B.getType()->getAsCXXRecordDecl();
+    if (!BR || BR->isInvalidDecl())
+      continue;
+    if (B.isVirtual()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    }
+    if (!BR->isEmpty()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonEmptyBase << B.getType()
+          << B.getSourceRange();
+    }
+  }
+}
+
+static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
+  // Emit primary "not empty" diagnostic.
+  S.Diag(Loc, diag::note_unsatisfied_trait) << T << diag::TraitName::Empty;
+
+  // While diagnosing is_empty<T>, we want to look at the actual type, not a
+  // reference or an array of it. So we need to massage the QualType param to
+  // strip refs and arrays.
+  if (T->isReferenceType())
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+  T = T.getNonReferenceType();
+
+  if (auto *AT = S.Context.getAsArrayType(T))
+    T = AT->getElementType();
+
+  if (auto *D = T->getAsCXXRecordDecl()) {
+    if (D->hasDefinition()) {
+      DiagnoseIsEmptyReason(S, Loc, D);
+      S.Diag(D->getLocation(), diag::note_defined_here) << D;
+    }
+  }
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2304,6 +2401,12 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsTriviallyCopyable:
     DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case BTT_IsAssignable:
+    DiagnoseNonAssignableReason(*this, E->getBeginLoc(), Args[0], Args[1]);
+    break;
+  case UTT_IsEmpty:
+    DiagnoseIsEmptyReason(*this, E->getBeginLoc(), Args[0]);
     break;
   default:
     break;

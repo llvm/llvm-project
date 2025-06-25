@@ -149,7 +149,7 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
 }
 
 // CHECK-LABEL: @vector_broadcast
-func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>) -> vector<8x16xf32> {
+func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>, %f: vector<8x1x!llvm.ptr<1>>) {
   // CHECK: vector.broadcast %{{.*}} : f32 to vector<f32>
   %0 = vector.broadcast %a : f32 to vector<f32>
   // CHECK: vector.broadcast %{{.*}} : vector<f32> to vector<4xf32>
@@ -162,7 +162,9 @@ func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: ve
   %4 = vector.broadcast %d : vector<1x16xf32> to vector<8x16xf32>
   // CHECK-NEXT: vector.broadcast %{{.*}} : vector<8x1xf32> to vector<8x16xf32>
   %5 = vector.broadcast %e : vector<8x1xf32> to vector<8x16xf32>
-  return %4 : vector<8x16xf32>
+  // CHECK-NEXT: vector.broadcast %{{.*}} : vector<8x1x!llvm.ptr<1>> to vector<8x16x!llvm.ptr<1>>
+  %6 = vector.broadcast %f : vector<8x1x!llvm.ptr<1>> to vector<8x16x!llvm.ptr<1>>
+  return
 }
 
 // CHECK-LABEL: @shuffle0D
@@ -959,13 +961,16 @@ func.func @vector_scan(%0: vector<4x8x16x32xf32>) -> vector<4x8x16x32xf32> {
 }
 
 // CHECK-LABEL: func @test_splat_op
-// CHECK-SAME: [[S:%arg[0-9]+]]: f32
-func.func @test_splat_op(%s : f32) {
-  // CHECK: vector.splat [[S]] : vector<8xf32>
+// CHECK-SAME: %[[s:.*]]: f32, %[[s2:.*]]: !llvm.ptr<1>
+func.func @test_splat_op(%s : f32, %s2 : !llvm.ptr<1>) {
+  // CHECK: vector.splat %[[s]] : vector<8xf32>
   %v = vector.splat %s : vector<8xf32>
 
-  // CHECK: vector.splat [[S]] : vector<4xf32>
+  // CHECK: vector.splat %[[s]] : vector<4xf32>
   %u = "vector.splat"(%s) : (f32) -> vector<4xf32>
+
+  // CHECK: vector.splat %[[s2]] : vector<16x!llvm.ptr<1>>
+  %w = vector.splat %s2 : vector<16x!llvm.ptr<1>>
   return
 }
 
