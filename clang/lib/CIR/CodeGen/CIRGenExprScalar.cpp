@@ -605,6 +605,8 @@ public:
 
   mlir::Value VisitUnaryReal(const UnaryOperator *e);
 
+  mlir::Value VisitUnaryImag(const UnaryOperator *e);
+
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
   /// Emit a conversion from the specified type to the specified destination
@@ -1914,6 +1916,27 @@ mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
   return Visit(op);
 }
 
+mlir::Value ScalarExprEmitter::VisitUnaryImag(const UnaryOperator *e) {
+  // TODO(cir): handle scalar promotion.
+  Expr *op = e->getSubExpr();
+  if (op->getType()->isAnyComplexType()) {
+    // If it's an l-value, load through the appropriate subobject l-value.
+    // Note that we have to ask `e` because `op` might be an l-value that
+    // this won't work for, e.g. an Obj-C property.
+    if (e->isGLValue()) {
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      mlir::Value complex = cgf.emitComplexExpr(op);
+      return cgf.builder.createComplexImag(loc, complex);
+    }
+
+    // Otherwise, calculate and project.
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "VisitUnaryImag calculate and project");
+  }
+
+  return Visit(op);
+}
+
 /// Return the size or alignment of the type of argument of the sizeof
 /// expression as an integer.
 mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
@@ -1934,13 +1957,6 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     cgf.getCIRGenModule().errorNYI(
         e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
         e->getStmtClassName());
-    return builder.getConstant(
-        loc, builder.getAttr<cir::IntAttr>(
-                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
-  } else if (e->getKind() == UETT_VectorElements) {
-    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
-                                   "sizeof operator for VectorElements",
-                                   e->getStmtClassName());
     return builder.getConstant(
         loc, builder.getAttr<cir::IntAttr>(
                  cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
