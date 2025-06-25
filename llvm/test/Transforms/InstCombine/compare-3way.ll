@@ -564,8 +564,7 @@ unreached:
 define i32 @smax_smin_to_scmp(i32 %x) {
 ; CHECK-LABEL: define i32 @smax_smin_to_scmp
 ; CHECK-SAME: (i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 -1)
-; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.smin.i32(i32 [[COND]], i32 1)
+; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
 ; CHECK-NEXT:    ret i32 [[COND5]]
 ;
   %cond = call i32 @llvm.smax.i32(i32 %x, i32 -1)
@@ -576,8 +575,7 @@ define i32 @smax_smin_to_scmp(i32 %x) {
 define i16 @smax_smin_to_scmp_i16(i16 %x) {
 ; CHECK-LABEL: define i16 @smax_smin_to_scmp_i16
 ; CHECK-SAME: (i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[COND:%.*]] = call i16 @llvm.smax.i16(i16 [[X]], i16 -1)
-; CHECK-NEXT:    [[COND5:%.*]] = call i16 @llvm.smin.i16(i16 [[COND]], i16 1)
+; CHECK-NEXT:    [[COND5:%.*]] = call i16 @llvm.scmp.i16.i16(i16 [[X]], i16 0)
 ; CHECK-NEXT:    ret i16 [[COND5]]
 ;
   %cond = call i16 @llvm.smax.i16(i16 %x, i16 -1)
@@ -589,8 +587,7 @@ define i16 @smax_smin_to_scmp_i16(i16 %x) {
 define i32 @smin_smax_to_scmp(i32 %x) {
 ; CHECK-LABEL: define i32 @smin_smax_to_scmp
 ; CHECK-SAME: (i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 -1)
-; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 1)
+; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
 ; CHECK-NEXT:    ret i32 [[COND5]]
 ;
   %cond = call i32 @llvm.smin.i32(i32 %x, i32 1)
@@ -607,6 +604,18 @@ define i32 @test_max_min_neg(i32 %x) {
 ;
   %cond = call i32 @llvm.smax.i32(i32 %x, i32 -2)
   %cond5 = call i32 @llvm.smin.i32(i32 %cond, i32 1)
+  ret i32 %cond5
+}
+
+define i32 @test_max_min_neg_2(i32 %x) {
+; CHECK-LABEL: define i32 @test_max_min_neg_2
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 -1)
+; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.smin.i32(i32 [[COND]], i32 2)
+; CHECK-NEXT:    ret i32 [[COND5]]
+;
+  %cond = call i32 @llvm.smax.i32(i32 %x, i32 -1)
+  %cond5 = call i32 @llvm.smin.i32(i32 %cond, i32 2)
   ret i32 %cond5
 }
 
