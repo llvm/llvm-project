@@ -109,7 +109,7 @@ ThreadMachCore::CreateRegisterContextForFrame(StackFrame *frame) {
     StructuredData::Array *threads = process_md_sp->GetAsDictionary()
                                          ->GetValueForKey("threads")
                                          ->GetAsArray();
-    if (threads) {
+    if (threads && threads->GetSize() == core_objfile->GetNumThreadContexts()) {
       StructuredData::ObjectSP thread_sp =
           threads->GetItemAtIndex(m_objfile_lc_thread_idx);
       if (thread_sp && thread_sp->GetAsDictionary())

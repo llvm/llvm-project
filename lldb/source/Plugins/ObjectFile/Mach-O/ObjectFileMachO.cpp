@@ -5867,6 +5867,11 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
   while (buf.back() == '\0')
     buf.resize(buf.size() - 1);
   StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+  if (!object_sp) {
+    LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                   "parse as valid JSON.");
+    return {};
+  }
   StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
   if (!dict) {
     LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
