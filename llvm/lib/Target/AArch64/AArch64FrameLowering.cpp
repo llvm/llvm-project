@@ -3955,6 +3955,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Save number of saved regs, so we can easily update CSStackSize later.
   unsigned NumSavedRegs = SavedRegs.count();
 
+  // If we must call __arm_get_current_vg in the prologue preserve the LR.
+  if (requiresSaveVG(MF) && !Subtarget.hasSVE())
+    SavedRegs.set(AArch64::LR);
+
   // The frame record needs to be created by saving the appropriate registers
   uint64_t EstimatedStackSize = MFI.estimateStackSize(MF);
   if (hasFP(MF) ||
