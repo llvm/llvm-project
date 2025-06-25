@@ -1280,7 +1280,8 @@ void TensorArmType::getExtensions(
     std::optional<StorageClass> storage) {
 
   llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
-  extensions.push_back({Extension::SPV_ARM_tensors});
+  static constexpr Extension ext{Extension::SPV_ARM_tensors};
+  extensions.push_back(ext);
 }
 
 void TensorArmType::getCapabilities(
@@ -1288,7 +1289,8 @@ void TensorArmType::getCapabilities(
     std::optional<StorageClass> storage) {
   llvm::cast<SPIRVType>(getElementType())
       .getCapabilities(capabilities, storage);
-  capabilities.push_back({Capability::TensorsARM});
+  static constexpr Capability cap{Capability::TensorsARM};
+  capabilities.push_back(cap);
 }
 
 LogicalResult
