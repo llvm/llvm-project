@@ -68,6 +68,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   // Initialize cached types
   VoidTy = cir::VoidType::get(&getMLIRContext());
+  VoidPtrTy = cir::PointerType::get(VoidTy);
   SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
   SInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
   SInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
@@ -94,6 +95,9 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
+  // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
+  UIntPtrTy =
+      cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
   PtrDiffTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
 
@@ -226,11 +230,9 @@ mlir::Operation *
 CIRGenModule::getAddrOfGlobal(GlobalDecl gd, ForDefinition_t isForDefinition) {
   const Decl *d = gd.getDecl();
 
-  if (isa<CXXConstructorDecl>(d) || isa<CXXDestructorDecl>(d)) {
-    errorNYI(d->getSourceRange(),
-             "getAddrOfGlobal: C++ constructor/destructor");
-    return nullptr;
-  }
+  if (isa<CXXConstructorDecl>(d) || isa<CXXDestructorDecl>(d))
+    return getAddrOfCXXStructor(gd, /*FnInfo=*/nullptr, /*FnType=*/nullptr,
+                                /*DontDefer=*/false, isForDefinition);
 
   if (isa<CXXMethodDecl>(d)) {
     const CIRGenFunctionInfo &fi =
@@ -411,6 +413,7 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
     cgf.generateCode(gd, funcOp, funcType);
   }
   curCGF = nullptr;
+  assert(!cir::MissingFeatures::opFuncAttributesForDefinition());
 }
 
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
@@ -771,7 +774,7 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
       // Make sure to emit the definition(s) before we emit the thunks. This is
       // necessary for the generation of certain thunks.
       if (isa<CXXConstructorDecl>(method) || isa<CXXDestructorDecl>(method))
-        errorNYI(method->getSourceRange(), "C++ ctor/dtor");
+        abi->emitCXXStructor(gd);
       else if (fd->isMultiVersion())
         errorNYI(method->getSourceRange(), "multiversion functions");
       else
@@ -1171,6 +1174,10 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   // No code generation needed.
   case Decl::UsingShadow:
   case Decl::Empty:
+    break;
+
+  case Decl::CXXConstructor:
+    getCXXABI().emitCXXConstructors(cast<CXXConstructorDecl>(decl));
     break;
 
   // C++ Decls

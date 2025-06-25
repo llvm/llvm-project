@@ -246,6 +246,7 @@ def OMPC_Inclusive : Clause<[Spelling<"inclusive">]> {
   let flangClass = "OmpObjectList";
 }
 def OMPC_Indirect : Clause<[Spelling<"indirect">]> {
+  let flangClass = "OmpIndirectClause";
 }
 def OMPC_Init : Clause<[Spelling<"init">]> {
   let clangClass = "OMPInitClause";
@@ -354,9 +355,16 @@ def OMPC_NumTeams : Clause<[Spelling<"num_teams">]> {
   let clangClass = "OMPNumTeamsClause";
   let flangClass = "ScalarIntExpr";
 }
+def OMP_NUMTHREADS_Strict : EnumVal<"strict", 1, 1> {}
+def OMP_NUMTHREADS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
 def OMPC_NumThreads : Clause<[Spelling<"num_threads">]> {
   let clangClass = "OMPNumThreadsClause";
   let flangClass = "ScalarIntExpr";
+  let enumClauseValue = "NumThreadsType";
+  let allowedClauseValues = [
+    OMP_NUMTHREADS_Strict,
+    OMP_NUMTHREADS_Unknown
+  ];
 }
 def OMPC_OMPX_Attribute : Clause<[Spelling<"ompx_attribute">]> {
   let clangClass = "OMPXAttributeClause";
@@ -646,7 +654,7 @@ def OMP_EndAssumes : Directive<[Spelling<"end assumes">]> {
 def OMP_BeginDeclareTarget : Directive<[Spelling<"begin declare target">]> {
   let allowedClauses = [
     VersionedClause<OMPC_DeviceType>,
-    VersionedClause<OMPC_Indirect>,
+    VersionedClause<OMPC_Indirect, 51>,
     VersionedClause<OMPC_Link>,
     VersionedClause<OMPC_To>,
   ];
@@ -724,7 +732,7 @@ def OMP_DeclareSimd : Directive<[Spelling<"declare simd">]> {
 def OMP_DeclareTarget : Directive<[Spelling<"declare target">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Enter, 52>,
-    VersionedClause<OMPC_Indirect>,
+    VersionedClause<OMPC_Indirect, 51>,
     VersionedClause<OMPC_Link>,
     VersionedClause<OMPC_To>,
   ];

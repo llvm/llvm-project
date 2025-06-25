@@ -5439,7 +5439,7 @@ public:
   }
 
   ArrayRef<QualType> getParamTypes() const {
-    return llvm::ArrayRef(param_type_begin(), param_type_end());
+    return {param_type_begin(), param_type_end()};
   }
 
   ExtProtoInfo getExtProtoInfo() const {
@@ -5593,7 +5593,7 @@ public:
   using param_type_iterator = const QualType *;
 
   ArrayRef<QualType> param_types() const {
-    return llvm::ArrayRef(param_type_begin(), param_type_end());
+    return {param_type_begin(), param_type_end()};
   }
 
   param_type_iterator param_type_begin() const {
@@ -5607,7 +5607,7 @@ public:
   using exception_iterator = const QualType *;
 
   ArrayRef<QualType> exceptions() const {
-    return llvm::ArrayRef(exception_begin(), exception_end());
+    return {exception_begin(), exception_end()};
   }
 
   exception_iterator exception_begin() const {
@@ -6052,9 +6052,7 @@ public:
                       ArrayRef<QualType> Expansions);
 
 private:
-  const QualType *getExpansionsPtr() const {
-    return getTrailingObjects<QualType>();
-  }
+  const QualType *getExpansionsPtr() const { return getTrailingObjects(); }
 
   static TypeDependence computeDependence(QualType Pattern, Expr *IndexExpr,
                                           ArrayRef<QualType> Expansions = {});
@@ -6494,7 +6492,7 @@ public:
   uint32_t getSize() const { return Size; }
   uint32_t getAlignment() const { return Alignment; }
   ArrayRef<SpirvOperand> getOperands() const {
-    return getTrailingObjects<SpirvOperand>(NumOperands);
+    return getTrailingObjects(NumOperands);
   }
 
   bool isSugared() const { return false; }
@@ -7612,7 +7610,7 @@ public:
   /// Retrieve the type arguments of this object type as they were
   /// written.
   ArrayRef<QualType> getTypeArgsAsWritten() const {
-    return llvm::ArrayRef(getTypeArgStorage(), ObjCObjectTypeBits.NumTypeArgs);
+    return {getTypeArgStorage(), ObjCObjectTypeBits.NumTypeArgs};
   }
 
   /// Whether this is a "__kindof" type as written.

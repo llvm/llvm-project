@@ -25,6 +25,10 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* Added ``-z dynamic-undefined-weak`` to make undefined weak symbols dynamic
+  when the dynamic symbol table is present.
+  (`#143831 <https://github.com/llvm/llvm-project/pull/143831>`_)
+
 * For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
   GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
   from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
@@ -58,6 +62,10 @@ ELF Improvements
   on executable sections.
   (`#128883 <https://github.com/llvm/llvm-project/pull/128883>`_)
 
+* For AArch64 and X86_64, added ``--branch-to-branch``, which rewrites branches
+  that point to another branch instruction to instead branch directly to the
+  target of the second instruction. Enabled by default at ``-O2``.
+  
 Breaking changes
 ----------------
 * Executable-only and readable-executable sections are now allowed to be placed

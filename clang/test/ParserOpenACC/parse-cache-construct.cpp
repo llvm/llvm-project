@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 %s -verify -fopenacc
 
 namespace NS {
-  static char* NSArray;// expected-note{{declared here}}
-  static int NSInt;// expected-note 2{{declared here}}
+  static char* NSArray; // expected-note {{'NS::NSArray' declared here}}
+  static int NSInt;     // expected-note 2 {{'NS::NSInt' declared here}}
 }
 char *getArrayPtr();
 template<typename T, int I>
@@ -21,17 +21,17 @@ void func() {
   }
 
   for (int i = 0; i < 10; ++i) {
-    // expected-error@+1{{use of undeclared identifier 'NSArray'; did you mean 'NS::NSArray'}}
+    // expected-error@+1{{use of undeclared identifier 'NSArray'}}
     #pragma acc cache(NSArray[NS::NSInt : NS::NSInt])
   }
 
   for (int i = 0; i < 10; ++i) {
-    // expected-error@+1{{use of undeclared identifier 'NSInt'; did you mean 'NS::NSInt'}}
+    // expected-error@+1{{use of undeclared identifier 'NSInt'}}
     #pragma acc cache(NS::NSArray[NSInt : NS::NSInt])
   }
 
   for (int i = 0; i < 10; ++i) {
-    // expected-error@+1{{use of undeclared identifier 'NSInt'; did you mean 'NS::NSInt'}}
+    // expected-error@+1{{use of undeclared identifier 'NSInt'}}
     #pragma acc cache(NS::NSArray[NS::NSInt : NSInt])
   }
 }
