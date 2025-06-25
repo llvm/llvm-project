@@ -152,7 +152,7 @@ void vararg_bar2(const char *fmt) { return; }
 #pragma omp declare variant(foo_v1) match(construct={dispatch}) \
                                     append_args(foobar(target))
 
-// expected-error@+2 {{directive '#pragma omp declare variant' cannot contain more than one 'append_args' clause}}
+// expected-error@+2 {{directive '#pragma omp declare_variant' cannot contain more than one 'append_args' clause}}
 #pragma omp declare variant(foo_v1) match(construct={dispatch}) \
                                     append_args(interop(target)) \
                                     append_args(interop(targetsync))

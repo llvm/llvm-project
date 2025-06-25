@@ -75,7 +75,8 @@ static void initializeUsedResources(InstrDesc &ID,
       WithColor::warning()
           << "Ignoring invalid write of zero cycles on processor resource "
           << PR.Name << "\n";
-      WithColor::note() << "found in scheduling class " << SCDesc.Name
+      WithColor::note() << "found in scheduling class "
+                        << SM.getSchedClassName(ID.SchedClassID)
                         << " (write index #" << I << ")\n";
 #endif
       continue;
