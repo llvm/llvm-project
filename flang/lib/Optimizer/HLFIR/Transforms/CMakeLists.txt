@@ -12,7 +12,7 @@ add_flang_library(HLFIRTransforms
   SimplifyHLFIRIntrinsics.cpp
   OptimizedBufferization.cpp
   PropagateFortranVariableAttributes.cpp
-  XSComplexDivisionConversion.cpp
+  ArithmeticBasedComplexDivisionConversion.cpp
 
   DEPENDS
   CUFAttrsIncGen

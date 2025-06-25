@@ -34,8 +34,8 @@ def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR transformational intrinsic operations";
 }
 
-def XSComplexDivisionConversion : Pass<"XS-complex", "::mlir::ModuleOp"> {
-  let summary = "XSComplexDivisionConversion transformational intrinsic operations";
+def ComplexDivisionConversion : Pass<"complex-division-conversion", "::mlir::ModuleOp"> {
+  let summary = "ComplexDivisionConversion transformational intrinsic operations";
 }
 
 def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::mlir::ModuleOp"> {

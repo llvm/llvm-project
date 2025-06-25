@@ -19,21 +19,21 @@
 #define DEBUG_TYPE "xs-complex-conversion"
 
 namespace hlfir {
-#define GEN_PASS_DEF_XSCOMPLEXDIVISIONCONVERSION
+#define GEN_PASS_DEF_COMPLEXDIVISIONCONVERSION
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } 
 
-static llvm::cl::opt<bool> EnableXSDivc(
-    "enable-XSDivc", llvm::cl::init(false), llvm::cl::Hidden,
-    llvm::cl::desc("Enable calling of XSDivc."));
+static llvm::cl::opt<bool> EnableArithmeticBasedComplexDiv(
+    "enable-arithmetic-based-complex-divsion", llvm::cl::init(false), llvm::cl::Hidden,
+    llvm::cl::desc("Enable calling of Arithmetic-based Complex Division."));
 
 namespace {
-class HlfirXSComplexDivisionConversion : public mlir::OpRewritePattern<fir::CallOp> {
+class HlfirArithmeticBasedComplexDivisionConversion : public mlir::OpRewritePattern<fir::CallOp> {
   using OpRewritePattern::OpRewritePattern;
   llvm::LogicalResult matchAndRewrite(fir::CallOp callOp,
                                       mlir::PatternRewriter &rewriter) const override {
-    if (!EnableXSDivc) {
-      LLVM_DEBUG(llvm::dbgs() << "XS Complex Division support is currently disabled \n");
+    if (!EnableArithmeticBasedComplexDiv) {
+      LLVM_DEBUG(llvm::dbgs() << "Arithmetic-based Complex Division support is currently disabled \n");
       return mlir::failure();
     }
     fir::FirOpBuilder builder{rewriter, callOp.getOperation()};
@@ -56,6 +56,8 @@ class HlfirXSComplexDivisionConversion : public mlir::OpRewritePattern<fir::Call
     auto x1 = callOp.getOperands()[2]; // real part of denominator : x1
     auto y1 = callOp.getOperands()[3]; // imaginary part of denominator : y1
 
+    // standard complex division formula:
+    // (x0 + y0i)/(x1 + y1i) = ((x0*x1 + y0*y1)/(x1² + y1²)) + ((y0*x1 - x0*y1)/(x1² + y1²))i
     auto x0x1 = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x0, x1); // x0 * x1
     auto x1Squared = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x1, x1); // x1^2
     auto y0x1 = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y0, x1); // y0 * x1
@@ -63,13 +65,9 @@ class HlfirXSComplexDivisionConversion : public mlir::OpRewritePattern<fir::Call
     auto y0y1 = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y0, y1); // y0 * y1
     auto y1Squared = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y1, y1); // y1^2
 
-    // compute denominator: x1^2 + y1^2
-    auto denom = rewriter.create<mlir::arith::AddFOp>(loc, eleTy, x1Squared, y1Squared);
-
-    // compute real numerator: x0*x1 + y0*y1
-    auto realNumerator = rewriter.create<mlir::arith::AddFOp>(loc, eleTy, x0x1, y0y1);
-    // compute imag numerator: y0*x1 - x0*y1
-    auto imagNumerator = rewriter.create<mlir::arith::SubFOp>(loc, eleTy, y0x1, x0y1);
+    auto denom = rewriter.create<mlir::arith::AddFOp>(loc, eleTy, x1Squared, y1Squared); // x1^2 + y1^2
+    auto realNumerator = rewriter.create<mlir::arith::AddFOp>(loc, eleTy, x0x1, y0y1); // x0*x1 + y0*y1
+    auto imagNumerator = rewriter.create<mlir::arith::SubFOp>(loc, eleTy, y0x1, x0y1); // y0*x1 - x0*y1
 
     // compute final real and imaginary parts
     auto realResult = rewriter.create<mlir::arith::DivFOp>(loc, eleTy, realNumerator, denom);
@@ -85,21 +83,20 @@ class HlfirXSComplexDivisionConversion : public mlir::OpRewritePattern<fir::Call
     return mlir::success();
   }
 };
-
-class XSComplexDivisionConversion : public hlfir::impl::XSComplexDivisionConversionBase<XSComplexDivisionConversion> {
+class ArithmeticBasedComplexDivisionConversion : public hlfir::impl::ComplexDivisionConversionBase<ArithmeticBasedComplexDivisionConversion> {
 public:
   void runOnOperation() override {
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<HlfirXSComplexDivisionConversion>(context);
+    patterns.insert<HlfirArithmeticBasedComplexDivisionConversion>(context);
     
     mlir::GreedyRewriteConfig config;
     config.setRegionSimplificationLevel(mlir::GreedySimplifyRegionLevel::Disabled);
 
     if (mlir::failed(mlir::applyPatternsGreedily(module, std::move(patterns), config)))
     {
-      mlir::emitError(mlir::UnknownLoc::get(context), "failure in XS Complex Division HLFIR intrinsic lowering");
+      mlir::emitError(mlir::UnknownLoc::get(context), "failure in Arithmetic-based Complex Division HLFIR intrinsic lowering");
       signalPassFailure();
     }
   }

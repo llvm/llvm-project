@@ -267,7 +267,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
     }
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
-  pm.addPass(hlfir::createXSComplexDivisionConversion());
+  pm.addPass(hlfir::createComplexDivisionConversion());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
 
   hlfir::BufferizeHLFIROptions bufferizeOptions;
