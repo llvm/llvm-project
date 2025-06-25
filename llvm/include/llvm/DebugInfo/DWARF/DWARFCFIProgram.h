@@ -144,7 +144,6 @@ private:
   const uint64_t CodeAlignmentFactor;
   const int64_t DataAlignmentFactor;
   Triple::ArchType Arch;
-
 };
 
 } // end namespace dwarf
