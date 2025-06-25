@@ -304,6 +304,9 @@ Changes to LLDB
     stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
   ```
 * ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
+* Changed invalid disassembly to say <unknown> instead of being blank.
+* Changed the format of opcode bytes to match llvm-objdump when disassembling
+  RISC-V with the -b option.
 
 ### Changes to lldb-dap
 

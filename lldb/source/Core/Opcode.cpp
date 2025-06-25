@@ -85,23 +85,23 @@ int Opcode::DumpRISCV(Stream *s, uint32_t min_byte_width) {
   if (m_type != Opcode::eTypeBytes)
     return Dump(s, min_byte_width);
 
-  // from RISCVPrettyPrinter in llvm-objdump.cpp
-  // if size % 4 == 0, print as 1 or 2 32 bit values (32 or 64 bit inst)
-  // else if size % 2 == 0, print as 1 or 3 16 bit values (16 or 48 bit inst)
-  // else fall back and print bytes
+  // Logic taken from from RISCVPrettyPrinter in llvm-objdump.cpp
   for (uint32_t i = 0; i < m_data.inst.length;) {
     if (i > 0)
       s->PutChar(' ');
+    // if size % 4 == 0, print as 1 or 2 32 bit values (32 or 64 bit inst)
     if (!(m_data.inst.length % 4)) {
       s->Printf("%2.2x%2.2x%2.2x%2.2x", m_data.inst.bytes[i + 3],
                                         m_data.inst.bytes[i + 2],
                                         m_data.inst.bytes[i + 1],
                                         m_data.inst.bytes[i + 0]);
       i += 4;
+    // else if size % 2 == 0, print as 1 or 3 16 bit values (16 or 48 bit inst)
     } else if (!(m_data.inst.length % 2)) {
       s->Printf("%2.2x%2.2x", m_data.inst.bytes[i + 1],
                               m_data.inst.bytes[i + 0]);
       i += 2;
+    // else fall back and print bytes
     } else {
       s->Printf("%2.2x", m_data.inst.bytes[i]);
       ++i;

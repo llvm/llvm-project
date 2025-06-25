@@ -20,7 +20,7 @@ def __lldb_init_module(debugger, dict):
     print("Filter program set to %s" % filter_program)
 
 
-def fdis(debugger, args, result, dict):
+def fdis(debugger, args, exe_ctx, result, dict):
     """
   Call the built in disassembler, then pass its output to a filter program
   to add in disassembly for hidden opcodes.
@@ -62,7 +62,7 @@ def fdis(debugger, args, result, dict):
         return
 
     res = lldb.SBCommandReturnObject()
-    debugger.GetCommandInterpreter().HandleCommand('disassemble -b ' + args, res)
+    debugger.GetCommandInterpreter().HandleCommand('disassemble -b ' + args, exe_ctx, res)
     if (len(res.GetError()) > 0):
         result.SetError(res.GetError())
         result.SetStatus(lldb.eReturnStatusFailed)
