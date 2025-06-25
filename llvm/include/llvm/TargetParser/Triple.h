@@ -581,6 +581,9 @@ public:
   /// Is this an Apple XROS triple.
   bool isXROS() const { return getOS() == Triple::XROS; }
 
+  /// Is this an Apple BridgeOS triple.
+  bool isBridgeOS() const { return getOS() == Triple::BridgeOS; }
+
   /// Is this an Apple DriverKit triple.
   bool isDriverKit() const { return getOS() == Triple::DriverKit; }
 
@@ -591,9 +594,11 @@ public:
     return (getVendor() == Triple::Apple) && isOSBinFormatMachO();
   }
 
-  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, XROS, or DriverKit).
+  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, DriverKit, XROS, or
+  /// bridgeOS).
   bool isOSDarwin() const {
-    return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS();
+    return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS() ||
+           isBridgeOS();
   }
 
   bool isSimulatorEnvironment() const {
