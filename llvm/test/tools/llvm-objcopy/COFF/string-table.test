@@ -10,6 +10,7 @@
 # CHECK-NEXT:   [    1a] symbol_aaa
 # CHECK-NEXT: }
 
+# Symbol or section name is added into strtab only if it exceeds 8 characters.
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
