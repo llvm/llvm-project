@@ -20,6 +20,7 @@
 #include "test_allocator.h"
 
 int main(int, char**) {
+  // Attempt to push back an element into a vector<bool> that is already at its maximum possible size
   std::vector<bool, limited_allocator<bool, 10> > v;
   v.resize(v.max_size(), true);
   try {

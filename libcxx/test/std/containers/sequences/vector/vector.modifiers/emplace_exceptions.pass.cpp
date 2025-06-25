@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 
 int main(int, char**) {
-  {
+  { // Attempt to emplace an element at the beginning of a vector that is already at its maximum possible size
     std::vector<int, limited_allocator<int, 10> > v(10, 42);
     try {
       v.emplace(v.begin(), 0);
@@ -31,7 +31,7 @@ int main(int, char**) {
         assert(v[i] == 42);
     }
   }
-  {
+  { // Attempt to emplace an element at the end of a vector that is already at its maximum possible size
     std::vector<int, limited_allocator<int, 10> > v(10, 42);
     try {
       v.emplace(v.end(), 0);
@@ -42,7 +42,7 @@ int main(int, char**) {
         assert(v[i] == 42);
     }
   }
-  {
+  { // Attempt to emplace an element in the middle of a vector that is already at its maximum possible size
     std::vector<int, limited_allocator<int, 10> > v(10, 42);
     try {
       v.emplace(v.begin() + v.size() / 2, 0);

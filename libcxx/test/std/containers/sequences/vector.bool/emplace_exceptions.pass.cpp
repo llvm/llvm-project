@@ -21,7 +21,7 @@
 #include "test_allocator.h"
 
 int main(int, char**) {
-  {
+  { // Attempt to insert an element at the beginning of a vector<bool> that is already at its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size(), true);
     try {
@@ -33,7 +33,7 @@ int main(int, char**) {
         assert(v[i] == true);
     }
   }
-  {
+  { // Attempt to insert an element at the end of a vector<bool> that is already at its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size(), true);
     try {
@@ -45,7 +45,7 @@ int main(int, char**) {
         assert(v[i] == true);
     }
   }
-  {
+  { // Attempt to insert an element in the middle of a vector<bool> that is already at its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size(), true);
     try {

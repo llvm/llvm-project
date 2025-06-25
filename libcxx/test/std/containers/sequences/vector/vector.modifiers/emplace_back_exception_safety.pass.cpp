@@ -21,6 +21,7 @@
 #include "test_allocator.h"
 
 int main(int, char**) {
+  // Attempt to append an element to a vector that is already at its maximum possible size
   std::vector<int, limited_allocator<int, 10> > v(10, 42);
   try {
     v.emplace_back(0);

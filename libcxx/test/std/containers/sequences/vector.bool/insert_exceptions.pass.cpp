@@ -25,7 +25,7 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-  {
+  { // Attempt to insert an element at the beginning of a vector<bool> that is already at its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size(), true);
     try {
@@ -37,7 +37,7 @@ int main(int, char**) {
         assert(v[i] == true);
     }
   }
-  {
+  { // Attempt to insert an element at the end of a vector<bool> that is already at its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size(), false);
     try {
@@ -49,7 +49,7 @@ int main(int, char**) {
         assert(v[i] == false);
     }
   }
-  {
+  { // Attempt to insert an element in the middle of a vector<bool> that is already at its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size(), true);
     try {
@@ -61,19 +61,7 @@ int main(int, char**) {
         assert(v[i] == true);
     }
   }
-  {
-    std::vector<bool, limited_allocator<bool, 10> > v;
-    v.resize(v.max_size(), true);
-    try {
-      v.insert(v.begin(), 1, false);
-      assert(false);
-    } catch (const std::length_error&) {
-      assert(v.size() == v.max_size());
-      for (std::size_t i = 0; i != v.size(); ++i)
-        assert(v[i] == true);
-    }
-  }
-  {
+  { // Attempt to insert an iterator range to a vector<bool> that would exceed its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size() - 2, true);
     bool a[] = {true, false, true};
@@ -87,7 +75,7 @@ int main(int, char**) {
     }
   }
 #if TEST_STD_VER >= 11
-  {
+  { // Attempt to insert an initializer_list to a vector<bool> that would exceed its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size() - 2, true);
     try {

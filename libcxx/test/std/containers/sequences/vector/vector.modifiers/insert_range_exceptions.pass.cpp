@@ -25,7 +25,7 @@ int main(int, char**) {
   test_insert_range_exception_safety_throwing_copy<std::vector>();
   test_insert_range_exception_safety_throwing_allocator<std::vector, int>();
 
-  {
+  { // Attempt to insert a range at the beginning of a vector that would exceed its maximum possible size
     std::vector<int, limited_allocator<int, 10> > v(8, 42);
     int a[] = {1, 2, 3};
     try {
@@ -37,7 +37,7 @@ int main(int, char**) {
         assert(v[i] == 42);
     }
   }
-  {
+  { // Attempt to insert a range at the end of a vector that would exceed its maximum possible size
     std::vector<int, limited_allocator<int, 10> > v(8, 42);
     int a[] = {1, 2, 3};
     try {
@@ -49,7 +49,7 @@ int main(int, char**) {
         assert(v[i] == 42);
     }
   }
-  {
+  { // Attempt to insert a range in the middle of a vector that would exceed its maximum possible size
     std::vector<int, limited_allocator<int, 10> > v(10, 42);
     int a[] = {1, 2, 3};
     try {

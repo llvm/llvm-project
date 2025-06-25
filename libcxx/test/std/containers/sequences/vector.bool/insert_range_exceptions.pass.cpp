@@ -26,7 +26,7 @@ int main(int, char**) {
   // Note: `test_insert_range_exception_safety_throwing_copy` doesn't apply because copying booleans cannot throw.
   test_insert_range_exception_safety_throwing_allocator<std::vector, bool>();
 
-  {
+  { // Attempt to insert a range at the end of a vector<bool> that would exceed its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size() - 2, true);
     bool a[] = {true, false, true};
@@ -39,7 +39,7 @@ int main(int, char**) {
         assert(v[i] == true);
     }
   }
-  {
+  { // Attempt to insert a range at the beginning of a vector<bool> that would exceed its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size() - 2, false);
     bool a[] = {true, false, true};
@@ -52,7 +52,7 @@ int main(int, char**) {
         assert(v[i] == false);
     }
   }
-  {
+  { // Attempt to insert a range in the middle of a vector<bool> that would exceed its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v(5, true);
     bool a[v.max_size()] = {};
     try {

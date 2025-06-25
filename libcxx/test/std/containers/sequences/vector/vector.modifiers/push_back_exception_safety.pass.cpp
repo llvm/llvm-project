@@ -89,7 +89,7 @@ int main(int, char**) {
     assert(is_contiguous_container_asan_correct(vec));
   }
 
-  {
+  { // Attempt to push back an element into a vector that is already at its maximum possible size
     std::vector<int, limited_allocator<int, 10> > v(10, 42);
     try {
       v.push_back(0);

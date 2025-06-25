@@ -26,7 +26,7 @@ int main(int, char**) {
   // Note: `test_append_range_exception_safety_throwing_copy` doesn't apply because copying booleans cannot throw.
   test_append_range_exception_safety_throwing_allocator<std::vector, bool>();
 
-  {
+  { // Attempt to append more elements to a non-empty vector<bool> than its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size() - 2, true);
     bool a[] = {false, true, false};
@@ -39,16 +39,14 @@ int main(int, char**) {
         assert(v[i] == true);
     }
   }
-  {
-    std::vector<bool, limited_allocator<bool, 10> > v(5, true);
-    bool a[v.max_size()] = {}; // A large enough array to trigger a length_error when appended
+  { // Attempt to append more elements to an empty vector<bool> than its maximum possible size
+    std::vector<bool, limited_allocator<bool, 10> > v;
+    bool a[v.max_size() + 1] = {}; // A large enough array to trigger a length_error when appended
     try {
       v.append_range(a);
       assert(false);
     } catch (const std::length_error&) {
-      assert(v.size() == 5);
-      for (std::size_t i = 0; i != v.size(); ++i)
-        assert(v[i] == true);
+      assert(v.empty());
     }
   }
 

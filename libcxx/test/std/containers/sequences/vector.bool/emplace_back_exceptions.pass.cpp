@@ -24,6 +24,8 @@
 int main(int, char**) {
   std::vector<bool, limited_allocator<bool, 10> > v;
   v.resize(v.max_size(), true);
+
+  // Attempt to append one more element to a vector<bool> that is already at its maximum possible size
   try {
     v.emplace_back(true);
     assert(false);

@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 
 int main(int, char**) {
-  {
+  { // Attempt to reserve more space than the maximum possible size of a vector<bool>
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.reserve(5);
     try {
@@ -35,7 +35,7 @@ int main(int, char**) {
       assert(v.capacity() >= 5);
     }
   }
-  {
+  { // Attempt to reserve more space for a vector<bool> that is already at its maximum possible size
     std::vector<bool, limited_allocator<bool, 10> > v;
     v.resize(v.max_size(), true);
     try {
@@ -47,7 +47,7 @@ int main(int, char**) {
         assert(v[i] == true);
     }
   }
-  {
+  { // Attempt to reserve 1 more space than the maximum possible size of a vector<bool>
     bool a[] = {true, false, true, false, true};
     std::vector<bool> v(std::begin(a), std::end(a));
     try {

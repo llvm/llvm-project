@@ -25,6 +25,7 @@ int main(int, char**) {
   test_append_range_exception_safety_throwing_copy<std::vector>();
   test_append_range_exception_safety_throwing_allocator<std::vector, int>();
 
+  // Attempt to append a range to a vector that would exceed its maximum possible size
   {
     std::vector<int, limited_allocator<int, 10> > v(8, 42);
     int a[] = {1, 2, 3};
