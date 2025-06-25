@@ -50,8 +50,12 @@ public:
   static bool instructionWaitsForSGPRWrites(const MachineInstr &MI) {
     // These instruction types wait for VA_SDST==0 before issuing.
     const uint64_t VA_SDST_0 = SIInstrFlags::SALU | SIInstrFlags::SMRD;
-
-    return MI.getDesc().TSFlags & VA_SDST_0;
+    if (MI.getDesc().TSFlags & VA_SDST_0) {
+      for (auto &Op : MI.uses())
+        if (Op.isReg())
+          return true;
+    }
+    return false;
   }
 
   // Types of delay that can be encoded in an s_delay_alu instruction.
