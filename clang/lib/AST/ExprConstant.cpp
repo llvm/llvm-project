@@ -5280,7 +5280,8 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
   if (InitE->isValueDependent())
     return false;
 
-  if (VD->getType()->isReferenceType()) {
+  if (VD->getType()->isReferenceType() &&
+      !VD->getType()->isFunctionReferenceType()) {
     return EvaluateInitForDeclOfReferenceType(Info, VD, InitE, Result, Val);
   } else if (!EvaluateInPlace(Val, Info, Result, InitE)) {
     // Wipe out any partially-computed value, to allow tracking that this
@@ -6924,7 +6925,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
                                     isa<CXXDefaultInitExpr>(Init));
       FullExpressionRAII InitScope(Info);
 
-      if (FD && FD->getType()->isReferenceType()) {
+      if (FD && FD->getType()->isReferenceType() &&
+          !FD->getType()->isFunctionReferenceType()) {
         LValue Result;
         if (!EvaluateInitForDeclOfReferenceType(Info, FD, Init, Result,
                                                 *Value)) {
@@ -10962,7 +10964,8 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
 
     APValue &FieldVal = Result.getStructField(Field->getFieldIndex());
 
-    if (Field->getType()->isReferenceType()) {
+    if (Field->getType()->isReferenceType() &&
+        !Field->getType()->isFunctionReferenceType()) {
       LValue Result;
       if (!EvaluateInitForDeclOfReferenceType(Info, Field, Init, Result,
                                               FieldVal)) {
