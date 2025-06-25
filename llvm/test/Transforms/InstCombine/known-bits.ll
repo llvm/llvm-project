@@ -384,7 +384,7 @@ define i64 @test_icmp_trunc2(i64 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CONV]], 12
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[SEXT:%.*]] = and i64 [[X]], 2147483647
+; CHECK-NEXT:    [[SEXT:%.*]] = and i64 [[X]], 4294967295
 ; CHECK-NEXT:    ret i64 [[SEXT]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i64 0
@@ -408,7 +408,7 @@ define i64 @test_icmp_trunc3(i64 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[CONV]], 96
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET:%.*]] = and i64 [[N]], 127
+; CHECK-NEXT:    [[RET:%.*]] = and i64 [[N]], 4294967295
 ; CHECK-NEXT:    ret i64 [[RET]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i64 0

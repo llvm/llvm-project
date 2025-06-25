@@ -17,7 +17,7 @@ define i64 @pomote_zext_shl_vscale_i32_to_i64() {
 ; CHECK-LABEL: @pomote_zext_shl_vscale_i32_to_i64(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[VSCALE]], 3
-; CHECK-NEXT:    [[EXT:%.*]] = and i64 [[SHL]], 4294967288
+; CHECK-NEXT:    [[EXT:%.*]] = and i64 [[SHL]], 4294967295
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ;
   %vscale = call i32 @llvm.vscale.i32()
