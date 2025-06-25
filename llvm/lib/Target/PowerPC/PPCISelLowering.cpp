@@ -9622,7 +9622,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(Op.getNode());
   assert(BVN && "Expected a BuildVectorSDNode in LowerBUILD_VECTOR");
 
-  if(Subtarget.hasP10Vector()) {
+  if (Subtarget.hasP10Vector()) {
     APInt BitMask(32, 0);
     // If the value of the vector is all zeros or all ones,
     // we do not convert it to MTVSRBMI.
