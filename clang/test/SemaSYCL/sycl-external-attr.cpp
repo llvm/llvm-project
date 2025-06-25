@@ -25,13 +25,18 @@ class C {
   [[clang::sycl_external]] void member();
 };
 
-[[clang::sycl_external]] int main() // expected-error {{'sycl_external' cannot be applied to main function}}
+[[clang::sycl_external]] int main() // expected-error {{'sycl_external' cannot be applied to the 'main' function}}
 {
-    return 0;
+  return 0;
 }
 
 class D {
-  [[clang::sycl_external]] void del() = delete; // expected-error {{'sycl_external' cannot be applied to explicitly deleted functions}}
+  [[clang::sycl_external]] void del() = delete; // expected-error {{'sycl_external' cannot be applied to an explicitly deleted function}}
+};
+
+struct NonCopyable {
+  ~NonCopyable() = delete;
+  [[clang::sycl_external]] NonCopyable(const NonCopyable&) = default;
 };
 
 class A {

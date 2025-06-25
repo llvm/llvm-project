@@ -213,7 +213,7 @@ void SemaSYCL::handleExternalAttr(Decl *D, const ParsedAttr &AL) {
     Diag(AL.getLoc(), diag::err_sycl_attribute_avoid_main);
     return;
   }
-  if (FD->isDeleted()) {
+  if (FD->isDeletedAsWritten()) {
     Diag(AL.getLoc(), diag::err_sycl_attribute_avoid_deleted_function);
     return;
   }
