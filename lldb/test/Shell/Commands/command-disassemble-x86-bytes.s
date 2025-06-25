@@ -18,11 +18,11 @@ main:                                   # @main
         .byte  0x6 
 
 # CHECK: [0x0] <+0>:   48 83 ec 18              subq   $0x18, %rsp
-# CHECK: [0x4] <+4>:   c7 44 24 14 00 00 00 00  movl   $0x0, 0x14(%rsp)
-# CHECK: [0xc] <+12>:  48 89 54 24 08           movq   %rdx, 0x8(%rsp)
-# CHECK: [0x11] <+17>: 89 4c 24 04              movl   %ecx, 0x4(%rsp)
-# CHECK: [0x15] <+21>: 8b 04 24                 movl   (%rsp), %eax
-# CHECK: [0x18] <+24>: 48 83 c4 18              addq   $0x18, %rsp
-# CHECK: [0x1c] <+28>: c3                       retq
-# CHECK: [0x1d] <+29>: 06                       <unknown>
+# CHECK-NEXT: [0x4] <+4>:   c7 44 24 14 00 00 00 00  movl   $0x0, 0x14(%rsp)
+# CHECK-NEXT: [0xc] <+12>:  48 89 54 24 08           movq   %rdx, 0x8(%rsp)
+# CHECK-NEXT: [0x11] <+17>: 89 4c 24 04              movl   %ecx, 0x4(%rsp)
+# CHECK-NEXT: [0x15] <+21>: 8b 04 24                 movl   (%rsp), %eax
+# CHECK-NEXT: [0x18] <+24>: 48 83 c4 18              addq   $0x18, %rsp
+# CHECK-NEXT: [0x1c] <+28>: c3                       retq
+# CHECK-NEXT: [0x1d] <+29>: 06                       <unknown>
 
