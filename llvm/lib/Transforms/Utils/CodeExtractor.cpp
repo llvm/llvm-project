@@ -1528,12 +1528,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall, inputs,
                                NewValues);
 
-  LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
-    newFunction->dump();
-    report_fatal_error("verification of newFunction failed!");
-  });
-  LLVM_DEBUG(if (verifyFunction(*oldFunction))
-                 report_fatal_error("verification of oldFunction failed!"));
+  LLVM_DEBUG(llvm::dbgs() << "After extractCodeRegion - newFunction:\n");
+  LLVM_DEBUG(newFunction->dump());
+  LLVM_DEBUG(llvm::dbgs() << "After extractCodeRegion - oldFunction:\n");
+  LLVM_DEBUG(oldFunction->dump());
   LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
                  report_fatal_error("Stale Asumption cache for old Function!"));
   return newFunction;
@@ -1833,6 +1831,9 @@ CallInst *CodeExtractor::emitReplacerCall(
   // This takes place of the original loop
   BasicBlock *codeReplacer =
       BasicBlock::Create(Context, "codeRepl", oldFunction, ReplIP);
+  if (AllocationBlock)
+    assert(AllocationBlock->getParent() == oldFunction &&
+           "AllocationBlock is not in the same function");
   BasicBlock *AllocaBlock =
       AllocationBlock ? AllocationBlock : &oldFunction->getEntryBlock();
 

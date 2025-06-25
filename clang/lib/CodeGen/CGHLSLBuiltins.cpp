@@ -676,35 +676,23 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
     // Due to the use of variadic arguments, explicitly retreive argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    llvm::FunctionType *FT = llvm::FunctionType::get(
-        OpExpr->getType(), ArrayRef{OpExpr->getType()}, false);
     Intrinsic::ID IID = getWaveActiveSumIntrinsic(
         getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
         E->getArg(0)->getType());
 
-    // Get overloaded name
-    std::string Name =
-        Intrinsic::getName(IID, ArrayRef{OpExpr->getType()}, &CGM.getModule());
-    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
-                                                     /*Local=*/false,
-                                                     /*AssumeConvergent=*/true),
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.active.sum");
   }
   case Builtin::BI__builtin_hlsl_wave_active_max: {
     // Due to the use of variadic arguments, explicitly retreive argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    llvm::FunctionType *FT = llvm::FunctionType::get(
-        OpExpr->getType(), ArrayRef{OpExpr->getType()}, false);
     Intrinsic::ID IID = getWaveActiveMaxIntrinsic(
         getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
         E->getArg(0)->getType());
 
-    // Get overloaded name
-    std::string Name =
-        Intrinsic::getName(IID, ArrayRef{OpExpr->getType()}, &CGM.getModule());
-    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
-                                                     /*Local=*/false,
-                                                     /*AssumeConvergent=*/true),
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.active.max");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
@@ -739,18 +727,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // create our function type.
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Value *OpIndex = EmitScalarExpr(E->getArg(1));
-    llvm::FunctionType *FT = llvm::FunctionType::get(
-        OpExpr->getType(), ArrayRef{OpExpr->getType(), OpIndex->getType()},
-        false);
-
-    // Get overloaded name
-    std::string Name =
-        Intrinsic::getName(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
-                           ArrayRef{OpExpr->getType()}, &CGM.getModule());
-    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
-                                                     /*Local=*/false,
-                                                     /*AssumeConvergent=*/true),
-                           ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(
+            &CGM.getModule(), CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
+            {OpExpr->getType()}),
+        ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);

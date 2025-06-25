@@ -120,9 +120,10 @@ struct OffloadContext {
 
 // If the context is uninited, then we assume tracing is disabled
 bool isTracingEnabled() {
-  return OffloadContextVal && OffloadContext::get().TracingEnabled;
+  return isOffloadInitialized() && OffloadContext::get().TracingEnabled;
 }
 bool isValidationEnabled() { return OffloadContext::get().ValidationEnabled; }
+bool isOffloadInitialized() { return OffloadContextVal != nullptr; }
 
 template <typename HandleT> Error olDestroy(HandleT Handle) {
   delete Handle;
@@ -245,23 +246,23 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   // Find the info if it exists under any of the given names
-  auto GetInfo = [&](std::vector<std::string> Names) {
+  auto GetInfoString = [&](std::vector<std::string> Names) {
     if (Device == OffloadContext::get().HostDevice())
-      return std::string("Host");
+      return "Host";
 
     if (!Device->Device)
-      return std::string("");
+      return "";
 
     auto Info = Device->Device->obtainInfoImpl();
     if (auto Err = Info.takeError())
-      return std::string("");
+      return "";
 
     for (auto Name : Names) {
       if (auto Entry = Info->get(Name))
-        return (*Entry)->Value;
+        return std::get<std::string>((*Entry)->Value).c_str();
     }
 
-    return std::string("");
+    return "";
   };
 
   switch (PropName) {
@@ -272,12 +273,12 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                ? ReturnValue(OL_DEVICE_TYPE_HOST)
                : ReturnValue(OL_DEVICE_TYPE_GPU);
   case OL_DEVICE_INFO_NAME:
-    return ReturnValue(GetInfo({"Device Name"}).c_str());
+    return ReturnValue(GetInfoString({"Device Name"}));
   case OL_DEVICE_INFO_VENDOR:
-    return ReturnValue(GetInfo({"Vendor Name"}).c_str());
+    return ReturnValue(GetInfoString({"Vendor Name"}));
   case OL_DEVICE_INFO_DRIVER_VERSION:
     return ReturnValue(
-        GetInfo({"CUDA Driver Version", "HSA Runtime Version"}).c_str());
+        GetInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -470,6 +471,7 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
     delete Prog;
     return Res.takeError();
   }
+  assert(*Res != nullptr && "loadBinary returned nullptr");
 
   Prog->Image = *Res;
   *Program = Prog;
@@ -478,6 +480,14 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
 }
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
+  auto &Device = Program->Image->getDevice();
+  if (auto Err = Device.unloadBinary(Program->Image))
+    return Err;
+
+  auto &LoadedImages = Device.LoadedImages;
+  LoadedImages.erase(
+      std::find(LoadedImages.begin(), LoadedImages.end(), Program->Image));
+
   return olDestroy(Program);
 }
 

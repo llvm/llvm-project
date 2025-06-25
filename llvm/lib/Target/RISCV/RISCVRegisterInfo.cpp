@@ -880,8 +880,7 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() &&
-                 !DisableCostPerUse
+  return MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() && !DisableCostPerUse
              ? 1
              : 0;
 }
