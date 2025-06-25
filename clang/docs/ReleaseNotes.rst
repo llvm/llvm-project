@@ -705,7 +705,7 @@ Improvements to Clang's diagnostics
 - Clang now does not issue a warning about returning from a function declared with
   the ``[[noreturn]]`` attribute when the function body is ended with a call via
   pointer, provided it can be proven that the pointer only points to
-  ``[[noreturn]]`` functions..
+  ``[[noreturn]]`` functions.
 
 Improvements to Clang's time-trace
 ----------------------------------

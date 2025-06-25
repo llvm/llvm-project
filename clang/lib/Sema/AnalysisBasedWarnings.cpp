@@ -403,6 +403,15 @@ static bool isNoexcept(const FunctionDecl *FD) {
   return false;
 }
 
+/// Checks if the given expression is a reference to a function with
+/// 'noreturn' attribute.
+static bool isReferenceToNoReturn(const Expr *E) {
+  if (auto *DRef = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts()))
+    if (auto *FD = dyn_cast<FunctionDecl>(DRef->getDecl()))
+      return FD->isNoReturn();
+  return false;
+}
+
 /// Checks if the given variable, which is assumed to be a function pointer, is
 /// initialized with a function having 'noreturn' attribute.
 static bool isInitializedWithNoReturn(const VarDecl *VD) {
@@ -410,19 +419,8 @@ static bool isInitializedWithNoReturn(const VarDecl *VD) {
     if (auto *ListInit = dyn_cast<InitListExpr>(Init);
         ListInit && ListInit->getNumInits() > 0)
       Init = ListInit->getInit(0);
-    if (auto *DeclRef = dyn_cast<DeclRefExpr>(Init->IgnoreParenCasts()))
-      if (auto *FD = dyn_cast<FunctionDecl>(DeclRef->getDecl()))
-        return FD->isNoReturn();
+    return isReferenceToNoReturn(Init);
   }
-  return false;
-}
-
-/// Checks if the given expression is a reference to a function with
-/// 'noreturn' attribute.
-static bool isReferenceToNoReturn(const Expr *E) {
-  if (auto *DRef = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts()))
-    if (auto *FD = dyn_cast<FunctionDecl>(DRef->getDecl()))
-      return FD->isNoReturn();
   return false;
 }
 
