@@ -1816,7 +1816,7 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, round_mode, vl)
     // Masked:   (passthru, op0, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
+    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -2021,7 +2021,7 @@ let ManualCodegen = [{
     // LLVM intrinsic
     // Unmasked: (passthru, op0, frm, vl)
     // Masked:   (passthru, op0, mask, frm, vl, policy)
-    SmallVector<llvm::Value*, 7> Operands;
+    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -2225,7 +2225,7 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, op1, round_mode, vl)
     // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
+    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
