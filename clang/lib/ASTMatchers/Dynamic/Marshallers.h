@@ -1060,7 +1060,7 @@ makeMatcherAutoMarshall(ReturnType (*Func)(), StringRef MatcherName) {
   BuildReturnTypeVector<ReturnType>::build(RetTypes);
   return std::make_unique<FixedArgCountMatcherDescriptor>(
       matcherMarshall0<ReturnType>, reinterpret_cast<void (*)()>(Func),
-      MatcherName, RetTypes, ArrayRef<ArgKind>());
+      MatcherName, RetTypes, std::nullopt);
 }
 
 /// 1-arg overload
