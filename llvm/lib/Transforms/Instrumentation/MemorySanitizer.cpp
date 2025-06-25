@@ -3294,22 +3294,51 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(Op));
   }
 
-  void handleCountZeroes(IntrinsicInst &I) {
+  // Uninitialized bits are ok if they appear after the leading/trailing 0's
+  // and a 1. If the input is all zero, it is fully initialized iff
+  // !is_zero_poison.
+  //
+  // e.g., for ctlz, with little-endian, if 0/1 are initialized bits with
+  // concrete value 0/1, and ? is an uninitialized bit:
+  //       - 0001 0??? is fully initialized
+  //       - 000? ???? is fully uninitialized (*)
+  //       - ???? ???? is fully uninitialized
+  //       - 0000 0000 is fully uninitialized if is_zero_poison,
+  //                      fully initialized   otherwise
+  //
+  // (*) TODO: arguably, since the number of zeros is in the range [3, 8], we
+  //     only need to poison 4 bits.
+  //
+  // OutputShadow =
+  //      ((ConcreteZerosCount >= ShadowZerosCount) && !AllZeroShadow)
+  //   || (is_zero_poison && AllZeroSrc)
+  void handleCountLeadingTrailingZeros(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Src = I.getArgOperand(0);
+    Value *SrcShadow = getShadow(Src);
 
-    // Set the Output shadow based on input Shadow
-    Value *BoolShadow = IRB.CreateIsNotNull(getShadow(Src), "_mscz_bs");
+    Value *False = IRB.getInt1(false);
+    Value *ConcreteZerosCount = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {Src, /*is_zero_poison=*/False});
+    Value *ShadowZerosCount = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {SrcShadow, /*is_zero_poison=*/False});
+
+    Value *CompareConcreteZeros = IRB.CreateICmpUGE(
+        ConcreteZerosCount, ShadowZerosCount, "_mscz_cmp_zeros");
+
+    Value *NotAllZeroShadow =
+        IRB.CreateIsNotNull(SrcShadow, "_mscz_shadow_not_null");
+    Value *OutputShadow =
+        IRB.CreateAnd(CompareConcreteZeros, NotAllZeroShadow, "_mscz_main");
 
     // If zero poison is requested, mix in with the shadow
     Constant *IsZeroPoison = cast<Constant>(I.getOperand(1));
     if (!IsZeroPoison->isZeroValue()) {
       Value *BoolZeroPoison = IRB.CreateIsNull(Src, "_mscz_bzp");
-      BoolShadow = IRB.CreateOr(BoolShadow, BoolZeroPoison, "_mscz_bs");
+      OutputShadow = IRB.CreateOr(OutputShadow, BoolZeroPoison, "_mscz_bs");
     }
 
-    Value *OutputShadow =
-        IRB.CreateSExt(BoolShadow, getShadowTy(Src), "_mscz_os");
+    OutputShadow = IRB.CreateSExt(OutputShadow, getShadowTy(Src), "_mscz_os");
 
     setShadow(&I, OutputShadow);
     setOriginForNaryOp(I);
@@ -4726,7 +4755,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::ctlz:
     case Intrinsic::cttz:
-      handleCountZeroes(I);
+      handleCountLeadingTrailingZeros(I);
       break;
     case Intrinsic::masked_compressstore:
       handleMaskedCompressStore(I);

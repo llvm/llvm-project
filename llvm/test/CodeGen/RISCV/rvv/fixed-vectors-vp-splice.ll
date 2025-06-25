@@ -299,3 +299,52 @@ define <8 x half> @test_vp_splice_v8f16_masked(<8 x half> %va, <8 x half> %vb, <
   %v = call <8 x half> @llvm.experimental.vp.splice.v8f16(<8 x half> %va, <8 x half> %vb, i32 5, <8 x i1> %mask, i32 %evla, i32 %evlb)
   ret <8 x half> %v
 }
+
+define <4 x i32> @test_vp_splice_v4i32_with_firstelt(i32 %first, <4 x i32> %vb, <4 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: test_vp_splice_v4i32_with_firstelt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vslide1up.vx v9, v8, a0, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %va = insertelement <4 x i32> poison, i32 %first, i32 0
+  %v = call <4 x i32> @llvm.experimental.vp.splice.v4i32(<4 x i32> %va, <4 x i32> %vb, i32 0, <4 x i1> %mask, i32 1, i32 %evl)
+  ret <4 x i32> %v
+}
+
+define <4 x i32> @test_vp_splice_v4i32_with_splat_firstelt(i32 %first, <4 x i32> %vb, <4 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: test_vp_splice_v4i32_with_splat_firstelt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vslide1up.vx v9, v8, a0, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %ins = insertelement <4 x i32> poison, i32 %first, i32 0
+  %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
+  %v = call <4 x i32> @llvm.experimental.vp.splice.v4i32(<4 x i32> %splat, <4 x i32> %vb, i32 0, <4 x i1> %mask, i32 1, i32 %evl)
+  ret <4 x i32> %v
+}
+
+define <4 x float> @test_vp_splice_nxv2f32_with_firstelt(float %first, <4 x float> %vb, <4 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: test_vp_splice_nxv2f32_with_firstelt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfslide1up.vf v9, v8, fa0, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %va = insertelement <4 x float> poison, float %first, i32 0
+  %v = call <4 x float> @llvm.experimental.vp.splice.nxv2f32(<4 x float> %va, <4 x float> %vb, i32 0, <4 x i1> %mask, i32 1, i32 %evl)
+  ret <4 x float> %v
+}
+
+define <4 x half> @test_vp_splice_nxv2f16_with_firstelt(half %first, <4 x half> %vb, <4 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: test_vp_splice_nxv2f16_with_firstelt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vfslide1up.vf v9, v8, fa0, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %va = insertelement <4 x half> poison, half %first, i32 0
+  %v = call <4 x half> @llvm.experimental.vp.splice.nxv2f16(<4 x half> %va, <4 x half> %vb, i32 0, <4 x i1> %mask, i32 1, i32 %evl)
+  ret <4 x half> %v
+}
