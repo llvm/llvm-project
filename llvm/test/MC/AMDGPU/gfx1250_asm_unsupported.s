@@ -1,5 +1,67 @@
 ; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
+;; DOT4_F32_*, DOT2_F32_*, DOT2_F16 and DOT2_BF16
+
+v_dot4_f32_fp8_fp8 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_fp8_fp8 v0, v1, v2, v3 row_mirror
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_fp8_fp8 v0, v1, v2, v3 dpp8:[0,1,2,3,4,5,6,7]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_fp8_bf8 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_fp8_bf8 v0, v1, v2, v3 quad_perm:[3,2,1,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_fp8_bf8 v0, v1, v2, v3 dpp8:[0,1,2,3,4,5,6,7]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_bf8_fp8 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_bf8_fp8 v0, v1, v2, v3 row_shl:15
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_bf8_fp8 v0, v1, v2, v3 dpp8:[0,1,2,3,4,5,6,7]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_bf8_bf8 v0, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_bf8_bf8 v0, v1, v2, v3 row_share:15
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4_f32_bf8_bf8 v0, v1, v2, v3 dpp8:[0,1,2,3,4,5,6,7]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2_f16_f16 v5, v1, v2, s3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2_f16_f16_e64_dpp v0, v1, v2, v3 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 fi:1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2_f16_f16_e64_dpp v0, v1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2_bf16_bf16 v5, v1, v2, s3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 fi:1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2_f32_bf16 v5, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2_f32_f16 v5, v1, v2, s3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; LDS-direct and parameter-load, VINTERP
 
 ds_direct_load v1 wait_va_vdst:15

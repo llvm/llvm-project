@@ -498,7 +498,13 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
         allocaInsertPoint = frame.allocaInsertPoint;
         return WalkResult::interrupt();
       });
-  if (walkResult.wasInterrupted())
+  // In cases with multiple levels of outlining, the tree walk might find an
+  // alloca insertion point that is inside the original function while the
+  // builder insertion point is inside the outlined function. We need to make
+  // sure that we do not use it in those cases.
+  if (walkResult.wasInterrupted() &&
+      allocaInsertPoint.getBlock()->getParent() ==
+          builder.GetInsertBlock()->getParent())
     return allocaInsertPoint;
 
   // Otherwise, insert to the entry block of the surrounding function.
@@ -4378,6 +4384,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::OpenMPIRBuilder::TargetDataInfo info(/*RequiresDevicePointerInfo=*/true,
                                              /*SeparateBeginEndCalls=*/true);
+  bool isTargetDevice = ompBuilder->Config.isTargetDevice();
+  bool isOffloadEntry =
+      isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
@@ -4467,6 +4476,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   if (failed(result))
     return failure();
+  // Pretend we have IF(false) if we're not doing offload.
+  if (!isOffloadEntry)
+    ifCond = builder.getFalse();
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   MapInfoData mapData;
