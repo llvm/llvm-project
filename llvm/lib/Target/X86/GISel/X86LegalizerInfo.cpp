@@ -418,6 +418,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasAVX512, {v16s32, v8s64})
       .legalFor(UseX87, {s80});
 
+  getActionDefinitionsBuilder(G_FABS)
+      .legalFor(UseX87 && !HasSSE2 && !HasSSE1, {s64, s80})
+      .lower();
+
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor(HasSSE1 || UseX87, {s8, s32})
