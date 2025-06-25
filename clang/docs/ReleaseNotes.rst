@@ -722,6 +722,7 @@ Bug Fixes in This Version
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
+- Fixed a bug when use unicode character name in macro concatenation. (#GH145240) 
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1069,6 +1070,9 @@ impact the linker behaviour like the other `-static-*` flags.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash in ``UnixAPIMisuseChecker`` and ``MallocChecker`` when analyzing
+  code with non-standard ``getline`` or ``getdelim`` function signatures. (#GH144884)
 
 Improvements
 ^^^^^^^^^^^^

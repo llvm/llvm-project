@@ -2304,7 +2304,7 @@ let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v2f16, "TBUFFER_STORE_FORMAT_D16_XY">;
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4f16, "TBUFFER_STORE_FORMAT_D16_XYZ", v3f16>;
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4f16, "TBUFFER_STORE_FORMAT_D16_XYZW">;
-} // End HasPackedD16VMem.
+} // End HasPackedD16VMem,HasMTBUFInsts.
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.

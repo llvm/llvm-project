@@ -1817,8 +1817,8 @@ func.func private @custom_typeP.field_1.offset() -> i32
 func.func private @custom_typeP.field_2.offset() -> i32
 
 func.func @field_index_dynamic_size() -> () {
-  %1 = fir.field_index field_1, !fir.type<custom_type{field_1:i32, field_2:!fir.array<?xf32>}>
-  %2 = fir.field_index field_2, !fir.type<custom_type{field_1:i32, field_2:!fir.array<?xf32>}>
+  %1 = fir.field_index field_1, !fir.type<custom_type(l:i32){field_1:i32, field_2:!fir.array<?xf32>}>
+  %2 = fir.field_index field_2, !fir.type<custom_type(l:i32){field_1:i32, field_2:!fir.array<?xf32>}>
   return
 }
 

@@ -1092,8 +1092,8 @@ struct Waitcnt {
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || VaVdst != ~0u ||
-           VmVsrc != ~0u || XCnt != ~0u;
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u ||
+           VaVdst != ~0u || VmVsrc != ~0u;
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }

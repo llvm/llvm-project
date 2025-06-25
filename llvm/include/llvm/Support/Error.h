@@ -1191,7 +1191,7 @@ private:
 /// (or Expected) and you want to call code that still returns
 /// std::error_codes.
 class LLVM_ABI ECError : public ErrorInfo<ECError> {
-  LLVM_ABI_FRIEND friend Error errorCodeToError(std::error_code);
+  LLVM_ABI friend Error errorCodeToError(std::error_code);
 
   void anchor() override;
 

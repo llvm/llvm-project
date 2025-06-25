@@ -249,12 +249,12 @@ unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
     return Wait.BvhCnt;
   case KM_CNT:
     return Wait.KmCnt;
+  case X_CNT:
+    return Wait.XCnt;
   case VA_VDST:
     return Wait.VaVdst;
   case VM_VSRC:
     return Wait.VmVsrc;
-  case X_CNT:
-    return Wait.XCnt;
   default:
     llvm_unreachable("bad InstCounterType");
   }
@@ -2461,6 +2461,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 
   bool IsVMEMAccess = false;
   bool IsSMEMAccess = false;
+
   if (isExpertMode(MaxCounter)) {
     if (const auto ET = getSoftwareHazardEventType(Inst))
       ScoreBrackets->updateByEvent(TII, TRI, MRI, *ET, Inst);
