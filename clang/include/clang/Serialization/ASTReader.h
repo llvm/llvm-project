@@ -373,6 +373,24 @@ struct LazySpecializationInfoLookupTable;
 
 } // namespace serialization
 
+struct VisibleLookupBlockOffsets {
+  uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  uint64_t TULocalOffset = 0;
+
+  operator bool() const {
+    return VisibleOffset || ModuleLocalOffset || TULocalOffset;
+  }
+};
+
+struct LookupBlockOffsets : VisibleLookupBlockOffsets {
+  uint64_t LexicalOffset = 0;
+
+  operator bool() const {
+    return VisibleLookupBlockOffsets::operator bool() || LexicalOffset;
+  }
+};
+
 /// Reads an AST files chain containing the contents of a translation
 /// unit.
 ///
@@ -534,13 +552,6 @@ private:
   /// Declarations that have modifications residing in a later file
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
-
-  struct LookupBlockOffsets {
-    uint64_t LexicalOffset;
-    uint64_t VisibleOffset;
-    uint64_t ModuleLocalOffset;
-    uint64_t TULocalOffset;
-  };
 
   using DelayedNamespaceOffsetMapTy =
       llvm::DenseMap<GlobalDeclID, LookupBlockOffsets>;
@@ -1443,6 +1454,12 @@ private:
     const StringRef *operator->() && = delete;
     const StringRef &operator*() && = delete;
   };
+
+  /// VarDecls with initializers containing side effects must be emitted,
+  /// but DeclMustBeEmitted is not allowed to deserialize the intializer.
+  /// FIXME: Lower memory usage by removing VarDecls once the initializer
+  /// is deserialized.
+  llvm::SmallPtrSet<Decl *, 16> InitSideEffectVars;
 
 public:
   /// Get the buffer for resolving paths.
@@ -2394,6 +2411,8 @@ public:
   ExtKind hasExternalDefinitions(const Decl *D) override;
 
   bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
+
+  bool hasInitializerWithSideEffects(const VarDecl *VD) const override;
 
   /// Retrieve a selector from the given module with its local ID
   /// number.

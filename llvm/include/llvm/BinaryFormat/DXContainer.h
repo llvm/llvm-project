@@ -13,6 +13,7 @@
 #ifndef LLVM_BINARYFORMAT_DXCONTAINER_H
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -39,6 +40,8 @@ template <typename T> struct EnumEntry;
 // └────────────────────────────────┘
 
 namespace dxbc {
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
   assert(Kind <= Triple::Amplification - Triple::Pixel &&
@@ -154,19 +157,21 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
+#define ROOT_ELEMENT_FLAG(Num, Val) Val = Num,
 enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = Num,
 enum class RootDescriptorFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
 enum class DescriptorRangeFlag : uint32_t {
 #include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS)
 };
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
@@ -181,7 +186,7 @@ enum class DescriptorRangeType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
+LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
@@ -735,15 +740,30 @@ struct RootDescriptor : public v1::RootDescriptor {
   }
 };
 
-struct DescriptorRange : public v1::DescriptorRange {
+struct DescriptorRange {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
   uint32_t Flags;
+  uint32_t OffsetInDescriptorsFromTableStart;
   void swapBytes() {
-    v1::DescriptorRange::swapBytes();
+    sys::swapByteOrder(RangeType);
+    sys::swapByteOrder(NumDescriptors);
+    sys::swapByteOrder(BaseShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
     sys::swapByteOrder(Flags);
   }
 };
 } // namespace v2
 } // namespace RTS0
+
+// D3D_ROOT_SIGNATURE_VERSION
+enum class RootSignatureVersion {
+  V1_0 = 0x1,
+  V1_1 = 0x2,
+};
 
 } // namespace dxbc
 } // namespace llvm

@@ -4420,3 +4420,32 @@ void SymbolFileDWARF::GetCompileOptions(
     args.insert({comp_unit, Args(flags)});
   }
 }
+
+std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
+  uint32_t total_dwo_count = 0;
+  uint32_t loaded_dwo_count = 0;
+
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  for (size_t cu_idx = 0; cu_idx < num_cus; cu_idx++) {
+    DWARFUnit *dwarf_cu = info.GetUnitAtIndex(cu_idx);
+    if (dwarf_cu == nullptr)
+      continue;
+
+    // Check if this is a DWO unit by checking if it has a DWO ID.
+    if (!dwarf_cu->GetDWOId().has_value())
+      continue;
+
+    total_dwo_count++;
+
+    // If we have a DWO symbol file, that means we were able to successfully
+    // load it.
+    SymbolFile *dwo_symfile =
+        dwarf_cu->GetDwoSymbolFile(/*load_all_debug_info=*/false);
+    if (dwo_symfile) {
+      loaded_dwo_count++;
+    }
+  }
+
+  return {loaded_dwo_count, total_dwo_count};
+}
