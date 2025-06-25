@@ -432,19 +432,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
 
     // Some darwins have an optimized __bzero/bzero function.
-    switch (TT.getArch()) {
-    case Triple::x86:
-    case Triple::x86_64:
+    if (TT.isX86()) {
       if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
         setLibcallName(RTLIB::BZERO, "__bzero");
-      break;
-    case Triple::aarch64:
-    case Triple::aarch64_32:
+    } else if (TT.isAArch64())
       setLibcallName(RTLIB::BZERO, "bzero");
-      break;
-    default:
-      break;
-    }
 
     if (darwinHasSinCosStret(TT)) {
       setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
