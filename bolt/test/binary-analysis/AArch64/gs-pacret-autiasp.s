@@ -1,5 +1,3 @@
-// REQUIRES: !rhel8
-
 // RUN: %clang %cflags -march=armv9.5-a+pauth-lr -mbranch-protection=pac-ret %s %p/../../Inputs/asm_main.c -o %t.exe
 // RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck %s
 
@@ -20,6 +18,10 @@ f1:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   ret
@@ -42,6 +44,10 @@ f_intermediate_overwrite1:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   autiasp
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
@@ -65,6 +71,10 @@ f_intermediate_overwrite2:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: mov     x30, x0
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autiasp
@@ -104,6 +114,10 @@ f_intermediate_overwrite3:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: mov     w30, w0
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autiasp
@@ -128,6 +142,10 @@ f_nonx30_ret:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: mov     x16, x30
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   mov     x16, x30
@@ -314,6 +332,10 @@ f_autia1716:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autia1716
@@ -336,6 +358,10 @@ f_autib1716:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autib1716
@@ -358,6 +384,10 @@ f_autiax12:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autia   x12, sp
@@ -380,6 +410,10 @@ f_autibx12:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autib   x12, sp
@@ -431,6 +465,10 @@ f_autdax12:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autda   x12, sp
@@ -453,6 +491,10 @@ f_autdbx12:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autdb   x12, sp
@@ -504,6 +546,10 @@ f_autizax12:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autiza  x12
@@ -526,6 +572,10 @@ f_autizbx12:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autizb  x12
@@ -577,6 +627,10 @@ f_autdzax12:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autdza  x12
@@ -599,6 +653,10 @@ f_autdzbx12:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autdzb  x12
@@ -857,6 +915,10 @@ f_autia171615:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autia171615
@@ -879,9 +941,20 @@ f_autib171615:
 // CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g
 // CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
 // CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT: {{[0-9a-f]+}}:   autib171615
 // CHECK-NEXT: {{[0-9a-f]+}}:   ret
         ret
         .size f_autib171615, .-f_autib171615
+
+        .globl  g
+        .type   g,@function
+g:
+        nop
+        ret
+        .size g, .-g
