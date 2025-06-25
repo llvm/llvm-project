@@ -3588,7 +3588,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
 
     // If either side isn't demanded, replace it by UNDEF. We handle this
-    // explicitly here to also simplify in case of mulitple uses (on the
+    // explicitly here to also simplify in case of multiple uses (on the
     // contrary to the SimplifyDemandedVectorElts calls below).
     bool FoldLHS = !DemandedLHS && !LHS.isUndef();
     bool FoldRHS = !DemandedRHS && !RHS.isUndef();
