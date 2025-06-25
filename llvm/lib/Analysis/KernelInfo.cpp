@@ -77,14 +77,6 @@ public:
 
 } // end anonymous namespace
 
-static DiagnosticLocation getRemarkLocation(const Instruction &I) {
-  if (DebugLoc DL = I.getDebugLoc())
-    return DiagnosticLocation(DL);
-  if (auto *SP = I.getFunction()->getSubprogram())
-    return DiagnosticLocation(SP);
-  return DiagnosticLocation();
-}
-
 static void identifyCallee(OptimizationRemark &R, const Module *M,
                            const Value *V, StringRef Kind = "") {
   SmallString<100> Name; // might be function name or asm expression
@@ -113,19 +105,16 @@ static void remarkAlloca(OptimizationRemarkEmitter &ORE, const Function &Caller,
                          TypeSize::ScalarTy StaticSize) {
   ORE.emit([&] {
     StringRef DbgName;
-    DebugLoc DL;
+    DebugLoc Loc;
     bool Artificial = false;
     auto DVRs = findDVRDeclares(&const_cast<AllocaInst &>(Alloca));
     if (!DVRs.empty()) {
       const DbgVariableRecord &DVR = **DVRs.begin();
       DbgName = DVR.getVariable()->getName();
-      DL = DVR.getDebugLoc();
+      Loc = DVR.getDebugLoc();
       Artificial = DVR.Variable->isArtificial();
     }
-
-    OptimizationRemark R(DEBUG_TYPE, "Alloca",
-                         DL ? DiagnosticLocation(DL)
-                            : getRemarkLocation(Alloca),
+    OptimizationRemark R(DEBUG_TYPE, "Alloca", DiagnosticLocation(Loc),
                          Alloca.getParent());
     R << "in ";
     identifyFunction(R, Caller);
@@ -153,8 +142,7 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
                        const CallBase &Call, StringRef CallKind,
                        StringRef RemarkKind) {
   ORE.emit([&] {
-    OptimizationRemark R(DEBUG_TYPE, RemarkKind, getRemarkLocation(Call),
-                         Call.getParent());
+    OptimizationRemark R(DEBUG_TYPE, RemarkKind, &Call);
     R << "in ";
     identifyFunction(R, Caller);
     R << ", " << CallKind << ", callee is ";
@@ -167,8 +155,7 @@ static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
                                       const Function &Caller,
                                       const Instruction &Inst) {
   ORE.emit([&] {
-    OptimizationRemark R(DEBUG_TYPE, "FlatAddrspaceAccess",
-                         getRemarkLocation(Inst), Inst.getParent());
+    OptimizationRemark R(DEBUG_TYPE, "FlatAddrspaceAccess", &Inst);
     R << "in ";
     identifyFunction(R, Caller);
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst)) {
@@ -278,11 +265,7 @@ void KernelInfo::updateForBB(const BasicBlock &BB,
 static void remarkProperty(OptimizationRemarkEmitter &ORE, const Function &F,
                            StringRef Name, int64_t Value) {
   ORE.emit([&] {
-    DiagnosticLocation DL = F.getSubprogram()
-                                ? DiagnosticLocation(F.getSubprogram())
-                                : DiagnosticLocation();
-    OptimizationRemark R(DEBUG_TYPE, Name, DL,
-                         !F.empty() ? &F.front() : nullptr);
+    OptimizationRemark R(DEBUG_TYPE, Name, &F);
     R << "in ";
     identifyFunction(R, F);
     R << ", " << Name << " = " << itostr(Value);
