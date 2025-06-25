@@ -592,6 +592,10 @@ def int_amdgcn_cvt_pk_f16_fp8 : DefaultAttrsIntrinsic<
   [llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_pk_f16_fp8">;
 
+def int_amdgcn_cvt_pk_f16_bf8 : DefaultAttrsIntrinsic<
+  [llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_cvt_pk_f16_bf8">;
+
 class AMDGPUCvtScaleF32Intrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
   [DstTy], [Src0Ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
