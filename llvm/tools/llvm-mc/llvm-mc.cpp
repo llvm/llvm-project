@@ -17,7 +17,6 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -26,7 +25,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -39,13 +37,10 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/UnwindInfoChecker/FunctionUnitStreamer.h"
 #include "llvm/UnwindInfoChecker/FunctionUnitUnwindInfoAnalyzer.h"
 #include <memory>
-#include <optional>
 
 using namespace llvm;
 
@@ -122,7 +117,11 @@ static cl::opt<unsigned> CommentColumn("comment-column",
                                        cl::desc("Asm comments indentation"),
                                        cl::init(40));
 
-enum OutputFileType { OFT_Null, OFT_AssemblyFile, OFT_ObjectFile };
+enum OutputFileType {
+  OFT_Null,
+  OFT_AssemblyFile,
+  OFT_ObjectFile
+};
 static cl::opt<OutputFileType>
     FileType("filetype", cl::init(OFT_AssemblyFile),
              cl::desc("Choose an output file type:"),
@@ -249,8 +248,8 @@ static const Target *GetTarget(const char *ProgName) {
 
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(ArchName, TheTriple,
+                                                         Error);
   if (!TheTarget) {
     WithColor::error(errs(), ProgName) << Error;
     return nullptr;
@@ -261,8 +260,8 @@ static const Target *GetTarget(const char *ProgName) {
   return TheTarget;
 }
 
-static std::unique_ptr<ToolOutputFile>
-GetOutputStream(StringRef Path, sys::fs::OpenFlags Flags) {
+static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path,
+    sys::fs::OpenFlags Flags) {
   std::error_code EC;
   auto Out = std::make_unique<ToolOutputFile>(Path, EC, Flags);
   if (EC) {
@@ -286,12 +285,13 @@ static void setDwarfDebugFlags(int argc, char **argv) {
 
 static std::string DwarfDebugProducer;
 static void setDwarfDebugProducer() {
-  if (!getenv("DEBUG_PRODUCER"))
+  if(!getenv("DEBUG_PRODUCER"))
     return;
   DwarfDebugProducer += getenv("DEBUG_PRODUCER");
 }
 
-static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
+static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
+                      raw_ostream &OS) {
 
   AsmLexer Lexer(MAI);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID())->getBuffer());
@@ -308,7 +308,7 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
 }
 
 static int fillCommandLineSymbols(MCAsmParser &Parser) {
-  for (auto &I : DefineSymbol) {
+  for (auto &I: DefineSymbol) {
     auto Pair = StringRef(I).split('=');
     auto Sym = Pair.first;
     auto Val = Pair.second;
@@ -332,7 +332,8 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
                          SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
                          MCInstrInfo &MCII, MCTargetOptions const &MCOptions) {
-  std::unique_ptr<MCAsmParser> Parser(createMCAsmParser(SrcMgr, Ctx, Str, MAI));
+  std::unique_ptr<MCAsmParser> Parser(
+      createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
 
@@ -343,7 +344,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   }
 
   int SymbolResult = fillCommandLineSymbols(*Parser);
-  if (SymbolResult)
+  if(SymbolResult)
     return SymbolResult;
   Parser->setShowParsedOperands(ShowInstOperands);
   Parser->setTargetParser(*TAP);
