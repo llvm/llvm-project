@@ -77,7 +77,7 @@ information on other ways to engage with the community.
 Making and Submitting a Patch
 -----------------------------
 
-Submitting patches for review is straightforward with GitHub. Follow the
+Patches are submitted to GitHub and reviewed using Pull Requests. Follow the
 :ref:`Getting Started Guide <sources>` to check out sources, make a patch, and
 then follow the :ref:`GitHub Pull Request <github-reviews>` guide to upload a
 pull request.
@@ -90,7 +90,8 @@ Here are some tips to enable a successful code review:
 
 * Identify 2-3 individuals to review the patch. Look through the relevant
   :ref:`Maintainers` file or browse git blame for likely stakeholders for the
-  code you want to modify.
+  code you want to modify, and add ``@username`` to a PR comment to notify them
+  of your PR.
 
 * To avoid precommit CI failures due to merge conflicts, base your patches on a recent commit from ``main``. If you want to make changes to a release branch, land
   a change in ``main`` first and ask a release manager to backport it.
@@ -222,13 +223,17 @@ features added.  Some tips for getting your testcase approved:
   appropriate sub-directory should be selected (see the
   :doc:`Testing Guide <TestingGuide>` for details).
 
+* We prefer that functional changes are tested using ``FileCheck`` and the tool
+  that fits most closely with the code being modified. For example, ``opt`` is
+  used to test IR transformations, ``llc`` for backend changes, and ``clang``
+  for frontend changes. Some components have scripts for generating and
+  updating golden tests in the ``utils/`` subproject directory, i.e.
+  `mlir/utils/generate-test-checks.py <https://github.com/llvm/llvm-project/blob/main/mlir/utils/generate-test-checks.py>`_
+  and `llvm/utils/update_llc_test_checks.py <https://github.com/llvm/llvm-project/blob/main/llvm/utils/update_llc_test_checks.py>`_
+
 * Changes to libraries, such as Support, which are not directly observable
   through tool invocations, are often best tested with unit tests. Unit tests
   are located under the ``unittests`` subdirectory of each subproject.
-
-* Test cases are written in the relevant input language of the relevant
-  component. For LLVM, this is typically the :doc:`LLVM assembly language
-  <LangRef>`. For Clang, it is often C/C++/ObjC.
 
 * Test cases should be targeted. Large inputs exhibiting bugs should be reduced
   with tools like ``llvm-reduce`` before committing them to the suite. It is not
@@ -240,11 +245,14 @@ features added.  Some tips for getting your testcase approved:
   documentation, etc. Instead, add sufficient comments to the test to provide
   the context behind such links.
 
-Note that ``llvm/test`` and ``clang/test`` are designed for regression and small
-feature tests only. More extensive test cases (e.g., entire applications,
-benchmarks, etc) should be added to the ``llvm-test`` test suite.  The ``llvm-test``
-suite is for integration and application testing (correctness, performance, etc)
-testing, not feature or regression testing.
+Note that ``llvm/test`` and ``clang/test`` are designed for regression and
+small feature tests only. More extensive test cases (e.g., entire applications,
+benchmarks, etc) should be added to the
+`llvm-test-suite <https://github.com/llvm/llvm-test-suite>`_ repository.  The
+``llvm-test-suite`` repository is for integration and application testing
+(correctness, performance, etc) testing, not feature or regression testing. It
+also serves to separate out third party code that falls under a different
+license.
 
 Release Notes
 -------------
@@ -340,11 +348,11 @@ you follow these guidelines to help review, search in logs, email formatting
 and so on. These guidelines are very similar to rules used by other open source
 projects.
 
-Commit messages should communicate briefly what the change does, and provide
-background, possibly with context, for why the change is being made. Commit
-messages should be thoughtfully written and specific, rather than vague. For
-example, "bits were not set right" will leave the reviewer wondering about which
-bits, and why they weren't right, while "Correctly set overflow bits in
+Commit messages should communicate briefly what the change does, but they
+should really emphasize why a change is being made and provide useful context.
+Commit messages should be thoughtfully written and specific, rather than vague.
+For example, "bits were not set right" will leave the reviewer wondering about
+which bits, and why they weren't right, while "Correctly set overflow bits in
 TargetInfo" conveys almost all there is to the change.
 
 Below are some guidelines about the format of the message itself:
@@ -399,9 +407,15 @@ Below are some guidelines about the format of the message itself:
   message self-explanatory. Note that such non-public links should not be
   included in the submitted code.
 
+LLVM uses a squash workflow for pull requests, so as the pull request evolves
+during review, it's important to update the pull request description over the
+course of a review. GitHub uses the initial commit message to create the pull
+request description, but it ignores all subsequent commit messages. Authors and
+reviewers should make a final editing pass over the squashed commit description when
+squashing and merging PRs.
+
 For minor violations of these recommendations, the community normally favors
-reminding the contributor of this policy over reverting. Minor corrections and
-omissions can be handled by sending a reply to the commits mailing list.
+reminding the contributor of this policy over reverting.
 
 .. _revert_policy:
 
@@ -571,7 +585,21 @@ significant effort in an implementation. Prototype implementations, however, can
 often be helpful in making design discussions more concrete by demonstrating
 what is possible.
 
-TODO: Elaborate on best practices for making a successful RFC.
+These are some suggestions for how to get a major change accepted:
+
+* Make it targeted, and avoid touching components irrelevant to the task
+
+* Explain how the change improves LLVM for other stakeholders rather than
+  focusing on your specific use case.
+
+* As discussion evolves, periodically summarize the current state of the
+  discussion and clearly separate points where consensus seems to emerge from
+  those where further discussion is necessary.
+
+* Compilers are foundational infrastructure, so there is a high quality bar,
+  and the burden of proof is on the proposer. If reviewers repeatedly ask for
+  an unreasonable amount of evidence or data, proposal authors can escalate to
+  the area team to resolve disagreements.
 
 After posting a major proposal, it is common to receive lots of conflicting
 feedback from different parties, or no feedback at all, leaving authors without
