@@ -21,3 +21,15 @@ module {
 cir.global external @ci2 = #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s64i> : !cir.complex<!s32i>
 
 }
+
+// -----
+
+module {
+  cir.func @complex_real_invalid_result_type() -> !cir.double {
+    %0 = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
+    %2 = cir.load align(8) %0 : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+    // expected-error @below {{result type does not match operand type}}
+    %3 = cir.complex.real %2 : !cir.complex<!cir.double> -> !cir.float
+    cir.return
+  }
+}
