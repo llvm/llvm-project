@@ -7289,7 +7289,6 @@ private:
     // components.
     bool IsExpressionFirstInfo = true;
     bool FirstPointerInComplexData = false;
-    bool SkipStandalonePtrMapping = false;
     Address BP = Address::invalid();
     const Expr *AssocExpr = I->getAssociatedExpression();
     const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
@@ -7299,9 +7298,11 @@ private:
     // ATTACH entries are generated based solely on array section presence
 
     // Track info for ATTACH entry generation
-    bool ShouldGenerateAttachEntry = false;
     Address AttachBaseAddr = Address::invalid();
     Address AttachFirstElemAddr = Address::invalid();
+
+    // Find the component that should use ATTACH-style mapping.
+    auto AttachInfo = findAttachComponent(Components);
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
@@ -7631,40 +7632,25 @@ private:
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
-        // Check if this is an array section or subscript on a standalone pointer (not struct member)
-        bool IsArraySectionOnPointer = false;
         
         // Lambda to handle BP loading for global pointers
-        auto LoadGlobalPointerIfNeeded = [&]() {
-          if (FirstPointerInComplexData) {
-            QualType Ty = Components.rbegin()
-                              ->getAssociatedDeclaration()
-                              ->getType()
-                              .getNonReferenceType();
-            BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
-            FirstPointerInComplexData = false;
-          }
-        };
-        
-        // Check if we should use ATTACH-style mapping for this expression
-        IsArraySectionOnPointer = shouldUseAttachStyleMapping(I->getAssociatedExpression(), EncounteredME != nullptr);
-        
-        if (IsArraySectionOnPointer) {
-          // For global pointers, load the pointer value so BP points to &p[0] instead of &p
-          LoadGlobalPointerIfNeeded();
-          // Set flags for ATTACH entry generation (only for the first array section/subscript we encounter)
-          if (!ShouldGenerateAttachEntry) {
-            ShouldGenerateAttachEntry = true;
-            if (OASE) {
-              AttachBaseAddr = CGF.EmitLValue(OASE->getBase()).getAddress();
-              AttachFirstElemAddr = CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
-            } else if (ASE) {
-              AttachBaseAddr = CGF.EmitLValue(ASE->getBase()).getAddress();
-              AttachFirstElemAddr = CGF.EmitLValue(ASE).getAddress();
-            }
-          }
-        }
-        
+//         auto LoadGlobalPointerIfNeeded = [&]() {
+//           if (FirstPointerInComplexData) {
+//             llvm::errs() << "DEBUG generateInfoForComponentList: LoadGlobalPointerIfNeeded - updating BP\n";
+//             llvm::errs() << "  Original BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+//             QualType Ty = Components.rbegin()
+//                               ->getAssociatedDeclaration()
+//                               ->getType()
+//                               .getNonReferenceType();
+//             BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
+//             llvm::errs() << "  Updated BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+//             FirstPointerInComplexData = false;
+//           }
+//         };
+//         (void) LoadGlobalPointerIfNeeded;
+//
+// //        if (IsAttachablePointeeExpr)
+//   //        LoadGlobalPointerIfNeeded();
         // Skip adding an entry in the CurInfo of this combined entry if the
         // whole struct is currently being mapped. The struct needs to be added
         // in the first position before any data internal to the struct is being
@@ -7710,8 +7696,8 @@ private:
           // (there is a set of entries for each capture).
           // Don't use PTR_AND_OBJ when we have array sections/subscripts on pointers
           bool AddPtrFlag = (!IsExpressionFirstInfo || RequiresReference ||
-                             FirstPointerInComplexData || IsMemberReference) &&
-                            !IsArraySectionOnPointer;
+                             FirstPointerInComplexData || IsMemberReference); //&&
+                            // !IsAttachablePointeeExpr;
           OpenMPOffloadMappingFlags Flags =
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
                              AddPtrFlag, IsCaptureFirstInfo && !RequiresReference,
@@ -7781,6 +7767,24 @@ private:
         if (IsFinalArraySection || IsNonContiguous)
           PartialStruct.IsArraySection = true;
 
+        if (Next == CE) {
+          // Generate ATTACH entry for array sections and subscripts on standalone
+          // pointers Info was already collected during the main component loop
+          // Check if we should use ATTACH-style mapping for this expression
+          bool IsAttachablePointeeExpr = AttachInfo.IsValid && AttachInfo.BasePtrDecl && AttachInfo.BasePtrDecl == BaseDecl;
+          if (IsAttachablePointeeExpr) {
+            // Use BasePtrExpr for AttachBaseAddr
+            AttachBaseAddr = CGF.EmitLValue(AttachInfo.BasePtrExpr).getAddress();
+            if (OASE) {
+              AttachFirstElemAddr = CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
+            } else if (ASE) {
+              AttachFirstElemAddr = CGF.EmitLValue(ASE).getAddress();
+            } else if (auto *ME = dyn_cast<MemberExpr>(I->getAssociatedExpression())) {
+               AttachFirstElemAddr = CGF.EmitMemberExpr(ME).getAddress();
+               llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+          }
+        }
+
         // If we have a final array section, we are done with this expression.
         if (IsFinalArraySection)
           break;
@@ -7807,20 +7811,12 @@ private:
     if (!EncounteredME)
       PartialStruct.HasCompleteRecord = true;
 
-    // Generate ATTACH entry for array sections and subscripts on standalone
-    // pointers Info was already collected during the main component loop
-
-    if (ShouldGenerateAttachEntry && AttachBaseAddr.isValid() &&
-        AttachFirstElemAddr.isValid()) {
+    // Don't do this yet for member-exprs, like map(s.p[0:10])
+    if (AttachBaseAddr.isValid() && AttachFirstElemAddr.isValid()) {
       // Generate ATTACH entry: &pointer, &pointer[idx], sizeof(pointer), ATTACH
-      // Since this is for standalone pointers only, we use CombinedInfo
-      CombinedInfo.Exprs.emplace_back(BaseDecl, MapExpr);
-      CombinedInfo.BasePointers.push_back(AttachBaseAddr.emitRawPointer(CGF));
-      CombinedInfo.DevicePtrDecls.push_back(nullptr);
-      CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-      CombinedInfo.Pointers.push_back(AttachFirstElemAddr.emitRawPointer(CGF));
-      // Size is the size of the pointer itself - use pointer size, not BaseDecl
-      // size
+      // Use StructBaseCombinedInfo if mapping whole struct, otherwise use CombinedInfo
+      
+      // Size is the size of the pointer itself - use pointer size, not BaseDecl size
       llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
           llvm::ConstantInt::get(
               CGF.CGM.SizeTy,
@@ -7831,8 +7827,15 @@ private:
       CombinedInfo.Sizes.push_back(PointerSize);
       // ATTACH flag
       CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
-      CombinedInfo.Mappers.push_back(nullptr);
-      CombinedInfo.NonContigInfo.Dims.push_back(1);
+      StructBaseCombinedInfo.Exprs.emplace_back(BaseDecl, MapExpr);
+      StructBaseCombinedInfo.BasePointers.push_back(AttachBaseAddr.emitRawPointer(CGF));
+      StructBaseCombinedInfo.DevicePtrDecls.push_back(nullptr);
+      StructBaseCombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+      StructBaseCombinedInfo.Pointers.push_back(AttachFirstElemAddr.emitRawPointer(CGF));
+      StructBaseCombinedInfo.Sizes.push_back(PointerSize);
+      StructBaseCombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+      StructBaseCombinedInfo.Mappers.push_back(nullptr);
+      StructBaseCombinedInfo.NonContigInfo.Dims.push_back(1);
     }
 
     if (!IsNonContiguous)
@@ -8108,46 +8111,87 @@ private:
     }
   }
 
-  /// Helper to check if we should use ATTACH-style mapping for single-level
-  /// pointers This is used for both ATTACH generation and use_device_ptr
-  /// consistency
-  static bool shouldUseAttachStyleMapping(const Expr *E,
-                                          bool IsInStructContext) {
-    if (IsInStructContext)
-    const Expr *BaseExpr = nullptr;
-    if (const auto *OASE = dyn_cast<ArraySectionExpr>(E)) {
-      if (!ArraySectionExpr::getBaseOriginalType(OASE->getBase())
-               .getCanonicalType()
+/// Result structure for findAttachComponent
+struct AttachInfo {
+  const Expr *BasePtrExpr = nullptr;  // The pointer expression
+  const ValueDecl *BasePtrDecl = nullptr;  // The pointer decl, if any
+  const Expr *PteeExpr = nullptr;     // The array section/subscript expression
+  bool IsValid = false;
+};
+
+static AttachInfo findAttachComponent(
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
                ->isAnyPointerType())
         return false;
       BaseExpr = OASE->getBase();
-    } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-      if (!ArraySectionExpr::getBaseOriginalType(ASE->getBase())
+  const auto *Begin = Components.begin();
+  const auto *End = Components.end();
                .getCanonicalType()
                ->isAnyPointerType())
         return false;
       BaseExpr = ASE->getBase();
     } else {
-      return false;
+  for (const auto *I = Begin; I != End; ++I) {
+    // Check if current component is an array section or subscript
+    const Expr *CurrentExpr = I->getAssociatedExpression();
+    if (!CurrentExpr) {
+      break;
     }
 
-    // Only handle simple variable references to single-level pointers
-    // Skip complex expressions like (*q)[3:10] and multi-level pointers like
-    // q[1][3:5]
-    if (const auto *DRE =
+    // For something like p->s[1].q[10], the pointee should be "p->s[1].q",
+    // while base-ptr would be p.
+    const auto *ME = dyn_cast<MemberExpr>(CurrentExpr);
+    if (ME) {
             dyn_cast<DeclRefExpr>(BaseExpr->IgnoreParenImpCasts())) {
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (!ME->isArrow()) {
         // Check that the original declaration is a single-level pointer, not
-        // pointer-to-pointer
-        QualType DeclType =
-            VD->getType().getNonReferenceType().getCanonicalType();
-        bool result = DeclType->isPointerType() &&
-               !DeclType->getPointeeType()->isPointerType();
-        return result;
+        PreviousMemberExpr = CurrentExpr;  // Track this as potential PteeExpr
+        continue;
       }
     }
     return false;
+    const auto *OASE = dyn_cast<ArraySectionExpr>(CurrentExpr);
+    const auto *ASE = dyn_cast<ArraySubscriptExpr>(CurrentExpr);
+
+    if (!OASE && !ASE && !ME) {
+      break;
+    }
+
+    // Check if the next component (in forward direction) has a pointer type
+    const auto *NextI = std::next(I);
+    if (NextI == End) {
+      // Check if the next component (in forward direction) has a pointer type
+      break;
+    }
+
+   // Get the type of the next component
+   QualType NextType;
+   if (const auto *NextDecl = NextI->getAssociatedDeclaration()) {
+     NextType = NextDecl->getType().getNonReferenceType().getCanonicalType();
+   } else if (const auto *NextExpr = NextI->getAssociatedExpression()) {
+     NextType = NextExpr->getType().getNonReferenceType().getCanonicalType();
+   } else {
+     break;
+   }
+
+   // Stop if the next component is a pointer type - this means we found our component
+   if (!NextType->isPointerType())
+     continue;
+
+      llvm::errs() << "DEBUG findAttachComponent: Next component not pointer type, continuing\n";
+    }
   }
+
+   // Get the pointer expression (NextRI) and use the candidate PteeExpr
+   const Expr *BasePtrExpr = NextI->getAssociatedExpression();
+   const ValueDecl *BasePtrDecl = NextI->getAssociatedDeclaration();
+   const Expr *PteeExpr = CurrentExpr;
+
+   return AttachInfo{BasePtrExpr, BasePtrDecl, BeginExpr, true};
+ }
+
+  return AttachInfo{};
+}
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
   /// mappers for the extracted mappable expressions (all included in \a
@@ -8303,24 +8347,7 @@ private:
           }
         };
 
-    // Helper to check if a component list uses ATTACH-style mapping for
-    // single-level pointers
-    auto ComponentListUsesAttachStyleMapping =
-        [](const auto &Components) -> bool {
-      if (Components.empty())
-        return false;
-
-      // Check if any component uses ATTACH-style mapping
-      for (const auto &Component : Components) {
-        const Expr *E = Component.getAssociatedExpression();
-        if (E && shouldUseAttachStyleMapping(E, false)) {
-          return true;
-        }
-      }
-      return false;
-    };
-
-    auto &&IsMapInfoExist = [&Info, &ComponentListUsesAttachStyleMapping](CodeGenFunction &CGF, const ValueDecl *VD,
+    auto &&IsMapInfoExist = [&Info](CodeGenFunction &CGF, const ValueDecl *VD,
                                     const Expr *IE, bool IsDevAddr) -> bool {
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
