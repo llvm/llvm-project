@@ -50,6 +50,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -6487,14 +6488,14 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // without any additional checking.
   if (Fn->getType() == Context.BuiltinFnTy && ArgExprs.size() == 1 &&
       ArgExprs[0]->getType() == Context.BuiltinFnTy) {
-    auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
+    const auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
 
     if (FD->getName() == "__builtin_amdgcn_is_invocable") {
-      auto FnPtrTy = Context.getPointerType(FD->getType());
-      auto *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
-      return CallExpr::Create(Context, R, ArgExprs, Context.VoidTy,
-                              ExprValueKind::VK_PRValue, RParenLoc,
-                              FPOptionsOverride());
+      QualType FnPtrTy = Context.getPointerType(FD->getType());
+      Expr *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
+      return CallExpr::Create(
+          Context, R, ArgExprs, Context.AMDGPUFeaturePredicateTy,
+          ExprValueKind::VK_PRValue, RParenLoc, FPOptionsOverride());
     }
   }
 
@@ -15748,7 +15749,9 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
         // Vector logical not returns the signed variant of the operand type.
         resultType = GetSignedVectorType(resultType);
         break;
-      } else if (IsAMDGPUPredicateBI(InputExpr)) {
+      } else if (resultType == Context.AMDGPUFeaturePredicateTy) {
+        resultType = Context.getLogicalOperationType();
+        Input = AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast<CallExpr>(InputExpr));
         break;
       } else {
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
@@ -20555,13 +20558,8 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
   E = result.get();
 
   if (!E->isTypeDependent()) {
-    if (E->getType()->isVoidType()) {
-      bool InvalidPredicate = false;
-      if (auto *BIC = MaybeHandleAMDGPUPredicateBI(*this, E, InvalidPredicate))
-        return BIC;
-      else if (InvalidPredicate)
-        return ExprError();
-    }
+    if (E->getType() == Context.AMDGPUFeaturePredicateTy)
+      return AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast_or_null<CallExpr>(E));
 
     if (getLangOpts().CPlusPlus)
       return CheckCXXBooleanCondition(E, IsConstexpr); // C++ 6.4p4

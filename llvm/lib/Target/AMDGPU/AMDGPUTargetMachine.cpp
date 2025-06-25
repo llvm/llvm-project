@@ -876,6 +876,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
     }
   });
 
+  PB.registerFullLinkTimeOptimizationEarlyEPCallback(
+    [this](ModulePassManager &PM, OptimizationLevel) {
+      PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
+    });
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         // Promote kernel arguments to global address space for LLVM IR

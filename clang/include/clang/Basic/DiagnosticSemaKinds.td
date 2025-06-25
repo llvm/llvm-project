@@ -11695,9 +11695,9 @@ def err_omp_inscan_reduction_expected : Error<
 def note_omp_previous_inscan_reduction : Note<
   "'reduction' clause with 'inscan' modifier is used here">;
 def err_omp_multivar_xteam_scan_unsupported : Error<
-  "multiple list items are not yet supported with the 'inclusive' or the 'exclusive' clauses that appear with the 'scan' directive">;  
+  "multiple list items are not yet supported with the 'inclusive' or the 'exclusive' clauses that appear with the 'scan' directive">;
 def err_omp_xteam_scan_prohibited : Error<
-  "'scan' directive is not supported inside target regions. Use flag '-fopenmp-target-xteam-scan' to enable it">;  
+  "'scan' directive is not supported inside target regions. Use flag '-fopenmp-target-xteam-scan' to enable it">;
 def err_omp_expected_predefined_allocator : Error<
   "expected one of the predefined allocators for the variables with the static "
   "storage: 'omp_default_mem_alloc', 'omp_large_cap_mem_alloc', "
@@ -12915,8 +12915,19 @@ def err_amdgcn_processor_is_arg_not_literal
 def err_amdgcn_processor_is_arg_invalid_value
     : Error<"the argument to __builtin_amdgcn_processor_is must be a valid "
             "AMDGCN processor identifier; '%0' is not valid">;
+def note_amdgcn_processor_is_valid_options
+    : Note<"valid AMDGCN processor identifiers are: %0">;
 def err_amdgcn_is_invocable_arg_invalid_value
     : Error<"the argument to __builtin_amdgcn_is_invocable must be either a "
             "target agnostic builtin or an AMDGCN target specific builtin; `%0`"
             " is not valid">;
+def err_amdgcn_predicate_type_is_not_constructible
+    : Error<"%0 has type __amdgpu_feature_predicate_t, which is not"
+            " constructible">;
+def err_amdgcn_predicate_type_needs_explicit_bool_cast
+    : Error<"%0 must be explicitly cast to %1; however, please note that this "
+            "is almost always an error and that it prevents the effective "
+            "guarding of target dependent code, and thus should be avoided">;
+def note_amdgcn_protected_by_predicate : Note<"jump enters statement controlled"
+                                              " by AMDGPU feature predicate">;
 } // end of sema component.

@@ -8,7 +8,7 @@
 
 declare void @llvm.amdgcn.s.sleep(i32 immarg) #1
 
-define amdgpu_kernel void @kernel(ptr addrspace(1) readnone nocapture %p.coerce, i32 %x, ptr addrspace(1) %pfn.coerce) {
+define amdgpu_kernel void @kernel(ptr addrspace(1) readnone captures(none) %p.coerce, i32 %x, ptr addrspace(1) %pfn.coerce) {
 entry:
   %0 = ptrtoint ptr addrspace(1) %pfn.coerce to i64
   %1 = inttoptr i64 %0 to ptr

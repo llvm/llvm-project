@@ -19823,7 +19823,7 @@ static Value *GetOrInsertAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   P->setExternallyInitialized(true);
 
   return CGF.Builder.CreateLoad(
-      RawAddress(P, PTy, CharUnits::One(), KnownNonNull));
+      RawAddress(P, PTy, CharUnits::One(), KnownNonNull), true);
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
