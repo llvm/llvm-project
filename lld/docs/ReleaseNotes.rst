@@ -62,6 +62,10 @@ ELF Improvements
   on executable sections.
   (`#128883 <https://github.com/llvm/llvm-project/pull/128883>`_)
 
+* For AArch64 and X86_64, added ``--branch-to-branch``, which rewrites branches
+  that point to another branch instruction to instead branch directly to the
+  target of the second instruction. Enabled by default at ``-O2``.
+  
 Breaking changes
 ----------------
 * Executable-only and readable-executable sections are now allowed to be placed
