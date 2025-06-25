@@ -307,7 +307,7 @@ Changes to LLDB
 * Disassembly of unknown instructions now produces "<unknown>" instead of
   nothing at all
 * Changed the format of opcode bytes to match llvm-objdump when disassembling
-  RISC-V code with disassemble's --byte option.
+  RISC-V code with `disassemble`'s `--byte` option.
 
 ### Changes to lldb-dap
 

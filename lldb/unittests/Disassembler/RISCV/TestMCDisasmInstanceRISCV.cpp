@@ -61,12 +61,6 @@ TEST_F(TestMCDisasmInstanceRISCV, TestRISCV32Instruction) {
       arch, nullptr, nullptr, nullptr, nullptr, start_addr, &data, sizeof(data),
       num_of_instructions, false);
 
-  // If we failed to get a disassembler, we can assume it is because
-  // the llvm we linked against was not built with the riscv target,
-  // and we should skip these tests without marking anything as failing.
-  if (!disass_sp)
-    return;
-
   const InstructionList inst_list(disass_sp->GetInstructionList());
   EXPECT_EQ(num_of_instructions, inst_list.GetSize());
 
@@ -134,12 +128,6 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
   disass_sp = Disassembler::DisassembleBytes(
       arch, nullptr, nullptr, nullptr, nullptr, start_addr, &data, sizeof(data),
       num_of_instructions, false);
-
-  // If we failed to get a disassembler, we can assume it is because
-  // the llvm we linked against was not built with the riscv target,
-  // and we should skip these tests without marking anything as failing.
-  if (!disass_sp)
-    return;
 
   const InstructionList inst_list(disass_sp->GetInstructionList());
   EXPECT_EQ(num_of_instructions, inst_list.GetSize());
