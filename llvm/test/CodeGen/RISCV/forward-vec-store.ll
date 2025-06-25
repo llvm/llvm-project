@@ -4,19 +4,19 @@
 define void @forward_store(<32 x half> %halves, ptr %p, ptr %p2, ptr %p3, ptr %p4) {
 ; CHECK-LABEL: forward_store:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a4, a0, 16
-; CHECK-NEXT:    li a5, 32
-; CHECK-NEXT:    vsetvli zero, a5, e16, m4, ta, ma
+; CHECK-NEXT:    li a4, 32
+; CHECK-NEXT:    vsetivli zero, 8, e16, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v16, v8, 8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v12, v8, 16
+; CHECK-NEXT:    vsetvli zero, a4, e16, m4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    addi a5, a0, 32
-; CHECK-NEXT:    addi a0, a0, 48
+; CHECK-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 24
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a4)
-; CHECK-NEXT:    vle16.v v9, (a5)
-; CHECK-NEXT:    vle16.v v10, (a0)
-; CHECK-NEXT:    vse16.v v8, (a1)
-; CHECK-NEXT:    vse16.v v9, (a2)
-; CHECK-NEXT:    vse16.v v10, (a3)
+; CHECK-NEXT:    vse16.v v16, (a1)
+; CHECK-NEXT:    vse16.v v12, (a2)
+; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
   store <32 x half> %halves, ptr %p, align 256
   %gep1 = getelementptr inbounds nuw i8, ptr %p, i32 16
