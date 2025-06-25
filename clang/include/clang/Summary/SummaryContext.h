@@ -36,6 +36,7 @@ public:
 };
 
 class SummaryContext {
+public:
   std::map<SmallVector<char>, const FunctionSummary *> IDToSummary;
   std::vector<std::unique_ptr<FunctionSummary>> FunctionSummaries;
 
@@ -48,7 +49,6 @@ class SummaryContext {
 
   template <typename T> void registerAttr();
 
-public:
   SummaryContext();
 
   const FunctionSummary *GetSummary(const FunctionDecl *FD) const;

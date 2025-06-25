@@ -972,6 +972,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // FIXME: cleanup and lookup dirs recursively
   if (!CI.getFrontendOpts().SummaryDirPath.empty()) {
+    // FIXME: this is a quick shortcut so large summaries are only evaluated
+    // once, we should think about implementing it in a reasonable way...
+    static const char *reducedCache =
+        "reduced-summary-so-that-we-do-not-have-to-evaluate-it-every-time.json";
     FileManager &FileMgr = CI.getFileManager();
 
     StringRef SummaryDirPath = CI.getFrontendOpts().SummaryDirPath;
@@ -981,23 +985,49 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       llvm::sys::path::native(SummaryDir->getName(), DirNative);
 
       llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
-      for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
-                                         DirEnd;
-           Dir != DirEnd && !EC; Dir.increment(EC)) {
-        if (llvm::sys::path::extension(Dir->path()) == ".json") {
-          std::ifstream t(Dir->path().str());
-          std::stringstream buffer;
-          buffer << t.rdbuf();
+      std::string cacheFile = DirNative.str().str() + '/' + reducedCache;
 
-          auto JSON = llvm::json::parse(buffer.str());
-          if (!JSON)
+      std::vector<std::string> paths;
+
+      if (FS.exists(cacheFile)) {
+        paths.emplace_back(cacheFile);
+      } else {
+        for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
+                                           DirEnd;
+             Dir != DirEnd && !EC; Dir.increment(EC)) {
+          if (llvm::sys::path::extension(Dir->path()) != ".json")
             continue;
 
-          CI.getSummaryContext().ParseSummaryFromJSON(*JSON->getAsArray());
+          paths.emplace_back(Dir->path().str());
         }
       }
 
+      for (auto &&path : paths) {
+        std::ifstream t(path);
+        std::stringstream buffer;
+        buffer << t.rdbuf();
+
+        auto JSON = llvm::json::parse(buffer.str());
+        if (!!JSON)
+          CI.getSummaryContext().ParseSummaryFromJSON(*JSON->getAsArray());
+
+        llvm::handleAllErrors(
+            JSON.takeError(),
+            [](const llvm::ErrorInfoBase &EI) { std::ignore = EI.message(); });
+      }
+
       CI.getSummaryContext().ReduceSummaries();
+
+      if (!FS.exists(cacheFile)) {
+        // FIXME: very quick printing of the summary to the cache file
+        llvm::raw_fd_ostream fd(cacheFile, EC, llvm::sys::fs::CD_CreateAlways);
+
+        JSONPrintingSummaryConsumer printer(CI.getSummaryContext(), fd);
+        printer.ProcessStartOfSourceFile();
+        for (auto &&Summary : CI.getSummaryContext().FunctionSummaries)
+          printer.ProcessFunctionSummary(*Summary);
+        printer.ProcessEndOfSourceFile();
+      }
     }
   }
 

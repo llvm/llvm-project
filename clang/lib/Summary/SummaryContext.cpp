@@ -30,6 +30,10 @@ class CallCollector : public ast_matchers::MatchFinder::MatchCallback {
       return;
     }
 
+    if (Result.SourceManager->isInSystemHeader(Callee->getLocation()) ||
+        Callee->getBuiltinID())
+      return;
+
     if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(Callee);
         MD && MD->isVirtual()) {
       callsOpaqueSymbol = true;
@@ -76,6 +80,9 @@ void SummaryContext::CreateSummary(SmallVector<char> ID,
                                    std::set<const SummaryAttr *> Attrs,
                                    std::set<SmallVector<char>> Calls,
                                    bool CallsOpaque) {
+  if (IDToSummary.count(ID))
+    return;
+
   auto Summary = std::make_unique<FunctionSummary>(
       std::move(ID), std::move(Attrs), std::move(Calls), CallsOpaque);
   auto *SummaryPtr = FunctionSummaries.emplace_back(std::move(Summary)).get();
@@ -101,6 +108,7 @@ void SummaryContext::SummarizeFunctionBody(const FunctionDecl *FD) {
   CreateSummary(GetUSR(FD), std::move(Attrs), std::move(calls), opaque);
 }
 
+// FIXME: this needs proper error handling
 void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
   for (auto it = Summary.begin(); it != Summary.end(); ++it) {
     const llvm::json::Object *FunctionSummary = it->getAsObject();

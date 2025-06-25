@@ -16695,7 +16695,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
 
-  if (SummaryCnsmr && !LateTemplateParser) {
+  // FIXME: checking this should be done by the summary context
+  if (SummaryCnsmr && !LateTemplateParser && FD &&
+      !SourceMgr.isInSystemHeader(FD->getLocation()) && !FD->getBuiltinID()) {
     SummaryCtx->SummarizeFunctionBody(FD);
     SummaryCnsmr->ProcessFunctionSummary(*SummaryCtx->GetSummary(FD));
   }
