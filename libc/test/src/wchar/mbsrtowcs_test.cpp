@@ -102,9 +102,9 @@ TEST_F(LlvmLibcMBSRToWCSTest, NullDestination) {
   // Four laughing cat emojis "😹😹😹😹"
   const char *src =
       "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(nullptr, &src, 5, nullptr);
+  size_t n = LIBC_NAMESPACE::mbsrtowcs(nullptr, &src, 2, nullptr);
   ASSERT_ERRNO_SUCCESS();
-  // Null destination should still return correct number of read chars
+  // Null destination should ignore len and read till end of string
   ASSERT_EQ(static_cast<int>(n), 4);
 }
 

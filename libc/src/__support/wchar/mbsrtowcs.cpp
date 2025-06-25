@@ -22,12 +22,13 @@ namespace internal {
 ErrorOr<size_t> mbsrtowcs(wchar_t *__restrict dst, const char **__restrict src,
                           size_t len, mbstate *__restrict ps) {
   size_t i = 0;
+  constexpr size_t MAX_UTF8_LENGTH = 4;
   // Converting characters until we reach error or null terminator
   for (; i < len; ++i, ++dst) {
-    auto check = mbrtowc(dst, *src, 4, ps);
+    auto check = mbrtowc(dst, *src, MAX_UTF8_LENGTH, ps);
     // Encoding error/invalid mbstate
     if (!check.has_value())
-      return Error(check.error());
+      return check;
     // Successfully encoded, check for null terminator
     if (*dst == L'\0') {
       *src = nullptr;
