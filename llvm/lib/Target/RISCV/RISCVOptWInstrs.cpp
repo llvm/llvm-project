@@ -804,10 +804,6 @@ bool RISCVOptWInstrs::convertZExtLoads(MachineFunction &MF,
       switch (MI.getOpcode()) {
       default:
         continue;
-      case RISCV::LHU:
-        WOpc = RISCV::LH;
-        UsersWidth = 16;
-        break;
       case RISCV::LWU:
         WOpc = RISCV::LW;
         UsersWidth = 32;
