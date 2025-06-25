@@ -3287,7 +3287,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //       - 0001 0??? is fully initialized
   //       - 000? ???? is fully uninitialized (*)
   //       - ???? ???? is fully uninitialized
-  //       - 0000 0000 is fully initialized iff !is_zero_poison
+  //       - 0000 0000 is fully uninitialized if is_zero_poison,
+  //                      fully initialized   otherwise
+  //
   // (*) TODO: arguably, since the number of zeros is in the range [3, 8], we
   //     only need to poison 4 bits.
   //
