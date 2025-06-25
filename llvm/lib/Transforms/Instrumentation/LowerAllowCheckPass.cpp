@@ -31,8 +31,7 @@ using namespace llvm;
 
 static cl::opt<int>
     HotPercentileCutoff("lower-allow-check-percentile-cutoff-hot",
-                        cl::desc("Hot percentile cutoff."),
-                      cl::init(0));
+                        cl::desc("Hot percentile cutoff."), cl::init(0));
 
 static cl::opt<float>
     RandomRate("lower-allow-check-random-rate",
