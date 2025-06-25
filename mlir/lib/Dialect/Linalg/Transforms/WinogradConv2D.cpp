@@ -39,6 +39,15 @@ namespace {
 ///
 /// The following tables define these constant transformation matrices for
 /// F(2 x 2, 3 x 3), F(4 x 4, 3 x 3), and F(2 x 2, 5 x 5)
+///
+/// To add more transformation matrices, we need to add the following
+/// items:
+/// 1. Add the constant transformation matrix to the corresponding
+///   G, GT, BT, B, AT, or A array.
+/// 2. Add the corresponding TransformMatrix to the GMatrices, GTMatrices,
+///   BTMatrices, BMatrices, ATMatrices, or AMatrices map.
+/// 3. Add a enum value F_m_r to WinogradConv2DFmr enum.
+///
 constexpr float G_2x2_3x3[] = {
    -1,     0,   0,
  1./2, -1./2, 1./2,
