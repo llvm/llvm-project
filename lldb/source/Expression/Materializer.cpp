@@ -76,12 +76,14 @@ public:
 
     Status allocate_error;
     const bool zero_memory = false;
+    IRMemoryMap::AllocationPolicy used_policy;
 
     lldb::addr_t mem = map.Malloc(
         llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
             .value_or(0),
         8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
-        IRMemoryMap::eAllocationPolicyMirror, zero_memory, allocate_error);
+        IRMemoryMap::eAllocationPolicyMirror, zero_memory, allocate_error,
+        &used_policy);
 
     if (!allocate_error.Success()) {
       err = Status::FromErrorStringWithFormat(
@@ -103,14 +105,22 @@ public:
         m_persistent_variable_sp->GetName(), mem, eAddressTypeLoad,
         map.GetAddressByteSize());
 
-    // Clear the flag if the variable will never be deallocated.
-
     if (m_persistent_variable_sp->m_flags &
         ExpressionVariable::EVKeepInTarget) {
-      Status leak_error;
-      map.Leak(mem, leak_error);
-      m_persistent_variable_sp->m_flags &=
-          ~ExpressionVariable::EVNeedsAllocation;
+      if (used_policy == IRMemoryMap::eAllocationPolicyMirror) {
+        // Clear the flag if the variable will never be deallocated.
+        Status leak_error;
+        map.Leak(mem, leak_error);
+        m_persistent_variable_sp->m_flags &=
+            ~ExpressionVariable::EVNeedsAllocation;
+      } else {
+        // If the variable cannot be kept in target, clear this flag...
+        m_persistent_variable_sp->m_flags &=
+            ~ExpressionVariable::EVKeepInTarget;
+        // ...and set the flag to copy the value during dematerialization.
+        m_persistent_variable_sp->m_flags |=
+            ExpressionVariable::EVNeedsFreezeDry;
+      }
     }
 
     // Write the contents of the variable to the area.

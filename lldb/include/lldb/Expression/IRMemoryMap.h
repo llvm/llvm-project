@@ -50,8 +50,12 @@ public:
                                  ///only in the process.
   };
 
+  // If 'policy' is 'eAllocationPolicyMirror' but it is impossible to allocate
+  // memory in the process, 'eAllocationPolicyHostOnly' will be used instead.
+  // The actual policy is returned via 'used_policy'.
   lldb::addr_t Malloc(size_t size, uint8_t alignment, uint32_t permissions,
-                      AllocationPolicy policy, bool zero_memory, Status &error);
+                      AllocationPolicy policy, bool zero_memory, Status &error,
+                      AllocationPolicy *used_policy = nullptr);
   void Leak(lldb::addr_t process_address, Status &error);
   void Free(lldb::addr_t process_address, Status &error);
 

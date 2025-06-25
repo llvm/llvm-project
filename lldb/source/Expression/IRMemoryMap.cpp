@@ -321,7 +321,8 @@ IRMemoryMap::Allocation::Allocation(lldb::addr_t process_alloc,
 
 lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
                                  uint32_t permissions, AllocationPolicy policy,
-                                 bool zero_memory, Status &error) {
+                                 bool zero_memory, Status &error,
+                                 AllocationPolicy *used_policy) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
   error.Clear();
 
@@ -454,6 +455,9 @@ lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
               (uint64_t)allocation_size, (uint64_t)alignment,
               (uint64_t)permissions, policy_string, aligned_address);
   }
+
+  if (used_policy)
+    *used_policy = policy;
 
   return aligned_address;
 }
