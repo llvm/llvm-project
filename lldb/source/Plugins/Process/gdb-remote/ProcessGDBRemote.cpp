@@ -34,6 +34,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/PseudoTerminal.h"
@@ -92,7 +93,14 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
+#elif defined(_WIN32)
+#define DEBUGSERVER_BASENAME "lldb-server.exe"
+#else
+#define DEBUGSERVER_BASENAME "lldb-server"
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
@@ -3448,6 +3456,51 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   return error;
 }
 
+static FileSpec GetDebugserverPath(Platform &platform) {
+  Log *log = GetLog(GDBRLog::Process);
+  // If we locate debugserver, keep that located version around
+  static FileSpec g_debugserver_file_spec;
+  FileSpec debugserver_file_spec;
+
+  Environment host_env = Host::GetEnvironment();
+
+  // Always check to see if we have an environment override for the path to the
+  // debugserver to use and use it if we do.
+  std::string env_debugserver_path = host_env.lookup("LLDB_DEBUGSERVER_PATH");
+  if (!env_debugserver_path.empty()) {
+    debugserver_file_spec.SetFile(env_debugserver_path,
+                                  FileSpec::Style::native);
+    LLDB_LOG(log, "gdb-remote stub exe path set from environment variable: {0}",
+             env_debugserver_path);
+  } else
+    debugserver_file_spec = g_debugserver_file_spec;
+  if (FileSystem::Instance().Exists(debugserver_file_spec))
+    return debugserver_file_spec;
+
+  // The debugserver binary is in the LLDB.framework/Resources directory.
+  debugserver_file_spec = HostInfo::GetSupportExeDir();
+  if (debugserver_file_spec) {
+    debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME);
+    if (FileSystem::Instance().Exists(debugserver_file_spec)) {
+      LLDB_LOG(log, "found gdb-remote stub exe '{0}'", debugserver_file_spec);
+
+      g_debugserver_file_spec = debugserver_file_spec;
+    } else {
+      debugserver_file_spec = platform.LocateExecutable(DEBUGSERVER_BASENAME);
+      if (!debugserver_file_spec) {
+        // Platform::LocateExecutable() wouldn't return a path if it doesn't
+        // exist
+        LLDB_LOG(log, "could not find gdb-remote stub exe '{0}'",
+                 debugserver_file_spec);
+      }
+      // Don't cache the platform specific GDB server binary as it could
+      // change from platform to platform
+      g_debugserver_file_spec.Clear();
+    }
+  }
+  return debugserver_file_spec;
+}
+
 Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     const ProcessInfo &process_info) {
   using namespace std::placeholders; // For _1, _2, etc.
@@ -3466,6 +3519,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
       std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3));
   debugserver_launch_info.SetUserID(process_info.GetUserID());
 
+  FileSpec debugserver_path = GetDebugserverPath(*GetTarget().GetPlatform());
+
 #if defined(__APPLE__)
   // On macOS 11, we need to support x86_64 applications translated to
   // arm64. We check whether a binary is translated and spawn the correct
@@ -3478,12 +3533,12 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
              NULL, 0) == 0 &&
       bufsize > 0) {
     if (processInfo.kp_proc.p_flag & P_TRANSLATED) {
-      FileSpec rosetta_debugserver(
-          "/Library/Apple/usr/libexec/oah/debugserver");
-      debugserver_launch_info.SetExecutableFile(rosetta_debugserver, false);
+      debugserver_path = FileSpec("/Library/Apple/usr/libexec/oah/debugserver");
     }
   }
 #endif
+  debugserver_launch_info.SetExecutableFile(debugserver_path,
+                                            /*add_exe_file_as_first_arg=*/true);
 
   llvm::Expected<Socket::Pair> socket_pair = Socket::CreatePair();
   if (!socket_pair)
@@ -3495,7 +3550,6 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     return error;
 
   error = m_gdb_comm.StartDebugserverProcess(shared_socket.GetSendableFD(),
-                                             GetTarget().GetPlatform().get(),
                                              debugserver_launch_info, nullptr);
 
   if (error.Fail()) {
