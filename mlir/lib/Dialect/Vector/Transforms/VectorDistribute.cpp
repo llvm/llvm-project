@@ -55,12 +55,16 @@ static AffineMap calculateImplicitMap(VectorType sequentialType,
   return map;
 }
 
-static int getDistributedDim(VectorType origType, VectorType distributedType) {
-  assert(origType.getRank() == distributedType.getRank() &&
+/// Given a sequential and distributed vector type, returns the distributed
+/// dimension. This function expects that only a single dimension is
+/// distributed.
+static int getDistributedDim(VectorType sequentialType,
+                             VectorType distributedType) {
+  assert(sequentialType.getRank() == distributedType.getRank() &&
          "sequential and distributed vector types must have the same rank");
   int64_t distributedDim = -1;
-  for (int64_t i = 0; i < origType.getRank(); ++i) {
-    if (distributedType.getDimSize(i) != origType.getDimSize(i)) {
+  for (int64_t i = 0; i < sequentialType.getRank(); ++i) {
+    if (distributedType.getDimSize(i) != sequentialType.getDimSize(i)) {
       // Keep this assert here in case WarpExecuteOnLane0Op gets extended to
       // support distributing multiple dimensions in the future.
       assert(distributedDim == -1 && "found multiple distributed dims");
@@ -1234,7 +1238,6 @@ struct WarpOpExtractStridedSlice : public WarpDistributionPattern {
     auto yieldedType = cast<VectorType>(operand->get().getType());
     int64_t distributedDim = getDistributedDim(yieldedType, distributedType);
     assert(distributedDim != -1 && "could not find distributed dimension");
-    (void)distributedDim;
 
     // Distributed dimension must be fully extracted.
     // TODO: Partial extraction from distributed dimension require cross lane
