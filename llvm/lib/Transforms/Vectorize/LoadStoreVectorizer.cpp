@@ -1647,25 +1647,30 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
 }
 
 void Vectorizer::propagateBestAlignmentsInChain(ArrayRef<ChainElem> C) const {
-  ChainElem BestAlignedElem = C[0];
-  Align BestAlignSoFar = getLoadStoreAlignment(C[0].Inst);
+  auto PropagateAlignments = [](auto ChainIt) {
+    ChainElem BestAlignedElem = *ChainIt.begin();
+    Align BestAlignSoFar = getLoadStoreAlignment(BestAlignedElem.Inst);
 
-  for (const ChainElem &E : C) {
-    Align OrigAlign = getLoadStoreAlignment(E.Inst);
-    if (OrigAlign > BestAlignSoFar) {
-      BestAlignedElem = E;
-      BestAlignSoFar = OrigAlign;
+    for (const ChainElem &E : ChainIt) {
+      Align OrigAlign = getLoadStoreAlignment(E.Inst);
+      if (OrigAlign > BestAlignSoFar) {
+        BestAlignedElem = E;
+        BestAlignSoFar = OrigAlign;
+        continue;
+      }
+
+      APInt DeltaFromBestAlignedElem =
+          APIntOps::abdu(E.OffsetFromLeader, BestAlignedElem.OffsetFromLeader);
+      // commonAlignment is equivalent to a greatest common power-of-two
+      // divisor; it returns the largest power of 2 that divides both A and B.
+      Align NewAlign = commonAlignment(
+          BestAlignSoFar, DeltaFromBestAlignedElem.getLimitedValue());
+      if (NewAlign > OrigAlign)
+        setLoadStoreAlignment(E.Inst, NewAlign);
     }
+  };
 
-    APInt OffsetFromBestAlignedElem =
-        E.OffsetFromLeader - BestAlignedElem.OffsetFromLeader;
-    assert(OffsetFromBestAlignedElem.isNonNegative());
-    // commonAlignment is equivalent to a greatest common power-of-two divisor;
-    // it returns the largest power of 2 that divides both A and B.
-    Align NewAlign = commonAlignment(
-        BestAlignSoFar, OffsetFromBestAlignedElem.getLimitedValue());
-    if (NewAlign > OrigAlign)
-      setLoadStoreAlignment(E.Inst, NewAlign);
-  }
-  return;
+  // Propagate forwards and backwards.
+  PropagateAlignments(C);
+  PropagateAlignments(reverse(C));
 }
