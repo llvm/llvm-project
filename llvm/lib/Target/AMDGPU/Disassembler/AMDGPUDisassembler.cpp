@@ -843,10 +843,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     }
   }
 
-  // Validate buffer offset for GFX12+ - must be positive
-  if ((MCII->get(MI.getOpcode()).TSFlags &
-       (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF)) &&
-      isGFX12Plus()) {
+  // Validate buffer instruction offsets for GFX12+ - must be non-negative
+  if (isGFX12Plus() && isBufferInstruction(MI)) {
     int OffsetIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::offset);
     if (OffsetIdx != -1) {
@@ -2784,6 +2782,20 @@ const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
       Ctx.reportWarning(SMLoc(), "unsupported redefinition of " + Id);
   }
   return MCSymbolRefExpr::create(Sym, Ctx);
+}
+
+bool AMDGPUDisassembler::isBufferInstruction(const MCInst &MI) const {
+  const uint64_t TSFlags = MCII->get(MI.getOpcode()).TSFlags;
+
+  // Check for MUBUF and MTBUF instructions
+  if (TSFlags & (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF))
+    return true;
+
+  // Check for SMEM buffer instructions (S_BUFFER_* instructions)
+  if ((TSFlags & SIInstrFlags::SMRD) && AMDGPU::getSMEMIsBuffer(MI.getOpcode()))
+    return true;
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
