@@ -36,7 +36,7 @@ ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
       return Error(EILSEQ);
   }
   auto wc = char_conv.pop_utf32();
-  if (wc.has_value()) {
+  if (wc.has_value() && pwc != nullptr) {
     *pwc = wc.value();
     // null terminator -> return 0
     if (wc.value() == L'\0')

@@ -59,6 +59,23 @@ TEST_F(LlvmLibcMBSRToWCSTest, MultiByteTwoCharacters) {
   ASSERT_EQ(src, nullptr);
 }
 
+TEST_F(LlvmLibcMBSRToWCSTest, MixedNumberOfBytes) {
+  // 'A', sigma symbol 'Σ', recycling symbol '♻', laughing cat emoji '😹'
+  const char *src = "A\xce\xa3\xe2\x99\xbb\xf0\x9f\x98\xb9";
+  wchar_t dest[5];
+  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 5, nullptr);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(static_cast<char>(dest[0]), 'A');
+  ASSERT_EQ(static_cast<int>(dest[1]), 931);
+  ASSERT_EQ(static_cast<int>(dest[2]), 9851);
+  ASSERT_EQ(static_cast<int>(dest[3]), 128569);
+  ASSERT_TRUE(dest[4] == L'\0');
+  // Should not count null terminator in number
+  ASSERT_EQ(static_cast<int>(n), 4);
+  // Should set ch to nullptr after reading null terminator
+  ASSERT_EQ(src, nullptr);
+}
+
 TEST_F(LlvmLibcMBSRToWCSTest, ReadLessThanStringLength) {
   // Four laughing cat emojis "😹😹😹😹"
   const char *src =

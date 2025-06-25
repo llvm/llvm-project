@@ -15,6 +15,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/wchar/mbrtowc.h"
 #include "src/__support/wchar/mbstate.h"
+#include "src/__support/wchar/character_converter.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -22,20 +23,24 @@ namespace internal {
 ErrorOr<size_t> mbsrtowcs(wchar_t *__restrict dst, const char **__restrict src,
                           size_t len, mbstate *__restrict ps) {
   size_t i = 0;
-  constexpr size_t MAX_UTF8_LENGTH = 4;
   // Converting characters until we reach error or null terminator
-  for (; i < len; ++i, ++dst) {
-    auto check = mbrtowc(dst, *src, MAX_UTF8_LENGTH, ps);
+  for (; i < len; ++i) {
+    wchar_t temp;
+    auto check = internal::mbrtowc(dst == nullptr ? &temp : dst, *src,
+                                   MAX_UTF8_LENGTH, ps);
     // Encoding error/invalid mbstate
     if (!check.has_value())
       return check;
     // Successfully encoded, check for null terminator
-    if (*dst == L'\0') {
+    if (temp == L'\0' || (dst != nullptr && *dst == L'\0')) {
       *src = nullptr;
       return i;
     }
     // Set src to point right after the last character converted
     *src = *src + check.value();
+    // Incrementing destination
+    if (dst != nullptr)
+      ++dst;
   }
   return i;
 }

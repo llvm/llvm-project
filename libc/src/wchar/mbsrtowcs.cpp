@@ -25,9 +25,9 @@ LLVM_LIBC_FUNCTION(size_t, mbsrtowcs,
                     size_t len, mbstate_t *__restrict ps)) {
   LIBC_CRASH_ON_NULLPTR(src);
   static internal::mbstate internal_mbstate;
-  wchar_t temp[len];
+  len = dst == nullptr ? SIZE_MAX : len;
   auto ret = internal::mbsrtowcs(
-      dst == nullptr ? temp : dst, src, dst == nullptr ? SIZE_MAX : len,
+      dst, src, len,
       ps == nullptr ? &internal_mbstate
                     : reinterpret_cast<internal::mbstate *>(ps));
   if (!ret.has_value()) {

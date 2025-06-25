@@ -27,7 +27,6 @@ constexpr uint32_t MASK_ENCODED_BITS =
     mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
 // Maximum value for utf-32 for a utf-8 sequence of a given length
 constexpr char32_t MAX_VALUE_PER_UTF8_LEN[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
-constexpr int MAX_UTF8_LENGTH = 4;
 
 CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
