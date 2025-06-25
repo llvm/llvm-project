@@ -25,9 +25,6 @@ LLVM_LIBC_FUNCTION(size_t, wcsrtombs,
   static internal::mbstate internal_mbstate;
 
   LIBC_CRASH_ON_NULLPTR(src);
-  char buf[len];
-  if (dst == nullptr)
-    dst = buf;
 
   auto result = internal::wcsrtombs(
       dst, src, len,

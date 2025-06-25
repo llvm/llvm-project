@@ -25,15 +25,18 @@ ErrorOr<size_t> wcsrtombs(char *__restrict dst, const wchar_t **__restrict src,
                           size_t len, mbstate *__restrict ps) {
   static_assert(sizeof(wchar_t) == 4);
 
-  if (src == nullptr || dst == nullptr)
+  if (src == nullptr)
     return Error(-1);
+  
+  // ignore len parameter when theres no destination string
+  if (dst == nullptr)
+    len = SIZE_MAX;
 
   size_t bytes_written = 0;
-  const wchar_t *wc_ptr = *src;
   while (bytes_written < len) {
     char buf[4];
-    auto result = internal::wcrtomb(dst + bytes_written, *wc_ptr, ps,
-                                    len - bytes_written);
+    auto result =
+        internal::wcrtomb(dst + bytes_written, **src, ps, len - bytes_written);
     if (!result.has_value())
       return result; // forward the error
 
@@ -41,13 +44,13 @@ ErrorOr<size_t> wcsrtombs(char *__restrict dst, const wchar_t **__restrict src,
       return len;
 
     // terminate the loop after converting the null wide character
-    if (*wc_ptr == L'\0') {
+    if (**src == L'\0') {
       *src = '\0';
       return bytes_written;
     }
 
     bytes_written += result.value();
-    wc_ptr++;
+    (*src)++;
   }
 
   return bytes_written;
