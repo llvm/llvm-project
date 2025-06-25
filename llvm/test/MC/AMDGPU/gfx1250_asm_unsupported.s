@@ -1,5 +1,70 @@
 ; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
+;; Export, S_WAIT_EXPCNT and S_WAIT_EVENT
+
+export mrt0 off, off, off, off
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+export mrt7 v1, v1, v1, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+export mrtz v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+export pos0 v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+export pos3 v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp mrt0 off, off, off, off
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp mrt7 v1, v1, v1, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp mrtz v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp pos0 v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+exp pos3 v4, v3, v2, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_event 0x3141
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_expcnt 0x1234
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+;; Ray Tracing: DS_BVH_STACK ops
+
+ds_bvh_stack_rtn_b32 v255, v254, v253, v[249:252]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bvh_stack_push4_pop1_rtn_b32 v1, v0, v1, v[2:5]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bvh_stack_push8_pop1_rtn_b32 v1, v0, v1, v[2:9]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bvh_stack_push8_pop2_rtn_b64 v[254:255], v253, v252, v[244:251]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+;; S_WAIT_*CNT instructions.
+
+s_wait_samplecnt 0x1234
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_bvhcnt 0x1234
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+;; S_WAITCNT instruction.
+
+s_waitcnt 0
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; All "TBUFFER" ops, and BUFFER_LOAD/STORE_FORMAT ops.
 
 tbuffer_load_d16_format_x v4, off, s[8:11], s3 format:[BUF_FMT_8_UNORM] offset:8388607

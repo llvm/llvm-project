@@ -221,8 +221,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
   case AArch64::fixup_aarch64_movw: {
     AArch64MCExpr::Specifier RefKind =
         static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-    if (AArch64::getSymbolLoc(RefKind) != AArch64MCExpr::VK_ABS &&
-        AArch64::getSymbolLoc(RefKind) != AArch64MCExpr::VK_SABS) {
+    if (AArch64::getSymbolLoc(RefKind) != AArch64::S_ABS &&
+        AArch64::getSymbolLoc(RefKind) != AArch64::S_SABS) {
       if (!RefKind) {
         // The fixup is an expression
         if (SignedValue > 0xFFFF || SignedValue < -0xFFFF)
@@ -250,17 +250,17 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       return Value;
     }
 
-    if (AArch64::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS) {
+    if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS) {
       switch (AArch64::getAddressFrag(RefKind)) {
-      case AArch64MCExpr::VK_G0:
+      case AArch64::S_G0:
         break;
-      case AArch64MCExpr::VK_G1:
+      case AArch64::S_G1:
         SignedValue = SignedValue >> 16;
         break;
-      case AArch64MCExpr::VK_G2:
+      case AArch64::S_G2:
         SignedValue = SignedValue >> 32;
         break;
-      case AArch64MCExpr::VK_G3:
+      case AArch64::S_G3:
         SignedValue = SignedValue >> 48;
         break;
       default:
@@ -269,15 +269,15 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
 
     } else {
       switch (AArch64::getAddressFrag(RefKind)) {
-      case AArch64MCExpr::VK_G0:
+      case AArch64::S_G0:
         break;
-      case AArch64MCExpr::VK_G1:
+      case AArch64::S_G1:
         Value = Value >> 16;
         break;
-      case AArch64MCExpr::VK_G2:
+      case AArch64::S_G2:
         Value = Value >> 32;
         break;
-      case AArch64MCExpr::VK_G3:
+      case AArch64::S_G3:
         Value = Value >> 48;
         break;
       default:
@@ -285,9 +285,9 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       }
     }
 
-    if (RefKind & AArch64MCExpr::VK_NC) {
+    if (RefKind & AArch64::S_NC) {
       Value &= 0xFFFF;
-    } else if (AArch64::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS) {
+    } else if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS) {
       if (SignedValue > 0xFFFF || SignedValue < -0xFFFF)
         Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
 
@@ -423,8 +423,7 @@ void AArch64AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
   if (Fixup.getTargetKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
     auto RefKind = static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
     AArch64MCExpr::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
-    if (SymLoc == AArch64MCExpr::VK_AUTH ||
-        SymLoc == AArch64MCExpr::VK_AUTHADDR) {
+    if (SymLoc == AArch64::S_AUTH || SymLoc == AArch64::S_AUTHADDR) {
       const auto *Expr = dyn_cast<AArch64AuthMCExpr>(Fixup.getValue());
       if (!Expr) {
         getContext().reportError(Fixup.getValue()->getLoc(),
@@ -477,7 +476,7 @@ void AArch64AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
   // handle this more cleanly. This may affect the output of -show-mc-encoding.
   AArch64MCExpr::Specifier RefKind =
       static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-  if (AArch64::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS ||
+  if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS ||
       (!RefKind && Fixup.getTargetKind() == AArch64::fixup_aarch64_movw)) {
     // If the immediate is negative, generate MOVN else MOVZ.
     // (Bit 30 = 0) ==> MOVN, (Bit 30 = 1) ==> MOVZ.
