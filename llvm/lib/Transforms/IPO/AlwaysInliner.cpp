@@ -35,35 +35,36 @@ bool canInlineCallBase(CallBase *CB) {
          !CB->getAttributes().hasFnAttr(Attribute::NoInline);
 }
 
-  bool attemptInlineFunction(
-      Function &F, CallBase *CB, bool InsertLifetime,
-      function_ref<AAResults &(Function &)> &GetAAR,
-      function_ref<AssumptionCache &(Function &)> &GetAssumptionCache,
-      ProfileSummaryInfo &PSI) {
-    Function *Caller = CB->getCaller();
-    OptimizationRemarkEmitter ORE(Caller);
-    DebugLoc DLoc = CB->getDebugLoc();
-    BasicBlock *Block = CB->getParent();
+bool attemptInlineFunction(
+    Function &F, CallBase *CB, bool InsertLifetime,
+    function_ref<AAResults &(Function &)> &GetAAR,
+    function_ref<AssumptionCache &(Function &)> &GetAssumptionCache,
+    ProfileSummaryInfo &PSI) {
+  Function *Caller = CB->getCaller();
+  OptimizationRemarkEmitter ORE(Caller);
+  DebugLoc DLoc = CB->getDebugLoc();
+  BasicBlock *Block = CB->getParent();
 
-    InlineFunctionInfo IFI(GetAssumptionCache, &PSI, nullptr, nullptr);
-    InlineResult Res = InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
-                                      &GetAAR(F), InsertLifetime);
-    if (!Res.isSuccess()) {
-      ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
-              << "'" << ore::NV("Callee", &F) << "' is not inlined into '"
-              << ore::NV("Caller", Caller)
-              << "': " << ore::NV("Reason", Res.getFailureReason());
-      });
-      return false;
-    }
-
-    emitInlinedIntoBasedOnCost(ORE, DLoc, Block, F, *Caller,
-                              InlineCost::getAlways("always inline attribute"),
-                              /*ForProfileContext=*/false, DEBUG_TYPE);
-
-    return true;
+  InlineFunctionInfo IFI(GetAssumptionCache, &PSI, nullptr, nullptr);
+  InlineResult Res = InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
+                                    &GetAAR(F), InsertLifetime);
+  if (!Res.isSuccess()) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+             << "'" << ore::NV("Callee", &F) << "' is not inlined into '"
+             << ore::NV("Caller", Caller)
+             << "': " << ore::NV("Reason", Res.getFailureReason());
+    });
+    return false;
   }
+
+  emitInlinedIntoBasedOnCost(ORE, DLoc, Block, F, *Caller,
+                             InlineCost::getAlways("always inline attribute"),
+                             /*ForProfileContext=*/false, DEBUG_TYPE);
+
+  return true;
+}
+
 /// This function inlines all functions that are marked with the always_inline
 /// attribute. It also removes the inlined functions if they are dead after the
 /// inlining process.
