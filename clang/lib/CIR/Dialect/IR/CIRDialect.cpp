@@ -115,8 +115,25 @@ template <typename Ty> struct EnumTraits {};
     static unsigned getMaxEnumVal() { return cir::getMaxEnumValFor##Ty(); }    \
   }
 
+REGISTER_ENUM_TYPE(GlobalLinkageKind);
+REGISTER_ENUM_TYPE(VisibilityKind);
 REGISTER_ENUM_TYPE(SideEffect);
 } // namespace
+
+/// Parse an enum from the keyword, or default to the provided default value.
+/// The return type is the enum type by default, unless overriden with the
+/// second template argument.
+template <typename EnumTy, typename RetTy = EnumTy>
+static RetTy parseOptionalCIRKeyword(AsmParser &parser, EnumTy defaultValue) {
+  llvm::SmallVector<llvm::StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return static_cast<RetTy>(defaultValue);
+  return static_cast<RetTy>(index);
+}
 
 /// Parse an enum from the keyword, return failure if the keyword is not found.
 template <typename EnumTy, typename RetTy = EnumTy>
@@ -168,6 +185,26 @@ static bool omitRegionTerm(mlir::Region &r) {
     return y && y.getArgs().empty();
   };
   return singleNonEmptyBlock && yieldsNothing();
+}
+
+void printVisibilityAttr(OpAsmPrinter &printer,
+                         cir::VisibilityAttr &visibility) {
+  switch (visibility.getValue()) {
+  case cir::VisibilityKind::Hidden:
+    printer << "hidden";
+    break;
+  case cir::VisibilityKind::Protected:
+    printer << "protected";
+    break;
+  case cir::VisibilityKind::Default:
+    break;
+  }
+}
+
+void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
+  cir::VisibilityKind visibilityKind =
+      parseOptionalCIRKeyword(parser, cir::VisibilityKind::Default);
+  visibility = cir::VisibilityAttr::get(parser.getContext(), visibilityKind);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1287,18 +1324,53 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // FuncOp
 //===----------------------------------------------------------------------===//
 
+/// Returns the name used for the linkage attribute. This *must* correspond to
+/// the name of the attribute in ODS.
+static llvm::StringRef getLinkageAttrNameString() { return "linkage"; }
+
 void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name, FuncType type) {
+                        StringRef name, FuncType type,
+                        GlobalLinkageKind linkage) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
+  result.addAttribute(
+      getLinkageAttrNameString(),
+      GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+  result.addAttribute(getGlobalVisibilityAttrName(result.name),
+                      cir::VisibilityAttr::get(builder.getContext()));
 }
 
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
+
+  mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
+  mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
+  mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+
+  // Default to external linkage if no keyword is provided.
+  state.addAttribute(getLinkageAttrNameString(),
+                     GlobalLinkageKindAttr::get(
+                         parser.getContext(),
+                         parseOptionalCIRKeyword<GlobalLinkageKind>(
+                             parser, GlobalLinkageKind::ExternalLinkage)));
+
+  ::llvm::StringRef visAttrStr;
+  if (parser.parseOptionalKeyword(&visAttrStr, {"private", "public", "nested"})
+          .succeeded()) {
+    state.addAttribute(visNameAttr,
+                       parser.getBuilder().getStringAttr(visAttrStr));
+  }
+
+  cir::VisibilityAttr cirVisibilityAttr;
+  parseVisibilityAttr(parser, cirVisibilityAttr);
+  state.addAttribute(visibilityNameAttr, cirVisibilityAttr);
+
+  if (parser.parseOptionalKeyword(dsoLocalNameAttr).succeeded())
+    state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
@@ -1346,10 +1418,14 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   return success();
 }
 
+// This function corresponds to `llvm::GlobalValue::isDeclaration` and should
+// have a similar implementation. We don't currently support aliases, ifuncs,
+// or materializable functions, but those should be handled here as they are
+// implemented.
 bool cir::FuncOp::isDeclaration() {
-  // TODO(CIR): This function will actually do something once external
-  // function declarations and aliases are upstreamed.
-  return false;
+  assert(!cir::MissingFeatures::opFuncGlobalAliases());
+  assert(!cir::MissingFeatures::supportIFuncAttr());
+  return getFunctionBody().empty();
 }
 
 mlir::Region *cir::FuncOp::getCallableRegion() {
@@ -1359,6 +1435,25 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getComdat())
+    p << " comdat";
+
+  if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
+    p << ' ' << stringifyGlobalLinkageKind(getLinkage());
+
+  mlir::SymbolTable::Visibility vis = getVisibility();
+  if (vis != mlir::SymbolTable::Visibility::Public)
+    p << ' ' << vis;
+
+  cir::VisibilityAttr cirVisibilityAttr = getGlobalVisibilityAttr();
+  if (!cirVisibilityAttr.isDefault()) {
+    p << ' ';
+    printVisibilityAttr(p, cirVisibilityAttr);
+  }
+
+  if (getDsoLocal())
+    p << " dso_local";
+
   p << ' ';
   p.printSymbolName(getSymName());
   cir::FuncType fnType = getFunctionType();

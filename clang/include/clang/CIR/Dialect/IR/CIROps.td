@@ -1737,16 +1737,40 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
 def FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
+  DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   IsolatedFromAbove
 ]> {
   let summary = "Declare or define a function";
   let description = [{
     The `cir.func` operation defines a function, similar to the `mlir::FuncOp`
     built-in.
+
+    The function linkage information is specified by `linkage`, as defined by
+    `GlobalLinkageKind` attribute.
+
+    Example:
+
+    ```mlir
+    // External function definitions.
+    cir.func @abort()
+
+    // A function with internal linkage.
+    cir.func internal @count(%x: i64) -> (i64)
+      return %x : i64
+
+    // Linkage information
+    cir.func linkonce_odr @some_method(...)
+    ```
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$dso_local,
+                       DefaultValuedAttr<CIR_GlobalLinkageKind,
+                                         "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs);
 
@@ -1754,8 +1778,10 @@ def FuncOp : CIR_Op<"func", [
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
-                                 "FuncType":$type)>];
+  let builders = [OpBuilder<(ins
+    "llvm::StringRef":$sym_name, "FuncType":$type,
+    CArg<"cir::GlobalLinkageKind", "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)
+  >];
 
   let extraClassDeclaration = [{
     /// Returns the region on the current operation that is callable. This may
