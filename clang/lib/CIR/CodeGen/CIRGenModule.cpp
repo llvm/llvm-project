@@ -1583,7 +1583,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // the LLVM GV (corresponding to our FuncOp) computed, so it doesn't have to
   // recompute it here. This is a minimal fix for now.
   if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
-    const auto *decl = globalDecl.getDecl();
+    const Decl *decl = globalDecl.getDecl();
     func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
   }
 }
