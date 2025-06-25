@@ -13720,25 +13720,24 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   SDUse *Ops = OperandRecycler.allocate(
       ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
 
-  Node->SDNodeBits.IsDivergent = false;
+  bool IsDivergent = false;
   for (unsigned I = 0; I != Vals.size(); ++I) {
     Ops[I].setUser(Node);
     Ops[I].setInitial(Vals[I]);
     EVT VT = Ops[I].getValueType();
 
-    if (DivergentTarget)
-      // Skip Chain. It does not carry divergence.
-      if (VT != MVT::Other &&
-          (VT != MVT::Glue || gluePropagatesDivergence(Ops[I].getNode())) &&
-          Ops[I].getNode()->isDivergent()) {
-        Node->SDNodeBits.IsDivergent = true;
-      }
+    // Skip Chain. It does not carry divergence.
+    if (VT != MVT::Other &&
+        (VT != MVT::Glue || gluePropagatesDivergence(Ops[I].getNode())) &&
+        Ops[I].getNode()->isDivergent()) {
+      IsDivergent = true;
+    }
   }
   Node->NumOperands = Vals.size();
   Node->OperandList = Ops;
-  if (DivergentTarget  && !TLI->isSDNodeAlwaysUniform(Node)) {
-    Node->SDNodeBits.IsDivergent |=
-        TLI->isSDNodeSourceOfDivergence(Node, FLI, UA);
+  if (!TLI->isSDNodeAlwaysUniform(Node)) {
+    IsDivergent |= TLI->isSDNodeSourceOfDivergence(Node, FLI, UA);
+    Node->SDNodeBits.IsDivergent = IsDivergent;
   }
   checkForCycles(Node);
 }
