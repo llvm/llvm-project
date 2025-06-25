@@ -36,7 +36,6 @@ void roundTrip(SourceLocation::UIntTy Loc,
 constexpr SourceLocation::UIntTy MacroBit =
     1 << (sizeof(SourceLocation::UIntTy) * CHAR_BIT - 1);
 constexpr SourceLocation::UIntTy Big = MacroBit >> 1;
-constexpr SourceLocation::UIntTy Biggest = -1;
 
 TEST(SourceLocationEncoding, Individual) {
   roundTrip(1, 2);
