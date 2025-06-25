@@ -329,6 +329,9 @@ Non-comprehensive list of changes in this release
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 - Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
   polymorphic object.
+- ``libclang`` receives a family of new bindings to query basic facts about
+  GCC-style inline assembly blocks, including whether the block is ``volatile``
+  and its template string following the LLVM IR ``asm`` format. (#GH143424)
 - Clang no longer rejects reinterpret_cast conversions between indirect
   ARC-managed pointers and other pointer types. The prior behavior was overly
   strict and inconsistent with the ARC specification.
