@@ -1166,9 +1166,9 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         res.getLangOpts().OpenMPVersion = version;
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
-          diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
-                                "OpenMP version %0 is no longer supported, "
-                                "assuming version %1");
+            diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                  "OpenMP version %0 is no longer supported, "
+                                  "assuming version %1");
         std::string assumed = std::to_string(res.getLangOpts().OpenMPVersion);
         diags.Report(diagID) << value << assumed;
       } else {
