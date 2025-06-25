@@ -1958,6 +1958,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_replaceable", TypeTrait::UTT_IsReplaceable)
       .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
       .Case("is_assignable", TypeTrait::BTT_IsAssignable)
+      .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Default(std::nullopt);
 }
 
@@ -2313,6 +2314,74 @@ static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc,
+                                  const CXXRecordDecl *D) {
+  // Non-static data members (ignore zero-width bit‐fields).
+  for (const auto *Field : D->fields()) {
+    if (Field->isZeroLengthBitField())
+      continue;
+    if (Field->isBitField()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonZeroLengthField << Field
+          << Field->getSourceRange();
+      continue;
+    }
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NonEmptyMember << Field
+        << Field->getType() << Field->getSourceRange();
+  }
+
+  // Virtual functions.
+  for (const auto *M : D->methods()) {
+    if (M->isVirtual()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << M
+          << M->getSourceRange();
+      break;
+    }
+  }
+
+  // Virtual bases and non-empty bases.
+  for (const auto &B : D->bases()) {
+    const auto *BR = B.getType()->getAsCXXRecordDecl();
+    if (!BR || BR->isInvalidDecl())
+      continue;
+    if (B.isVirtual()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    }
+    if (!BR->isEmpty()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonEmptyBase << B.getType()
+          << B.getSourceRange();
+    }
+  }
+}
+
+static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
+  // Emit primary "not empty" diagnostic.
+  S.Diag(Loc, diag::note_unsatisfied_trait) << T << diag::TraitName::Empty;
+
+  // While diagnosing is_empty<T>, we want to look at the actual type, not a
+  // reference or an array of it. So we need to massage the QualType param to
+  // strip refs and arrays.
+  if (T->isReferenceType())
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+  T = T.getNonReferenceType();
+
+  if (auto *AT = S.Context.getAsArrayType(T))
+    T = AT->getElementType();
+
+  if (auto *D = T->getAsCXXRecordDecl()) {
+    if (D->hasDefinition()) {
+      DiagnoseIsEmptyReason(S, Loc, D);
+      S.Diag(D->getLocation(), diag::note_defined_here) << D;
+    }
+  }
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2335,6 +2404,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case BTT_IsAssignable:
     DiagnoseNonAssignableReason(*this, E->getBeginLoc(), Args[0], Args[1]);
+    break;
+  case UTT_IsEmpty:
+    DiagnoseIsEmptyReason(*this, E->getBeginLoc(), Args[0]);
     break;
   default:
     break;
