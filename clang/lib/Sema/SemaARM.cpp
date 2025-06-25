@@ -1423,8 +1423,8 @@ static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty,
 
 bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
   bool IsStreaming = false;
-  if (LangOpts.VScaleMin != LangOpts.VScaleStreamingMin ||
-      LangOpts.VScaleMax != LangOpts.VScaleStreamingMax) {
+  if (getLangOpts().VScaleMin != getLangOpts().VScaleStreamingMin ||
+      getLangOpts().VScaleMax != getLangOpts().VScaleStreamingMax) {
     if (const FunctionDecl *FD =
             SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
       // For streaming-compatible functions, we don't know vector length.
@@ -1468,8 +1468,8 @@ bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
 bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
                                        QualType SecondType) {
   bool IsStreaming = false;
-  if (LangOpts.VScaleMin != LangOpts.VScaleStreamingMin ||
-      LangOpts.VScaleMax != LangOpts.VScaleStreamingMax) {
+  if (getLangOpts().VScaleMin != getLangOpts().VScaleStreamingMin ||
+      getLangOpts().VScaleMax != getLangOpts().VScaleStreamingMax) {
     if (const FunctionDecl *FD =
             SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
       // For streaming-compatible functions, we don't know vector length.
