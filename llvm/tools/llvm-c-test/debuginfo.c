@@ -261,10 +261,11 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef DynSubscripts[] = {
       LLVMDIBuilderGetOrCreateSubrange(DIB, 0, 10),
   };
-  LLVMMetadataRef L = LLVMDIBuilderCreateExpression(DIB, NULL, 0);
+  LLVMMetadataRef Loc = LLVMDIBuilderCreateExpression(DIB, NULL, 0);
+  LLVMMetadataRef Rank = LLVMDIBuilderCreateExpression(DIB, NULL, 0);
   LLVMMetadataRef DynamicArrayMetadataTy = LLVMDIBuilderCreateDynamicArrayType(
-      DIB, File, "foo", 3, 42, File, 64 * 10, 0, Int64Ty, DynSubscripts, 1, L,
-      NULL, NULL, NULL, NULL);
+      DIB, File, "foo", 3, 42, File, 64 * 10, 0, Int64Ty, DynSubscripts, 1, Loc,
+      FooVar1, NULL, Rank, NULL);
   LLVMAddNamedMetadataOperand(
       M, "DynType",
       LLVMMetadataAsValue(LLVMGetModuleContext(M), DynamicArrayMetadataTy));

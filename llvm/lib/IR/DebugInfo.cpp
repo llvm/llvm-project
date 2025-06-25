@@ -1343,6 +1343,17 @@ LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
       unwrap(Stride), unwrap(Bias)));
 }
 
+/// MD may be nullptr, a DIExpression or DIVariable.
+PointerUnion<DIExpression *, DIVariable *> unwrapExprVar(LLVMMetadataRef MD) {
+  if (!MD)
+    return nullptr;
+  MDNode *MDN = unwrapDI<MDNode>(MD);
+  if (auto *E = dyn_cast<DIExpression>(MDN))
+    return E;
+  assert(isa<DIVariable>(MDN) && "Expected DIExpression or DIVariable");
+  return cast<DIVariable>(MDN);
+}
+
 LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t Size,
@@ -1355,9 +1366,8 @@ LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
   return wrap(unwrap(Builder)->createArrayType(
       unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
       Size, AlignInBits, unwrapDI<DIType>(Ty), Subs,
-      unwrapDI<DIExpression>(DataLocation), unwrapDI<DIExpression>(Associated),
-      unwrapDI<DIExpression>(Allocated), unwrapDI<DIExpression>(Rank),
-      unwrap(BitStride)));
+      unwrapExprVar(DataLocation), unwrapExprVar(Associated),
+      unwrapExprVar(Allocated), unwrapExprVar(Rank), unwrap(BitStride)));
 }
 
 void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
