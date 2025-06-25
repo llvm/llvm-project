@@ -1211,8 +1211,8 @@ bool Preprocessor::HandleModuleContextualKeyword(
   });
 
   if (Result.getIdentifierInfo()->isModulesImport() &&
-      isNextPPTokenOneOf<tok::raw_identifier, tok::less, tok::string_literal,
-                         tok::colon>()) {
+      isNextPPTokenOneOf(tok::raw_identifier, tok::less, tok::string_literal,
+                         tok::colon)) {
     Result.setKind(tok::kw_import);
     ModuleImportLoc = Result.getLocation();
     IsAtImport = false;
@@ -1220,7 +1220,7 @@ bool Preprocessor::HandleModuleContextualKeyword(
   }
 
   if (Result.getIdentifierInfo()->isModulesDeclaration() &&
-      isNextPPTokenOneOf<tok::raw_identifier, tok::colon, tok::semi>()) {
+      isNextPPTokenOneOf(tok::raw_identifier, tok::colon, tok::semi)) {
     Result.setKind(tok::kw_module);
     ModuleDeclLoc = Result.getLocation();
     return true;
