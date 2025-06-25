@@ -83,17 +83,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_SVE_VectorCall;
   case CC_SpirFunction:
     return llvm::CallingConv::SPIR_FUNC;
-  case CC_DeviceKernel: {
-    if (CGM.getLangOpts().OpenCL)
-      return CGM.getTargetCodeGenInfo().getOpenCLKernelCallingConv();
-    if (CGM.getTriple().isSPIROrSPIRV())
-      return llvm::CallingConv::SPIR_KERNEL;
-    if (CGM.getTriple().isAMDGPU())
-      return llvm::CallingConv::AMDGPU_KERNEL;
-    if (CGM.getTriple().isNVPTX())
-      return llvm::CallingConv::PTX_Kernel;
-    llvm_unreachable("Unknown kernel calling convention");
-  }
+  case CC_DeviceKernel:
+    return CGM.getTargetCodeGenInfo().getDeviceKernelCallingConv();
   case CC_PreserveMost:
     return llvm::CallingConv::PreserveMost;
   case CC_PreserveAll:
@@ -2669,6 +2660,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);
+
+    // Windows hotpatching support
+    if (!MSHotPatchFunctions.empty()) {
+      bool IsHotPatched = llvm::binary_search(MSHotPatchFunctions, Name);
+      if (IsHotPatched)
+        FuncAttrs.addAttribute("marked_for_windows_hot_patching");
+    }
   }
 
   // Mark functions that are replaceable by the loader.

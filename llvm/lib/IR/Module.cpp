@@ -119,26 +119,30 @@ Module::~Module() {
 }
 
 void Module::removeDebugIntrinsicDeclarations() {
-  auto *DeclareIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_declare);
-  assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug declare intrinsic should have had uses removed.");
-  DeclareIntrinsicFn->eraseFromParent();
-  auto *ValueIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_value);
-  assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug value intrinsic should have had uses removed.");
-  ValueIntrinsicFn->eraseFromParent();
-  auto *AssignIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_assign);
-  assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug assign intrinsic should have had uses removed.");
-  AssignIntrinsicFn->eraseFromParent();
-  auto *LabelntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_label);
-  assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
-         "Debug label intrinsic should have had uses removed.");
-  LabelntrinsicFn->eraseFromParent();
+  if (auto *DeclareIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_declare)) {
+    assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug declare intrinsic should have had uses removed.");
+    DeclareIntrinsicFn->eraseFromParent();
+  }
+  if (auto *ValueIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_value)) {
+    assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug value intrinsic should have had uses removed.");
+    ValueIntrinsicFn->eraseFromParent();
+  }
+  if (auto *AssignIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_assign)) {
+    assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug assign intrinsic should have had uses removed.");
+    AssignIntrinsicFn->eraseFromParent();
+  }
+  if (auto *LabelntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_label)) {
+    assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
+           "Debug label intrinsic should have had uses removed.");
+    LabelntrinsicFn->eraseFromParent();
+  }
 }
 
 std::unique_ptr<RandomNumberGenerator>
@@ -916,4 +920,11 @@ StringRef Module::getTargetABIFromMD() {
           dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
     TargetABI = TargetABIMD->getString();
   return TargetABI;
+}
+
+WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
+  Metadata *MD = getModuleFlag("winx64-eh-unwindv2");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
+  return WinX64EHUnwindV2Mode::Disabled;
 }

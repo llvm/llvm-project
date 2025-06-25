@@ -131,11 +131,11 @@ public:
   mlir::Value emitLoadOfLValue(const Expr *e) {
     LValue lv = cgf.emitLValue(e);
     // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
-    return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+    return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
   }
 
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
-    return cgf.emitLoadOfLValue(lv, loc).getScalarVal();
+    return cgf.emitLoadOfLValue(lv, loc).getValue();
   }
 
   // l-values
@@ -400,10 +400,10 @@ public:
       cgf.cgm.errorNYI(e->getSourceRange(), "Atomic inc/dec");
       // TODO(cir): This is not correct, but it will produce reasonable code
       // until atomic operations are implemented.
-      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
       input = value;
     } else {
-      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
       input = value;
     }
 
@@ -602,6 +602,8 @@ public:
   }
 
   mlir::Value VisitUnaryLNot(const UnaryOperator *e);
+
+  mlir::Value VisitUnaryReal(const UnaryOperator *e);
 
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
@@ -1805,7 +1807,7 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
 
-  auto v = cgf.emitCallExpr(e).getScalarVal();
+  auto v = cgf.emitCallExpr(e).getValue();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
   return v;
 }
@@ -1889,6 +1891,27 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
 
   // ZExt result to the expr type.
   return maybePromoteBoolResult(boolVal, cgf.convertType(e->getType()));
+}
+
+mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
+  // TODO(cir): handle scalar promotion.
+  Expr *op = e->getSubExpr();
+  if (op->getType()->isAnyComplexType()) {
+    // If it's an l-value, load through the appropriate subobject l-value.
+    // Note that we have to ask `e` because `op` might be an l-value that
+    // this won't work for, e.g. an Obj-C property.
+    if (e->isGLValue()) {
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      mlir::Value complex = cgf.emitComplexExpr(op);
+      return cgf.builder.createComplexReal(loc, complex);
+    }
+
+    // Otherwise, calculate and project.
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "VisitUnaryReal calculate and project");
+  }
+
+  return Visit(op);
 }
 
 /// Return the size or alignment of the type of argument of the sizeof

@@ -586,11 +586,6 @@ bool llvm::stripDebugInfo(Function &F) {
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
     for (Instruction &I : llvm::make_early_inc_range(BB)) {
-      if (isa<DbgInfoIntrinsic>(&I)) {
-        I.eraseFromParent();
-        Changed = true;
-        continue;
-      }
       if (I.getDebugLoc()) {
         Changed = true;
         I.setDebugLoc(DebugLoc());
@@ -1816,6 +1811,12 @@ void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP) {
 
 unsigned LLVMDISubprogramGetLine(LLVMMetadataRef Subprogram) {
   return unwrapDI<DISubprogram>(Subprogram)->getLine();
+}
+
+void LLVMDISubprogramReplaceType(LLVMMetadataRef Subprogram,
+                                 LLVMMetadataRef SubroutineType) {
+  unwrapDI<DISubprogram>(Subprogram)
+      ->replaceType(unwrapDI<DISubroutineType>(SubroutineType));
 }
 
 LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst) {

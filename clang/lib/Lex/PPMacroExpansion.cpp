@@ -418,44 +418,6 @@ static bool isTrivialSingleTokenExpansion(const MacroInfo *MI,
   return !llvm::is_contained(MI->params(), II);
 }
 
-/// isNextPPTokenLParen - Determine whether the next preprocessor token to be
-/// lexed is a '('.  If so, consume the token and return true, if not, this
-/// method should have no observable side-effect on the lexed tokens.
-bool Preprocessor::isNextPPTokenLParen() {
-  // Do some quick tests for rejection cases.
-  unsigned Val;
-  if (CurLexer)
-    Val = CurLexer->isNextPPTokenLParen();
-  else
-    Val = CurTokenLexer->isNextTokenLParen();
-
-  if (Val == 2) {
-    // We have run off the end.  If it's a source file we don't
-    // examine enclosing ones (C99 5.1.1.2p4).  Otherwise walk up the
-    // macro stack.
-    if (CurPPLexer)
-      return false;
-    for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
-      if (Entry.TheLexer)
-        Val = Entry.TheLexer->isNextPPTokenLParen();
-      else
-        Val = Entry.TheTokenLexer->isNextTokenLParen();
-
-      if (Val != 2)
-        break;
-
-      // Ran off the end of a source file?
-      if (Entry.ThePPLexer)
-        return false;
-    }
-  }
-
-  // Okay, if we know that the token is a '(', lex it and return.  Otherwise we
-  // have found something that isn't a '(' or we found the end of the
-  // translation unit.  In either case, return false.
-  return Val == 1;
-}
-
 /// HandleMacroExpandedIdentifier - If an identifier token is read that is to be
 /// expanded as a macro, handle it and return the next token as 'Identifier'.
 bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
@@ -468,6 +430,9 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
   // then the macro could expand to different things in other contexts, we need
   // to disable the optimization in this case.
   if (CurPPLexer) CurPPLexer->MIOpt.ExpandedMacro();
+
+  if (!hasSeenMainFileFirstPPToken())
+    HandleMainFileFirstPPToken(Identifier);
 
   // If this is a builtin macro, like __LINE__ or _Pragma, handle it specially.
   if (MI->isBuiltinMacro()) {

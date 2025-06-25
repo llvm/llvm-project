@@ -88,7 +88,7 @@ RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
 #include "RISCVGenInstrInfo.inc"
 
 MCInst RISCVInstrInfo::getNop() const {
-  if (STI.hasStdExtCOrZca())
+  if (STI.hasStdExtZca())
     return MCInstBuilder(RISCV::C_NOP);
   return MCInstBuilder(RISCV::ADDI)
       .addReg(RISCV::X0)
@@ -1449,36 +1449,45 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
-  if (isFromLoadImm(MRI, LHS, C0) && MRI.hasOneUse(LHS.getReg())) {
-    // Might be case 1.
-    // Signed integer overflow is UB. (UINT64_MAX is bigger so we don't need
-    // to worry about unsigned overflow here)
-    if (C0 < INT64_MAX)
-      if (Register RegZ = searchConst(C0 + 1)) {
-        reverseBranchCondition(Cond);
-        Cond[1] = MachineOperand::CreateReg(RHS.getReg(), /*isDef=*/false);
-        Cond[2] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
-        // We might extend the live range of Z, clear its kill flag to
-        // account for this.
-        MRI.clearKillFlags(RegZ);
-        modifyBranch();
-        return true;
-      }
-  } else if (isFromLoadImm(MRI, RHS, C0) && MRI.hasOneUse(RHS.getReg())) {
-    // Might be case 2.
-    // For unsigned cases, we don't want C1 to wrap back to UINT64_MAX
-    // when C0 is zero.
-    if ((CC == RISCVCC::COND_GE || CC == RISCVCC::COND_LT) || C0)
-      if (Register RegZ = searchConst(C0 - 1)) {
-        reverseBranchCondition(Cond);
-        Cond[1] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
-        Cond[2] = MachineOperand::CreateReg(LHS.getReg(), /*isDef=*/false);
-        // We might extend the live range of Z, clear its kill flag to
-        // account for this.
-        MRI.clearKillFlags(RegZ);
-        modifyBranch();
-        return true;
-      }
+  // Might be case 1.
+  // Don't change 0 to 1 since we can use x0.
+  // For unsigned cases changing -1U to 0 would be incorrect.
+  // The incorrect case for signed would be INT_MAX, but isFromLoadImm can't
+  // return that.
+  if (isFromLoadImm(MRI, LHS, C0) && C0 != 0 && LHS.getReg().isVirtual() &&
+      MRI.hasOneUse(LHS.getReg()) &&
+      (CC == RISCVCC::COND_GE || CC == RISCVCC::COND_LT || C0 != -1)) {
+    assert(isInt<12>(C0) && "Unexpected immediate");
+    if (Register RegZ = searchConst(C0 + 1)) {
+      reverseBranchCondition(Cond);
+      Cond[1] = MachineOperand::CreateReg(RHS.getReg(), /*isDef=*/false);
+      Cond[2] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
+      // We might extend the live range of Z, clear its kill flag to
+      // account for this.
+      MRI.clearKillFlags(RegZ);
+      modifyBranch();
+      return true;
+    }
+  }
+
+  // Might be case 2.
+  // For signed cases we don't want to change 0 since we can use x0.
+  // For unsigned cases changing 0 to -1U would be incorrect.
+  // The incorrect case for signed would be INT_MIN, but isFromLoadImm can't
+  // return that.
+  if (isFromLoadImm(MRI, RHS, C0) && C0 != 0 && RHS.getReg().isVirtual() &&
+      MRI.hasOneUse(RHS.getReg())) {
+    assert(isInt<12>(C0) && "Unexpected immediate");
+    if (Register RegZ = searchConst(C0 - 1)) {
+      reverseBranchCondition(Cond);
+      Cond[1] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
+      Cond[2] = MachineOperand::CreateReg(LHS.getReg(), /*isDef=*/false);
+      // We might extend the live range of Z, clear its kill flag to
+      // account for this.
+      MRI.clearKillFlags(RegZ);
+      modifyBranch();
+      return true;
+    }
   }
 
   return false;
@@ -1717,7 +1726,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (!MI.memoperands_empty()) {
     MachineMemOperand *MMO = *(MI.memoperands_begin());
     if (STI.hasStdExtZihintntl() && MMO->isNonTemporal()) {
-      if (STI.hasStdExtCOrZca() && STI.enableRVCHintInstrs()) {
+      if (STI.hasStdExtZca()) {
         if (isCompressibleInst(MI, STI))
           return 4; // c.ntl.all + c.load/c.store
         return 6;   // c.ntl.all + load/store
@@ -1738,7 +1747,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case RISCV::PseudoMV_FPR16INX:
   case RISCV::PseudoMV_FPR32INX:
     // MV is always compressible to either c.mv or c.li rd, 0.
-    return STI.hasStdExtCOrZca() ? 2 : 4;
+    return STI.hasStdExtZca() ? 2 : 4;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow
     return StackMapOpers(&MI).getNumPatchBytes();
@@ -1765,7 +1774,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
         return get(Opcode).getSize();
 
       // Number of C.NOP or NOP
-      return (STI.hasStdExtCOrZca() ? 2 : 4) * Num;
+      return (STI.hasStdExtZca() ? 2 : 4) * Num;
     }
     // XRay uses C.JAL + 21 or 33 C.NOP for each sled in RV32 and RV64,
     // respectively.
@@ -3341,14 +3350,14 @@ RISCVInstrInfo::getOutliningCandidateInfo(
   // Each RepeatedSequenceLoc is identical.
   outliner::Candidate &Candidate = RepeatedSequenceLocs[0];
   unsigned InstrSizeCExt =
-      Candidate.getMF()->getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() ? 2
-                                                                          : 4;
+      Candidate.getMF()->getSubtarget<RISCVSubtarget>().hasStdExtZca() ? 2 : 4;
   unsigned CallOverhead = 0, FrameOverhead = 0;
 
   MachineOutlinerConstructionID MOCI = MachineOutlinerDefault;
   if (Candidate.back().isReturn()) {
     MOCI = MachineOutlinerTailCall;
     // tail call = auipc + jalr in the worst case without linker relaxation.
+    // FIXME: This code suggests the JALR can be compressed - how?
     CallOverhead = 4 + InstrSizeCExt;
     // Using tail call we move ret instruction from caller to callee.
     FrameOverhead = 0;
