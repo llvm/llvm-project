@@ -83,6 +83,14 @@ static cl::opt<bool> LargeTable(
              "in the table instead of the default 16 bits."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
+static cl::opt<bool> UseFnTableInDecodetoMCInst(
+    "use-fn-table-in-decode-to-mcinst",
+    cl::desc(
+        "Use a table of function pointers instead of a switch case in the\n"
+        "generated `decodeToMCInst` function. Helps improve compile time\n"
+        "of the generated code."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -222,10 +230,11 @@ public:
   DecoderEmitter(const RecordKeeper &R, StringRef PredicateNamespace)
       : RK(R), Target(R), PredicateNamespace(PredicateNamespace) {}
 
-  // Emit the decoder state machine table.
-  void emitTable(formatted_raw_ostream &OS, DecoderTable &Table, indent Indent,
-                 unsigned BitWidth, StringRef Namespace,
-                 const EncodingIDsVec &EncodingIDs) const;
+  // Emit the decoder state machine table. Returns a mask of MCD decoder ops
+  // that were emitted.
+  unsigned emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
+                     indent Indent, unsigned BitWidth, StringRef Namespace,
+                     const EncodingIDsVec &EncodingIDs) const;
   void emitInstrLenTable(formatted_raw_ostream &OS,
                          ArrayRef<unsigned> InstrLen) const;
   void emitPredicateFunction(formatted_raw_ostream &OS,
@@ -826,11 +835,12 @@ unsigned Filter::usefulness() const {
 //                              //
 //////////////////////////////////
 
-// Emit the decoder state machine table.
-void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
-                               indent Indent, unsigned BitWidth,
-                               StringRef Namespace,
-                               const EncodingIDsVec &EncodingIDs) const {
+// Emit the decoder state machine table. Returns a mask of MCD decoder ops
+// that were emitted.
+unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
+                                   DecoderTable &Table, indent Indent,
+                                   unsigned BitWidth, StringRef Namespace,
+                                   const EncodingIDsVec &EncodingIDs) const {
   // We'll need to be able to map from a decoded opcode into the corresponding
   // EncodingID for this specific combination of BitWidth and Namespace. This
   // is used below to index into NumberedEncodings.
@@ -884,6 +894,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       OS << " (Fail)";
   };
 
+  unsigned OpcodeMask = 0;
+
   while (I != E) {
     assert(I < E && "incomplete decode table entry!");
 
@@ -892,6 +904,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     OS.PadToColumn(12);
 
     const uint8_t DecoderOp = *I++;
+    OpcodeMask |= (1 << DecoderOp);
     switch (DecoderOp) {
     default:
       PrintFatalError("Invalid decode table opcode: " + Twine((int)DecoderOp) +
@@ -1027,6 +1040,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
   Indent -= 2;
 
   OS << Indent << "};\n\n";
+
+  return OpcodeMask;
 }
 
 void DecoderEmitter::emitInstrLenTable(formatted_raw_ostream &OS,
@@ -1045,19 +1060,13 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
   OS << Indent << "static bool checkDecoderPredicate(unsigned Idx, "
      << "const FeatureBitset &Bits) {\n";
   Indent += 2;
-  if (!Predicates.empty()) {
-    OS << Indent << "switch (Idx) {\n";
-    OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
-    unsigned Index = 0;
-    for (const auto &Predicate : Predicates) {
-      OS << Indent << "case " << Index++ << ":\n";
-      OS << Indent + 2 << "return (" << Predicate << ");\n";
-    }
-    OS << Indent << "}\n";
-  } else {
-    // No case statement to emit
-    OS << Indent << "llvm_unreachable(\"Invalid index!\");\n";
+  OS << Indent << "switch (Idx) {\n";
+  OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
+  for (const auto &[Index, Predicate] : enumerate(Predicates)) {
+    OS << Indent << "case " << Index << ":\n";
+    OS << Indent + 2 << "return (" << Predicate << ");\n";
   }
+  OS << Indent << "}\n";
   Indent -= 2;
   OS << Indent << "}\n\n";
 }
@@ -1065,31 +1074,67 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
 void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
                                          DecoderSet &Decoders,
                                          indent Indent) const {
-  // The decoder function is just a big switch statement based on the
-  // input decoder index.
-  OS << Indent << "template <typename InsnType>\n";
-  OS << Indent << "static DecodeStatus decodeToMCInst(DecodeStatus S,"
-     << " unsigned Idx, InsnType insn, MCInst &MI,\n";
-  OS << Indent << "                                   uint64_t "
-     << "Address, const MCDisassembler *Decoder, bool &DecodeComplete) {\n";
-  Indent += 2;
-  OS << Indent << "DecodeComplete = true;\n";
+  // The decoder function is just a big switch statement or a table of function
+  // pointers based on the input decoder index.
+
   // TODO: When InsnType is large, using uint64_t limits all fields to 64 bits
   // It would be better for emitBinaryParser to use a 64-bit tmp whenever
   // possible but fall back to an InsnType-sized tmp for truly large fields.
-  OS << Indent
-     << "using TmpType = "
-        "std::conditional_t<std::is_integral<InsnType>::"
-        "value, InsnType, uint64_t>;\n";
-  OS << Indent << "TmpType tmp;\n";
-  OS << Indent << "switch (Idx) {\n";
-  OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
-  for (const auto &[Index, Decoder] : enumerate(Decoders)) {
-    OS << Indent << "case " << Index << ":\n";
-    OS << Decoder;
-    OS << Indent + 2 << "return S;\n";
+  StringRef TmpTypeDecl =
+      "using TmpType = std::conditional_t<std::is_integral<InsnType>::value, "
+      "InsnType, uint64_t>;\n";
+  StringRef DecodeParams =
+      "DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const "
+      "MCDisassembler *Decoder, bool &DecodeComplete";
+
+  if (UseFnTableInDecodetoMCInst) {
+    // Emit a function for each case first.
+    for (const auto &[Index, Decoder] : enumerate(Decoders)) {
+      OS << Indent << "template <typename InsnType>\n";
+      OS << Indent << "DecodeStatus decodeFn" << Index << "(" << DecodeParams
+         << ") {\n";
+      Indent += 2;
+      OS << Indent << TmpTypeDecl;
+      OS << Indent << "[[maybe_unused]] TmpType tmp;\n";
+      OS << Decoder;
+      OS << Indent << "return S;\n";
+      Indent -= 2;
+      OS << Indent << "}\n\n";
+    }
   }
-  OS << Indent << "}\n";
+
+  OS << Indent << "// Handling " << Decoders.size() << " cases.\n";
+  OS << Indent << "template <typename InsnType>\n";
+  OS << Indent << "static DecodeStatus decodeToMCInst(unsigned Idx, "
+     << DecodeParams << ") {\n";
+  Indent += 2;
+  OS << Indent << "DecodeComplete = true;\n";
+
+  if (UseFnTableInDecodetoMCInst) {
+    // Build a table of function pointers.
+    OS << Indent << "using DecodeFnTy = DecodeStatus (*)(" << DecodeParams
+       << ");\n";
+    OS << Indent << "static constexpr DecodeFnTy decodeFnTable[] = {\n";
+    for (size_t Index : llvm::seq(Decoders.size()))
+      OS << Indent + 2 << "decodeFn" << Index << ",\n";
+    OS << Indent << "};\n";
+    OS << Indent << "if (Idx >= " << Decoders.size() << ")\n";
+    OS << Indent + 2 << "llvm_unreachable(\"Invalid index!\");\n";
+    OS << Indent
+       << "return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
+          "DecodeComplete);\n";
+  } else {
+    OS << Indent << TmpTypeDecl;
+    OS << Indent << "TmpType tmp;\n";
+    OS << Indent << "switch (Idx) {\n";
+    OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
+    for (const auto &[Index, Decoder] : enumerate(Decoders)) {
+      OS << Indent << "case " << Index << ":\n";
+      OS << Decoder;
+      OS << Indent + 2 << "return S;\n";
+    }
+    OS << Indent << "}\n";
+  }
   Indent -= 2;
   OS << Indent << "}\n";
 }
@@ -1266,7 +1311,8 @@ std::pair<unsigned, bool> FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   // FIXME: emitDecoder() function can take a buffer directly rather than
   // a stream.
   raw_svector_ostream S(Decoder);
-  bool HasCompleteDecoder = emitDecoder(S, indent(4), Opc);
+  indent Indent(UseFnTableInDecodetoMCInst ? 2 : 4);
+  bool HasCompleteDecoder = emitDecoder(S, Indent, Opc);
 
   // Using the full decoder string as the key value here is a bit
   // heavyweight, but is effective. If the string comparisons become a
@@ -2217,8 +2263,15 @@ static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
 
 // emitDecodeInstruction - Emit the templated helper function
 // decodeInstruction().
-static void emitDecodeInstruction(formatted_raw_ostream &OS,
-                                  bool IsVarLenInst) {
+static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
+                                  unsigned OpcodeMask) {
+  const bool HasTryDecode = OpcodeMask & ((1 << MCD::OPC_TryDecode) |
+                                          (1 << MCD::OPC_TryDecodeOrFail));
+  const bool HasCheckPredicate =
+      OpcodeMask &
+      ((1 << MCD::OPC_CheckPredicate) | (1 << MCD::OPC_CheckPredicateOrFail));
+  const bool HasSoftFail = OpcodeMask & (1 << MCD::OPC_SoftFail);
+
   OS << R"(
 static unsigned decodeNumToSkip(const uint8_t *&Ptr) {
   unsigned NumToSkip = *Ptr++;
@@ -2238,9 +2291,11 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     OS << ",\n                                      "
           "llvm::function_ref<void(APInt &, uint64_t)> makeUp";
   }
-  OS << R"() {
-  const FeatureBitset &Bits = STI.getFeatureBits();
+  OS << ") {\n";
+  if (HasCheckPredicate)
+    OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
 
+  OS << R"(
   const uint8_t *Ptr = DecodeTable;
   uint64_t CurFieldValue = 0;
   DecodeStatus S = MCDisassembler::Success;
@@ -2321,7 +2376,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
         Ptr += NumToSkip;
       }
       break;
-    }
+    })";
+  if (HasCheckPredicate) {
+    OS << R"(
     case MCD::OPC_CheckPredicate:
     case MCD::OPC_CheckPredicateOrFail: {
       bool IsFail = DecoderOp == MCD::OPC_CheckPredicateOrFail;
@@ -2343,7 +2400,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
         Ptr += NumToSkip;
       }
       break;
-    }
+    })";
+  }
+  OS << R"(
     case MCD::OPC_Decode: {
       // Decode the Opcode value.
       unsigned Opc = decodeULEB128AndIncUnsafe(Ptr);
@@ -2357,14 +2416,16 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
        << "      makeUp(insn, Len);";
   }
   OS << R"(
-      S = decodeToMCInst(S, DecodeIdx, insn, MI, Address, DisAsm, DecodeComplete);
+      S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
       assert(DecodeComplete);
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": "
                    << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
       return S;
-    }
+    })";
+  if (HasTryDecode) {
+    OS << R"(
     case MCD::OPC_TryDecode:
     case MCD::OPC_TryDecodeOrFail: {
       bool IsFail = DecoderOp == MCD::OPC_TryDecodeOrFail;
@@ -2377,7 +2438,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       MCInst TmpMI;
       TmpMI.setOpcode(Opc);
       bool DecodeComplete;
-      S = decodeToMCInst(S, DecodeIdx, insn, TmpMI, Address, DisAsm, DecodeComplete);
+      S = decodeToMCInst(DecodeIdx, S, insn, TmpMI, Address, DisAsm, DecodeComplete);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_TryDecode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": ");
 
@@ -2399,17 +2460,22 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       // set before the decode attempt.
       S = MCDisassembler::Success;
       break;
-    }
-    case MCD::OPC_SoftFail: {
-      // Decode the mask values.
-      uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
-      uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
-      bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
-      if (Failed)
-        S = MCDisassembler::SoftFail;
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
-      break;
-    }
+    })";
+  }
+  if (HasSoftFail) {
+    OS << R"(
+      case MCD::OPC_SoftFail: {
+        // Decode the mask values.
+        uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
+        uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
+        bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
+        if (Failed)
+          S = MCDisassembler::SoftFail;
+        LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
+        break;
+  })";
+  }
+  OS << R"(
     case MCD::OPC_Fail: {
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Fail\n");
       return MCDisassembler::Fail;
@@ -2609,12 +2675,13 @@ namespace {
   }
 
   DecoderTableInfo TableInfo;
-  for (const auto &Opc : OpcMap) {
+  unsigned OpcodeMask = 0;
+  for (const auto &[NSAndByteSize, EncodingIDs] : OpcMap) {
+    const std::string &DecoderNamespace = NSAndByteSize.first;
+    const unsigned BitWidth = 8 * NSAndByteSize.second;
     // Emit the decoder for this namespace+width combination.
-    ArrayRef<EncodingAndInst> NumberedEncodingsRef(NumberedEncodings.data(),
-                                                   NumberedEncodings.size());
-    FilterChooser FC(NumberedEncodingsRef, Opc.second, Operands,
-                     IsVarLenInst ? MaxInstLen : 8 * Opc.first.second, this);
+    FilterChooser FC(NumberedEncodings, EncodingIDs, Operands,
+                     IsVarLenInst ? MaxInstLen : BitWidth, this);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
@@ -2634,8 +2701,8 @@ namespace {
     TableInfo.Table.push_back(MCD::OPC_Fail);
 
     // Print the table to the output stream.
-    emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(), Opc.first.first,
-              Opc.second);
+    OpcodeMask |= emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(),
+                            DecoderNamespace, EncodingIDs);
   }
 
   // For variable instruction, we emit a instruction length table
@@ -2643,14 +2710,20 @@ namespace {
   // You can see example usage in M68k's disassembler.
   if (IsVarLenInst)
     emitInstrLenTable(OS, InstrLen);
+
+  const bool HasCheckPredicate =
+      OpcodeMask &
+      ((1 << MCD::OPC_CheckPredicate) | (1 << MCD::OPC_CheckPredicateOrFail));
+
   // Emit the predicate function.
-  emitPredicateFunction(OS, TableInfo.Predicates, indent(0));
+  if (HasCheckPredicate)
+    emitPredicateFunction(OS, TableInfo.Predicates, indent(0));
 
   // Emit the decoder function.
   emitDecoderFunction(OS, TableInfo.Decoders, indent(0));
 
   // Emit the main entry point for the decoder, decodeInstruction().
-  emitDecodeInstruction(OS, IsVarLenInst);
+  emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask);
 
   OS << "\n} // namespace\n";
 }

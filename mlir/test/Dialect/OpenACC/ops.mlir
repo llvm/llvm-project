@@ -921,6 +921,21 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 
 // -----
 
+func.func @testdataopmodifiers(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
+  %0 = acc.create varPtr(%a : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier capture,zero>}
+  %1 = acc.copyin varPtr(%b : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,capture,always>}
+  acc.data dataOperands(%0, %1 : memref<f32>, memref<f32>) {
+  }
+  acc.copyout accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>) {modifiers = #acc<data_clause_modifier zero,capture,always>}
+  func.return
+}
+// CHECK:      func @testdataopmodifiers(%[[ARGA:.*]]: memref<f32>, %[[ARGB:.*]]: memref<f32>, %[[ARGC:.*]]: memref<f32>) {
+// CHECK:      %[[CREATEA:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier zero,capture>}
+// CHECK:      %[[COPYINB:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always,readonly,capture>}
+// CHECK:      acc.copyout accPtr(%[[CREATEA]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) {modifiers = #acc<data_clause_modifier always,zero,capture>}
+
+// -----
+
 func.func @testupdateop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32

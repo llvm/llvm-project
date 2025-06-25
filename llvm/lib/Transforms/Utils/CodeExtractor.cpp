@@ -471,10 +471,6 @@ CodeExtractor::getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
         Info.LifeEnd = IntrInst;
         continue;
       }
-      // At this point, permit debug uses outside of the region.
-      // This is fixed in a later call to fixupDebugInfoPostExtraction().
-      if (isa<DbgInfoIntrinsic>(IntrInst))
-        continue;
     }
     // Find untracked uses of the address, bail.
     if (!definedInRegion(Blocks, U))
@@ -1077,10 +1073,6 @@ static void applyFirstDebugLoc(Function *oldFunction,
       return any_of(*BB, [&BranchI](const Instruction &I) {
         if (!I.getDebugLoc())
           return false;
-        // Don't use source locations attached to debug-intrinsics: they could
-        // be from completely unrelated scopes.
-        if (isa<DbgInfoIntrinsic>(I))
-          return false;
         BranchI->setDebugLoc(I.getDebugLoc());
         return true;
       });
@@ -1329,7 +1321,6 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   //  2) They need to point to fresh metadata, e.g. because they currently
   //     point to a variable in the wrong scope.
   SmallDenseMap<DINode *, DINode *> RemappedMetadata;
-  SmallVector<Instruction *, 4> DebugIntrinsicsToDelete;
   SmallVector<DbgVariableRecord *, 4> DVRsToDelete;
   DenseMap<const MDNode *, MDNode *> Cache;
 
@@ -1370,55 +1361,29 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       }
 
       DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
-      // Apply the two updates that dbg.values get: invalid operands, and
-      // variable metadata fixup.
+      // If any of the used locations are invalid, delete the record.
       if (any_of(DVR.location_ops(), IsInvalidLocation)) {
         DVRsToDelete.push_back(&DVR);
         continue;
       }
+
+      // DbgAssign intrinsics have an extra Value argument:
       if (DVR.isDbgAssign() && IsInvalidLocation(DVR.getAddress())) {
         DVRsToDelete.push_back(&DVR);
         continue;
       }
+
+      // If the variable was in the scope of the old function, i.e. it was not
+      // inlined, point the intrinsic to a fresh variable within the new
+      // function.
       if (!DVR.getDebugLoc().getInlinedAt())
         DVR.setVariable(GetUpdatedDIVariable(DVR.getVariable()));
     }
   };
 
-  for (Instruction &I : instructions(NewFunc)) {
+  for (Instruction &I : instructions(NewFunc))
     UpdateDbgRecordsOnInst(I);
 
-    auto *DII = dyn_cast<DbgInfoIntrinsic>(&I);
-    if (!DII)
-      continue;
-
-    // Point the intrinsic to a fresh label within the new function if the
-    // intrinsic was not inlined from some other function.
-    if (auto *DLI = dyn_cast<DbgLabelInst>(&I)) {
-      UpdateDbgLabel(DLI);
-      continue;
-    }
-
-    auto *DVI = cast<DbgVariableIntrinsic>(DII);
-    // If any of the used locations are invalid, delete the intrinsic.
-    if (any_of(DVI->location_ops(), IsInvalidLocation)) {
-      DebugIntrinsicsToDelete.push_back(DVI);
-      continue;
-    }
-    // DbgAssign intrinsics have an extra Value argument:
-    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
-        DAI && IsInvalidLocation(DAI->getAddress())) {
-      DebugIntrinsicsToDelete.push_back(DVI);
-      continue;
-    }
-    // If the variable was in the scope of the old function, i.e. it was not
-    // inlined, point the intrinsic to a fresh variable within the new function.
-    if (!DVI->getDebugLoc().getInlinedAt())
-      DVI->setVariable(GetUpdatedDIVariable(DVI->getVariable()));
-  }
-
-  for (auto *DII : DebugIntrinsicsToDelete)
-    DII->eraseFromParent();
   for (auto *DVR : DVRsToDelete)
     DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   DIB.finalizeSubprogram(NewSP);

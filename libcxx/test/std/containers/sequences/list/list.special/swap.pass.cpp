@@ -9,7 +9,7 @@
 // <list>
 
 // template <class T, class Alloc>
-//   void swap(list<T,Alloc>& x, list<T,Alloc>& y);
+//   void swap(list<T,Alloc>& x, list<T,Alloc>& y); // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -17,7 +17,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int a1[] = {1, 3, 7, 9, 10};
     int a2[] = {0, 2, 4, 5, 6, 8, 11};
@@ -131,6 +131,15 @@ int main(int, char**) {
     assert((c2 == std::list<int, A>(a1, a1 + 5)));
     assert(c2.get_allocator() == A());
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

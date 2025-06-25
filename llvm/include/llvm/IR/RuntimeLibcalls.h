@@ -19,6 +19,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -53,8 +54,12 @@ static inline auto libcalls() {
 
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
-  explicit RuntimeLibcallsInfo(const Triple &TT) {
-    initLibcalls(TT);
+  explicit RuntimeLibcallsInfo(
+      const Triple &TT,
+      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      FloatABI::ABIType FloatABI = FloatABI::Default,
+      EABI EABIVersion = EABI::Default, StringRef ABIName = "") {
+    initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
   }
 
   /// Rename the default libcall routine name for the specified libcall.
@@ -101,6 +106,16 @@ struct RuntimeLibcallsInfo {
     SoftFloatCompareLibcallPredicates[Call] = Pred;
   }
 
+  /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
+  /// unsupported.
+  const char *getMemcpyName() const {
+    if (const char *Memcpy = getLibcallName(RTLIB::MEMCPY))
+      return Memcpy;
+
+    // Fallback to memmove if memcpy isn't available.
+    return getLibcallName(RTLIB::MEMMOVE);
+  }
+
 private:
   /// Stores the name each libcall.
   const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1] = {nullptr};
@@ -134,6 +149,8 @@ private:
     return true;
   }
 
+  static bool darwinHasExp10(const Triple &TT);
+
   /// Return true if the target has sincosf/sincos/sincosl functions
   static bool hasSinCos(const Triple &TT) {
     return TT.isGNUEnvironment() || TT.isOSFuchsia() ||
@@ -144,7 +161,9 @@ private:
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
-  LLVM_ABI void initLibcalls(const Triple &TT);
+  LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
+                             FloatABI::ABIType FloatABI, EABI ABIType,
+                             StringRef ABIName);
 };
 
 } // namespace RTLIB

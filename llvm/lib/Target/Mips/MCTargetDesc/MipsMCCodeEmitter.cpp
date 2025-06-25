@@ -581,7 +581,7 @@ getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
                const MCSubtargetInfo &STI) const {
   MCExpr::ExprKind Kind = Expr->getKind();
   if (Kind == MCExpr::Specifier) {
-    const MipsMCExpr *MipsExpr = cast<MipsMCExpr>(Expr);
+    const auto *MipsExpr = cast<MCSpecifierExpr>(Expr);
 
     Mips::Fixups FixupKind = Mips::Fixups(0);
     switch (MipsExpr->getSpecifier()) {

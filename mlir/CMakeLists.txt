@@ -184,6 +184,8 @@ set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir"
   CACHE STRING "nanobind domain for MLIR python bindings.")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
+set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/mlir_core/mlir" CACHE STRING
+       "Prefix under install directory to place python bindings")
 set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
        "Prime the python detection by searching for a full 'Development' \
        component first (temporary while diagnosing environment specific Python \

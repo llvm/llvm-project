@@ -596,17 +596,20 @@ class QCILICC<bits<3> funct3, bits<2> funct2, DAGOperand InTyRs2, string opcodes
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIMVCC<bits<3> funct3, string opcodestr>
-    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
-               (ins GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
-               opcodestr, "$rd, $rs1, $rs2, $rs3">;
+    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
+               opcodestr, "$rd, $rs1, $rs2, $rs3"> {
+  let Constraints = "$rd = $rd_wb";
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
-    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
-               (ins GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
+    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
                opcodestr, "$rd, $rs1, $imm, $rs3"> {
   bits<5> imm;
-
+  
+  let Constraints = "$rd = $rd_wb";
   let rs2 = imm;
 }
 
@@ -1439,8 +1442,6 @@ def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC
 } // let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2
 
 let Predicates = [HasVendorXqcibm, IsRV32] in {
-def : Pat<(sext_inreg (i32 GPR:$rs1), i16), (QC_EXT GPR:$rs1, 16, 0)>;
-def : Pat<(sext_inreg (i32 GPR:$rs1), i8), (QC_EXT GPR:$rs1, 8, 0)>;
 def : Pat<(sext_inreg (i32 GPR:$rs1), i1), (QC_EXT GPR:$rs1, 1, 0)>;
 
 // Prefer qc.extu to andi for the following cases since the former can be compressed
@@ -1450,7 +1451,20 @@ def : Pat<(i32 (and GPRNoX0:$rs, 255)), (QC_EXTU GPRNoX0:$rs, 8, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 511)), (QC_EXTU GPRNoX0:$rs, 9, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 1023)), (QC_EXTU GPRNoX0:$rs, 10, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 2047)), (QC_EXTU GPRNoX0:$rs, 11, 0)>;
+
+def : Pat<(i32 (bitreverse GPRNoX0:$rs1)), (QC_BREV32 GPRNoX0:$rs1)>;
 } // Predicates = [HasVendorXqcibm, IsRV32]
+
+// If Zbb is enabled sext.b/h is preferred since they are compressible
+let Predicates = [HasVendorXqcibm, NoStdExtZbb, IsRV32] in {
+def : Pat<(sext_inreg (i32 GPR:$rs1), i16), (QC_EXT GPR:$rs1, 16, 0)>;
+def : Pat<(sext_inreg (i32 GPR:$rs1), i8), (QC_EXT GPR:$rs1, 8, 0)>;
+} // Predicates = [HasVendorXqcibm, NoStdExtZbb, IsRV32]
+
+let Predicates = [HasVendorXqcibm, HasStdExtZbb, IsRV32] in {
+def: Pat<(i32 (cttz (not (i32 GPR:$rs1)))), (QC_CTO GPR:$rs1)>;
+def: Pat<(i32 (ctlz (not (i32 GPR:$rs1)))), (QC_CLO GPR:$rs1)>;
+} // Predicates = [HasVendorXqcibm, HasStdExtZbb, IsRV32]
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
@@ -1564,6 +1578,11 @@ def : CompressPat<(QC_E_ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, 0),
 def : CompressPat<(QC_E_ADDI X2, X2, simm10_lsb0000nonzero:$imm),
                   (C_ADDI16SP X2, simm10_lsb0000nonzero:$imm)>;
 } // let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32]
+
+let Predicates = [HasVendorXqciac, IsRV32] in {
+def : CompressPat<(QC_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5)>;
+}
 
 let isCompressOnly = true, Predicates = [HasVendorXqcibi, IsRV32] in {
 def : CompressPat<(QC_E_BEQI GPRNoX0:$rs1, simm5nonzero:$imm5, bare_simm13_lsb0:$imm12),
