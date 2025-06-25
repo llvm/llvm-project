@@ -8,15 +8,15 @@
 
 #include "hdr/types/mbstate_t.h"
 #include "hdr/types/wchar_t.h"
+#include "src/__support/wchar/mbstate.h"
 #include "src/string/memset.h"
 #include "src/wchar/wcsrtombs.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
-#include "src/__support/wchar/mbstate.h"
 
 using LlvmLibcWCSRToMBSTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcWCSRToMBSTest, SingleCharacterOneByte) {
+TEST_F(LlvmLibcWCSRToMBSTest, SingleCharacterOneByte) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
   const wchar_t *wcs = L"U";
@@ -28,7 +28,7 @@ TEST(LlvmLibcWCSRToMBSTest, SingleCharacterOneByte) {
   ASSERT_EQ(wcs, nullptr);
 }
 
-TEST(LlvmLibcWCSRToMBSTest, MultipleCompleteConversions) {
+TEST_F(LlvmLibcWCSRToMBSTest, MultipleCompleteConversions) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
 
@@ -71,7 +71,7 @@ TEST(LlvmLibcWCSRToMBSTest, MultipleCompleteConversions) {
   ASSERT_EQ(mbs[6], '\x01'); // should not write beyond null terminator
 }
 
-TEST(LlvmLibcWCSRToMBSTest, MultiplePartialConversions) {
+TEST_F(LlvmLibcWCSRToMBSTest, MultiplePartialConversions) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
 
@@ -115,7 +115,7 @@ TEST(LlvmLibcWCSRToMBSTest, MultiplePartialConversions) {
   ASSERT_EQ(mbs[6], '\x01');
 }
 
-TEST(LlvmLibcWCSRToMBSTest, NullDestination) {
+TEST_F(LlvmLibcWCSRToMBSTest, NullDestination) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
 
@@ -130,7 +130,7 @@ TEST(LlvmLibcWCSRToMBSTest, NullDestination) {
   ASSERT_EQ(wcs, nullptr);
 }
 
-TEST(LlvmLibcWCSRToMBSTest, NullState) {
+TEST_F(LlvmLibcWCSRToMBSTest, NullState) {
   // same as MultiplePartialConversions test except without an explicit
   // mbstate_t
 
@@ -172,7 +172,7 @@ TEST(LlvmLibcWCSRToMBSTest, NullState) {
   ASSERT_EQ(mbs[6], '\x01');
 }
 
-TEST(LlvmLibcWCSRToMBSTest, InvalidWchar) {
+TEST_F(LlvmLibcWCSRToMBSTest, InvalidWchar) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
 
@@ -189,12 +189,25 @@ TEST(LlvmLibcWCSRToMBSTest, InvalidWchar) {
   ASSERT_ERRNO_EQ(EILSEQ);
 }
 
-TEST(LlvmLibcWCSRToMBSTest, InvalidState) {
+TEST_F(LlvmLibcWCSRToMBSTest, InvalidState) {
   LIBC_NAMESPACE::internal::mbstate state{0, 0, 9}; // 9 total bytes is invalid
   const wchar_t *wcs = L"\xFF\xAC15";
   char mbs[5];
   // convert the valid wchar
-  size_t count = LIBC_NAMESPACE::wcsrtombs(mbs, &wcs, 5, reinterpret_cast<mbstate_t*>(&state));
+  size_t count = LIBC_NAMESPACE::wcsrtombs(
+      mbs, &wcs, 5, reinterpret_cast<mbstate_t *>(&state));
   ASSERT_EQ(count, static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EINVAL);
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+TEST_F(LlvmLibcWCSRToMBSTest, NullSrc) {
+  // Passing in a nullptr should crash the program.
+  char mbs[] = {0, 0};
+  EXPECT_DEATH(
+      [&mbs] {
+        LIBC_NAMESPACE::wcsrtombs(mbs, nullptr, 2, nullptr);
+      },
+      WITH_SIGNAL(-1));
+}
+#endif // LIBC_HAS_ADDRESS_SANITIZER

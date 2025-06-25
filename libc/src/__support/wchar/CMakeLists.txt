@@ -49,6 +49,7 @@ add_object_library(
     libc.hdr.types.wchar_t
     libc.src.__support.error_or
     libc.src.__support.common
+    libc.src.__support.libc_assert
     .character_converter
     .mbstate
     .wcrtomb

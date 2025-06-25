@@ -7,16 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/wchar/wcsrtombs.h"
-#include "src/__support/error_or.h"
-#include "src/__support/wchar/character_converter.h"
-#include "src/__support/wchar/mbstate.h"
-#include "src/__support/wchar/wcrtomb.h"
-
 #include "hdr/types/char32_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/wchar/character_converter.h"
+#include "src/__support/wchar/mbstate.h"
+#include "src/__support/wchar/wcrtomb.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
