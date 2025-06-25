@@ -107,8 +107,8 @@ struct RuntimeLibcallsInfo {
   }
 
 private:
-  static const char *const
-      DefaultLibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
+  static const char
+      *const DefaultLibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
 
   /// Stores the name each libcall.
   const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1] = {nullptr};
