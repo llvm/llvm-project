@@ -582,26 +582,26 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 
   Example 1:
   ```mlir
-    %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
-                            l2_hint = #xegpu.cache_hint<uncached>,
-                            l3_hint = #xegpu.cache_hint<uncached>}
+    %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
+                             l2_hint = #xegpu.cache_hint<uncached>,
+                             l3_hint = #xegpu.cache_hint<uncached>}>
           : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
             vector<16xi1> -> vector<16xf32>
   ```
 
   Example 2:
   ```mlir
-    %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
-                            l2_hint = #xegpu.cache_hint<uncached>,
-                            l3_hint = #xegpu.cache_hint<uncached>}
+    %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
+                             l2_hint = #xegpu.cache_hint<uncached>,
+                             l3_hint = #xegpu.cache_hint<uncached>}>
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
             vector<16xi1> -> vector<16x8xf32>
   ```
   Example 3 (SIMT mode):
   ```mlir
-    %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
-                            l2_hint = #xegpu.cache_hint<uncached>,
-                            l3_hint = #xegpu.cache_hint<uncached>}
+    %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
+                             l2_hint = #xegpu.cache_hint<uncached>,
+                             l3_hint = #xegpu.cache_hint<uncached>}>
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>
             vector<16xi1> -> vector<8xf32>
   ```
@@ -657,18 +657,26 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
 
   Example 1:
   ```mlir
-    xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
-                                 l2_hint = #xegpu.cache_hint<write_back>,
-                                 l3_hint = #xegpu.cache_hint<write_through>}
+    xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
+                             l2_hint = #xegpu.cache_hint<write_back>,
+                             l3_hint = #xegpu.cache_hint<write_through>}>
           : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scattered_tdesc_attr<>>, vector<16xi1>
   ```
 
   Example 2:
   ```mlir
-    xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
-                            l2_hint = #xegpu.cache_hint<write_back>,
-                            l3_hint = #xegpu.cache_hint<write_through>}
+    xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
+                             l2_hint = #xegpu.cache_hint<write_back>,
+                             l3_hint = #xegpu.cache_hint<write_through>}>
           : vector<16x8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
+  ```
+
+  Example 3 (SIMT mode):
+  ```mlir
+    xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
+                             l2_hint = #xegpu.cache_hint<write_back>,
+                             l3_hint = #xegpu.cache_hint<write_through>}>
+          : vector<8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>> vector<16xi1>
   ```
   }];
 

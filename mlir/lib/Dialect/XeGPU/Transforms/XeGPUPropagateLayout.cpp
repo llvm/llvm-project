@@ -229,7 +229,9 @@ static LayoutInfo getDefaultSIMTLayoutInfo(xegpu::TensorDescType tdescTy) {
 
   if (tdescTy.isScattered()) {
     int packingFactor =
-        xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth;
+        bitwidth < xegpu::targetinfo::packedSizeInBitsForGatherScatter
+            ? xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth
+            : 1;
     return LayoutInfo(LaneLayout({xegpu::targetinfo::subgroupSize, 1}),
                       LaneData({1, packingFactor}));
   }
