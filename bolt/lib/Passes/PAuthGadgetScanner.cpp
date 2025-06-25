@@ -737,18 +737,13 @@ protected:
 //
 // Then, a function can be split into a number of disjoint contiguous sequences
 // of instructions without labels in between. These sequences can be processed
-// the same way basic blocks are processed by data-flow analysis, assuming
-// pessimistically that all registers are unsafe at the start of each sequence.
+// the same way basic blocks are processed by data-flow analysis, with the same
+// pessimistic estimation of the initial state at the start of each sequence
+// (except the first instruction of the function).
 class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis,
                                     public CFGUnawareAnalysis<SrcState> {
   using SrcSafetyAnalysis::BC;
   BinaryFunction &BF;
-
-  /// Creates a state with all registers marked unsafe (not to be confused
-  /// with empty state).
-  SrcState createUnsafeState() const {
-    return SrcState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
-  }
 
 public:
   CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
@@ -759,6 +754,7 @@ public:
   }
 
   void run() override {
+    const SrcState DefaultState = computePessimisticState(BF);
     SrcState S = createEntryState();
     for (auto &I : BF.instrs()) {
       MCInst &Inst = I.second;
@@ -773,7 +769,7 @@ public:
         LLVM_DEBUG({
           traceInst(BC, "Due to label, resetting the state before", Inst);
         });
-        S = createUnsafeState();
+        S = DefaultState;
       }
 
       // Attach the state *before* this instruction executes.
