@@ -357,9 +357,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // Most operations are naturally 32-bit vector operations. We only support
   // load and store of i64 vectors, so promote v2i64 vector operations to v4i32.
   for (MVT Vec64 : {MVT::v2i64, MVT::v2f64}) {
-    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
-    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v4i32);
-
+    if (STI.hasMovB64())
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
+    else {
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+      AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v4i32);
+    }
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
     AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v4i32);
 
@@ -371,9 +374,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   for (MVT Vec64 : {MVT::v3i64, MVT::v3f64}) {
-    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
-    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v6i32);
-
+    if (STI.hasMovB64())
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
+    else {
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+      AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v6i32);
+    }
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
     AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v6i32);
 
@@ -385,9 +391,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   for (MVT Vec64 : {MVT::v4i64, MVT::v4f64}) {
-    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
-    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v8i32);
-
+    if (STI.hasMovB64())
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
+    else {
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+      AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v8i32);
+    }
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
     AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v8i32);
 
@@ -399,9 +408,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   for (MVT Vec64 : {MVT::v8i64, MVT::v8f64}) {
-    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
-    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v16i32);
-
+    if (STI.hasMovB64())
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
+    else {
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+      AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v16i32);
+    }
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
     AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v16i32);
 
@@ -413,9 +425,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   for (MVT Vec64 : {MVT::v16i64, MVT::v16f64}) {
-    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
-    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v32i32);
-
+    if (STI.hasMovB64())
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
+    else {
+      setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+      AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v32i32);
+    }
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
     AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v32i32);
 
@@ -945,6 +960,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   setTargetDAGCombine({ISD::ADD,
+                       ISD::BITCAST,
+                       ISD::BUILD_VECTOR,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
                        ISD::USUBO_CARRY,
@@ -14145,6 +14162,18 @@ bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {
       EltSize, NumElem, Idx->isDivergent(), getSubtarget());
 }
 
+static unsigned getMappedVectorIndex(unsigned Idx, EVT From, EVT To) {
+  assert(From.isVector() && To.isVector() &&
+         "From and To types have to be vector types");
+  assert(From.getSizeInBits() == To.getSizeInBits() &&
+         "From and To vector types require the same size");
+
+  unsigned FromNumElts = From.getVectorNumElements();
+  unsigned ToNumElts = To.getVectorNumElements();
+
+  return (Idx * ToNumElts) / FromNumElts;
+}
+
 SDValue
 SITargetLowering::performExtractVectorEltCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
@@ -14204,6 +14233,27 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
       DCI.AddToWorklist(Elt1.getNode());
       return DAG.getNode(Opc, SL, ResVT, Elt0, Elt1, Vec->getFlags());
     }
+    }
+  }
+
+  // if PeekThoughBitcast(Vec)[MapIdx(CIdx)] == undef &&
+  //    VecEltSize < PeekThroughEltSize, then
+  // EXTRACT_VECTOR_ELT(bitcast(build_vector(..., undef, ...)), CIdx) => undef
+  auto *IndexC = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  SDValue PeekThroughVec = peekThroughBitcasts(Vec);
+  EVT PeekThroughVecVT = PeekThroughVec.getValueType();
+  if (IndexC && PeekThroughVec.getOpcode() == ISD::BUILD_VECTOR &&
+      PeekThroughVecVT.isFixedLengthVector()) {
+    EVT PeekThroughVecEltVT = PeekThroughVecVT.getVectorElementType();
+    // Small elt size vectors to big elt size vectors are the cases covered for
+    // now (e.g., v4i32 bitcast(v2i64)) which may be conservative.
+    if (VecEltSize < PeekThroughVecEltVT.getSizeInBits()) {
+      unsigned IndexVal = IndexC->getZExtValue();
+      unsigned MappedIndexVal =
+          getMappedVectorIndex(IndexVal, VecVT, PeekThroughVecVT);
+      SDValue PeekThroughElt = PeekThroughVec.getOperand(MappedIndexVal);
+      if (PeekThroughElt.isUndef())
+        return DAG.getUNDEF(VecEltVT);
     }
   }
 
@@ -15591,6 +15641,70 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return SDValue(CSrc, 0);
 }
 
+SDValue
+SITargetLowering::performBuildVectorCombine(SDNode *N,
+                                            DAGCombinerInfo &DCI) const {
+  const GCNSubtarget *ST = getSubtarget();
+  if (DCI.Level < AfterLegalizeDAG || !ST->hasMovB64())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+
+  EVT VT = N->getValueType(0);
+  EVT EltVT = VT.getVectorElementType();
+  unsigned SizeBits = VT.getSizeInBits();
+  unsigned EltSize = EltVT.getSizeInBits();
+
+  // Skip if:
+  //  - Value type isn't multiple of 64 bit (e.g., v3i32), or
+  //  - Element type has already been combined into 64b elements
+  if ((SizeBits % 64) != 0 || EltVT == MVT::i64 || EltVT == MVT::f64)
+    return SDValue();
+
+  // Construct the 64b values.
+  SmallVector<uint64_t, 8> ImmVals;
+  uint64_t ImmVal = 0;
+  uint64_t ImmSize = 0;
+  for (SDValue Opand : N->ops()) {
+    // Build_vector with constants only.
+    ConstantSDNode *C = dyn_cast<ConstantSDNode>(Opand);
+    if (!C)
+      return SDValue();
+
+    ImmVal |= C->getZExtValue() << ImmSize;
+    ImmSize += EltSize;
+    if (ImmSize > 64)
+      return SDValue();
+    if (ImmSize == 64) {
+      if (!isUInt<32>(ImmVal))
+        return SDValue();
+      ImmVals.push_back(ImmVal);
+      ImmVal = 0;
+      ImmSize = 0;
+    }
+  }
+
+  // Avoid emitting build_vector with 1 element and directly emit value.
+  if (ImmVals.size() == 1) {
+    SDValue Val = DAG.getConstant(ImmVals[0], SL, MVT::i64);
+    return DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Val);
+  }
+
+  // Construct and return build_vector with 64b elements.
+  if (!ImmVals.empty()) {
+    SmallVector<SDValue, 8> VectorConsts;
+    for (uint64_t I : ImmVals)
+      VectorConsts.push_back(DAG.getConstant(I, SL, MVT::i64));
+    unsigned NewNumElts = SizeBits / 64;
+    LLVMContext &Ctx = *DAG.getContext();
+    EVT NewVT = EVT::getVectorVT(Ctx, MVT::i64, NewNumElts);
+    SDValue BV = DAG.getBuildVector(NewVT, SL, VectorConsts);
+    return DAG.getBitcast(VT, BV);
+  }
+  return SDValue();
+}
+
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
@@ -15678,6 +15792,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFCanonicalizeCombine(N, DCI);
   case AMDGPUISD::RCP:
     return performRcpCombine(N, DCI);
+  case ISD::BUILD_VECTOR:
+    return performBuildVectorCombine(N, DCI);
   case ISD::FLDEXP:
   case AMDGPUISD::FRACT:
   case AMDGPUISD::RSQ:
@@ -15730,6 +15846,14 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
+  case ISD::BITCAST: {
+    // Avoid undoing build_vector with 64b elements if subtarget supports 64b
+    // movs (i.e., avoid inf loop through combines).
+    const GCNSubtarget *ST = getSubtarget();
+    if (ST->hasMovB64())
+      return SDValue();
+    break;
+  }
   case ISD::LOAD: {
     if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widened;
