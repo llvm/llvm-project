@@ -2275,10 +2275,10 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
       HandleDoubleFree(C, ParentExpr->getSourceRange(), RsBase->isReleased(),
                        SymBase, PreviousRetStatusSymbol);
       return nullptr;
+    }
 
     // If the pointer is allocated or escaped, but we are now trying to free it,
     // check that the call to free is proper.
-    }
     if (RsBase->isAllocated() || RsBase->isAllocatedOfSizeZero() ||
         RsBase->isEscaped()) {
 
