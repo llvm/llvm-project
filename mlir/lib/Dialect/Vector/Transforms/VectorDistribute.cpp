@@ -1148,7 +1148,7 @@ struct WarpOpInsertStridedSlice : public WarpDistributionPattern {
     int64_t destDistributedDim =
         getDistributedDim(yieldedType, distributedType);
     assert(destDistributedDim != -1 && "could not find distributed dimension");
-    (void)destDistributedDim;
+
     VectorType srcType = insertOp.getSourceVectorType();
     VectorType destType = insertOp.getDestVectorType();
     // Currently we require that both source (kD) and dest (nD) vectors are
@@ -1242,7 +1242,9 @@ struct WarpOpExtractStridedSlice : public WarpDistributionPattern {
     // Distributed dimension must be fully extracted.
     // TODO: Partial extraction from distributed dimension require cross lane
     // communication.
-    if (distributedDim < static_cast<int64_t>(extractOp.getSizes().size())) {
+    int64_t extractedDimsRank =
+        static_cast<int64_t>(extractOp.getSizes().size());
+    if (distributedDim < extractedDimsRank) {
       int64_t distributedDimOffset =
           llvm::cast<IntegerAttr>(extractOp.getOffsets()[distributedDim])
               .getInt();
