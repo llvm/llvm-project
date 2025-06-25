@@ -1,3 +1,6 @@
+## Show that section names appear before symbol names in the COFF strtab.
+## These names are only added to the strtab if they exceed 8 characters.
+
 # RUN: yaml2obj %s -o %t
 # RUN: touch %t.sec
 # RUN: llvm-objcopy --add-section=.debug_str=%t.sec %t %t1
@@ -10,7 +13,6 @@
 # CHECK-NEXT:   [    1a] symbol_aaa
 # CHECK-NEXT: }
 
-# Symbol or section name is added into strtab only if it exceeds 8 characters.
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
