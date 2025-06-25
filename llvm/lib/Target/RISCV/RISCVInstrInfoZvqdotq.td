@@ -28,18 +28,20 @@ let Predicates = [HasStdExtZvqdotq] in {
 } // Predicates = [HasStdExtZvqdotq]
 
 
-def riscv_vqdot_vl : SDNode<"RISCVISD::VQDOT_VL", SDT_RISCVIntBinOp_VL>;
-def riscv_vqdotu_vl : SDNode<"RISCVISD::VQDOTU_VL", SDT_RISCVIntBinOp_VL>;
-def riscv_vqdotsu_vl : SDNode<"RISCVISD::VQDOTSU_VL", SDT_RISCVIntBinOp_VL>;
+let HasPassthruOp = true, HasMaskOp = true in {
+  def riscv_vqdot_vl : RVSDNode<"VQDOT_VL", SDT_RISCVIntBinOp_VL>;
+  def riscv_vqdotu_vl : RVSDNode<"VQDOTU_VL", SDT_RISCVIntBinOp_VL>;
+  def riscv_vqdotsu_vl : RVSDNode<"VQDOTSU_VL", SDT_RISCVIntBinOp_VL>;
+} // let HasPassthruOp = true, HasMaskOp = true
 
 multiclass VPseudoVQDOT_VV_VX {
   foreach m = MxSet<32>.m in {
     defm "" : VPseudoBinaryV_VV<m>,
-            SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
-                        forcePassthruRead=true>;
+              SchedBinary<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV", m.MX,
+                          forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
-            SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
-                        forcePassthruRead=true>;
+              SchedBinary<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddX", m.MX,
+                          forcePassthruRead=true>;
   }
 }
 

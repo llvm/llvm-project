@@ -130,7 +130,7 @@ bool LibraryNameIs(const char *full_name, const char *base_name);
 // Call cb for each region mapped by map.
 void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr));
 
-// Releases memory pages entirely within the [beg, end] address range.
+// Releases memory pages entirely within the [beg, end) address range.
 // The pages no longer count toward RSS; reads are guaranteed to return 0.
 // Requires (but does not verify!) that pages are MAP_PRIVATE.
 inline void ReleaseMemoryPagesToOSAndZeroFill(uptr beg, uptr end) {

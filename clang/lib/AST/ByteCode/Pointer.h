@@ -722,6 +722,14 @@ public:
     getInlineDesc()->LifeState = Lifetime::Ended;
   }
 
+  void startLifetime() const {
+    if (!isBlockPointer())
+      return;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return;
+    getInlineDesc()->LifeState = Lifetime::Started;
+  }
+
   /// Compare two pointers.
   ComparisonCategoryResult compare(const Pointer &Other) const {
     if (!hasSameBase(*this, Other))
@@ -748,6 +756,7 @@ public:
   /// Whether this points to a block that's been created for a "literal lvalue",
   /// i.e. a non-MaterializeTemporaryExpr Expr.
   bool pointsToLiteral() const;
+  bool pointsToStringLiteral() const;
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;

@@ -33,8 +33,8 @@ class MMAType:
 
         self.ptx_reg_pattern = {
             "f16": "%r[0-9]+",
-            "f32": "%f[0-9]+",
-            "f64": "%fd[0-9]+",
+            "f32": "%r[0-9]+",
+            "f64": "%rd[0-9]+",
         }.get(ptx_type, "%r[0-9]+")
 
     def __repr__(self):

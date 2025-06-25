@@ -635,7 +635,8 @@ genHTML(const Index &Index, StringRef InfoPath, bool IsOutermostList) {
 }
 
 static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
-  if (I.Kind == "FullComment") {
+  switch (I.Kind) {
+  case CommentKind::CK_FullComment: {
     auto FullComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
     for (const auto &Child : I.Children) {
       std::unique_ptr<HTMLNode> Node = genHTML(*Child);
@@ -645,7 +646,7 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     return std::move(FullComment);
   }
 
-  if (I.Kind == "ParagraphComment") {
+  case CommentKind::CK_ParagraphComment: {
     auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
     for (const auto &Child : I.Children) {
       std::unique_ptr<HTMLNode> Node = genHTML(*Child);
@@ -657,7 +658,7 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     return std::move(ParagraphComment);
   }
 
-  if (I.Kind == "BlockCommandComment") {
+  case CommentKind::CK_BlockCommandComment: {
     auto BlockComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
     BlockComment->Children.emplace_back(
         std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name));
@@ -670,12 +671,26 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
       return nullptr;
     return std::move(BlockComment);
   }
-  if (I.Kind == "TextComment") {
-    if (I.Text == "")
+
+  case CommentKind::CK_TextComment: {
+    if (I.Text.empty())
       return nullptr;
     return std::make_unique<TextNode>(I.Text);
   }
-  return nullptr;
+
+  // For now, return nullptr for unsupported comment kinds
+  case CommentKind::CK_InlineCommandComment:
+  case CommentKind::CK_HTMLStartTagComment:
+  case CommentKind::CK_HTMLEndTagComment:
+  case CommentKind::CK_ParamCommandComment:
+  case CommentKind::CK_TParamCommandComment:
+  case CommentKind::CK_VerbatimBlockComment:
+  case CommentKind::CK_VerbatimBlockLineComment:
+  case CommentKind::CK_VerbatimLineComment:
+  case CommentKind::CK_Unknown:
+    return nullptr;
+  }
+  llvm_unreachable("Unhandled CommentKind");
 }
 
 static std::unique_ptr<TagNode> genHTML(const std::vector<CommentInfo> &C) {
@@ -692,9 +707,8 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
   std::vector<std::unique_ptr<TagNode>> Out;
   std::string EnumType = I.Scoped ? "enum class " : "enum ";
   // Determine if enum members have comments attached
-  bool HasComments = std::any_of(
-      I.Members.begin(), I.Members.end(),
-      [](const EnumValueInfo &M) { return !M.Description.empty(); });
+  bool HasComments = llvm::any_of(
+      I.Members, [](const EnumValueInfo &M) { return !M.Description.empty(); });
   std::unique_ptr<TagNode> Table =
       std::make_unique<TagNode>(HTMLTag::TAG_TABLE);
   std::unique_ptr<TagNode> THead =
@@ -971,6 +985,9 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     MainContentNodes =
         genHTML(*static_cast<clang::doc::TypedefInfo *>(I), CDCtx, InfoTitle);
     break;
+  case InfoType::IT_concept:
+  case InfoType::IT_variable:
+    break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
@@ -997,6 +1014,10 @@ static std::string getRefType(InfoType IT) {
     return "enum";
   case InfoType::IT_typedef:
     return "typedef";
+  case InfoType::IT_concept:
+    return "concept";
+  case InfoType::IT_variable:
+    return "variable";
   }
   llvm_unreachable("Unknown InfoType");
 }
@@ -1022,12 +1043,12 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   // JavaScript from escaping characters incorrectly, and introducing  bad paths
   // in the URLs.
   std::string RootPathEscaped = RootPath.str().str();
-  std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
+  llvm::replace(RootPathEscaped, '\\', '/');
   OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
 
   llvm::SmallString<128> Base(CDCtx.Base);
   std::string BaseEscaped = Base.str().str();
-  std::replace(BaseEscaped.begin(), BaseEscaped.end(), '\\', '/');
+  llvm::replace(BaseEscaped, '\\', '/');
   OS << "var Base = \"" << BaseEscaped << "\";\n";
 
   CDCtx.Idx.sort();

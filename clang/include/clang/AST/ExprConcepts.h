@@ -514,10 +514,6 @@ class RequiresExpr final : public Expr,
     return NumLocalParameters;
   }
 
-  unsigned numTrailingObjects(OverloadToken<concepts::Requirement *>) const {
-    return NumRequirements;
-  }
-
   RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
                RequiresExprBodyDecl *Body, SourceLocation LParenLoc,
                ArrayRef<ParmVarDecl *> LocalParameters,
@@ -540,13 +536,13 @@ public:
          unsigned NumRequirements);
 
   ArrayRef<ParmVarDecl *> getLocalParameters() const {
-    return {getTrailingObjects<ParmVarDecl *>(), NumLocalParameters};
+    return getTrailingObjects<ParmVarDecl *>(NumLocalParameters);
   }
 
   RequiresExprBodyDecl *getBody() const { return Body; }
 
   ArrayRef<concepts::Requirement *> getRequirements() const {
-    return {getTrailingObjects<concepts::Requirement *>(), NumRequirements};
+    return getTrailingObjects<concepts::Requirement *>(NumRequirements);
   }
 
   /// \brief Whether or not the requires clause is satisfied.

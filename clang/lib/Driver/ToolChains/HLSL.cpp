@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "HLSL.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Job.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/Triple.h"
@@ -201,7 +200,7 @@ bool checkExtensionArgsAreValid(ArrayRef<std::string> SpvExtensionArgs,
   for (auto Extension : SpvExtensionArgs) {
     if (!isValidSPIRVExtensionName(Extension)) {
       Driver.Diag(diag::err_drv_invalid_value)
-          << "-fspv_extension" << Extension;
+          << "-fspv-extension" << Extension;
       AllValid = false;
     }
   }
@@ -296,6 +295,13 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_rootsig_ver) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fdx_rootsignature_version),
+                        A->getValue());
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT__SLASH_O) {
       StringRef OStr = A->getValue();
       if (OStr == "d") {
@@ -331,6 +337,25 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+
+    if (A->getOption().getID() == options::OPT_fvk_use_dx_layout) {
+      // This is the only implemented layout so far.
+      A->claim();
+      continue;
+    }
+
+    if (A->getOption().getID() == options::OPT_fvk_use_scalar_layout) {
+      getDriver().Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+      A->claim();
+      continue;
+    }
+
+    if (A->getOption().getID() == options::OPT_fvk_use_gl_layout) {
+      getDriver().Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+      A->claim();
+      continue;
+    }
+
     DAL->append(A);
   }
 

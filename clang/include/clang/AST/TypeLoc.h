@@ -828,7 +828,7 @@ public:
   }
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
+    return {getProtocolLocArray(), getNumProtocols()};
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
@@ -973,6 +973,25 @@ public:
   }
 };
 
+struct HLSLInlineSpirvTypeLocInfo {
+  SourceLocation Loc;
+}; // Nothing.
+
+class HLSLInlineSpirvTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, HLSLInlineSpirvTypeLoc,
+                             HLSLInlineSpirvType, HLSLInlineSpirvTypeLocInfo> {
+public:
+  SourceLocation getSpirvTypeLoc() const { return getLocalData()->Loc; }
+  void setSpirvTypeLoc(SourceLocation loc) const { getLocalData()->Loc = loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getSpirvTypeLoc(), getSpirvTypeLoc());
+  }
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setSpirvTypeLoc(loc);
+  }
+};
+
 struct ObjCObjectTypeLocInfo {
   SourceLocation TypeArgsLAngleLoc;
   SourceLocation TypeArgsRAngleLoc;
@@ -1069,7 +1088,7 @@ public:
 
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
+    return {getProtocolLocArray(), getNumProtocols()};
   }
 
   bool hasBaseTypeAsWritten() const {
@@ -1526,7 +1545,7 @@ public:
   }
 
   ArrayRef<ParmVarDecl *> getParams() const {
-    return llvm::ArrayRef(getParmArray(), getNumParams());
+    return {getParmArray(), getNumParams()};
   }
 
   // ParmVarDecls* are stored after Info, one for each parameter.

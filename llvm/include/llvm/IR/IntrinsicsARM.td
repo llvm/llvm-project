@@ -1306,8 +1306,6 @@ foreach suffix = ["a","n","p","m"] in {
     [llvm_anyvector_ty /* input */], LLVMMatchType<0>, llvm_anyvector_ty>;
 }
 
-def int_arm_mve_vrintn: DefaultAttrsIntrinsic<
-  [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_arm_mve_vcls: DefaultAttrsIntrinsic<
   [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 

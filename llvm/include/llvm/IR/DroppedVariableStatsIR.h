@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_DROPPEDVARIABLESTATSIR_H
 
 #include "llvm/IR/DroppedVariableStats.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -28,7 +29,7 @@ class DILocation;
 /// A class to collect and print dropped debug information due to LLVM IR
 /// optimization passes. After every LLVM IR pass is run, it will print how many
 /// #dbg_values were dropped due to that pass.
-class DroppedVariableStatsIR : public DroppedVariableStats {
+class LLVM_ABI DroppedVariableStatsIR : public DroppedVariableStats {
 public:
   DroppedVariableStatsIR(bool DroppedVarStatsEnabled)
       : llvm::DroppedVariableStats(DroppedVarStatsEnabled) {}

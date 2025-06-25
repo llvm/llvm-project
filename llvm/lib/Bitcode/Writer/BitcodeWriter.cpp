@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -62,9 +63,11 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -99,11 +102,25 @@ static cl::opt<bool> WriteRelBFToSummary(
     "write-relbf-to-summary", cl::Hidden, cl::init(false),
     cl::desc("Write relative block frequency to function summary "));
 
+// Since we only use the context information in the memprof summary records in
+// the LTO backends to do assertion checking, save time and space by only
+// serializing the context for non-NDEBUG builds.
+// TODO: Currently this controls writing context of the allocation info records,
+// which are larger and more expensive, but we should do this for the callsite
+// records as well.
+// FIXME: Convert to a const once this has undergone more sigificant testing.
+static cl::opt<bool>
+    CombinedIndexMemProfContext("combined-index-memprof-context", cl::Hidden,
+#ifdef NDEBUG
+                                cl::init(false),
+#else
+                                cl::init(true),
+#endif
+                                cl::desc(""));
+
 namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 }
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -528,10 +545,12 @@ public:
         for (auto Idx : CI.StackIdIndices)
           RecordStackIdReference(Idx);
       }
-      for (auto &AI : FS->allocs())
-        for (auto &MIB : AI.MIBs)
-          for (auto Idx : MIB.StackIdIndices)
-            RecordStackIdReference(Idx);
+      if (CombinedIndexMemProfContext) {
+        for (auto &AI : FS->allocs())
+          for (auto &MIB : AI.MIBs)
+            for (auto Idx : MIB.StackIdIndices)
+              RecordStackIdReference(Idx);
+      }
     });
   }
 
@@ -2641,9 +2660,9 @@ void ModuleBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
 
       Record.push_back(VE.getInstructionID(&I));
 
-      for (unsigned i = 0, e = MDs.size(); i != e; ++i) {
-        Record.push_back(MDs[i].first);
-        Record.push_back(VE.getMetadataID(MDs[i].second));
+      for (const auto &[ID, MD] : MDs) {
+        Record.push_back(ID);
+        Record.push_back(VE.getMetadataID(MD));
       }
       Stream.EmitRecord(bitc::METADATA_ATTACHMENT, Record, 0);
       Record.clear();
@@ -2782,12 +2801,12 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
           unsigned(IA->getDialect() & 1) << 2 | unsigned(IA->canThrow()) << 3);
 
       // Add the asm string.
-      const std::string &AsmStr = IA->getAsmString();
+      StringRef AsmStr = IA->getAsmString();
       Record.push_back(AsmStr.size());
       Record.append(AsmStr.begin(), AsmStr.end());
 
       // Add the constraint string.
-      const std::string &ConstraintStr = IA->getConstraintString();
+      StringRef ConstraintStr = IA->getConstraintString();
       Record.push_back(ConstraintStr.size());
       Record.append(ConstraintStr.begin(), ConstraintStr.end());
       Stream.EmitRecord(bitc::CST_CODE_INLINEASM, Record);
@@ -4349,9 +4368,14 @@ static void writeFunctionHeapProfileRecords(
       Record.push_back(AI.Versions.size());
     for (auto &MIB : AI.MIBs) {
       Record.push_back((uint8_t)MIB.AllocType);
-      // Record the index into the radix tree array for this context.
-      assert(CallStackCount <= CallStackPos.size());
-      Record.push_back(CallStackPos[CallStackCount++]);
+      // The per-module summary always needs to include the alloc context, as we
+      // use it during the thin link. For the combined index it is optional (see
+      // comments where CombinedIndexMemProfContext is defined).
+      if (PerModule || CombinedIndexMemProfContext) {
+        // Record the index into the radix tree array for this context.
+        assert(CallStackCount <= CallStackPos.size());
+        Record.push_back(CallStackPos[CallStackCount++]);
+      }
     }
     if (!PerModule)
       llvm::append_range(Record, AI.Versions);
@@ -4384,8 +4408,11 @@ static void writeFunctionHeapProfileRecords(
       Stream.EmitRecord(bitc::FS_ALLOC_CONTEXT_IDS, ContextIds,
                         ContextIdAbbvId);
     }
-    Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_ALLOC_INFO
-                                : bitc::FS_COMBINED_ALLOC_INFO,
+    Stream.EmitRecord(PerModule
+                          ? bitc::FS_PERMODULE_ALLOC_INFO
+                          : (CombinedIndexMemProfContext
+                                 ? bitc::FS_COMBINED_ALLOC_INFO
+                                 : bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT),
                       Record, AllocAbbrev);
   }
 }
@@ -4557,14 +4584,23 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_STACK_IDS, Vals, StackIdAbbvId);
   }
 
-  // n x context id
-  auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
-  ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
-  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  // The context ids are hashes that are close to 64 bits in size, so emitting
-  // as a pair of 32-bit fixed-width values is more efficient than a VBR.
-  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-  unsigned ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
+  unsigned ContextIdAbbvId = 0;
+  if (metadataMayIncludeContextSizeInfo()) {
+    // n x context id
+    auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
+    ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
+    ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    // The context ids are hashes that are close to 64 bits in size, so emitting
+    // as a pair of 32-bit fixed-width values is more efficient than a VBR if we
+    // are emitting them for all MIBs. Otherwise we use VBR to better compress 0
+    // values that are expected to more frequently occur in an alloc's memprof
+    // summary.
+    if (metadataIncludesAllContextSizeInfo())
+      ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+    else
+      ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
+  }
 
   // Abbrev for FS_PERMODULE_PROFILE.
   Abbv = std::make_shared<BitCodeAbbrev>();
@@ -4847,7 +4883,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   unsigned CallsiteAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   Abbv = std::make_shared<BitCodeAbbrev>();
-  Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_ALLOC_INFO));
+  Abbv->Add(BitCodeAbbrevOp(CombinedIndexMemProfContext
+                                ? bitc::FS_COMBINED_ALLOC_INFO
+                                : bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // nummib
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // numver
   // nummib x (alloc type, context radix tree index),
@@ -4856,13 +4894,6 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
-
-  Abbv = std::make_shared<BitCodeAbbrev>();
-  Abbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_RADIX_TREE_ARRAY));
-  // n x entry
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
-  unsigned RadixAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   auto shouldImportValueAsDecl = [&](GlobalValueSummary *GVS) -> bool {
     if (DecSummaries == nullptr)
@@ -4900,44 +4931,54 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.clear();
   };
 
-  // First walk through all the functions and collect the allocation contexts in
-  // their associated summaries, for use in constructing a radix tree of
-  // contexts. Note that we need to do this in the same order as the functions
-  // are processed further below since the call stack positions in the resulting
-  // radix tree array are identified based on this order.
-  MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
-  forEachSummary([&](GVInfo I, bool IsAliasee) {
-    // Don't collect this when invoked for an aliasee, as it is not needed for
-    // the alias summary. If the aliasee is to be imported, we will invoke this
-    // separately with IsAliasee=false.
-    if (IsAliasee)
-      return;
-    GlobalValueSummary *S = I.second;
-    assert(S);
-    auto *FS = dyn_cast<FunctionSummary>(S);
-    if (!FS)
-      return;
-    collectMemProfCallStacks(
-        FS,
-        /*GetStackIndex*/
-        [&](unsigned I) {
-          // Get the corresponding index into the list of StackIds actually
-          // being written for this combined index (which may be a subset in
-          // the case of distributed indexes).
-          assert(StackIdIndicesToIndex.contains(I));
-          return StackIdIndicesToIndex[I];
-        },
-        CallStacks);
-  });
-  // Finalize the radix tree, write it out, and get the map of positions in the
-  // linearized tree array.
   DenseMap<CallStackId, LinearCallStackId> CallStackPos;
-  if (!CallStacks.empty()) {
-    CallStackPos =
-        writeMemoryProfileRadixTree(std::move(CallStacks), Stream, RadixAbbrev);
+  if (CombinedIndexMemProfContext) {
+    Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_RADIX_TREE_ARRAY));
+    // n x entry
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    unsigned RadixAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+    // First walk through all the functions and collect the allocation contexts
+    // in their associated summaries, for use in constructing a radix tree of
+    // contexts. Note that we need to do this in the same order as the functions
+    // are processed further below since the call stack positions in the
+    // resulting radix tree array are identified based on this order.
+    MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
+    forEachSummary([&](GVInfo I, bool IsAliasee) {
+      // Don't collect this when invoked for an aliasee, as it is not needed for
+      // the alias summary. If the aliasee is to be imported, we will invoke
+      // this separately with IsAliasee=false.
+      if (IsAliasee)
+        return;
+      GlobalValueSummary *S = I.second;
+      assert(S);
+      auto *FS = dyn_cast<FunctionSummary>(S);
+      if (!FS)
+        return;
+      collectMemProfCallStacks(
+          FS,
+          /*GetStackIndex*/
+          [&](unsigned I) {
+            // Get the corresponding index into the list of StackIds actually
+            // being written for this combined index (which may be a subset in
+            // the case of distributed indexes).
+            assert(StackIdIndicesToIndex.contains(I));
+            return StackIdIndicesToIndex[I];
+          },
+          CallStacks);
+    });
+    // Finalize the radix tree, write it out, and get the map of positions in
+    // the linearized tree array.
+    if (!CallStacks.empty()) {
+      CallStackPos = writeMemoryProfileRadixTree(std::move(CallStacks), Stream,
+                                                 RadixAbbrev);
+    }
   }
 
-  // Keep track of the current index into the CallStackPos map.
+  // Keep track of the current index into the CallStackPos map. Not used if
+  // CombinedIndexMemProfContext is false.
   CallStackId CallStackCount = 0;
 
   DenseSet<GlobalValue::GUID> DefOrUseGUIDs;

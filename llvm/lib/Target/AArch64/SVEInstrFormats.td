@@ -7884,9 +7884,14 @@ multiclass sve_int_perm_compact_sd<string asm, SDPatternOperator op> {
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_int_perm_compact_bh<string asm> {
+multiclass sve_int_perm_compact_bh<string asm, SDPatternOperator op> {
   def _B : sve_int_perm_compact<0b00, asm, ZPR8>;
   def _H : sve_int_perm_compact<0b01, asm, ZPR16>;
+
+  def : SVE_2_Op_Pat<nxv16i8,  op, nxv16i1, nxv16i8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i16,  op, nxv8i1,  nxv8i16,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv8f16,  op, nxv8i1,  nxv8f16,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, !cast<Instruction>(NAME # _H)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9235,11 +9240,12 @@ multiclass sve2_crypto_cons_bin_op<bit opc, string asm, ZPRRegOp zprty,
   def : SVE_2_Op_Pat<vt, op, vt, vt, !cast<Instruction>(NAME)>;
 }
 
-class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty>
+class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty,
+                             SDPatternOperator op, ValueType vt>
 : I<(outs zprty:$Zdn), (ins zprty:$_Zdn, zprty:$Zm),
   asm, "\t$Zdn, $_Zdn, $Zm",
   "",
-  []>, Sched<[]> {
+  [(set (vt zprty:$Zdn), (op (vt zprty:$_Zdn), (vt zprty:$Zm)))]>, Sched<[]> {
   bits<5> Zdn;
   bits<5> Zm;
   let Inst{31-17} = 0b010001010010001;
@@ -9251,12 +9257,6 @@ class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty>
 
   let Constraints = "$Zdn = $_Zdn";
   let hasSideEffects = 0;
-}
-
-multiclass sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty,
-                                  SDPatternOperator op, ValueType vt> {
-  def NAME : sve2_crypto_des_bin_op<opc, asm, zprty>;
-  def : SVE_2_Op_Pat<vt, op, vt, vt, !cast<Instruction>(NAME)>;
 }
 
 class sve2_crypto_unary_op<bit opc, string asm, ZPRRegOp zprty>

@@ -26,6 +26,7 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -486,7 +487,6 @@ Fortran::lower::genCallOpAndResult(
 
   // Deal with potential mismatches in arguments types. Passing an array to a
   // scalar argument should for instance be tolerated here.
-  bool callingImplicitInterface = caller.canBeCalledViaImplicitInterface();
   for (auto [fst, snd] : llvm::zip(caller.getInputs(), funcType.getInputs())) {
     // When passing arguments to a procedure that can be called by implicit
     // interface, allow any character actual arguments to be passed to dummy
@@ -518,10 +518,17 @@ Fortran::lower::genCallOpAndResult(
         // Do not attempt any reboxing here that could break this.
         bool legacyLowering =
             !converter.getLoweringOptions().getLowerToHighLevelFIR();
+        // When dealing with a dummy character argument (fir.boxchar), the
+        // effective argument might be a non-character raw pointer. This may
+        // happen when calling an implicit interface that was previously called
+        // with a character argument, or when calling an explicit interface with
+        // an IgnoreTKR dummy character arguments. Allow creating a fir.boxchar
+        // from the raw pointer, which requires a non-trivial type conversion.
+        const bool allowCharacterConversions = true;
         bool isVolatile = fir::isa_volatile_type(snd);
         cast = builder.createVolatileCast(loc, isVolatile, fst);
         cast = builder.convertWithSemantics(loc, snd, cast,
-                                            callingImplicitInterface,
+                                            allowCharacterConversions,
                                             /*allowRebox=*/legacyLowering);
       }
     }
@@ -536,6 +543,19 @@ Fortran::lower::genCallOpAndResult(
   unsigned callNumResults;
   fir::FortranProcedureFlagsEnumAttr procAttrs =
       caller.getProcedureAttrs(builder.getContext());
+
+  if (converter.getLoweringOptions().getCUDARuntimeCheck()) {
+    if (caller.getCallDescription().chevrons().empty()) {
+      for (auto [oper, arg] :
+           llvm::zip(operands, caller.getPassedArguments())) {
+        if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(oper.getType())) {
+          const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
+          if (sym && Fortran::evaluate::IsCUDADeviceSymbol(*sym))
+            fir::runtime::cuda::genDescriptorCheckSection(builder, loc, oper);
+        }
+      }
+    }
+  }
 
   if (!caller.getCallDescription().chevrons().empty()) {
     // A call to a CUDA kernel with the chevron syntax.
@@ -960,9 +980,26 @@ struct CallCleanUp {
     mlir::Value tempVar;
     mlir::Value mustFree;
   };
-  void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-    Fortran::common::visit([&](auto &c) { c.genCleanUp(loc, builder); },
+
+  /// Generate clean-up code.
+  /// If \p postponeAssociates is true, the ExprAssociate clean-up
+  /// is not generated, and instead the corresponding CallCleanUp
+  /// object is returned as the result.
+  std::optional<CallCleanUp> genCleanUp(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        bool postponeAssociates) {
+    std::optional<CallCleanUp> postponed;
+    Fortran::common::visit(Fortran::common::visitors{
+                               [&](CopyIn &c) { c.genCleanUp(loc, builder); },
+                               [&](ExprAssociate &c) {
+                                 if (postponeAssociates)
+                                   postponed = CallCleanUp{c};
+                                 else
+                                   c.genCleanUp(loc, builder);
+                               },
+                           },
                            cleanUp);
+    return postponed;
   }
   std::variant<CopyIn, ExprAssociate> cleanUp;
 };
@@ -1429,6 +1466,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // cause the fir.if results to be assumed-rank in case of OPTIONAL dummy,
   // causing extra runtime costs due to the unknown runtime size of assumed-rank
   // descriptors.
+  // For TKR dummy characters, the boxchar creation also happens later when
+  // creating the fir.call .
   preparedDummy.dummy =
       builder.createConvert(loc, dummyTypeWithActualRank, addr);
   return preparedDummy;
@@ -1729,10 +1768,23 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       caller, callSiteType, callContext.resultType,
       callContext.isElementalProcWithArrayArgs());
 
-  /// Clean-up associations and copy-in.
-  for (auto cleanUp : callCleanUps)
-    cleanUp.genCleanUp(loc, builder);
+  // Clean-up associations and copy-in.
+  // The association clean-ups are postponed to the end of the statement
+  // lowering. The copy-in clean-ups may be delayed as well,
+  // but they are done immediately after the call currently.
+  llvm::SmallVector<CallCleanUp> associateCleanups;
+  for (auto cleanUp : callCleanUps) {
+    auto postponed =
+        cleanUp.genCleanUp(loc, builder, /*postponeAssociates=*/true);
+    if (postponed)
+      associateCleanups.push_back(*postponed);
+  }
 
+  fir::FirOpBuilder *bldr = &builder;
+  callContext.stmtCtx.attachCleanup([=]() {
+    for (auto cleanUp : associateCleanups)
+      (void)cleanUp.genCleanUp(loc, *bldr, /*postponeAssociates=*/false);
+  });
   if (auto *entity = std::get_if<hlfir::EntityWithAttributes>(&loweredResult))
     return *entity;
 

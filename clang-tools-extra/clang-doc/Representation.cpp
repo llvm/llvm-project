@@ -20,11 +20,67 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Representation.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {
 namespace doc {
+
+CommentKind stringToCommentKind(llvm::StringRef KindStr) {
+  static const llvm::StringMap<CommentKind> KindMap = {
+      {"FullComment", CommentKind::CK_FullComment},
+      {"ParagraphComment", CommentKind::CK_ParagraphComment},
+      {"TextComment", CommentKind::CK_TextComment},
+      {"InlineCommandComment", CommentKind::CK_InlineCommandComment},
+      {"HTMLStartTagComment", CommentKind::CK_HTMLStartTagComment},
+      {"HTMLEndTagComment", CommentKind::CK_HTMLEndTagComment},
+      {"BlockCommandComment", CommentKind::CK_BlockCommandComment},
+      {"ParamCommandComment", CommentKind::CK_ParamCommandComment},
+      {"TParamCommandComment", CommentKind::CK_TParamCommandComment},
+      {"VerbatimBlockComment", CommentKind::CK_VerbatimBlockComment},
+      {"VerbatimBlockLineComment", CommentKind::CK_VerbatimBlockLineComment},
+      {"VerbatimLineComment", CommentKind::CK_VerbatimLineComment},
+  };
+
+  auto It = KindMap.find(KindStr);
+  if (It != KindMap.end()) {
+    return It->second;
+  }
+  return CommentKind::CK_Unknown;
+}
+
+llvm::StringRef commentKindToString(CommentKind Kind) {
+  switch (Kind) {
+  case CommentKind::CK_FullComment:
+    return "FullComment";
+  case CommentKind::CK_ParagraphComment:
+    return "ParagraphComment";
+  case CommentKind::CK_TextComment:
+    return "TextComment";
+  case CommentKind::CK_InlineCommandComment:
+    return "InlineCommandComment";
+  case CommentKind::CK_HTMLStartTagComment:
+    return "HTMLStartTagComment";
+  case CommentKind::CK_HTMLEndTagComment:
+    return "HTMLEndTagComment";
+  case CommentKind::CK_BlockCommandComment:
+    return "BlockCommandComment";
+  case CommentKind::CK_ParamCommandComment:
+    return "ParamCommandComment";
+  case CommentKind::CK_TParamCommandComment:
+    return "TParamCommandComment";
+  case CommentKind::CK_VerbatimBlockComment:
+    return "VerbatimBlockComment";
+  case CommentKind::CK_VerbatimBlockLineComment:
+    return "VerbatimBlockLineComment";
+  case CommentKind::CK_VerbatimLineComment:
+    return "VerbatimLineComment";
+  case CommentKind::CK_Unknown:
+    return "Unknown";
+  }
+  llvm_unreachable("Unhandled CommentKind");
+}
 
 namespace {
 
@@ -87,10 +143,15 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return reduce<FunctionInfo>(Values);
   case InfoType::IT_typedef:
     return reduce<TypedefInfo>(Values);
-  default:
+  case InfoType::IT_concept:
+    return reduce<ConceptInfo>(Values);
+  case InfoType::IT_variable:
+    return reduce<VarInfo>(Values);
+  case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
   }
+  llvm_unreachable("unhandled enumerator");
 }
 
 bool CommentInfo::operator==(const CommentInfo &Other) const {
@@ -231,6 +292,8 @@ void NamespaceInfo::merge(NamespaceInfo &&Other) {
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
   reduceChildren(Children.Enums, std::move(Other.Children.Enums));
   reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
+  reduceChildren(Children.Concepts, std::move(Other.Children.Concepts));
+  reduceChildren(Children.Variables, std::move(Other.Children.Variables));
   mergeBase(std::move(Other));
 }
 
@@ -295,6 +358,28 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
   SymbolInfo::merge(std::move(Other));
 }
 
+void ConceptInfo::merge(ConceptInfo &&Other) {
+  assert(mergeable(Other));
+  if (!IsType)
+    IsType = Other.IsType;
+  if (ConstraintExpression.empty())
+    ConstraintExpression = std::move(Other.ConstraintExpression);
+  if (Template.Constraints.empty())
+    Template.Constraints = std::move(Other.Template.Constraints);
+  if (Template.Params.empty())
+    Template.Params = std::move(Other.Template.Params);
+  SymbolInfo::merge(std::move(Other));
+}
+
+void VarInfo::merge(VarInfo &&Other) {
+  assert(mergeable(Other));
+  if (!IsStatic)
+    IsStatic = Other.IsStatic;
+  if (Type.Type.USR == EmptySID && Type.Type.Name == "")
+    Type = std::move(Other.Type);
+  SymbolInfo::merge(std::move(Other));
+}
+
 BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
 
 BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
@@ -330,6 +415,12 @@ llvm::SmallString<16> Info::extractName() const {
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_function:
     return llvm::SmallString<16>("@nonymous_function_" +
+                                 toHex(llvm::toStringRef(USR)));
+  case InfoType::IT_concept:
+    return llvm::SmallString<16>("@nonymous_concept_" +
+                                 toHex(llvm::toStringRef(USR)));
+  case InfoType::IT_variable:
+    return llvm::SmallString<16>("@nonymous_variable_" +
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_default:
     return llvm::SmallString<16>("@nonymous_" + toHex(llvm::toStringRef(USR)));
@@ -369,9 +460,11 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef OutDirectory, StringRef SourceRoot,
                                  StringRef RepositoryUrl,
                                  StringRef RepositoryLinePrefix, StringRef Base,
-                                 std::vector<std::string> UserStylesheets)
+                                 std::vector<std::string> UserStylesheets,
+                                 bool FTimeTrace)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets), Base(Base) {
+      FTimeTrace(FTimeTrace), OutDirectory(OutDirectory),
+      UserStylesheets(UserStylesheets), Base(Base) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
@@ -394,6 +487,8 @@ void ScopeChildren::sort() {
   llvm::sort(Functions.begin(), Functions.end());
   llvm::sort(Enums.begin(), Enums.end());
   llvm::sort(Typedefs.begin(), Typedefs.end());
+  llvm::sort(Concepts.begin(), Concepts.end());
+  llvm::sort(Variables.begin(), Variables.end());
 }
 } // namespace doc
 } // namespace clang

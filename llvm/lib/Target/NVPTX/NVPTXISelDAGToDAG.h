@@ -43,8 +43,8 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   // If true, generate mul.wide from sext and mul
   bool doMulWide;
 
-  int getDivF32Level() const;
-  bool usePrecSqrtF32() const;
+  NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
+  bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
   bool allowFMA() const;
   bool allowUnsafeFPMath() const;
@@ -75,7 +75,8 @@ private:
   void SelectTexSurfHandle(SDNode *N);
   bool tryLoad(SDNode *N);
   bool tryLoadVector(SDNode *N);
-  bool tryLDGLDU(SDNode *N);
+  bool tryLDU(SDNode *N);
+  bool tryLDG(MemSDNode *N);
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
   bool tryLoadParam(SDNode *N);
@@ -92,9 +93,6 @@ private:
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
-  void SelectCpAsyncBulkG2S(SDNode *N);
-  void SelectCpAsyncBulkS2G(SDNode *N);
-  void SelectCpAsyncBulkPrefetchL2(SDNode *N);
   void SelectCpAsyncBulkTensorG2SCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorS2GCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);

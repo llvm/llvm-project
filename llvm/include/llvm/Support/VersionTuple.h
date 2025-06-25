@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <string>
 #include <tuple>
@@ -100,9 +101,7 @@ public:
 
   /// Return a version tuple that contains a different major version but
   /// everything else is the same.
-  VersionTuple withMajorReplaced(unsigned NewMajor) const {
-    return VersionTuple(NewMajor, Minor, Subminor, Build);
-  }
+  LLVM_ABI VersionTuple withMajorReplaced(unsigned NewMajor) const;
 
   /// Return a version tuple that contains only components that are non-zero.
   VersionTuple normalize() const {
@@ -179,16 +178,16 @@ public:
   }
 
   /// Retrieve a string representation of the version number.
-  std::string getAsString() const;
+  LLVM_ABI std::string getAsString() const;
 
   /// Try to parse the given string as a version number.
   /// \returns \c true if the string does not match the regular expression
   ///   [0-9]+(\.[0-9]+){0,3}
-  bool tryParse(StringRef string);
+  LLVM_ABI bool tryParse(StringRef string);
 };
 
 /// Print a version number.
-raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
 
 // Provide DenseMapInfo for version tuples.
 template <> struct DenseMapInfo<VersionTuple> {

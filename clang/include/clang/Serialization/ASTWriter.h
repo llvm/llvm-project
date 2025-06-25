@@ -75,6 +75,9 @@ class StoredDeclsList;
 class SwitchCase;
 class Token;
 
+struct VisibleLookupBlockOffsets;
+struct LookupBlockOffsets;
+
 namespace serialization {
 enum class DeclUpdateKind;
 } // namespace serialization
@@ -592,8 +595,6 @@ private:
   void WriteTypeAbbrevs();
   void WriteType(ASTContext &Context, QualType T);
 
-  bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-
   void GenerateSpecializationInfoLookupTable(
       const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
       llvm::SmallVectorImpl<char> &LookupTable, bool IsPartial);
@@ -608,9 +609,7 @@ private:
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
                                         const DeclContext *DC);
   void WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC,
-                                    uint64_t &VisibleBlockOffset,
-                                    uint64_t &ModuleLocalBlockOffset,
-                                    uint64_t &TULocalBlockOffset);
+                                    VisibleLookupBlockOffsets &Offsets);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
   void WriteComments(ASTContext &Context);
@@ -779,6 +778,9 @@ public:
     return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
 
+  void AddLookupOffsets(const LookupBlockOffsets &Offsets,
+                        RecordDataImpl &Record);
+
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
   // Emit a reference to a declaration if the declaration was emitted.
@@ -899,6 +901,10 @@ public:
 
   bool isWritingStdCXXNamedModules() const {
     return WritingModule && WritingModule->isNamedModule();
+  }
+
+  bool isWritingStdCXXHeaderUnit() const {
+    return WritingModule && WritingModule->isHeaderUnit();
   }
 
   bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }

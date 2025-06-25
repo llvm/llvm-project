@@ -156,7 +156,7 @@ certainly not forwarded. An example of this is shown below.
 
 ::
 
-  $ lldb-server plaform --server --listen 0.0.0.0:54321 --gdbserver-port 49140
+  $ lldb-server platform --server --listen 0.0.0.0:54321 --gdbserver-port 49140
 
 The result of this is that:
 

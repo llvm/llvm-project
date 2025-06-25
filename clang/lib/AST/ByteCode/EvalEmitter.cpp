@@ -20,7 +20,7 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
 EvalEmitter::~EvalEmitter() {
-  for (auto &[K, V] : Locals) {
+  for (auto &V : Locals) {
     Block *B = reinterpret_cast<Block *>(V.get());
     if (B->isInitialized())
       B->invokeDtor();
@@ -112,7 +112,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
 
   // Register the local.
   unsigned Off = Locals.size();
-  Locals.insert({Off, std::move(Memory)});
+  Locals.push_back(std::move(Memory));
   return {Off, D};
 }
 

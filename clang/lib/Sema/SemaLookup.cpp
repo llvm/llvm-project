@@ -927,13 +927,25 @@ bool Sema::LookupBuiltin(LookupResult &R) {
       NameKind == Sema::LookupRedeclarationWithLinkage) {
     IdentifierInfo *II = R.getLookupName().getAsIdentifierInfo();
     if (II) {
-      if (getLangOpts().CPlusPlus && NameKind == Sema::LookupOrdinaryName) {
-#define BuiltinTemplate(BIName)                                                \
+      if (NameKind == Sema::LookupOrdinaryName) {
+        if (getLangOpts().CPlusPlus) {
+#define BuiltinTemplate(BIName)
+#define CPlusPlusBuiltinTemplate(BIName)                                       \
   if (II == getASTContext().get##BIName##Name()) {                             \
     R.addDecl(getASTContext().get##BIName##Decl());                            \
     return true;                                                               \
   }
 #include "clang/Basic/BuiltinTemplates.inc"
+        }
+        if (getLangOpts().HLSL) {
+#define BuiltinTemplate(BIName)
+#define HLSLBuiltinTemplate(BIName)                                            \
+  if (II == getASTContext().get##BIName##Name()) {                             \
+    R.addDecl(getASTContext().get##BIName##Decl());                            \
+    return true;                                                               \
+  }
+#include "clang/Basic/BuiltinTemplates.inc"
+        }
       }
 
       // Check if this is an OpenCL Builtin, and if so, insert its overloads.
@@ -946,7 +958,8 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         }
       }
 
-      if (RISCV().DeclareRVVBuiltins || RISCV().DeclareSiFiveVectorBuiltins) {
+      if (RISCV().DeclareRVVBuiltins || RISCV().DeclareSiFiveVectorBuiltins ||
+          RISCV().DeclareAndesVectorBuiltins) {
         if (!RISCV().IntrinsicManager)
           RISCV().IntrinsicManager = CreateRISCVIntrinsicManager(*this);
 
@@ -1552,6 +1565,21 @@ void Sema::makeMergedDefinitionVisible(NamedDecl *ND) {
   if (auto *TD = dyn_cast<TemplateDecl>(ND))
     for (auto *Param : *TD->getTemplateParameters())
       makeMergedDefinitionVisible(Param);
+
+  // If we import a named module which contains a header, and then we include a
+  // header which contains a definition of enums, we will skip parsing the enums
+  // in the current TU. But we need to ensure the visibility of the enum
+  // contants, since they are able to be found with the parents of their
+  // parents.
+  if (auto *ED = dyn_cast<EnumDecl>(ND);
+      ED && ED->isFromGlobalModule() && !ED->isScoped()) {
+    for (auto *ECD : ED->enumerators()) {
+      ECD->setVisibleDespiteOwningModule();
+      DeclContext *RedeclCtx = ED->getDeclContext()->getRedeclContext();
+      if (RedeclCtx->lookup(ECD->getDeclName()).empty())
+        RedeclCtx->makeDeclVisibleInContext(ECD);
+    }
+  }
 }
 
 /// Find the module in which the given declaration was defined.
@@ -1965,6 +1993,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   if (D->isModulePrivate())
     return false;
 
+  Module *DeclTopModule = DeclModule->getTopLevelModule();
+
   // [module.reach]/p1
   //   A translation unit U is necessarily reachable from a point P if U is a
   //   module interface unit on which the translation unit containing P has an
@@ -1983,17 +2013,28 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   //
   // Here we only check for the first condition. Since we couldn't see
   // DeclModule if it isn't (transitively) imported.
-  if (DeclModule->getTopLevelModule()->isModuleInterfaceUnit())
+  if (DeclTopModule->isModuleInterfaceUnit())
     return true;
 
-  // [module.reach]/p2
+  // [module.reach]/p1,2
+  //   A translation unit U is necessarily reachable from a point P if U is a
+  //   module interface unit on which the translation unit containing P has an
+  //   interface dependency, or the translation unit containing P imports U, in
+  //   either case prior to P
+  //
   //   Additional translation units on
   //   which the point within the program has an interface dependency may be
   //   considered reachable, but it is unspecified which are and under what
   //   circumstances.
-  //
-  // The decision here is to treat all additional tranditional units as
-  // unreachable.
+  Module *CurrentM = SemaRef.getCurrentModule();
+
+  // Directly imported module are necessarily reachable.
+  // Since we can't export import a module implementation partition unit, we
+  // don't need to count for Exports here.
+  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+    return true;
+
+  // Then we treat all module implementation partition unit as unreachable.
   return false;
 }
 
@@ -2159,22 +2200,10 @@ bool LookupResult::isAvailableForLookup(Sema &SemaRef, NamedDecl *ND) {
   // Class and enumeration member names can be found by name lookup in any
   // context in which a definition of the type is reachable.
   //
-  // FIXME: The current implementation didn't consider about scope. For example,
-  // ```
-  // // m.cppm
-  // export module m;
-  // enum E1 { e1 };
-  // // Use.cpp
-  // import m;
-  // void test() {
-  //   auto a = E1::e1; // Error as expected.
-  //   auto b = e1; // Should be error. namespace-scope name e1 is not visible
-  // }
-  // ```
-  // For the above example, the current implementation would emit error for `a`
-  // correctly. However, the implementation wouldn't diagnose about `b` now.
-  // Since we only check the reachability for the parent only.
-  // See clang/test/CXX/module/module.interface/p7.cpp for example.
+  // NOTE: The above wording may be problematic. See
+  // https://github.com/llvm/llvm-project/issues/131058 But it is much complext
+  // to adjust it in Sema's lookup process. Now we hacked it in ASTWriter. See
+  // the comments in ASTDeclContextNameLookupTrait::getLookupVisibility.
   if (auto *TD = dyn_cast<TagDecl>(DC))
     return SemaRef.hasReachableDefinition(TD);
 
@@ -3269,6 +3298,11 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
 
     case Type::HLSLAttributedResource:
       T = cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr();
+      break;
+
+    // Inline SPIR-V types are treated as fundamental types.
+    case Type::HLSLInlineSpirv:
+      break;
     }
 
     if (Queue.empty())
@@ -5413,40 +5447,6 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
   return FailedCorrection(Typo, TypoName.getLoc(), RecordFailure && !SecondBestTC);
 }
 
-TypoExpr *Sema::CorrectTypoDelayed(
-    const DeclarationNameInfo &TypoName, Sema::LookupNameKind LookupKind,
-    Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
-    TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC, CorrectTypoKind Mode,
-    DeclContext *MemberContext, bool EnteringContext,
-    const ObjCObjectPointerType *OPT) {
-  auto Consumer = makeTypoCorrectionConsumer(
-      TypoName, LookupKind, S, SS, CCC, MemberContext, EnteringContext, OPT,
-      Mode == CorrectTypoKind::ErrorRecovery);
-
-  // Give the external sema source a chance to correct the typo.
-  TypoCorrection ExternalTypo;
-  if (ExternalSource && Consumer) {
-    ExternalTypo = ExternalSource->CorrectTypo(
-        TypoName, LookupKind, S, SS, *Consumer->getCorrectionValidator(),
-        MemberContext, EnteringContext, OPT);
-    if (ExternalTypo)
-      Consumer->addCorrection(ExternalTypo);
-  }
-
-  if (!Consumer || Consumer->empty())
-    return nullptr;
-
-  // Make sure the best edit distance (prior to adding any namespace qualifiers)
-  // is not more that about a third of the length of the typo's identifier.
-  unsigned ED = Consumer->getBestEditDistance(true);
-  IdentifierInfo *Typo = TypoName.getName().getAsIdentifierInfo();
-  if (!ExternalTypo && ED > 0 && Typo->getName().size() / ED < 3)
-    return nullptr;
-  ExprEvalContexts.back().NumTypos++;
-  return createDelayedTypo(std::move(Consumer), std::move(TDG), std::move(TRC),
-                           TypoName.getLoc());
-}
-
 void TypoCorrection::addCorrectionDecl(NamedDecl *CDecl) {
   if (!CDecl) return;
 
@@ -5769,32 +5769,6 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
   // Add any extra diagnostics.
   for (const PartialDiagnostic &PD : Correction.getExtraDiagnostics())
     Diag(Correction.getCorrectionRange().getBegin(), PD);
-}
-
-TypoExpr *Sema::createDelayedTypo(std::unique_ptr<TypoCorrectionConsumer> TCC,
-                                  TypoDiagnosticGenerator TDG,
-                                  TypoRecoveryCallback TRC,
-                                  SourceLocation TypoLoc) {
-  assert(TCC && "createDelayedTypo requires a valid TypoCorrectionConsumer");
-  auto TE = new (Context) TypoExpr(Context.DependentTy, TypoLoc);
-  auto &State = DelayedTypos[TE];
-  State.Consumer = std::move(TCC);
-  State.DiagHandler = std::move(TDG);
-  State.RecoveryHandler = std::move(TRC);
-  if (TE)
-    TypoExprs.push_back(TE);
-  return TE;
-}
-
-const Sema::TypoExprState &Sema::getTypoExprState(TypoExpr *TE) const {
-  auto Entry = DelayedTypos.find(TE);
-  assert(Entry != DelayedTypos.end() &&
-         "Failed to get the state for a TypoExpr!");
-  return Entry->second;
-}
-
-void Sema::clearDelayedTypo(TypoExpr *TE) {
-  DelayedTypos.erase(TE);
 }
 
 void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {

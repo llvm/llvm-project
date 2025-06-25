@@ -151,9 +151,8 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   setMinimumJumpTableEntries(100);
 
   // Use fast calling convention for library functions.
-  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-    setLibcallCallingConv(static_cast<RTLIB::Libcall>(I), CallingConv::Fast);
-  }
+  for (RTLIB::Libcall LC : RTLIB::libcalls())
+    setLibcallCallingConv(LC, CallingConv::Fast);
 
   MaxStoresPerMemset = 16; // For @llvm.memset -> sequence of stores
   MaxStoresPerMemsetOptSize = 8;
@@ -212,7 +211,7 @@ Register LanaiTargetLowering::getRegisterByName(
   const char *RegName, LLT /*VT*/,
   const MachineFunction & /*MF*/) const {
   // Only unallocatable registers should be matched here.
-  Register Reg = StringSwitch<unsigned>(RegName)
+  Register Reg = StringSwitch<Register>(RegName)
                      .Case("pc", Lanai::PC)
                      .Case("sp", Lanai::SP)
                      .Case("fp", Lanai::FP)
@@ -221,11 +220,8 @@ Register LanaiTargetLowering::getRegisterByName(
                      .Case("rr2", Lanai::RR2)
                      .Case("r11", Lanai::R11)
                      .Case("rca", Lanai::RCA)
-                     .Default(0);
-
-  if (Reg)
-    return Reg;
-  report_fatal_error("Invalid register name global variable");
+                     .Default(Register());
+  return Reg;
 }
 
 std::pair<unsigned, const TargetRegisterClass *>

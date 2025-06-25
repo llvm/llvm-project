@@ -11,13 +11,13 @@
 #include "ToolChains/Arch/ARM.h"
 #include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/Clang.h"
-#include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
 #include "ToolChains/InterfaceStubs.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
@@ -389,10 +389,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   return SanArgs;
 }
 
-const XRayArgs& ToolChain::getXRayArgs() const {
-  if (!XRayArguments)
-    XRayArguments.reset(new XRayArgs(*this, Args));
-  return *XRayArguments;
+const XRayArgs ToolChain::getXRayArgs(const llvm::opt::ArgList &JobArgs) const {
+  XRayArgs XRayArguments(*this, JobArgs);
+  return XRayArguments;
 }
 
 namespace {
@@ -502,8 +501,7 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered =
-      llvm::TargetRegistry::lookupTarget(std::string(Prefix), IgnoredError);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
@@ -935,6 +933,20 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(T))
     return *Path;
 
+  if (T.isOSAIX()) {
+    llvm::Triple AIXTriple;
+    if (T.getEnvironment() == Triple::UnknownEnvironment) {
+      // Strip unknown environment and the OS version from the triple.
+      AIXTriple = llvm::Triple(T.getArchName(), T.getVendorName(),
+                               llvm::Triple::getOSTypeName(T.getOS()));
+    } else {
+      // Strip the OS version from the triple.
+      AIXTriple = getTripleWithoutOSVersion();
+    }
+    if (auto Path = getPathForTriple(AIXTriple))
+      return *Path;
+  }
+
   if (T.isOSzOS() &&
       (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
     // Build the triple without version information
@@ -980,14 +992,6 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   if (Triple.isOSDarwin())
     return {};
 
-  // For AIX, get the triple without the OS version.
-  if (Triple.isOSAIX()) {
-    const llvm::Triple &TripleWithoutVersion = getTripleWithoutOSVersion();
-    llvm::sys::path::append(P, TripleWithoutVersion.str());
-    if (getVFS().exists(P))
-      return std::string(P);
-    return {};
-  }
   llvm::sys::path::append(P, Triple.str());
   return std::string(P);
 }
@@ -1366,10 +1370,17 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
+/// Utility function to add a system framework directory to CC1 arguments.
+void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
+                                          llvm::opt::ArgStringList &CC1Args,
+                                          const Twine &Path) {
+  CC1Args.push_back("-internal-iframework");
+  CC1Args.push_back(DriverArgs.MakeArgString(Path));
+}
+
 /// Utility function to add a system include directory to CC1 arguments.
-/*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
-                                            ArgStringList &CC1Args,
-                                            const Twine &Path) {
+void ToolChain::addSystemInclude(const ArgList &DriverArgs,
+                                 ArgStringList &CC1Args, const Twine &Path) {
   CC1Args.push_back("-internal-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
@@ -1382,9 +1393,9 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
 /// "C" semantics. These semantics are *ignored* by and large today, but its
 /// important to preserve the preprocessor changes resulting from the
 /// classification.
-/*static*/ void ToolChain::addExternCSystemInclude(const ArgList &DriverArgs,
-                                                   ArgStringList &CC1Args,
-                                                   const Twine &Path) {
+void ToolChain::addExternCSystemInclude(const ArgList &DriverArgs,
+                                        ArgStringList &CC1Args,
+                                        const Twine &Path) {
   CC1Args.push_back("-internal-externc-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
@@ -1396,19 +1407,28 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
     addExternCSystemInclude(DriverArgs, CC1Args, Path);
 }
 
+/// Utility function to add a list of system framework directories to CC1.
+void ToolChain::addSystemFrameworkIncludes(const ArgList &DriverArgs,
+                                           ArgStringList &CC1Args,
+                                           ArrayRef<StringRef> Paths) {
+  for (const auto &Path : Paths) {
+    CC1Args.push_back("-internal-iframework");
+    CC1Args.push_back(DriverArgs.MakeArgString(Path));
+  }
+}
+
 /// Utility function to add a list of system include directories to CC1.
-/*static*/ void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
-                                             ArgStringList &CC1Args,
-                                             ArrayRef<StringRef> Paths) {
+void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
+                                  ArgStringList &CC1Args,
+                                  ArrayRef<StringRef> Paths) {
   for (const auto &Path : Paths) {
     CC1Args.push_back("-internal-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(Path));
   }
 }
 
-/*static*/ std::string ToolChain::concat(StringRef Path, const Twine &A,
-                                         const Twine &B, const Twine &C,
-                                         const Twine &D) {
+std::string ToolChain::concat(StringRef Path, const Twine &A, const Twine &B,
+                              const Twine &C, const Twine &D) {
   SmallString<128> Result(Path);
   llvm::sys::path::append(Result, llvm::sys::path::Style::posix, A, B, C, D);
   return std::string(Result);
@@ -1425,7 +1445,7 @@ std::string ToolChain::detectLibcxxVersion(StringRef IncludePath) const {
     StringRef VersionText = llvm::sys::path::filename(LI->path());
     int Version;
     if (VersionText[0] == 'v' &&
-        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
+        !VersionText.substr(1).getAsInteger(10, Version)) {
       if (Version > MaxVersion) {
         MaxVersion = Version;
         MaxVersionString = std::string(VersionText);

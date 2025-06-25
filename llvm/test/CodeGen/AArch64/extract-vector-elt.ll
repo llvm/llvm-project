@@ -391,13 +391,10 @@ define float @extract_v4i32_copysign_build_vector(<4 x float> %a, <4 x float> %b
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    adrp x8, .LCPI16_0
-; CHECK-SD-NEXT:    mvni v1.4s, #128, lsl #24
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI16_0]
+; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    ldr s0, [x8]
 ; CHECK-SD-NEXT:    add sp, sp, #16
@@ -425,10 +422,7 @@ entry:
 define float @extract_v4i32_copysign_build_vector_const(<4 x float> %a, <4 x float> %b, i32 %c) {
 ; CHECK-SD-LABEL: extract_v4i32_copysign_build_vector_const:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    adrp x8, .LCPI17_0
-; CHECK-SD-NEXT:    mvni v1.4s, #128, lsl #24
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI17_0]
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-SD-NEXT:    mov s0, v0.s[2]
 ; CHECK-SD-NEXT:    ret
 ;

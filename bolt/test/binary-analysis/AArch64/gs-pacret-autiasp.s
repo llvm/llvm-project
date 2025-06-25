@@ -217,11 +217,27 @@ f_callclobbered_calleesaved:
 f_unreachable_instruction:
 // CHECK-LABEL: GS-PAUTH: Warning: unreachable instruction found in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
 // CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       add     x0, x1, x2
+// CHECK-NOT:   instructions that write to the affected registers after any authentication are:
         b       1f
         add     x0, x1, x2
 1:
         ret
         .size f_unreachable_instruction, .-f_unreachable_instruction
+
+// Expected false positive: without CFG, the state is reset to all-unsafe
+// after an unconditional branch.
+
+        .globl  state_is_reset_after_indirect_branch_nocfg
+        .type   state_is_reset_after_indirect_branch_nocfg,@function
+state_is_reset_after_indirect_branch_nocfg:
+// CHECK-LABEL: GS-PAUTH: non-protected ret found in function state_is_reset_after_indirect_branch_nocfg, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:         ret
+// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+        adr     x2, 1f
+        br      x2
+1:
+        ret
+        .size state_is_reset_after_indirect_branch_nocfg, .-state_is_reset_after_indirect_branch_nocfg
 
 /// Now do a basic sanity check on every different Authentication instruction:
 
