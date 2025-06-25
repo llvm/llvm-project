@@ -15,8 +15,8 @@
 #ifndef MLIR_SUPPORT_STACKFRAME_H
 #define MLIR_SUPPORT_STACKFRAME_H
 
-#include "mlir/IR/Visitors.h"
 #include "mlir/Support/TypeID.h"
+#include "mlir/Support/WalkResult.h"
 #include <memory>
 
 namespace mlir {
@@ -82,6 +82,17 @@ public:
       }
     }
     return WalkResult::advance();
+  }
+
+  /// Get the top instance of frame type `T` or nullptr if none are found
+  template <typename T>
+  T *getStackTop() {
+    T *top = nullptr;
+    stackWalk<T>([&](T &frame) -> mlir::WalkResult {
+      top = &frame;
+      return mlir::WalkResult::interrupt();
+    });
+    return top;
   }
 
 private:

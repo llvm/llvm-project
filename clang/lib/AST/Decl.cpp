@@ -5878,21 +5878,21 @@ bool HLSLBufferDecl::buffer_decls_empty() {
 // HLSLRootSignatureDecl Implementation
 //===----------------------------------------------------------------------===//
 
-HLSLRootSignatureDecl::HLSLRootSignatureDecl(DeclContext *DC,
-                                             SourceLocation Loc,
-                                             IdentifierInfo *ID,
-                                             unsigned NumElems)
+HLSLRootSignatureDecl::HLSLRootSignatureDecl(
+    DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    llvm::dxbc::RootSignatureVersion Version, unsigned NumElems)
     : NamedDecl(Decl::Kind::HLSLRootSignature, DC, Loc, DeclarationName(ID)),
-      NumElems(NumElems) {}
+      Version(Version), NumElems(NumElems) {}
 
 HLSLRootSignatureDecl *HLSLRootSignatureDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    llvm::dxbc::RootSignatureVersion Version,
     ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements) {
   HLSLRootSignatureDecl *RSDecl =
       new (C, DC,
            additionalSizeToAlloc<llvm::hlsl::rootsig::RootElement>(
                RootElements.size()))
-          HLSLRootSignatureDecl(DC, Loc, ID, RootElements.size());
+          HLSLRootSignatureDecl(DC, Loc, ID, Version, RootElements.size());
   auto *StoredElems = RSDecl->getElems();
   llvm::uninitialized_copy(RootElements, StoredElems);
   return RSDecl;
@@ -5901,7 +5901,9 @@ HLSLRootSignatureDecl *HLSLRootSignatureDecl::Create(
 HLSLRootSignatureDecl *
 HLSLRootSignatureDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   HLSLRootSignatureDecl *Result = new (C, ID)
-      HLSLRootSignatureDecl(nullptr, SourceLocation(), nullptr, /*NumElems=*/0);
+      HLSLRootSignatureDecl(nullptr, SourceLocation(), nullptr,
+                            /*Version*/ llvm::dxbc::RootSignatureVersion::V1_1,
+                            /*NumElems=*/0);
   return Result;
 }
 
