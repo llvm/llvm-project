@@ -136,11 +136,26 @@ public:
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
 
-    Location loc = op.getLoc();
+    // Check permutation maps. For now only accept
+    //   lhs: (d0, d1, d2) -> (d0, d2)
+    //   rhs: (d0, d1, d2) -> (d1, d2)
+    //   acc: (d0, d1, d2) -> (d0, d1)
+    // This corresponds to matrix multiplication with transposed RHS.
+    if (op.getIndexingMapsArray()[0] !=
+            AffineMap::getMultiDimMapWithTargets(3, ArrayRef{0u, 2u},
+                                                 op.getContext()) ||
+        op.getIndexingMapsArray()[1] !=
+            AffineMap::getMultiDimMapWithTargets(3, ArrayRef{1u, 2u},
+                                                 op.getContext()) ||
+        op.getIndexingMapsArray()[2] !=
+            AffineMap::getMultiDimMapWithTargets(3, ArrayRef{0u, 1u},
+                                                 op.getContext()))
+      return rewriter.notifyMatchFailure(op, "non-matching permutation maps");
+
     mlir::VectorType lhsType = op.getLhsType();
     mlir::VectorType rhsType = op.getRhsType();
 
-    // Check the rank the types so we can safely examine their dimensions.
+    // Check the rank of the types so we can safely examine their dimensions.
     if (lhsType.getRank() != 2 || rhsType.getRank() != 2)
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
@@ -158,22 +173,6 @@ public:
         M < 2 || M % 2 != 0 || N < 2 || N % 2 != 0 ||
         !rhsType.getScalableDims()[0])
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
-
-    // Check permutation maps. For now only accept
-    //   lhs: (d0, d1, d2) -> (d0, d2)
-    //   rhs: (d0, d1, d2) -> (d1, d2)
-    //   acc: (d0, d1, d2) -> (d0, d1)
-    // This corresponds to matrix multiplication with transposed RHS.
-    if (op.getIndexingMapsArray()[0] !=
-            AffineMap::getMultiDimMapWithTargets(3, ArrayRef{0u, 2u},
-                                                 op.getContext()) ||
-        op.getIndexingMapsArray()[1] !=
-            AffineMap::getMultiDimMapWithTargets(3, ArrayRef{1u, 2u},
-                                                 op.getContext()) ||
-        op.getIndexingMapsArray()[2] !=
-            AffineMap::getMultiDimMapWithTargets(3, ArrayRef{0u, 1u},
-                                                 op.getContext()))
-      return rewriter.notifyMatchFailure(op, "non-matching permutation maps");
 
     // Check iterator types for matrix multiplication.
     auto itTypes = op.getIteratorTypesArray();
@@ -228,6 +227,7 @@ public:
                                    /*scalableDims=*/{true});
 
     // Extract LHS sub-tiles with logicall shape <2x8>.
+    Location loc = op.getLoc();
     SmallVector<Value> lhsTile;
     for (int64_t i = 0; i < M; i += 2) {
       // Extract two consecutive rows of the LHS tile.
@@ -283,7 +283,7 @@ public:
       if (mmlaOp == MMLA::MixedSwapped) {
         // We need to swap the positions of the LHS and RHS (since we don't have
         // a signed * unsigned operation), but then each individual 2x2 tile of
-        // the acumulator and (later) the result need to be transposed.
+        // the accumulator and (later) the result need to be transposed.
         accTileVec = rewriter.create<vector::InterleaveOp>(loc, r0, r1);
       } else {
         // Bitcast them to 64-bit elements, so subsequent
