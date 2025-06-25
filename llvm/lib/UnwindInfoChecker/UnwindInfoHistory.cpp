@@ -19,14 +19,14 @@
 using namespace llvm;
 
 std::optional<dwarf::UnwindTable::const_iterator>
-UnwindInfoHistory::getCurrentUnwindRow() const {
+UnwindInfoState::getCurrentUnwindRow() const {
   if (!Table.size())
     return std::nullopt;
 
   return --Table.end();
 }
 
-void UnwindInfoHistory::update(const MCCFIInstruction &CFIDirective) {
+void UnwindInfoState::update(const MCCFIInstruction &CFIDirective) {
   auto DwarfOperations = convert(CFIDirective);
   if (!DwarfOperations) {
     Context->reportError(
@@ -50,7 +50,7 @@ void UnwindInfoHistory::update(const MCCFIInstruction &CFIDirective) {
 }
 
 std::optional<dwarf::CFIProgram>
-UnwindInfoHistory::convert(MCCFIInstruction CFIDirective) {
+UnwindInfoState::convert(MCCFIInstruction CFIDirective) {
   //! FIXME, this way of instantiating CFI program does not look right, either
   //! refactor CFIProgram to not depend on the Code/Data Alignment or add a new
   //! type that is independent from this and is also feedable to UnwindTable.
