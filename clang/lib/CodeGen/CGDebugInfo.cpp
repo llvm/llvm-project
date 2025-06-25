@@ -2156,7 +2156,7 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
   }
 
   // Copy rest of the arguments.
-  for (unsigned i = (SkipFirst ? 2 : 1), e = Args.size(); i != e; ++i)
+  for (unsigned i = (SkipFirst ? 2 : 1), e = Args.size(); i < e; ++i)
     Elts.push_back(Args[i]);
 
   // Attach FlagObjectPointer to the explicit "this" parameter.
