@@ -130,7 +130,8 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID, "TemplateSpecializationBlock"},
           {BI_TEMPLATE_PARAM_BLOCK_ID, "TemplateParamBlock"},
           {BI_CONSTRAINT_BLOCK_ID, "ConstraintBlock"},
-          {BI_CONCEPT_BLOCK_ID, "ConceptBlock"}};
+          {BI_CONCEPT_BLOCK_ID, "ConceptBlock"},
+          {BI_VAR_BLOCK_ID, "VarBlock"}};
       assert(Inits.size() == BlockIdCount);
       for (const auto &Init : Inits)
         BlockIdNameMap[Init.first] = Init.second;
@@ -213,7 +214,12 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {CONCEPT_IS_TYPE, {"IsType", &genBoolAbbrev}},
           {CONCEPT_CONSTRAINT_EXPRESSION,
            {"ConstraintExpression", &genStringAbbrev}},
-          {CONSTRAINT_EXPRESSION, {"Expression", &genStringAbbrev}}};
+          {CONSTRAINT_EXPRESSION, {"Expression", &genStringAbbrev}},
+          {VAR_USR, {"USR", &genSymbolIdAbbrev}},
+          {VAR_NAME, {"Name", &genStringAbbrev}},
+          {VAR_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
+          {VAR_IS_STATIC, {"IsStatic", &genBoolAbbrev}}};
+
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
         RecordIdNameMap[Init.first] = Init.second;
@@ -277,7 +283,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
          {CONCEPT_USR, CONCEPT_NAME, CONCEPT_IS_TYPE,
           CONCEPT_CONSTRAINT_EXPRESSION}},
         // Constraint Block
-        {BI_CONSTRAINT_BLOCK_ID, {CONSTRAINT_EXPRESSION}}};
+        {BI_CONSTRAINT_BLOCK_ID, {CONSTRAINT_EXPRESSION}},
+        {BI_VAR_BLOCK_ID, {VAR_NAME, VAR_USR, VAR_DEFLOCATION, VAR_IS_STATIC}}};
 
 // AbbreviationMap
 
@@ -540,6 +547,8 @@ void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
     emitBlock(C);
   for (const auto &C : I.Children.Concepts)
     emitBlock(C);
+  for (const auto &C : I.Children.Variables)
+    emitBlock(C);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const EnumInfo &I) {
@@ -682,6 +691,20 @@ void ClangDocBitcodeWriter::emitBlock(const ConstraintInfo &C) {
   emitBlock(C.ConceptRef, FieldId::F_concept);
 }
 
+void ClangDocBitcodeWriter::emitBlock(const VarInfo &I) {
+  StreamSubBlockGuard Block(Stream, BI_VAR_BLOCK_ID);
+  emitRecord(I.USR, VAR_USR);
+  emitRecord(I.Name, VAR_NAME);
+  for (const auto &N : I.Namespace)
+    emitBlock(N, FieldId::F_namespace);
+  for (const auto &CI : I.Description)
+    emitBlock(CI);
+  if (I.DefLoc)
+    emitRecord(*I.DefLoc, VAR_DEFLOCATION);
+  emitRecord(I.IsStatic, VAR_IS_STATIC);
+  emitBlock(I.Type);
+}
+
 bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
   switch (I->IT) {
   case InfoType::IT_namespace:
@@ -701,6 +724,9 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
     break;
   case InfoType::IT_concept:
     emitBlock(*static_cast<clang::doc::ConceptInfo *>(I));
+    break;
+  case InfoType::IT_variable:
+    emitBlock(*static_cast<VarInfo *>(I));
     break;
   case InfoType::IT_default:
     llvm::errs() << "Unexpected info, unable to write.\n";

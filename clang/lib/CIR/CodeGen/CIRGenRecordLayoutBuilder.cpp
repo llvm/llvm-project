@@ -704,11 +704,14 @@ void CIRRecordLowering::lowerUnion() {
   // locate the "most appropriate" storage type.
   for (const FieldDecl *field : recordDecl->fields()) {
     mlir::Type fieldType;
-    if (field->isBitField())
-      cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                         "bitfields in lowerUnion");
-    else
+    if (field->isBitField()) {
+      if (field->isZeroLengthBitField())
+        continue;
+      fieldType = getBitfieldStorageType(field->getBitWidthValue());
+      setBitFieldInfo(field, CharUnits::Zero(), fieldType);
+    } else {
       fieldType = getStorageType(field);
+    }
 
     // This maps a field to its index. For unions, the index is always 0.
     fieldIdxMap[field->getCanonicalDecl()] = 0;
@@ -778,10 +781,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
       !cirGenTypes.getCGModule().getCodeGenOpts().AAPCSBitfieldWidth)
     return;
 
-  for ([[maybe_unused]] auto &I : bitFields) {
-    assert(!cir::MissingFeatures::armComputeVolatileBitfields());
-    cirGenTypes.getCGModule().errorNYI("NYI AAPCS bit-fields");
-  }
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 }
 
 void CIRRecordLowering::accumulateBases(const CXXRecordDecl *cxxRecordDecl) {

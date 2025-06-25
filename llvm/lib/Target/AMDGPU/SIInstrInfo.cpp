@@ -8716,9 +8716,8 @@ void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
 void SIInstrInfo::addUsersToMoveToVALUWorklist(
     Register DstReg, MachineRegisterInfo &MRI,
     SIInstrWorklist &Worklist) const {
-  for (MachineRegisterInfo::use_iterator I = MRI.use_begin(DstReg),
-         E = MRI.use_end(); I != E;) {
-    MachineInstr &UseMI = *I->getParent();
+  for (MachineOperand &MO : make_early_inc_range(MRI.use_operands(DstReg))) {
+    MachineInstr &UseMI = *MO.getParent();
 
     unsigned OpNo = 0;
 
@@ -8733,21 +8732,15 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
     case AMDGPU::INSERT_SUBREG:
       break;
     default:
-      OpNo = I.getOperandNo();
+      OpNo = MO.getOperandNo();
       break;
     }
 
-    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo))) {
+    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo)))
       Worklist.insert(&UseMI);
-
-      do {
-        ++I;
-      } while (I != E && I->getParent() == &UseMI);
-    } else {
+    else
+      // Legalization could change user list.
       legalizeOperandsVALUt16(UseMI, OpNo, MRI);
-
-      ++I;
-    }
   }
 }
 
