@@ -343,6 +343,9 @@ private:
   /// Postcondition: For all i, ret[i][0].second == 0, because the first instr
   /// in the chain is the leader, and an instr touches distance 0 from itself.
   std::vector<Chain> gatherChains(ArrayRef<Instruction *> Instrs);
+
+  /// Propagates the best alignment in a chain of contiguous accesses
+  void propagateBestAlignmentsInChain(ArrayRef<ChainElem> C) const;
 };
 
 class LoadStoreVectorizerLegacyPass : public FunctionPass {
@@ -715,6 +718,14 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
 
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
   unsigned VecRegBytes = TTI.getLoadStoreVecRegBitWidth(AS) / 8;
+
+  // We know that the accesses are contiguous. Propagate alignment
+  // information so that slices of the chain can still be vectorized.
+  propagateBestAlignmentsInChain(C);
+  LLVM_DEBUG({
+    dbgs() << "LSV: Chain after alignment propagation:\n";
+    dumpChain(C);
+  });
 
   std::vector<Chain> Ret;
   for (unsigned CBegin = 0; CBegin < C.size(); ++CBegin) {
@@ -1633,4 +1644,28 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
     return (OffsetB - OffsetA + Diff->sext(OffsetB.getBitWidth()))
         .sextOrTrunc(OrigBitWidth);
   return std::nullopt;
+}
+
+void Vectorizer::propagateBestAlignmentsInChain(ArrayRef<ChainElem> C) const {
+  ChainElem BestAlignedElem = C[0];
+  Align BestAlignSoFar = getLoadStoreAlignment(C[0].Inst);
+
+  for (const ChainElem &E : C) {
+    Align OrigAlign = getLoadStoreAlignment(E.Inst);
+    if (OrigAlign > BestAlignSoFar) {
+      BestAlignedElem = E;
+      BestAlignSoFar = OrigAlign;
+    }
+
+    APInt OffsetFromBestAlignedElem =
+        E.OffsetFromLeader - BestAlignedElem.OffsetFromLeader;
+    assert(OffsetFromBestAlignedElem.isNonNegative());
+    // commonAlignment is equivalent to a greatest common power-of-two divisor;
+    // it returns the largest power of 2 that divides both A and B.
+    Align NewAlign = commonAlignment(
+        BestAlignSoFar, OffsetFromBestAlignedElem.getLimitedValue());
+    if (NewAlign > OrigAlign)
+      setLoadStoreAlignment(E.Inst, NewAlign);
+  }
+  return;
 }
