@@ -1830,6 +1830,11 @@ void OMPClausePrinter::VisitOMPFinalClause(OMPFinalClause *Node) {
 
 void OMPClausePrinter::VisitOMPNumThreadsClause(OMPNumThreadsClause *Node) {
   OS << "num_threads(";
+  OpenMPNumThreadsClauseModifier Modifier = Node->getModifier();
+  if (Modifier != OMPC_NUMTHREADS_unknown) {
+    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(), Modifier)
+       << ": ";
+  }
   Node->getNumThreads()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }

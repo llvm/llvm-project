@@ -17,6 +17,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -211,8 +212,8 @@ static void applyEraseUnnecessaryInputs(func::FuncOp funcOp) {
 
 static void applyWinogradConv2D(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  populateWinogradConv2DPatterns(patterns, /*m=*/4, /*r=*/3);
-  populateWinogradConv2DPatterns(patterns, /*m=*/2, /*r=*/5);
+  populateWinogradConv2DPatterns(patterns, WinogradConv2DFmr::F_4_3);
+  populateWinogradConv2DPatterns(patterns, WinogradConv2DFmr::F_2_5);
   (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 

@@ -469,6 +469,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(COSH_F);
   case TargetOpcode::G_FTANH:
     RTLIBCASE(TANH_F);
+  case TargetOpcode::G_FSINCOS:
+    RTLIBCASE(SINCOS_F);
   case TargetOpcode::G_FLOG10:
     RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
@@ -646,6 +648,54 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
   return createLibcall(MIRBuilder, Libcall,
                        {MI.getOperand(0).getReg(), OpType, 0}, Args,
                        LocObserver, &MI);
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::emitSincosLibcall(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size, Type *OpType,
+    LostDebugLocObserver &LocObserver) {
+  MachineFunction &MF = *MI.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register DstSin = MI.getOperand(0).getReg();
+  Register DstCos = MI.getOperand(1).getReg();
+  Register Src = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(DstSin);
+
+  int MemSize = DstTy.getSizeInBytes();
+  Align Alignment = getStackTemporaryAlignment(DstTy);
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  unsigned AddrSpace = DL.getAllocaAddrSpace();
+  MachinePointerInfo PtrInfo;
+
+  Register StackPtrSin =
+      createStackTemporary(TypeSize::getFixed(MemSize), Alignment, PtrInfo)
+          .getReg(0);
+  Register StackPtrCos =
+      createStackTemporary(TypeSize::getFixed(MemSize), Alignment, PtrInfo)
+          .getReg(0);
+
+  auto &Ctx = MF.getFunction().getContext();
+  auto LibcallResult =
+      createLibcall(MIRBuilder, getRTLibDesc(MI.getOpcode(), Size),
+                    {{0}, Type::getVoidTy(Ctx), 0},
+                    {{Src, OpType, 0},
+                     {StackPtrSin, PointerType::get(Ctx, AddrSpace), 1},
+                     {StackPtrCos, PointerType::get(Ctx, AddrSpace), 2}},
+                    LocObserver, &MI);
+
+  if (LibcallResult != LegalizeResult::Legalized)
+    return LegalizerHelper::UnableToLegalize;
+
+  MachineMemOperand *LoadMMOSin = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Alignment);
+  MachineMemOperand *LoadMMOCos = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Alignment);
+
+  MIRBuilder.buildLoad(DstSin, StackPtrSin, *LoadMMOSin);
+  MIRBuilder.buildLoad(DstCos, StackPtrCos, *LoadMMOCos);
+  MI.eraseFromParent();
+
+  return LegalizerHelper::Legalized;
 }
 
 LegalizerHelper::LegalizeResult
@@ -1274,6 +1324,16 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     if (Status != Legalized)
       return Status;
     break;
+  }
+  case TargetOpcode::G_FSINCOS: {
+    LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = LLTy.getSizeInBits();
+    Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
+      return UnableToLegalize;
+    }
+    return emitSincosLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
   }
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
