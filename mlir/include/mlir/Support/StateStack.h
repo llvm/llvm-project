@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_STACKFRAME_H
-#define MLIR_IR_STACKFRAME_H
+#ifndef MLIR_SUPPORT_STACKFRAME_H
+#define MLIR_SUPPORT_STACKFRAME_H
 
-#include "mlir/IR/Visitors.h"
 #include "mlir/Support/TypeID.h"
+#include "mlir/Support/WalkResult.h"
 #include <memory>
 
 namespace mlir {
@@ -125,4 +125,4 @@ struct isa_impl<T, ::mlir::StateStackFrame> {
 };
 } // namespace llvm
 
-#endif // MLIR_IR_STACKFRAME_H
+#endif // MLIR_SUPPORT_STACKFRAME_H
