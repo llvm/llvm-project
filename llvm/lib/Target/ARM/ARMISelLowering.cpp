@@ -505,12 +505,10 @@ const ARMBaseTargetMachine &ARMTargetLowering::getTM() const {
 
 ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                                      const ARMSubtarget &STI)
-    : TargetLowering(TM_), Subtarget(&STI) {
-
+    : TargetLowering(TM_), Subtarget(&STI),
+      RegInfo(Subtarget->getRegisterInfo()),
+      Itins(Subtarget->getInstrItineraryData()) {
   const auto &TM = static_cast<const ARMBaseTargetMachine &>(TM_);
-
-  RegInfo = Subtarget->getRegisterInfo();
-  Itins = Subtarget->getInstrItineraryData();
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);

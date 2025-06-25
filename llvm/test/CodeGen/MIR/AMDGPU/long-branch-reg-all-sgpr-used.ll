@@ -46,6 +46,7 @@
 ; CHECK-NEXT:   needIdx0Restore: false
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_used_all_sgprs(ptr addrspace(1) %arg, i32 %cnd) #0 {
@@ -316,6 +317,7 @@
 ; CHECK-NEXT:   needIdx0Restore: false
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_high_num_sgprs_used(ptr addrspace(1) %arg, i32 %cnd) #0 {

@@ -2068,7 +2068,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
     if (!WCG->isOptNone() &&
-        (ST->isDynamicVGPREnabled() ||
+        (MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() ||
          (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
           ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
           !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
@@ -3164,7 +3164,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   Limits.VaVdstMax = AMDGPU::DepCtr::getVaVdstBitMask();
   Limits.VmVsrcMax = AMDGPU::DepCtr::getVmVsrcBitMask();
 
-  [[maybe_unused]] unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
+  [[maybe_unused]] unsigned NumVGPRsMax =
+      ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
   [[maybe_unused]] unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
@@ -3351,7 +3352,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   // (i.e. whether we're in dynamic VGPR mode or not).
   // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
   // waveslot limited kernel runs slower with the deallocation.
-  if (ST->isDynamicVGPREnabled()) {
+  if (MFI->isDynamicVGPREnabled()) {
     for (MachineInstr *MI : ReleaseVGPRInsts) {
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
               TII->get(AMDGPU::S_ALLOC_VGPR))
@@ -3362,7 +3363,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     if (!ReleaseVGPRInsts.empty() &&
         (MF.getFrameInfo().hasCalls() ||
          ST->getOccupancyWithNumVGPRs(
-             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
+             /*IsDynamicVGPR=*/false) <
              AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
       for (MachineInstr *MI : ReleaseVGPRInsts) {
         if (ST->requiresNopBeforeDeallocVGPRs()) {

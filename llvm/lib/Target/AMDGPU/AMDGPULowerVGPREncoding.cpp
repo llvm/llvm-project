@@ -403,7 +403,7 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
   OpInfo.Encode(StoreIdxReg.asMCReg(), *MMO, 0);
   OpInfo.Encode(LoadIdxReg.asMCReg(), *LoadMMO, 1);
 
-  unsigned MaxVGPR = ST->getAddressableNumVGPRs() - 1;
+  unsigned MaxVGPR = ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) - 1;
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
   for (unsigned I = 0; I < Size / 32; ++I) {
     unsigned CurLoadOffset = (LoadOffset + I) & MaxVGPR;
@@ -464,7 +464,7 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
   OpMetaInfo OpInfo;
   OpInfo.Encode(IdxReg.asMCReg(), *MMO, IsLoad ? 1 : 0);
 
-  unsigned MaxVGPR = ST->getAddressableNumVGPRs() - 1;
+  unsigned MaxVGPR = ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) - 1;
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
   for (unsigned i = 0; i < Size / 32; ++i) {
     unsigned CurOffset = (Offset + i) & MaxVGPR;
@@ -534,7 +534,7 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
         int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
         assert(OffsetIdx != -1 && "Malformed V_LOAD/STORE_IDX instruction");
         unsigned Offset = II->getOperand(OffsetIdx).getImm();
-        assert(Offset < ST->getAddressableNumVGPRs() - ByteSize / 4);
+        assert(Offset < ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) - ByteSize / 4);
         assert(
             !ST->needsAlignedVGPRs() || ByteSize <= 4 ||
             (Offset & 1) == 0 &&

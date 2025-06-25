@@ -1936,7 +1936,7 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
                                        const SIInstrInfo *TII, unsigned Latency,
                                        unsigned Category) {
-  assert (SIInstrInfo::isXDLWMMA(MI) && (Latency == 8 || Latency == 16) &&
+  assert (TII->isXDLWMMA(MI) && (Latency == 8 || Latency == 16) &&
           "Handle me if the xdl wmma instruction latency changes");
 
   switch (Category) {
@@ -1978,10 +1978,10 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   if (!AMDGPU::isGFX1250Only(ST))
     return false;
 
-  if (!SIInstrInfo::isXDLWMMA(*MI) && !isCoexecutableVALUInst(*MI))
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  if (!TII->isXDLWMMA(*MI) && !isCoexecutableVALUInst(*MI))
     return false;
 
-  const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   // WaitStates here is the number of V_NOPs or unrelated VALU instructions must
@@ -1994,7 +1994,7 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   unsigned Category = 0;
 
   auto IsWMMAHazardFn = [MI, TII, TRI, &Category, this](const MachineInstr &I) {
-    if (!SIInstrInfo::isXDLWMMA(I))
+    if (!TII->isXDLWMMA(I))
       return false;
 
     unsigned Latency = TSchedModel.computeInstrLatency(&I);
@@ -2019,7 +2019,7 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   };
 
   auto IsVALUHazardFn = [MI, TII, TRI, &Category, this](const MachineInstr &I) {
-    if (!SIInstrInfo::isXDLWMMA(I))
+    if (!TII->isXDLWMMA(I))
       return false;
 
     unsigned Latency = TSchedModel.computeInstrLatency(&I);
@@ -2067,7 +2067,7 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   };
 
   int WaitStatesNeeded = -1;
-  if (SIInstrInfo::isXDLWMMA(*MI)) {
+  if (TII->isXDLWMMA(*MI)) {
     for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
       Limit = WMMAWaitStates[Category]; // for IsExpiredFn.
       DenseSet<const MachineBasicBlock *> Visited;

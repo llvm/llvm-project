@@ -819,11 +819,6 @@ For example:
                                                   performant than code generated for XNACK replay
                                                   disabled.
 
-     dynamic-vgpr    TODO                         Represents the "Dynamic VGPR" hardware mode, introduced in GFX12.
-                                                  Waves launched in this mode may allocate or deallocate the VGPRs
-                                                  using dedicated instructions, but may not send the DEALLOC_VGPRS
-                                                  message.
-
      cu-stores       TODO                         On GFX12.5, controls whether ``scope:SCOPE_CU`` stores may be used.
                                                   This is enabled by default.
                                                   If disabled, all stores will be done at ``scope:SCOPE_SE`` or greater.
@@ -2019,6 +2014,15 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-promote-alloca-to-vector-vgpr-ratio"     Ratio of VGPRs to budget for promoting alloca to vectors.
 
+     "amdgpu-dynamic-vgpr-block-size"                 Represents the size of a VGPR block in the "Dynamic VGPR" hardware mode,
+                                                      introduced in GFX12.
+                                                      A value of 0 (default) means that dynamic VGPRs are not enabled.
+                                                      Valid values for GFX12+ are 16 and 32.
+                                                      Waves launched in this mode may allocate or deallocate the VGPRs
+                                                      using dedicated instructions, but may not send the DEALLOC_VGPRS
+                                                      message. If a shader has this attribute, then all its callees must
+                                                      match its value.
+
      "amdgpu-cluster-dims"="x,y,z"                    Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
                                                       cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
                                                       but the dimensions cannot be determined at compile time. Any other value explicitly
@@ -2030,6 +2034,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                      `!reqd_work_group_size` metadata on the kernel function.
 
      "amdgpu-wavegroup-rank-function"                 GFX13+ only. Indicate it is a rank-specialized function for wavegroup.
+
      ================================================ ==========================================================
 
 Calling Conventions

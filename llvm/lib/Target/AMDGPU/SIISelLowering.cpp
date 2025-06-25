@@ -5939,6 +5939,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
                                             const GCNSubtarget &ST) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   MachineFunction *MF = MBB.getParent();
+  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
 
@@ -5962,9 +5963,9 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
       Shift.addReg(SAddrOp.getReg());
     else
       Shift.addFrameIndex(SAddrOp.getIndex());
-    Shift.addImm(2u);
-    Shift.setOperandDead(3); // Dead scc
-    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+	    Shift.addImm(2u);
+	    Shift.setOperandDead(3); // Dead scc
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) * 4) {
       Offset = Offset >> 2;
     } else {
       Register AddReg = MRI.createVirtualRegister(IdxRC);
@@ -5982,7 +5983,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
   auto EmitIdxST = [&](MachineInstr &MI) {
     int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
     Register VirtualIDX = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
-    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) * 4) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), VirtualIDX).addImm(0);
       Offset = Offset >> 2;
     } else {
@@ -6007,7 +6008,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
         .addReg(SAddrReg)
         .addImm(2u)
         .setOperandDead(3); // Dead scc
-    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) * 4) {
       Offset = Offset >> 2;
     } else {
       Register AddReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
