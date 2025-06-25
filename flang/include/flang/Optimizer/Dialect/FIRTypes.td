@@ -330,7 +330,8 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
   let extraClassDeclaration = [{
     using TypePair = std::pair<std::string, mlir::Type>;
-    using TypeList = std::vector<TypePair>;
+    using TypeList = llvm::ArrayRef<TypePair>;
+    using TypeVector = llvm::SmallVector<TypePair>;
     TypeList getTypeList() const;
     TypeList getLenParamList() const;
 

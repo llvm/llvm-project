@@ -25,14 +25,18 @@ entry:
 define i64 @read_volatile_i64_twice() {
 ; ACORE-LABEL: read_volatile_i64_twice:
 ; ACORE:       @ %bb.0: @ %entry
-; ACORE-NEXT:    mov r0, #0
-; ACORE-NEXT:    mov r1, #0
+; ACORE-NEXT:    mrrc p15, #1, r0, r1, c14
+; ACORE-NEXT:    mrrc p15, #1, r2, r3, c14
+; ACORE-NEXT:    eor r0, r2, r0
+; ACORE-NEXT:    eor r1, r3, r1
 ; ACORE-NEXT:    bx lr
 ;
 ; MCORE-LABEL: read_volatile_i64_twice:
 ; MCORE:       @ %bb.0: @ %entry
-; MCORE-NEXT:    movs r0, #0
-; MCORE-NEXT:    movs r1, #0
+; MCORE-NEXT:    mrrc p15, #1, r0, r1, c14
+; MCORE-NEXT:    mrrc p15, #1, r2, r3, c14
+; MCORE-NEXT:    eors r0, r2
+; MCORE-NEXT:    eors r1, r3
 ; MCORE-NEXT:    bx lr
 entry:
   %0 = tail call i64 @llvm.read_volatile_register.i64(metadata !5)

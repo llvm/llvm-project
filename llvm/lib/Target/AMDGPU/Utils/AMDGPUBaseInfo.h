@@ -980,6 +980,7 @@ struct Waitcnt {
   unsigned SampleCnt = ~0u; // gfx12+ only.
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
+  unsigned XCnt = ~0u;      // gfx1250.
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
 
@@ -990,18 +991,18 @@ struct Waitcnt {
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
-          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned VaVdst,
-          unsigned VmVsrc)
+          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
+          unsigned VaVdst, unsigned VmVsrc)
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
-        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), VaVdst(VaVdst),
-        VmVsrc(VmVsrc) {}
+        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
+        VaVdst(VaVdst), VmVsrc(VmVsrc) {}
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || VaVdst != ~0u ||
-           VmVsrc != ~0u;
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u ||
+           VaVdst != ~0u || VmVsrc != ~0u;
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
@@ -1015,8 +1016,8 @@ struct Waitcnt {
         std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
-        std::min(KmCnt, Other.KmCnt), std::min(VaVdst, Other.VaVdst),
-        std::min(VmVsrc, Other.VmVsrc));
+        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
+        std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
   }
 };
 
@@ -1121,6 +1122,10 @@ unsigned getDscntBitMask(const IsaVersion &Version);
 /// \returns Dscnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support KMcnt
 unsigned getKmcntBitMask(const IsaVersion &Version);
+
+/// \returns Xcnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support Xcnt.
+unsigned getXcntBitMask(const IsaVersion &Version);
 
 /// \return STOREcnt or VScnt bit mask for given isa \p Version.
 /// returns 0 for versions that do not support STOREcnt or VScnt.
