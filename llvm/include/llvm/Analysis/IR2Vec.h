@@ -108,6 +108,7 @@ public:
   /// Arithmetic operators
   Embedding &operator+=(const Embedding &RHS);
   Embedding &operator-=(const Embedding &RHS);
+  Embedding &operator*=(double Factor);
 
   /// Adds Src Embedding scaled by Factor with the called Embedding.
   /// Called_Embedding += Src * Factor
@@ -116,6 +117,8 @@ public:
   /// Returns true if the embedding is approximately equal to the RHS embedding
   /// within the specified tolerance.
   bool approximatelyEquals(const Embedding &RHS, double Tolerance = 1e-6) const;
+
+  void print(raw_ostream &OS) const;
 };
 
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
@@ -234,6 +237,8 @@ public:
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
   ir2vec::Vocab Vocabulary;
   Error readVocabulary();
+  Error parseVocabSection(StringRef Key, const json::Value &ParsedVocabValue,
+                          ir2vec::Vocab &TargetVocab, unsigned &Dim);
   void emitError(Error Err, LLVMContext &Ctx);
 
 public:
@@ -249,10 +254,19 @@ public:
 /// functions.
 class IR2VecPrinterPass : public PassInfoMixin<IR2VecPrinterPass> {
   raw_ostream &OS;
-  void printVector(const ir2vec::Embedding &Vec) const;
 
 public:
   explicit IR2VecPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  static bool isRequired() { return true; }
+};
+
+/// This pass prints the embeddings in the vocabulary
+class IR2VecVocabPrinterPass : public PassInfoMixin<IR2VecVocabPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit IR2VecVocabPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static bool isRequired() { return true; }
 };
