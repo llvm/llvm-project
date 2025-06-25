@@ -290,7 +290,20 @@ bool Hexagon::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                          uint64_t branchAddr, const Symbol &s,
                          int64_t a) const {
-  return !ctx.target->inBranchRange(type, branchAddr, s.getVA(ctx, a));
+  // Only check branch range for supported branch relocation types
+  switch (type) {
+  case R_HEX_B22_PCREL:
+  case R_HEX_PLT_B22_PCREL:
+  case R_HEX_GD_PLT_B22_PCREL:
+  case R_HEX_LD_PLT_B22_PCREL:
+  case R_HEX_B15_PCREL:
+  case R_HEX_B13_PCREL:
+  case R_HEX_B9_PCREL:
+    return !ctx.target->inBranchRange(type, branchAddr, s.getVA(ctx, a));
+  default:
+    // For unsupported relocation types, no thunk is needed
+    return false;
+  }
 }
 
 void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
