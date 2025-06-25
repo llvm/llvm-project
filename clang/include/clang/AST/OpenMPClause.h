@@ -824,30 +824,51 @@ class OMPNumThreadsClause final
       public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
+  /// Modifiers for 'num_threads' clause.
+  OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown;
+
+  /// Location of the modifier.
+  SourceLocation ModifierLoc;
+
+  /// Sets modifier.
+  void setModifier(OpenMPNumThreadsClauseModifier M) { Modifier = M; }
+
+  /// Sets modifier location.
+  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
+
   /// Set condition.
   void setNumThreads(Expr *NThreads) { setStmt(NThreads); }
 
 public:
   /// Build 'num_threads' clause with condition \a NumThreads.
   ///
+  /// \param Modifier Clause modifier.
   /// \param NumThreads Number of threads for the construct.
   /// \param HelperNumThreads Helper Number of threads for the construct.
   /// \param CaptureRegion Innermost OpenMP region where expressions in this
   /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
+  /// \param ModifierLoc Modifier location.
   /// \param EndLoc Ending location of the clause.
-  OMPNumThreadsClause(Expr *NumThreads, Stmt *HelperNumThreads,
-                      OpenMPDirectiveKind CaptureRegion,
+  OMPNumThreadsClause(OpenMPNumThreadsClauseModifier Modifier, Expr *NumThreads,
+                      Stmt *HelperNumThreads, OpenMPDirectiveKind CaptureRegion,
                       SourceLocation StartLoc, SourceLocation LParenLoc,
-                      SourceLocation EndLoc)
+                      SourceLocation ModifierLoc, SourceLocation EndLoc)
       : OMPOneStmtClause(NumThreads, StartLoc, LParenLoc, EndLoc),
-        OMPClauseWithPreInit(this) {
+        OMPClauseWithPreInit(this), Modifier(Modifier),
+        ModifierLoc(ModifierLoc) {
     setPreInitStmt(HelperNumThreads, CaptureRegion);
   }
 
   /// Build an empty clause.
   OMPNumThreadsClause() : OMPOneStmtClause(), OMPClauseWithPreInit(this) {}
+
+  /// Gets modifier.
+  OpenMPNumThreadsClauseModifier getModifier() const { return Modifier; }
+
+  /// Gets modifier location.
+  SourceLocation getModifierLoc() const { return ModifierLoc; }
 
   /// Returns number of threads.
   Expr *getNumThreads() const { return getStmtAs<Expr>(); }

@@ -5959,35 +5959,6 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
-// Refer to comments added to the MIR variant of isFMAFasterThanFMulAndFAdd for
-// specific details.
-bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
-                                                  Type *Ty) const {
-  switch (Ty->getScalarSizeInBits()) {
-  case 16: {
-    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
-    return Subtarget->has16BitInsts() &&
-           Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
-  }
-  case 32: {
-    if (!Subtarget->hasMadMacF32Insts())
-      return Subtarget->hasFastFMAF32();
-
-    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
-    if (Mode.FP32Denormals != DenormalMode::getPreserveSign())
-      return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
-
-    return Subtarget->hasFastFMAF32() && Subtarget->hasDLInsts();
-  }
-  case 64:
-    return true;
-  default:
-    break;
-  }
-
-  return false;
-}
-
 bool SITargetLowering::isFMADLegal(const MachineInstr &MI, LLT Ty) const {
   if (!Ty.isScalar())
     return false;
@@ -17619,33 +17590,6 @@ bool SITargetLowering::checkForPhysRegDependency(
     return true;
   }
   return false;
-}
-
-/// Check if it is profitable to hoist instruction in then/else to if.
-bool SITargetLowering::isProfitableToHoist(Instruction *I) const {
-  if (!I->hasOneUse())
-    return true;
-
-  Instruction *User = I->user_back();
-  // TODO: Add more patterns that are not profitable to hoist and
-  // handle modifiers such as fabs and fneg
-  switch (I->getOpcode()) {
-  case Instruction::FMul: {
-    if (User->getOpcode() != Instruction::FSub &&
-        User->getOpcode() != Instruction::FAdd)
-      return true;
-
-    const TargetOptions &Options = getTargetMachine().Options;
-
-    return ((!I->hasAllowContract() || !User->hasAllowContract()) &&
-            Options.AllowFPOpFusion != FPOpFusion::Fast &&
-            !Options.UnsafeFPMath) ||
-           !isFMAFasterThanFMulAndFAdd(*I->getFunction(), User->getType());
-  }
-  default:
-    return true;
-  }
-  return true;
 }
 
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(

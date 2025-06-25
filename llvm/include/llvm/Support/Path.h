@@ -80,8 +80,8 @@ class const_iterator
   Style S = Style::native; ///< The path style to use.
 
   // An end iterator has Position = Path.size() + 1.
-  LLVM_ABI_FRIEND friend const_iterator begin(StringRef path, Style style);
-  LLVM_ABI_FRIEND friend const_iterator end(StringRef path);
+  LLVM_ABI friend const_iterator begin(StringRef path, Style style);
+  LLVM_ABI friend const_iterator end(StringRef path);
 
 public:
   reference operator*() const { return Component; }
@@ -105,8 +105,8 @@ class reverse_iterator
   size_t    Position = 0;  ///< The iterators current position within Path.
   Style S = Style::native; ///< The path style to use.
 
-  LLVM_ABI_FRIEND friend reverse_iterator rbegin(StringRef path, Style style);
-  LLVM_ABI_FRIEND friend reverse_iterator rend(StringRef path);
+  LLVM_ABI friend reverse_iterator rbegin(StringRef path, Style style);
+  LLVM_ABI friend reverse_iterator rend(StringRef path);
 
 public:
   reference operator*() const { return Component; }
