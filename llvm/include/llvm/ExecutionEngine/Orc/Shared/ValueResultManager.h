@@ -28,7 +28,7 @@ class ValueResultManager {
 public:
   using ValueID = uint64_t;
   using ResultCallback = unique_function<void(Value)>;
-  using SendResultFn = unique_function<void(shared::WrapperFunctionResult)>;
+  using SendResultFn = unique_function<void(Error)>;
 
   ValueResultManager() = default;
 
