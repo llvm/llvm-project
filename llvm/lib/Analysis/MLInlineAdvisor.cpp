@@ -473,7 +473,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(FeatureIndex::NumberOfFeatures) =
+    *ModelRunner->getTensor<int64_t>((int)FeatureMap.size()) =
         GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }
@@ -552,7 +552,7 @@ void MLInlineAdvice::reportContextForRemark(
     DiagnosticInfoOptimizationBase &OR) {
   using namespace ore;
   OR << NV("Callee", Callee->getName());
-  for (size_t I = 0; I < NumberOfFeatures; ++I)
+  for (size_t I = 0; I < FeatureMap.size(); ++I)
     OR << NV(FeatureMap[I].name(),
              *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
   OR << NV("ShouldInline", isInliningRecommended());
