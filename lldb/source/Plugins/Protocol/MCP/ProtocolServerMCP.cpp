@@ -24,8 +24,7 @@ LLDB_PLUGIN_DEFINE(ProtocolServerMCP)
 
 static constexpr size_t kChunkSize = 1024;
 
-ProtocolServerMCP::ProtocolServerMCP(Debugger &debugger)
-    : ProtocolServer(), m_debugger(debugger) {
+ProtocolServerMCP::ProtocolServerMCP() : ProtocolServer() {
   AddRequestHandler("initialize",
                     std::bind(&ProtocolServerMCP::InitializeHandler, this,
                               std::placeholders::_1));
@@ -39,8 +38,10 @@ ProtocolServerMCP::ProtocolServerMCP(Debugger &debugger)
       "notifications/initialized", [](const protocol::Notification &) {
         LLDB_LOG(GetLog(LLDBLog::Host), "MCP initialization complete");
       });
-  AddTool(std::make_unique<LLDBCommandTool>(
-      "lldb_command", "Run an lldb command.", m_debugger));
+  AddTool(
+      std::make_unique<CommandTool>("lldb_command", "Run an lldb command."));
+  AddTool(std::make_unique<DebuggerListTool>(
+      "lldb_debugger_list", "List debugger instances with their debugger_id."));
 }
 
 ProtocolServerMCP::~ProtocolServerMCP() { llvm::consumeError(Stop()); }
@@ -54,8 +55,8 @@ void ProtocolServerMCP::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb::ProtocolServerSP ProtocolServerMCP::CreateInstance(Debugger &debugger) {
-  return std::make_shared<ProtocolServerMCP>(debugger);
+lldb::ProtocolServerUP ProtocolServerMCP::CreateInstance() {
+  return std::make_unique<ProtocolServerMCP>();
 }
 
 llvm::StringRef ProtocolServerMCP::GetPluginDescriptionStatic() {
@@ -145,7 +146,7 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   std::lock_guard<std::mutex> guard(m_server_mutex);
 
   if (m_running)
-    return llvm::createStringError("server already running");
+    return llvm::createStringError("the MCP server is already running");
 
   Status status;
   m_listener = Socket::Create(connection.protocol, status);
@@ -162,10 +163,10 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   if (llvm::Error error = handles.takeError())
     return error;
 
+  m_running = true;
   m_listen_handlers = std::move(*handles);
   m_loop_thread = std::thread([=] {
-    llvm::set_thread_name(
-        llvm::formatv("debugger-{0}.mcp.runloop", m_debugger.GetID()));
+    llvm::set_thread_name("protocol-server.mcp");
     m_loop.Run();
   });
 
@@ -175,6 +176,8 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
 llvm::Error ProtocolServerMCP::Stop() {
   {
     std::lock_guard<std::mutex> guard(m_server_mutex);
+    if (!m_running)
+      return createStringError("the MCP sever is not running");
     m_running = false;
   }
 
@@ -311,11 +314,12 @@ ProtocolServerMCP::ToolsCallHandler(const protocol::Request &request) {
   if (it == m_tools.end())
     return llvm::createStringError(llvm::formatv("no tool \"{0}\"", tool_name));
 
-  const json::Value *args = param_obj->get("arguments");
-  if (!args)
-    return llvm::createStringError("no tool arguments");
+  protocol::ToolArguments tool_args;
+  if (const json::Value *args = param_obj->get("arguments"))
+    tool_args = *args;
 
-  llvm::Expected<protocol::TextResult> text_result = it->second->Call(*args);
+  llvm::Expected<protocol::TextResult> text_result =
+      it->second->Call(tool_args);
   if (!text_result)
     return text_result.takeError();
 
