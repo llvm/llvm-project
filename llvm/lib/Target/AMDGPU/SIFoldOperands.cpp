@@ -149,11 +149,11 @@ struct FoldCandidate {
   bool Commuted;
 
   FoldCandidate(MachineInstr *MI, unsigned OpNo, FoldableDef Def,
-                bool Commuted_ = false, int ShrinkOp = -1)
+                bool Commuted = false, int ShrinkOp = -1)
       : UseMI(MI), Def(Def), ShrinkOpcode(ShrinkOp), UseOpNo(OpNo),
-        Commuted(Commuted_) {}
+        Commuted(Commuted) {}
 
-  bool isFI() const { return Def.Kind == MachineOperand::MO_FrameIndex; }
+  bool isFI() const { return Def.isFI(); }
 
   int getFI() const {
     assert(isFI());
