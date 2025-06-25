@@ -76,7 +76,6 @@ public:
     MinGlobalAlign = 16;
     HasUnalignedAccess = true;
     if (Triple.isOSzOS()) {
-      HasFloat16 = false;
       if (Triple.isArch64Bit()) {
         AddrSpaceMap = &ZOSAddressMap;
       }
