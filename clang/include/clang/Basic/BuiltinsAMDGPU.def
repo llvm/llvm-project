@@ -642,5 +642,7 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_f16_f32, "V2hV2hfUiIb", "nc", "f32-to-f16
 
 TARGET_BUILTIN(__builtin_amdgcn_s_setprio_inc_wg, "vIs", "n", "setprio-inc-wg-inst")
 
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f16_fp8, "V2hs", "nc", "gfx1250-insts")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

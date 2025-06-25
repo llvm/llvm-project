@@ -10,3 +10,23 @@
 void test_setprio_inc_wg() {
   __builtin_amdgcn_s_setprio_inc_wg(10);
 }
+
+// CHECK-LABEL: @test_cvt_pk_f16_fp8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(1) [[TMP2]], i64 0
+// CHECK-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[ARRAYIDX]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_pk_f16_fp8(global half2* out, short a)
+{
+  out[0] = __builtin_amdgcn_cvt_pk_f16_fp8(a);
+}

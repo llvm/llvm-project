@@ -729,6 +729,21 @@ let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts] 
   }
 }
 
+// FIXME-TRUE16: True16 versions of these instructions are untested.
+let HasExtSDWA = 0, HasOpSel = 1, EmitDstSel = 0, HasOMod = 0, HasModifiers = 1 in {
+def VOPProfile_CVT_PK_F16_F8 : VOPProfile<[v2f16, i16, untyped, untyped]>;
+def VOPProfile_CVT_PK_F16_F8_true16 : VOP3_Profile_True16<VOPProfile_CVT_PK_F16_F8>;
+def VOPProfile_CVT_PK_F16_F8_fake16 : VOP3_Profile_Fake16<VOPProfile_CVT_PK_F16_F8>;
+}
+
+let SubtargetPredicate = isGFX1250Plus in {
+  let mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
+    defm V_CVT_PK_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_fp8",
+      VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
+      int_amdgcn_cvt_pk_f16_fp8>;
+  }
+} // End SubtargetPredicate = isGFX1250Plus
+
 let SubtargetPredicate = isGFX10Plus in {
   defm V_PIPEFLUSH        : VOP1Inst<"v_pipeflush", VOP_NO_EXT<VOP_NONE>>;
 
@@ -1062,6 +1077,7 @@ defm V_CVT_F16_F32           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00a>;
 defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00b>;
 
 defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
+defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
