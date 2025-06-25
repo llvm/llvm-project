@@ -1102,11 +1102,11 @@ struct WarpOpCreateMask : public WarpDistributionPattern {
 /// ```
 /// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<8x1xf32>) {
 ///   ...
-///   %src = ... : vector<4x16xf32>
-///   %dest = ... : vector<8x16xf32>
+///   %src = ... : vector<4x32xf32>
+///   %dest = ... : vector<8x32xf32>
 ///   %insert = vector.insert_strided_slice %src, %dest, offsets = [0, 0],
-///     strides = [1, 1] : vector<4x16xf32> into vector<8x16xf32>
-///   gpu.yield %insert : vector<8x16xf32>
+///     strides = [1, 1] : vector<4x32xf32> into vector<8x32xf32>
+///   gpu.yield %insert : vector<8x32xf32>
 /// }
 /// ```
 /// To
@@ -1114,14 +1114,14 @@ struct WarpOpCreateMask : public WarpDistributionPattern {
 /// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<4x1xf32>,
 /// vector<8x1xf32>) {
 ///   ...
-///   %src = ... : vector<4x16xf32>
-///   %dest = ... : vector<8x16xf32>
+///   %src = ... : vector<4x32xf32>
+///   %dest = ... : vector<8x32xf32>
 ///   gpu.yield %src, %dest : vector<4x16xf32>, vector<8x16xf32>
 /// }
 /// %insert = vector.insert_strided_slice %0#0, %0#1,
 ///   offsets = [0, 0], strides = [1, 1] : vector<4x1xf32> into vector<8x1xf32>
 /// ```
-/// NOTE: Current support assume that both src and dest vectors are distributed
+/// NOTE: Current support assumes that both src and dest vectors are distributed
 /// to lanes and sinking the insert op does not require any cross lane
 /// communication.
 struct WarpOpInsertStridedSlice : public WarpDistributionPattern {
@@ -1159,7 +1159,8 @@ struct WarpOpInsertStridedSlice : public WarpDistributionPattern {
         destDistributedDim - (destType.getRank() - srcType.getRank());
     if (sourceDistributedDim < 0)
       return rewriter.notifyMatchFailure(
-          insertOp, "distributed dimension must be in the last k dims");
+          insertOp,
+          "distributed dimension must be in the last k dims of dest vector");
     // Distributed dimension must be fully inserted.
     if (srcType.getDimSize(sourceDistributedDim) !=
         destType.getDimSize(destDistributedDim))
@@ -1197,21 +1198,21 @@ struct WarpOpInsertStridedSlice : public WarpDistributionPattern {
 /// ```
 /// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<16x1xf32>) {
 ///   ...
-///   %src = ... : vector<32x16xf32>
+///   %src = ... : vector<64x32xf32>
 ///   %extract = vector.extract_strided_slice %src, offsets = [0], sizes = [16],
-///     strides = [1] : vector<32x16xf32> to vector<16x16xf32>
-///   gpu.yield %extract : vector<16x16xf32>
+///     strides = [1] : vector<64x32xf32> to vector<16x32xf32>
+///   gpu.yield %extract : vector<16x32xf32>
 /// }
 /// ```
 /// To
-/// ````
-/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<32x1xf32>) {
+/// ```
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<64x1xf32>) {
 ///   ...
-///   %src = ... : vector<32x16xf32>
-///   gpu.yield %src : vector<32x16xf32>
+///   %src = ... : vector<64x32xf32>
+///   gpu.yield %src : vector<64x32xf32>
 /// }
 /// %extract = vector.extract_strided_slice %0, offsets = [0], sizes = [16],
-///   strides = [1] : vector<32x1xf32> to vector<16x1xf32>
+///   strides = [1] : vector<64x1xf32> to vector<16x1xf32>
 /// ```
 /// NOTE: Current support assumes that the extraction happens only on non
 /// distributed dimensions (does not require cross lane communication).
