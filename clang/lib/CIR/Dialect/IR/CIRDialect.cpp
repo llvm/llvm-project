@@ -196,7 +196,7 @@ void printVisibilityAttr(OpAsmPrinter &printer,
   case cir::VisibilityKind::Protected:
     printer << "protected";
     break;
-  default:
+  case cir::VisibilityKind::Default:
     break;
   }
 }
@@ -1418,9 +1418,14 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   return success();
 }
 
+// This function corresponds to `llvm::GlobalValue::isDeclaration` and should
+// have a similar implementation. We don't currently support aliases, ifuncs,
+// or materializable functions, but those should be handled here as they are
+// implemented.
 bool cir::FuncOp::isDeclaration() {
   assert(!cir::MissingFeatures::opFuncGlobalAliases());
-  return isExternal();
+  assert(!cir::MissingFeatures::supportIFuncAttr());
+  return getFunctionBody().empty();
 }
 
 mlir::Region *cir::FuncOp::getCallableRegion() {
