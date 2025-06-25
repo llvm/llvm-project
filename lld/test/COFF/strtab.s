@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -triple=x86_64-windows-msvc %s -filetype=obj -o %t.obj
 # RUN: lld-link -out:%t.exe -entry:main %t.obj -debug:dwarf
 # RUN: llvm-readobj --string-table %t.exe | FileCheck %s
