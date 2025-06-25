@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+#===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===----------------------------------------------------------------------===##
+
+#
+# This file generates a Buildkite pipeline that triggers the various CI jobs for
+# the LLVM project during pre-commit CI.
+#
+# See https://buildkite.com/docs/agent/v3/cli-pipeline#pipeline-format.
+#
+# As this outputs a yaml file, it's possible to log messages to stderr or
+# prefix with "#".
+
+
+set -eu
+set -o pipefail
+
+# Environment variables script works with:
+
+# Set by buildkite
+: ${BUILDKITE_PULL_REQUEST_BASE_BRANCH:=}
+: ${BUILDKITE_COMMIT:=}
+: ${BUILDKITE_BRANCH:=}
+# Fetch origin to have an up to date merge base for the diff.
+git fetch origin
+# List of files affected by this commit
+: ${MODIFIED_FILES:=$(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD)}
+# Filter rules for generic windows tests
+: ${WINDOWS_AGENTS:='{"queue": "windows"}'}
+# Filter rules for generic linux tests
+: ${LINUX_AGENTS:='{"queue": "linux"}'}
+
+reviewID="$(git log --format=%B -n 1 | sed -nE 's/^Review-ID:[[:space:]]*(.+)$/\1/p')"
+if [[ "${reviewID}" != "" ]]; then
+  buildMessage="https://llvm.org/${reviewID}"
+else
+  buildMessage="Push to branch ${BUILDKITE_BRANCH}"
+fi
+
+cat <<EOF
+steps:
+EOF
+
+echo "Files modified:" >&2
+echo "$MODIFIED_FILES" >&2
+modified_dirs=$(echo "$MODIFIED_FILES" | cut -d'/' -f1 | sort -u)
+echo "Directories modified:" >&2
+echo "$modified_dirs" >&2
+
+# Project specific pipelines.
+
+# If libc++ or one of the runtimes directories changed.
+if echo "$modified_dirs" | grep -q -E "^(libcxx|libcxxabi|libunwind|runtimes|cmake)$"; then
+  cat <<EOF
+- trigger: "libcxx-ci"
+  build:
+    message: "${buildMessage}"
+    commit: "${BUILDKITE_COMMIT}"
+    branch: "${BUILDKITE_BRANCH}"
+EOF
+fi
+
+# Generic pipeline for projects that have not defined custom steps.
+#
+# Individual projects should instead define the pre-commit CI tests that suits their
+# needs while letting them run on the infrastructure provided by LLVM.
+
+# Figure out which projects need to be built on each platform
+source <(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD | python3 .ci/compute_projects.py Linux)
+linux_projects=${projects_to_build}
+linux_check_targets=${project_check_targets}
+linux_runtimes=${runtimes_to_build}
+linux_runtime_check_targets=${runtimes_check_targets}
+
+source <(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD | python3 .ci/compute_projects.py Windows)
+windows_projects=${projects_to_build}
+windows_check_targets=${project_check_targets}
+
+
+# Generate the appropriate pipeline
+if [[ "${linux_projects}" != "" ]]; then
+  cat <<EOF
+- label: ':linux: Linux x64'
+  artifact_paths:
+  - 'artifacts/**/*'
+  - '*_result.json'
+  - 'build/test-results.*.xml'
+  agents: ${LINUX_AGENTS}
+  retry:
+    automatic:
+      - exit_status: -1  # Agent was lost
+        limit: 2
+      - exit_status: 255 # Forced agent shutdown
+        limit: 2
+  timeout_in_minutes: 120
+  env:
+    CC: 'clang'
+    CXX: 'clang++'
+  commands:
+  - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"'
+EOF
+fi
+
+if [[ "${windows_projects}" != "" ]]; then
+  cat <<EOF
+- label: ':windows: Windows x64'
+  artifact_paths:
+  - 'artifacts/**/*'
+  - '*_result.json'
+  - 'build/test-results.*.xml'
+  agents: ${WINDOWS_AGENTS}
+  retry:
+    automatic:
+      - exit_status: -1  # Agent was lost
+        limit: 2
+      - exit_status: 255 # Forced agent shutdown
+        limit: 2
+  timeout_in_minutes: 150
+  env:
+    MAX_PARALLEL_COMPILE_JOBS: '16'
+    MAX_PARALLEL_LINK_JOBS: '4'
+  commands:
+  - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
+  - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'
+EOF
+fi
