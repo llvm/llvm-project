@@ -147,6 +147,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Initialize the device, which is a no-op
   Error initImpl(GenericPluginTy &Plugin) override { return Plugin::success(); }
 
+  /// Unload the binary image
+  ///
+  /// TODO: This currently does nothing, and should be implemented as part of
+  /// broader memory handling logic for this plugin
+  Error unloadBinaryImpl(DeviceImageTy *) override { return Plugin::success(); }
+
   /// Deinitialize the device, which is a no-op
   Error deinitImpl() override { return Plugin::success(); }
 

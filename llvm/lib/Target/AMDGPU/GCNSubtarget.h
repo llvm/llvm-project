@@ -694,12 +694,10 @@ public:
   bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
 
   bool hasExportInsts() const {
-    return !hasGFX940Insts();
+    return !hasGFX940Insts() && !hasGFX1250Insts();
   }
 
-  bool hasVINTERPEncoding() const {
-    return GFX11Insts;
-  }
+  bool hasVINTERPEncoding() const { return GFX11Insts && !hasGFX1250Insts(); }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
