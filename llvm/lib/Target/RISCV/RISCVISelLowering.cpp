@@ -13241,6 +13241,8 @@ SDValue RISCVTargetLowering::lowerVPMergeMask(SDValue Op,
 SDValue
 RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
                                                SelectionDAG &DAG) const {
+  using namespace SDPatternMatch;
+
   SDLoc DL(Op);
 
   SDValue Op1 = Op.getOperand(0);
@@ -13284,6 +13286,42 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
     Op2 = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, Op2, SplatOneOp2,
                       SplatZeroOp2, DAG.getUNDEF(ContainerVT), EVL2);
   }
+
+  auto getVectorFirstEle = [](SDValue Vec) {
+    SDValue FirstEle;
+    if (sd_match(Vec, m_InsertElt(m_Value(), m_Value(FirstEle), m_Zero())))
+      return FirstEle;
+
+    if (Vec.getOpcode() == ISD::SPLAT_VECTOR ||
+        Vec.getOpcode() == ISD::BUILD_VECTOR)
+      return Vec.getOperand(0);
+
+    return SDValue();
+  };
+
+  if (!IsMaskVector && isNullConstant(Offset) && isOneConstant(EVL1))
+    if (auto FirstEle = getVectorFirstEle(Op->getOperand(0))) {
+      MVT EltVT = ContainerVT.getVectorElementType();
+      SDValue Result;
+      if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
+          EltVT == MVT::bf16) {
+        EltVT = EltVT.changeTypeToInteger();
+        ContainerVT = ContainerVT.changeVectorElementType(EltVT);
+        Op2 = DAG.getBitcast(ContainerVT, Op2);
+        FirstEle =
+            DAG.getAnyExtOrTrunc(DAG.getBitcast(EltVT, FirstEle), DL, XLenVT);
+      }
+      Result = DAG.getNode(EltVT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL
+                                                   : RISCVISD::VSLIDE1UP_VL,
+                           DL, ContainerVT, DAG.getUNDEF(ContainerVT), Op2,
+                           FirstEle, Mask, EVL2);
+      Result = DAG.getBitcast(
+          ContainerVT.changeVectorElementType(VT.getVectorElementType()),
+          Result);
+      return VT.isFixedLengthVector()
+                 ? convertFromScalableVector(VT, Result, DAG, Subtarget)
+                 : Result;
+    }
 
   int64_t ImmValue = cast<ConstantSDNode>(Offset)->getSExtValue();
   SDValue DownOffset, UpOffset;
