@@ -13,8 +13,7 @@
 
 #include "OffloadImpl.hpp"
 #include "Helpers.hpp"
-// Required for operator<< implementation of ol_device_info_t
-#include "OffloadPrint.hpp"
+#include "OffloadPrint.hpp" // Required for operator<< implementation of ol_device_info_t
 #include "PluginManager.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
