@@ -6,7 +6,7 @@
 # CHECK-LABEL: name: waitcnt-no-redundant
 # CHECK: S_WAITCNT 0
 # CHECK-NEXT: $sgpr2 = S_MOV_B32 42
-# CHECK-NEXT: S_WAITCNT_soft 53119
+# CHECK-NOT: S_WAITCNT_soft 53119
 
 ---
 name: waitcnt-no-redundant
