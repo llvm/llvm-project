@@ -777,8 +777,10 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
   if (!EE)
     return EE.takeError();
 
-  if (auto DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
-          EE->getExecutionSession(), name))
+  if (llvm::Expected<
+          std::unique_ptr<llvm::orc::EPCDynamicLibrarySearchGenerator>>
+          DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
+              EE->getExecutionSession(), name))
     // FIXME: Eventually we should put each library in its own JITDylib and
     //        turn off process symbols by default.
     EE->getProcessSymbolsJITDylib()->addGenerator(std::move(*DLSG));
