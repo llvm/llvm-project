@@ -1607,6 +1607,14 @@ private:
       }
       // Opposite combinations result in false.
       return getFalseRange(Sym->getType());
+    } else if (Sym->getOpcode() == BO_Sub) {
+      QualType CondTy =
+          State->getStateManager().getSValBuilder().getConditionType();
+      const SymSymExpr *SSE = State->getSymbolManager().getSymSymExpr(
+          Sym->getRHS(), BO_NE, Sym->getLHS(), CondTy);
+      if (auto Constraint = getRangeForComparisonSymbol(SSE))
+        return Constraint->encodesFalseRange() ? getFalseRange(Sym->getType())
+                                               : getTrueRange(Sym->getType());
     }
 
     return std::nullopt;
