@@ -240,7 +240,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   EXPECT_TRUE(sd_match(
       Load, m_Load(m_Specific(Ch), m_Specific(BasePtr), m_Specific(Offset))));
 
-  EXPECT_TRUE(
+  EXPECT_FALSE(
       sd_match(Load.getValue(1), m_Load(m_Specific(Ch), m_Specific(BasePtr),
                                         m_Specific(Offset))));
 }

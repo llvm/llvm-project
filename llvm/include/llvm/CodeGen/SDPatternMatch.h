@@ -514,9 +514,10 @@ m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
-inline TernaryOpc_match<T0_P, T1_P, T2_P>
+inline Result_match<0, TernaryOpc_match<T0_P, T1_P, T2_P>>
 m_Load(const T0_P &Ch, const T1_P &Ptr, const T2_P &Offset) {
-  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::LOAD, Ch, Ptr, Offset);
+  return m_Result<0>(
+      TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::LOAD, Ch, Ptr, Offset));
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
