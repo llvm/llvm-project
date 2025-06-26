@@ -31,8 +31,11 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
+#include <termios.h>
 #include <unistd.h>
 #endif
 
@@ -169,7 +172,9 @@ bool Socket::FindProtocolByScheme(const char *scheme,
 
 Socket::Socket(SocketProtocol protocol, bool should_close)
     : IOObject(eFDTypeSocket), m_protocol(protocol),
-      m_socket(kInvalidSocketValue), m_should_close_fd(should_close) {}
+      m_socket(kInvalidSocketValue),
+      m_waitable_handle(IOObject::kInvalidHandleValue),
+      m_should_close_fd(should_close) {}
 
 Socket::~Socket() { Close(); }
 
@@ -313,8 +318,39 @@ Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
 }
 
 IOObject::WaitableHandle Socket::GetWaitableHandle() {
-  // TODO: On Windows, use WSAEventSelect
+#ifdef _WIN32
+  if (m_socket == kInvalidSocketValue)
+    return kInvalidHandleValue;
+
+  if (m_waitable_handle == kInvalidHandleValue) {
+    m_waitable_handle = WSACreateEvent();
+    assert(m_waitable_handle != WSA_INVALID_EVENT);
+    if (WSAEventSelect(m_socket, m_waitable_handle,
+                       FD_ACCEPT | FD_READ | FD_WRITE) != 0)
+      return kInvalidHandleValue;
+  }
+
+  return m_waitable_handle;
+#else
   return m_socket;
+#endif
+}
+
+bool Socket::HasReadableData() {
+#ifdef _WIN32
+  if (!IsValid() || m_waitable_handle == kInvalidHandleValue)
+    return false;
+
+  WSANETWORKEVENTS events;
+  if (WSAEnumNetworkEvents(m_socket, m_waitable_handle, &events) != 0)
+    return false;
+
+  return events.lNetworkEvents & FD_CLOSE ||
+         events.lNetworkEvents & FD_ACCEPT || events.lNetworkEvents & FD_READ;
+#else
+  size_t buffer_size = 0;
+  return ioctl(m_socket, FIONREAD, buffer_size) != -1 && buffer_size > 0;
+#endif
 }
 
 Status Socket::Read(void *buf, size_t &num_bytes) {
@@ -380,7 +416,14 @@ Status Socket::Close() {
   Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOGF(log, "%p Socket::Close (fd = %" PRIu64 ")",
             static_cast<void *>(this), static_cast<uint64_t>(m_socket));
-
+#ifdef _WIN32
+  if (m_waitable_handle != kInvalidHandleValue) {
+    if (WSACloseEvent(m_waitable_handle) == 0)
+      m_waitable_handle = kInvalidHandleValue;
+    else
+      error = GetLastError();
+  }
+#endif
   bool success = CloseSocket(m_socket) == 0;
   // A reference to a FD was passed in, set it to an invalid value
   m_socket = kInvalidSocketValue;

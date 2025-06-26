@@ -8,8 +8,11 @@
 
 #include "lldb/Host/windows/MainLoopWindows.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/Socket.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/WindowsError.h"
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
@@ -20,16 +23,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-static DWORD ToTimeout(std::optional<MainLoopWindows::TimePoint> point) {
-  using namespace std::chrono;
-
-  if (!point)
-    return WSA_INFINITE;
-
-  nanoseconds dur = (std::max)(*point - steady_clock::now(), nanoseconds(0));
-  return ceil<milliseconds>(dur).count();
-}
 
 MainLoopWindows::MainLoopWindows() {
   m_interrupt_event = WSACreateEvent();
@@ -44,36 +37,61 @@ MainLoopWindows::~MainLoopWindows() {
 }
 
 llvm::Expected<size_t> MainLoopWindows::Poll() {
-  std::vector<WSAEVENT> events;
+  std::vector<HANDLE> events;
   events.reserve(m_read_fds.size() + 1);
-  for (auto &[fd, info] : m_read_fds) {
-    int result = WSAEventSelect(fd, info.event, FD_READ | FD_ACCEPT | FD_CLOSE);
-    assert(result == 0);
-    UNUSED_IF_ASSERT_DISABLED(result);
-
-    events.push_back(info.event);
+  for (auto &[fd, fd_info] : m_read_fds) {
+    // short circuit waiting if a handle is already ready.
+    if (fd_info.object_sp->HasReadableData())
+      return events.size();
+    events.push_back(fd);
   }
   events.push_back(m_interrupt_event);
 
-  DWORD result =
-      WSAWaitForMultipleEvents(events.size(), events.data(), FALSE,
-                               ToTimeout(GetNextWakeupTime()), FALSE);
+  while (true) {
+    DWORD timeout = INFINITY;
+    std::optional<lldb_private::MainLoopBase::TimePoint> deadline =
+        GetNextWakeupTime();
+    if (deadline) {
+      // Check how much time is remaining, we may have woken up early for an
+      // unrelated reason on a file descriptor (e.g. a stat was triggered).
+      std::chrono::milliseconds remaining =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              deadline.value() - std::chrono::steady_clock::now());
+      if (remaining.count() <= 0)
+        return events.size() - 1;
+      timeout = remaining.count();
+    }
 
-  for (auto &fd : m_read_fds) {
-    int result = WSAEventSelect(fd.first, WSA_INVALID_EVENT, 0);
-    assert(result == 0);
-    UNUSED_IF_ASSERT_DISABLED(result);
+    DWORD result =
+        WaitForMultipleObjects(events.size(), events.data(), FALSE, timeout);
+
+    // A timeout is treated as a (premature) signalization of the interrupt
+    // event.
+    if (result == WAIT_TIMEOUT)
+      return events.size() - 1;
+
+    if (result == WAIT_FAILED)
+      return llvm::createStringError(llvm::mapLastWindowsError(),
+                                     "WaitForMultipleObjects failed");
+
+    // check if interrupt requested.
+    if (result == WAIT_OBJECT_0 + events.size())
+      return result - WAIT_OBJECT_0;
+
+    // An object may be signaled before data is ready for reading, verify it has
+    // data.
+    if (result >= WAIT_OBJECT_0 &&
+        result < WAIT_OBJECT_0 + (events.size() - 1) &&
+        std::next(m_read_fds.begin(), result - WAIT_OBJECT_0)
+            ->second.object_sp->HasReadableData())
+      return result - WAIT_OBJECT_0;
+
+    // If no handles are actually ready then yield the thread to allow the CPU
+    // to progress.
+    std::this_thread::yield();
   }
 
-  if (result >= WSA_WAIT_EVENT_0 && result < WSA_WAIT_EVENT_0 + events.size())
-    return result - WSA_WAIT_EVENT_0;
-
-  // A timeout is treated as a (premature) signalization of the interrupt event.
-  if (result == WSA_WAIT_TIMEOUT)
-    return events.size() - 1;
-
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "WSAWaitForMultipleEvents failed");
+  llvm_unreachable();
 }
 
 MainLoopWindows::ReadHandleUP
@@ -83,28 +101,16 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
     error = Status::FromErrorString("IO object is not valid.");
     return nullptr;
   }
-  if (object_sp->GetFdType() != IOObject::eFDTypeSocket) {
-    error = Status::FromErrorString(
-        "MainLoopWindows: non-socket types unsupported on Windows");
-    return nullptr;
-  }
 
-  WSAEVENT event = WSACreateEvent();
-  if (event == WSA_INVALID_EVENT) {
-    error =
-        Status::FromErrorStringWithFormat("Cannot create monitoring event.");
-    return nullptr;
-  }
+  IOObject::WaitableHandle waitable_handle = object_sp->GetWaitableHandle();
+  assert(waitable_handle != IOObject::kInvalidHandleValue);
 
   const bool inserted =
-      m_read_fds
-          .try_emplace(object_sp->GetWaitableHandle(), FdInfo{event, callback})
+      m_read_fds.try_emplace(waitable_handle, FdInfo{object_sp, callback})
           .second;
   if (!inserted) {
-    WSACloseEvent(event);
     error = Status::FromErrorStringWithFormat(
-        "File descriptor %d already monitored.",
-        object_sp->GetWaitableHandle());
+        "File descriptor %d already monitored.", waitable_handle);
     return nullptr;
   }
 
@@ -114,16 +120,7 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
 void MainLoopWindows::UnregisterReadObject(IOObject::WaitableHandle handle) {
   auto it = m_read_fds.find(handle);
   assert(it != m_read_fds.end());
-  BOOL result = WSACloseEvent(it->second.event);
-  assert(result == TRUE);
-  UNUSED_IF_ASSERT_DISABLED(result);
   m_read_fds.erase(it);
-}
-
-void MainLoopWindows::ProcessReadObject(IOObject::WaitableHandle handle) {
-  auto it = m_read_fds.find(handle);
-  if (it != m_read_fds.end())
-    it->second.callback(*this); // Do the work
 }
 
 Status MainLoopWindows::Run() {
@@ -138,8 +135,7 @@ Status MainLoopWindows::Run() {
 
     if (*signaled_event < m_read_fds.size()) {
       auto &KV = *std::next(m_read_fds.begin(), *signaled_event);
-      WSAResetEvent(KV.second.event);
-      ProcessReadObject(KV.first);
+      KV.second.callback(*this); // Do the work.
     } else {
       assert(*signaled_event == m_read_fds.size());
       WSAResetEvent(m_interrupt_event);

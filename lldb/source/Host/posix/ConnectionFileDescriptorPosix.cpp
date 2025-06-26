@@ -276,7 +276,7 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
               "%p ConnectionFileDescriptor::Read()  fd = %" PRIu64
               ", dst = %p, dst_len = %" PRIu64 ") => %" PRIu64 ", error = %s",
               static_cast<void *>(this),
-              static_cast<uint64_t>(m_io_sp->GetWaitableHandle()),
+              static_cast<file_t>(m_io_sp->GetWaitableHandle()),
               static_cast<void *>(dst), static_cast<uint64_t>(dst_len),
               static_cast<uint64_t>(bytes_read), error.AsCString());
   }
@@ -380,7 +380,7 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
               "%p ConnectionFileDescriptor::Write(fd = %" PRIu64
               ", src = %p, src_len = %" PRIu64 ") => %" PRIu64 " (error = %s)",
               static_cast<void *>(this),
-              static_cast<uint64_t>(m_io_sp->GetWaitableHandle()),
+              static_cast<file_t>(m_io_sp->GetWaitableHandle()),
               static_cast<const void *>(src), static_cast<uint64_t>(src_len),
               static_cast<uint64_t>(bytes_sent), error.AsCString());
   }
@@ -451,14 +451,17 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
     if (timeout)
       select_helper.SetTimeout(*timeout);
 
-    select_helper.FDSetRead(handle);
+    // FIXME: Migrate to MainLoop.
 #if defined(_WIN32)
+    if (const auto *sock = static_cast<Socket *>(m_io_sp.get()))
+      select_helper.FDSetRead((socket_t)sock->GetNativeSocket());
     // select() won't accept pipes on Windows.  The entire Windows codepath
     // needs to be converted over to using WaitForMultipleObjects and event
     // HANDLEs, but for now at least this will allow ::select() to not return
     // an error.
     const bool have_pipe_fd = false;
 #else
+    select_helper.FDSetRead(handle);
     const bool have_pipe_fd = pipe_fd >= 0;
 #endif
     if (have_pipe_fd)
@@ -493,7 +496,12 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
           break; // Lets keep reading to until we timeout
         }
       } else {
+#if defined(_WIN32)
+        if (const auto *sock = static_cast<Socket *>(m_io_sp.get());
+            select_helper.FDIsSetRead(sock->GetNativeSocket()))
+#else
         if (select_helper.FDIsSetRead(handle))
+#endif
           return eConnectionStatusSuccess;
 
         if (select_helper.FDIsSetRead(pipe_fd)) {

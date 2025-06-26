@@ -37,11 +37,10 @@ protected:
   void Interrupt() override;
 
 private:
-  void ProcessReadObject(IOObject::WaitableHandle handle);
   llvm::Expected<size_t> Poll();
 
   struct FdInfo {
-    void *event;
+    lldb::IOObjectSP object_sp;
     Callback callback;
   };
   llvm::DenseMap<IOObject::WaitableHandle, FdInfo> m_read_fds;

@@ -118,6 +118,8 @@ IOObject::WaitableHandle File::GetWaitableHandle() {
   return IOObject::kInvalidHandleValue;
 }
 
+bool File::HasReadableData() { return false; }
+
 Status File::GetFileSpec(FileSpec &file_spec) const {
   file_spec.Clear();
   return std::error_code(ENOTSUP, std::system_category());
@@ -274,7 +276,23 @@ int NativeFile::GetDescriptor() const {
 }
 
 IOObject::WaitableHandle NativeFile::GetWaitableHandle() {
+#ifdef _WIN32
+  return (HANDLE)_get_osfhandle(GetDescriptor());
+#else
   return GetDescriptor();
+#endif
+}
+
+bool NativeFile::HasReadableData() {
+#ifdef _WIN32
+  DWORD available_bytes = 0;
+  return !PeekNamedPipe((HANDLE)_get_osfhandle(GetDescriptor()), NULL, 0, NULL,
+                        &available_bytes, NULL) ||
+         available_bytes > 0;
+#else
+  size_t buffer_size = 0;
+  return ioctl(GetDescriptor(), FIONREAD, buffer_size) != -1 && buffer_size > 0;
+#endif
 }
 
 FILE *NativeFile::GetStream() {
