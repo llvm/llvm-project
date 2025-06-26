@@ -11,7 +11,7 @@
 float test_default_parameter_type(half2 p1, half2 p2, float p3) {
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -27,7 +27,7 @@ float test_float_arg2_type(half2 p1, float2 p2, float p3) {
   // CHECK:  %conv = fptrunc reassoc nnan ninf nsz arcp afn <2 x float> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -43,7 +43,7 @@ float test_float_arg1_type(float2 p1, half2 p2, float p3) {
   // CHECK:  %conv = fptrunc reassoc nnan ninf nsz arcp afn <2 x float> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -59,7 +59,7 @@ float test_double_arg3_type(half2 p1, half2 p2, double p3) {
   // CHECK:  %conv = fptrunc reassoc nnan ninf nsz arcp afn double %{{.*}} to float
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -76,7 +76,7 @@ float test_float_arg1_arg2_type(float2 p1, float2 p2, float p3) {
   // CHECK:  %conv1 = fptrunc reassoc nnan ninf nsz arcp afn <2 x float> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -93,7 +93,7 @@ float test_double_arg1_arg2_type(double2 p1, double2 p2, float p3) {
   // CHECK:  %conv1 = fptrunc reassoc nnan ninf nsz arcp afn <2 x double> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -110,7 +110,7 @@ float test_int16_arg1_arg2_type(int16_t2 p1, int16_t2 p2, float p3) {
   // CHECK:  %conv1 = sitofp <2 x i16> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -127,7 +127,7 @@ float test_int32_arg1_arg2_type(int32_t2 p1, int32_t2 p2, float p3) {
   // CHECK:  %conv1 = sitofp <2 x i32> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -144,7 +144,7 @@ float test_int64_arg1_arg2_type(int64_t2 p1, int64_t2 p2, float p3) {
   // CHECK:  %conv1 = sitofp <2 x i64> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1
@@ -163,7 +163,7 @@ float test_bool_arg1_arg2_type(bool2 p1, bool2 p2, float p3) {
   // CHECK:  %conv2 = uitofp <2 x i1> %loadedv1 to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
-  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
+  // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i.i, align 4
   // CHECK-SPIRV:  %[[RES:.*]] = fadd reassoc nnan ninf nsz arcp afn float %[[CONV]], %[[C]]
   // CHECK-DXIL:  %[[AX:.*]] = extractelement <2 x half> %{{.*}}, i32 0
   // CHECK-DXIL:  %[[AY:.*]] = extractelement <2 x half> %{{.*}}, i32 1

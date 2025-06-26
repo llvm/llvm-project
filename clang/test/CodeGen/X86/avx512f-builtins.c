@@ -10474,8 +10474,6 @@ __m512i test_mm512_mask_abs_epi32 (__m512i __W, __mmask16 __U, __m512i __A)
 {
   // CHECK-LABEL: test_mm512_mask_abs_epi32
   // CHECK: [[ABS:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %{{.*}}, i1 false)
-  // CHECK: [[TMP:%.*]] = bitcast <16 x i32> [[ABS]] to <8 x i64>
-  // CHECK: [[ABS:%.*]] = bitcast <8 x i64> [[TMP]] to <16 x i32>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> [[ABS]], <16 x i32> %{{.*}}
   return _mm512_mask_abs_epi32 (__W,__U,__A);
 }
@@ -10484,8 +10482,6 @@ __m512i test_mm512_maskz_abs_epi32 (__mmask16 __U, __m512i __A)
 {
   // CHECK-LABEL: test_mm512_maskz_abs_epi32
   // CHECK: [[ABS:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %{{.*}}, i1 false)
-  // CHECK: [[TMP:%.*]] = bitcast <16 x i32> [[ABS]] to <8 x i64>
-  // CHECK: [[ABS:%.*]] = bitcast <8 x i64> [[TMP]] to <16 x i32>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> [[ABS]], <16 x i32> %{{.*}}
   return _mm512_maskz_abs_epi32 (__U,__A);
 }
