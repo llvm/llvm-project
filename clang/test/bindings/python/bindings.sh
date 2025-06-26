@@ -26,10 +26,8 @@
 # be explicitly skipped via appropriate LIT_ARGS, or adding a mechanism to
 # allow specifying a python interpreter compiled for the target that could
 # be executed using qemu-user.
-#
-# FIXME: Handle CMAKE_CROSSCOMPILING.
-# Again, might already be handled by libclang-loadable.
+# XFAIL: !native
 
 # RUN: env PYTHONPATH=%S/../../../bindings/python \
-# RUN:   CLANG_LIBRARY_PATH=`llvm-config --libdir` \
+# RUN:   CLANG_LIBRARY_PATH=%libdir \
 # RUN:   %python -m unittest discover -s %S/tests
