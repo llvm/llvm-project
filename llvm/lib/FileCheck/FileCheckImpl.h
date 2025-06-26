@@ -366,8 +366,9 @@ public:
   /// \returns the index where the substitution is to be performed in RegExStr.
   size_t getIndex() const { return InsertIdx; }
 
-  /// \returns a regular expression string that matches the result of the substitution represented
-  /// by this class instance or an error if substitution failed.
+  /// \returns a regular expression string that matches the result of the
+  /// substitution represented by this class instance or an error if
+  /// substitution failed.
   virtual Expected<std::string> getResultRegex() const = 0;
 
   /// \returns a string containing the result of the substitution represented
@@ -410,7 +411,8 @@ public:
   Expected<std::string> getResultRegex() const override;
 
   /// \returns a string containing the result of evaluating the expression in
-  /// this substitution, in a form suitable for diagnostics, or an error if evaluation failed.
+  /// this substitution, in a form suitable for diagnostics, or an error if
+  /// evaluation failed.
   Expected<std::string> getResultForDiagnostics() const override;
 };
 
