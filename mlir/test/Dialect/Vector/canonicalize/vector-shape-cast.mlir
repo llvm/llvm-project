@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -canonicalize |  FileCheck %s
 
+// This file contains tests where there a vector.shape_cast gets canonicalized, or where a
+// vector.shape_cast is the result of a canonicalization. Not all such tests must live in this file.
 
 // +----------------------------------------
 //  Tests of BroadcastToShapeCast
