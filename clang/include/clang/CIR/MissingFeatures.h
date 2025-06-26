@@ -204,6 +204,7 @@ struct MissingFeatures {
   static bool fastMathFlags() { return false; }
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
+  static bool getBitfieldOp() { return false; }
   static bool hip() { return false; }
   static bool implicitConstructorArgs() { return false; }
   static bool incrementProfileCounter() { return false; }

@@ -550,6 +550,9 @@ public:
     return it->second;
   }
 
+  Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
+                                   mlir::Type fieldType, unsigned index);
+
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
@@ -976,6 +979,7 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this

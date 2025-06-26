@@ -76,3 +76,11 @@ void def() {
   T t;
   U u;
 }
+
+// CIR: cir.func {{.*@load_field}}
+// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init]
+// CIR:   [[TMP1:%.*]] = cir.load{{.*}} [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:   [[TMP2:%.*]] = cir.get_member %2[1] {name = "e"} : !cir.ptr<!rec_S> -> !cir.ptr<!u16i>
+int load_field(S* s) {
+  return s->e;
+}
