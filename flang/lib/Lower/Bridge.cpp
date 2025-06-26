@@ -52,6 +52,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -262,6 +263,7 @@ public:
   }
 
   void createTypeInfo(Fortran::lower::AbstractConverter &converter) {
+    createTypeInfoForTypeDescriptorBuiltinType(converter);
     while (!registeredTypeInfoA.empty()) {
       currentTypeInfoStack = &registeredTypeInfoB;
       for (const TypeInfo &info : registeredTypeInfoA)
@@ -277,8 +279,20 @@ public:
 private:
   void createTypeInfoOpAndGlobal(Fortran::lower::AbstractConverter &converter,
                                  const TypeInfo &info) {
-    Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.symbol.get());
+    if (!::skipExternalRttiDefinition)
+      Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.symbol.get());
     createTypeInfoOp(converter, info);
+  }
+
+  void createTypeInfoForTypeDescriptorBuiltinType(
+      Fortran::lower::AbstractConverter &converter) {
+    if (registeredTypeInfoA.empty())
+      return;
+    auto builtinTypeInfoType = llvm::cast<fir::RecordType>(
+        converter.genType(registeredTypeInfoA[0].symbol.get()));
+    converter.getFirOpBuilder().createTypeInfoOp(
+        registeredTypeInfoA[0].loc, builtinTypeInfoType,
+        /*parentType=*/fir::RecordType{});
   }
 
   void createTypeInfoOp(Fortran::lower::AbstractConverter &converter,
