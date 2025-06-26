@@ -3133,6 +3133,16 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
                                     newSteps, op.getInitVals(), nullptr);
     // Erase the empty block that was inserted by the builder.
     rewriter.eraseBlock(newOp.getBody());
+
+    // The new ParallelOp needs to keep all attributes from the old one, except
+    // for "operandSegmentSizes" which will be outdated.
+    for (const auto &namedAttr : op->getAttrs()) {
+      if (namedAttr.getName() == ParallelOp::getOperandSegmentSizeAttr())
+        continue;
+      rewriter.modifyOpInPlace(newOp, [&]() {
+        newOp->setAttr(namedAttr.getName(), namedAttr.getValue());
+      });
+    }
     // Clone the loop body and remap the block arguments of the collapsed loops
     // (inlining does not support a cancellable block argument mapping).
     rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),
