@@ -487,16 +487,17 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   ASSERT_EQ(Elements.size(), 3u);
 
   RootElement Elem = Elements[0];
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+  ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
+  ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), llvm::dxbc::RootFlags::None);
 
   Elem = Elements[1];
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+  ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
+  ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), llvm::dxbc::RootFlags::None);
 
   Elem = Elements[2];
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::ValidFlags);
+  ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
+  auto ValidRootFlags = llvm::dxbc::RootFlags(0xfff);
+  ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), ValidRootFlags);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }

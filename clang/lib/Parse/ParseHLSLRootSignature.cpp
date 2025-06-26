@@ -76,7 +76,7 @@ static FlagType maybeOrFlag(std::optional<FlagType> Flags, FlagType Flag) {
                                llvm::to_underlying(Flag));
 }
 
-std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
+std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
   assert(CurToken.TokKind == TokenKind::kw_RootFlags &&
          "Expects to only be invoked starting at given keyword");
 
@@ -84,7 +84,7 @@ std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
                            CurToken.TokKind))
     return std::nullopt;
 
-  std::optional<RootFlags> Flags = RootFlags::None;
+  std::optional<llvm::dxbc::RootFlags> Flags = llvm::dxbc::RootFlags::None;
 
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
@@ -104,7 +104,8 @@ std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
         switch (CurToken.TokKind) {
 #define ROOT_FLAG_ENUM(NAME, LIT)                                              \
   case TokenKind::en_##NAME:                                                   \
-    Flags = maybeOrFlag<RootFlags>(Flags, RootFlags::NAME);                    \
+    Flags = maybeOrFlag<llvm::dxbc::RootFlags>(Flags,                          \
+                                               llvm::dxbc::RootFlags::NAME);   \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
         default:

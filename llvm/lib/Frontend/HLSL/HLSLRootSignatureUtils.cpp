@@ -246,26 +246,9 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-static const EnumEntry<RootFlags> RootFlagNames[] = {
-    {"AllowInputAssemblerInputLayout",
-     RootFlags::AllowInputAssemblerInputLayout},
-    {"DenyVertexShaderRootAccess", RootFlags::DenyVertexShaderRootAccess},
-    {"DenyHullShaderRootAccess", RootFlags::DenyHullShaderRootAccess},
-    {"DenyDomainShaderRootAccess", RootFlags::DenyDomainShaderRootAccess},
-    {"DenyGeometryShaderRootAccess", RootFlags::DenyGeometryShaderRootAccess},
-    {"DenyPixelShaderRootAccess", RootFlags::DenyPixelShaderRootAccess},
-    {"AllowStreamOutput", RootFlags::AllowStreamOutput},
-    {"LocalRootSignature", RootFlags::LocalRootSignature},
-    {"DenyAmplificationShaderRootAccess",
-     RootFlags::DenyAmplificationShaderRootAccess},
-    {"DenyMeshShaderRootAccess", RootFlags::DenyMeshShaderRootAccess},
-    {"CBVSRVUAVHeapDirectlyIndexed", RootFlags::CBVSRVUAVHeapDirectlyIndexed},
-    {"SamplerHeapDirectlyIndexed", RootFlags::SamplerHeapDirectlyIndexed},
-};
-
-raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags) {
+raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags) {
   OS << "RootFlags(";
-  printFlags(OS, Flags, ArrayRef(RootFlagNames));
+  printFlags(OS, Flags, dxbc::getRootFlags());
   OS << ")";
 
   return OS;
@@ -341,7 +324,7 @@ template <class... Ts> OverloadedVisit(Ts...) -> OverloadedVisit<Ts...>;
 
 raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
   const auto Visitor = OverloadedVisit{
-      [&OS](const RootFlags &Flags) { OS << Flags; },
+      [&OS](const dxbc::RootFlags &Flags) { OS << Flags; },
       [&OS](const RootConstants &Constants) { OS << Constants; },
       [&OS](const RootDescriptor &Descriptor) { OS << Descriptor; },
       [&OS](const DescriptorTableClause &Clause) { OS << Clause; },
@@ -366,7 +349,7 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
 
 MDNode *MetadataBuilder::BuildRootSignature() {
   const auto Visitor = OverloadedVisit{
-      [this](const RootFlags &Flags) -> MDNode * {
+      [this](const dxbc::RootFlags &Flags) -> MDNode * {
         return BuildRootFlags(Flags);
       },
       [this](const RootConstants &Constants) -> MDNode * {
@@ -396,7 +379,7 @@ MDNode *MetadataBuilder::BuildRootSignature() {
   return MDNode::get(Ctx, GeneratedMetadata);
 }
 
-MDNode *MetadataBuilder::BuildRootFlags(const RootFlags &Flags) {
+MDNode *MetadataBuilder::BuildRootFlags(const dxbc::RootFlags &Flags) {
   IRBuilder<> Builder(Ctx);
   Metadata *Operands[] = {
       MDString::get(Ctx, "RootFlags"),

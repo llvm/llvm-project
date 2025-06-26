@@ -262,7 +262,7 @@ TEST(HLSLRootSignatureTest, SetRootConstantsDump) {
 }
 
 TEST(HLSLRootSignatureTest, NoneRootFlagsDump) {
-  RootFlags Flags = RootFlags::None;
+  llvm::dxbc::RootFlags Flags = llvm::dxbc::RootFlags::None;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -274,7 +274,7 @@ TEST(HLSLRootSignatureTest, NoneRootFlagsDump) {
 }
 
 TEST(HLSLRootSignatureTest, AllRootFlagsDump) {
-  RootFlags Flags = RootFlags::ValidFlags;
+  llvm::dxbc::RootFlags Flags = llvm::dxbc::RootFlags(0xfff);
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
