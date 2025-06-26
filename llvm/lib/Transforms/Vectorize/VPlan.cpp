@@ -261,6 +261,13 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
     return Data.VPV2Scalars[Def][0];
   }
 
+  // Look through BuildVector to avoid redundant extracts.
+  // TODO: Remove once replicate regions are unrolled explicitly.
+  if (Lane.getKind() == VPLane::Kind::First && match(Def, m_BuildVector())) {
+    auto *BuildVector = cast<VPInstruction>(Def);
+    return get(BuildVector->getOperand(Lane.getKnownLane()), true);
+  }
+
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
   if (!VecPart->getType()->isVectorTy()) {
@@ -465,7 +472,7 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
            "Predecessor basic-block not found building successor.");
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
     auto *PredBBTerminator = PredBB->getTerminator();
-    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
+    LLVM_DEBUG(dbgs() << "LV: draw edge from " << PredBB->getName() << '\n');
 
     auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
     if (isa<UnreachableInst>(PredBBTerminator)) {
@@ -579,8 +586,8 @@ VPBasicBlock *VPBasicBlock::clone() {
 }
 
 void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
-  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-                    << " in BB:" << BB->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB: " << getName()
+                    << " in BB: " << BB->getName() << '\n');
 
   State->CFG.PrevVPBB = this;
 
@@ -589,7 +596,7 @@ void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
     Recipe.execute(*State);
   }
 
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *BB);
+  LLVM_DEBUG(dbgs() << "LV: filled BB: " << *BB);
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {

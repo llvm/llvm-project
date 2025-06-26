@@ -7328,6 +7328,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
                            OrigLoop->getHeader()->getContext());
+  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
     VPlanTransforms::runPass(VPlanTransforms::addBranchWeightToMiddleTerminator,
@@ -9271,12 +9272,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
                                {PhiR, NewExitingVPV}, Flags, ExitDL);
     }
-    // Update all users outside the vector region.
-    OrigExitingVPV->replaceUsesWithIf(
-        FinalReductionResult, [FinalReductionResult](VPUser &User, unsigned) {
-          auto *Parent = cast<VPRecipeBase>(&User)->getParent();
-          return FinalReductionResult != &User && !Parent->getParent();
-        });
+    // Update all users outside the vector region. Also replace redundant
+    // ExtractLastElement.
+    for (auto *U : to_vector(OrigExitingVPV->users())) {
+      auto *Parent = cast<VPRecipeBase>(U)->getParent();
+      if (FinalReductionResult == U || Parent->getParent())
+        continue;
+      U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
+      if (match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                       m_VPValue())))
+        cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
+    }
 
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
     // with a boolean reduction phi node to check if the condition is true in

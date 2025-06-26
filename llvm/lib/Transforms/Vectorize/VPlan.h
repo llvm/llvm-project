@@ -936,6 +936,13 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
+    /// Given operands of (the same) struct type, creates a struct of fixed-
+    /// width vectors each containing a struct field of all operands. The
+    /// number of operands matches the element count of every vector.
+    BuildStructVector,
+    /// Creates a fixed-width vector containing all operands. The number of
+    /// operands matches the vector element count.
+    BuildVector,
     ComputeAnyOfResult,
     ComputeFindLastIVResult,
     ComputeReductionResult,
@@ -952,8 +959,10 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
-    // Returns a scalar boolean value, which is true if any lane of its (only
-    // boolean) vector operand is true.
+    // Returns a scalar boolean value, which is true if any lane of its
+    // (boolean) vector operand is true. It produces the reduced value across
+    // all unrolled iterations. Unrolling will add all copies of its original
+    // operand as additional operands.
     AnyOf,
     // Calculates the first active lane index of the vector predicate operand.
     FirstActiveLane,
@@ -1000,6 +1009,13 @@ private:
   /// the modeled instruction for a given lane. \returns the scalar generated
   /// value for lane \p Lane.
   Value *generatePerLane(VPTransformState &State, const VPLane &Lane);
+
+#if !defined(NDEBUG)
+  /// Return the number of operands determined by the opcode of the
+  /// VPInstruction. Returns -1u if the number of operands cannot be determined
+  /// directly by the opcode.
+  static unsigned getNumOperandsForOpcode(unsigned Opcode);
+#endif
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL = {},

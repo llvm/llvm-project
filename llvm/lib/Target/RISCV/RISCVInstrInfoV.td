@@ -30,8 +30,8 @@ class VTypeIOp<int VTypeINum> : RISCVOp {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
-      return isUInt<VTypeINum>(Imm);
-    return MCOp.isBareSymbolRef();
+      return isUInt<}] # VTypeINum # [{>(Imm);
+    return MCOp.Kind == KindTy::VType;
   }];
 }
 
