@@ -1,14 +1,23 @@
+# This pipeline is used for running the VMR verification of the PR changes in repo-level PRs.
+#
+# It will run a full set of verification jobs defined in:
+# https://github.com/dotnet/dotnet/blob/10060d128e3f470e77265f8490f5e4f72dae738e/eng/pipelines/templates/stages/vmr-build.yml#L27-L38
+#
+# For repos that do not need to run the full set, you would do the following:
+#
+# 1. Copy this YML file to a repo-specific location, i.e. outside of eng/common.
+#
+# 2. Add `verifications` parameter to VMR template reference
+#
+#    Examples:
+#    - For source-build stage 1 verification, add the following:
+#        verifications: [ "source-build-stage1" ]
+#
+#    - For Windows only verifications, add the following:
+#        verifications: [ "unified-build-windows-x64", "unified-build-windows-x86" ]
+
 trigger: none
-pr:
-  branches:
-    include:
-    - main
-    - release/*
-  paths:
-    exclude:
-    - documentation/*
-    - README.md
-    - CODEOWNERS
+pr: none
 
 variables:
 - template: /eng/common/templates/variables/pool-providers.yml@self

@@ -38,11 +38,6 @@ steps:
       targetRidArgs='/p:TargetRid=${{ parameters.platform.targetRID }}'
     fi
 
-    baseRidArgs=
-    if [ '${{ parameters.platform.baseRID }}' != '' ]; then
-      baseRidArgs='/p:BaseRid=${{ parameters.platform.baseRID }}'
-    fi
-
     portableBuildArgs=
     if [ '${{ parameters.platform.portableBuild }}' != '' ]; then
       portableBuildArgs='/p:PortableBuild=${{ parameters.platform.portableBuild }}'
@@ -55,7 +50,6 @@ steps:
       ${{ parameters.platform.buildArguments }} \
       $internalRuntimeDownloadArgs \
       $targetRidArgs \
-      $baseRidArgs \
       $portableBuildArgs \
   displayName: Build
 

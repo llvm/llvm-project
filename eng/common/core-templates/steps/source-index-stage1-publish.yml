@@ -1,15 +1,15 @@
 parameters:
   sourceIndexUploadPackageVersion: 2.0.0-20250425.2
-  sourceIndexProcessBinlogPackageVersion: 1.0.1-20250425.2
+  sourceIndexProcessBinlogPackageVersion: 1.0.1-20250515.1
   sourceIndexPackageSource: https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json
   binlogPath: artifacts/log/Debug/Build.binlog
 
 steps:
 - task: UseDotNet@2
-  displayName: "Source Index: Use .NET 8 SDK"
+  displayName: "Source Index: Use .NET 9 SDK"
   inputs:
     packageType: sdk
-    version: 8.0.x
+    version: 9.0.x
     installationPath: $(Agent.TempDirectory)/dotnet
     workingDirectory: $(Agent.TempDirectory)
 

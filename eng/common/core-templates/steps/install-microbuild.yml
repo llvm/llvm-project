@@ -30,6 +30,10 @@ steps:
         ${{ if and(eq(parameters.enableMicrobuildForMacAndLinux, 'true'), ne(variables['Agent.Os'], 'Windows_NT')) }}:
           azureSubscription: 'MicroBuild Signing Task (DevDiv)'
           useEsrpCli: true
+        ${{ elseif eq(variables['System.TeamProject'], 'DevDiv') }}:
+          ConnectedPMEServiceName: 6cc74545-d7b9-4050-9dfa-ebefcc8961ea
+        ${{ else }}:
+          ConnectedPMEServiceName: 248d384a-b39b-46e3-8ad5-c2c210d5e7ca
       env:
         TeamName: $(_TeamName)
         MicroBuildOutputFolderOverride: ${{ parameters.microBuildOutputFolder }}

@@ -447,27 +447,13 @@ function MSBuild {
     fi
 
     local toolset_dir="${_InitializeToolset%/*}"
-    # new scripts need to work with old packages, so we need to look for the old names/versions
-    local selectedPath=
-    local possiblePaths=()
-    possiblePaths+=( "$toolset_dir/net/Microsoft.DotNet.ArcadeLogging.dll" )
-    possiblePaths+=( "$toolset_dir/net/Microsoft.DotNet.Arcade.Sdk.dll" )
+    local selectedPath="$toolset_dir/net/Microsoft.DotNet.ArcadeLogging.dll"
 
-    # This list doesn't need to be updated anymore and can eventually be removed.
-    possiblePaths+=( "$toolset_dir/net9.0/Microsoft.DotNet.ArcadeLogging.dll" )
-    possiblePaths+=( "$toolset_dir/net9.0/Microsoft.DotNet.Arcade.Sdk.dll" )
-    possiblePaths+=( "$toolset_dir/net8.0/Microsoft.DotNet.ArcadeLogging.dll" )
-    possiblePaths+=( "$toolset_dir/net8.0/Microsoft.DotNet.Arcade.Sdk.dll" )
-    for path in "${possiblePaths[@]}"; do
-      if [[ -f $path ]]; then
-        selectedPath=$path
-        break
-      fi
-    done
     if [[ -z "$selectedPath" ]]; then
-      Write-PipelineTelemetryError -category 'Build'  "Unable to find arcade sdk logger assembly."
+      Write-PipelineTelemetryError -category 'Build'  "Unable to find arcade sdk logger assembly: $selectedPath"
       ExitWithExitCode 1
     fi
+
     args+=( "-logger:$selectedPath" )
   fi
 
