@@ -99,19 +99,19 @@ namespace {
     bool IsARCUnbridgedCast;
 
     struct OpRangeType {
-      SourceLocation Ranges[3];
+      SourceLocation Locations[3];
 
       OpRangeType(SourceLocation Begin, SourceLocation LParen,
                   SourceLocation RParen)
-          : Ranges{Begin, LParen, RParen} {}
+          : Locations{Begin, LParen, RParen} {}
 
       OpRangeType() = default;
 
-      SourceLocation getBegin() const { return Ranges[0]; }
+      SourceLocation getBegin() const { return Locations[0]; }
 
-      SourceLocation getLParenLoc() const { return Ranges[1]; }
+      SourceLocation getLParenLoc() const { return Locations[1]; }
 
-      SourceLocation getRParenLoc() const { return Ranges[2]; }
+      SourceLocation getRParenLoc() const { return Locations[2]; }
 
       friend const StreamingDiagnostic &
       operator<<(const StreamingDiagnostic &DB, OpRangeType Op) {
