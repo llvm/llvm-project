@@ -304,7 +304,8 @@ Expected<std::string> StringSubstitution::getResultForDiagnostics() const {
     OS << '"';
     // Escape the string if it contains any characters that
     // make it hard to read, such as tabs, newlines, quotes, and non-printable characters.
-    // Note that we do not include backslashes in this set, because they are
+    // These are the characters that are escaped by write_escaped(),
+    // except we do not include backslashes, because they are
     // common in Windows paths and escaping them would make the output
     // harder to read.
     // However, when we do escape, backslashes are escaped as well,
