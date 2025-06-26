@@ -51,7 +51,7 @@ public:
         getABIInfo().getDataLayout().getAllocaAddrSpace());
   }
 
-  unsigned getOpenCLKernelCallingConv() const override;
+  unsigned getDeviceKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
   llvm::Type *
   getHLSLType(CodeGenModule &CGM, const Type *Ty,
@@ -75,6 +75,10 @@ public:
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
+  bool supportsLibCall() const override {
+    return getABIInfo().getTarget().getTriple().getVendor() !=
+           llvm::Triple::AMD;
+  }
 };
 
 inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
@@ -219,7 +223,7 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
 }
 }
 
-unsigned CommonSPIRTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
+unsigned CommonSPIRTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::SPIR_KERNEL;
 }
 
@@ -228,7 +232,7 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
   // Convert HIP kernels to SPIR-V kernels.
   if (getABIInfo().getContext().getLangOpts().HIP) {
     FT = getABIInfo().getContext().adjustFunctionType(
-        FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
+        FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
     return;
   }
 }

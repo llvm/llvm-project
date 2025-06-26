@@ -589,10 +589,6 @@ LogicalResult SwitchOp::verify() {
            static_cast<int64_t>(getCaseDestinations().size())))
     return emitOpError("expects number of case values to match number of "
                        "case destinations");
-  if (getBranchWeights() && getBranchWeights()->size() != getNumSuccessors())
-    return emitError("expects number of branch weights to match number of "
-                     "successors: ")
-           << getBranchWeights()->size() << " vs " << getNumSuccessors();
   if (getCaseValues() &&
       getValue().getType() != getCaseValues()->getElementType())
     return emitError("expects case value type to match condition value type");
@@ -962,7 +958,6 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
   assert(callee && "expected non-null callee in direct call builder");
   build(builder, state, results,
         /*var_callee_type=*/nullptr, callee, args, /*fastmathFlags=*/nullptr,
-        /*branch_weights=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
         /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
@@ -992,7 +987,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), callee, args,
         /*fastmathFlags=*/nullptr,
-        /*branch_weights=*/nullptr, /*CConv=*/nullptr,
+        /*CConv=*/nullptr,
         /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr,
         /*no_unwind=*/nullptr, /*will_return=*/nullptr,
@@ -1009,7 +1004,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType),
         /*callee=*/nullptr, args,
-        /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
+        /*fastmathFlags=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -1025,7 +1020,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), args,
-        /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
+        /*fastmathFlags=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},

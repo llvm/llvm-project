@@ -49,7 +49,8 @@ protected:
   }
 
   std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
-                                         TrivialModuleLoader &ModLoader) {
+                                         TrivialModuleLoader &ModLoader,
+                                         StringRef PreDefines = {}) {
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
@@ -61,6 +62,8 @@ protected:
         PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
+    if (!PreDefines.empty())
+      PP->setPredefines(PreDefines.str());
     PP->Initialize(*Target);
     PP->EnterMainSourceFile();
     return PP;
@@ -769,4 +772,46 @@ TEST(LexerPreambleTest, PreambleBounds) {
   }
 }
 
+TEST_F(LexerTest, CheckFirstPPToken) {
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "int a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::kw_int));
+  }
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "#define FOO int\n"
+                       "FOO a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::hash));
+  }
+
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "FOO a;",
+                       ModLoader, "#define FOO int\n");
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::identifier));
+    EXPECT_TRUE(
+        PP->getMainFileFirstPPToken().getIdentifierInfo()->isStr("FOO"));
+  }
+}
 } // anonymous namespace

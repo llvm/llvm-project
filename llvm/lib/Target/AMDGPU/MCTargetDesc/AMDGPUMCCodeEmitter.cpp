@@ -547,6 +547,7 @@ static bool needsPCRel(const MCExpr *Expr) {
   }
   case MCExpr::Unary:
     return needsPCRel(cast<MCUnaryExpr>(Expr)->getSubExpr());
+  case MCExpr::Specifier:
   case MCExpr::Target:
   case MCExpr::Constant:
     return false;

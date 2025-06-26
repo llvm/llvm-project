@@ -16,6 +16,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/Core/ProtocolServer.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -294,19 +295,19 @@ bool Debugger::GetAutoConfirm() const {
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
-const FormatEntity::Entry *Debugger::GetDisassemblyFormat() const {
+FormatEntity::Entry Debugger::GetDisassemblyFormat() const {
   constexpr uint32_t idx = ePropertyDisassemblyFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
-const FormatEntity::Entry *Debugger::GetFrameFormat() const {
+FormatEntity::Entry Debugger::GetFrameFormat() const {
   constexpr uint32_t idx = ePropertyFrameFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
-const FormatEntity::Entry *Debugger::GetFrameFormatUnique() const {
+FormatEntity::Entry Debugger::GetFrameFormatUnique() const {
   constexpr uint32_t idx = ePropertyFrameFormatUnique;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
 uint64_t Debugger::GetStopDisassemblyMaxSize() const {
@@ -350,14 +351,14 @@ void Debugger::SetPrompt(llvm::StringRef p) {
   GetCommandInterpreter().UpdatePrompt(new_prompt);
 }
 
-const FormatEntity::Entry *Debugger::GetThreadFormat() const {
+FormatEntity::Entry Debugger::GetThreadFormat() const {
   constexpr uint32_t idx = ePropertyThreadFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
-const FormatEntity::Entry *Debugger::GetThreadStopFormat() const {
+FormatEntity::Entry Debugger::GetThreadStopFormat() const {
   constexpr uint32_t idx = ePropertyThreadStopFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
 lldb::ScriptLanguage Debugger::GetScriptLanguage() const {
@@ -492,9 +493,9 @@ bool Debugger::GetShowStatusline() const {
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
-const FormatEntity::Entry *Debugger::GetStatuslineFormat() const {
+FormatEntity::Entry Debugger::GetStatuslineFormat() const {
   constexpr uint32_t idx = ePropertyStatuslineFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
 bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
@@ -506,6 +507,18 @@ bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
 
 llvm::StringRef Debugger::GetSeparator() const {
   constexpr uint32_t idx = ePropertySeparator;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDisabledAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowDisabledAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDisabledAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowDisabledAnsiSuffix;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_debugger_properties[idx].default_cstr_value);
 }
@@ -1536,8 +1549,11 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
   FormatEntity::Entry format_entry;
 
   if (format == nullptr) {
-    if (exe_ctx != nullptr && exe_ctx->HasTargetScope())
-      format = exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    if (exe_ctx != nullptr && exe_ctx->HasTargetScope()) {
+      format_entry =
+          exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+      format = &format_entry;
+    }
     if (format == nullptr) {
       FormatEntity::Parse("${addr}: ", format_entry);
       format = &format_entry;
@@ -2359,4 +2375,27 @@ llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
   assert(g_thread_pool &&
          "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;
+}
+
+void Debugger::AddProtocolServer(lldb::ProtocolServerSP protocol_server_sp) {
+  assert(protocol_server_sp &&
+         GetProtocolServer(protocol_server_sp->GetPluginName()) == nullptr);
+  m_protocol_servers.push_back(protocol_server_sp);
+}
+
+void Debugger::RemoveProtocolServer(lldb::ProtocolServerSP protocol_server_sp) {
+  auto it = llvm::find(m_protocol_servers, protocol_server_sp);
+  if (it != m_protocol_servers.end())
+    m_protocol_servers.erase(it);
+}
+
+lldb::ProtocolServerSP
+Debugger::GetProtocolServer(llvm::StringRef protocol) const {
+  for (ProtocolServerSP protocol_server_sp : m_protocol_servers) {
+    if (!protocol_server_sp)
+      continue;
+    if (protocol_server_sp->GetPluginName() == protocol)
+      return protocol_server_sp;
+  }
+  return nullptr;
 }

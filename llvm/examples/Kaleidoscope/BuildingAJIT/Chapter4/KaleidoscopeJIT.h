@@ -151,7 +151,9 @@ public:
       : ES(std::move(ES)), EPCIU(std::move(EPCIU)), DL(std::move(DL)),
         Mangle(*this->ES, this->DL),
         ObjectLayer(*this->ES,
-                    []() { return std::make_unique<SectionMemoryManager>(); }),
+                    [](const MemoryBuffer &) {
+                      return std::make_unique<SectionMemoryManager>();
+                    }),
         CompileLayer(*this->ES, ObjectLayer,
                      std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
         OptimizeLayer(*this->ES, CompileLayer, optimizeModule),

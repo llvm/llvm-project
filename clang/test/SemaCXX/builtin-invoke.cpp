@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only %s -std=c++20
+// RUN: %clang_cc1 -verify -fsyntax-only %s -std=c++23
 
 void func() { // expected-note {{'func' declared here}}
   __builtin_invoke(); // expected-error {{too few arguments to function call, expected at least 1, have 0}}
@@ -72,12 +72,20 @@ private:
   InvalidSpecialization2& get(); // expected-note 2 {{declared private here}}
 };
 
-struct Incomplete; // expected-note {{forward declaration}}
+struct ExplicitObjectParam {
+  void func(this const ExplicitObjectParam& self) {}
+};
+
+struct Incomplete; // expected-note 2 {{forward declaration}}
 struct Incomplete2;
+
+void incomplete_by_val_test(Incomplete);
 
 void incomplete_test(Incomplete& incomplete) {
   __builtin_invoke((int (Incomplete2::*)){}, incomplete); // expected-error {{incomplete type 'Incomplete' used in type trait expression}} \
                                                              expected-error {{indirection requires pointer operand ('Incomplete' invalid)}}
+  __builtin_invoke(incomplete_test, incomplete);
+  __builtin_invoke(incomplete_by_val_test, incomplete); // expected-error {{argument type 'Incomplete' is incomplete}}
 }
 
 void call() {
@@ -116,6 +124,7 @@ void call() {
   __builtin_invoke(&Callable::func, 1); // expected-error {{indirection requires pointer operand ('int' invalid)}}
   __builtin_invoke(&Callable::func, Callable{});
   __builtin_invoke(&Callable::func, Callable{}, 1); // expected-error {{too many arguments to function call, expected 0, have 1}}
+  __builtin_invoke(&ExplicitObjectParam::func, ExplicitObjectParam{});
 
   Callable c;
   __builtin_invoke(&Callable::func, &c);

@@ -103,6 +103,13 @@ class CommandObjectStatsDump : public CommandObjectParsed {
         else
           error = Status::FromError(bool_or_error.takeError());
         break;
+      case 'p':
+        if (llvm::Expected<bool> bool_or_error =
+                OptionArgParser::ToBoolean("--plugins", option_arg))
+          m_stats_options.SetIncludePlugins(*bool_or_error);
+        else
+          error = Status::FromError(bool_or_error.takeError());
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }

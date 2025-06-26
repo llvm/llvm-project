@@ -10,6 +10,7 @@
 #include "GDBRemoteTestUtils.h"
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/Listener.h"
 #include "llvm/ADT/StringRef.h"
@@ -51,8 +52,12 @@ struct TestClient : public GDBRemoteClientBase {
 class GDBRemoteClientBaseTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
-                      llvm::Succeeded());
+    llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+    ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+    client.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->first)));
+    server.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
     ASSERT_EQ(TestClient::eBroadcastBitRunPacketSent,
               listener_sp->StartListeningForEvents(
                   &client, TestClient::eBroadcastBitRunPacketSent));

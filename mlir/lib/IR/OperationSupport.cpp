@@ -683,11 +683,10 @@ llvm::hash_code OperationEquivalence::computeHash(
   DictionaryAttr dictAttrs;
   if (!(flags & Flags::IgnoreDiscardableAttrs))
     dictAttrs = op->getRawDictionaryAttrs();
-  llvm::hash_code hashProperties;
+  llvm::hash_code hash =
+      llvm::hash_combine(op->getName(), dictAttrs, op->getResultTypes());
   if (!(flags & Flags::IgnoreProperties))
-    hashProperties = op->hashProperties();
-  llvm::hash_code hash = llvm::hash_combine(
-      op->getName(), dictAttrs, op->getResultTypes(), hashProperties);
+    hash = llvm::hash_combine(hash, op->hashProperties());
 
   //   - Location if required
   if (!(flags & Flags::IgnoreLocations))
