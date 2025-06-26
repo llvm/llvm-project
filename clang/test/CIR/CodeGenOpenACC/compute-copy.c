@@ -899,7 +899,7 @@ void acc_compute_members() {
 }
 
 void modifier_list() {
-  // CHECK: cir.func @modifier_list() {
+  // CHECK: cir.func{{.*}} @modifier_list() {
   int localVar;
   // CHECK-NEXT: %[[LOCALVAR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["localVar"]
 
