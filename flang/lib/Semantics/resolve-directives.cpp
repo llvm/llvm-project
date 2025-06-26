@@ -1968,10 +1968,11 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   auto &optLoopCons = std::get<1>(x.t);
   if (optLoopCons.has_value()) {
     if (const auto &outer{std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-      for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+      for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;
+          --level) {
         if (loop->IsDoConcurrent()) {
-          // DO CONCURRENT is explicitly allowed for the LOOP construct so long as
-          // there isn't a COLLAPSE clause
+          // DO CONCURRENT is explicitly allowed for the LOOP construct so long
+          // as there isn't a COLLAPSE clause
           if (isLoopConstruct) {
             if (hasCollapseClause) {
               // hasCollapseClause implies clause != nullptr
@@ -2000,16 +2001,20 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         }
       }
       CheckAssocLoopLevel(level, GetAssociatedClause());
-    } else if (const auto &loop{std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(&*optLoopCons)}) {
+    } else if (const auto &loop{std::get_if<
+                   common::Indirection<parser::OpenMPLoopConstruct>>(
+                   &*optLoopCons)}) {
       auto &beginDirective =
-            std::get<parser::OmpBeginLoopDirective>(loop->value().t);
+          std::get<parser::OmpBeginLoopDirective>(loop->value().t);
       auto &beginLoopDirective =
           std::get<parser::OmpLoopDirective>(beginDirective.t);
       if ((beginLoopDirective.v != llvm::omp::Directive::OMPD_unroll &&
-            beginLoopDirective.v != llvm::omp::Directive::OMPD_tile)) {
+              beginLoopDirective.v != llvm::omp::Directive::OMPD_tile)) {
         context_.Say(GetContext().directiveSource,
-          "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
-          parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(GetContext().directive, version).str()));
+            "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                GetContext().directive, version)
+                    .str()));
       } else {
         PrivatizeAssociatedLoopIndexAndCheckLoopLevel(loop->value());
       }

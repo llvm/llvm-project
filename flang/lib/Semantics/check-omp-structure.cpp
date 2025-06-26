@@ -763,7 +763,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   SetLoopInfo(x);
 
   auto &optLoopCons = std::get<1>(x.t);
-  if(optLoopCons.has_value()) {
+  if (optLoopCons.has_value()) {
     if (const auto &doConstruct{
             std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
       const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
@@ -866,26 +866,26 @@ void OmpStructureChecker::CheckLoopItrVariableIsInt(
   auto &optLoopCons = std::get<1>(x.t);
   if (optLoopCons.has_value()) {
     if (const auto &loopConstruct{
-          std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
 
-    for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
-      if (loop->IsDoNormal()) {
-        const parser::Name &itrVal{GetLoopIndex(loop)};
-        if (itrVal.symbol) {
-          const auto *type{itrVal.symbol->GetType()};
-          if (!type->IsNumeric(TypeCategory::Integer)) {
-            context_.Say(itrVal.source,
-                "The DO loop iteration"
-                " variable must be of the type integer."_err_en_US,
-                itrVal.ToString());
+      for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
+        if (loop->IsDoNormal()) {
+          const parser::Name &itrVal{GetLoopIndex(loop)};
+          if (itrVal.symbol) {
+            const auto *type{itrVal.symbol->GetType()};
+            if (!type->IsNumeric(TypeCategory::Integer)) {
+              context_.Say(itrVal.source,
+                  "The DO loop iteration"
+                  " variable must be of the type integer."_err_en_US,
+                  itrVal.ToString());
+            }
           }
         }
-      }
-      // Get the next DoConstruct if block is not empty.
-      const auto &block{std::get<parser::Block>(loop->t)};
-      const auto it{block.begin()};
-      loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
-                               : nullptr;
+        // Get the next DoConstruct if block is not empty.
+        const auto &block{std::get<parser::Block>(loop->t)};
+        const auto it{block.begin()};
+        loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
+                                 : nullptr;
       }
     }
   }
@@ -1088,25 +1088,25 @@ void OmpStructureChecker::CheckDistLinear(
     // clauses.
     auto &optLoopCons = std::get<1>(x.t);
     if (optLoopCons.has_value()) {
-    if (const auto &loopConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-      for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
-        if (loop->IsDoNormal()) {
-          const parser::Name &itrVal{GetLoopIndex(loop)};
-          if (itrVal.symbol) {
-            // Remove the symbol from the collected set
-            indexVars.erase(&itrVal.symbol->GetUltimate());
+      if (const auto &loopConstruct{
+              std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+        for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
+          if (loop->IsDoNormal()) {
+            const parser::Name &itrVal{GetLoopIndex(loop)};
+            if (itrVal.symbol) {
+              // Remove the symbol from the collected set
+              indexVars.erase(&itrVal.symbol->GetUltimate());
+            }
+            collapseVal--;
+            if (collapseVal == 0) {
+              break;
+            }
           }
-          collapseVal--;
-          if (collapseVal == 0) {
-            break;
-          }
-        }
-        // Get the next DoConstruct if block is not empty.
-        const auto &block{std::get<parser::Block>(loop->t)};
-        const auto it{block.begin()};
-        loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
-                                 : nullptr;
+          // Get the next DoConstruct if block is not empty.
+          const auto &block{std::get<parser::Block>(loop->t)};
+          const auto it{block.begin()};
+          loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
+                                   : nullptr;
         }
       }
     }
