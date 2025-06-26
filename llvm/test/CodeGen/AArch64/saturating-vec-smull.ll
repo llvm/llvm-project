@@ -37,7 +37,7 @@ define <8 x i16> @saturating_q15(<8 x i16> %a, <8 x i16> %b) {
   %as = sext <8 x i16> %a to <8 x i32>
   %bs = sext <8 x i16> %b to <8 x i32>
   %m = mul <8 x i32> %bs, %as
-  %sh = ashr <8 x i32> %m, splat (i32 16)
+  %sh = ashr <8 x i32> %m, splat (i32 15)
   %ma = tail call <8 x i32> @llvm.smin.v8i32(<8 x i32> %sh, <8 x i32> splat (i32 16383))
   %t = trunc <8 x i32> %ma to <8 x i16>
   ret <8 x i16> %t
@@ -51,7 +51,7 @@ define <4 x i32> @saturating_q31(<4 x i32> %a, <4 x i32> %b) {
   %as = sext <4 x i32> %a to <4 x i64>
   %bs = sext <4 x i32> %b to <4 x i64>
   %m = mul <4 x i64> %bs, %as
-  %sh = ashr <4 x i64> %m, splat (i64 32)
+  %sh = ashr <4 x i64> %m, splat (i64 31)
   %ma = tail call <4 x i64> @llvm.smin.v8i32(<4 x i64> %sh, <4 x i64> splat (i64 1073741823))
   %t = trunc <4 x i64> %ma to <4 x i32>
   ret <4 x i32> %t
