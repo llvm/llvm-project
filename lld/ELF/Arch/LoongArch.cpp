@@ -1100,8 +1100,9 @@ void LoongArch::tlsdescToIe(uint8_t *loc, const Relocation &rel,
 
 // Convert TLSDESC GD/LD to LE.
 // The code sequence obtained in the normal or medium code model is as follows:
-//  * lu12i.w $a0, %le_hi20(sym_le)  # le_hi20 != 0
-//  * ori $a0 $a0, %le_lo12(sym_le)
+//  * lu12i.w   $a0, %le_hi20(sym)      # le_hi20 != 0, otherwise NOP
+//  * ori       $a0, src, %le_lo12(sym) # le_hi20 != 0, src = $a0,
+//                                      # otherwise,    src = $zero
 // See the comment in tlsdescToIe for detailed information.
 void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel,
                             uint64_t val) const {
@@ -1124,7 +1125,7 @@ void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel,
     break;
   case R_LARCH_TLS_DESC_CALL:
     if (isUInt12)
-      write32le(loc, insn(ORI, R_A0, R_ZERO, val)); // ori $a0, $r0, %le_lo12
+      write32le(loc, insn(ORI, R_A0, R_ZERO, val)); // ori $a0, $zero, %le_lo12
     else
       write32le(loc,
                 insn(ORI, R_A0, R_A0, lo12(val))); // ori $a0, $a0, %le_lo12
@@ -1179,7 +1180,7 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         //  * i+2 -- R_LARCH_TLS_IE64_PC_LO20
         //  * i+3 -- R_LARCH_TLS_IE64_PC_HI12
         isExtreme =
-            (i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_IE64_PC_LO20);
+            i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_IE64_PC_LO20;
       }
       if (isExtreme) {
         rel.expr = getRelExpr(rel.type, *rel.sym, loc);
@@ -1203,7 +1204,7 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         //  * i+2 -- R_LARCH_TLS_DESC64_PC_LO20
         //  * i+3 -- R_LARCH_TLS_DESC64_PC_HI12
         isExtreme =
-            (i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20);
+            i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20;
       }
       [[fallthrough]];
     case R_RELAX_TLS_GD_TO_IE_ABS:
@@ -1221,7 +1222,7 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     case R_RELAX_TLS_GD_TO_LE:
       if (rel.type == R_LARCH_TLS_DESC_PC_HI20) {
         isExtreme =
-            (i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20);
+            i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20;
       }
       if (isExtreme) {
         if (rel.type == R_LARCH_TLS_DESC_CALL)
