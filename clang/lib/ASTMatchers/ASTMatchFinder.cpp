@@ -1470,11 +1470,8 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
     return true;
   }
 
-  if (Options.SkipDeclsInModules && DeclNode->isFromASTFile()) {
-    auto *M = DeclNode->getOwningModule();
-    if (M && (M->isInterfaceOrPartition() || M->isGlobalModule()))
-      return true;
-  }
+  if (Options.SkipDeclsInModules && DeclNode->isInAnotherModuleUnit())
+    return true;
 
   bool ScopedTraversal =
       TraversingASTNodeNotSpelledInSource || DeclNode->isImplicit();
