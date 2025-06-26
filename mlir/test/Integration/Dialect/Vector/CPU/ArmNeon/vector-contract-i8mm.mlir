@@ -44,7 +44,7 @@
 // Such a `vector.contract` is representative of the code we aim to generate
 // by vectorisation of `linalg.mmt4d`.
 //
-// In this specific test we use M == 4, N == 4, and K == 16.
+// In this specific test we use M == 4, N == 4, and K == 8.
 //
 
 // Test the operation where both LHS and RHS are interpreted as signed, hence
@@ -59,43 +59,43 @@ func.func @test_smmla() {
   %c0_i8 = arith.constant 0 : i8
 
   // Accumulator test data
-  %acc_cst = arith.constant dense<[[ -1,  -9,  -4,   0],
-                                   [  6,   5,   7,   2],
-                                   [ -8,  -7,   9, -10],
-                                   [  9,   4,  -4,   0]]> : vector<4x4xi32>
+  %acc_cst = arith.constant dense<[[-44,  20,  44, -46],
+                                   [ -8,  25, -34,  26],
+                                   [-20, -36,  -3,  39],
+                                   [-48, -31, -25, -21]]> : vector<4x4xi32>
 
   %acc_mem = memref.alloca() : memref<4x4xi32>
   vector.transfer_write %acc_cst, %acc_mem[%c0, %c0] : vector<4x4xi32>, memref<4x4xi32>
   %acc = vector.transfer_read %acc_mem[%c0, %c0], %c0_i32 {in_bounds = [true, true]} : memref<4x4xi32>, vector<4x4xi32>
 
   // LHS test data
-  %lhs_cst = arith.constant dense<[[ -4,  -4,  -4,  -6,   0,   1,   6,   2,  -1,   4,   5,  -8,   9,   5,   4,   9],
-                                   [ -1,   6,   0,   7,  -7,   8,   5,   8,  -7,   6,  -2,   1,   1,   5,  -4,  -4],
-                                   [  4, -10,  10,  -3,   5,   3,   2,   3,  -7,   9,  -9, -10,   7,  -8,  -5,  -2],
-                                   [  9,   5,   8,   9,   6,  -3,  -9,   7,  -4,  -7,  -2,   7,  -8,   2,   8,   7]]> : vector<4x16xi8>
+  %lhs_cst = arith.constant dense<[[-35, -27, -36, -31,  23, -34,  -8, -33],
+                                   [-20,  17, -32, -47,  37,  22,  -7, -21],
+                                   [ -7, -35,  20,  -4,  39,  46, -23,  40],
+                                   [ 40,  27,  37,  43,  38,  -6,  37,  49]]> : vector<4x8xi8>
 
-  %lhs_mem = memref.alloca() : memref<4x16xi8>
-  vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] : vector<4x16xi8>, memref<4x16xi8>
-  %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x16xi8>, vector<4x16xi8>
+  %lhs_mem = memref.alloca() : memref<4x8xi8>
+  vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] : vector<4x8xi8>, memref<4x8xi8>
+  %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x8xi8>, vector<4x8xi8>
 
   // RHS test data
-  %rhs_cst = arith.constant dense<[[  1,   2,  -3,   5,  10,   8,  10,  -2,   1,  10,  -5,   2,   4,   3,  -9,   4],
-                                   [ -3,  -3,  -3,   4,   6,  -1,   0,  -5,   6,   3,  -1,   9,  -3,   3,  -2,   4],
-                                   [  1,   9,  -1,   1,  -5,   4,   9, -10,  -1,  -7,  10,  -2,   0,  -3,   4,   7],
-                                   [ -4, -10,   8, -10,  -5,  -8,  -6,   7,   4,  -2,  10,   3,  -9,   5,   2,  -1]]> : vector<4x16xi8>
+  %rhs_cst = arith.constant dense<[[-17, -50,  -1,  48, -13,  22,  39,  33],
+                                   [-35, -24,  37, -32,  33,  30, -11, -17],
+                                   [-28,  31,   3, -44, -15, -27,  22,  35],
+                                   [-23,  39,  48,  26, -23,  32, -39, -38]]> : vector<4x8xi8>
 
-  %rhs_mem = memref.alloca() : memref<4x16xi8>
-  vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] : vector<4x16xi8>, memref<4x16xi8>
-  %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x16xi8>, vector<4x16xi8>
+  %rhs_mem = memref.alloca() : memref<4x8xi8>
+  vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] : vector<4x8xi8>, memref<4x8xi8>
+  %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x8xi8>, vector<4x8xi8>
 
 
   // Matrix multiplication and accumulate with transposed RHS.
-  %0 = arith.extsi %lhs : vector<4x16xi8> to vector<4x16xi32>
-  %1 = arith.extsi %rhs : vector<4x16xi8> to vector<4x16xi32>
+  %0 = arith.extsi %lhs : vector<4x8xi8> to vector<4x8xi32>
+  %1 = arith.extsi %rhs : vector<4x8xi8> to vector<4x8xi32>
   %2 = vector.contract {indexing_maps = #packed_maps,
                         iterator_types = ["parallel", "parallel", "reduction"],
                         kind = #vector.kind<add>} %0, %1, %acc
-    : vector<4x16xi32>, vector<4x16xi32> into vector<4x4xi32>
+    : vector<4x8xi32>, vector<4x8xi32> into vector<4x4xi32>
 
   // Display the result of the multiplication
   vector.print str "Result(SMMLA):\n"
@@ -123,42 +123,42 @@ func.func @test_ummla() {
   %c0_i8 = arith.constant 0 : i8
 
   // Accumulator test data
-  %acc_cst = arith.constant dense<[[39, 39, 46, 30],
-                                   [22, 48, 61, 54],
-                                   [41, 63, 27, 10],
-                                   [37, 30, 16, 45]]> : vector<4x4xi32>
+  %acc_cst = arith.constant dense<[[16, 16, 48, 40],
+                                   [40, 24, 35, 12],
+                                   [33, 24, 29, 19],
+                                   [28, 13, 33, 18]]> : vector<4x4xi32>
 
   %acc_mem = memref.alloca() : memref<4x4xi32>
   vector.transfer_write %acc_cst, %acc_mem[%c0, %c0] : vector<4x4xi32>, memref<4x4xi32>
   %acc = vector.transfer_read %acc_mem[%c0, %c0], %c0_i32 {in_bounds = [true, true]} : memref<4x4xi32>, vector<4x4xi32>
 
   // LHS test data
-  %lhs_cst = arith.constant dense<[[ 6,  6, 38, 30, 60,  4, 42, 11, 16, 12, 30, 41, 14, 55, 47, 25],
-                                   [ 2, 19, 25, 29, 15, 23, 14, 19,  9, 16, 42, 17, 58, 62, 30,  3],
-                                   [62, 50, 47, 18,  3, 48, 23,  8, 43, 29, 43, 15,  6, 38, 46, 25],
-                                   [32, 27, 52, 39, 47, 26, 26, 13, 23, 29, 24, 44, 23, 45, 35, 51]]> : vector<4x16xi8>
+  %lhs_cst = arith.constant dense<[[35, 42, 37, 49, 36, 36, 23, 33],
+                                   [39, 34, 33, 45, 43, 10, 44, 47],
+                                   [18, 35, 29, 25, 36, 33, 28, 29],
+                                   [26, 49, 43, 32, 27, 16, 45, 33]]> : vector<4x8xi8>
 
-  %lhs_mem = memref.alloca() : memref<4x16xi8>
-  vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] : vector<4x16xi8>, memref<4x16xi8>
-  %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x16xi8>, vector<4x16xi8>
+  %lhs_mem = memref.alloca() : memref<4x8xi8>
+  vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] : vector<4x8xi8>, memref<4x8xi8>
+  %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x8xi8>, vector<4x8xi8>
 
   // RHS test data
-  %rhs_cst = arith.constant dense<[[33,  0, 49, 34, 37,  8, 25, 19, 15, 26, 23, 18, 19, 16, 39, 33],
-                                   [22, 17, 53, 58,  6, 35, 54, 23,  8, 53, 21, 27, 49, 25, 34, 12],
-                                   [27, 18, 53, 53, 49, 11, 12, 39, 62, 47, 59, 29, 20, 18, 52, 25],
-                                   [27, 40, 11, 52, 37, 60, 29, 44, 46, 25, 13, 33, 14, 53, 56, 39]]> : vector<4x16xi8>
+  %rhs_cst = arith.constant dense<[[18, 31, 37, 35, 44, 22, 37, 28],
+                                   [21, 22, 49, 39, 30, 28, 35, 37],
+                                   [21, 47, 39, 35, 23, 43, 24, 49],
+                                   [49, 49, 40, 32, 37, 20, 47, 40]]> : vector<4x8xi8>
 
-  %rhs_mem = memref.alloca() : memref<4x16xi8>
-  vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] : vector<4x16xi8>, memref<4x16xi8>
-  %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x16xi8>, vector<4x16xi8>
+  %rhs_mem = memref.alloca() : memref<4x8xi8>
+  vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] : vector<4x8xi8>, memref<4x8xi8>
+  %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x8xi8>, vector<4x8xi8>
 
   // Matrix multiplication and accumulate with transposed RHS.
-  %0 = arith.extui %lhs : vector<4x16xi8> to vector<4x16xi32>
-  %1 = arith.extui %rhs : vector<4x16xi8> to vector<4x16xi32>
+  %0 = arith.extui %lhs : vector<4x8xi8> to vector<4x8xi32>
+  %1 = arith.extui %rhs : vector<4x8xi8> to vector<4x8xi32>
   %2 = vector.contract {indexing_maps = #packed_maps,
                         iterator_types = ["parallel", "parallel", "reduction"],
                         kind = #vector.kind<add>} %0, %1, %acc
-    : vector<4x16xi32>, vector<4x16xi32> into vector<4x4xi32>
+    : vector<4x8xi32>, vector<4x8xi32> into vector<4x4xi32>
 
   // Display the result of the multiplication
   vector.print str "Result(UMMLA):\n"
@@ -187,42 +187,42 @@ func.func @test_usmmla() {
   %c0_i8 = arith.constant 0 : i8
 
   // Accumulator test data
-  %acc_cst = arith.constant dense<[[-50,  22, -15,   6],
-                                   [  0, -46,  32, -59],
-                                   [-62, -60, -38,  17],
-                                   [-50,   8, -12,  22]]> : vector<4x4xi32>
+  %acc_cst = arith.constant dense<[[-44,  20,  44, -46],
+                                   [ -8,  25, -34,  26],
+                                   [-20, -36,  -3,  39],
+                                   [-48, -31, -25, -21]]> : vector<4x4xi32>
 
   %acc_mem = memref.alloca() : memref<4x4xi32>
   vector.transfer_write %acc_cst, %acc_mem[%c0, %c0] : vector<4x4xi32>, memref<4x4xi32>
   %acc = vector.transfer_read %acc_mem[%c0, %c0], %c0_i32 {in_bounds = [true, true]} : memref<4x4xi32>, vector<4x4xi32>
 
   // LHS test data
-  %lhs_cst = arith.constant dense<[[ 6,  6, 38, 30, 60,  4, 42, 11, 16, 12, 30, 41, 14, 55, 47, 25],
-                                   [ 2, 19, 25, 29, 15, 23, 14, 19,  9, 16, 42, 17, 58, 62, 30,  3],
-                                   [62, 50, 47, 18,  3, 48, 23,  8, 43, 29, 43, 15,  6, 38, 46, 25],
-                                   [32, 27, 52, 39, 47, 26, 26, 13, 23, 29, 24, 44, 23, 45, 35, 51]]> : vector<4x16xi8>
+  %lhs_cst = arith.constant dense<[[153, 161,  24, 157, 211, 154,  52,  27],
+                                   [168,  77, 136, 124, 249,  28,  13, 122],
+                                   [ 97,  82, 181,  39,  53,  25,  80, 240],
+                                   [184, 227, 106, 165, 126, 113, 121, 228]]> : vector<4x8xi8>
 
-  %lhs_mem = memref.alloca() : memref<4x16xi8>
-  vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] : vector<4x16xi8>, memref<4x16xi8>
-  %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x16xi8>, vector<4x16xi8>
+  %lhs_mem = memref.alloca() : memref<4x8xi8>
+  vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] : vector<4x8xi8>, memref<4x8xi8>
+  %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x8xi8>, vector<4x8xi8>
 
   // RHS test data
-  %rhs_cst = arith.constant dense<[[ -9, -10,   7,  -8,  -5,  -2,   9,   5,   8,   9,   6,  -3,  -9,   7,  -4,  -7],
-                                   [ -2,   7,  -8,   2,   8,   7,   1,   2,  -3,   5,   8,  -2,   1,  -5,   2,   4],
-                                   [  3,  -9,   4,  -3,  -3,  -3,   4,   6,  -1,   0,  -5,   6,   3,  -1,   9,  -3],
-                                   [  3,  -2,   4,   1,   9,  -1,   1,  -5,   4,   9, -10,  -1,  -7,  -2,   0,  -3]]> : vector<4x16xi8>
+  %rhs_cst = arith.constant dense<[[ 40,  27,  37,  43,  38,  -6,  37,  49],
+                                   [-17, -50,  -1,  48, -13,  22,  39,  33],
+                                   [-35, -24,  37, -32,  33,  30, -11, -17],
+                                   [-28,  31,   3, -44, -15, -27,  22,  35]]> : vector<4x8xi8>
 
-  %rhs_mem = memref.alloca() : memref<4x16xi8>
-  vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] : vector<4x16xi8>, memref<4x16xi8>
-  %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x16xi8>, vector<4x16xi8>
+  %rhs_mem = memref.alloca() : memref<4x8xi8>
+  vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] : vector<4x8xi8>, memref<4x8xi8>
+  %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x8xi8>, vector<4x8xi8>
 
   // Matrix multiplication and accumulate with transposed RHS.
-  %0 = arith.extui %lhs : vector<4x16xi8> to vector<4x16xi32>
-  %1 = arith.extsi %rhs : vector<4x16xi8> to vector<4x16xi32>
+  %0 = arith.extui %lhs : vector<4x8xi8> to vector<4x8xi32>
+  %1 = arith.extsi %rhs : vector<4x8xi8> to vector<4x8xi32>
   %2 = vector.contract {indexing_maps = #packed_maps,
                         iterator_types = ["parallel", "parallel", "reduction"],
                         kind = #vector.kind<add>} %0, %1, %acc
-    : vector<4x16xi32>, vector<4x16xi32> into vector<4x4xi32>
+    : vector<4x8xi32>, vector<4x8xi32> into vector<4x4xi32>
 
   // Display the result of the multiplication
   vector.print str "Result(USMMLA):\n"
@@ -252,42 +252,42 @@ func.func @test_summla() {
   %c0_i8 = arith.constant 0 : i8
 
   // Accumulator test data
-  %acc_cst = arith.constant dense<[[-61,  52,   8, -54],
-                                   [-25, -50,  22, -15],
-                                   [  6,   0, -46,  32],
-                                   [-59, -62, -60, -38]]> : vector<4x4xi32>
+  %acc_cst = arith.constant dense<[[-44,  20,  44, -46],
+                                   [ -8,  25, -34,  26],
+                                   [-20, -36,  -3,  39],
+                                   [-48, -31, -25, -21]]> : vector<4x4xi32>
 
   %acc_mem = memref.alloca() : memref<4x4xi32>
   vector.transfer_write %acc_cst, %acc_mem[%c0, %c0] : vector<4x4xi32>, memref<4x4xi32>
   %acc = vector.transfer_read %acc_mem[%c0, %c0], %c0_i32 {in_bounds = [true, true]} : memref<4x4xi32>, vector<4x4xi32>
 
   // LHS test data
-  %lhs_cst = arith.constant dense<[[ -4,  -4,  -4,  -6,   0,   1,   6,   2,  -1,   4,   5,  -8,   9,   5,   4,   9],
-                                   [ -1,   6,   0,   7,  -7,   8,   5,   8,  -7,   6,  -2,   1,   1,   5,  -4,  -4],
-                                   [  4, -10,  -3,   5,   3,   2,   3,  -7,   9,  -9, -10,   7,  -8,  -5,  -2,   9],
-                                   [  5,   8,   9,   6,  -3,  -9,   7,  -4,  -7,  -2,   7,  -8,   2,   8,   7,   1]]> : vector<4x16xi8>
+  %lhs_cst = arith.constant dense<[[-35, -27, -36, -31,  23, -34,  -8, -33],
+                                   [-20,  17, -32, -47,  37,  22,  -7, -21],
+                                   [ -7, -35,  20,  -4,  39,  46, -23,  40],
+                                   [ 40,  27,  37,  43,  38,  -6,  37,  49]]> : vector<4x8xi8>
 
-  %lhs_mem = memref.alloca() : memref<4x16xi8>
-  vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] : vector<4x16xi8>, memref<4x16xi8>
-  %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x16xi8>, vector<4x16xi8>
+  %lhs_mem = memref.alloca() : memref<4x8xi8>
+  vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] : vector<4x8xi8>, memref<4x8xi8>
+  %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x8xi8>, vector<4x8xi8>
 
   // RHS test data
-  %rhs_cst = arith.constant dense<[[12, 39, 62, 47, 59, 29, 20, 18, 52, 25, 27, 40, 11, 52, 37, 60],
-                                   [29, 44, 46, 25, 13, 33, 14, 53, 56, 39, 39, 39, 46, 30, 22, 48],
-                                   [61, 54, 41, 63, 27, 10, 37, 30, 16, 45, 41, 51, 39, 28, 13, 28],
-                                   [21, 28, 24, 40, 46, 30, 11, 19,  9, 11,  5, 46, 19, 26,  0,  9]]> : vector<4x16xi8>
+  %rhs_cst = arith.constant dense<[[125, 171, 138, 187, 108, 175,  82,  99],
+                                   [221,  25, 164,  97, 156, 221, 218, 177],
+                                   [171, 160, 219, 191, 144,  45, 161, 210],
+                                   [223, 165, 123,  99, 108,  86,  37,  92]]> : vector<4x8xi8>
 
-  %rhs_mem = memref.alloca() : memref<4x16xi8>
-  vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] : vector<4x16xi8>, memref<4x16xi8>
-  %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x16xi8>, vector<4x16xi8>
+  %rhs_mem = memref.alloca() : memref<4x8xi8>
+  vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] : vector<4x8xi8>, memref<4x8xi8>
+  %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<4x8xi8>, vector<4x8xi8>
 
   // Matrix multiplication and accumulate with transposed RHS.
-  %0 = arith.extsi %lhs : vector<4x16xi8> to vector<4x16xi32>
-  %1 = arith.extui %rhs : vector<4x16xi8> to vector<4x16xi32>
+  %0 = arith.extsi %lhs : vector<4x8xi8> to vector<4x8xi32>
+  %1 = arith.extui %rhs : vector<4x8xi8> to vector<4x8xi32>
   %2 = vector.contract {indexing_maps = #packed_maps,
                         iterator_types = ["parallel", "parallel", "reduction"],
                         kind = #vector.kind<add>} %0, %1, %acc
-    : vector<4x16xi32>, vector<4x16xi32> into vector<4x4xi32>
+    : vector<4x8xi32>, vector<4x8xi32> into vector<4x4xi32>
 
   // Display the result of the multiplication
   vector.print str "Result(SUMMLA (i.e. USMMLA transposed)):\n"
@@ -305,31 +305,31 @@ func.func @test_summla() {
 
 func.func @main() {
 // CHECK-LABEL: Result(SMMLA):
-// CHECK: (   82,  -63,   95,   11 )
-// CHECK: (  184,  -81,  -17, -172 )
-// CHECK: (  168, -158, -251, -133 )
-// CHECK: ( -139,   40,  -48,   75 )
+// CHECK: ( -1999,  1941,   685, -2879 )
+// CHECK: ( -3705,  2952,   987,  -685 )
+// CHECK: (  2565,  4157, -1589,  -357 )
+// CHECK: (  2383, -2252,    32, -1365 )
   func.call @test_smmla() : () -> ()
 
 // CHECK-LABEL: Result(UMMLA):
-// CHECK: ( 12414, 13508, 16691, 16069 )
-// CHECK: (  8935, 13219, 13408, 13644 )
-// CHECK: ( 12223, 15233, 18131, 18553 )
-// CHECK: ( 14459, 16573, 19443, 19417 )
+// CHECK: ( 9183,  9513, 10460, 11314 )
+// CHECK: ( 9648,  9812, 10092, 12088 )
+// CHECK: ( 7548,  7625,  8398,  9044 )
+// CHECK: ( 8855,  9046,  9685, 11191 )
   func.call @test_ummla() : () -> ()
 
 // CHECK-LABEL: Result(USMMLA):
-// CHECK: (  176,  483,  468,  265 )
-// CHECK: (   23,  449,  192, -727 )
-// CHECK: ( -128,  563,  -30,   66 )
-// CHECK: ( -476,  657,  202,  334 )
+// CHECK: ( 28403,    445,  -2759, -11409 )
+// CHECK: ( 34908,   1047,    142,  -7274 )
+// CHECK: ( 31032,   6807,  -2378,   7382 )
+// CHECK: ( 44217,   6396, -10930,    623 )
   func.call @test_usmmla() : () -> ()
 
 // CHECK-LABEL: Result(SUMMLA (i.e. USMMLA transposed)):
-// CHECK: ( 300,  716,   54, -378 )
-// CHECK: ( 244,  746, 1184,  689 )
-// CHECK: ( 253, -655, -688,  115 )
-// CHECK: ( 995,  574, 1490,  177 )
+// CHECK: ( -27190, -28812, -30502, -23575 )
+// CHECK: (  -7613,  -8386, -15938,  -6521 )
+// CHECK: (   9468,  18750,   9199,   5764 )
+// CHECK: (  33655,  41064,  48900,  31627 )
   func.call @test_summla() : () -> ()
 
   return
