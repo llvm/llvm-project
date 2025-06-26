@@ -42,7 +42,7 @@ protected:
     AARes->addAAResult(*BasicAA);
     PSE.reset(new PredicatedScalarEvolution(*SE, *L));
     LAI.reset(
-        new LoopAccessInfo(L, &*SE, nullptr, TLI.get(), &*AARes, &*DT, &*LI));
+        new LoopAccessInfo(L, &*SE, nullptr, &*TLI, &*AARes, &*DT, &*LI));
     IAI.reset(new InterleavedAccessInfo(*PSE, L, &*DT, &*LI, &*LAI));
     IAI->analyzeInterleaving(false);
     return {Plan, *IAI};
