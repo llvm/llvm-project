@@ -10655,12 +10655,8 @@ bool SIInstrInfo::isXDLWMMA(const MachineInstr &MI) const {
 bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
-  if (AMDGPU::isGFX12Plus(ST)) {
-    if (isDOT(MI))
-      return true;
-
-    return isXDLWMMA(MI);
-  }
+  if (AMDGPU::isGFX12Plus(ST))
+    return isDOT(MI) || isXDLWMMA(MI);
 
   if (!isMAI(MI) || isDGEMM(Opcode) ||
       Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
