@@ -12,8 +12,13 @@
 
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
+#include "llvm/MC/MCSectionGOFF.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,44 +28,13 @@ using namespace llvm;
 #define DEBUG_TYPE "goff-writer"
 
 namespace {
-
-// The standard System/390 convention is to name the high-order (leftmost) bit
-// in a byte as bit zero. The Flags type helps to set bits in a byte according
-// to this numeration order.
-class Flags {
-  uint8_t Val;
-
-  constexpr static uint8_t bits(uint8_t BitIndex, uint8_t Length, uint8_t Value,
-                                uint8_t OldValue) {
-    assert(BitIndex < 8 && "Bit index out of bounds!");
-    assert(Length + BitIndex <= 8 && "Bit length too long!");
-
-    uint8_t Mask = ((1 << Length) - 1) << (8 - BitIndex - Length);
-    Value = Value << (8 - BitIndex - Length);
-    assert((Value & Mask) == Value && "Bits set outside of range!");
-
-    return (OldValue & ~Mask) | Value;
-  }
-
-public:
-  constexpr Flags() : Val(0) {}
-  constexpr Flags(uint8_t BitIndex, uint8_t Length, uint8_t Value)
-      : Val(bits(BitIndex, Length, Value, 0)) {}
-
-  void set(uint8_t BitIndex, uint8_t Length, uint8_t Value) {
-    Val = bits(BitIndex, Length, Value, Val);
-  }
-
-  constexpr operator uint8_t() const { return Val; }
-};
-
 // Common flag values on records.
 
 // Flag: This record is continued.
-constexpr uint8_t RecContinued = Flags(7, 1, 1);
+constexpr uint8_t RecContinued = GOFF::Flags(7, 1, 1);
 
 // Flag: This record is a continuation.
-constexpr uint8_t RecContinuation = Flags(6, 1, 1);
+constexpr uint8_t RecContinuation = GOFF::Flags(6, 1, 1);
 
 // The GOFFOstream is responsible to write the data into the fixed physical
 // records of the format. A user of this class announces the begin of a new
@@ -223,19 +197,160 @@ void GOFFOstream::finalizeRecord() {
 }
 
 namespace {
+// A GOFFSymbol holds all the data required for writing an ESD record.
+class GOFFSymbol {
+public:
+  std::string Name;
+  uint32_t EsdId;
+  uint32_t ParentEsdId;
+  uint64_t Offset = 0; // Offset of the symbol into the section. LD only.
+                       // Offset is only 32 bit, the larger type is used to
+                       // enable error checking.
+  GOFF::ESDSymbolType SymbolType;
+  GOFF::ESDNameSpaceId NameSpace = GOFF::ESD_NS_ProgramManagementBinder;
+
+  GOFF::BehavioralAttributes BehavAttrs;
+  GOFF::SymbolFlags SymbolFlags;
+  uint32_t SortKey = 0;
+  uint32_t SectionLength = 0;
+  uint32_t ADAEsdId = 0;
+  uint32_t EASectionEDEsdId = 0;
+  uint32_t EASectionOffset = 0;
+  uint8_t FillByteValue = 0;
+
+  GOFFSymbol() : EsdId(0), ParentEsdId(0) {}
+
+  GOFFSymbol(StringRef Name, uint32_t EsdID, const GOFF::SDAttr &Attr)
+      : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(0),
+        SymbolType(GOFF::ESD_ST_SectionDefinition) {
+    BehavAttrs.setTaskingBehavior(Attr.TaskingBehavior);
+    BehavAttrs.setBindingScope(Attr.BindingScope);
+  }
+
+  GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
+             const GOFF::EDAttr &Attr)
+      : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
+        SymbolType(GOFF::ESD_ST_ElementDefinition) {
+    this->NameSpace = Attr.NameSpace;
+    // We always set a fill byte value.
+    this->FillByteValue = Attr.FillByteValue;
+    SymbolFlags.setFillBytePresence(1);
+    SymbolFlags.setReservedQwords(Attr.ReservedQwords);
+    // TODO Do we need/should set the "mangled" flag?
+    BehavAttrs.setReadOnly(Attr.IsReadOnly);
+    BehavAttrs.setRmode(Attr.Rmode);
+    BehavAttrs.setTextStyle(Attr.TextStyle);
+    BehavAttrs.setBindingAlgorithm(Attr.BindAlgorithm);
+    BehavAttrs.setLoadingBehavior(Attr.LoadBehavior);
+    BehavAttrs.setAlignment(Attr.Alignment);
+  }
+
+  GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
+             GOFF::ESDNameSpaceId NameSpace, const GOFF::LDAttr &Attr)
+      : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
+        SymbolType(GOFF::ESD_ST_LabelDefinition), NameSpace(NameSpace) {
+    SymbolFlags.setRenameable(Attr.IsRenamable);
+    BehavAttrs.setExecutable(Attr.Executable);
+    BehavAttrs.setBindingStrength(Attr.BindingStrength);
+    BehavAttrs.setLinkageType(Attr.Linkage);
+    BehavAttrs.setAmode(Attr.Amode);
+    BehavAttrs.setBindingScope(Attr.BindingScope);
+  }
+
+  GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
+             const GOFF::EDAttr &EDAttr, const GOFF::PRAttr &Attr)
+      : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
+        SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
+    SymbolFlags.setRenameable(Attr.IsRenamable);
+    BehavAttrs.setExecutable(Attr.Executable);
+    BehavAttrs.setLinkageType(Attr.Linkage);
+    BehavAttrs.setBindingScope(Attr.BindingScope);
+    BehavAttrs.setAlignment(EDAttr.Alignment);
+  }
+};
+
 class GOFFWriter {
   GOFFOstream OS;
+  MCAssembler &Asm;
 
   void writeHeader();
+  void writeSymbol(const GOFFSymbol &Symbol);
   void writeEnd();
 
+  void defineSectionSymbols(const MCSectionGOFF &Section);
+  void defineLabel(const MCSymbolGOFF &Symbol);
+  void defineSymbols();
+
 public:
-  GOFFWriter(raw_pwrite_stream &OS);
+  GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm);
   uint64_t writeObject();
 };
 } // namespace
 
-GOFFWriter::GOFFWriter(raw_pwrite_stream &OS) : OS(OS) {}
+GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm)
+    : OS(OS), Asm(Asm) {}
+
+void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
+  if (Section.isSD()) {
+    GOFFSymbol SD(Section.getName(), Section.getOrdinal(),
+                  Section.getSDAttributes());
+    writeSymbol(SD);
+  }
+
+  if (Section.isED()) {
+    GOFFSymbol ED(Section.getName(), Section.getOrdinal(),
+                  Section.getParent()->getOrdinal(), Section.getEDAttributes());
+    ED.SectionLength = Asm.getSectionAddressSize(Section);
+    writeSymbol(ED);
+  }
+
+  if (Section.isPR()) {
+    MCSectionGOFF *Parent = Section.getParent();
+    GOFFSymbol PR(Section.getName(), Section.getOrdinal(), Parent->getOrdinal(),
+                  Parent->getEDAttributes(), Section.getPRAttributes());
+    PR.SectionLength = Asm.getSectionAddressSize(Section);
+    if (Section.requiresNonZeroLength()) {
+      // We cannot have a zero-length section for data.  If we do,
+      // artificially inflate it. Use 2 bytes to avoid odd alignments. Note:
+      // if this is ever changed, you will need to update the code in
+      // SystemZAsmPrinter::emitCEEMAIN and SystemZAsmPrinter::emitCELQMAIN to
+      // generate -1 if there is no ADA
+      if (!PR.SectionLength)
+        PR.SectionLength = 2;
+    }
+    writeSymbol(PR);
+  }
+}
+
+void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
+  MCSectionGOFF &Section = static_cast<MCSectionGOFF &>(Symbol.getSection());
+  GOFFSymbol LD(Symbol.getName(), Symbol.getIndex(), Section.getOrdinal(),
+                Section.getEDAttributes().NameSpace, Symbol.getLDAttributes());
+  if (Symbol.getADA())
+    LD.ADAEsdId = Symbol.getADA()->getOrdinal();
+  writeSymbol(LD);
+}
+
+void GOFFWriter::defineSymbols() {
+  unsigned Ordinal = 0;
+  // Process all sections.
+  for (MCSection &S : Asm) {
+    auto &Section = cast<MCSectionGOFF>(S);
+    Section.setOrdinal(++Ordinal);
+    defineSectionSymbols(Section);
+  }
+
+  // Process all symbols
+  for (const MCSymbol &Sym : Asm.symbols()) {
+    if (Sym.isTemporary())
+      continue;
+    auto &Symbol = cast<MCSymbolGOFF>(Sym);
+    if (Symbol.hasLDAttributes()) {
+      Symbol.setIndex(++Ordinal);
+      defineLabel(Symbol);
+    }
+  }
+}
 
 void GOFFWriter::writeHeader() {
   OS.newRecord(GOFF::RT_HDR);
@@ -251,6 +366,45 @@ void GOFFWriter::writeHeader() {
   OS.write_zeros(6);       // Reserved
 }
 
+void GOFFWriter::writeSymbol(const GOFFSymbol &Symbol) {
+  if (Symbol.Offset >= (((uint64_t)1) << 31))
+    report_fatal_error("ESD offset out of range");
+
+  // All symbol names are in EBCDIC.
+  SmallString<256> Name;
+  ConverterEBCDIC::convertToEBCDIC(Symbol.Name, Name);
+
+  // Check length here since this number is technically signed but we need uint
+  // for writing to records.
+  if (Name.size() >= GOFF::MaxDataLength)
+    report_fatal_error("Symbol max name length exceeded");
+  uint16_t NameLength = Name.size();
+
+  OS.newRecord(GOFF::RT_ESD);
+  OS.writebe<uint8_t>(Symbol.SymbolType);   // Symbol Type
+  OS.writebe<uint32_t>(Symbol.EsdId);       // ESDID
+  OS.writebe<uint32_t>(Symbol.ParentEsdId); // Parent or Owning ESDID
+  OS.writebe<uint32_t>(0);                  // Reserved
+  OS.writebe<uint32_t>(
+      static_cast<uint32_t>(Symbol.Offset));     // Offset or Address
+  OS.writebe<uint32_t>(0);                       // Reserved
+  OS.writebe<uint32_t>(Symbol.SectionLength);    // Length
+  OS.writebe<uint32_t>(Symbol.EASectionEDEsdId); // Extended Attribute ESDID
+  OS.writebe<uint32_t>(Symbol.EASectionOffset);  // Extended Attribute Offset
+  OS.writebe<uint32_t>(0);                       // Reserved
+  OS.writebe<uint8_t>(Symbol.NameSpace);         // Name Space ID
+  OS.writebe<uint8_t>(Symbol.SymbolFlags);       // Flags
+  OS.writebe<uint8_t>(Symbol.FillByteValue);     // Fill-Byte Value
+  OS.writebe<uint8_t>(0);                        // Reserved
+  OS.writebe<uint32_t>(Symbol.ADAEsdId);         // ADA ESDID
+  OS.writebe<uint32_t>(Symbol.SortKey);          // Sort Priority
+  OS.writebe<uint64_t>(0);                       // Reserved
+  for (auto F : Symbol.BehavAttrs.Attr)
+    OS.writebe<uint8_t>(F);          // Behavioral Attributes
+  OS.writebe<uint16_t>(NameLength);  // Name Length
+  OS.write(Name.data(), NameLength); // Name
+}
+
 void GOFFWriter::writeEnd() {
   uint8_t F = GOFF::END_EPR_None;
   uint8_t AMODE = 0;
@@ -259,9 +413,9 @@ void GOFFWriter::writeEnd() {
   // TODO Set Flags/AMODE/ESDID for entry point.
 
   OS.newRecord(GOFF::RT_END);
-  OS.writebe<uint8_t>(Flags(6, 2, F)); // Indicator flags
-  OS.writebe<uint8_t>(AMODE);          // AMODE
-  OS.write_zeros(3);                   // Reserved
+  OS.writebe<uint8_t>(GOFF::Flags(6, 2, F)); // Indicator flags
+  OS.writebe<uint8_t>(AMODE);                // AMODE
+  OS.write_zeros(3);                         // Reserved
   // The record count is the number of logical records. In principle, this value
   // is available as OS.logicalRecords(). However, some tools rely on this field
   // being zero.
@@ -271,6 +425,9 @@ void GOFFWriter::writeEnd() {
 
 uint64_t GOFFWriter::writeObject() {
   writeHeader();
+
+  defineSymbols();
+
   writeEnd();
 
   // Make sure all records are written.
@@ -289,7 +446,7 @@ GOFFObjectWriter::GOFFObjectWriter(
 GOFFObjectWriter::~GOFFObjectWriter() {}
 
 uint64_t GOFFObjectWriter::writeObject() {
-  uint64_t Size = GOFFWriter(OS).writeObject();
+  uint64_t Size = GOFFWriter(OS, *Asm).writeObject();
   return Size;
 }
 

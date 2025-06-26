@@ -264,6 +264,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue Rotl = DAG->getNode(ISD::ROTL, DL, Int32VT, Op0, Op1);
   SDValue Rotr = DAG->getNode(ISD::ROTR, DL, Int32VT, Op1, Op0);
 
+  SDValue SMulLoHi = DAG->getNode(ISD::SMUL_LOHI, DL,
+                                  DAG->getVTList(Int32VT, Int32VT), Op0, Op1);
+  SDValue PartsDiff =
+      DAG->getNode(ISD::SUB, DL, Int32VT, SMulLoHi, SMulLoHi.getValue(1));
+
   SDValue ICMP_GT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGT);
   SDValue ICMP_GE = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGE);
   SDValue ICMP_UGT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETUGT);
@@ -346,6 +351,15 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(UMin, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMinLikeULT, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMinLikeULE, m_UMinLike(m_Value(), m_Value())));
+
+  // By default, it matches any of the results.
+  EXPECT_TRUE(
+      sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI), m_Opc(ISD::SMUL_LOHI))));
+  // Matching a specific result.
+  EXPECT_TRUE(sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI),
+                                        m_Result<1>(m_Opc(ISD::SMUL_LOHI)))));
+  EXPECT_FALSE(sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI),
+                                         m_Result<0>(m_Opc(ISD::SMUL_LOHI)))));
 
   SDValue BindVal;
   EXPECT_TRUE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_Value(BindVal),
