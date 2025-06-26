@@ -3240,40 +3240,53 @@ static SDValue performBitcastCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performAnyTrueCombine(SDNode *N, SelectionDAG &DAG) {
-  // any_true (setcc <X>, 0, eq)
-  // => not (all_true X)
-
-  SDLoc DL(N);
+static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
+  // any_true (setcc <X>, 0, eq) => (not (all_true X))
+  // all_true (setcc <X>, 0, eq) => (not (any_true X))
+  // any_true (setcc <X>, 0, ne) => (any_true X)
+  // all_true (setcc <X>, 0, ne) => (all_true X)
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
-  if (N->getConstantOperandVal(0) != Intrinsic::wasm_anytrue)
-    return SDValue();
+  using namespace llvm::SDPatternMatch;
+  SDLoc DL(N);
+  auto CombineSetCC =
+      [&N, &DAG, &DL](Intrinsic::WASMIntrinsics InPre, ISD::CondCode SetType,
+                      Intrinsic::WASMIntrinsics InPost) -> SDValue {
+    if (N->getConstantOperandVal(0) != InPre)
+      return SDValue();
 
-  SDValue SetCC = N->getOperand(1);
-  if (SetCC.getOpcode() != ISD::SETCC)
-    return SDValue();
+    SDValue LHS;
+    if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
+                                              m_SpecificCondCode(SetType))))
+      return SDValue();
 
-  SDValue LHS = SetCC->getOperand(0);
-  SDValue RHS = SetCC->getOperand(1);
-  ISD::CondCode Cond = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
-  EVT LT = LHS.getValueType();
-  unsigned NumElts = LT.getVectorNumElements();
-  if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
-    return SDValue();
+    EVT LT = LHS.getValueType();
+    unsigned NumElts = LT.getVectorNumElements();
+    if (LT.getScalarSizeInBits() > 128 / NumElts)
+      return SDValue();
 
-  EVT Width = MVT::getIntegerVT(128 / NumElts);
+    SDValue Ret = DAG.getZExtOrTrunc(
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                    {DAG.getConstant(InPost, DL, MVT::i32), LHS}),
+        DL, MVT::i1);
+    if (SetType == ISD::SETEQ)
+      Ret = DAG.getNOT(DL, Ret, MVT::i1);
+    return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
+  };
 
-  if (!isNullOrNullSplat(RHS) || Cond != ISD::SETEQ)
-    return SDValue();
+  if (SDValue AnyTrueEQ = CombineSetCC(Intrinsic::wasm_anytrue, ISD::SETEQ,
+                                       Intrinsic::wasm_alltrue))
+    return AnyTrueEQ;
+  if (SDValue AllTrueEQ = CombineSetCC(Intrinsic::wasm_alltrue, ISD::SETEQ,
+                                       Intrinsic::wasm_anytrue))
+    return AllTrueEQ;
+  if (SDValue AnyTrueNE = CombineSetCC(Intrinsic::wasm_anytrue, ISD::SETNE,
+                                       Intrinsic::wasm_anytrue))
+    return AnyTrueNE;
+  if (SDValue AllTrueNE = CombineSetCC(Intrinsic::wasm_alltrue, ISD::SETNE,
+                                       Intrinsic::wasm_alltrue))
+    return AllTrueNE;
 
-  SDValue Ret = DAG.getZExtOrTrunc(
-      DAG.getNode(
-          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-          {DAG.getConstant(Intrinsic::wasm_alltrue, DL, MVT::i32),
-           DAG.getSExtOrTrunc(LHS, DL, LT.changeVectorElementType(Width))}),
-      DL, MVT::i1);
-  Ret = DAG.getNOT(DL, Ret, MVT::i1);
-  return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
+  return SDValue();
 }
 
 template <int MatchRHS, ISD::CondCode MatchCond, bool RequiresNegate,
@@ -3465,8 +3478,8 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN: {
-    if (auto AnyTrueCombine = performAnyTrueCombine(N, DCI.DAG))
-      return AnyTrueCombine;
+    if (auto AnyAllCombine = performAnyAllCombine(N, DCI.DAG))
+      return AnyAllCombine;
     return performLowerPartialReduction(N, DCI.DAG);
   }
   case ISD::MUL:
