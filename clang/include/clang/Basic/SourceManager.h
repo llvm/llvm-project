@@ -720,6 +720,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// expansion.
   SmallVector<SrcMgr::SLocEntry, 0> LocalSLocEntryTable;
 
+  SmallVector<SourceLocation::UIntTy, 0> LocalLocOffsetTable;
+  
   /// The table of SLocEntries that are loaded from other modules.
   ///
   /// Negative FileIDs are indexes into this table. To get from ID to an index,

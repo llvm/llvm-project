@@ -330,6 +330,7 @@ void SourceManager::clearIDTables() {
   MainFileID = FileID();
   LocalSLocEntryTable.clear();
   LoadedSLocEntryTable.clear();
+  LocalLocOffsetTable.clear();
   SLocEntryLoaded.clear();
   SLocEntryOffsetLoaded.clear();
   LastLineNoFileIDQuery = FileID();
@@ -637,9 +638,11 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     noteSLocAddressSpaceUsage(Diag);
     return FileID();
   }
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
   LocalSLocEntryTable.push_back(
       SLocEntry::get(NextLocalOffset,
                      FileInfo::get(IncludePos, File, FileCharacter, Filename)));
+  LocalLocOffsetTable.push_back(NextLocalOffset);
   // We do a +1 here because we want a SourceLocation that means "the end of the
   // file", e.g. for the "no newline at the end of the file" diagnostic.
   NextLocalOffset += FileSize + 1;
@@ -691,7 +694,9 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     SLocEntryLoaded[Index] = SLocEntryOffsetLoaded[Index] = true;
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
+  LocalLocOffsetTable.push_back(NextLocalOffset);
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
     Diag.Report(diag::err_sloc_space_too_large);
@@ -830,10 +835,11 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // SLocOffset.
   unsigned LessIndex = 0;
   // upper bound of the search range.
-  unsigned GreaterIndex = LocalSLocEntryTable.size();
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
+  unsigned GreaterIndex = LocalLocOffsetTable.size();
   if (LastFileIDLookup.ID >= 0) {
     // Use the LastFileIDLookup to prune the search space.
-    if (LocalSLocEntryTable[LastFileIDLookup.ID].getOffset() < SLocOffset)
+    if (LocalLocOffsetTable[LastFileIDLookup.ID] < SLocOffset)
       LessIndex = LastFileIDLookup.ID;
     else
       GreaterIndex = LastFileIDLookup.ID;
@@ -844,7 +850,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   while (true) {
     --GreaterIndex;
     assert(GreaterIndex < LocalSLocEntryTable.size());
-    if (LocalSLocEntryTable[GreaterIndex].getOffset() <= SLocOffset) {
+    if (LocalLocOffsetTable[GreaterIndex] <= SLocOffset) {
       FileID Res = FileID::get(int(GreaterIndex));
       // Remember it.  We have good locality across FileID lookups.
       LastFileIDLookup = Res;
@@ -860,8 +866,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
 
     unsigned MiddleIndex = LessIndex + (GreaterIndex - LessIndex) / 2;
 
-    SourceLocation::UIntTy MidOffset =
-        getLocalSLocEntry(MiddleIndex).getOffset();
+    SourceLocation::UIntTy MidOffset = LocalLocOffsetTable[MiddleIndex];
 
     if (MidOffset <= SLocOffset)
       LessIndex = MiddleIndex + 1;
