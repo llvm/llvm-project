@@ -3,6 +3,14 @@
 #include <unordered_map>
 
 using StringMapT = std::unordered_map<std::string, std::string>;
+using StringMapTRef = const StringMapT &;
+
+void check_references(const StringMapT &ref1, StringMapT &ref2,
+                      StringMapTRef ref3, StringMapTRef &ref4,
+                      const StringMapT &&ref5, StringMapT &&ref6,
+                      const StringMapT *const &ref7) {
+  std::printf("Break here");
+}
 
 int main() {
   StringMapT string_map;
@@ -21,7 +29,12 @@ int main() {
     StringMapT::const_iterator const_baz = string_map.find("Baz");
     auto bucket_it = string_map.begin(string_map.bucket("Baz"));
     auto const_bucket_it = string_map.cbegin(string_map.bucket("Baz"));
+
     std::printf("Break here");
+
+    check_references(string_map, string_map, string_map, string_map,
+                     StringMapT{{"Foo", "Bar"}}, StringMapT{{"Baz", "Qux"}},
+                     &string_map);
   }
 
   return 0;

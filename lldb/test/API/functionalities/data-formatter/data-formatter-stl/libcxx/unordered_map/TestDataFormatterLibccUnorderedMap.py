@@ -64,3 +64,131 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
                 ValueCheck(name="second", summary='"Qux"'),
             ],
         )
+
+        lldbutil.continue_to_breakpoint(process, bkpt)
+
+        # Test references to std::unordered_map
+        self.expect_var_path(
+            "ref1",
+            summary="size=2",
+            type="const StringMapT &",
+            children=[
+                ValueCheck(
+                    name="[0]",
+                    children=[
+                        ValueCheck(name="first", summary='"Baz"'),
+                        ValueCheck(name="second", summary='"Qux"'),
+                    ],
+                ),
+                ValueCheck(
+                    name="[1]",
+                    children=[
+                        ValueCheck(name="first", summary='"Foo"'),
+                        ValueCheck(name="second", summary='"Bar"'),
+                    ],
+                ),
+            ],
+        )
+
+        self.expect_var_path(
+            "ref2",
+            summary="size=2",
+            type="StringMapT &",
+            children=[
+                ValueCheck(
+                    name="[0]",
+                    children=[
+                        ValueCheck(name="first", summary='"Baz"'),
+                        ValueCheck(name="second", summary='"Qux"'),
+                    ],
+                ),
+                ValueCheck(
+                    name="[1]",
+                    children=[
+                        ValueCheck(name="first", summary='"Foo"'),
+                        ValueCheck(name="second", summary='"Bar"'),
+                    ],
+                ),
+            ],
+        )
+
+        self.expect_var_path(
+            "ref3",
+            summary="size=2",
+            type="StringMapTRef",
+            children=[
+                ValueCheck(
+                    name="[0]",
+                    children=[
+                        ValueCheck(name="first", summary='"Baz"'),
+                        ValueCheck(name="second", summary='"Qux"'),
+                    ],
+                ),
+                ValueCheck(
+                    name="[1]",
+                    children=[
+                        ValueCheck(name="first", summary='"Foo"'),
+                        ValueCheck(name="second", summary='"Bar"'),
+                    ],
+                ),
+            ],
+        )
+
+        self.expect_var_path(
+            "ref4",
+            summary="size=2",
+            type="const StringMapT &",
+            children=[
+                ValueCheck(
+                    name="[0]",
+                    children=[
+                        ValueCheck(name="first", summary='"Baz"'),
+                        ValueCheck(name="second", summary='"Qux"'),
+                    ],
+                ),
+                ValueCheck(
+                    name="[1]",
+                    children=[
+                        ValueCheck(name="first", summary='"Foo"'),
+                        ValueCheck(name="second", summary='"Bar"'),
+                    ],
+                ),
+            ],
+        )
+
+        self.expect_var_path(
+            "ref5",
+            summary="size=1",
+            type="const StringMapT &&",
+            children=[
+                ValueCheck(
+                    name="[0]",
+                    children=[
+                        ValueCheck(name="first", summary='"Foo"'),
+                        ValueCheck(name="second", summary='"Bar"'),
+                    ],
+                ),
+            ],
+        )
+
+        self.expect_var_path(
+            "ref6",
+            summary="size=1",
+            type="StringMapT &&",
+            children=[
+                ValueCheck(
+                    name="[0]",
+                    children=[
+                        ValueCheck(name="first", summary='"Baz"'),
+                        ValueCheck(name="second", summary='"Qux"'),
+                    ],
+                ),
+            ],
+        )
+
+        # FIXME: we're getting this wrong.
+        self.expect_var_path(
+            "ref7",
+            summary="size=0",
+            type="const StringMapT *const &",
+        )
