@@ -35,6 +35,7 @@
 #include <vector>
 
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Host/Terminal.h"
 #include "lldb/lldb-private.h"
 
 #if !defined(_WIN32) && !defined(__ANDROID__)
@@ -266,6 +267,8 @@ public:
   size_t GetTerminalWidth() { return m_terminal_width; }
 
   size_t GetTerminalHeight() { return m_terminal_height; }
+
+  CursorPosition GetCursorPosition();
 
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of

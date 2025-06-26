@@ -28,6 +28,7 @@
 #define ANSI_TO_START_OF_ROW ESCAPE "[%u;1f"
 #define ANSI_REVERSE_VIDEO ESCAPE "[7m"
 #define ANSI_UP_ROWS ESCAPE "[%dA"
+#define ANSI_SET_COLUMN_N ESCAPE "[%uG"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -103,19 +104,35 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
       (mode == DisableStatusline) ? m_terminal_height : m_terminal_height - 1;
 
   LockedStreamFile locked_stream = stream_sp->Lock();
+
+  if (mode == EnableStatusline) {
+    // Get the cursor position before we potentially change the cursor position.
+    CursorPosition cursor_position = m_debugger.GetIOHandlerCursorPosition();
+
+    // Move everything on the screen up to make space for the statusline. This
+    // is going to move the cursor to the start of the next line which we need
+    // to undo.
+    locked_stream << '\n';
+
+    // First move the cursor back up. We can't use ANSI_SAVE/RESTORE_CURSOR
+    // here, because the old and new position differ if everything on the screen
+    // moved up.
+    locked_stream.Printf(ANSI_UP_ROWS, 1);
+
+    // Finally move the cursor back to the correct column, if the IOHandler was
+    // able to tell us where that was.
+    if (cursor_position.cols)
+      locked_stream.Printf(ANSI_SET_COLUMN_N, *cursor_position.cols);
+  }
+
+  // Adjust the scroll window.
   locked_stream << ANSI_SAVE_CURSOR;
   locked_stream.Printf(ANSI_SET_SCROLL_ROWS, scroll_height);
   locked_stream << ANSI_RESTORE_CURSOR;
-  switch (mode) {
-  case EnableStatusline:
-    // Move everything on the screen up.
-    locked_stream.Printf(ANSI_UP_ROWS, 1);
-    locked_stream << '\n';
-    break;
-  case DisableStatusline:
+
+  if (mode == DisableStatusline) {
     // Clear the screen below to hide the old statusline.
     locked_stream << ANSI_CLEAR_BELOW;
-    break;
   }
 }
 

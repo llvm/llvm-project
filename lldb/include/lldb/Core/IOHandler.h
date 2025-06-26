@@ -10,6 +10,7 @@
 #define LLDB_CORE_IOHANDLER_H
 
 #include "lldb/Host/Config.h"
+#include "lldb/Host/Terminal.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Predicate.h"
@@ -112,6 +113,10 @@ public:
   virtual const char *GetCommandPrefix() { return nullptr; }
 
   virtual const char *GetHelpPrologue() { return nullptr; }
+
+  virtual CursorPosition GetCursorPosition() const {
+    return {std::nullopt, std::nullopt};
+  }
 
   int GetInputFD();
 
@@ -403,6 +408,8 @@ public:
   uint32_t GetCurrentLineIndex() const;
 
   void PrintAsync(const char *s, size_t len, bool is_stdout) override;
+
+  virtual CursorPosition GetCursorPosition() const override;
 
 private:
 #if LLDB_ENABLE_LIBEDIT

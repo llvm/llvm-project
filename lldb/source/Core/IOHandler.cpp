@@ -634,6 +634,14 @@ void IOHandlerEditline::GotEOF() {
 #endif
 }
 
+CursorPosition IOHandlerEditline::GetCursorPosition() const {
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up)
+    return m_editline_up->GetCursorPosition();
+#endif
+  return {std::nullopt, std::nullopt};
+}
+
 void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {

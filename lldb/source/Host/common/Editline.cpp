@@ -398,6 +398,20 @@ int Editline::GetLineIndexForLocation(CursorLocation location, int cursor_row) {
   return line;
 }
 
+CursorPosition Editline::GetCursorPosition() {
+  if (!m_editline)
+    return {};
+
+  const LineInfoW *info = el_wline(m_editline);
+  if (!info)
+    return {};
+
+  const size_t editline_cursor_col =
+      (int)((info->cursor - info->buffer) + GetPromptWidth()) + 1;
+
+  return {editline_cursor_col, std::nullopt};
+}
+
 void Editline::MoveCursor(CursorLocation from, CursorLocation to) {
   const LineInfoW *info = el_wline(m_editline);
   int editline_cursor_position =

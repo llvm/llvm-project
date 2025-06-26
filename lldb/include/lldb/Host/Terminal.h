@@ -169,6 +169,11 @@ protected:
   lldb::pid_t m_process_group = -1;       ///< Cached process group information.
 };
 
+struct CursorPosition {
+  std::optional<unsigned> cols;
+  std::optional<unsigned> rows;
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_HOST_TERMINAL_H
