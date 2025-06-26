@@ -20986,6 +20986,83 @@ static SDValue performBuildVectorCombine(SDNode *N,
   return SDValue();
 }
 
+// A special combine for the vqdmulh family of instructions.
+// truncate( smin( sra ( mul( sext v0, sext v1 ) ), SHIFT_AMOUNT ),
+// SATURATING_VAL ) can be reduced to sqdmulh(...)
+static SDValue trySQDMULHCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 SelectionDAG &DAG) {
+
+  if (N->getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+
+  if (!VT.isVector() || VT.getScalarSizeInBits() > 64)
+    return SDValue();
+
+  SDValue SMin = N->getOperand(0);
+
+  if (SMin.getOpcode() != ISD::SMIN)
+    return SDValue();
+
+  ConstantSDNode *Clamp = isConstOrConstSplat(SMin.getOperand(1));
+
+  if (!Clamp)
+    return SDValue();
+
+  MVT ScalarType;
+  unsigned ShiftAmt = 0;
+  // Here we are considering clamped Arm Q format
+  // data types which use 2 upper bits, one for the
+  // integer part and one for the sign. We also consider
+  // standard signed integer types
+  switch (Clamp->getSExtValue()) {
+  case (1ULL << 14) - 1: // Q15 saturation
+  case (1ULL << 15) - 1:
+    ScalarType = MVT::i16;
+    ShiftAmt = 16;
+    break;
+  case (1ULL << 30) - 1: // Q31 saturation
+  case (1ULL << 31) - 1:
+    ScalarType = MVT::i32;
+    ShiftAmt = 32;
+    break;
+  default:
+    return SDValue();
+  }
+
+  SDValue Sra = SMin.getOperand(0);
+  if (Sra.getOpcode() != ISD::SRA)
+    return SDValue();
+
+  ConstantSDNode *RightShiftVec = isConstOrConstSplat(Sra.getOperand(1));
+  if (!RightShiftVec)
+    return SDValue();
+  unsigned SExtValue = RightShiftVec->getSExtValue();
+
+  if (SExtValue != ShiftAmt && SExtValue != (ShiftAmt - 1))
+    return SDValue();
+
+  SDValue Mul = Sra.getOperand(0);
+  if (Mul.getOpcode() != ISD::MUL)
+    return SDValue();
+
+  SDValue SExt0 = Mul.getOperand(0);
+  SDValue SExt1 = Mul.getOperand(1);
+
+  if (SExt0.getOpcode() != ISD::SIGN_EXTEND ||
+      SExt1.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+
+  SDValue V0 = SExt0.getOperand(0);
+  SDValue V1 = SExt1.getOperand(0);
+
+  SDLoc DL(N);
+  EVT VecVT = N->getValueType(0);
+  return DAG.getNode(AArch64ISD::SQDMULH, DL, VecVT, V0, V1);
+}
+
 static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(N);
@@ -20999,6 +21076,9 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
       Op = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op);
     return DAG.getNode(N0.getOpcode(), DL, VT, Op);
   }
+
+  if (SDValue V = trySQDMULHCombine(N, DCI, DAG))
+    return V;
 
   // Performing the following combine produces a preferable form for ISEL.
   // i32 (trunc (extract Vi64, idx)) -> i32 (extract (nvcast Vi32), idx*2))
@@ -26677,77 +26757,6 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return NVCAST;
 }
 
-// A special combine for the vqdmulh family of instructions. This is one of the
-// potential set of patterns that could patch this instruction. The base pattern
-// vshl(smin(uzp(smull, smull2), 1) can be reduced to vshl(vshr(sqdmulh(...),
-// 1), 1) when operating on Q31 data types
-static SDValue performVSHLCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI,
-                                  SelectionDAG &DAG) {
-
-  SDValue Op0 = N->getOperand(0);
-  ConstantSDNode *Splat = isConstOrConstSplat(N->getOperand(1));
-
-  if (Op0.getOpcode() != ISD::SMIN || !Splat || !Splat->isOne())
-    return SDValue();
-
-  auto trySQDMULHCombine = [](SDNode *N, SelectionDAG &DAG) -> SDValue {
-    EVT VT = N->getValueType(0);
-
-    if (!VT.isVector() || VT.getScalarSizeInBits() > 64)
-      return SDValue();
-
-    ConstantSDNode *Clamp;
-
-    if (N->getOpcode() != ISD::SMIN)
-      return SDValue();
-
-    Clamp = isConstOrConstSplat(N->getOperand(1));
-
-    if (!Clamp) {
-      return SDValue();
-    }
-
-    MVT ScalarType;
-    int ShftAmt = 0;
-    // Here we are considering clamped Arm Q format
-    // data types which uses 2 upper bits, one for the
-    // integer part and one for the sign.
-    switch (Clamp->getSExtValue()) {
-    case (1ULL << 30) - 1:
-      ScalarType = MVT::i32;
-      ShftAmt = 32;
-      break;
-    default:
-      return SDValue();
-    }
-
-    SDValue Mulhs = N->getOperand(0);
-    if (Mulhs.getOpcode() != ISD::MULHS)
-      return SDValue();
-
-    SDValue V0 = Mulhs.getOperand(0);
-    SDValue V1 = Mulhs.getOperand(1);
-
-    SDLoc DL(Mulhs);
-    const unsigned LegalLanes = 128 / ShftAmt;
-    EVT LegalVecVT = MVT::getVectorVT(ScalarType, LegalLanes);
-    return DAG.getNode(AArch64ISD::SQDMULH, DL, LegalVecVT, V0, V1);
-  };
-
-  if (SDValue Val = trySQDMULHCombine(Op0.getNode(), DAG)) {
-    SDLoc DL(N);
-    EVT VecVT = N->getOperand(0).getValueType();
-    // Clear lower bits for correctness
-    SDValue RightShift =
-        DAG.getNode(AArch64ISD::VASHR, DL, VecVT, Val, N->getOperand(1));
-    return DAG.getNode(AArch64ISD::VSHL, DL, VecVT, RightShift,
-                       N->getOperand(1));
-  }
-
-  return SDValue();
-}
-
 /// If the operand is a bitwise AND with a constant RHS, and the shift has a
 /// constant RHS and is the only use, we can pull it out of the shift, i.e.
 ///
@@ -26888,8 +26897,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMaskedGatherScatterCombine(N, DCI, DAG);
   case ISD::FP_EXTEND:
     return performFPExtendCombine(N, DAG, DCI, Subtarget);
-  case AArch64ISD::VSHL:
-    return performVSHLCombine(N, DCI, DAG);
   case AArch64ISD::BRCOND:
     return performBRCONDCombine(N, DCI, DAG);
   case AArch64ISD::TBNZ:

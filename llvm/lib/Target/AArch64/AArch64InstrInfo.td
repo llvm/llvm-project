@@ -9443,6 +9443,9 @@ def : Pat<(v4i32 (mulhu V128:$Rn, V128:$Rm)),
            (UMULLv4i32_v2i64 V128:$Rn, V128:$Rm))>;
 
 
+def : Pat<(v8i16 (AArch64sqdmulh (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
+          (SQDMULHv8i16 V128:$Rn, V128:$Rm)>;
+
 def : Pat<(v4i32 (AArch64sqdmulh (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
           (SQDMULHv4i32 V128:$Rn, V128:$Rm)>;
 
