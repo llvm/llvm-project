@@ -12,14 +12,14 @@ namespace Fortran {
 namespace lower {
 class AbstractConverter;
 class SymMap;
-
-namespace pft {
-struct Evaluation;
-}
 } // namespace lower
 
 namespace parser {
 struct OpenMPAtomicConstruct;
+}
+
+namespace pft {
+struct Evaluation;
 }
 
 namespace semantics {
