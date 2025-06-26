@@ -293,6 +293,7 @@ protected:
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
+  bool HasAtomicMinMaxWithPayload = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1507,6 +1508,8 @@ public:
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
   bool hasLdsBarrierArriveAtomic() const { return HasLdsBarrierArriveAtomic; }
+
+  bool hasAtomicMinMaxWithPayload() const { return HasAtomicMinMaxWithPayload; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that

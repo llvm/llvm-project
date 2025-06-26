@@ -4260,8 +4260,11 @@ defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VFLAT_Real_AllAddr_gfx13<0x6f, "global_l
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64    : VFLAT_Real_AllAddr_Atomics_gfx13<0x75>;
 defm TENSOR_SAVE                      : VFLAT_Real_Base_gfx13<0x76>;
 defm TENSOR_STOP                      : VFLAT_Real_Base_gfx13<0x77>;
+
+let AssemblerPredicate = HasAtomicMinMaxWithPayload in {
 defm GLOBAL_ATOMIC_MIN_U64_IN_B128    : VFLAT_Real_AllAddr_Atomics_gfx13<0x79, "global_atomic_min_u64_in_b128">;
 defm GLOBAL_ATOMIC_MAX_U64_IN_B128    : VFLAT_Real_AllAddr_Atomics_gfx13<0x7a, "global_atomic_max_u64_in_b128">;
+}
 
 // TODO-GFX13: Hide under predicate for now.
 let AssemblerPredicate = HasSGPRVMEM in {
