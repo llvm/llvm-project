@@ -5914,11 +5914,14 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
   }
 
   case UnqualifiedIdKind::IK_OperatorFunctionId:
-    NameInfo.setName(Context.DeclarationNames.getCXXOperatorName(
-                                           Name.OperatorFunctionId.Operator));
-    NameInfo.setCXXOperatorNameRange(SourceRange(
-        Name.OperatorFunctionId.SymbolLocations[0], Name.EndLocation));
-    return NameInfo;
+    return DeclarationNameInfo(
+        Context.DeclarationNames.getCXXOperatorName(
+            Name.OperatorFunctionId.Operator),
+        Name.StartLocation,
+        DeclarationNameLoc::makeCXXOperatorNameLoc(
+            Context.getCXXOperatorSourceInfo(
+                SourceRange(Name.OperatorFunctionId.SymbolLocations[0],
+                            Name.EndLocation))));
 
   case UnqualifiedIdKind::IK_LiteralOperatorId:
     NameInfo.setName(Context.DeclarationNames.getCXXLiteralOperatorName(

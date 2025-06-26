@@ -15829,8 +15829,13 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
 
     CXXRecordDecl *NamingClass = nullptr; // lookup ignores member operators
     // CHECKME: no 'operator' keyword?
+    // DeclarationNameInfo OpNameInfo(
+    //     OpName, LLoc,
+    //     DeclarationNameLoc::makeCXXOperatorNameLoc(
+    //         Context.getCXXOperatorSourceInfo(SourceRange(LLoc, RLoc))));
     DeclarationNameInfo OpNameInfo(OpName, LLoc);
-    OpNameInfo.setCXXOperatorNameRange(SourceRange(LLoc, RLoc));
+    OpNameInfo.setCXXOperatorNameInfo(
+        Context.getCXXOperatorSourceInfo(SourceRange(LLoc, RLoc)));
     ExprResult Fn = CreateUnresolvedLookupExpr(
         NamingClass, NestedNameSpecifierLoc(), OpNameInfo, UnresolvedSet<0>());
     if (Fn.isInvalid())
@@ -15902,7 +15907,8 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
 
         // Build the actual expression node.
         DeclarationNameInfo OpLocInfo(OpName, LLoc);
-        OpLocInfo.setCXXOperatorNameRange(SourceRange(LLoc, RLoc));
+        OpLocInfo.setCXXOperatorNameInfo(
+            Context.getCXXOperatorSourceInfo(SourceRange(LLoc, RLoc)));
         ExprResult FnExpr = CreateFunctionRefExpr(
             *this, FnDecl, Best->FoundDecl, Base, HadMultipleCandidates,
             OpLocInfo.getLoc(), OpLocInfo.getInfo());
@@ -16532,7 +16538,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   DeclarationNameInfo OpLocInfo(
                Context.DeclarationNames.getCXXOperatorName(OO_Call), LParenLoc);
-  OpLocInfo.setCXXOperatorNameRange(SourceRange(LParenLoc, RParenLoc));
+  OpLocInfo.setCXXOperatorNameInfo(
+      Context.getCXXOperatorSourceInfo(SourceRange(LParenLoc, RParenLoc)));
   ExprResult NewFn = CreateFunctionRefExpr(*this, Method, Best->FoundDecl,
                                            Obj, HadMultipleCandidates,
                                            OpLocInfo.getLoc(),
