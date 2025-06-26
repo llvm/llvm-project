@@ -8,7 +8,7 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT:    .quad .Ltmp0
 ; CHECK-NEXT:    .quad .LBB0_1
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB0_1: # Block address taken
+; CHECK-NEXT:  .LBB0_1: # Inline asm indirect target
 ; CHECK-NEXT:    # %bar
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    pushq %rax

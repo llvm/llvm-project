@@ -9,6 +9,7 @@
 #include "BitcodeReader.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -53,10 +54,8 @@ static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
   case AS_none:
     Field = (AccessSpecifier)R[0];
     return llvm::Error::success();
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid value for AccessSpecifier");
   }
+  llvm_unreachable("invalid value for AccessSpecifier");
 }
 
 static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
@@ -93,6 +92,8 @@ static llvm::Error decodeRecord(const Record &R, InfoType &Field,
   case InfoType::IT_default:
   case InfoType::IT_enum:
   case InfoType::IT_typedef:
+  case InfoType::IT_concept:
+  case InfoType::IT_variable:
     Field = IT;
     return llvm::Error::success();
   }
@@ -109,6 +110,7 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
   case FieldId::F_type:
   case FieldId::F_child_namespace:
   case FieldId::F_child_record:
+  case FieldId::F_concept:
   case FieldId::F_default:
     Field = F;
     return llvm::Error::success();
@@ -314,9 +316,13 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
 
 static llvm::Error parseRecord(const Record &R, unsigned ID,
                                llvm::StringRef Blob, CommentInfo *I) {
+  llvm::SmallString<16> KindStr;
   switch (ID) {
   case COMMENT_KIND:
-    return decodeRecord(R, I->Kind, Blob);
+    if (llvm::Error Err = decodeRecord(R, KindStr, Blob))
+      return Err;
+    I->Kind = stringToCommentKind(KindStr);
+    return llvm::Error::success();
   case COMMENT_TEXT:
     return decodeRecord(R, I->Text, Blob);
   case COMMENT_NAME:
@@ -388,6 +394,46 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
                                  "invalid field for TemplateParamInfo");
 }
 
+static llvm::Error parseRecord(const Record &R, unsigned ID,
+                               llvm::StringRef Blob, ConceptInfo *I) {
+  switch (ID) {
+  case CONCEPT_USR:
+    return decodeRecord(R, I->USR, Blob);
+  case CONCEPT_NAME:
+    return decodeRecord(R, I->Name, Blob);
+  case CONCEPT_IS_TYPE:
+    return decodeRecord(R, I->IsType, Blob);
+  case CONCEPT_CONSTRAINT_EXPRESSION:
+    return decodeRecord(R, I->ConstraintExpression, Blob);
+  }
+  llvm_unreachable("invalid field for ConceptInfo");
+}
+
+static llvm::Error parseRecord(const Record &R, unsigned ID,
+                               llvm::StringRef Blob, ConstraintInfo *I) {
+  if (ID == CONSTRAINT_EXPRESSION)
+    return decodeRecord(R, I->ConstraintExpr, Blob);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid field for ConstraintInfo");
+}
+
+static llvm::Error parseRecord(const Record &R, unsigned ID,
+                               llvm::StringRef Blob, VarInfo *I) {
+  switch (ID) {
+  case VAR_USR:
+    return decodeRecord(R, I->USR, Blob);
+  case VAR_NAME:
+    return decodeRecord(R, I->Name, Blob);
+  case VAR_DEFLOCATION:
+    return decodeRecord(R, I->DefLoc, Blob);
+  case VAR_IS_STATIC:
+    return decodeRecord(R, I->IsStatic, Blob);
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid field for VarInfo");
+  }
+}
+
 template <typename T> static llvm::Expected<CommentInfo *> getCommentInfo(T I) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid type cannot contain CommentInfo");
@@ -426,6 +472,14 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
   return I->Children.back().get();
 }
 
+template <> llvm::Expected<CommentInfo *> getCommentInfo(ConceptInfo *I) {
+  return &I->Description.emplace_back();
+}
+
+template <> Expected<CommentInfo *> getCommentInfo(VarInfo *I) {
+  return &I->Description.emplace_back();
+}
+
 // When readSubBlock encounters a TypeInfo sub-block, it calls addTypeInfo on
 // the parent block to set it. The template specializations define what to do
 // for each supported parent block.
@@ -462,6 +516,11 @@ template <> llvm::Error addTypeInfo(EnumInfo *I, TypeInfo &&T) {
 
 template <> llvm::Error addTypeInfo(TypedefInfo *I, TypeInfo &&T) {
   I->Underlying = std::move(T);
+  return llvm::Error::success();
+}
+
+template <> llvm::Error addTypeInfo(VarInfo *I, TypeInfo &&T) {
+  I->Type = std::move(T);
   return llvm::Error::success();
 }
 
@@ -581,6 +640,17 @@ template <> llvm::Error addReference(RecordInfo *I, Reference &&R, FieldId F) {
   }
 }
 
+template <>
+llvm::Error addReference(ConstraintInfo *I, Reference &&R, FieldId F) {
+  if (F == FieldId::F_concept) {
+    I->ConceptRef = std::move(R);
+    return llvm::Error::success();
+  }
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "ConstraintInfo cannot contain this Reference");
+}
+
 template <typename T, typename ChildInfoType>
 static void addChild(T I, ChildInfoType &&R) {
   llvm::errs() << "invalid child type for info";
@@ -596,6 +666,12 @@ template <> void addChild(NamespaceInfo *I, EnumInfo &&R) {
 }
 template <> void addChild(NamespaceInfo *I, TypedefInfo &&R) {
   I->Children.Typedefs.emplace_back(std::move(R));
+}
+template <> void addChild(NamespaceInfo *I, ConceptInfo &&R) {
+  I->Children.Concepts.emplace_back(std::move(R));
+}
+template <> void addChild(NamespaceInfo *I, VarInfo &&R) {
+  I->Children.Variables.emplace_back(std::move(R));
 }
 
 // Record children:
@@ -646,6 +722,9 @@ template <> void addTemplate(RecordInfo *I, TemplateInfo &&P) {
 template <> void addTemplate(FunctionInfo *I, TemplateInfo &&P) {
   I->Template.emplace(std::move(P));
 }
+template <> void addTemplate(ConceptInfo *I, TemplateInfo &&P) {
+  I->Template = std::move(P);
+}
 
 // Template specializations go only into template records.
 template <typename T>
@@ -657,6 +736,14 @@ template <>
 void addTemplateSpecialization(TemplateInfo *I,
                                TemplateSpecializationInfo &&TSI) {
   I->Specialization.emplace(std::move(TSI));
+}
+
+template <typename T> static void addConstraint(T I, ConstraintInfo &&C) {
+  llvm::errs() << "invalid container for constraint info";
+  exit(1);
+}
+template <> void addConstraint(TemplateInfo *I, ConstraintInfo &&C) {
+  I->Constraints.emplace_back(std::move(C));
 }
 
 // Read records from bitcode into a given info.
@@ -672,6 +759,7 @@ llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, T I) {
 
 template <>
 llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, Reference *I) {
+  llvm::TimeTraceScope("Reducing infos", "readRecord");
   Record R;
   llvm::StringRef Blob;
   llvm::Expected<unsigned> MaybeRecID = Stream.readRecord(ID, R, &Blob);
@@ -683,6 +771,7 @@ llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, Reference *I) {
 // Read a block of records into a single info.
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
+  llvm::TimeTraceScope("Reducing infos", "readBlock");
   if (llvm::Error Err = Stream.EnterSubBlock(ID))
     return Err;
 
@@ -711,8 +800,11 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
   }
 }
 
+// TODO: Create a helper that can receive a function to reduce repetition for
+// most blocks.
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
+  llvm::TimeTraceScope("Reducing infos", "readSubBlock");
   switch (ID) {
   // Blocks can only have certain types of sub blocks.
   case BI_COMMENT_BLOCK_ID: {
@@ -811,6 +903,27 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     addChild(I, std::move(TI));
     return llvm::Error::success();
   }
+  case BI_CONSTRAINT_BLOCK_ID: {
+    ConstraintInfo CI;
+    if (auto Err = readBlock(ID, &CI))
+      return Err;
+    addConstraint(I, std::move(CI));
+    return llvm::Error::success();
+  }
+  case BI_CONCEPT_BLOCK_ID: {
+    ConceptInfo CI;
+    if (auto Err = readBlock(ID, &CI))
+      return Err;
+    addChild(I, std::move(CI));
+    return llvm::Error::success();
+  }
+  case BI_VAR_BLOCK_ID: {
+    VarInfo VI;
+    if (auto Err = readBlock(ID, &VI))
+      return Err;
+    addChild(I, std::move(VI));
+    return llvm::Error::success();
+  }
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid subblock type");
@@ -819,6 +932,7 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
 
 ClangDocBitcodeReader::Cursor
 ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
+  llvm::TimeTraceScope("Reducing infos", "skipUntilRecordOrBlock");
   BlockOrRecordID = 0;
 
   while (!Stream.AtEndOfStream()) {
@@ -880,6 +994,7 @@ llvm::Error ClangDocBitcodeReader::validateStream() {
 }
 
 llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
+  llvm::TimeTraceScope("Reducing infos", "readBlockInfoBlock");
   Expected<std::optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
@@ -895,6 +1010,7 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
 template <typename T>
 llvm::Expected<std::unique_ptr<Info>>
 ClangDocBitcodeReader::createInfo(unsigned ID) {
+  llvm::TimeTraceScope("Reducing infos", "createInfo");
   std::unique_ptr<Info> I = std::make_unique<T>();
   if (auto Err = readBlock(ID, static_cast<T *>(I.get())))
     return std::move(Err);
@@ -903,6 +1019,7 @@ ClangDocBitcodeReader::createInfo(unsigned ID) {
 
 llvm::Expected<std::unique_ptr<Info>>
 ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
+  llvm::TimeTraceScope("Reducing infos", "readBlockToInfo");
   switch (ID) {
   case BI_NAMESPACE_BLOCK_ID:
     return createInfo<NamespaceInfo>(ID);
@@ -912,8 +1029,12 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
     return createInfo<EnumInfo>(ID);
   case BI_TYPEDEF_BLOCK_ID:
     return createInfo<TypedefInfo>(ID);
+  case BI_CONCEPT_BLOCK_ID:
+    return createInfo<ConceptInfo>(ID);
   case BI_FUNCTION_BLOCK_ID:
     return createInfo<FunctionInfo>(ID);
+  case BI_VAR_BLOCK_ID:
+    return createInfo<VarInfo>(ID);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "cannot create info");
@@ -952,6 +1073,8 @@ ClangDocBitcodeReader::readBitcode() {
     case BI_RECORD_BLOCK_ID:
     case BI_ENUM_BLOCK_ID:
     case BI_TYPEDEF_BLOCK_ID:
+    case BI_CONCEPT_BLOCK_ID:
+    case BI_VAR_BLOCK_ID:
     case BI_FUNCTION_BLOCK_ID: {
       auto InfoOrErr = readBlockToInfo(ID);
       if (!InfoOrErr)

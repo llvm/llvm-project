@@ -188,9 +188,90 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
   Members.push_back(Index);
 }
 
+/// Returns \p A + \p B, if it is guaranteed not to unsigned wrap. Otherwise
+/// return nullptr. \p A and \p B must have the same type.
+static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
+                                     ScalarEvolution &SE) {
+  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/false, A, B))
+    return nullptr;
+  return SE.getAddExpr(A, B);
+}
+
+/// Returns \p A * \p B, if it is guaranteed not to unsigned wrap. Otherwise
+/// return nullptr. \p A and \p B must have the same type.
+static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
+                                   ScalarEvolution &SE) {
+  if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/false, A, B))
+    return nullptr;
+  return SE.getMulExpr(A, B);
+}
+
+/// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
+/// \p MaxBTC is guaranteed inbounds of the accessed object.
+static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
+                                                 const SCEV *MaxBTC,
+                                                 const SCEV *EltSize,
+                                                 ScalarEvolution &SE,
+                                                 const DataLayout &DL) {
+  auto *PointerBase = SE.getPointerBase(AR->getStart());
+  auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
+  if (!StartPtr)
+    return false;
+  bool CheckForNonNull, CheckForFreed;
+  uint64_t DerefBytes = StartPtr->getValue()->getPointerDereferenceableBytes(
+      DL, CheckForNonNull, CheckForFreed);
+
+  if (CheckForNonNull || CheckForFreed)
+    return false;
+
+  const SCEV *Step = AR->getStepRecurrence(SE);
+  bool IsKnownNonNegative = SE.isKnownNonNegative(Step);
+  if (!IsKnownNonNegative && !SE.isKnownNegative(Step))
+    return false;
+
+  Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
+  Step = SE.getNoopOrSignExtend(Step, WiderTy);
+  MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
+
+  // For the computations below, make sure they don't unsigned wrap.
+  if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
+    return false;
+  const SCEV *StartOffset = SE.getNoopOrZeroExtend(
+      SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
+
+  const SCEV *OffsetAtLastIter =
+      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
+  if (!OffsetAtLastIter)
+    return false;
+
+  const SCEV *OffsetEndBytes = addSCEVNoOverflow(
+      OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
+  if (!OffsetEndBytes)
+    return false;
+
+  if (IsKnownNonNegative) {
+    // For positive steps, check if
+    //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
+    // while making sure none of the computations unsigned wrap themselves.
+    const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
+    if (!EndBytes)
+      return false;
+    return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes,
+                               SE.getConstant(WiderTy, DerefBytes));
+  }
+
+  // For negative steps check if
+  //  * StartOffset >= (MaxBTC * Step + EltSize)
+  //  * StartOffset <= DerefBytes.
+  assert(SE.isKnownNegative(Step) && "must be known negative");
+  return SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, OffsetEndBytes) &&
+         SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset,
+                             SE.getConstant(WiderTy, DerefBytes));
+}
+
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
-    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *MaxBECount,
-    ScalarEvolution *SE,
+    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
+    const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
@@ -206,11 +287,37 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
   const SCEV *ScStart;
   const SCEV *ScEnd;
 
+  auto &DL = Lp->getHeader()->getDataLayout();
+  Type *IdxTy = DL.getIndexType(PtrExpr->getType());
+  const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
     ScStart = AR->getStart();
-    ScEnd = AR->evaluateAtIteration(MaxBECount, *SE);
+    if (!isa<SCEVCouldNotCompute>(BTC))
+      // Evaluating AR at an exact BTC is safe: LAA separately checks that
+      // accesses cannot wrap in the loop. If evaluating AR at BTC wraps, then
+      // the loop either triggers UB when executing a memory access with a
+      // poison pointer or the wrapping/poisoned pointer is not used.
+      ScEnd = AR->evaluateAtIteration(BTC, *SE);
+    else {
+      // Evaluating AR at MaxBTC may wrap and create an expression that is less
+      // than the start of the AddRec due to wrapping (for example consider
+      // MaxBTC = -2). If that's the case, set ScEnd to -(EltSize + 1). ScEnd
+      // will get incremented by EltSize before returning, so this effectively
+      // sets ScEnd to the maximum unsigned value for the type. Note that LAA
+      // separately checks that accesses cannot not wrap, so unsigned max
+      // represents an upper bound.
+      if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE,
+                                               DL)) {
+        ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
+      } else {
+        ScEnd = SE->getAddExpr(
+            SE->getNegativeSCEV(EltSizeSCEV),
+            SE->getSCEV(ConstantExpr::getIntToPtr(
+                ConstantInt::get(EltSizeSCEV->getType(), -1), AR->getType())));
+      }
+    }
     const SCEV *Step = AR->getStepRecurrence(*SE);
 
     // For expressions with negative step, the upper bound is ScStart and the
@@ -232,9 +339,6 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
   assert(SE->isLoopInvariant(ScEnd, Lp) && "ScEnd needs to be invariant");
 
   // Add the size of the pointed element to ScEnd.
-  auto &DL = Lp->getHeader()->getDataLayout();
-  Type *IdxTy = DL.getIndexType(PtrExpr->getType());
-  const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
   std::pair<const SCEV *, const SCEV *> Res = {ScStart, ScEnd};
@@ -250,9 +354,11 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     unsigned DepSetId, unsigned ASId,
                                     PredicatedScalarEvolution &PSE,
                                     bool NeedsFreeze) {
-  const SCEV *MaxBECount = PSE.getSymbolicMaxBackedgeTakenCount();
-  const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
-      Lp, PtrExpr, AccessTy, MaxBECount, PSE.getSE(), &DC.getPointerBounds());
+  const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
+  const SCEV *BTC = PSE.getBackedgeTakenCount();
+  const auto &[ScStart, ScEnd] =
+      getStartAndEndForAccess(Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC,
+                              PSE.getSE(), &DC.getPointerBounds());
   assert(!isa<SCEVCouldNotCompute>(ScStart) &&
          !isa<SCEVCouldNotCompute>(ScEnd) &&
          "must be able to compute both start and end expressions");
@@ -530,8 +636,10 @@ void RuntimePointerChecking::groupChecks(
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
       auto PointerI = PositionMap.find(M.getPointer());
-      assert(PointerI != PositionMap.end() &&
-             "pointer in equivalence class not found in PositionMap");
+      // If we can't find the pointer in PositionMap that means we can't
+      // generate a memcheck for it.
+      if (PointerI == PositionMap.end())
+        continue;
       for (unsigned Pointer : PointerI->second) {
         bool Merged = false;
         // Mark this pointer as seen.
@@ -693,10 +801,13 @@ public:
   /// non-intersection.
   ///
   /// Returns true if we need no check or if we do and we can generate them
-  /// (i.e. the pointers have computable bounds).
+  /// (i.e. the pointers have computable bounds). A return value of false means
+  /// we couldn't analyze and generate runtime checks for all pointers in the
+  /// loop, but if \p AllowPartial is set then we will have checks for those
+  /// pointers we could analyze.
   bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
-                       Value *&UncomputablePtr);
+                       Value *&UncomputablePtr, bool AllowPartial);
 
   /// Goes over all memory accesses, checks whether a RT check is needed
   /// and builds sets of dependent accesses.
@@ -1001,24 +1112,22 @@ static void findForkedSCEVs(
       break;
     }
 
-    // Find the pointer type we need to extend to.
-    Type *IntPtrTy = SE->getEffectiveSCEVType(
-        SE->getSCEV(GEP->getPointerOperand())->getType());
+    Type *IntPtrTy = SE->getEffectiveSCEVType(GEP->getPointerOperandType());
 
     // Find the size of the type being pointed to. We only have a single
     // index term (guarded above) so we don't need to index into arrays or
     // structures, just get the size of the scalar value.
     const SCEV *Size = SE->getSizeOfExpr(IntPtrTy, SourceTy);
 
-    // Scale up the offsets by the size of the type, then add to the bases.
-    const SCEV *Scaled1 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[0]), IntPtrTy));
-    const SCEV *Scaled2 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[1]), IntPtrTy));
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[0]), Scaled1),
-                          NeedsFreeze);
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[1]), Scaled2),
-                          NeedsFreeze);
+    for (auto [B, O] : zip(BaseScevs, OffsetScevs)) {
+      const SCEV *Base = get<0>(B);
+      const SCEV *Offset = get<0>(O);
+
+      // Scale up the offsets by the size of the type, then add to the bases.
+      const SCEV *Scaled =
+          SE->getMulExpr(Size, SE->getTruncateOrSignExtend(Offset, IntPtrTy));
+      ScevList.emplace_back(SE->getAddExpr(Base, Scaled), NeedsFreeze);
+    }
     break;
   }
   case Instruction::Select: {
@@ -1028,10 +1137,9 @@ static void findForkedSCEVs(
     // then we just bail out and return the generic SCEV.
     findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     findForkedSCEVs(SE, L, I->getOperand(2), ChildScevs, Depth);
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1044,10 +1152,9 @@ static void findForkedSCEVs(
       findForkedSCEVs(SE, L, I->getOperand(0), ChildScevs, Depth);
       findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     }
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1074,12 +1181,9 @@ static void findForkedSCEVs(
       break;
     }
 
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[0]), get<0>(RScevs[0])),
-        NeedsFreeze);
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[1]), get<0>(RScevs[1])),
-        NeedsFreeze);
+    for (auto [L, R] : zip(LScevs, RScevs))
+      ScevList.emplace_back(GetBinOpExpr(Opcode, get<0>(L), get<0>(R)),
+                            NeedsFreeze);
     break;
   }
   default:
@@ -1181,8 +1285,8 @@ bool AccessAnalysis::createCheckForAccess(
 
 bool AccessAnalysis::canCheckPtrAtRT(
     RuntimePointerChecking &RtCheck, Loop *TheLoop,
-    const DenseMap<Value *, const SCEV *> &StridesMap,
-    Value *&UncomputablePtr) {
+    const DenseMap<Value *, const SCEV *> &StridesMap, Value *&UncomputablePtr,
+    bool AllowPartial) {
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   bool CanDoRT = true;
@@ -1275,7 +1379,8 @@ bool AccessAnalysis::canCheckPtrAtRT(
                                   /*Assume=*/true)) {
           CanDoAliasSetRT = false;
           UncomputablePtr = Access.getPointer();
-          break;
+          if (!AllowPartial)
+            break;
         }
       }
     }
@@ -1315,7 +1420,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
     }
   }
 
-  if (MayNeedRTCheck && CanDoRT)
+  if (MayNeedRTCheck && (CanDoRT || AllowPartial))
     RtCheck.generateChecks(DepCands, IsDepCheckNeeded);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
@@ -1329,7 +1434,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
   bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
   assert(CanDoRTIfNeeded == (CanDoRT || !MayNeedRTCheck) &&
          "CanDoRTIfNeeded depends on RtCheck.Need");
-  if (!CanDoRTIfNeeded)
+  if (!CanDoRTIfNeeded && !AllowPartial)
     RtCheck.reset();
   return CanDoRTIfNeeded;
 }
@@ -1623,7 +1728,7 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   std::optional<int64_t> Diff =
       getPointersDiff(ElemTyA, PtrA, ElemTyB, PtrB, DL, SE,
                       /*StrictCheck=*/true, CheckType);
-  return Diff && *Diff == 1;
+  return Diff == 1;
 }
 
 void MemoryDepChecker::addAccess(StoreInst *SI) {
@@ -1908,11 +2013,14 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // required for correctness.
   if (SE.isLoopInvariant(Src, InnermostLoop) ||
       SE.isLoopInvariant(Sink, InnermostLoop)) {
-    const SCEV *MaxBECount = PSE.getSymbolicMaxBackedgeTakenCount();
-    const auto &[SrcStart_, SrcEnd_] = getStartAndEndForAccess(
-        InnermostLoop, Src, ATy, MaxBECount, PSE.getSE(), &PointerBounds);
-    const auto &[SinkStart_, SinkEnd_] = getStartAndEndForAccess(
-        InnermostLoop, Sink, BTy, MaxBECount, PSE.getSE(), &PointerBounds);
+    const SCEV *BTC = PSE.getBackedgeTakenCount();
+    const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
+    const auto &[SrcStart_, SrcEnd_] =
+        getStartAndEndForAccess(InnermostLoop, Src, ATy, BTC, SymbolicMaxBTC,
+                                PSE.getSE(), &PointerBounds);
+    const auto &[SinkStart_, SinkEnd_] =
+        getStartAndEndForAccess(InnermostLoop, Sink, BTy, BTC, SymbolicMaxBTC,
+                                PSE.getSE(), &PointerBounds);
     if (!isa<SCEVCouldNotCompute>(SrcStart_) &&
         !isa<SCEVCouldNotCompute>(SrcEnd_) &&
         !isa<SCEVCouldNotCompute>(SinkStart_) &&
@@ -2599,9 +2707,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
-  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-      *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr);
-  if (!CanDoRTIfNeeded) {
+  HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
+      *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr, AllowPartial);
+  if (!HasCompletePtrRtChecking) {
     const auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I)
         << "cannot identify array bounds";
@@ -2629,11 +2737,12 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       PtrRtChecking->Need = true;
 
       UncomputablePtr = nullptr;
-      CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-          *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr);
+      HasCompletePtrRtChecking =
+          Accesses.canCheckPtrAtRT(*PtrRtChecking, TheLoop, SymbolicStrides,
+                                   UncomputablePtr, AllowPartial);
 
       // Check that we found the bounds for the pointer.
-      if (!CanDoRTIfNeeded) {
+      if (!HasCompletePtrRtChecking) {
         auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
         recordAnalysis("CantCheckMemDepsAtRunTime", I)
             << "cannot check memory dependencies at runtime";
@@ -2764,8 +2873,8 @@ LoopAccessInfo::recordAnalysis(StringRef RemarkName, const Instruction *I) {
 
 bool LoopAccessInfo::isInvariant(Value *V) const {
   auto *SE = PSE->getSE();
-  // TODO: Is this really what we want? Even without FP SCEV, we may want some
-  // trivially loop-invariant FP values to be considered invariant.
+  if (TheLoop->isLoopInvariant(V))
+    return true;
   if (!SE->isSCEVable(V->getType()))
     return false;
   const SCEV *S = SE->getSCEV(V);
@@ -2908,9 +3017,10 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetTransformInfo *TTI,
                                const TargetLibraryInfo *TLI, AAResults *AA,
-                               DominatorTree *DT, LoopInfo *LI)
+                               DominatorTree *DT, LoopInfo *LI,
+                               bool AllowPartial)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
-      PtrRtChecking(nullptr), TheLoop(L) {
+      PtrRtChecking(nullptr), TheLoop(L), AllowPartial(AllowPartial) {
   unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
   if (TTI && !TTI->enableScalableVectorization())
     // Scale the vector width by 2 as rough estimate to also consider
@@ -2959,6 +3069,8 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 
   // List the pair of accesses need run-time checks to prove independence.
   PtrRtChecking->print(OS, Depth);
+  if (PtrRtChecking->Need && !HasCompletePtrRtChecking)
+    OS.indent(Depth) << "Generated run-time checks are incomplete\n";
   OS << "\n";
 
   OS.indent(Depth)
@@ -2978,12 +3090,15 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PSE->print(OS, Depth);
 }
 
-const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
+const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L,
+                                                     bool AllowPartial) {
   const auto &[It, Inserted] = LoopAccessInfoMap.try_emplace(&L);
 
-  if (Inserted)
-    It->second =
-        std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT, &LI);
+  // We need to create the LoopAccessInfo if either we don't already have one,
+  // or if it was created with a different value of AllowPartial.
+  if (Inserted || It->second->hasAllowPartial() != AllowPartial)
+    It->second = std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT,
+                                                  &LI, AllowPartial);
 
   return *It->second;
 }

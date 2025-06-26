@@ -13,7 +13,9 @@
 #ifndef LLVM_BINARYFORMAT_DXCONTAINER_H
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
@@ -39,6 +41,8 @@ template <typename T> struct EnumEntry;
 
 namespace dxbc {
 
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
   assert(Kind <= Triple::Amplification - Triple::Pixel &&
          "Shader kind out of expected range.");
@@ -59,7 +63,7 @@ struct ShaderHash {
   uint32_t Flags; // dxbc::HashFlags
   uint8_t Digest[16];
 
-  bool isPopulated();
+  LLVM_ABI bool isPopulated();
 
   void swapBytes() { sys::swapByteOrder(Flags); }
 };
@@ -153,19 +157,21 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
+#define ROOT_ELEMENT_FLAG(Num, Val) Val = Num,
 enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = Num,
 enum class RootDescriptorFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
 enum class DescriptorRangeFlag : uint32_t {
 #include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS)
 };
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
@@ -173,14 +179,14 @@ enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
 #define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
 enum class DescriptorRangeType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
+LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
@@ -197,7 +203,7 @@ enum class ShaderVisibility : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
+LLVM_ABI ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 
 #define SHADER_VISIBILITY(Val, Enum)                                           \
   case Val:                                                                    \
@@ -229,7 +235,7 @@ enum class SamplersBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-PartType parsePartType(StringRef S);
+LLVM_ABI PartType parsePartType(StringRef S);
 
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
@@ -360,35 +366,35 @@ enum class SemanticKind : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<SemanticKind>> getSemanticKinds();
+LLVM_ABI ArrayRef<EnumEntry<SemanticKind>> getSemanticKinds();
 
 #define COMPONENT_TYPE(Val, Enum) Enum = Val,
 enum class ComponentType : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<ComponentType>> getComponentTypes();
+LLVM_ABI ArrayRef<EnumEntry<ComponentType>> getComponentTypes();
 
 #define INTERPOLATION_MODE(Val, Enum) Enum = Val,
 enum class InterpolationMode : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<InterpolationMode>> getInterpolationModes();
+LLVM_ABI ArrayRef<EnumEntry<InterpolationMode>> getInterpolationModes();
 
 #define RESOURCE_TYPE(Val, Enum) Enum = Val,
 enum class ResourceType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<ResourceType>> getResourceTypes();
+LLVM_ABI ArrayRef<EnumEntry<ResourceType>> getResourceTypes();
 
 #define RESOURCE_KIND(Val, Enum) Enum = Val,
 enum class ResourceKind : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<ResourceKind>> getResourceKinds();
+LLVM_ABI ArrayRef<EnumEntry<ResourceKind>> getResourceKinds();
 
 #define RESOURCE_FLAG(Index, Enum) bool Enum = false;
 struct ResourceFlags {
@@ -555,21 +561,21 @@ enum class SigMinPrecision : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<SigMinPrecision>> getSigMinPrecisions();
+LLVM_ABI ArrayRef<EnumEntry<SigMinPrecision>> getSigMinPrecisions();
 
 #define D3D_SYSTEM_VALUE(Val, Enum) Enum = Val,
 enum class D3DSystemValue : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<D3DSystemValue>> getD3DSystemValues();
+LLVM_ABI ArrayRef<EnumEntry<D3DSystemValue>> getD3DSystemValues();
 
 #define COMPONENT_TYPE(Val, Enum) Enum = Val,
 enum class SigComponentType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
+LLVM_ABI ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
 
 struct ProgramSignatureHeader {
   uint32_t ParamCount;
@@ -734,15 +740,30 @@ struct RootDescriptor : public v1::RootDescriptor {
   }
 };
 
-struct DescriptorRange : public v1::DescriptorRange {
+struct DescriptorRange {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
   uint32_t Flags;
+  uint32_t OffsetInDescriptorsFromTableStart;
   void swapBytes() {
-    v1::DescriptorRange::swapBytes();
+    sys::swapByteOrder(RangeType);
+    sys::swapByteOrder(NumDescriptors);
+    sys::swapByteOrder(BaseShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
     sys::swapByteOrder(Flags);
   }
 };
 } // namespace v2
 } // namespace RTS0
+
+// D3D_ROOT_SIGNATURE_VERSION
+enum class RootSignatureVersion {
+  V1_0 = 0x1,
+  V1_1 = 0x2,
+};
 
 } // namespace dxbc
 } // namespace llvm

@@ -12,7 +12,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <map>
@@ -92,12 +94,12 @@ public:
   /// Create a location whose rule is set to Unspecified. This means the
   /// register value might be in the same register but it wasn't specified in
   /// the unwind opcodes.
-  static UnwindLocation createUnspecified();
+  LLVM_ABI static UnwindLocation createUnspecified();
   /// Create a location where the value is undefined and not available. This can
   /// happen when a register is volatile and can't be recovered.
-  static UnwindLocation createUndefined();
+  LLVM_ABI static UnwindLocation createUndefined();
   /// Create a location where the value is known to be in the register itself.
-  static UnwindLocation createSame();
+  LLVM_ABI static UnwindLocation createSame();
   /// Create a location that is in (Deref == false) or at (Deref == true) the
   /// CFA plus an offset. Most registers that are spilled onto the stack use
   /// this rule. The rule for the register will use this rule and specify a
@@ -105,8 +107,8 @@ public:
   /// relative to a CFA value which is typically defined using the register
   /// plus offset location. \see createRegisterPlusOffset(...) for more
   /// information.
-  static UnwindLocation createIsCFAPlusOffset(int32_t Off);
-  static UnwindLocation createAtCFAPlusOffset(int32_t Off);
+  LLVM_ABI static UnwindLocation createIsCFAPlusOffset(int32_t Off);
+  LLVM_ABI static UnwindLocation createAtCFAPlusOffset(int32_t Off);
   /// Create a location where the saved value is in (Deref == false) or at
   /// (Deref == true) a regiser plus an offset and, optionally, in the specified
   /// address space (used mostly for the CFA).
@@ -115,18 +117,18 @@ public:
   /// frame pointer as the register, with an offset that accounts for all
   /// spilled registers and all local variables in a function, and Deref ==
   /// false.
-  static UnwindLocation
+  LLVM_ABI static UnwindLocation
   createIsRegisterPlusOffset(uint32_t Reg, int32_t Off,
                              std::optional<uint32_t> AddrSpace = std::nullopt);
-  static UnwindLocation
+  LLVM_ABI static UnwindLocation
   createAtRegisterPlusOffset(uint32_t Reg, int32_t Off,
                              std::optional<uint32_t> AddrSpace = std::nullopt);
   /// Create a location whose value is the result of evaluating a DWARF
   /// expression. This allows complex expressions to be evaluated in order to
   /// unwind a register or CFA value.
-  static UnwindLocation createIsDWARFExpression(DWARFExpression Expr);
-  static UnwindLocation createAtDWARFExpression(DWARFExpression Expr);
-  static UnwindLocation createIsConstant(int32_t Value);
+  LLVM_ABI static UnwindLocation createIsDWARFExpression(DWARFExpression Expr);
+  LLVM_ABI static UnwindLocation createAtDWARFExpression(DWARFExpression Expr);
+  LLVM_ABI static UnwindLocation createIsConstant(int32_t Value);
 
   Location getLocation() const { return Kind; }
   uint32_t getRegister() const { return RegNum; }
@@ -164,12 +166,12 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
 
-  bool operator==(const UnwindLocation &RHS) const;
+  LLVM_ABI bool operator==(const UnwindLocation &RHS) const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindLocation &R);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindLocation &R);
 
 /// A class that can track all registers with locations in a UnwindRow object.
 ///
@@ -222,7 +224,7 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
 
   /// Returns true if we have any register locations in this object.
   bool hasLocations() const { return !Locations.empty(); }
@@ -234,7 +236,7 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
 
 /// A class that represents a single row in the unwind table that is decoded by
 /// parsing the DWARF Call Frame Information opcodes.
@@ -303,15 +305,11 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            unsigned IndentLevel = 0) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                     unsigned IndentLevel = 0) const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
-
-class CFIProgram;
-class CIE;
-class FDE;
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
 
 /// A class that contains all UnwindRow objects for an FDE or a single unwind
 /// row for a CIE. To unwind an address the rows, which are sorted by start
@@ -323,6 +321,8 @@ public:
   using RowContainer = std::vector<UnwindRow>;
   using iterator = RowContainer::iterator;
   using const_iterator = RowContainer::const_iterator;
+
+  UnwindTable(RowContainer &&Rows) : Rows(std::move(Rows)) {}
 
   size_t size() const { return Rows.size(); }
   iterator begin() { return Rows.begin(); }
@@ -338,7 +338,7 @@ public:
   ///
   /// \param OS the stream to use for output.
   ///
-  /// \param MRI register information that helps emit register names insteead
+  /// \param MRI register information that helps emit register names instead
   /// of raw register numbers.
   ///
   /// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
@@ -348,184 +348,59 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            unsigned IndentLevel = 0) const;
-
-  /// Create an UnwindTable from a Common Information Entry (CIE).
-  ///
-  /// \param Cie The Common Information Entry to extract the table from. The
-  /// CFIProgram is retrieved from the \a Cie object and used to create the
-  /// UnwindTable.
-  ///
-  /// \returns An error if the DWARF Call Frame Information opcodes have state
-  /// machine errors, or a valid UnwindTable otherwise.
-  static Expected<UnwindTable> create(const CIE *Cie);
-
-  /// Create an UnwindTable from a Frame Descriptor Entry (FDE).
-  ///
-  /// \param Fde The Frame Descriptor Entry to extract the table from. The
-  /// CFIProgram is retrieved from the \a Fde object and used to create the
-  /// UnwindTable.
-  ///
-  /// \returns An error if the DWARF Call Frame Information opcodes have state
-  /// machine errors, or a valid UnwindTable otherwise.
-  static Expected<UnwindTable> create(const FDE *Fde);
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                     unsigned IndentLevel = 0) const;
 
 private:
   RowContainer Rows;
-  /// The end address when data is extracted from a FDE. This value will be
-  /// invalid when a UnwindTable is extracted from a CIE.
-  std::optional<uint64_t> EndAddress;
-
-  /// Parse the information in the CFIProgram and update the CurrRow object
-  /// that the state machine describes.
-  ///
-  /// This is an internal implementation that emulates the state machine
-  /// described in the DWARF Call Frame Information opcodes and will push
-  /// CurrRow onto the Rows container when needed.
-  ///
-  /// \param CFIP the CFI program that contains the opcodes from a CIE or FDE.
-  ///
-  /// \param CurrRow the current row to modify while parsing the state machine.
-  ///
-  /// \param InitialLocs If non-NULL, we are parsing a FDE and this contains
-  /// the initial register locations from the CIE. If NULL, then a CIE's
-  /// opcodes are being parsed and this is not needed. This is used for the
-  /// DW_CFA_restore and DW_CFA_restore_extended opcodes.
-  Error parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
-                  const RegisterLocations *InitialLocs);
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
+/// Parse the information in the CFIProgram and update the CurrRow object
+/// that the state machine describes.
+///
+/// This function emulates the state machine described in the DWARF Call Frame
+/// Information opcodes and will push CurrRow onto a RowContainer when needed.
+///
+/// \param CFIP the CFI program that contains the opcodes from a CIE or FDE.
+///
+/// \param CurrRow the current row to modify while parsing the state machine.
+///
+/// \param InitialLocs If non-NULL, we are parsing a FDE and this contains
+/// the initial register locations from the CIE. If NULL, then a CIE's
+/// opcodes are being parsed and this is not needed. This is used for the
+/// DW_CFA_restore and DW_CFA_restore_extended opcodes.
+///
+/// \returns An error if the DWARF Call Frame Information opcodes have state
+/// machine errors, or the accumulated rows otherwise.
+LLVM_ABI Expected<UnwindTable::RowContainer>
+parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
+          const RegisterLocations *InitialLocs);
 
-/// Represent a sequence of Call Frame Information instructions that, when read
-/// in order, construct a table mapping PC to frame state. This can also be
-/// referred to as "CFI rules" in DWARF literature to avoid confusion with
-/// computer programs in the broader sense, and in this context each instruction
-/// would be a rule to establish the mapping. Refer to pg. 172 in the DWARF5
-/// manual, "6.4.1 Structure of Call Frame Information".
-class CFIProgram {
-public:
-  static constexpr size_t MaxOperands = 3;
-  typedef SmallVector<uint64_t, MaxOperands> Operands;
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
 
-  /// An instruction consists of a DWARF CFI opcode and an optional sequence of
-  /// operands. If it refers to an expression, then this expression has its own
-  /// sequence of operations and operands handled separately by DWARFExpression.
-  struct Instruction {
-    Instruction(uint8_t Opcode) : Opcode(Opcode) {}
+class CIE;
 
-    uint8_t Opcode;
-    Operands Ops;
-    // Associated DWARF expression in case this instruction refers to one
-    std::optional<DWARFExpression> Expression;
+/// Create an UnwindTable from a Common Information Entry (CIE).
+///
+/// \param Cie The Common Information Entry to extract the table from. The
+/// CFIProgram is retrieved from the \a Cie object and used to create the
+/// UnwindTable.
+///
+/// \returns An error if the DWARF Call Frame Information opcodes have state
+/// machine errors, or a valid UnwindTable otherwise.
+LLVM_ABI Expected<UnwindTable> createUnwindTable(const CIE *Cie);
 
-    Expected<uint64_t> getOperandAsUnsigned(const CFIProgram &CFIP,
-                                            uint32_t OperandIdx) const;
+class FDE;
 
-    Expected<int64_t> getOperandAsSigned(const CFIProgram &CFIP,
-                                         uint32_t OperandIdx) const;
-  };
-
-  using InstrList = std::vector<Instruction>;
-  using iterator = InstrList::iterator;
-  using const_iterator = InstrList::const_iterator;
-
-  iterator begin() { return Instructions.begin(); }
-  const_iterator begin() const { return Instructions.begin(); }
-  iterator end() { return Instructions.end(); }
-  const_iterator end() const { return Instructions.end(); }
-
-  unsigned size() const { return (unsigned)Instructions.size(); }
-  bool empty() const { return Instructions.empty(); }
-  uint64_t codeAlign() const { return CodeAlignmentFactor; }
-  int64_t dataAlign() const { return DataAlignmentFactor; }
-  Triple::ArchType triple() const { return Arch; }
-
-  CFIProgram(uint64_t CodeAlignmentFactor, int64_t DataAlignmentFactor,
-             Triple::ArchType Arch)
-      : CodeAlignmentFactor(CodeAlignmentFactor),
-        DataAlignmentFactor(DataAlignmentFactor),
-        Arch(Arch) {}
-
-  /// Parse and store a sequence of CFI instructions from Data,
-  /// starting at *Offset and ending at EndOffset. *Offset is updated
-  /// to EndOffset upon successful parsing, or indicates the offset
-  /// where a problem occurred in case an error is returned.
-  Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
-
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, unsigned IndentLevel,
-            std::optional<uint64_t> InitialLocation) const;
-
-  void addInstruction(const Instruction &I) { Instructions.push_back(I); }
-
-  /// Get a DWARF CFI call frame string for the given DW_CFA opcode.
-  StringRef callFrameString(unsigned Opcode) const;
-
-private:
-  std::vector<Instruction> Instructions;
-  const uint64_t CodeAlignmentFactor;
-  const int64_t DataAlignmentFactor;
-  Triple::ArchType Arch;
-
-  /// Convenience method to add a new instruction with the given opcode.
-  void addInstruction(uint8_t Opcode) {
-    Instructions.push_back(Instruction(Opcode));
-  }
-
-  /// Add a new single-operand instruction.
-  void addInstruction(uint8_t Opcode, uint64_t Operand1) {
-    Instructions.push_back(Instruction(Opcode));
-    Instructions.back().Ops.push_back(Operand1);
-  }
-
-  /// Add a new instruction that has two operands.
-  void addInstruction(uint8_t Opcode, uint64_t Operand1, uint64_t Operand2) {
-    Instructions.push_back(Instruction(Opcode));
-    Instructions.back().Ops.push_back(Operand1);
-    Instructions.back().Ops.push_back(Operand2);
-  }
-
-  /// Add a new instruction that has three operands.
-  void addInstruction(uint8_t Opcode, uint64_t Operand1, uint64_t Operand2,
-                      uint64_t Operand3) {
-    Instructions.push_back(Instruction(Opcode));
-    Instructions.back().Ops.push_back(Operand1);
-    Instructions.back().Ops.push_back(Operand2);
-    Instructions.back().Ops.push_back(Operand3);
-  }
-
-  /// Types of operands to CFI instructions
-  /// In DWARF, this type is implicitly tied to a CFI instruction opcode and
-  /// thus this type doesn't need to be explicitly written to the file (this is
-  /// not a DWARF encoding). The relationship of instrs to operand types can
-  /// be obtained from getOperandTypes() and is only used to simplify
-  /// instruction printing.
-  enum OperandType {
-    OT_Unset,
-    OT_None,
-    OT_Address,
-    OT_Offset,
-    OT_FactoredCodeOffset,
-    OT_SignedFactDataOffset,
-    OT_UnsignedFactDataOffset,
-    OT_Register,
-    OT_AddressSpace,
-    OT_Expression
-  };
-
-  /// Get the OperandType as a "const char *".
-  static const char *operandTypeString(OperandType OT);
-
-  /// Retrieve the array describing the types of operands according to the enum
-  /// above. This is indexed by opcode.
-  static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
-
-  /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-  void printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
-                    const Instruction &Instr, unsigned OperandIdx,
-                    uint64_t Operand, std::optional<uint64_t> &Address) const;
-};
+/// Create an UnwindTable from a Frame Descriptor Entry (FDE).
+///
+/// \param Fde The Frame Descriptor Entry to extract the table from. The
+/// CFIProgram is retrieved from the \a Fde object and used to create the
+/// UnwindTable.
+///
+/// \returns An error if the DWARF Call Frame Information opcodes have state
+/// machine errors, or a valid UnwindTable otherwise.
+LLVM_ABI Expected<UnwindTable> createUnwindTable(const FDE *Fde);
 
 /// An entry in either debug_frame or eh_frame. This entry can be a CIE or an
 /// FDE.
@@ -564,7 +439,7 @@ protected:
 };
 
 /// DWARF Common Information Entry (CIE)
-class CIE : public FrameEntry {
+class LLVM_ABI CIE : public FrameEntry {
 public:
   // CIEs (and FDEs) are simply container classes, so the only sensible way to
   // create them is by providing the full parsed contents in the constructor.
@@ -626,7 +501,7 @@ private:
 };
 
 /// DWARF Frame Description Entry (FDE)
-class FDE : public FrameEntry {
+class LLVM_ABI FDE : public FrameEntry {
 public:
   FDE(bool IsDWARF64, uint64_t Offset, uint64_t Length, uint64_t CIEPointer,
       uint64_t InitialLocation, uint64_t AddressRange, CIE *Cie,
@@ -682,17 +557,17 @@ public:
   // it is a .debug_frame section. EHFrameAddress should be different
   // than zero for correct parsing of .eh_frame addresses when they
   // use a PC-relative encoding.
-  DWARFDebugFrame(Triple::ArchType Arch,
-                  bool IsEH = false, uint64_t EHFrameAddress = 0);
-  ~DWARFDebugFrame();
+  LLVM_ABI DWARFDebugFrame(Triple::ArchType Arch, bool IsEH = false,
+                           uint64_t EHFrameAddress = 0);
+  LLVM_ABI ~DWARFDebugFrame();
 
   /// Dump the section data into the given stream.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            std::optional<uint64_t> Offset) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                     std::optional<uint64_t> Offset) const;
 
   /// Parse the section from raw data. \p Data is assumed to contain the whole
   /// frame section contents to be parsed.
-  Error parse(DWARFDataExtractor Data);
+  LLVM_ABI Error parse(DWARFDataExtractor Data);
 
   /// Return whether the section has any entries.
   bool empty() const { return Entries.empty(); }

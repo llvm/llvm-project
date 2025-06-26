@@ -6,6 +6,10 @@
 # RUN: link_fdata %s %t %t.preagg PREAGG
 # RUN: perf2bolt %t -p %t.preagg --pa -o %t.fdata | FileCheck %s
 # CHECK: traces mismatching disassembled function contents: 0
+# RUN: FileCheck %s --check-prefix=CHECK-FDATA --input-file %t.fdata
+# CHECK-FDATA:      1 main 0 1 main 6 0 1
+# CHECK-FDATA-NEXT: 1 main e 1 main 11 0 1
+# CHECK-FDATA-NEXT: 1 main 11 1 main 0 0 1
 
 	.globl main
 main:

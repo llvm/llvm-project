@@ -49,6 +49,8 @@ static const LangASMap FakeAddrSpaceMap = {
     13, // hlsl_groupshared
     14, // hlsl_constant
     15, // hlsl_private
+    16, // hlsl_device
+    17, // hlsl_input
     20, // wasm_funcref
 };
 
@@ -157,7 +159,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
-  HasAArch64SVETypes = false;
+  HasAArch64ACLETypes = false;
   HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
   HasUnalignedAccess = false;
@@ -553,8 +555,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 bool TargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeatureVec) const {
-  for (const auto &F : FeatureVec) {
-    StringRef Name = F;
+  for (StringRef Name : FeatureVec) {
     if (Name.empty())
       continue;
     // Apply the feature via the target.

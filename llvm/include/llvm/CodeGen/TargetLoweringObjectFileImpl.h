@@ -117,10 +117,6 @@ public:
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
 
-  virtual const MCExpr *createTargetMCExpr(const MCExpr *Expr,
-                                           uint8_t Specifier) const {
-    return nullptr;
-  }
   const MCExpr *
   lowerSymbolDifference(const MCSymbol *LHS, const MCSymbol *RHS,
                         int64_t Addend,

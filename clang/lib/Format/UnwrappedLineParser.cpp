@@ -269,7 +269,7 @@ void UnwrappedLineParser::parseFile() {
   bool MustBeDeclaration = !Line->InPPDirective && !Style.isJavaScript();
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
-  if (Style.isTextProto())
+  if (Style.isTextProto() || (Style.isJson() && FormatTok->IsFirst))
     parseBracedList();
   else
     parseLevel();
@@ -3485,6 +3485,7 @@ bool UnwrappedLineParser::parseRequires(bool SeenEqual) {
   case tok::r_paren:
   case tok::kw_noexcept:
   case tok::kw_const:
+  case tok::star:
   case tok::amp:
     // This is a requires clause.
     parseRequiresClause(RequiresToken);

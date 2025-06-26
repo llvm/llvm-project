@@ -1415,10 +1415,10 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   // Arrange for local static and local extern declarations to appear
   // to be local to this function as well, in case they're directly
   // referenced in a block.
-  for (DeclMapTy::const_iterator i = ldm.begin(), e = ldm.end(); i != e; ++i) {
-    const auto *var = dyn_cast<VarDecl>(i->first);
+  for (const auto &KV : ldm) {
+    const auto *var = dyn_cast<VarDecl>(KV.first);
     if (var && !var->hasLocalStorage())
-      setAddrOfLocalVar(var, i->second);
+      setAddrOfLocalVar(var, KV.second);
   }
 
   // Begin building the function declaration.

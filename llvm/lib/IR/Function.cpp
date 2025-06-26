@@ -37,6 +37,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -59,13 +60,11 @@ using ProfileCount = Function::ProfileCount;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
-template class llvm::SymbolTableListTraits<BasicBlock>;
+template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
 
 static cl::opt<int> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 void Function::renumberBlocks() {
   validateBlockNumbers();
@@ -89,30 +88,15 @@ void Function::validateBlockNumbers() const {
 }
 
 void Function::convertToNewDbgValues() {
-  IsNewDbgInfoFormat = true;
   for (auto &BB : *this) {
     BB.convertToNewDbgValues();
   }
 }
 
 void Function::convertFromNewDbgValues() {
-  IsNewDbgInfoFormat = false;
   for (auto &BB : *this) {
     BB.convertFromNewDbgValues();
   }
-}
-
-void Function::setIsNewDbgInfoFormat(bool NewFlag) {
-  if (NewFlag && !IsNewDbgInfoFormat)
-    convertToNewDbgValues();
-  else if (!NewFlag && IsNewDbgInfoFormat)
-    convertFromNewDbgValues();
-}
-void Function::setNewDbgInfoFormatFlag(bool NewFlag) {
-  for (auto &BB : *this) {
-    BB.setNewDbgInfoFormatFlag(NewFlag);
-  }
-  IsNewDbgInfoFormat = NewFlag;
 }
 
 //===----------------------------------------------------------------------===//
@@ -492,7 +476,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
                    const Twine &name, Module *ParentModule)
     : GlobalObject(Ty, Value::FunctionVal, AllocMarker, Linkage, name,
                    computeAddrSpace(AddrSpace, ParentModule)),
-      NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
+      NumArgs(Ty->getNumParams()) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
@@ -507,7 +491,6 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 
   if (ParentModule) {
     ParentModule->getFunctionList().push_back(this);
-    IsNewDbgInfoFormat = ParentModule->IsNewDbgInfoFormat;
   }
 
   HasLLVMReservedName = getName().starts_with("llvm.");
@@ -1133,7 +1116,7 @@ std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
-      if (MDS->getString() == "function_entry_count") {
+      if (MDS->getString() == MDProfLabels::FunctionEntryCount) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         // A value of -1 is used for SamplePGO when there were no samples.
@@ -1142,7 +1125,8 @@ std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
           return std::nullopt;
         return ProfileCount(Count, PCT_Real);
       } else if (AllowSynthetic &&
-                 MDS->getString() == "synthetic_function_entry_count") {
+                 MDS->getString() ==
+                     MDProfLabels::SyntheticFunctionEntryCount) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         return ProfileCount(Count, PCT_Synthetic);
@@ -1155,7 +1139,7 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
   DenseSet<GlobalValue::GUID> R;
   if (MDNode *MD = getMetadata(LLVMContext::MD_prof))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
-      if (MDS->getString() == "function_entry_count")
+      if (MDS->getString() == MDProfLabels::FunctionEntryCount)
         for (unsigned i = 2; i < MD->getNumOperands(); i++)
           R.insert(mdconst::extract<ConstantInt>(MD->getOperand(i))
                        ->getValue()
@@ -1165,6 +1149,18 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
 
 bool Function::nullPointerIsDefined() const {
   return hasFnAttribute(Attribute::NullPointerIsValid);
+}
+
+unsigned Function::getVScaleValue() const {
+  Attribute Attr = getFnAttribute(Attribute::VScaleRange);
+  if (!Attr.isValid())
+    return 0;
+
+  unsigned VScale = Attr.getVScaleRangeMin();
+  if (VScale && VScale == Attr.getVScaleRangeMax())
+    return VScale;
+
+  return 0;
 }
 
 bool llvm::NullPointerIsDefined(const Function *F, unsigned AS) {
