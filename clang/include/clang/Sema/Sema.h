@@ -2282,12 +2282,8 @@ public:
   /// haven't seen the declaration for yet. The TypeList is the argument list
   /// the function must match if HasTypeList is true.
   struct SymbolLabel {
-    std::optional<SmallVector<QualType, 4>> TypeList;
     SourceLocation NameLoc;
-    bool HasTypeList;
-    Qualifiers CVQual;
-    NestedNameSpecifier
-        *NestedNameId; // Nested name identifier for type lookup.
+    IdentifierInfo *IdentId;
     bool Used;
   };
 
@@ -2301,15 +2297,10 @@ public:
   bool isNamedDeclSameAsSymbolLabel(NamedDecl *D,
                                     clang::Sema::SymbolLabel &Label);
 
-  typedef SmallVector<SymbolLabel, 1> PendingPragmaExportOverloads;
-  llvm::DenseMap<IdentifierInfo *, PendingPragmaExportOverloads>
-      PendingExportedNames;
+  llvm::DenseMap<IdentifierInfo *, SymbolLabel> PendingExportedNames;
 
   /// ActonPragmaExport - called on well-formed '\#pragma export'.
-  void ActOnPragmaExport(NestedNameSpecifier *NestedId,
-                         SourceLocation ExportNameLoc,
-                         std::optional<SmallVector<QualType, 4>> &&TypeList,
-                         Qualifiers CVQual);
+  void ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation ExportNameLoc);
 
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based optnone, consider marking the function

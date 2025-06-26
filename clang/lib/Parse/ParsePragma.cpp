@@ -1512,8 +1512,7 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
 
     // C++ could have a nested name, or be qualified with ::.
     PP.Lex(Tok);
-    if (Tok.isNot(tok::identifier) &&
-        !(PP.getLangOpts().CPlusPlus && Tok.is(tok::coloncolon))) {
+    if (Tok.isNot(tok::identifier)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
           << PragmaName;
       return false;
@@ -1521,19 +1520,7 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
 
     IdentifierInfo *IdentName = Tok.getIdentifierInfo();
     SourceLocation IdentNameLoc = Tok.getLocation();
-    NestedNameSpecifier *NestedId = zOSParseIdentifier(PragmaName, IdentName);
-    if (!NestedId)
-      return false;
-
-    // C++ can have a paramater list for overloaded functions.
-    // Try to parse the argument types.
-    std::optional<SmallVector<QualType, 4>> TypeList;
-    Qualifiers CVQual;
-
-    if (PP.getLangOpts().CPlusPlus && Tok.is(tok::l_paren)) {
-      if (!zOSParseParameterList(PragmaName, TypeList, CVQual))
-        return false;
-    }
+    PP.Lex(Tok);
 
     if (Tok.isNot(tok::r_paren)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
@@ -1542,8 +1529,7 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     }
 
     PP.Lex(Tok);
-    Actions.ActOnPragmaExport(NestedId, IdentNameLoc, std::move(TypeList),
-                              CVQual);
+    Actions.ActOnPragmaExport(IdentName, IdentNameLoc);
 
     // Because export is also a C++ keyword, we also check for that.
     if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
