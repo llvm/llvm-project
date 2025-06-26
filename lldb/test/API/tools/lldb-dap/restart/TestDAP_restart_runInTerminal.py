@@ -5,7 +5,7 @@ Test lldb-dap RestartRequest.
 from typing import Dict, Any, List
 
 import lldbdap_testcase
-from lldbsuite.test.decorators import skipIfWindows, skipIf, skipIfBuildType
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 
 
