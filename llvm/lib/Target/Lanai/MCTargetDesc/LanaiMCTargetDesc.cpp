@@ -94,7 +94,7 @@ public:
       : MCInstrAnalysis(Info) {}
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+                      uint64_t &Target, const MCSubtargetInfo *STI) const override {
     if (Inst.getNumOperands() == 0)
       return false;
     if (!isConditionalBranch(Inst) && !isUnconditionalBranch(Inst) &&

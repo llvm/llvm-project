@@ -210,7 +210,7 @@ public:
   }
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+                      uint64_t &Target, const MCSubtargetInfo *STI) const override {
     if (isConditionalBranch(Inst)) {
       int64_t Imm;
       if (Size == 2)
@@ -222,6 +222,8 @@ public:
     }
 
     switch (Inst.getOpcode()) {
+    default:
+      return false;
     case RISCV::C_J:
     case RISCV::C_JAL:
     case RISCV::QC_E_J:
@@ -238,20 +240,11 @@ public:
       }
       return false;
     }
-    }
-
-    return false;
-  }
-
-  bool evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                           uint64_t &Target,
-                           const MCSubtargetInfo &STI) const override {
-    unsigned int ArchRegWidth = STI.getTargetTriple().getArchPointerBitWidth();
-    switch(Inst.getOpcode()) {
-    default:
-      return false;
     case RISCV::C_ADDI:
     case RISCV::ADDI: {
+      if (!STI)
+        return false;
+      unsigned int ArchRegWidth = STI->getTargetTriple().getArchPointerBitWidth();
       MCRegister Reg = Inst.getOperand(1).getReg();
       auto TargetRegState = getGPRState(Reg);
       if (TargetRegState && Reg != RISCV::X0) {

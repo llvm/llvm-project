@@ -137,7 +137,7 @@ public:
       : MCInstrAnalysis(Info) {}
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+                      uint64_t &Target, const MCSubtargetInfo *STI) const override {
     if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
         Info->get(Inst.getOpcode()).operands()[0].OperandType !=
             MCOI::OPERAND_PCREL)

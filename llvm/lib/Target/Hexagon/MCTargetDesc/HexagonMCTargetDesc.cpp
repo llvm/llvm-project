@@ -717,7 +717,7 @@ public:
   }
 
   bool evaluateBranch(MCInst const &Inst, uint64_t Addr,
-                      uint64_t Size, uint64_t &Target) const override {
+                      uint64_t Size, uint64_t &Target, const MCSubtargetInfo *STI) const override {
     if (!(isCall(Inst) || isUnconditionalBranch(Inst) ||
           isConditionalBranch(Inst)))
       return false;

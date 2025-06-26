@@ -2356,10 +2356,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
             bool PrintTarget = DT->InstrAnalysis->evaluateBranch(
-                                   Inst, SectionAddr + Index, Size, Target) ||
-                               DT->InstrAnalysis->evaluateInstruction(
-                                   Inst, SectionAddr + Index, Size, Target,
-                                   *DT->SubtargetInfo);
+                                   Inst, SectionAddr + Index, Size, Target, DT->SubtargetInfo.get());
             if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(

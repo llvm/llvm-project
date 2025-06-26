@@ -181,7 +181,7 @@ public:
   /// targets. Return true on success, and the address in Target.
   virtual bool
   evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                 uint64_t &Target) const;
+                 uint64_t &Target, const MCSubtargetInfo *STI = nullptr) const;
 
   /// Given an instruction that accesses a memory address, try to compute
   /// the target address. Return true on success, and the address in \p Target.

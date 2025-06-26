@@ -231,7 +231,7 @@ public:
   MipsMCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+                      uint64_t &Target, const MCSubtargetInfo *STI) const override {
     unsigned NumOps = Inst.getNumOperands();
     if (NumOps == 0)
       return false;
