@@ -10104,7 +10104,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (LVL.hasUncountableEarlyExit() && UserIC != 1 &&
       !VectorizerParams::isInterleaveForced()) {
     UserIC = 1;
-    reportVectorizationInfo("Interleaving not currently supported for loops "
+    reportVectorizationInfo("Interleaving not supported for loops "
                             "with uncountable early exits",
                             "InterleaveEarlyExitDisabled", ORE, L);
   }
