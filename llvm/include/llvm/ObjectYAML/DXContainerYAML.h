@@ -172,7 +172,7 @@ struct StaticSamplerYamlDesc {
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16u;
   uint32_t ComparisonFunc =
-      llvm::to_underlying(dxbc::SamplersComparisonFunction::LessEqual);
+      llvm::to_underlying(dxbc::ComparisonFunc::LessEqual);
   uint32_t BorderColor =
       llvm::to_underlying(dxbc::StaticBorderColor::OpaqueWhite);
   float MinLOD = 0.f;

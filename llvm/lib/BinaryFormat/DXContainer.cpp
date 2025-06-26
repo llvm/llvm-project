@@ -99,6 +99,26 @@ ArrayRef<EnumEntry<ShaderVisibility>> dxbc::getShaderVisibility() {
   return ArrayRef(ShaderVisibilityValues);
 }
 
+#define TEXTURE_ADDRESS_MODE(Val, Enum) {#Enum, TextureAddressMode::Enum},
+
+static const EnumEntry<TextureAddressMode> TextureAddressModeNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<TextureAddressMode>> dxbc::getTextureAddressModes() {
+  return ArrayRef(TextureAddressModeNames);
+}
+
+#define COMPARISON_FUNC(Val, Enum) {#Enum, ComparisonFunc::Enum},
+
+static const EnumEntry<ComparisonFunc> ComparisonFuncNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ComparisonFunc>> dxbc::getComparisonFuncs() {
+  return ArrayRef(ComparisonFuncNames);
+}
+
 #define STATIC_BORDER_COLOR(Val, Enum) {#Enum, StaticBorderColor::Enum},
 
 static const EnumEntry<StaticBorderColor> StaticBorderColorValues[] = {

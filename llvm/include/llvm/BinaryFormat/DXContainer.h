@@ -231,10 +231,14 @@ enum class TextureAddressMode : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define COMPARISON_FUNCTION(Val, Enum) Enum = Val,
-enum class SamplersComparisonFunction : uint32_t {
+LLVM_ABI ArrayRef<EnumEntry<TextureAddressMode>> getTextureAddressModes();
+
+#define COMPARISON_FUNC(Val, Enum) Enum = Val,
+enum class ComparisonFunc : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+LLVM_ABI ArrayRef<EnumEntry<ComparisonFunc>> getComparisonFuncs();
 
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
 enum class StaticBorderColor : uint32_t {
