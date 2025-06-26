@@ -1,4 +1,4 @@
-// RUN: mlir-opt  %s  --transform-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(affine-simplify-min-max))" %s | FileCheck %s
 
 // CHECK-DAG: #[[MAP_0:.*]] = affine_map<()[s0] -> (32, s0)>
 // CHECK-DAG: #[[MAP_1:.*]] = affine_map<()[s0, s1] -> (s1, s0)>
@@ -57,12 +57,4 @@ func.func @overlapping_constraints() -> (index, index) {
   %r0 = affine.min affine_map<()[s0, s1, s2] -> (s0, s1, s2)>()[%0, %1, %2]
   %r1 = affine.max affine_map<()[s0, s1, s2] -> (s0, s1, s2)>()[%0, %1, %2]
   return %r0, %r1 : index, index
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["affine.min", "affine.max"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    transform.affine.simplify_min_max_affine_ops %0 : !transform.any_op
-    transform.yield 
-  }
 }
