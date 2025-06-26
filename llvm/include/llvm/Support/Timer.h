@@ -258,7 +258,7 @@ public:
 
 private:
   friend class Timer;
-  friend void PrintStatisticsJSON(raw_ostream &OS);
+  LLVM_ABI friend void PrintStatisticsJSON(raw_ostream &OS);
   void addTimer(Timer &T);
   void removeTimer(Timer &T);
   void prepareToPrintList(bool reset_time = false);

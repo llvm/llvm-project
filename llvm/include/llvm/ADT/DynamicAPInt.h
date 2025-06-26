@@ -212,7 +212,7 @@ public:
   friend DynamicAPInt operator/(int64_t A, const DynamicAPInt &B);
   friend DynamicAPInt operator%(int64_t A, const DynamicAPInt &B);
 
-  friend hash_code hash_value(const DynamicAPInt &x); // NOLINT
+  LLVM_ABI friend hash_code hash_value(const DynamicAPInt &x); // NOLINT
 
   LLVM_ABI void static_assert_layout(); // NOLINT
 

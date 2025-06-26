@@ -161,9 +161,6 @@ DWARF:
 
   auto platform_sp = Platform::GetHostPlatform();
   ASSERT_TRUE(platform_sp);
-  auto path_or_err = platform_sp->ResolveSDKPathFromDebugInfo(*module);
-  EXPECT_FALSE(static_cast<bool>(path_or_err));
-  llvm::consumeError(path_or_err.takeError());
 }
 
 TEST_F(XcodeSDKModuleTests, TestSDKPathFromDebugInfo_No_DW_AT_APPLE_sdk) {
@@ -207,9 +204,6 @@ DWARF:
 
   auto platform_sp = Platform::GetHostPlatform();
   ASSERT_TRUE(platform_sp);
-  auto path_or_err = platform_sp->ResolveSDKPathFromDebugInfo(*module);
-  EXPECT_FALSE(static_cast<bool>(path_or_err));
-  llvm::consumeError(path_or_err.takeError());
 }
 
 TEST_P(SDKPathParsingMultiparamTests, TestSDKPathFromDebugInfo) {
