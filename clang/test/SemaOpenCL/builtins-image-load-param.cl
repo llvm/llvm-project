@@ -21,7 +21,6 @@ half4 test_builtin_image_load_2d_2(half4 v4f16, int i32, int8 vec8i32) {
   return __builtin_amdgcn_image_load_2d_v4f16_i32(100, i32, i32, vec8i32, 120, i32); //expected-error{{argument to '__builtin_amdgcn_image_load_2d_v4f16_i32' must be a constant integer}}
 }
 
-
 float test_builtin_image_load_2darray(float f32, int i32, int8 vec8i32) {
 
   return __builtin_amdgcn_image_load_2darray_f32_i32(100, i32, i32, i32, vec8i32, i32, 110); //expected-error{{argument to '__builtin_amdgcn_image_load_2darray_f32_i32' must be a constant integer}}
