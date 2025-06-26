@@ -82,6 +82,22 @@ namespace PAuthGadgetScanner {
   dbgs() << "\n";
 }
 
+// Iterates over BinaryFunction's instructions like a range-based for loop:
+//
+// iterateOverInstrs(BF, [&](MCInstReference Inst) {
+//   // loop body
+// });
+template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
+  if (BF.hasCFG()) {
+    for (BinaryBasicBlock &BB : BF)
+      for (int64_t I = 0, E = BB.size(); I < E; ++I)
+        Fn(MCInstInBBReference(&BB, I));
+  } else {
+    for (auto I : BF.instrs())
+      Fn(MCInstInBFReference(&BF, I.first));
+  }
+}
+
 // This class represents mapping from a set of arbitrary physical registers to
 // consecutive array indexes.
 class TrackedRegisters {
@@ -342,6 +358,29 @@ protected:
     return S;
   }
 
+  /// Computes a reasonably pessimistic estimation of the register state when
+  /// the previous instruction is not known for sure. Takes the set of registers
+  /// which are trusted at function entry and removes all registers that can be
+  /// clobbered inside this function.
+  SrcState computePessimisticState(BinaryFunction &BF) {
+    BitVector ClobberedRegs(NumRegs);
+    iterateOverInstrs(BF, [&](MCInstReference Inst) {
+      BC.MIB->getClobberedRegs(Inst, ClobberedRegs);
+
+      // If this is a call instruction, no register is safe anymore, unless
+      // it is a tail call. Ignore tail calls for the purpose of estimating the
+      // worst-case scenario, assuming no instructions are executed in the
+      // caller after this point anyway.
+      if (BC.MIB->isCall(Inst) && !BC.MIB->isTailCall(Inst))
+        ClobberedRegs.set();
+    });
+
+    SrcState S = createEntryState();
+    S.SafeToDerefRegs.reset(ClobberedRegs);
+    S.TrustedRegs.reset(ClobberedRegs);
+    return S;
+  }
+
   BitVector getClobberedRegs(const MCInst &Point) const {
     BitVector Clobbered(NumRegs);
     // Assume a call can clobber all registers, including callee-saved
@@ -545,6 +584,10 @@ class DataflowSrcSafetyAnalysis
   using SrcSafetyAnalysis::BC;
   using SrcSafetyAnalysis::computeNext;
 
+  // Pessimistic initial state for basic blocks without any predecessors
+  // (not needed for most functions, thus initialized lazily).
+  SrcState PessimisticState;
+
 public:
   DataflowSrcSafetyAnalysis(BinaryFunction &BF,
                             MCPlusBuilder::AllocatorIdTy AllocId,
@@ -584,6 +627,18 @@ protected:
   SrcState getStartingStateAtBB(const BinaryBasicBlock &BB) {
     if (BB.isEntryPoint())
       return createEntryState();
+
+    // If a basic block without any predecessors is found in an optimized code,
+    // this likely means that some CFG edges were not detected. Pessimistically
+    // assume any register that can ever be clobbered in this function to be
+    // unsafe before this basic block.
+    // Warn about this fact in FunctionAnalysis::findUnsafeUses(), as it likely
+    // means imprecise CFG information.
+    if (BB.pred_empty()) {
+      if (PessimisticState.empty())
+        PessimisticState = computePessimisticState(*BB.getParent());
+      return PessimisticState;
+    }
 
     return SrcState();
   }
@@ -1344,17 +1399,6 @@ shouldReportAuthOracle(const BinaryContext &BC, const MCInstReference &Inst,
   return make_gadget_report(AuthOracleKind, Inst, *AuthReg);
 }
 
-template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
-  if (BF.hasCFG()) {
-    for (BinaryBasicBlock &BB : BF)
-      for (int64_t I = 0, E = BB.size(); I < E; ++I)
-        Fn(MCInstInBBReference(&BB, I));
-  } else {
-    for (auto I : BF.instrs())
-      Fn(MCInstInBFReference(&BF, I.first));
-  }
-}
-
 static SmallVector<MCPhysReg>
 collectRegsToTrack(ArrayRef<PartialReport<MCPhysReg>> Reports) {
   SmallSet<MCPhysReg, 4> RegsToTrack;
@@ -1375,17 +1419,60 @@ void FunctionAnalysisContext::findUnsafeUses(
     BF.dump();
   });
 
+  bool UnreachableBBReported = false;
+  if (BF.hasCFG()) {
+    // Warn on basic blocks being unreachable according to BOLT (at most once
+    // per BinaryFunction), as this likely means the CFG reconstructed by BOLT
+    // is imprecise. A basic block can be
+    // * reachable from an entry basic block - a hopefully correct non-empty
+    //   state is propagated to that basic block sooner or later. All basic
+    //   blocks are expected to belong to this category under normal conditions.
+    // * reachable from a "directly unreachable" BB (a basic block that has no
+    //   direct predecessors and this is not because it is an entry BB) - *some*
+    //   non-empty state is propagated to this basic block sooner or later, as
+    //   the initial state of directly unreachable basic blocks is
+    //   pessimistically initialized to "all registers are unsafe"
+    //   - a warning can be printed for the "directly unreachable" basic block
+    // * neither reachable from an entry nor from a "directly unreachable" BB
+    //   (such as if this BB is in an isolated loop of basic blocks) - the final
+    //   state is computed to be empty for this basic block
+    //   - a warning can be printed for this basic block
+    for (BinaryBasicBlock &BB : BF) {
+      MCInst *FirstInst = BB.getFirstNonPseudoInstr();
+      // Skip empty basic block early for simplicity.
+      if (!FirstInst)
+        continue;
+
+      bool IsDirectlyUnreachable = BB.pred_empty() && !BB.isEntryPoint();
+      bool HasNoStateComputed = Analysis->getStateBefore(*FirstInst).empty();
+      if (!IsDirectlyUnreachable && !HasNoStateComputed)
+        continue;
+
+      // Arbitrarily attach the report to the first instruction of BB.
+      // This is printed as "[message] in function [name], basic block ...,
+      // at address ..." when the issue is reported to the user.
+      Reports.push_back(make_generic_report(
+          MCInstReference::get(FirstInst, BF),
+          "Warning: possibly imprecise CFG, the analysis quality may be "
+          "degraded in this function. According to BOLT, unreachable code is "
+          "found" /* in function [name]... */));
+      UnreachableBBReported = true;
+      break; // One warning per function.
+    }
+  }
+  // FIXME: Warn the user about imprecise analysis when the function has no CFG
+  //        information at all.
+
   iterateOverInstrs(BF, [&](MCInstReference Inst) {
     if (BC.MIB->isCFI(Inst))
       return;
 
     const SrcState &S = Analysis->getStateBefore(Inst);
-
-    // If non-empty state was never propagated from the entry basic block
-    // to Inst, assume it to be unreachable and report a warning.
     if (S.empty()) {
-      Reports.push_back(
-          make_generic_report(Inst, "Warning: unreachable instruction found"));
+      LLVM_DEBUG(
+          { traceInst(BC, "Instruction has no state, skipping", Inst); });
+      assert(UnreachableBBReported && "Should be reported at least once");
+      (void)UnreachableBBReported;
       return;
     }
 
