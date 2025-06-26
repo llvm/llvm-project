@@ -284,22 +284,22 @@ uint32_t test_ror(uint32_t x, uint32_t y) {
 //
 // AArch64-LABEL: @test_rorl(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    [[REM_I:%.*]] = urem i32 [[Y:%.*]], 64
-// AArch64-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[REM_I]], 0
-// AArch64-NEXT:    br i1 [[CMP_I]], label [[IF_THEN_I:%.*]], label [[IF_END_I:%.*]]
-// AArch64:       if.then.i:
-// AArch64-NEXT:    br label [[__RORLL_EXIT:%.*]]
-// AArch64:       if.end.i:
-// AArch64-NEXT:    [[SH_PROM_I:%.*]] = zext i32 [[REM_I]] to i64
-// AArch64-NEXT:    [[SHR_I:%.*]] = lshr i64 [[X:%.*]], [[SH_PROM_I]]
-// AArch64-NEXT:    [[SUB_I:%.*]] = sub i32 64, [[REM_I]]
-// AArch64-NEXT:    [[SH_PROM1_I:%.*]] = zext i32 [[SUB_I]] to i64
-// AArch64-NEXT:    [[SHL_I:%.*]] = shl i64 [[X]], [[SH_PROM1_I]]
-// AArch64-NEXT:    [[OR_I:%.*]] = or i64 [[SHR_I]], [[SHL_I]]
-// AArch64-NEXT:    br label [[__RORLL_EXIT]]
-// AArch64:       __rorll.exit:
-// AArch64-NEXT:    [[RETVAL_I_0:%.*]] = phi i64 [ [[X]], [[IF_THEN_I]] ], [ [[OR_I]], [[IF_END_I]] ]
-// AArch64-NEXT:    ret i64 [[RETVAL_I_0]]
+// AArch64-NEXT:    [[REM_I_I:%.*]] = urem i32 [[Y:%.*]], 64
+// AArch64-NEXT:    [[CMP_I_I:%.*]] = icmp eq i32 [[REM_I_I]], 0
+// AArch64-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[IF_END_I_I:%.*]]
+// AArch64:       if.then.i.i:
+// AArch64-NEXT:    br label [[__RORL_EXIT:%.*]]
+// AArch64:       if.end.i.i:
+// AArch64-NEXT:    [[SH_PROM_I_I:%.*]] = zext i32 [[REM_I_I]] to i64
+// AArch64-NEXT:    [[SHR_I_I:%.*]] = lshr i64 [[X:%.*]], [[SH_PROM_I_I]]
+// AArch64-NEXT:    [[SUB_I_I:%.*]] = sub i32 64, [[REM_I_I]]
+// AArch64-NEXT:    [[SH_PROM1_I_I:%.*]] = zext i32 [[SUB_I_I]] to i64
+// AArch64-NEXT:    [[SHL_I_I:%.*]] = shl i64 [[X]], [[SH_PROM1_I_I]]
+// AArch64-NEXT:    [[OR_I_I:%.*]] = or i64 [[SHR_I_I]], [[SHL_I_I]]
+// AArch64-NEXT:    br label [[__RORL_EXIT]]
+// AArch64:       __rorl.exit:
+// AArch64-NEXT:    [[RETVAL_I_I_0:%.*]] = phi i64 [ [[X]], [[IF_THEN_I_I]] ], [ [[OR_I_I]], [[IF_END_I_I]] ]
+// AArch64-NEXT:    ret i64 [[RETVAL_I_I_0]]
 //
 unsigned long test_rorl(unsigned long x, uint32_t y) {
   return __rorl(x, y);
@@ -345,8 +345,8 @@ unsigned test_clz(uint32_t t) {
 // AArch64-LABEL: @test_clzl(
 // AArch64-NEXT:  entry:
 // AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[T:%.*]], i1 false)
-// AArch64-NEXT:    [[CAST_I:%.*]] = trunc i64 [[TMP0]] to i32
-// AArch64-NEXT:    ret i32 [[CAST_I]]
+// AArch64-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+// AArch64-NEXT:    ret i32 [[TMP1]]
 //
 unsigned test_clzl(unsigned long t) {
   return __clzl(t);
@@ -355,8 +355,8 @@ unsigned test_clzl(unsigned long t) {
 // ARM-LABEL: @test_clzll(
 // ARM-NEXT:  entry:
 // ARM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[T:%.*]], i1 false)
-// ARM-NEXT:    [[CAST_I:%.*]] = trunc i64 [[TMP0]] to i32
-// ARM-NEXT:    ret i32 [[CAST_I]]
+// ARM-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+// ARM-NEXT:    ret i32 [[TMP1]]
 //
 unsigned test_clzll(uint64_t t) {
   return __clzll(t);
@@ -478,42 +478,42 @@ uint32_t test_rev16(uint32_t t) {
 //
 // AArch64-LABEL: @test_rev16l(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 32
-// AArch64-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SHR_I]] to i32
-// AArch64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV_I]])
-// AArch64-NEXT:    [[REM_I_I10_I:%.*]] = urem i32 16, 32
-// AArch64-NEXT:    [[CMP_I_I11_I:%.*]] = icmp eq i32 [[REM_I_I10_I]], 0
-// AArch64-NEXT:    br i1 [[CMP_I_I11_I]], label [[IF_THEN_I_I17_I:%.*]], label [[IF_END_I_I12_I:%.*]]
-// AArch64:       if.then.i.i17.i:
-// AArch64-NEXT:    br label [[__REV16_EXIT18_I:%.*]]
-// AArch64:       if.end.i.i12.i:
-// AArch64-NEXT:    [[SHR_I_I13_I:%.*]] = lshr i32 [[TMP0]], [[REM_I_I10_I]]
-// AArch64-NEXT:    [[SUB_I_I14_I:%.*]] = sub i32 32, [[REM_I_I10_I]]
-// AArch64-NEXT:    [[SHL_I_I15_I:%.*]] = shl i32 [[TMP0]], [[SUB_I_I14_I]]
-// AArch64-NEXT:    [[OR_I_I16_I:%.*]] = or i32 [[SHR_I_I13_I]], [[SHL_I_I15_I]]
-// AArch64-NEXT:    br label [[__REV16_EXIT18_I]]
-// AArch64:       __rev16.exit18.i:
-// AArch64-NEXT:    [[RETVAL_I_I6_I_0:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN_I_I17_I]] ], [ [[OR_I_I16_I]], [[IF_END_I_I12_I]] ]
-// AArch64-NEXT:    [[CONV1_I:%.*]] = zext i32 [[RETVAL_I_I6_I_0]] to i64
-// AArch64-NEXT:    [[SHL_I:%.*]] = shl i64 [[CONV1_I]], 32
-// AArch64-NEXT:    [[CONV2_I:%.*]] = trunc i64 [[T]] to i32
-// AArch64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV2_I]])
-// AArch64-NEXT:    [[REM_I_I_I:%.*]] = urem i32 16, 32
-// AArch64-NEXT:    [[CMP_I_I_I:%.*]] = icmp eq i32 [[REM_I_I_I]], 0
-// AArch64-NEXT:    br i1 [[CMP_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[IF_END_I_I_I:%.*]]
-// AArch64:       if.then.i.i.i:
-// AArch64-NEXT:    br label [[__REV16LL_EXIT:%.*]]
-// AArch64:       if.end.i.i.i:
-// AArch64-NEXT:    [[SHR_I_I_I:%.*]] = lshr i32 [[TMP1]], [[REM_I_I_I]]
-// AArch64-NEXT:    [[SUB_I_I_I:%.*]] = sub i32 32, [[REM_I_I_I]]
-// AArch64-NEXT:    [[SHL_I_I_I:%.*]] = shl i32 [[TMP1]], [[SUB_I_I_I]]
-// AArch64-NEXT:    [[OR_I_I_I:%.*]] = or i32 [[SHR_I_I_I]], [[SHL_I_I_I]]
-// AArch64-NEXT:    br label [[__REV16LL_EXIT]]
-// AArch64:       __rev16ll.exit:
-// AArch64-NEXT:    [[RETVAL_I_I_I_0:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN_I_I_I]] ], [ [[OR_I_I_I]], [[IF_END_I_I_I]] ]
-// AArch64-NEXT:    [[CONV4_I:%.*]] = zext i32 [[RETVAL_I_I_I_0]] to i64
-// AArch64-NEXT:    [[OR_I:%.*]] = or i64 [[SHL_I]], [[CONV4_I]]
-// AArch64-NEXT:    ret i64 [[OR_I]]
+// AArch64-NEXT:    [[SHR_I_I:%.*]] = lshr i64 [[T:%.*]], 32
+// AArch64-NEXT:    [[CONV_I_I:%.*]] = trunc i64 [[SHR_I_I]] to i32
+// AArch64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV_I_I]])
+// AArch64-NEXT:    [[REM_I_I10_I_I:%.*]] = urem i32 16, 32
+// AArch64-NEXT:    [[CMP_I_I11_I_I:%.*]] = icmp eq i32 [[REM_I_I10_I_I]], 0
+// AArch64-NEXT:    br i1 [[CMP_I_I11_I_I]], label [[IF_THEN_I_I17_I_I:%.*]], label [[IF_END_I_I12_I_I:%.*]]
+// AArch64:       if.then.i.i17.i.i:
+// AArch64-NEXT:    br label [[__REV16_EXIT18_I_I:%.*]]
+// AArch64:       if.end.i.i12.i.i:
+// AArch64-NEXT:    [[SHR_I_I13_I_I:%.*]] = lshr i32 [[TMP0]], [[REM_I_I10_I_I]]
+// AArch64-NEXT:    [[SUB_I_I14_I_I:%.*]] = sub i32 32, [[REM_I_I10_I_I]]
+// AArch64-NEXT:    [[SHL_I_I15_I_I:%.*]] = shl i32 [[TMP0]], [[SUB_I_I14_I_I]]
+// AArch64-NEXT:    [[OR_I_I16_I_I:%.*]] = or i32 [[SHR_I_I13_I_I]], [[SHL_I_I15_I_I]]
+// AArch64-NEXT:    br label [[__REV16_EXIT18_I_I]]
+// AArch64:       __rev16.exit18.i.i:
+// AArch64-NEXT:    [[RETVAL_I_I5_I_I_0:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN_I_I17_I_I]] ], [ [[OR_I_I16_I_I]], [[IF_END_I_I12_I_I]] ]
+// AArch64-NEXT:    [[CONV1_I_I:%.*]] = zext i32 [[RETVAL_I_I5_I_I_0]] to i64
+// AArch64-NEXT:    [[SHL_I_I:%.*]] = shl i64 [[CONV1_I_I]], 32
+// AArch64-NEXT:    [[CONV2_I_I:%.*]] = trunc i64 [[T]] to i32
+// AArch64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV2_I_I]])
+// AArch64-NEXT:    [[REM_I_I_I_I:%.*]] = urem i32 16, 32
+// AArch64-NEXT:    [[CMP_I_I_I_I:%.*]] = icmp eq i32 [[REM_I_I_I_I]], 0
+// AArch64-NEXT:    br i1 [[CMP_I_I_I_I]], label [[IF_THEN_I_I_I_I:%.*]], label [[IF_END_I_I_I_I:%.*]]
+// AArch64:       if.then.i.i.i.i:
+// AArch64-NEXT:    br label [[__REV16L_EXIT:%.*]]
+// AArch64:       if.end.i.i.i.i:
+// AArch64-NEXT:    [[SHR_I_I_I_I:%.*]] = lshr i32 [[TMP1]], [[REM_I_I_I_I]]
+// AArch64-NEXT:    [[SUB_I_I_I_I:%.*]] = sub i32 32, [[REM_I_I_I_I]]
+// AArch64-NEXT:    [[SHL_I_I_I_I:%.*]] = shl i32 [[TMP1]], [[SUB_I_I_I_I]]
+// AArch64-NEXT:    [[OR_I_I_I_I:%.*]] = or i32 [[SHR_I_I_I_I]], [[SHL_I_I_I_I]]
+// AArch64-NEXT:    br label [[__REV16L_EXIT]]
+// AArch64:       __rev16l.exit:
+// AArch64-NEXT:    [[RETVAL_I_I_I_I_0:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN_I_I_I_I]] ], [ [[OR_I_I_I_I]], [[IF_END_I_I_I_I]] ]
+// AArch64-NEXT:    [[CONV4_I_I:%.*]] = zext i32 [[RETVAL_I_I_I_I_0]] to i64
+// AArch64-NEXT:    [[OR_I_I:%.*]] = or i64 [[SHL_I_I]], [[CONV4_I_I]]
+// AArch64-NEXT:    ret i64 [[OR_I_I]]
 //
 long test_rev16l(long t) {
   return __rev16l(t);
@@ -536,8 +536,8 @@ long test_rev16l(long t) {
 // ARM-NEXT:    [[OR_I_I16_I:%.*]] = or i32 [[SHR_I_I13_I]], [[SHL_I_I15_I]]
 // ARM-NEXT:    br label [[__REV16_EXIT18_I]]
 // ARM:       __rev16.exit18.i:
-// ARM-NEXT:    [[RETVAL_I_I6_I_0:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN_I_I17_I]] ], [ [[OR_I_I16_I]], [[IF_END_I_I12_I]] ]
-// ARM-NEXT:    [[CONV1_I:%.*]] = zext i32 [[RETVAL_I_I6_I_0]] to i64
+// ARM-NEXT:    [[RETVAL_I_I5_I_0:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN_I_I17_I]] ], [ [[OR_I_I16_I]], [[IF_END_I_I12_I]] ]
+// ARM-NEXT:    [[CONV1_I:%.*]] = zext i32 [[RETVAL_I_I5_I_0]] to i64
 // ARM-NEXT:    [[SHL_I:%.*]] = shl i64 [[CONV1_I]], 32
 // ARM-NEXT:    [[CONV2_I:%.*]] = trunc i64 [[T]] to i32
 // ARM-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV2_I]])
@@ -587,8 +587,8 @@ uint32_t test_rbit(uint32_t t) {
 //
 // AArch64-LABEL: @test_rbitl(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    [[RBIT_I:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[T:%.*]])
-// AArch64-NEXT:    ret i64 [[RBIT_I]]
+// AArch64-NEXT:    [[RBIT_I_I:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[T:%.*]])
+// AArch64-NEXT:    ret i64 [[RBIT_I_I]]
 //
 long test_rbitl(long t) {
   return __rbitl(t);
@@ -640,36 +640,33 @@ uint32_t test_usat(int32_t t) {
 
 /* 9.4.2 Saturating addition and subtraction intrinsics */
 #ifdef __ARM_32BIT_STATE
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_qadd(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.qadd(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_qadd(int32_t a, int32_t b) {
   return __qadd(a, b);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_qsub(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.qsub(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_qsub(int32_t a, int32_t b) {
   return __qsub(a, b);
 }
 
 extern int32_t f();
-// AArch32-LABEL: @test_qdbl(
-// AArch32-NEXT:  entry:
-// AArch32-NEXT:    [[CALL:%.*]] = call i32 @f() #[[ATTR9:[0-9]+]]
-// AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.qadd(i32 [[CALL]], i32 [[CALL]])
-// AArch32-NEXT:    ret i32 [[TMP0]]
 //
 #ifndef __ARM_FEATURE_DSP
 __attribute__((target("dsp")))
@@ -683,74 +680,80 @@ int32_t test_qdbl() {
  * 9.3 16-bit multiplications
  */
 #ifdef __ARM_32BIT_STATE
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smulbb(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smulbb(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smulbb(int32_t a, int32_t b) {
   return __smulbb(a, b);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smulbt(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smulbt(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smulbt(int32_t a, int32_t b) {
   return __smulbt(a, b);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smultb(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smultb(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smultb(int32_t a, int32_t b) {
   return __smultb(a, b);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smultt(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smultt(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smultt(int32_t a, int32_t b) {
   return __smultt(a, b);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smulwb(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smulwb(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smulwb(int32_t a, int32_t b) {
   return __smulwb(a, b);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smulwt(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smulwt(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smulwt(int32_t a, int32_t b) {
   return __smulwt(a, b);
 }
@@ -758,74 +761,80 @@ int32_t test_smulwt(int32_t a, int32_t b) {
 
 /* 9.4.3 Accumultating multiplications */
 #ifdef __ARM_32BIT_STATE
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smlabb(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smlabb(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smlabb(int32_t a, int32_t b, int32_t c) {
   return __smlabb(a, b, c);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smlabt(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smlabt(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smlabt(int32_t a, int32_t b, int32_t c) {
   return __smlabt(a, b, c);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smlatb(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smlatb(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smlatb(int32_t a, int32_t b, int32_t c) {
   return __smlatb(a, b, c);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smlatt(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smlatt(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smlatt(int32_t a, int32_t b, int32_t c) {
   return __smlatt(a, b, c);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smlawb(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smlawb(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smlawb(int32_t a, int32_t b, int32_t c) {
   return __smlawb(a, b, c);
 }
 
+//
+#ifndef __ARM_FEATURE_DSP
+__attribute__((target("dsp")))
+#endif
 // AArch32-LABEL: @test_smlawt(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.smlawt(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_DSP
-__attribute__((target("dsp")))
-#endif
 int32_t test_smlawt(int32_t a, int32_t b, int32_t c) {
   return __smlawt(a, b, c);
 }
@@ -1369,6 +1378,11 @@ int32_t test_smusdx(int16x2_t a, int16x2_t b) {
 #endif
 
 /* 9.7 CRC32 intrinsics */
+//
+//
+#ifndef __ARM_FEATURE_CRC32
+__attribute__((target("crc")))
+#endif
 // AArch32-LABEL: @test_crc32b(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = zext i8 [[B:%.*]] to i32
@@ -1381,13 +1395,15 @@ int32_t test_smusdx(int16x2_t a, int16x2_t b) {
 // AArch64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.aarch64.crc32b(i32 [[A:%.*]], i32 [[TMP0]])
 // AArch64-NEXT:    ret i32 [[TMP1]]
 //
-#ifndef __ARM_FEATURE_CRC32
-__attribute__((target("crc")))
-#endif
 uint32_t test_crc32b(uint32_t a, uint8_t b) {
   return __crc32b(a, b);
 }
 
+//
+//
+#ifndef __ARM_FEATURE_CRC32
+__attribute__((target("crc")))
+#endif
 // AArch32-LABEL: @test_crc32h(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = zext i16 [[B:%.*]] to i32
@@ -1400,13 +1416,15 @@ uint32_t test_crc32b(uint32_t a, uint8_t b) {
 // AArch64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.aarch64.crc32h(i32 [[A:%.*]], i32 [[TMP0]])
 // AArch64-NEXT:    ret i32 [[TMP1]]
 //
-#ifndef __ARM_FEATURE_CRC32
-__attribute__((target("crc")))
-#endif
 uint32_t test_crc32h(uint32_t a, uint16_t b) {
   return __crc32h(a, b);
 }
 
+//
+//
+#ifndef __ARM_FEATURE_CRC32
+__attribute__((target("crc")))
+#endif
 // AArch32-LABEL: @test_crc32w(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.crc32w(i32 [[A:%.*]], i32 [[B:%.*]])
@@ -1417,13 +1435,15 @@ uint32_t test_crc32h(uint32_t a, uint16_t b) {
 // AArch64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.crc32w(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch64-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_CRC32
-__attribute__((target("crc")))
-#endif
 uint32_t test_crc32w(uint32_t a, uint32_t b) {
   return __crc32w(a, b);
 }
 
+//
+//
+#ifndef __ARM_FEATURE_CRC32
+__attribute__((target("crc")))
+#endif
 // AArch32-LABEL: @test_crc32d(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = trunc i64 [[B:%.*]] to i32
@@ -1438,13 +1458,15 @@ uint32_t test_crc32w(uint32_t a, uint32_t b) {
 // AArch64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.crc32x(i32 [[A:%.*]], i64 [[B:%.*]])
 // AArch64-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_CRC32
-__attribute__((target("crc")))
-#endif
 uint32_t test_crc32d(uint32_t a, uint64_t b) {
   return __crc32d(a, b);
 }
 
+//
+//
+#ifndef __ARM_FEATURE_CRC32
+__attribute__((target("crc")))
+#endif
 // AArch32-LABEL: @test_crc32cb(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = zext i8 [[B:%.*]] to i32
@@ -1457,13 +1479,15 @@ uint32_t test_crc32d(uint32_t a, uint64_t b) {
 // AArch64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.aarch64.crc32cb(i32 [[A:%.*]], i32 [[TMP0]])
 // AArch64-NEXT:    ret i32 [[TMP1]]
 //
-#ifndef __ARM_FEATURE_CRC32
-__attribute__((target("crc")))
-#endif
 uint32_t test_crc32cb(uint32_t a, uint8_t b) {
   return __crc32cb(a, b);
 }
 
+//
+//
+#ifndef __ARM_FEATURE_CRC32
+__attribute__((target("crc")))
+#endif
 // AArch32-LABEL: @test_crc32ch(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = zext i16 [[B:%.*]] to i32
@@ -1476,13 +1500,15 @@ uint32_t test_crc32cb(uint32_t a, uint8_t b) {
 // AArch64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.aarch64.crc32ch(i32 [[A:%.*]], i32 [[TMP0]])
 // AArch64-NEXT:    ret i32 [[TMP1]]
 //
-#ifndef __ARM_FEATURE_CRC32
-__attribute__((target("crc")))
-#endif
 uint32_t test_crc32ch(uint32_t a, uint16_t b) {
   return __crc32ch(a, b);
 }
 
+//
+//
+#ifndef __ARM_FEATURE_CRC32
+__attribute__((target("crc")))
+#endif
 // AArch32-LABEL: @test_crc32cw(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.arm.crc32cw(i32 [[A:%.*]], i32 [[B:%.*]])
@@ -1493,13 +1519,15 @@ uint32_t test_crc32ch(uint32_t a, uint16_t b) {
 // AArch64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.crc32cw(i32 [[A:%.*]], i32 [[B:%.*]])
 // AArch64-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_CRC32
-__attribute__((target("crc")))
-#endif
 uint32_t test_crc32cw(uint32_t a, uint32_t b) {
   return __crc32cw(a, b);
 }
 
+//
+//
+#ifndef __ARM_FEATURE_CRC32
+__attribute__((target("crc")))
+#endif
 // AArch32-LABEL: @test_crc32cd(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = trunc i64 [[B:%.*]] to i32
@@ -1514,9 +1542,6 @@ uint32_t test_crc32cw(uint32_t a, uint32_t b) {
 // AArch64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.crc32cx(i32 [[A:%.*]], i64 [[B:%.*]])
 // AArch64-NEXT:    ret i32 [[TMP0]]
 //
-#ifndef __ARM_FEATURE_CRC32
-__attribute__((target("crc")))
-#endif
 uint32_t test_crc32cd(uint32_t a, uint64_t b) {
   return __crc32cd(a, b);
 }
@@ -1764,14 +1789,18 @@ int32_t test_jcvt(double v) {
 
 // AArch64-LABEL: @test_rintn(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    call double @llvm.roundeven.f64(double [[TMP0:%.*]])
+// AArch64-NEXT:    [[TMP0:%.*]] = call double @llvm.roundeven.f64(double [[A:%.*]])
+// AArch64-NEXT:    ret double [[TMP0]]
+//
 double test_rintn(double a) {
   return __rintn(a);
 }
 
 // AArch64-LABEL: @test_rintnf(
-// AArch64-NEXT: entry:
-// AArch64-NEXT:      call float @llvm.roundeven.f32(float [[TMP0:%.*]])
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[TMP0:%.*]] = call float @llvm.roundeven.f32(float [[B:%.*]])
+// AArch64-NEXT:    ret float [[TMP0]]
+//
 float test_rintnf(float b) {
   return __rintnf(b);
 }

@@ -47,12 +47,15 @@ STATISTIC(NumAllocasPromoted,
 
 namespace {
 
-bool canInlineCallBase(CallBase *CB) {
+/// Sanity check for a call site's inlinability based on inline attributes.
+static bool canInlineCallBase(CallBase *CB) {
   return CB->hasFnAttr(Attribute::AlwaysInline) &&
          !CB->getAttributes().hasFnAttr(Attribute::NoInline);
 }
 
-bool attemptInlineFunction(
+/// Attempt to inline a call site \p CB into its caller.
+/// Returns true if the inlining was successful, false otherwise.
+static bool attemptInlineFunction(
     Function &F, CallBase *CB, bool InsertLifetime,
     function_ref<AAResults &(Function &)> &GetAAR,
     function_ref<AssumptionCache &(Function &)> &GetAssumptionCache,
@@ -365,7 +368,8 @@ bool AlwaysInlineInterleavedMem2RegImpl(
           MaxIncoming = CurrentIncoming;
         }
       }
-      Worklist.push_back(BestFunc);
+      if (BestFunc)
+        Worklist.push_back(BestFunc);
     }
   }
 
