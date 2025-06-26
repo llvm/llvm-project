@@ -130,26 +130,14 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; Taken from memcpy-param-combinations.ll, tests PTRADD handling in
 ; SelectionDAGAddressAnalysis.
 define void @memcpy_p1_p4_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; GFX942_PTRADD-LABEL: memcpy_p1_p4_sz16_align_1_1:
-; GFX942_PTRADD:       ; %bb.0: ; %entry
-; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_PTRADD-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0)
-; GFX942_PTRADD-NEXT:    global_store_dwordx2 v[0:1], v[4:5], off
-; GFX942_PTRADD-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off offset:8
-; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0)
-; GFX942_PTRADD-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off offset:8
-; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0)
-; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942_LEGACY-LABEL: memcpy_p1_p4_sz16_align_1_1:
-; GFX942_LEGACY:       ; %bb.0: ; %entry
-; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_LEGACY-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0)
-; GFX942_LEGACY-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0)
-; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+; GFX942-LABEL: memcpy_p1_p4_sz16_align_1_1:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
