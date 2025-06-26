@@ -2327,7 +2327,7 @@ private:
 /// 'fir.call' operations that invoke the '__divdc3' runtime function, which is
 /// typically used to perform double-precision complex division.
 ///
-/// When the 'EnableArithmeticBasedComplexDiv' flag is enabled, this pattern
+/// When the 'EnableComplexDivConverter' flag is enabled, this pattern
 /// matches calls to '__divdc3', extracts the real and imaginary components of
 /// the numerator and denominator, and replaces the function call with an
 /// explicit computation using MLIR's arithmetic operations.
@@ -2339,7 +2339,7 @@ private:
 ///     imag_part = (y0*x1 - x0*y1) / (x1^2 + y1^2)
 /// The result is then reassembled into a 'complex<f64>' value using FIR's
 /// 'InsertValueOp' instructions.
-class HlfirComplexDivisionConversion
+class ComplexDivisionConversion
     : public mlir::OpRewritePattern<fir::CallOp> {
   using OpRewritePattern::OpRewritePattern;
   llvm::LogicalResult
@@ -2461,7 +2461,7 @@ public:
 
     patterns.insert<DotProductConversion>(context);
     patterns.insert<ReshapeAsElementalConversion>(context);
-    patterns.insert<HlfirComplexDivisionConversion>(context);
+    patterns.insert<ComplexDivisionConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
