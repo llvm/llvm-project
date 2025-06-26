@@ -304,16 +304,14 @@ Expected<std::string> StringSubstitution::getResultForDiagnostics() const {
 
   OS << '"';
   // Escape the string if it contains any characters that
-  // make it hard to read, such as tabs, newlines, quotes, and non-printable
-  // characters. These are the characters that are escaped by write_escaped(),
-  // except we do not include backslashes, because they are
-  // common in Windows paths and escaping them would make the output
-  // harder to read.
-  // However, when we do escape, backslashes are escaped as well,
-  // otherwise the output would be ambiguous.
-  const bool NeedsEscaping = llvm::any_of(*VarVal, [](char C) {
-    return C == '\t' || C == '\n' || C == '"' || !isPrint(C);
-  });
+  // make it hard to read, such as non-printable characters (including all
+  // whitespace except space) and double quotes. These are the characters that
+  // are escaped by write_escaped(), except we do not include backslashes,
+  // because they are common in Windows paths and escaping them would make the
+  // output harder to read. However, when we do escape, backslashes are escaped
+  // as well, otherwise the output would be ambiguous.
+  const bool NeedsEscaping =
+      llvm::any_of(*VarVal, [](char C) { return !isPrint(C) || C == '"'; });
   if (NeedsEscaping)
     OS.write_escaped(*VarVal);
   else
