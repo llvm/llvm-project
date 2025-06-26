@@ -1541,6 +1541,36 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
   }
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat: {
+    InstructionCost Cost = 0;
+    bool IsSigned = ICA.getID() == Intrinsic::fptosi_sat;
+    Type *SrcTy = ICA.getArgTypes()[0];
+
+    auto SrcLT = getTypeLegalizationCost(SrcTy);
+    auto DstLT = getTypeLegalizationCost(RetTy);
+    if (!SrcTy->isVectorTy())
+      break;
+
+    if (!SrcLT.first.isValid() || !DstLT.first.isValid())
+      return InstructionCost::getInvalid();
+
+    IntrinsicCostAttributes Attrs1(Intrinsic::minnum, SrcTy, {SrcTy, SrcTy});
+    Cost += getIntrinsicInstrCost(Attrs1, CostKind);
+    IntrinsicCostAttributes Attrs2(Intrinsic::maxnum, SrcTy, {SrcTy, SrcTy});
+    Cost += getIntrinsicInstrCost(Attrs2, CostKind);
+    Cost +=
+        getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
+                         RetTy, SrcTy, TTI::CastContextHint::None, CostKind);
+    if (IsSigned) {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      Cost += getCmpSelInstrCost(BinaryOperator::FCmp, SrcTy, CondTy,
+                                 CmpInst::FCMP_UNO, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                 CmpInst::FCMP_UNO, CostKind);
+    }
+    return Cost;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
