@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 #define MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -305,8 +306,42 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
       rewriter.replaceOpWithNewOp<CollapseOpTy>(
           collapseOp, resultType, expandOp.getSrc(), composedReassociation);
     } else if (srcRank < resultRank) {
+      // Compute the dynamic output shape for the new expand_shape op.
+      Location loc = collapseOp.getLoc();
+      SmallVector<OpFoldResult> origOutputShape =
+          expandOp.getMixedOutputShape();
+      SmallVector<OpFoldResult> newOutputShape;
+      for (auto indices : collapseOp.getReassociationIndices()) {
+        int64_t numStaticElems = 1;
+        SmallVector<Value> dynamicSizes;
+        for (auto idx : indices) {
+          OpFoldResult size = origOutputShape[idx];
+          if (auto maybeCst = getConstantIntValue(size)) {
+            numStaticElems *= maybeCst.value();
+            continue;
+          }
+          dynamicSizes.push_back(cast<Value>(size));
+        }
+        if (dynamicSizes.empty()) {
+          newOutputShape.push_back(rewriter.getIndexAttr(numStaticElems));
+          continue;
+        }
+
+        // There is at least one dynamic size, so we can intialize `result` to
+        // the first dynamic size.
+        Value result = dynamicSizes[0];
+        for (auto v : llvm::drop_begin(dynamicSizes))
+          result = rewriter.create<arith::MulIOp>(loc, result, v);
+        if (numStaticElems != 1) {
+          result = rewriter.create<arith::MulIOp>(
+              loc, result,
+              rewriter.create<arith::ConstantIndexOp>(loc, numStaticElems));
+        }
+        newOutputShape.push_back(result);
+      }
       rewriter.replaceOpWithNewOp<ExpandOpTy>(
-          collapseOp, resultType, expandOp.getSrc(), composedReassociation);
+          collapseOp, resultType, expandOp.getSrc(), composedReassociation,
+          newOutputShape);
     } else {
       // Collapses/expansions that do not change the rank are not allowed. Use
       // a cast instead.
