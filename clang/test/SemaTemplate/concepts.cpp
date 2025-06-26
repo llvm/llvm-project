@@ -1000,7 +1000,7 @@ template<class>
 concept True = true;
 
 template<class>
-concept False = false; // expected-note 8 {{'false' evaluated to false}}
+concept False = false; // expected-note 9 {{'false' evaluated to false}}
 
 template<class>
 concept Irrelevant = false;
@@ -1027,9 +1027,7 @@ template<class T> void eee(T t) // expected-note {{candidate template ignored: c
 requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
 
 template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
-requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{because 'unsigned long' does not satisfy 'ErrorRequires'}}
-// // expected-note@#GH54678-ill-formed-concept {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
-
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{because 'unsigned long' does not satisfy 'False'}}
 void test() {
     aaa(42); // expected-error {{no matching function}}
     bbb(42L); // expected-error{{no matching function}}

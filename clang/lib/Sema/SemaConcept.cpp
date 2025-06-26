@@ -367,9 +367,6 @@ SubstitutionInTemplateArguments(
 
   Sema::SFINAETrap Trap(S);
 
-  // TODO substitute at the appropriate depth
-  // Template->getTemplateDepth();
-
   TemplateArgumentListInfo SubstArgs;
   if (Constraint.hasParameterMapping()) {
     Sema::ArgPackSubstIndexRAII SubstIndex(
@@ -396,10 +393,6 @@ SubstitutionInTemplateArguments(
     for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
       TemplateArgument Arg;
       if (Used[I])
-        // SubstitutedOuterMost[I].dump();
-        // SubstArgs[MappedIndex].getArgument().dump();
-        // Arg = S.Context.getCanonicalTemplateArgument(
-        //     SubstArgs[MappedIndex++].getArgument());
         Arg = S.Context.getCanonicalTemplateArgument(
             CTAI.SugaredConverted[MappedIndex++]);
       if (I < SubstitutedOuterMost.size())
@@ -671,21 +664,20 @@ static bool calculateConstraintSatisfaction(
 
   auto EffectiveDetailEndIndex = Satisfaction.Details.size();
 
+  bool Conjunction = Constraint.getCompoundKind() == NormalizedConstraint::CCK_Conjunction;
+
   bool Ok = calculateConstraintSatisfaction(
       S, Constraint.getLHS(), Template, TemplateNameLoc, MLTAL, Satisfaction,
       PackSubstitutionIndex);
 
-  if (!Ok || Satisfaction.ContainsErrors)
-    return Ok;
+  if(Conjunction && !Ok)
+    return false;
 
-  if (Satisfaction.IsSatisfied &&
-      Constraint.getCompoundKind() == NormalizedConstraint::CCK_Disjunction) {
+  if (!Conjunction && Ok && Satisfaction.IsSatisfied && !Satisfaction.ContainsErrors)
     return true;
-  }
-  if (!Satisfaction.IsSatisfied &&
-      Constraint.getCompoundKind() == NormalizedConstraint::CCK_Conjunction) {
+
+  if (Conjunction && Ok && (!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors))
     return true;
-  }
 
   Satisfaction.ContainsErrors = false;
   Satisfaction.IsSatisfied = false;
