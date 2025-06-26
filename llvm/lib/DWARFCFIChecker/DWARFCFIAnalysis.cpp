@@ -174,14 +174,13 @@ void DWARFCFIAnalysis::checkRegDiff(
   auto MaybePrevLoc = PrevRow->getRegisterLocations().getRegisterLocation(Reg);
   auto MaybeNextLoc = NextRow->getRegisterLocations().getRegisterLocation(Reg);
 
+  // All the tracked registers are added during initiation. So if a register is
+  // not added, should stay the same during execution and vice versa.
   if (!MaybePrevLoc) {
-    assert(!MaybeNextLoc && "The register unwind info suddenly "
-                            "appeared here, ignoring this change");
+    assert(!MaybeNextLoc && "the register unwind info suddenly appeared here");
     return;
   }
-
-  assert(MaybeNextLoc && "The register unwind info suddenly vanished "
-                         "here, ignoring this change");
+  assert(MaybeNextLoc && "the register unwind info suddenly vanished here");
 
   auto PrevLoc = MaybePrevLoc.value();
   auto NextLoc = MaybeNextLoc.value();
