@@ -10,7 +10,7 @@
 #include <clc/internal/clc.h>
 
 #define __FLOAT_ONLY
-#define __CLC_HAS_SCALAR
+#define __CLC_MIN_VECSIZE 1
 #define FUNCTION __clc_native_exp2
 #define __IMPL_FUNCTION __builtin_amdgcn_exp2f
 #define __CLC_BODY <clc/shared/unary_def_scalarize.inc>

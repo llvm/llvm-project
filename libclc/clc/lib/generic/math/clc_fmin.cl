@@ -11,12 +11,12 @@
 #include <clc/relational/clc_isnan.h>
 
 #define __FLOAT_ONLY
-#define __CLC_HAS_SCALAR
+#define __CLC_MIN_VECSIZE 1
 #define FUNCTION __clc_fmin
 #define __IMPL_FUNCTION __builtin_fminf
 #define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
 #include <clc/math/gentype.inc>
-#undef __CLC_HAS_SCALAR
+#undef __CLC_MIN_VECSIZE
 #undef FUNCTION
 #undef __IMPL_FUNCTION
 
@@ -25,12 +25,12 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
 #define __DOUBLE_ONLY
-#define __CLC_HAS_SCALAR
+#define __CLC_MIN_VECSIZE 1
 #define FUNCTION __clc_fmin
 #define __IMPL_FUNCTION __builtin_fmin
 #define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
 #include <clc/math/gentype.inc>
-#undef __CLC_HAS_SCALAR
+#undef __CLC_MIN_VECSIZE
 #undef FUNCTION
 #undef __IMPL_FUNCTION
 

@@ -8,7 +8,11 @@
 
 #include <clc/utils.h>
 
-#if __CLC_VECSIZE_OR_1 == 1
+#ifdef __CLC_SCALAR
+
+#ifndef __CLC_MIN_VECSIZE
+#define __CLC_MIN_VECSIZE 2
+#endif
 
 #ifndef __IMPL_FUNCTION
 #define __IMPL_FUNCTION FUNCTION
@@ -34,14 +38,15 @@
 #define __CLC_ARG3_TYPE __CLC_GENTYPE
 #endif
 
-#ifdef __CLC_HAS_SCALAR
+#if __CLC_MIN_VECSIZE == 1
 _CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE FUNCTION(__CLC_ARG1_TYPE x,
                                                      __CLC_ARG2_TYPE y,
                                                      __CLC_ARG3_TYPE z) {
   return __IMPL_FUNCTION(x, y, z);
 }
-#endif
+#endif // __CLC_MIN_VECSIZE == 1
 
+#if __CLC_MIN_VECSIZE <= 2
 #define __CLC_RET_TYPE2 __CLC_XCONCAT(__CLC_RET_TYPE, 2)
 #define __CLC_ARG1_TYPE2 __CLC_XCONCAT(__CLC_ARG1_TYPE, 2)
 #define __CLC_ARG2_TYPE2 __CLC_XCONCAT(__CLC_ARG2_TYPE, 2)
@@ -56,6 +61,7 @@ _CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE2 FUNCTION(__CLC_ARG1_TYPE2 x,
 #undef __CLC_ARG1_TYPE2
 #undef __CLC_ARG2_TYPE2
 #undef __CLC_ARG3_TYPE2
+#endif // __CLC_MIN_VECSIZE <= 2
 
 #define __CLC_RET_TYPE3 __CLC_XCONCAT(__CLC_RET_TYPE, 3)
 #define __CLC_ARG1_TYPE3 __CLC_XCONCAT(__CLC_ARG1_TYPE, 3)
@@ -140,4 +146,4 @@ _CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE16 FUNCTION(__CLC_ARG1_TYPE16 x,
 #undef __CLC_ARG2_TYPE16
 #undef __CLC_ARG3_TYPE16
 
-#endif // __CLC_VECSIZE_OR_1 == 1
+#endif // __CLC_SCALAR

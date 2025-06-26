@@ -12,7 +12,7 @@
 
 #define FUNCTION __clc_ldexp
 #define __CLC_ARG2_TYPE int
-#define __CLC_HAS_SCALAR
+#define __CLC_MIN_VECSIZE 1
 
 #ifdef __HAS_LDEXPF__
 // This defines all the ldexp(floatN, intN) variants.
