@@ -1371,7 +1371,7 @@ private:
         Tok->setType(TT_InlineASMColon);
       } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
-        if (Prev && Style.isTextProto())
+        if (Style.isTextProto())
           Prev->setType(TT_SelectorName);
       } else if (Contexts.back().ColonIsObjCMethodExpr ||
                  Line.startsWith(TT_ObjCMethodSpecifier)) {
@@ -1408,7 +1408,6 @@ private:
         }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
-        assert(Prev);
         if (Prev->isPointerOrReference())
           Prev->setFinalizedType(TT_PointerOrReference);
       } else if ((CurrentToken && CurrentToken->is(tok::numeric_constant)) ||
@@ -1419,8 +1418,6 @@ private:
                  !Line.getFirstNonComment()->isOneOf(tok::kw_enum, tok::kw_case,
                                                      tok::kw_default) &&
                  !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
-        if (!Prev)
-          break;
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept) ||
             Prev->ClosesRequiresClause) {
           Tok->setType(TT_CtorInitializerColon);
