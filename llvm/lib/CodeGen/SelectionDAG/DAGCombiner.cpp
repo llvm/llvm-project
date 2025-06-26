@@ -2696,59 +2696,82 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
   if (PtrVT == IntVT && isNullConstant(N0))
     return N1;
 
-  if (N0.getOpcode() != ISD::PTRADD ||
-      reassociationCanBreakAddressingModePattern(ISD::PTRADD, DL, N, N0, N1))
-    return SDValue();
+  if (N0.getOpcode() == ISD::PTRADD &&
+      !reassociationCanBreakAddressingModePattern(ISD::PTRADD, DL, N, N0, N1)) {
+    SDValue X = N0.getOperand(0);
+    SDValue Y = N0.getOperand(1);
+    SDValue Z = N1;
+    bool N0OneUse = N0.hasOneUse();
+    bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+    bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
 
-  SDValue X = N0.getOperand(0);
-  SDValue Y = N0.getOperand(1);
-  SDValue Z = N1;
-  bool N0OneUse = N0.hasOneUse();
-  bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
-  bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
-
-  // (ptradd (ptradd x, y), z) -> (ptradd x, (add y, z)) if:
-  //   * y is a constant and (ptradd x, y) has one use; or
-  //   * y and z are both constants.
-  if ((YIsConstant && N0OneUse) || (YIsConstant && ZIsConstant)) {
-    // If both additions in the original were NUW, the new ones are as well.
-    SDNodeFlags Flags =
-        (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
-    SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z}, Flags);
-    AddToWorklist(Add.getNode());
-    return DAG.getMemBasePlusOffset(X, Add, DL, Flags);
+    // (ptradd (ptradd x, y), z) -> (ptradd x, (add y, z)) if:
+    //   * y is a constant and (ptradd x, y) has one use; or
+    //   * y and z are both constants.
+    if ((YIsConstant && N0OneUse) || (YIsConstant && ZIsConstant)) {
+      // If both additions in the original were NUW, the new ones are as well.
+      SDNodeFlags Flags =
+          (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+      SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z}, Flags);
+      AddToWorklist(Add.getNode());
+      return DAG.getMemBasePlusOffset(X, Add, DL, Flags);
+    }
   }
 
-  // TODO: There is another possible fold here that was proven useful.
-  // It would be this:
-  //
-  // (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y) if:
-  //   * (ptradd x, y) has one use; and
-  //   * y is a constant; and
-  //   * z is not a constant.
-  //
-  // In some cases, specifically in AArch64's FEAT_CPA, it exposes the
-  // opportunity to select more complex instructions such as SUBPT and
-  // MSUBPT. However, a hypothetical corner case has been found that we could
-  // not avoid. Consider this (pseudo-POSIX C):
-  //
-  // char *foo(char *x, int z) {return (x + LARGE_CONSTANT) + z;}
-  // char *p = mmap(LARGE_CONSTANT);
-  // char *q = foo(p, -LARGE_CONSTANT);
-  //
-  // Then x + LARGE_CONSTANT is one-past-the-end, so valid, and a
-  // further + z takes it back to the start of the mapping, so valid,
-  // regardless of the address mmap gave back. However, if mmap gives you an
-  // address < LARGE_CONSTANT (ignoring high bits), x - LARGE_CONSTANT will
-  // borrow from the high bits (with the subsequent + z carrying back into
-  // the high bits to give you a well-defined pointer) and thus trip
-  // FEAT_CPA's pointer corruption checks.
-  //
-  // We leave this fold as an opportunity for future work, addressing the
-  // corner case for FEAT_CPA, as well as reconciling the solution with the
-  // more general application of pointer arithmetic in other future targets.
-  // For now each architecture that wants this fold must implement it in the
-  // target-specific code (see e.g. SITargetLowering::performPtrAddCombine)
+  // The following combines can turn in-bounds pointer arithmetic out of bounds.
+  // That is problematic for settings like AArch64's CPA, which checks that
+  // intermediate results of pointer arithmetic remain in bounds. The target
+  // therefore needs to opt-in to enable them.
+  if (!TLI.canTransformPtrArithOutOfBounds(
+          DAG.getMachineFunction().getFunction(), PtrVT))
+    return SDValue();
+
+  if (N0.getOpcode() == ISD::PTRADD && N1.getOpcode() == ISD::Constant) {
+    // Fold (ptradd (ptradd GA, v), c) -> (ptradd (ptradd GA, c) v) with
+    // global address GA and constant c, such that c can be folded into GA.
+    SDValue GAValue = N0.getOperand(0);
+    if (const GlobalAddressSDNode *GA =
+            dyn_cast<GlobalAddressSDNode>(GAValue)) {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      if (!LegalOperations && TLI.isOffsetFoldingLegal(GA)) {
+        // If both additions in the original were NUW, reassociation preserves
+        // that.
+        SDNodeFlags Flags =
+            (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+        SDValue Inner = DAG.getMemBasePlusOffset(GAValue, N1, DL, Flags);
+        AddToWorklist(Inner.getNode());
+        return DAG.getMemBasePlusOffset(Inner, N0.getOperand(1), DL, Flags);
+      }
+    }
+  }
+
+  if (N1.getOpcode() == ISD::ADD && N1.hasOneUse()) {
+    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if z is a constant,
+    //    y is not, and (add y, z) is used only once.
+    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if y is a constant,
+    //    z is not, and (add y, z) is used only once.
+    // The goal is to move constant offsets to the outermost ptradd, to create
+    // more opportunities to fold offsets into memory instructions.
+    // Together with the another combine above, this also implements
+    //   (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y)).
+    SDValue X = N0;
+    SDValue Y = N1.getOperand(0);
+    SDValue Z = N1.getOperand(1);
+    bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+    bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+
+    // If both additions in the original were NUW, reassociation preserves that.
+    SDNodeFlags ReassocFlags =
+        (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+
+    if (ZIsConstant != YIsConstant) {
+      if (YIsConstant)
+        std::swap(Y, Z);
+      SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, ReassocFlags);
+      AddToWorklist(Inner.getNode());
+      return DAG.getMemBasePlusOffset(Inner, Z, DL, ReassocFlags);
+    }
+  }
 
   return SDValue();
 }
