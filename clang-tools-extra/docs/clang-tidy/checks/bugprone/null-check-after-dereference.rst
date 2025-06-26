@@ -140,11 +140,11 @@ a pointer is not null.
 
 .. code-block:: c++
 
-   int branches(int *p, bool b) {
+   int branches(int *ptr, bool b) {
      if (b) {
-       *p = 42; // true-positive: note-tag appended here
+       *ptr = 42; // true-positive: note-tag appended here
      } else {
-       *p = 20; // false-positive: note tag not appended here
+       *ptr = 20; // false-positive: note tag not appended here
      }
 
      return ptr ? *ptr : 0;

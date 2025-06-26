@@ -106,8 +106,8 @@ New checks
 - New :doc:`bugprone-null-check-after-dereference
   <clang-tidy/checks/bugprone/null-check-after-dereference>` check.
 
-  Identifies redundant pointer null-checks, by finding cases where
-  the pointer cannot be null at the location of the null-check.
+  Identifies redundant pointer null-checks, by finding cases where the pointer
+  cannot be null at the location of the null-check.
 
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
