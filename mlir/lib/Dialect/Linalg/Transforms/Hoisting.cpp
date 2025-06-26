@@ -319,15 +319,17 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       auto base = transferRead.getBase();
       auto *source = base.getDefiningOp();
       if (source) {
-        // NOTE: We treat `memref.assume_alignment` as a special case:
-        //  1. If it has exactly two uses then these have to be the xfer Ops
-        //    being looked at.
-        //  2. Otherwise, there are other users that we should take into
-        //    account
-        // In the case of 1., it is safe to look past AssumeAlignmentOp,
-        // i.e. at the defining Op of the input MemRef, provided that:
-        //  * the original MemRef has only one use (i.e.
-        //  `memref.assume_alignment`)
+        // NOTE: We treat `memref.assume_alignment` as a special case.
+        //
+        // The idea is that it is safe to look past AssumeAlignmemtOp (i.e.
+        // MemRef _before_ alignment) iff:
+        //  1. It has exactly two uses (these have to be the xfer Ops
+        //     being looked at).
+        //  2. The original MemRef has only one use (i.e.
+        //     AssumeAlignmentOp).
+        //
+        // Relaxing these conditions will most likely require proper alias
+        // analysis.
         if (auto assume = dyn_cast<memref::AssumeAlignmentOp>(source)) {
           Value memPreAlignment = assume.getMemref();
           auto numInLoopUses =
@@ -342,9 +344,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           return WalkResult::advance();
       }
 
-      for (auto *user : base.getUsers())
-        if (isa_and_nonnull<ViewLikeOpInterface>(user))
-          return WalkResult::advance();
+      if (llvm::any_of(base.getUsers(), llvm::IsaPred<ViewLikeOpInterface>))
+        return WalkResult::advance();
 
       // Check 3.
       // TODO: may want to memoize this information for performance but it
