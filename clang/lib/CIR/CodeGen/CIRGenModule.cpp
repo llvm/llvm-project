@@ -95,7 +95,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
-  SizeSizeInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
+  SizeAlignInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
   // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
   UIntPtrTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);

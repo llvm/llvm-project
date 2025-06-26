@@ -66,11 +66,8 @@ struct CIRGenTypeCache {
     unsigned char PointerSizeInBytes;
   };
 
-  /// The size and alignment of size_t.
-  union {
-    unsigned char SizeSizeInBytes; // sizeof(size_t)
-    unsigned char SizeAlignInBytes;
-  };
+  /// The alignment of size_t.
+  unsigned char SizeAlignInBytes;
 
   clang::CharUnits getSizeAlign() const {
     return clang::CharUnits::fromQuantity(SizeAlignInBytes);
