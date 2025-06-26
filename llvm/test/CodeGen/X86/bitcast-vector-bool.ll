@@ -634,11 +634,7 @@ define i1 @trunc_v32i8_cmp(<32 x i8> %a0) nounwind {
 define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; SSE-LABEL: bitcast_v8i64_to_v2i4:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE-NEXT:    packssdw %xmm3, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    packssdw %xmm2, %xmm0
 ; SSE-NEXT:    packsswb %xmm0, %xmm0
