@@ -554,8 +554,6 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     }
 
     if (MO.isImplicit()) {
-      for (MCRegUnit Unit : TRI->regunits(Reg))
-        RUClobbers.set(Unit);
       if (!MO.isDead())
         // Non-dead implicit def? This cannot be hoisted.
         RuledOut = true;
@@ -582,6 +580,8 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
       }
 
       RUDefs.set(Unit);
+      if (MO.isImplicit())
+        RUClobbers.set(Unit);
     }
   }
 
