@@ -25,18 +25,10 @@ define void @storev2i64(<2 x i64> %0) {
 ; CHECK-LABEL: define void @storev2i64(
 ; CHECK-SAME: <2 x i64> [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[BUFFER:%.*]] = tail call target("dx.TypedBuffer", <2 x i64>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP8]], 32
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP11]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP0]], splat (i64 32)
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP4]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK-NEXT:    call void @llvm.dx.resource.store.typedbuffer.tdx.TypedBuffer_v2i64_1_0_0t.v4i32(target("dx.TypedBuffer", <2 x i64>, 1, 0, 0) [[BUFFER]], i32 0, <4 x i32> [[TMP13]])
 ; CHECK-NEXT:    ret void
 ;

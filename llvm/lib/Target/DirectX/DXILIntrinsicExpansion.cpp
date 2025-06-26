@@ -544,6 +544,18 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
+static Value* createCombinedi32toi64Expansion(IRBuilder<> &Builder, Value *LoBytes, Value *HighBytes) {
+  // For int64, manually combine two int32s
+  // First, zero-extend both values to i64
+  Value *Lo = Builder.CreateZExt(LoBytes, Builder.getInt64Ty());
+  Value *Hi =
+    Builder.CreateZExt(HighBytes, Builder.getInt64Ty());
+  // Shift the high bits left by 32 bits
+  Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
+  // OR the high and low bits together
+  return Builder.CreateOr(Lo, ShiftedHi);
+}
+
 static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
   IRBuilder<> Builder(Orig);
 
@@ -579,22 +591,14 @@ static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
   Value *Result = PoisonValue::get(BufferTy);
   for (unsigned I = 0; I < ExtractNum; I += 2) {
     Value *Combined = nullptr;
-    if (IsDouble) {
+    if (IsDouble) 
       // For doubles, use dx_asdouble intrinsic
       Combined =
           Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
                                   {ExtractElements[I], ExtractElements[I + 1]});
-    } else {
-      // For int64, manually combine two int32s
-      // First, zero-extend both values to i64
-      Value *Lo = Builder.CreateZExt(ExtractElements[I], Builder.getInt64Ty());
-      Value *Hi =
-          Builder.CreateZExt(ExtractElements[I + 1], Builder.getInt64Ty());
-      // Shift the high bits left by 32 bits
-      Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
-      // OR the high and low bits together
-      Combined = Builder.CreateOr(Lo, ShiftedHi);
-    }
+    else
+      Combined = 
+          createCombinedi32toi64Expansion(Builder, ExtractElements[I], ExtractElements[I + 1]);
 
     if (ExtractNum == 4)
       Result = Builder.CreateInsertElement(Result, Combined,
@@ -650,21 +654,35 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
   Type *Int32Ty = Builder.getInt32Ty();
   Type *ResultTy = VectorType::get(Int32Ty, IsVector ? 4 : 2, false);
   Value *Val = PoisonValue::get(ResultTy);
+  
+  // Handle double type(s)
+  Type *SplitElementTy = Int32Ty;
+  if (IsVector)
+    SplitElementTy = VectorType::get(SplitElementTy, 2, false);
 
+  Value *LowBits = nullptr;
+  Value *HighBits = nullptr;
   // Split the 64-bit values into 32-bit components
   if (IsDouble) {
-    // Handle double type(s)
-    Type *SplitElementTy = Int32Ty;
-    if (IsVector)
-      SplitElementTy = VectorType::get(SplitElementTy, 2, false);
-
     auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
     Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
                                            {Orig->getOperand(2)});
-    Value *LowBits = Builder.CreateExtractValue(Split, 0);
-    Value *HighBits = Builder.CreateExtractValue(Split, 1);
+    LowBits = Builder.CreateExtractValue(Split, 0);
+    HighBits = Builder.CreateExtractValue(Split, 1);
+  } else {
+    // Handle int64 type(s)
+    Value *InputVal = Orig->getOperand(2);
+     Constant *ShiftAmt = Builder.getInt64(32);
+    if (IsVector)
+      ShiftAmt = ConstantVector::getSplat(ElementCount::getFixed(2), ShiftAmt);
 
-    if (IsVector) {
+    // Split into low and high 32-bit parts
+    LowBits = Builder.CreateTrunc(InputVal, SplitElementTy);
+    Value *ShiftedVal = Builder.CreateLShr(InputVal, ShiftAmt);
+    HighBits = Builder.CreateTrunc(ShiftedVal, SplitElementTy);
+  }
+
+  if (IsVector) {
       // For vector doubles, use shuffle to create the final vector
       Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
     } else {
@@ -672,38 +690,6 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
       Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
       Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
     }
-  } else {
-    // Handle int64 type(s)
-    Value *InputVal = Orig->getOperand(2);
-
-    if (IsVector) {
-      // Handle vector of int64
-      for (unsigned I = 0; I < 2; ++I) {
-        // Extract each int64 element
-        Value *Int64Val =
-            Builder.CreateExtractElement(InputVal, Builder.getInt32(I));
-
-        // Split into low and high 32-bit parts
-        Value *LowBits = Builder.CreateTrunc(Int64Val, Int32Ty);
-        Value *ShiftedVal = Builder.CreateLShr(Int64Val, Builder.getInt64(32));
-        Value *HighBits = Builder.CreateTrunc(ShiftedVal, Int32Ty);
-
-        // Insert into result vector
-        Val =
-            Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(I * 2));
-        Val = Builder.CreateInsertElement(Val, HighBits,
-                                          Builder.getInt32(I * 2 + 1));
-      }
-    } else {
-      // Handle scalar int64
-      Value *LowBits = Builder.CreateTrunc(InputVal, Int32Ty);
-      Value *ShiftedVal = Builder.CreateLShr(InputVal, Builder.getInt64(32));
-      Value *HighBits = Builder.CreateTrunc(ShiftedVal, Int32Ty);
-
-      Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
-      Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
-    }
-  }
 
   // Create the final intrinsic call
   Builder.CreateIntrinsic(Builder.getVoidTy(),
