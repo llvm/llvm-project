@@ -173,6 +173,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
 
+- Improved :doc: `bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check by adding
+  `WarnOnSizeOfInLoopTermination` option to detect misuses of ``sizeof``
+  expression in loop conditions.
+
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
   calls of ``std::string`` constructor with char pointer, start position and
