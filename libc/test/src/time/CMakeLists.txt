@@ -79,7 +79,9 @@ add_libc_unittest(
   SRCS
     localtime_test.cpp
   DEPENDS
-    .time_utils.h
+    .time_utils
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_libc_unittest(
@@ -89,7 +91,9 @@ add_libc_unittest(
   SRCS
     localtime_r_test.cpp
   DEPENDS
-    .time_utils.h
+    .time_utils
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_libc_test(
