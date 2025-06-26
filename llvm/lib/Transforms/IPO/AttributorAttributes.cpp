@@ -5506,28 +5506,26 @@ struct AAAlignCallSiteReturned final
       : Base(IRP, A) {}
   ChangeStatus updateImpl(Attributor &A) override {
     SmallVector<AA::ValueAndContext> Values;
-    const auto &AligmentCBs = A.getAlignmentCallback(getIRPosition());
+    SmallVector<Attributor::AlignmentCallbackTy, 1> AligmentCBs =
+        A.getAlignmentCallback(getIRPosition());
 
-    if (!AligmentCBs.empty()) {
-      for (const auto &CB : AligmentCBs) {
-        CB(getIRPosition(), this, Values);
-      }
+    for (Attributor::AlignmentCallbackTy CB : AligmentCBs)
+      CB(getIRPosition(), this, Values);
 
-      if (!Values.empty()) {
-        StateType T;
-        for (const auto &VAC : Values) {
-          const auto *AA = A.getAAFor<AAAlign>(
-              *this, IRPosition::value(*VAC.getValue()), DepClassTy::REQUIRED);
-          if (AA && this != AA) {
-            const AAAlign::StateType &DS = AA->getState();
-            T ^= DS;
-          }
-          if (!T.isValidState())
-            return indicatePessimisticFixpoint();
+    if (!Values.empty()) {
+      StateType T;
+      for (AA::ValueAndContext &VAC : Values) {
+        const AAAlign *AA = A.getAAFor<AAAlign>(
+            *this, IRPosition::value(*VAC.getValue()), DepClassTy::REQUIRED);
+        if (AA && this != AA) {
+          const AAAlign::StateType &DS = AA->getState();
+          T ^= DS;
         }
-
-        return clampStateAndIndicateChange(getState(), T);
+        if (!T.isValidState())
+          return indicatePessimisticFixpoint();
       }
+
+      return clampStateAndIndicateChange(getState(), T);
     }
 
     return Base::updateImpl(A);
