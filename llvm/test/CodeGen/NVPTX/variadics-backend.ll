@@ -126,12 +126,7 @@ define dso_local i32 @foo() {
 ; CHECK-PTX-NEXT:    .param .b64 param1;
 ; CHECK-PTX-NEXT:    st.param.b64 [param1], %rd4;
 ; CHECK-PTX-NEXT:    .param .b32 retval0;
-; CHECK-PTX-NEXT:    call.uni (retval0),
-; CHECK-PTX-NEXT:    variadics1,
-; CHECK-PTX-NEXT:    (
-; CHECK-PTX-NEXT:    param0,
-; CHECK-PTX-NEXT:    param1
-; CHECK-PTX-NEXT:    );
+; CHECK-PTX-NEXT:    call.uni (retval0), variadics1, (param0, param1);
 ; CHECK-PTX-NEXT:    ld.param.b32 %r2, [retval0];
 ; CHECK-PTX-NEXT:    } // callseq 0
 ; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -238,12 +233,7 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-NEXT:    .param .b64 param1;
 ; CHECK-PTX-NEXT:    st.param.b64 [param1], %rd4;
 ; CHECK-PTX-NEXT:    .param .b32 retval0;
-; CHECK-PTX-NEXT:    call.uni (retval0),
-; CHECK-PTX-NEXT:    variadics2,
-; CHECK-PTX-NEXT:    (
-; CHECK-PTX-NEXT:    param0,
-; CHECK-PTX-NEXT:    param1
-; CHECK-PTX-NEXT:    );
+; CHECK-PTX-NEXT:    call.uni (retval0), variadics2, (param0, param1);
 ; CHECK-PTX-NEXT:    ld.param.b32 %r2, [retval0];
 ; CHECK-PTX-NEXT:    } // callseq 1
 ; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -315,12 +305,7 @@ define dso_local i32 @baz() {
 ; CHECK-PTX-NEXT:    .param .b64 param1;
 ; CHECK-PTX-NEXT:    st.param.b64 [param1], %rd1;
 ; CHECK-PTX-NEXT:    .param .b32 retval0;
-; CHECK-PTX-NEXT:    call.uni (retval0),
-; CHECK-PTX-NEXT:    variadics3,
-; CHECK-PTX-NEXT:    (
-; CHECK-PTX-NEXT:    param0,
-; CHECK-PTX-NEXT:    param1
-; CHECK-PTX-NEXT:    );
+; CHECK-PTX-NEXT:    call.uni (retval0), variadics3, (param0, param1);
 ; CHECK-PTX-NEXT:    ld.param.b32 %r2, [retval0];
 ; CHECK-PTX-NEXT:    } // callseq 2
 ; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -397,12 +382,7 @@ define dso_local void @qux() {
 ; CHECK-PTX-NEXT:    .param .b64 param1;
 ; CHECK-PTX-NEXT:    st.param.b64 [param1], %rd8;
 ; CHECK-PTX-NEXT:    .param .b32 retval0;
-; CHECK-PTX-NEXT:    call.uni (retval0),
-; CHECK-PTX-NEXT:    variadics4,
-; CHECK-PTX-NEXT:    (
-; CHECK-PTX-NEXT:    param0,
-; CHECK-PTX-NEXT:    param1
-; CHECK-PTX-NEXT:    );
+; CHECK-PTX-NEXT:    call.uni (retval0), variadics4, (param0, param1);
 ; CHECK-PTX-NEXT:    ld.param.b32 %r1, [retval0];
 ; CHECK-PTX-NEXT:    } // callseq 3
 ; CHECK-PTX-NEXT:    ret;
