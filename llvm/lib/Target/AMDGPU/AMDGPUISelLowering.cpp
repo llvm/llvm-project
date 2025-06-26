@@ -725,6 +725,19 @@ static bool selectSupportsSourceMods(const SDNode *N) {
   return N->getValueType(0) == MVT::f32;
 }
 
+LLVM_READONLY
+static bool buildVectorSupportsSourceMods(const SDNode *N) {
+  if (N->getValueType(0) != MVT::v2f32)
+    return true;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  if (LHS->getOpcode() != ISD::SELECT || RHS->getOpcode() != ISD::SELECT)
+    return true;
+
+  return false;
+}
+
 // Most FP instructions support source modifiers, but this could be refined
 // slightly.
 LLVM_READONLY
@@ -758,6 +771,8 @@ static bool hasSourceMods(const SDNode *N) {
       return true;
     }
   }
+  case ISD::BUILD_VECTOR:
+    return buildVectorSupportsSourceMods(N);
   case ISD::SELECT:
     return selectSupportsSourceMods(N);
   default:
@@ -4864,24 +4879,6 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
       (LHS.getOpcode() == ISD::FNEG && RHS.getOpcode() == ISD::FNEG)) {
     if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
       return SDValue();
-
-    // select c, (fneg (f32 bitcast i32 x)), (fneg (f32 bitcast i32 y)) can be
-    // lowered directly to a V_CNDMASK_. So prevent the fneg from being pulled
-    // out in this case. For now I've made the logic as specific to the case as
-    // possible, hopefully this can be relaxed in future.
-    if (LHS.getOpcode() == ISD::FNEG && RHS.getOpcode() == ISD::FNEG) {
-      SDValue LHSB = LHS.getOperand(0);
-      SDValue RHSB = RHS.getOperand(0);
-      if (LHSB.getOpcode() == ISD::BITCAST &&
-          RHSB->getOpcode() == ISD::BITCAST) {
-        EVT LHSBOpTy = LHSB->getOperand(0).getValueType();
-        EVT RHSBOpTy = RHSB->getOperand(0).getValueType();
-        if (LHSB.getValueType() == MVT::f32 &&
-            RHSB.getValueType() == MVT::f32 && LHSBOpTy == MVT::i32 &&
-            RHSBOpTy == MVT::i32)
-          return SDValue();
-      }
-    }
 
     return distributeOpThroughSelect(DCI, LHS.getOpcode(), SDLoc(N), Cond, LHS,
                                      RHS);
