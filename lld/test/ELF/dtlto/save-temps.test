@@ -8,7 +8,7 @@ RUN: rm -rf %t && split-file %s %t && cd %t
 RUN: opt -thinlto-bc t1.ll -o t1.bc
 
 ## Generate object files for mock.py to return.
-RUN: llc t1.ll --filetype=obj -o t1.o --relocation-model=pic
+RUN: llc t1.ll --filetype=obj -o t1.o
 
 ## Use a response file for common command-line arguments.
 ## Note that mock.py does not perform any compilation; instead, it simply writes

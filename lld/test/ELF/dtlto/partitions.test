@@ -10,8 +10,8 @@ RUN: opt -thinlto-bc thin1.ll -o thin1.bc
 RUN: opt -thinlto-bc thin2.ll -o thin2.bc
 
 ## Generate object files for mock.py to return.
-RUN: llc thin1.ll --filetype=obj -o thin1.o --relocation-model=pic
-RUN: llc thin2.ll --filetype=obj -o thin2.o --relocation-model=pic
+RUN: llc thin1.ll --filetype=obj -o thin1.o
+RUN: llc thin2.ll --filetype=obj -o thin2.o
 
 ## Link with 3 LTO partitions.
 RUN: ld.lld full.bc thin1.bc thin2.bc \
