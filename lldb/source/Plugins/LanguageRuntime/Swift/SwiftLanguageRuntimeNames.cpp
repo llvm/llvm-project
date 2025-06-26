@@ -1499,9 +1499,10 @@ SwiftLanguageRuntime::GetGenericSignature(llvm::StringRef function_name,
   return signature;
 }
 
-std::string SwiftLanguageRuntime::GetParentNameIfClosure(StringRef name) {
+std::string SwiftLanguageRuntime::GetParentNameIfClosure(Function &func) {
   using Kind = Node::Kind;
   swift::Demangle::Context ctx;
+  ConstString name = func.GetMangled().GetMangledName();
   auto *node = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
   if (!node || node->getKind() != Node::Kind::Global)
     return "";

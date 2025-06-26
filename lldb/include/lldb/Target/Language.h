@@ -513,8 +513,7 @@ public:
   /// returns the name of the parent function where the input closure was
   /// defined. Returns an empty string if there is no such parent, or if the
   /// query does not make sense for this language.
-  virtual std::string
-  GetParentNameIfClosure(llvm::StringRef mangled_name) const {
+  virtual std::string GetParentNameIfClosure(Function &function) const {
     return "";
   }
 
