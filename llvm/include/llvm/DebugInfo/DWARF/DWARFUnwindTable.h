@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFUNWINDTABLE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFUNWINDTABLE_H
 
-#include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <map>

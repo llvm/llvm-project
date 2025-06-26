@@ -9,6 +9,7 @@
 #include "OrcTestCommon.h"
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;

@@ -34,8 +34,8 @@ namespace {
 
 class AArch64MachObjectWriter : public MCMachObjectTargetWriter {
   bool getAArch64FixupKindMachOInfo(const MCFixup &Fixup, unsigned &RelocType,
-                                    AArch64MCExpr::Specifier Spec,
-                                    unsigned &Log2Size, const MCAssembler &Asm);
+                                    AArch64::Specifier Spec, unsigned &Log2Size,
+                                    const MCAssembler &Asm);
 
 public:
   AArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype, bool IsILP32)
@@ -49,7 +49,7 @@ public:
 } // end anonymous namespace
 
 bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
-    const MCFixup &Fixup, unsigned &RelocType, AArch64MCExpr::Specifier Spec,
+    const MCFixup &Fixup, unsigned &RelocType, AArch64::Specifier Spec,
     unsigned &Log2Size, const MCAssembler &Asm) {
   RelocType = unsigned(MachO::ARM64_RELOC_UNSIGNED);
   Log2Size = ~0U;
@@ -189,9 +189,8 @@ void AArch64MachObjectWriter::recordRelocation(
     return;
   }
 
-  if (!getAArch64FixupKindMachOInfo(
-          Fixup, Type, AArch64MCExpr::Specifier(Target.getSpecifier()),
-          Log2Size, Asm)) {
+  if (!getAArch64FixupKindMachOInfo(Fixup, Type, Target.getSpecifier(),
+                                    Log2Size, Asm)) {
     reportError(Fixup.getLoc(), "unknown AArch64 fixup kind!");
     return;
   }

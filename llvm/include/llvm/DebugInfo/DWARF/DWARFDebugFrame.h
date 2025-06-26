@@ -11,8 +11,8 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnwindTable.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"

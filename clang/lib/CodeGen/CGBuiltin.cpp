@@ -2356,7 +2356,7 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
   llvm::Type *OpTy = Signed->getType();
   llvm::Value *Zero = llvm::Constant::getNullValue(OpTy);
   Address ResultPtr = CGF.EmitPointerWithAlignment(ResultArg);
-  llvm::Type *ResTy = ResultPtr.getElementType();
+  llvm::Type *ResTy = CGF.getTypes().ConvertType(ResultQTy);
   unsigned OpWidth = std::max(Op1Info.Width, Op2Info.Width);
 
   // Take the absolute value of the signed operand.

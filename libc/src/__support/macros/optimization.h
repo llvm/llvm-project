@@ -10,7 +10,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 
-#include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 
@@ -30,8 +30,10 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 
 #if defined(LIBC_COMPILER_IS_CLANG)
 #define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
+#define LIBC_LOOP_UNROLL _Pragma("unroll")
 #elif defined(LIBC_COMPILER_IS_GCC)
 #define LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
+#define LIBC_LOOP_UNROLL _Pragma("GCC unroll 2048")
 #else
 #error "Unhandled compiler"
 #endif
