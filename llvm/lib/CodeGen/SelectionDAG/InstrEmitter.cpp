@@ -631,7 +631,8 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
 void
 InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
                                      VRBaseMapType &VRBaseMap) {
-  Register VReg = getVR(Node->getOperand(0), VRBaseMap);
+  RegisterSDNode *R = dyn_cast<RegisterSDNode>(Node->getOperand(0));
+  unsigned VReg = R ? R->getReg() : getVR(Node->getOperand(0), VRBaseMap);
 
   // Create the new VReg in the destination class and emit a copy.
   unsigned DstRCIdx = Node->getConstantOperandVal(1);
