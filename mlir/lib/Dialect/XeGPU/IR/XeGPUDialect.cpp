@@ -125,21 +125,6 @@ ScatterTensorDescAttr::get(mlir::MLIRContext *context,
   return Base::get(context, scopeAttr, chunkSizeAttr);
 }
 
-LogicalResult ScatterTensorDescAttr::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    MemorySpaceAttr memory_space, IntegerAttr chunk_size) {
-
-  if (chunk_size) {
-    int64_t chunkSize = chunk_size.getInt();
-    SmallVector<int64_t> supportedChunkSizes = {2,  3,  4,   8,  16,
-                                                32, 64, 128, 256};
-    if (!llvm::is_contained(supportedChunkSizes, chunkSize))
-      return emitError() << "invalid chunk size";
-  }
-
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU_LayoutAttr
 //===----------------------------------------------------------------------===//
@@ -333,7 +318,7 @@ LogicalResult TensorDescType::verify(
           : 1;
   auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
   if (scatterAttr) {
-    int64_t chunkSize = scatterAttr.getChunkSizeOrDefault();
+    int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
     if (rank == 1 && chunkSize != 1)
       return emitError() << "expected non-contiguous elements for 1D tensor";
 
@@ -357,17 +342,13 @@ LogicalResult TensorDescType::verify(
     auto laneData = layoutAttr.getLaneData();
     if (scatterAttr && laneData) {
       // Validate subgroup mapping rules for scattered tensors.
-      // A work-item's slice of the tensor with shape [sg_size] or
-      // [sg_size, chunk_size] will be [1] or [1, 32/element_ty_bit_width]
-      // respectively, the mapping should reflect that. This is because each
-      // work item access data in 32 bit granularity.
-
-      if (rank > 1 && laneData[0] != 1)
+      // if chunkSize > 1, the last dimension of the tensor should
+      // be distributed in the units divisible by chunkAlignmentFactor.
+      int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
+      if (chunkSize > 1 && laneData[rank - 1] % chunkAlignmentFactor)
         return emitError()
-               << "cannot map over non-contiguous scattered row elements";
-      if (laneData[rank - 1] != chunkAlignmentFactor)
-        return emitError() << "work item data mapping must match the number of "
-                              "contiguous elements";
+               << "expected last dim of lane_data to be a multiple of: "
+               << chunkAlignmentFactor;
     }
 
     if (!XeGPUDialect::isEvenlyDistributable(shape, layoutAttr)) {

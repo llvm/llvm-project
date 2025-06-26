@@ -183,10 +183,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     int getChunkSize() {
       auto attr = getEncoding();
       auto scatter_attr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(attr);
-      assert((!attr || scatter_attr) && "invalid on non ScatterTensorDescAttr.");
-      if (scatter_attr)
-        return scatter_attr.getChunkSizeOrDefault();
-      return 1;
+      assert(scatter_attr && "invalid on non ScatterTensorDescAttr.");
+      return scatter_attr.getChunkSizeAsInt();
     }
 
     /// Helper to drop all layout information from the TensorDesc type.
