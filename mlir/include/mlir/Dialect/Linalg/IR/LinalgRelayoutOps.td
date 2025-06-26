@@ -93,18 +93,19 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     tensor of rank `n + k` with a tiled and packed layout (maybe with padding)
     and optionally transposes the tiled source tensor dimensions.
 
-    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
-    being tiled, where `0 < k <= n`.
-     - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
-    `inner_tiles[i]` where `0 <= i < k`.
-     - the resulting tiled source dimension maps to an outer dimension of the
-     packed tensor in the order the non-tiled dimension appeared in the source
-     tensor, i.e. `shape(result)[inner_dims_pos[i]]` is equal to
-     `shape(source)[inner_dims_pos[i]] / inner_tiles[i]`.
-
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
     correspond to the least significant ("inner") result tensor dimension sizes,
     in the same order. Tile sizes can be static or dynamic.
+
+    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
+    being tiled, where `0 <= k <= n`.
+     - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
+    `inner_tiles[i]` where `0 <= i < k`.
+     - The tiled dimensions (of size `inner_tiles`) are added to the end of the
+     result tensor in the order in which they appear, i.e.
+     `shape(result)[rank(result) + i] = inner_tiles[i]` for `0 <= i < k`.
+     - The following relationship for the tiled dimensions holds:
+     `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`.
 
     Example: If `inner_tiles = [16, 32]`, the result tensor has a shape of
     `...x16x32`. If `inner_dims_pos = [0, 1]`, the 0th source dimension is tiled
@@ -118,17 +119,19 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     %0 = linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
         into %dest : tensor<128x256xf32> -> tensor<16x8 x 8x32 xf32>
     //                                             \  /   \  /
-    //                                       outer dims  inner dims
+    //                                 Outer Dims: 16x8   Inner Dims: 8x32
+
     // CHW to CHWhw
     %0 = linalg.pack %source inner_dims_pos = [2, 1] inner_tiles = [4, 2]
-        into %dest : tensor<1x8x16xf32> -> tensor<1x2x4 x 4x2 xf32>
-    //                                             \  /   \  /
-    //                                       outer dims  inner dims
+        into %dest : tensor<3x20x24xf32> -> tensor<3x10x6 x 4x2 xf32>
+    //                                              \  /    \ /
+    //                                 Outer Dims: 3x10x6  Inner Dims: 4x2
+
     // HCW to HCWhw
     %0 = linalg.pack %source inner_dims_pos = [2, 0] inner_tiles = [4, 2]
-        into %dest : tensor<20x1x12xf32> -> tensor<10x1x3 x 4x2xf32>
-    //                                              \  /      \ /
-    //                                  Outer Dims: 10x1x3    Inner Dims: 4x2
+        into %dest : tensor<18x3x32xf32> -> tensor<9x3x8 x 4x2 xf32>
+    //                                              \  /   \ /
+    //                                 Outer Dims: 9x3x8  Inner Dims: 4x2
     ```
 
     `outer_dims_perm` (optional) specifies a permutation for the outer
@@ -258,15 +261,6 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
     The "unpack" operation converts a source tensor of rank `n` with a tiled and
     packed layout to a result tensor of rank `n - k`.
 
-    `inner_dims_pos` (mandatory) specifies `k` result tensor dimensions that
-    were tiled with the `inner_tiles` to create the packed source tensor. The
-    source tensor dimensions can be combined given `inner_dims_pos` as follows:
-    the inner tile `shape(source)[n-k+i]` is combined with
-    `shape(source)[inner_dims_pos[i]]` where `0 <= i < k` and stored at
-    `shape(result)[inner_dims_pos[i]]`. The remaining dimensions are
-    `shape(result)[j] = shape(source)[j]` where `0 <= j < n-k` and `j` is not in
-    the set of `inner_dims_pos` indices.
-
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
     correspond to the least significant ("inner") source tensor dimension sizes.
     The behavior of this op is undefined if:
@@ -276,36 +270,50 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
       `inner_dims_pos[i]` (assuming that `outer_dims_perm` is not specified)
       evenly.
 
+    `inner_dims_pos` (mandatory) specifies `k` result tensor (i.e. unpacked
+    tensor) dimensions that were tiled with the `inner_tiles` to create the
+    packed source tensor. The source tensor (i.e. packed tensor) dimensions can
+    be unpacked given `inner_dims_pos` as follows.
+    - For `0 <= i < k` the following relationship holds:
+    `shape(result)[inner_dims_pos[i]] = shape(source)[n-k+i] + shape(source)[inner_dims_pos[i]]`.
+    - For `0 <= j < n-k` and `j` not in `inner_dims_pos` the following relationship holds:
+    `shape(result)[j] = shape(source)[j]`.
+
     `outer_dims_perm` (optional) specifies a permutation for the outer
     dimensions. If specified, it must have `n - k` elements. If specified, this
     permutation is applied before combining any dimensions.
 
-    Note, the amount of elements in the source (packed tensor) and the result
-    (unpacked) can be unequal, i.e. `SizeOf(source) >= SizeOf(result)`. As
-    the unpack operation may drop any padding introduced by the pack operation.
+    Note, the unpack operation may drop any padding introduced by the pack
+    operation and hence the following holds
+    `NumElementsOf(source) >= NumElementsOf(result)`.
 
     Examples:
 
     ```mlir
     // NCnc to NC:
     %0 = linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
-        into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
+        into %dest : tensor<16x8 x 8x32 xf32> -> tensor<128x256xf32>
+    //                      \  /   \  /
+    //          Outer Dims: 16x8  Inner Dims: 8x32
 
     // CK to KCck:
     %0 = linalg.unpack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
-        inner_tiles = [8, 32] into %dest
-        : tensor<8x16x8x32xf32> -> tensor<128x256xf32>
+        inner_tiles = [8, 32]
+        into %dest : tensor<8x16 x 8x32 xf32> -> tensor<128x256xf32>
+    //                      \  /   \  /
+    //          Outer Dims: 8x16  Inner Dims: 8x32
 
     // CHW to CHWhw:
     %0 = linalg.unpack %source inner_dims_pos = [2, 1] inner_tiles = [4, 2]
-        into %dest : tensor<1x3x2x4x2xf32> -> tensor<1x5x7xf32>
-    //                        /     \
-    //          Outer Dims: 1x3x2  Inner Dims: 4x2
+        into %dest : tensor<3x10x6 x 4x2 xf32> -> tensor<3x20x24xf32>
+    //                       \  /    \ /
+    //          Outer Dims: 3x10x6  Inner Dims: 4x2
+
     // HCW to HCWhw
     %0 = linalg.unpack %source inner_dims_pos = [2, 0] inner_tiles = [4, 2]
-        into %dest : tensor<10x1x3 x 4x2xf32> -> tensor<20x1x12xf32>
-    //                       /         \
-    //          Outer Dims: 10x1x3    Inner Dims: 4x2
+        into %dest : tensor<9x3x8 x 4x2 xf32> -> tensor<18x3x32xf32>
+    //                       \  /   \ /
+    //          Outer Dims: 9x3x8   Inner Dims: 4x2
     ```
   }];
   let arguments = (ins AnyRankedTensor:$source,
