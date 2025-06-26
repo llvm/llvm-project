@@ -6,9 +6,9 @@
 // +----------------------------------------
 
 // CHECK-LABEL: @broadcast_to_shape_cast
-//  CHECK-SAME:  %[[ARG0:.*]]: vector<4xi8>
-//  CHECK-NEXT:  %[[SCAST:.*]] = vector.shape_cast %[[ARG0]]
-//  CHECK-NEXT:  return %[[SCAST]] : vector<1x1x4xi8>
+//  CHECK-SAME: %[[ARG0:.*]]: vector<4xi8>
+//  CHECK-NEXT: %[[SCAST:.*]] = vector.shape_cast %[[ARG0]]
+//  CHECK-NEXT: return %[[SCAST]] : vector<1x1x4xi8>
 func.func @broadcast_to_shape_cast(%arg0 : vector<4xi8>) -> vector<1x1x4xi8> {
   %0 = vector.broadcast %arg0 : vector<4xi8> to vector<1x1x4xi8>
   return %0 : vector<1x1x4xi8>
@@ -49,9 +49,9 @@ func.func @negative_broadcast_scalar_to_shape_cast(%arg0 : i8) -> vector<1xi8> {
 // 2 -> 1
 // Because 0 < 1, this permutation is order preserving and effectively a shape_cast.
 // CHECK-LABEL: @transpose_to_shape_cast
-//  CHECK-SAME:  %[[ARG0:.*]]: vector<2x1x2xf32>
-//  CHECK-NEXT:  %[[SCAST:.*]] = vector.shape_cast %[[ARG0]]
-//  CHECK-NEXT:  return %[[SCAST]] : vector<2x2x1xf32>
+//  CHECK-SAME: %[[ARG0:.*]]: vector<2x1x2xf32>
+//  CHECK-NEXT: %[[SCAST:.*]] = vector.shape_cast %[[ARG0]]
+//  CHECK-NEXT: return %[[SCAST]] : vector<2x2x1xf32>
 func.func @transpose_to_shape_cast(%arg0 : vector<2x1x2xf32>) -> vector<2x2x1xf32> {
   %0 = vector.transpose %arg0, [0, 2, 1] : vector<2x1x2xf32> to vector<2x2x1xf32>
   return %0 : vector<2x2x1xf32>
@@ -64,10 +64,10 @@ func.func @transpose_to_shape_cast(%arg0 : vector<2x1x2xf32>) -> vector<2x2x1xf3
 // 2 -> 4
 // Because 0 < 4, this permutation is order preserving and effectively a shape_cast.
 // CHECK-LABEL: @shape_cast_of_transpose
-//  CHECK-SAME:   %[[ARG:.*]]: vector<1x4x4x1x1xi8>)
-//       CHECK:   %[[SHAPE_CAST:.*]] = vector.shape_cast %[[ARG]] :
-//  CHECK-SAME:   vector<1x4x4x1x1xi8> to vector<4x1x1x1x4xi8>
-//       CHECK:   return %[[SHAPE_CAST]]
+//  CHECK-SAME: %[[ARG:.*]]: vector<1x4x4x1x1xi8>)
+//       CHECK: %[[SHAPE_CAST:.*]] = vector.shape_cast %[[ARG]] :
+//  CHECK-SAME: vector<1x4x4x1x1xi8> to vector<4x1x1x1x4xi8>
+//       CHECK: return %[[SHAPE_CAST]]
 func.func @shape_cast_of_transpose(%arg : vector<1x4x4x1x1xi8>) -> vector<4x1x1x1x4xi8> {
   %0 = vector.transpose %arg, [1, 0, 3, 4, 2]  : vector<1x4x4x1x1xi8> to vector<4x1x1x1x4xi8>
   return %0 : vector<4x1x1x1x4xi8>
@@ -101,8 +101,8 @@ func.func @negative_transpose_to_shape_cast(%arg : vector<1x4x4x1xi8>) -> vector
 // -----
 
 // CHECK-LABEL: @shape_cast_of_transpose_scalable
-//  CHECK-NEXT:  vector.shape_cast
-//  CHECK-NEXT:  return
+//  CHECK-NEXT: vector.shape_cast
+//  CHECK-NEXT: return
 func.func @shape_cast_of_transpose_scalable(%arg : vector<[4]x1xi8>) -> vector<[4]xi8> {
   %0 = vector.transpose %arg, [1, 0] : vector<[4]x1xi8> to vector<1x[4]xi8>
   %1 = vector.shape_cast %0 : vector<1x[4]xi8> to vector<[4]xi8>
@@ -125,9 +125,9 @@ func.func @transpose_of_shape_cast_scalable(%arg : vector<[4]xi8>) -> vector<[4]
 // A test where a transpose cannot be transformed to a shape_cast because it is not order
 // preserving
 // CHECK-LABEL: @negative_transpose_to_shape_cast
-//  CHECK-SAME:  %[[ARG0:.*]]: vector<2x1x2xf32>
-//  CHECK-NEXT:  %[[TRANSPOSE:.*]] = vector.transpose %[[ARG0]], [2, 0, 1]
-//  CHECK-NEXT:  return %[[TRANSPOSE]] : vector<2x2x1xf32>
+//  CHECK-SAME: %[[ARG0:.*]]: vector<2x1x2xf32>
+//  CHECK-NEXT: %[[TRANSPOSE:.*]] = vector.transpose %[[ARG0]], [2, 0, 1]
+//  CHECK-NEXT: return %[[TRANSPOSE]] : vector<2x2x1xf32>
 func.func @negative_transpose_to_shape_cast(%arg0 : vector<2x1x2xf32>) -> vector<2x2x1xf32> {
   %0 = vector.transpose %arg0, [2, 0, 1] : vector<2x1x2xf32> to vector<2x2x1xf32>
   return %0 : vector<2x2x1xf32>
@@ -140,9 +140,9 @@ func.func @negative_transpose_to_shape_cast(%arg0 : vector<2x1x2xf32>) -> vector
 // +----------------------------------------
 
 // CHECK-LABEL: @extract_to_shape_cast
-//  CHECK-SAME:  %[[ARG0:.*]]: vector<1x4xf32>
-//  CHECK-NEXT:  %[[SCAST:.*]] = vector.shape_cast %[[ARG0]]
-//  CHECK-NEXT:  return %[[SCAST]] : vector<4xf32>
+//  CHECK-SAME: %[[ARG0:.*]]: vector<1x4xf32>
+//  CHECK-NEXT: %[[SCAST:.*]] = vector.shape_cast %[[ARG0]]
+//  CHECK-NEXT: return %[[SCAST]] : vector<4xf32>
 func.func @extract_to_shape_cast(%arg0 : vector<1x4xf32>) -> vector<4xf32> {
   %0 = vector.extract %arg0[0] : vector<4xf32> from vector<1x4xf32>
   return %0 : vector<4xf32>
