@@ -560,7 +560,7 @@ def fir_OmpTargetAllocMemOp : fir_Op<"omp_target_allocmem",
 
 def fir_OmpTargetFreeMemOp : fir_Op<"omp_target_freemem",
   [MemoryEffects<[MemFree]>]> {
-  let summary = "free a heap object";
+  let summary = "free a heap object on an openmp device";
 
   let description = [{
     Deallocates a heap memory reference that was allocated by an `omp_target_allocmem`.
@@ -569,7 +569,7 @@ def fir_OmpTargetFreeMemOp : fir_Op<"omp_target_freemem",
     ```
       %device = arith.constant 0 : i32
       %1 = fir.omp_target_allocmem %device : i32, !fir.array<3x3xi32>
-      fir.omp_target_freemem %device, %1 : i32, !fir.heap<!fir.array<?xf32>>
+      fir.omp_target_freemem %device, %1 : i32, !fir.heap<!fir.array<3x3xi32>>
     ```
   }];
 
