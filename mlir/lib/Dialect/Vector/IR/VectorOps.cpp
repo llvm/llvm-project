@@ -2472,7 +2472,7 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   if (llvm::any_of(elements, [](Attribute attr) { return !attr; }))
     return {};
 
-  auto destType = cast<VectorType>(fromElementsOp.getType());
+  auto destType = fromElementsOp.getDest().getType();
   return DenseElementsAttr::get(destType, elements);
 }
 
