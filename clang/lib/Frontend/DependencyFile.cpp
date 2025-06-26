@@ -383,25 +383,17 @@ static void PrintFilename(raw_ostream &OS, StringRef Filename,
 }
 
 void DependencyFileGenerator::outputDependencyFile(DiagnosticsEngine &Diags) {
-  // The use of NoAtomicWrite and calling discard on SeenMissingHeader
-  // preserves the previous behaviour: no temporary files are used, and when
-  // SeenMissingHeader is true it deletes a previously-existing file.
-  // FIXME: switch to atomic-write based on FrontendOptions::UseTemporary and
-  // and not deleting the previous file, if possible.
-  Expected<llvm::vfs::OutputFile> O =
-      OutputBackend->createFile(OutputFile, llvm::vfs::OutputConfig()
-                                                .setTextWithCRLF()
-                                                .setNoAtomicWrite()
-                                                .setNoDiscardOnSignal());
+  if (SeenMissingHeader) {
+    llvm::sys::fs::remove(OutputFile);
+    return;
+  }
+
+  Expected<llvm::vfs::OutputFile> O = OutputBackend->createFile(
+      OutputFile, llvm::vfs::OutputConfig().setTextWithCRLF());
 
   if (!O) {
     Diags.Report(diag::err_fe_error_opening)
         << OutputFile << toString(O.takeError());
-    return;
-  }
-
-  if (SeenMissingHeader) {
-    consumeError(O->discard());
     return;
   }
 
