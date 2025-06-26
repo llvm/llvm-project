@@ -34,7 +34,6 @@ def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR transformational intrinsic operations";
 }
 
-
 def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR ordered assignments like forall and where operations";
   let options = [
