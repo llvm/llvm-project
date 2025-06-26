@@ -1,0 +1,17 @@
+; RUN: echo -e "WINPATH=A:\windows\style\path"             >  %t
+; RUN: echo -e "NOT_ESCAPED=shouldn't be escaped [a-Z]\+$" >> %t
+; RUN: echo -e 'ESCAPED=\\ needs\to "be" escaped\000'      >> %t
+
+VARS:      WINPATH=[[WINPATH:.*]]
+VARS:      NOT_ESCAPED=[[NOT_ESCAPED:.*]]
+VARS-NEXT: ESCAPED=[[ESCAPED:.*]]
+; Trigger a failed match, to show variables values
+VARS-NEXT: [[WINPATH]] [[NOT_ESCAPED]] [[ESCAPED]]
+
+; RUN: %ProtectFileCheckOutput not FileCheck \
+; RUN:   -dump-input=never --strict-whitespace --check-prefix=VARS --input-file=%t %s 2>&1 \
+; RUN: | FileCheck %s
+
+CHECK: with "WINPATH" equal to "A:\\\\windows\\\\style\\\\path"
+CHECK: with "NOT_ESCAPED" equal to "shouldn't be escaped \\[a-Z\\]\\\\\\+\\$"
+CHECK: with "ESCAPED" equal to "\\\\ needs\to \"be\" escaped\\\000"
