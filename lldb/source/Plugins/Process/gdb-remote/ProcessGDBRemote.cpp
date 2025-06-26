@@ -876,7 +876,11 @@ bool ProcessGDBRemote::GPUBreakpointHit(void *baton,
       if (bp_sp) 
         bp_sp->SetEnabled(false);
     }
-    HandleGPUActions(response->actions);
+    if (Status err = HandleGPUActions(response->actions); err.Fail()) {
+      Debugger::ReportError(
+          llvm::formatv("HandleGPUActions failed. Error: {0}\nActions:\n{1}\n",
+                        err.AsCString(), toJSON(response->actions)));
+    }
   }
   return false; // Don't stop, auto continue.
 }
@@ -1062,8 +1066,13 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
   if (auto init_actions = m_gdb_comm.GetGPUInitializeActions()) {
-    for (const auto &init_action: *init_actions)
-      HandleGPUActions(init_action);
+    for (const auto &init_action : *init_actions) {
+      if (Status err = HandleGPUActions(init_action); err.Fail()) {
+        Debugger::ReportError(llvm::formatv(
+            "HandleGPUActions failed. Error: {0}\nActions:\n{1}\n",
+            err.AsCString(), toJSON(init_action)));
+      }
+    }
   }
   // First dispatch any commands from the platform:
   auto handle_cmds = [&] (const Args &args) ->  void {
@@ -2611,7 +2620,11 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         StringExtractorGDBRemote extractor(value);
         if (std::optional<GPUActions> gpu_actions = 
             extractor.GetFromJSONHexASCII<GPUActions>()) {
-          HandleGPUActions(*gpu_actions);
+          if (Status err = HandleGPUActions(*gpu_actions); err.Fail()) {
+            Debugger::ReportError(llvm::formatv(
+                "HandleGPUActions failed. Error: {0}\nActions:\n{1}\n",
+                err.AsCString(), toJSON(*gpu_actions)));
+          }
         }
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
