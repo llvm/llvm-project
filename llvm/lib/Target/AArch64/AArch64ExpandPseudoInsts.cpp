@@ -1556,7 +1556,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      StackOffset FrameRegOffset = TFI->resolveFrameOffsetReference(
          MF, BaseOffset, false /*isFixed*/, false /*isSVE*/, FrameReg,
          /*PreferFP=*/false,
-         /*ForSimm=*/true);
+         /*ForSimm=*/true,
+         /*FI=*/-1);
      Register SrcReg = FrameReg;
      if (FrameRegOffset) {
        // Use output register as temporary.
