@@ -4756,7 +4756,7 @@ ExprResult Sema::CheckConceptTemplateId(
     LocalInstantiationScope Scope(*this);
 
     EnterExpressionEvaluationContext EECtx{
-      *this, ExpressionEvaluationContext::Unevaluated, CSD};
+        *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
     Error = CheckConstraintSatisfaction(
         NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
@@ -4764,8 +4764,7 @@ ExprResult Sema::CheckConceptTemplateId(
         SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
                     TemplateArgs->getRAngleLoc()),
         Satisfaction, CL);
-
-    }
+  }
 
   if (!DoCheckConstraintSatisfaction)
     Satisfaction.IsSatisfied = false;
@@ -5899,9 +5898,11 @@ bool Sema::CheckTemplateArgumentList(
       // For constraint parameter mapping, we have already built a pack in
       // TransformTemplateArguments
       // if (inParameterMappingSubstitution()) {
-      //   llvm::copy(SugaredArgumentPack, std::back_inserter(CTAI.SugaredConverted));
+      //   llvm::copy(SugaredArgumentPack,
+      //   std::back_inserter(CTAI.SugaredConverted));
       //   SugaredArgumentPack.clear();
-      //   llvm::copy(CanonicalArgumentPack, std::back_inserter(CTAI.CanonicalConverted));
+      //   llvm::copy(CanonicalArgumentPack,
+      //   std::back_inserter(CTAI.CanonicalConverted));
       //   CanonicalArgumentPack.clear();
       //   ++Param;
       //   continue;

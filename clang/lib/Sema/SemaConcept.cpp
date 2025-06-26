@@ -549,7 +549,7 @@ static bool calculateConstraintSatisfaction(
   if (!NumExpansions)
     return false;
 
-  if(*NumExpansions == 0) {
+  if (*NumExpansions == 0) {
     Satisfaction.IsSatisfied = Conjunction;
     return true;
   }
@@ -566,7 +566,8 @@ static bool calculateConstraintSatisfaction(
     if (!Success && Conjunction)
       return false;
     if (!Conjunction && Satisfaction.IsSatisfied) {
-      Satisfaction.Details.erase(Satisfaction.Details.begin() + EffectiveDetailEndIndex,
+      Satisfaction.Details.erase(Satisfaction.Details.begin() +
+                                     EffectiveDetailEndIndex,
                                  Satisfaction.Details.end());
       break;
     }
@@ -664,29 +665,33 @@ static bool calculateConstraintSatisfaction(
 
   auto EffectiveDetailEndIndex = Satisfaction.Details.size();
 
-  bool Conjunction = Constraint.getCompoundKind() == NormalizedConstraint::CCK_Conjunction;
+  bool Conjunction =
+      Constraint.getCompoundKind() == NormalizedConstraint::CCK_Conjunction;
 
   bool Ok = calculateConstraintSatisfaction(
       S, Constraint.getLHS(), Template, TemplateNameLoc, MLTAL, Satisfaction,
       PackSubstitutionIndex);
 
-  if(Conjunction && !Ok)
+  if (Conjunction && !Ok)
     return false;
 
-  if (!Conjunction && Ok && Satisfaction.IsSatisfied && !Satisfaction.ContainsErrors)
+  if (!Conjunction && Ok && Satisfaction.IsSatisfied &&
+      !Satisfaction.ContainsErrors)
     return true;
 
-  if (Conjunction && Ok && (!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors))
+  if (Conjunction && Ok &&
+      (!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors))
     return true;
 
   Satisfaction.ContainsErrors = false;
   Satisfaction.IsSatisfied = false;
 
   Ok = calculateConstraintSatisfaction(S, Constraint.getRHS(), Template,
-                                         TemplateNameLoc, MLTAL, Satisfaction,
-                                         PackSubstitutionIndex);
+                                       TemplateNameLoc, MLTAL, Satisfaction,
+                                       PackSubstitutionIndex);
   if (Ok && Satisfaction.IsSatisfied && !Satisfaction.ContainsErrors)
-    Satisfaction.Details.erase(Satisfaction.Details.begin() + EffectiveDetailEndIndex,
+    Satisfaction.Details.erase(Satisfaction.Details.begin() +
+                                   EffectiveDetailEndIndex,
                                Satisfaction.Details.end());
   return Ok;
 }
@@ -1381,9 +1386,10 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
                                            concepts::NestedRequirement *Req,
                                            bool First) {
   DiagnoseUnsatisfiedConstraint(S, Req->getConstraintSatisfaction().records(),
-                                Req->hasInvalidConstraint() ? SourceLocation() :
-                                Req->getConstraintExpr()->getExprLoc(), First,
-                                Req);
+                                Req->hasInvalidConstraint()
+                                    ? SourceLocation()
+                                    : Req->getConstraintExpr()->getExprLoc(),
+                                First, Req);
 }
 
 static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,

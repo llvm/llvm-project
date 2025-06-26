@@ -1443,10 +1443,10 @@ public:
   DeclarationName getBaseEntity() { return Entity; }
 
   bool TryExpandParameterPacks(SourceLocation EllipsisLoc,
-                                SourceRange PatternRange,
-                                ArrayRef<UnexpandedParameterPack> Unexpanded,
-                                bool &ShouldExpand, bool &RetainExpansion,
-                                UnsignedOrNone &NumExpansions) {
+                               SourceRange PatternRange,
+                               ArrayRef<UnexpandedParameterPack> Unexpanded,
+                               bool &ShouldExpand, bool &RetainExpansion,
+                               UnsignedOrNone &NumExpansions) {
     if (SemaRef.CurrentInstantiationScope &&
         SemaRef.inConstraintSubstitution()) {
       for (UnexpandedParameterPack ParmPack : Unexpanded) {
