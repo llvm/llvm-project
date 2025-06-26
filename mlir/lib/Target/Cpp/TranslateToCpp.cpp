@@ -273,13 +273,13 @@ struct CppEmitter {
     return operandExpression == emittedExpression;
   };
 
-  // Resets the value counter to 0
+  // Resets the value counter to 0.
   void resetValueCounter();
 
-  // Increases the loop nesting level by 1
+  // Increases the loop nesting level by 1.
   void increaseLoopNestingLevel();
 
-  // Decreases the loop nesting level by 1
+  // Decreases the loop nesting level by 1.
   void decreaseLoopNestingLevel();
 
 private:
@@ -303,7 +303,7 @@ private:
   /// Map from block to name of C++ label.
   BlockMapper blockMapper;
 
-  /// Default values representing outermost scope
+  /// Default values representing outermost scope.
   llvm::ScopedHashTableScope<Value, std::string> defaultValueMapperScope;
   llvm::ScopedHashTableScope<Block *, std::string> defaultBlockMapperScope;
 
@@ -1294,7 +1294,7 @@ StringRef CppEmitter::getOrCreateName(Value val) {
 }
 
 /// Return the existing or a new name for a loop induction variable Value.
-/// Loop induction variables follow natural naming: i, j, k,...
+/// Loop induction variables follow natural naming: i, j, k, ..., t, uX.
 StringRef CppEmitter::getOrCreateInductionVarName(Value val) {
   if (!valueMapper.count(val)) {
 
@@ -1304,7 +1304,7 @@ StringRef CppEmitter::getOrCreateInductionVarName(Value val) {
       valueMapper.insert(val,
                          formatv("{0}{1}", (char)identifier, ++valueCount));
     } else {
-      // If running out of letters, continue with uX
+      // If running out of letters, continue with uX.
       valueMapper.insert(val, formatv("u{0}", ++valueCount));
     }
   }
