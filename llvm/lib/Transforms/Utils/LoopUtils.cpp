@@ -1227,9 +1227,12 @@ Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
                                        RecurKind RdxKind, Value *Start,
                                        Value *Sentinel) {
   bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RdxKind);
-  Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? Builder.CreateIntMaxReduce(Src, IsSigned)
-                      : Src;
+  Value *MaxRdx =
+      Src->getType()->isVectorTy()
+          ? (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RdxKind)
+                 ? Builder.CreateIntMaxReduce(Src, IsSigned)
+                 : Builder.CreateIntMinReduce(Src, IsSigned))
+          : Src;
   // Correct the final reduction result back to the start value if the maximum
   // reduction is sentinel value.
   Value *Cmp =
@@ -1324,8 +1327,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
-         "AnyOf or FindLastIV reductions are not supported.");
+         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+         "AnyOf, FindFirstIV and FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto VPID = VPIntrinsic::getForIntrinsic(Id);
   assert(VPReductionIntrinsic::isVPReduction(VPID) &&
