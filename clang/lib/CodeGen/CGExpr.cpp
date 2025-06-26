@@ -85,8 +85,6 @@ enum VariableTypeDescriptorKind : uint16_t {
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
 
-<<<<<<< HEAD
-=======
 static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
   switch (ID) {
   case SanitizerHandler::AddOverflow:
@@ -175,7 +173,6 @@ static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
   }
 }
 
->>>>>>> 592f9d2f8f85 (Addressed most of Dan's comments and added remaining test cases)
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
 RawAddress
@@ -4142,8 +4139,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-<<<<<<< HEAD
-=======
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
   llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
 
@@ -4152,7 +4147,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
         TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
   }
 
->>>>>>> 592f9d2f8f85 (Addressed most of Dan's comments and added remaining test cases)
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
@@ -4161,13 +4155,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
-<<<<<<< HEAD
-    Call->applyMergedLocation(Call->getDebugLoc(),
-                              Builder.getCurrentDebugLocation());
-=======
     Call->applyMergedLocation(Call->getDebugLoc(), TrapLocation);
 
->>>>>>> 592f9d2f8f85 (Addressed most of Dan's comments and added remaining test cases)
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
   } else {
