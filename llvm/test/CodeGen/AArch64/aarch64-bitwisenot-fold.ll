@@ -120,3 +120,27 @@ define i32 @and_not_select_ne(i32 %a, i32 %b, i32 %c) {
   %a.c = select i1 %cmp, i32 %a, i32 %c
   ret i32 %a.c
 }
+
+define i32 @and_not_select_eq_swap(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: and_not_select_eq_swap:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bics wzr, w1, w0
+; CHECK-NEXT:    csel w0, w0, w2, eq
+; CHECK-NEXT:    ret
+  %or = or i32 %b, %a
+  %cmp = icmp eq i32 %a, %or
+  %a.c = select i1 %cmp, i32 %a, i32 %c
+  ret i32 %a.c
+}
+
+define i32 @and_not_select_ne_swap(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: and_not_select_ne_swap:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bics wzr, w1, w0
+; CHECK-NEXT:    csel w0, w0, w2, ne
+; CHECK-NEXT:    ret
+  %or = or i32 %a, %b
+  %cmp = icmp eq i32 %a, %or
+  %a.c = select i1 %cmp, i32 %a, i32 %c
+  ret i32 %a.c
+}
