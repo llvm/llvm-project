@@ -1325,6 +1325,7 @@ namespace llvm {
 
     SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
         SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+        const APInt &DoNotPoisonEltMask,
         SelectionDAG &DAG, unsigned Depth) const override;
 
     bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(

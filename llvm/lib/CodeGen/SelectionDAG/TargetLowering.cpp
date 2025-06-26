@@ -1000,7 +1000,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END)
       if (SDValue V = SimplifyMultipleUseDemandedBitsForTargetNode(
-              Op, DemandedBits, DemandedElts | DoNotPoisonEltMask, DAG, Depth))
+              Op, DemandedBits, DemandedElts, DoNotPoisonEltMask, DAG, Depth))
         return V;
     break;
   }
@@ -4058,12 +4058,14 @@ bool TargetLowering::SimplifyDemandedBitsForTargetNode(
           Op.getOpcode() == ISD::INTRINSIC_VOID) &&
          "Should use SimplifyDemandedBits if you don't know whether Op"
          " is a target node!");
-  computeKnownBitsForTargetNode(Op, Known, DemandedElts, TLO.DAG, Depth);
+  computeKnownBitsForTargetNode(Op, Known, DemandedElts,
+                                TLO.DAG, Depth);
   return false;
 }
 
 SDValue TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+    const APInt &DoNotPoisonEltMask,
     SelectionDAG &DAG, unsigned Depth) const {
   assert(
       (Op.getOpcode() >= ISD::BUILTIN_OP_END ||
