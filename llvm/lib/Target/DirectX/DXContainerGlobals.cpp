@@ -166,7 +166,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
   const auto &RS = RSA.getDescForFunction(EntryFunction);
   const auto &RS = RSA.getDescForFunction(EntryFunction);
 
-  if (!RS )
+  if (!RS)
     return;
 
   SmallString<256> Data;

@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILPostOptimizationValidation.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -85,7 +88,9 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
 }
 
 static void reportErrors(Module &M, DXILResourceMap &DRM,
-                         DXILResourceBindingInfo &DRBI) {
+                         DXILResourceBindingInfo &DRBI,
+                         RootSignatureBindingInfo &RSBI,
+                         dxil::ModuleMetadataInfo &MMI) {
   if (DRM.hasInvalidCounterDirection())
     reportInvalidDirection(M, DRM);
 
@@ -94,6 +99,30 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   assert(!DRBI.hasImplicitBinding() && "implicit bindings should be handled in "
                                        "DXILResourceImplicitBinding pass");
+  // Assuming this is used to validate only the root signature assigned to the
+  // entry function.
+  std::optional<mcdxbc::RootSignatureDesc> RootSigDesc =
+      RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
+  if (!RootSigDesc)
+    return;
+
+  for (const mcdxbc::RootParameterInfo &Info :
+       RootSigDesc->ParametersContainer) {
+    const auto &[Type, Loc] =
+        RootSigDesc->ParametersContainer.getTypeAndLocForParameter(
+            Info.Location);
+    switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+      dxbc::RTS0::v2::RootDescriptor Desc =
+          RootSigDesc->ParametersContainer.getRootDescriptor(Loc);
+
+      llvm::dxil::ResourceInfo::ResourceBinding Binding;
+      Binding.LowerBound = Desc.ShaderRegister;
+      Binding.Space = Desc.RegisterSpace;
+      Binding.Size = 1;
+      break;
+    }
+  }
 }
 } // namespace
 
@@ -101,7 +130,10 @@ PreservedAnalyses
 DXILPostOptimizationValidation::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceBindingInfo &DRBI = MAM.getResult<DXILResourceBindingAnalysis>(M);
-  reportErrors(M, DRM, DRBI);
+  RootSignatureBindingInfo &RSBI = MAM.getResult<RootSignatureAnalysis>(M);
+  ModuleMetadataInfo &MMI = MAM.getResult<DXILMetadataAnalysis>(M);
+
+  reportErrors(M, DRM, DRBI, RSBI, MMI);
   return PreservedAnalyses::all();
 }
 
@@ -113,7 +145,13 @@ public:
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceBindingInfo &DRBI =
         getAnalysis<DXILResourceBindingWrapperPass>().getBindingInfo();
-    reportErrors(M, DRM, DRBI);
+
+    RootSignatureBindingInfo &RSBI =
+        getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
+    dxil::ModuleMetadataInfo &MMI =
+        getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+
+    reportErrors(M, DRM, DRBI, RSBI, MMI);
     return false;
   }
   StringRef getPassName() const override {
@@ -125,10 +163,13 @@ public:
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILResourceBindingWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
   }
 };
 char DXILPostOptimizationValidationLegacy::ID = 0;
