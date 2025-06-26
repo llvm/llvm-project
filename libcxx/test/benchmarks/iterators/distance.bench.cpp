@@ -46,10 +46,6 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(4096)
           ->Arg(8192);
-      // ->Arg(1 << 14)
-      // ->Arg(1 << 16)
-      // ->Arg(1 << 18)
-      // ->Arg(1 << 20);
     };
     bm.operator()<std::vector<std::vector<int>>>("std::distance(join_view(vector<vector<int>>))", std_distance, 256);
     bm.operator()<std::deque<std::deque<int>>>("std::distance(join_view(deque<deque<int>>))", std_distance, 256);

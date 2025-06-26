@@ -56,31 +56,20 @@ __distance(_RandIter __first, _RandIter __last) {
   return __last - __first;
 }
 
-template <class _SegmentedIter, class _Difference>
-struct __segment_distance {
-  using _Traits _LIBCPP_NODEBUG = __segmented_iterator_traits<_SegmentedIter>;
-
-  _Difference& __r_;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __segment_distance(_Difference& __r) : __r_(__r) {}
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-  operator()(typename _Traits::__local_iterator __lfirst, typename _Traits::__local_iterator __llast) {
-    __r_ += std::__distance(__lfirst, __llast);
-  }
-};
-
+#if _LIBCPP_STD_VER >= 20
 template <class _SegmentedIter,
           __enable_if_t<!__has_random_access_iterator_category<_SegmentedIter>::value &&
                             __is_segmented_iterator<_SegmentedIter>::value,
                         int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_SegmentedIter>
 __distance(_SegmentedIter __first, _SegmentedIter __last) {
-  using __difference_type = __iter_distance_t<_SegmentedIter>;
-  __difference_type __r(0);
-  std::__for_each_segment(__first, __last, std::__segment_distance<_SegmentedIter, __difference_type>(__r));
+  __iter_distance_t<_SegmentedIter> __r(0);
+  std::__for_each_segment(__first, __last, [&__r](auto __lfirst, auto __llast) {
+    __r += std::__distance(__lfirst, __llast);
+  });
   return __r;
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _InputIter>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 typename iterator_traits<_InputIter>::difference_type

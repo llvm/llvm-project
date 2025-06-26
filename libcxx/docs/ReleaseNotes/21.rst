@@ -76,6 +76,10 @@ Improvements and New Features
 - The ``bitset::to_string`` function has been optimized, resulting in a performance improvement of up to 8.3x for bitsets
   with uniformly distributed zeros and ones, and up to 13.5x and 16.1x for sparse and dense bitsets, respectively.
 
+- The ``std::distance`` and ``std::ranges::distance`` algorithms have been optimized for segmented iterators (e.g.,
+  ``std::join_view`` iterators), reducing the complexity from ``O(n)`` to ``O(n / segment_size)``. Benchmarks show
+  performance improvements of over 1600x in favorable cases with large segment sizes (e.g., 1024).
+
 Deprecations and Removals
 -------------------------
 
