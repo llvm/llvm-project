@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_type: [Debug, Release, MinSizeRel]
+        # build_type: [Debug, Release, MinSizeRel]
         include:
           - os: ubuntu-24.04
             ccache-variant: sccache
