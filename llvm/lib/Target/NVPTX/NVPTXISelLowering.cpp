@@ -3415,15 +3415,15 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
           // Extend or truncate the element if necessary (e.g. an i8 is loaded
           // into an i16 register)
-          const EVT ExpactedVT = ArgIns[I + J].VT;
-          assert((Elt.getValueType() == ExpactedVT ||
-                  (ExpactedVT.isInteger() && Elt.getValueType().isInteger())) &&
+          const EVT ExpectedVT = ArgIns[I + J].VT;
+          assert((Elt.getValueType() == ExpectedVT ||
+                  (ExpectedVT.isInteger() && Elt.getValueType().isInteger())) &&
                  "Non-integer argument type size mismatch");
-          if (ExpactedVT.bitsGT(Elt.getValueType()))
-            Elt = DAG.getNode(getExtOpcode(ArgIns[I + J].Flags), dl, ExpactedVT,
+          if (ExpectedVT.bitsGT(Elt.getValueType()))
+            Elt = DAG.getNode(getExtOpcode(ArgIns[I + J].Flags), dl, ExpectedVT,
                               Elt);
-          else if (ExpactedVT.bitsLT(Elt.getValueType()))
-            Elt = DAG.getNode(ISD::TRUNCATE, dl, ExpactedVT, Elt);
+          else if (ExpectedVT.bitsLT(Elt.getValueType()))
+            Elt = DAG.getNode(ISD::TRUNCATE, dl, ExpectedVT, Elt);
           InVals.push_back(Elt);
         }
         I += NumElts;
