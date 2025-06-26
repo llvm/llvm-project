@@ -10,12 +10,10 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
-  struct tm *result;
-  struct tm input;
-  time_t t_ptr;
+  struct tm *input = nullptr;
+  time_t t_ptr = 0;
 
-  t_ptr = 0;
-  result = LIBC_NAMESPACE::localtime_r(&t_ptr, &input);
+  struct tm *result = LIBC_NAMESPACE::localtime_r(&t_ptr, input);
 
   ASSERT_EQ(70, result->tm_year);
   ASSERT_EQ(0, result->tm_mon);
