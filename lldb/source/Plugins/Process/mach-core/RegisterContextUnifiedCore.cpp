@@ -117,24 +117,25 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
         }
         ent->GetAsDictionary()->AddIntegerItem("offset", offset);
         Status error;
-        switch (bitsize / 8) {
+        int bytesize = bitsize / 8;
+        switch (bytesize) {
         case 2: {
           Scalar value_scalar((uint16_t)value);
-          value_scalar.GetAsMemoryData(m_register_data.data() + offset, 2,
-                                       byte_order, error);
-          offset += 2;
+          value_scalar.GetAsMemoryData(m_register_data.data() + offset,
+                                       bytesize, byte_order, error);
+          offset += bytesize;
         } break;
         case 4: {
           Scalar value_scalar((uint32_t)value);
-          value_scalar.GetAsMemoryData(m_register_data.data() + offset, 4,
-                                       byte_order, error);
-          offset += 4;
+          value_scalar.GetAsMemoryData(m_register_data.data() + offset,
+                                       bytesize, byte_order, error);
+          offset += bytesize;
         } break;
         case 8: {
           Scalar value_scalar((uint64_t)value);
-          value_scalar.GetAsMemoryData(m_register_data.data() + offset, 8,
-                                       byte_order, error);
-          offset += 8;
+          value_scalar.GetAsMemoryData(m_register_data.data() + offset,
+                                       bytesize, byte_order, error);
+          offset += bytesize;
         } break;
         }
         return true;
@@ -147,25 +148,32 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
     additional_reginfo_up = DynamicRegisterInfo::Create(
         *metadata_registers_dict, target.GetArchitecture());
 
+  // Put the RegisterSet names in the constant string pool,
+  // to sidestep lifetime issues of char*'s.
+  auto copy_regset_name = [](RegisterSet &dst, const RegisterSet &src) {
+    dst.name = ConstString(src.name).AsCString();
+    if (src.short_name)
+      dst.short_name = ConstString(src.short_name).AsCString();
+    else
+      dst.short_name = nullptr;
+  };
+
   // Copy the core thread register sets into our combined register set list.
+  // RegisterSet indexes will be identical for the LC_THREAD RegisterContext.
   for (size_t idx = 0; idx < core_thread_regctx_sp->GetRegisterSetCount();
        idx++) {
     RegisterSet new_set;
     const RegisterSet *old_set = core_thread_regctx_sp->GetRegisterSet(idx);
-    new_set.name = ConstString(old_set->name).AsCString();
-    if (old_set->short_name)
-      new_set.short_name = ConstString(old_set->short_name).AsCString();
-    else
-      new_set.short_name = nullptr;
+    copy_regset_name(new_set, *old_set);
     m_register_sets.push_back(new_set);
   }
 
-  // Set up our RegisterSet array.
-  // First copying all of the core thread register sets,
-  // then any additional unique register sets from the metadata.
+  // Add any additional metadata RegisterSets to our combined RegisterSet array.
   if (additional_reginfo_up) {
     for (size_t idx = 0; idx < additional_reginfo_up->GetNumRegisterSets();
          idx++) {
+      // See if this metadata RegisterSet name matches one already present
+      // from the LC_THREAD RegisterContext.
       bool found_match = false;
       const RegisterSet *old_set = additional_reginfo_up->GetRegisterSet(idx);
       for (size_t jdx = 0; jdx < m_register_sets.size(); jdx++) {
@@ -175,13 +183,11 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
           break;
         }
       }
+      // This metadata RegisterSet is a new one.
+      // Add it to the combined RegisterSet array.
       if (!found_match) {
         RegisterSet new_set;
-        new_set.name = ConstString(old_set->name).AsCString();
-        if (old_set->short_name)
-          new_set.short_name = ConstString(old_set->short_name).AsCString();
-        else
-          new_set.short_name = nullptr;
+        copy_regset_name(new_set, *old_set);
         metadata_regset_to_combined_regset[idx] = m_register_sets.size();
         m_register_sets.push_back(new_set);
       }
@@ -190,9 +196,9 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
 
   // Set up our RegisterInfo array, one RegisterSet at a time.
   // The metadata registers may be declared to be in a core thread
-  // register set (e.g. "General Purpose Registers", so we scan
-  // both core registers and metadata registers should be examined
-  // when creating the combined register sets.
+  // register set (e.g. "General Purpose Registers"), so we scan
+  // both core registers and metadata registers when creating the
+  // combined RegisterInfo arrays.
   for (size_t combined_regset_idx = 0;
        combined_regset_idx < m_register_sets.size(); combined_regset_idx++) {
     uint32_t registers_this_regset = 0;
