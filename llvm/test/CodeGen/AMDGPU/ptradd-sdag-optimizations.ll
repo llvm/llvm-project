@@ -142,3 +142,179 @@ entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
+
+; Test skipping the lower-32-bit addition if it is unnecessary.
+define ptr @huge_offset_low_32_unused(ptr %p) {
+; GFX942_PTRADD-LABEL: huge_offset_low_32_unused:
+; GFX942_PTRADD:       ; %bb.0:
+; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    s_mov_b32 s0, 0
+; GFX942_PTRADD-NEXT:    s_mov_b32 s1, 1
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
+; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942_LEGACY-LABEL: huge_offset_low_32_unused:
+; GFX942_LEGACY:       ; %bb.0:
+; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    v_add_u32_e32 v1, 1, v1
+; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr inbounds i8, ptr %p, i64 u0x100000000
+  ret ptr %gep
+}
+
+; Reassociate address computation if it leads to more scalar operations.
+define amdgpu_kernel void @reassoc_scalar_r(ptr addrspace(1) %out, ptr addrspace(1) %p, i64 %soffset) {
+; GFX942_PTRADD-LABEL: reassoc_scalar_r:
+; GFX942_PTRADD:       ; %bb.0: ; %entry
+; GFX942_PTRADD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; GFX942_PTRADD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX942_PTRADD-NEXT:    v_mov_b32_e32 v1, 0
+; GFX942_PTRADD-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942_PTRADD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, s[6:7]
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[2:3], s[2:3], 0, v[2:3]
+; GFX942_PTRADD-NEXT:    global_store_dwordx2 v1, v[2:3], s[0:1]
+; GFX942_PTRADD-NEXT:    s_endpgm
+;
+; GFX942_LEGACY-LABEL: reassoc_scalar_r:
+; GFX942_LEGACY:       ; %bb.0: ; %entry
+; GFX942_LEGACY-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX942_LEGACY-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; GFX942_LEGACY-NEXT:    v_mov_b32_e32 v1, 0
+; GFX942_LEGACY-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942_LEGACY-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    s_add_u32 s2, s2, s6
+; GFX942_LEGACY-NEXT:    s_addc_u32 s3, s3, s7
+; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[2:3], s[2:3], 0, v[0:1]
+; GFX942_LEGACY-NEXT:    global_store_dwordx2 v1, v[2:3], s[0:1]
+; GFX942_LEGACY-NEXT:    s_endpgm
+entry:
+  %voffset32 = call i32 @llvm.amdgcn.workitem.id.x()
+  %voffset = zext i32 %voffset32 to i64
+  %offset = add nuw nsw i64 %voffset, %soffset
+  %gep = getelementptr i8, ptr addrspace(1) %p, i64 %offset
+  store ptr addrspace(1) %gep, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @reassoc_scalar_l(ptr addrspace(1) %out, ptr addrspace(1) %p, i64 %soffset) {
+; GFX942_PTRADD-LABEL: reassoc_scalar_l:
+; GFX942_PTRADD:       ; %bb.0: ; %entry
+; GFX942_PTRADD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; GFX942_PTRADD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX942_PTRADD-NEXT:    v_mov_b32_e32 v1, 0
+; GFX942_PTRADD-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942_PTRADD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[2:3], s[6:7], 0, v[0:1]
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[2:3], s[2:3], 0, v[2:3]
+; GFX942_PTRADD-NEXT:    global_store_dwordx2 v1, v[2:3], s[0:1]
+; GFX942_PTRADD-NEXT:    s_endpgm
+;
+; GFX942_LEGACY-LABEL: reassoc_scalar_l:
+; GFX942_LEGACY:       ; %bb.0: ; %entry
+; GFX942_LEGACY-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX942_LEGACY-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; GFX942_LEGACY-NEXT:    v_mov_b32_e32 v1, 0
+; GFX942_LEGACY-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942_LEGACY-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    s_add_u32 s2, s2, s6
+; GFX942_LEGACY-NEXT:    s_addc_u32 s3, s3, s7
+; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[2:3], s[2:3], 0, v[0:1]
+; GFX942_LEGACY-NEXT:    global_store_dwordx2 v1, v[2:3], s[0:1]
+; GFX942_LEGACY-NEXT:    s_endpgm
+entry:
+  %voffset32 = call i32 @llvm.amdgcn.workitem.id.x()
+  %voffset = zext i32 %voffset32 to i64
+  %offset = add nuw nsw i64 %soffset, %voffset
+  %gep = getelementptr i8, ptr addrspace(1) %p, i64 %offset
+  store ptr addrspace(1) %gep, ptr addrspace(1) %out
+  ret void
+}
+
+; Tests the target-specific (ptradd x, shl(0 - y, k)) -> sub(x, shl(y, k)) fold
+define ptr addrspace(1) @shl_neg_offset(ptr addrspace(1) %p, i64 %noffset, i64 %shift) {
+; GFX942_PTRADD-LABEL: shl_neg_offset:
+; GFX942_PTRADD:       ; %bb.0:
+; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    v_sub_co_u32_e32 v2, vcc, 0, v2
+; GFX942_PTRADD-NEXT:    s_nop 1
+; GFX942_PTRADD-NEXT:    v_subb_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX942_PTRADD-NEXT:    v_lshlrev_b64 v[2:3], v4, v[2:3]
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
+; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942_LEGACY-LABEL: shl_neg_offset:
+; GFX942_LEGACY:       ; %bb.0:
+; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    v_lshlrev_b64 v[2:3], v4, v[2:3]
+; GFX942_LEGACY-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v2
+; GFX942_LEGACY-NEXT:    s_nop 1
+; GFX942_LEGACY-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v3, vcc
+; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+  %offset = sub i64 0, %noffset
+  %x = shl i64 %offset, %shift
+  %gep = getelementptr inbounds i8, ptr addrspace(1) %p, i64 %x
+  ret ptr addrspace(1) %gep
+}
+
+%complextype = type { i64, [10 x i8], float }
+
+@v0 = dso_local addrspace(1) global %complextype zeroinitializer
+
+; Check that offsets are folded into global addresses if possible. For example,
+; this is relevant when using --amdgpu-lower-module-lds-strategy=table.
+define ptr addrspace(1) @complextype_global_gep(i64 %offset) {
+; GFX942_PTRADD-LABEL: complextype_global_gep:
+; GFX942_PTRADD:       ; %bb.0:
+; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    s_getpc_b64 s[0:1]
+; GFX942_PTRADD-NEXT:    s_add_u32 s0, s0, v0@rel32@lo+4
+; GFX942_PTRADD-NEXT:    s_addc_u32 s1, s1, v0@rel32@hi+12
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], s[0:1], 0, v[0:1]
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, 10
+; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942_LEGACY-LABEL: complextype_global_gep:
+; GFX942_LEGACY:       ; %bb.0:
+; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    s_getpc_b64 s[0:1]
+; GFX942_LEGACY-NEXT:    s_add_u32 s0, s0, v0@rel32@lo+14
+; GFX942_LEGACY-NEXT:    s_addc_u32 s1, s1, v0@rel32@hi+22
+; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
+; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+  %gep0 = getelementptr inbounds %complextype, ptr addrspace(1) @v0, i64 0, i32 1, i64 %offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 2
+  ret ptr addrspace(1) %gep1
+}
+
+%S = type <{ float, double }>
+
+; Tests the tryFoldToMad64_32 PTRADD combine.
+define amdgpu_kernel void @fold_mad64(ptr addrspace(1) %p) {
+; GFX942_PTRADD-LABEL: fold_mad64:
+; GFX942_PTRADD:       ; %bb.0:
+; GFX942_PTRADD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX942_PTRADD-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942_PTRADD-NEXT:    v_mul_hi_u32_u24_e32 v1, 12, v0
+; GFX942_PTRADD-NEXT:    v_mul_u32_u24_e32 v0, 12, v0
+; GFX942_PTRADD-NEXT:    v_mov_b32_e32 v2, 1.0
+; GFX942_PTRADD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], s[0:1], 0, v[0:1]
+; GFX942_PTRADD-NEXT:    global_store_dword v[0:1], v2, off
+; GFX942_PTRADD-NEXT:    s_endpgm
+;
+; GFX942_LEGACY-LABEL: fold_mad64:
+; GFX942_LEGACY:       ; %bb.0:
+; GFX942_LEGACY-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX942_LEGACY-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942_LEGACY-NEXT:    v_mov_b32_e32 v2, 1.0
+; GFX942_LEGACY-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v0, 12, s[0:1]
+; GFX942_LEGACY-NEXT:    global_store_dword v[0:1], v2, off
+; GFX942_LEGACY-NEXT:    s_endpgm
+  %voffset32 = call i32 @llvm.amdgcn.workitem.id.x()
+  %voffset = zext i32 %voffset32 to i64
+  %p1 = getelementptr inbounds %S, ptr addrspace(1) %p, i64 %voffset, i32 0
+  store float 1.0, ptr addrspace(1) %p1
+  ret void
+}
