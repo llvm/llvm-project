@@ -1679,4 +1679,44 @@ def EmitC_GetFieldOp
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
 }
 
+def BufferMapOp
+    : EmitC_Op<"buffer_map", [Pure,
+                              DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
+  let summary = "Creates a buffer map for field access";
+  let description = [{
+    The `emitc.buffer_map` operation generates a C++ std::map that maps field names
+    to their memory addresses for efficient runtime field access. This operation
+    collects fields with buffer attributes and creates the necessary lookup 
+    infrastructure.
+
+    Example:
+
+    ```mlir
+    emitc.buffer_map reflection_map [ @field1, @field2, @field3 ]
+    ```
+
+    This generates C++ code like:
+
+    ```cpp
+    const std::map<std::string, char*> _reflection_map {
+      { "field1", reinterpret_cast<char*>(&field1) },
+      { "field2", reinterpret_cast<char*>(&field2) },
+      { "field3", reinterpret_cast<char*>(&field3) }
+    };
+    
+    char* getBufferForName(const std::string& name) const {
+      auto it = _reflection_map.find(name);
+      return (it == _reflection_map.end()) ? nullptr : it->second;
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+      Arg<OptionalAttr<ArrayAttr>, "field names">:$fields);
+
+  let results = (outs);
+  let builders = [];
+  let assemblyFormat = "$sym_name  $fields attr-dict";
+}
+
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

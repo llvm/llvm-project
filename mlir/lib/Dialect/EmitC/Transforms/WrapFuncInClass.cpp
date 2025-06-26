@@ -53,22 +53,35 @@ public:
     ClassOp newClassOp = rewriter.create<ClassOp>(funcOp.getLoc(), className);
 
     SmallVector<std::pair<StringAttr, TypeAttr>> fields;
+    SmallVector<Attribute> bufferFieldAttrs;
     rewriter.createBlock(&newClassOp.getBody());
     rewriter.setInsertionPointToStart(&newClassOp.getBody().front());
 
     auto argAttrs = funcOp.getArgAttrs();
     for (auto [idx, val] : llvm::enumerate(funcOp.getArguments())) {
       StringAttr fieldName;
-      Attribute argAttr = nullptr;
 
       fieldName = rewriter.getStringAttr("fieldName" + std::to_string(idx));
-      if (argAttrs && idx < argAttrs->size())
-        argAttr = (*argAttrs)[idx];
+      if (argAttrs && idx < argAttrs->size()) {
+        mlir::DictionaryAttr dictAttr =
+            dyn_cast_or_null<mlir::DictionaryAttr>((*argAttrs)[idx]);
+        const mlir::Attribute namedAttribute =
+            dictAttr.getNamed(attributeName)->getValue();
 
+        auto name =
+            cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(namedAttribute)[0]);
+        bufferFieldAttrs.push_back(name);
+      }
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
       rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
-                                      argAttr);
+                                      nullptr);
+    }
+
+    if (!bufferFieldAttrs.empty()) {
+      ArrayAttr fieldsArrayAttr = rewriter.getArrayAttr(bufferFieldAttrs);
+      rewriter.create<emitc::BufferMapOp>(funcOp.getLoc(), "reflection_map",
+                                          fieldsArrayAttr);
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
