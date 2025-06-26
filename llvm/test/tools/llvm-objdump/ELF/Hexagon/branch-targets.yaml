@@ -1,4 +1,4 @@
-## Check that branch targets are printed within instruction packets for Hexagon
+## Check that branch targets are printed within instruction packets for Hexagon.
 
 --- !ELF
 FileHeader:
