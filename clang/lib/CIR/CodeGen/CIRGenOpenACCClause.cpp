@@ -289,6 +289,17 @@ class OpenACCClauseCIREmitter final
   mlir::acc::DataClauseModifier
   convertModifiers(OpenACCModifierKind modifiers) {
     using namespace mlir::acc;
+    static_assert(static_cast<int>(OpenACCModifierKind::Zero) ==
+                      static_cast<int>(DataClauseModifier::zero) &&
+                  static_cast<int>(OpenACCModifierKind::Readonly) ==
+                      static_cast<int>(DataClauseModifier::readonly) &&
+                  static_cast<int>(OpenACCModifierKind::AlwaysIn) ==
+                      static_cast<int>(DataClauseModifier::alwaysin) &&
+                  static_cast<int>(OpenACCModifierKind::AlwaysOut) ==
+                      static_cast<int>(DataClauseModifier::alwaysout) &&
+                  static_cast<int>(OpenACCModifierKind::Capture) ==
+                      static_cast<int>(DataClauseModifier::capture));
+
     DataClauseModifier mlirModifiers{};
 
     // The MLIR representation of this represents `always` as `alwaysin` +
