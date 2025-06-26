@@ -554,12 +554,9 @@ analyzeModule(Module &M) {
 
 AnalysisKey RootSignatureAnalysis::Key;
 
-RootSignatureAnalysis::Result
-RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!AnalysisResult)
-    AnalysisResult = std::make_unique<RootSignatureBindingInfo>(
-        RootSignatureBindingInfo(analyzeModule(M)));
-  return *AnalysisResult;
+RootSignatureBindingInfo RootSignatureAnalysis::run(Module &M,
+                                                    ModuleAnalysisManager &AM) {
+  return RootSignatureBindingInfo(analyzeModule(M));
 }
 
 //===----------------------------------------------------------------------===//
@@ -638,9 +635,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
-  if (!FuncToRsMap)
-    FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
-        RootSignatureBindingInfo(analyzeModule(M)));
+  FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
+      RootSignatureBindingInfo(analyzeModule(M)));
   return false;
 }
 
