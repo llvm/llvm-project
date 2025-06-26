@@ -754,11 +754,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Dmask = EmitScalarExpr(E->getArg(0));
     llvm::Value *S = EmitScalarExpr(E->getArg(1));
     llvm::Value *T = EmitScalarExpr(E->getArg(2));
-    llvm::Value *Slice;
-    llvm::Value *Mip;
-    llvm::Value *Rsrc;
-    llvm::Value *Tfe;
-    llvm::Value *Cpol;
+    llvm::Value *Slice = nullptr;
+    llvm::Value *Mip = nullptr;
+    llvm::Value *Rsrc = nullptr;
+    llvm::Value *Tfe = nullptr;
+    llvm::Value *Cpol = nullptr;
 
     SmallVector<Value *, 10> ArgTys;
 
@@ -788,11 +788,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
       ArgTys = {Dmask, S, Slice, Rsrc, Tfe, Cpol};
       IID = Intrinsic::amdgcn_image_load_1darray;
-      switch (BuiltinID) {
-      case AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f32_i32:
-      case AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f16_i32:
+      if (BuiltinID == AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f32_i32 ||
+          BuiltinID == AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f16_i32) {
         IID = Intrinsic::amdgcn_image_load_mip_1d;
-        break;
       }
       Call = Builder.CreateIntrinsic(RetTy, IID, ArgTys);
       break;
@@ -881,6 +879,167 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     }
     }
 
+    return Call;
+  }
+  case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2d_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
+    llvm::Type *RetTy = VoidTy;
+    llvm::Value *Vdata = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Dmask = EmitScalarExpr(E->getArg(1));
+    llvm::Value *S = EmitScalarExpr(E->getArg(2));
+    llvm::Value *T = EmitScalarExpr(E->getArg(3));
+    llvm::Value *Slice = nullptr;
+    llvm::Value *Mip = nullptr;
+    llvm::Value *Rsrc = nullptr;
+    llvm::Value *Tfe = nullptr;
+    llvm::Value *Cpol = nullptr;
+
+    SmallVector<Value *, 10> ArgTys;
+
+    Intrinsic::ID IID;
+    llvm::CallInst *Call;
+
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f16_i32: {
+      Rsrc = EmitScalarExpr(E->getArg(3));
+      Tfe = EmitScalarExpr(E->getArg(4));
+      Cpol = EmitScalarExpr(E->getArg(5));
+
+      ArgTys = {Vdata, Dmask, S, Rsrc, Tfe, Cpol};
+      IID = Intrinsic::amdgcn_image_store_1d;
+      Call = Builder.CreateIntrinsic(RetTy, IID, ArgTys);
+      break;
+    }
+    case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f16_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f16_i32: {
+      Slice = EmitScalarExpr(E->getArg(3));
+      Rsrc = EmitScalarExpr(E->getArg(4));
+      Tfe = EmitScalarExpr(E->getArg(5));
+      Cpol = EmitScalarExpr(E->getArg(6));
+
+      ArgTys = {Vdata, Dmask, S, Slice, Rsrc, Tfe, Cpol};
+      IID = Intrinsic::amdgcn_image_store_1darray;
+      if (BuiltinID ==
+              AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f32_i32 ||
+          BuiltinID ==
+              AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f16_i32) {
+        IID = Intrinsic::amdgcn_image_store_mip_1d;
+      }
+      Call = Builder.CreateIntrinsic(RetTy, IID, ArgTys);
+      break;
+    }
+    case AMDGPU::BI__builtin_amdgcn_image_store_2d_f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f16_i32: {
+      Rsrc = EmitScalarExpr(E->getArg(4));
+      Tfe = EmitScalarExpr(E->getArg(5));
+      Cpol = EmitScalarExpr(E->getArg(6));
+
+      ArgTys = {Vdata, Dmask, S, T, Rsrc, Tfe, Cpol};
+      IID = Intrinsic::amdgcn_image_store_2d;
+      Call = Builder.CreateIntrinsic(RetTy, IID, ArgTys);
+      break;
+    }
+    case AMDGPU::BI__builtin_amdgcn_image_store_2darray_f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f16_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f16_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f16_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f16_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f16_i32: {
+      Slice = EmitScalarExpr(E->getArg(4));
+      Rsrc = EmitScalarExpr(E->getArg(5));
+      Tfe = EmitScalarExpr(E->getArg(6));
+      Cpol = EmitScalarExpr(E->getArg(7));
+
+      ArgTys = {Vdata, Dmask, S, T, Slice, Rsrc, Tfe, Cpol};
+      IID = Intrinsic::amdgcn_image_store_2darray;
+
+      switch (BuiltinID) {
+      case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f32_i32:
+      case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f16_i32:
+        IID = Intrinsic::amdgcn_image_store_3d;
+        break;
+      case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f32_i32:
+      case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f16_i32:
+        IID = Intrinsic::amdgcn_image_store_cube;
+        break;
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f32_i32:
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f16_i32:
+        IID = Intrinsic::amdgcn_image_store_mip_1darray;
+        break;
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_f32_i32:
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f32_i32:
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f16_i32:
+        IID = Intrinsic::amdgcn_image_store_mip_2d;
+        break;
+      }
+      Call = Builder.CreateIntrinsic(RetTy, IID, ArgTys);
+      break;
+    }
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f16_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
+    case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
+      Slice = EmitScalarExpr(E->getArg(4));
+      Mip = EmitScalarExpr(E->getArg(5));
+      Rsrc = EmitScalarExpr(E->getArg(6));
+      Tfe = EmitScalarExpr(E->getArg(7));
+      Cpol = EmitScalarExpr(E->getArg(8));
+
+      ArgTys = {Vdata, Dmask, S, T, Slice, Mip, Rsrc, Tfe, Cpol};
+      IID = Intrinsic::amdgcn_image_store_mip_2darray;
+      switch (BuiltinID) {
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f32_i32:
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
+        IID = Intrinsic::amdgcn_image_store_mip_3d;
+        break;
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
+      case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32:
+        IID = Intrinsic::amdgcn_image_store_mip_cube;
+        break;
+      }
+      Call = Builder.CreateIntrinsic(RetTy, IID, ArgTys);
+      break;
+    }
+    }
     return Call;
   }
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
