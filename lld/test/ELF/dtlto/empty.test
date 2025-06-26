@@ -22,7 +22,7 @@ RUN: ld.lld @l.rsp
 RUN: llc -filetype=obj t1.ll -o t1.o
 RUN: llc -filetype=obj t2.ll -o t2.o
 
-# Check linking succeeds when all input files are ET_RELs.
+# Check linking succeeds when all input files are relocatable files.
 RUN: ld.lld @l.rsp
 
 #--- t1.ll
