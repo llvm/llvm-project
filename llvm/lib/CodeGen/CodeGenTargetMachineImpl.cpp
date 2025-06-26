@@ -201,7 +201,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
       return make_error<StringError>("createMCAsmBackend failed",
                                      inconvertibleErrorCode());
 
-    Triple T(getTargetTriple().str());
+    Triple T(getTargetTriple());
     // BEGIN MCCAS
     std::unique_ptr<MCObjectWriter> CASBackendWriter;
     if (Options.UseCASBackend) {
