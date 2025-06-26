@@ -2650,7 +2650,8 @@ mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  mlir::Value result = getRuntimeCallGenerator("acos", ftype)(builder, loc, {args[0]});
+  mlir::Value result =
+      getRuntimeCallGenerator("acos", ftype)(builder, loc, {args[0]});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
       loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
@@ -2802,7 +2803,8 @@ mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  mlir::Value result = getRuntimeCallGenerator("asin", ftype)(builder, loc, {args[0]});
+  mlir::Value result =
+      getRuntimeCallGenerator("asin", ftype)(builder, loc, {args[0]});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
       loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
