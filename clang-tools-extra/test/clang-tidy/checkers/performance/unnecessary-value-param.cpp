@@ -344,6 +344,10 @@ void ReferenceFunctionByCallingIt() {
   PositiveMessageAndFixAsFunctionIsCalled(ExpensiveToCopyType());
 }
 
+void NegativeMoved(ExpensiveToCopyType A) {
+  A Copy = std::move(A);
+}
+
 // Virtual method overrides of dependent types cannot be recognized unless they
 // are marked as override or final. Test that check is not triggered on methods
 // marked with override or final.

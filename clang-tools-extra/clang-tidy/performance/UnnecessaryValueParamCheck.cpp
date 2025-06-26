@@ -41,6 +41,17 @@ bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
   return Matches.empty();
 }
 
+bool isArgOfStdMove(const DeclRefExpr &DeclRef, const Decl &Decl,
+                    ASTContext &Context) {
+  auto Matches = match(
+      traverse(TK_AsIs, decl(forEachDescendant(callExpr(
+                            callee(functionDecl(hasName("std::move"))),
+                            hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                               equalsNode(&DeclRef)))))))),
+      Decl, Context);
+  return Matches.empty();
+}
+
 } // namespace
 
 UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
@@ -99,6 +110,11 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
     if (AllDeclRefExprs.size() == 1) {
       auto CanonicalType = Param->getType().getCanonicalType();
       const auto &DeclRefExpr = **AllDeclRefExprs.begin();
+
+      // The reference is in a call to `std::move`, do not warn.
+      if (isArgOfStdMove(DeclRefExpr, *Function, *Result.Context)) {
+        return;
+      }
 
       if (!hasLoopStmtAncestor(DeclRefExpr, *Function, *Result.Context) &&
           ((utils::type_traits::hasNonTrivialMoveConstructor(CanonicalType) &&

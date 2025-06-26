@@ -294,6 +294,7 @@ Changes in existing checks
   to avoid matching usage of functions within the current compilation unit.
   Added an option `IgnoreCoroutines` with the default value `true` to
   suppress this check for coroutines where passing by reference may be unsafe.
+  Fix false positive on by-value parameters that are only moved.
 
 - Improved :doc:`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
