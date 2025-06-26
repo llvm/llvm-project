@@ -29,7 +29,7 @@ CHECK: "my_clang.exe"
 CHECK: "carg1=20"
 CHECK: "carg2=30"
 
-CHECK: ld.lld: error: DTLTO backend compilation: cannot open native object file:
+CHECK: error: DTLTO backend compilation: cannot open native object file:
 
 #--- foo.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
