@@ -528,7 +528,8 @@ def fir_OmpTargetAllocMemOp : fir_Op<"omp_target_allocmem",
     be paired with `omp_target_freemem` operations to avoid memory leaks.
 
     ```
-      %0 = "fir.omp_target_allocmem"(%device, %type) : (i32, index) -> !fir.heap<!fir.array<?xf32>>
+      %device = arith.constant 0 : i32
+      %1 = fir.omp_target_allocmem %device : i32, !fir.array<3x3xi32>
     ```
   }];
 
@@ -541,6 +542,9 @@ def fir_OmpTargetAllocMemOp : fir_Op<"omp_target_allocmem",
     Variadic<AnyIntegerType>:$shape
   );
   let results = (outs fir_HeapType);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     mlir::Type getAllocatedType();
@@ -563,9 +567,9 @@ def fir_OmpTargetFreeMemOp : fir_Op<"omp_target_freemem",
     The memory object that is deallocated is placed in an undefined state
     after `fir.omp_target_freemem`.
     ```
-      %0 = "fir.omp_target_allocmem"(%device, %type) : (i32, index) -> !fir.heap<!fir.array<?xf32>>
-      ...
-      "fir.omp_target_freemem"(%device, %0) : (i32, !fir.heap<!fir.array<?xf32>>) -> ()
+      %device = arith.constant 0 : i32
+      %1 = fir.omp_target_allocmem %device : i32, !fir.array<3x3xi32>
+      fir.omp_target_freemem %device, %1 : i32, !fir.heap<!fir.array<?xf32>>
     ```
   }];
 
@@ -573,6 +577,7 @@ def fir_OmpTargetFreeMemOp : fir_Op<"omp_target_freemem",
   Arg<AnyIntegerType, "", [MemFree]>:$device,
   Arg<fir_HeapType, "", [MemFree]>:$heapref
   );
+  let assemblyFormat = "$device `,` $heapref attr-dict `:` type($device) `,` qualified(type($heapref))";
 }
 
 //===----------------------------------------------------------------------===//
