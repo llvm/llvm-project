@@ -16860,10 +16860,7 @@ static void knownBitsForSBFE(const MachineInstr &MI, GISelValueTracking &VT,
   VT.computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                           Depth + 1);
 
-  Known.Zero = Known.Zero.lshr(Offset);
-  Known.One = Known.One.lshr(Offset);
-
-  Known = Known.trunc(Width);
+  Known = Known.extractBits(Width, Offset);
 
   if (SExt)
     Known = Known.sext(BFEWidth);
