@@ -712,7 +712,7 @@ def thinlto_single_module_eq: JJ<"thinlto-single-module=">,
   HelpText<"Specify a single module to compile in ThinLTO mode, for debugging only">;
 def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
   HelpText<"Distributor to use for ThinLTO backend compilations. If specified, "
-  "ThinLTO backend compilations will be distributed.">;
+  "ThinLTO backend compilations will be distributed">;
 defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
   "pass to the ThinLTO distributor">;
 def thinlto_compiler_eq: JJ<"thinlto-remote-compiler=">,
