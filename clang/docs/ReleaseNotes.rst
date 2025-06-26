@@ -332,6 +332,11 @@ Non-comprehensive list of changes in this release
 - Clang no longer rejects reinterpret_cast conversions between indirect
   ARC-managed pointers and other pointer types. The prior behavior was overly
   strict and inconsistent with the ARC specification.
+- On non-Windows platforms, Clang now builds as a large shared library,
+  ``libclang-cpp``, by default. To revert to the old behavior of producing and
+  linking static libraries, pass ``-DCLANG_LINK_CLANG_DYLIB=OFF`` to CMake when
+  configuring your build. The new behavior matches LLVM, which also builds as a
+  large shared library.
 
 New Compiler Flags
 ------------------
