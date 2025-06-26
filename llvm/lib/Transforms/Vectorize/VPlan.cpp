@@ -1508,11 +1508,11 @@ void VPSlotTracker::assignName(const VPValue *V) {
   // Use the name of the underlying Value, wrapped in "ir<>", and versioned by
   // appending ".Number" to the name if there are multiple uses.
   std::string Name;
-  if (UV) {
+  if (UV)
     Name = getName(UV);
-  } else {
+  else
     Name = VPI->getName();
-  }
+
   assert(!Name.empty() && "Name cannot be empty.");
   StringRef Prefix = UV ? "ir<" : "vp<%";
   std::string BaseName = (Twine(Prefix) + Name + Twine(">")).str();
@@ -1567,7 +1567,7 @@ std::string VPSlotTracker::getName(const Value *V) {
 
   if (!MST) {
     // Lazily create the ModuleSlotTracker when we first hit an unnamed
-    // instruction
+    // instruction.
     auto *I = cast<Instruction>(V);
     // This check is required to support unit tests with incomplete IR.
     if (I->getParent()) {
