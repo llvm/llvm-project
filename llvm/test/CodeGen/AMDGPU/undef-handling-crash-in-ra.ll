@@ -8,9 +8,8 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
-; CHECK-NEXT:    v_mov_b32_e32 v40, v0
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], 0, 0
-; CHECK-NEXT:    flat_load_dword v42, v[0:1]
+; CHECK-NEXT:    v_pk_mov_b32 v[44:45], 0, 0
+; CHECK-NEXT:    flat_load_dword a32, v[44:45]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x8
@@ -33,11 +32,9 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_addc_u32 s5, s5, G@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[54:55], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b32 s6, 0
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], 0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v57, s7
 ; CHECK-NEXT:    s_mov_b32 s7, s6
 ; CHECK-NEXT:    s_mov_b32 s53, s14
-; CHECK-NEXT:    v_accvgpr_write_b32 a33, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v56, s8
 ; CHECK-NEXT:    v_pk_mov_b32 v[60:61], s[6:7], s[6:7] op_sel:[0,1]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
@@ -46,21 +43,19 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_mov_b32 s12, s14
 ; CHECK-NEXT:    s_mov_b32 s13, s15
 ; CHECK-NEXT:    s_mov_b32 s14, s16
-; CHECK-NEXT:    v_mov_b32_e32 v31, v40
+; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_mov_b32 s33, s16
 ; CHECK-NEXT:    s_mov_b32 s52, s15
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
-; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
+; CHECK-NEXT:    v_mov_b32_e32 v40, v0
 ; CHECK-NEXT:    flat_store_dwordx2 v[58:59], v[60:61]
 ; CHECK-NEXT:    ; kill: def $sgpr15 killed $sgpr15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    flat_load_dwordx2 v[62:63], v[58:59]
-; CHECK-NEXT:    v_accvgpr_read_b32 v0, a32
-; CHECK-NEXT:    v_mov_b32_e32 v44, 0
-; CHECK-NEXT:    v_mov_b32_e32 v45, 0x3ff00000
-; CHECK-NEXT:    v_accvgpr_read_b32 v1, a33
+; CHECK-NEXT:    v_mov_b32_e32 v42, 0
+; CHECK-NEXT:    v_mov_b32_e32 v43, 0x3ff00000
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[50:51]
@@ -69,26 +64,28 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_mov_b32 s13, s52
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[44:45]
+; CHECK-NEXT:    flat_store_dwordx2 v[44:45], v[42:43]
 ; CHECK-NEXT:    flat_store_dwordx2 v[58:59], v[60:61]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; kill: def $sgpr15 killed $sgpr15
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    flat_load_dwordx2 v[0:1], v[56:57] glc
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_accvgpr_read_b32 v6, a32
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s64
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v42
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v6
 ; CHECK-NEXT:    flat_store_dwordx2 v[58:59], v[62:63]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx2 v[58:59], v[46:47]
 ; CHECK-NEXT:    buffer_store_dword v47, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v44, v0, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_store_dword v42, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_4
 ; CHECK-NEXT:  ; %bb.1: ; %LeafBlock5
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v42
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v6
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; CHECK-NEXT:  ; %bb.2: ; %sw.bb17.i.i.i.i
@@ -96,23 +93,28 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:  ; %bb.3: ; %Flow
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:  .LBB0_4: ; %Flow8
-; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], s[4:5]
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[42:43], v[42:43] op_sel:[0,1]
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[44:45], v[44:45] op_sel:[0,1]
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_or_saveexec_b64 s[8:9], s[4:5]
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[6:7], v[6:7] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[8:9], v[8:9] op_sel:[0,1]
+; CHECK-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8
 ; CHECK-NEXT:  ; %bb.5: ; %LeafBlock
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v42
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[42:43], v[42:43] op_sel:[0,1]
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[44:45], v[44:45] op_sel:[0,1]
-; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; CHECK-NEXT:    s_mov_b32 s4, 0
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v6
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[6:7], v[6:7] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[8:9], v[8:9] op_sel:[0,1]
+; CHECK-NEXT:    s_and_saveexec_b64 s[10:11], vcc
 ; CHECK-NEXT:  ; %bb.6: ; %sw.bb.i.i.i.i
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    s_mov_b32 s6, s4
+; CHECK-NEXT:    s_mov_b32 s7, s4
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[6:7], s[6:7] op_sel:[0,1]
 ; CHECK-NEXT:  ; %bb.7: ; %Flow7
-; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
+; CHECK-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:  .LBB0_8: ; %bb.1
-; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_10
@@ -126,7 +128,7 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], 0
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], 0
 ; CHECK-NEXT:    s_endpgm
 entry:
   %load.null = load i32, ptr null, align 8
