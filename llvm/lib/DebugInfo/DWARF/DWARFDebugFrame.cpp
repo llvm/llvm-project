@@ -13,10 +13,9 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFCFIPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
-#include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
-#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -115,7 +114,7 @@ void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DWARFExpr: {
     if (Expr)
-      printDwarfExpression(&Expr.value(), OS, DumpOpts, nullptr);
+      DWARFExpressionPrinter::print(&(*Expr), OS, DumpOpts, nullptr);
     break;
   }
   case Constant:

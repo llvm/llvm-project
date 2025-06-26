@@ -8,9 +8,8 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFCFIPrinter.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
-#include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -101,7 +100,8 @@ static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
   case CFIProgram::OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
     OS << " ";
-    printDwarfExpression(&Instr.Expression.value(), OS, DumpOpts, nullptr);
+    DWARFExpressionPrinter::print(&Instr.Expression.value(), OS, DumpOpts,
+                                  nullptr);
     break;
   }
 }
