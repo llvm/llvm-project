@@ -154,6 +154,15 @@ public:
     return nullptr;
   }
 
+  /// Returns the only preceding instruction, or std::nullopt if multiple or no
+  /// predecessors are possible.
+  ///
+  /// If CFG information is available, basic block boundary can be crossed,
+  /// provided there is exactly one predecessor. If CFG is not available, the
+  /// preceding instruction in the offset order is returned, unless this is the
+  /// first instruction of the function.
+  std::optional<MCInstReference> getSinglePredecessor();
+
   raw_ostream &print(raw_ostream &OS) const;
 };
 

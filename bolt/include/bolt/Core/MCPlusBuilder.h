@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
+#include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -698,6 +699,19 @@ public:
                                                      bool MayOverwrite) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
+  }
+
+  /// Tests if BranchInst corresponds to an instruction sequence which is known
+  /// to be a safe dispatch via jump table.
+  ///
+  /// The target can decide which instruction sequences to consider "safe" from
+  /// the Pointer Authentication point of view, such as any jump table dispatch
+  /// sequence without function calls inside, any sequence which is contiguous,
+  /// or only some specific well-known sequences.
+  virtual bool
+  isSafeJumpTableBranchForPtrAuth(MCInstReference BranchInst) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   virtual bool isTerminator(const MCInst &Inst) const;
