@@ -112,7 +112,9 @@ define void @splat_ptr_scatter(ptr %ptr, <4 x i1> %mask, <4 x i32> %val) {
 
 define <4 x i32> @scalar_prefix(ptr %base, i64 %index, <4 x i64> %vecidx) {
 ; CHECK-LABEL: @scalar_prefix(
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], i64 [[INDEX:%.*]], <4 x i64> [[VECIDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], i64 [[INDEX:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast ptr [[TMP1]] to ptr
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP3]], <4 x i64> [[VECIDX:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
@@ -123,9 +125,9 @@ define <4 x i32> @scalar_prefix(ptr %base, i64 %index, <4 x i64> %vecidx) {
 
 define <4 x i32> @scalar_prefix_with_splat(ptr %base, i64 %index, <4 x i64> %vecidx) {
 ; CHECK-LABEL: @scalar_prefix_with_splat(
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> [[VECIDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], i64 [[INDEX:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast ptr [[TMP1]] to ptr
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP3]], <4 x i64> [[VECIDX:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
@@ -139,7 +141,9 @@ define <4 x i32> @scalar_prefix_with_splat(ptr %base, i64 %index, <4 x i64> %vec
 
 define <4 x i32> @scalar_prefix_with_constant_splat(ptr %base, <4 x i64> %vecidx) {
 ; CHECK-LABEL: @scalar_prefix_with_constant_splat(
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], <4 x i64> splat (i64 20), <4 x i64> [[VECIDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], i64 20, i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast ptr [[TMP1]] to ptr
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP3]], <4 x i64> [[VECIDX:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
@@ -150,7 +154,8 @@ define <4 x i32> @scalar_prefix_with_constant_splat(ptr %base, <4 x i64> %vecidx
 
 define <4 x i32> @reassociate(ptr %base, i64 %index, <4 x i64> %vecidx) {
 ; CHECK-LABEL: @reassociate(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], <4 x i64> [[VECIDX:%.*]], i64 [[INDEX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], i64 0, i64 [[INDEX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [256 x i32], ptr [[TMP1]], <4 x i64> [[VECIDX:%.*]], i64 0
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[GEP]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
@@ -161,9 +166,8 @@ define <4 x i32> @reassociate(ptr %base, i64 %index, <4 x i64> %vecidx) {
 
 define <4 x i32> @reassociate_with_splat(ptr %base, i64 %index, <4 x i64> %vecidx) {
 ; CHECK-LABEL: @reassociate_with_splat(
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], <4 x i64> [[VECIDX:%.*]], <4 x i64> [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [256 x i32], ptr [[BASE:%.*]], i64 0, i64 [[INDEX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [256 x i32], ptr [[TMP1]], <4 x i64> [[VECIDX:%.*]], i64 0
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[GEP]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
