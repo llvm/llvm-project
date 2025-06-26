@@ -23,6 +23,7 @@ class RewritePatternSet;
 class RewriterBase;
 class Value;
 class ValueRange;
+class ReifyRankedShapedTypeOpInterface;
 
 namespace arith {
 class WideIntEmulationConverter;
@@ -56,10 +57,6 @@ void populateResolveRankedShapedTypeResultDimsPatterns(
 /// defined by operations that implement the `InferShapedTypeOpInterface`, in
 /// terms of shapes of its input operands.
 void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
-
-/// Appends patterns that allow making ReifyRankedShapedTypeOpInterface ops
-/// shapes more static.
-void populateReifyToInferStaticShapePatterns(RewritePatternSet &patterns);
 
 /// Appends patterns for expanding memref operations that modify the metadata
 /// (sizes, offset, strides) of a memref into easier to analyze constructs.
@@ -213,6 +210,17 @@ memref::AllocaOp allocToAlloca(
     RewriterBase &rewriter, memref::AllocOp alloc,
     function_ref<bool(memref::AllocOp, memref::DeallocOp)> filter = nullptr);
 
+/// Reifies the results of `op`, potentially replacing `op` with a reified
+/// version. Returns `failure` if `mlir::reifyResultShapes` returned failure,
+/// otherwise it always succeeds. Users of this transform should always expect
+/// it to modify the IR, even when it fails. If any of the result types changes,
+/// the transform will insert cast operations to the old type to keep the IR
+/// consistent.
+///
+/// Note: This transform only works on ranked `memref` or `tensor` results,
+/// other types are ignored.
+LogicalResult reifyOpResultShapes(RewriterBase &rewriter,
+                                  ReifyRankedShapedTypeOpInterface op);
 } // namespace memref
 } // namespace mlir
 

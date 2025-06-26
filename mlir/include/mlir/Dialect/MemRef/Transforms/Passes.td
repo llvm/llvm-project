@@ -182,13 +182,40 @@ def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
   ];
 }
 
-def InferStaticShapesPass : Pass<"infer-static-shapes"> {
-  let summary = "Resolve memref.dim of result values";
+def ReifyResultShapesPass : Pass<"reify-result-shapes"> {
+  let summary = "Reifies the results of all `ReifyRankedShapedTypeOpInterface` operations";
   let description = [{
-    The pass resolves memref.dim of result of operations that
-    implement the `InferShapedTypeOpInterface` or
-    `ReifyRankedShapedTypeOpInterface` in terms of shapes of its
-    operands.
+    This pass reifies the shapes of every `ReifyRankedShapedTypeOpInterface`
+    operation with ranked `memref` and `tensor` results. Replacing the
+    operations with their reified versions, and inserting casts when results
+    shapes are updated.
+
+    Example:
+    ```mlir
+    #map = affine_map<(d0) -> (-d0 + 256)>
+    func.func @func(%arg0: f32, %arg1: index, %arg2: tensor<64x?x64xf32>) -> tensor<1x?x64xf32> {
+      %0 = affine.apply #map(%arg1)
+      %extracted_slice = tensor.extract_slice %arg2[0, 0, 0] [1, %arg1, 64] [1, 1, 1] : tensor<64x?x64xf32> to tensor<1x?x64xf32>
+      %padded = tensor.pad %extracted_slice low[0, 0, 0] high[0, %0, 0] {
+      ^bb0(%arg3: index, %arg4: index, %arg5: index):
+        tensor.yield %arg0 : f32
+      } : tensor<1x?x64xf32> to tensor<1x?x64xf32>
+      return %padded : tensor<1x?x64xf32>
+    }
+
+    // mlir-opt --reify-result-shapes
+    #map = affine_map<()[s0] -> (-s0 + 256)>
+    func.func @func(%arg0: f32, %arg1: index, %arg2: tensor<64x?x64xf32>) -> tensor<1x?x64xf32> {
+      %0 = affine.apply #map()[%arg1]
+      %extracted_slice = tensor.extract_slice %arg2[0, 0, 0] [1, %arg1, 64] [1, 1, 1] : tensor<64x?x64xf32> to tensor<1x?x64xf32>
+      %padded = tensor.pad %extracted_slice low[0, 0, 0] high[0, %0, 0] {
+      ^bb0(%arg3: index, %arg4: index, %arg5: index):
+        tensor.yield %arg0 : f32
+      } : tensor<1x?x64xf32> to tensor<1x256x64xf32>
+      %cast = tensor.cast %padded : tensor<1x256x64xf32> to tensor<1x?x64xf32>
+      return %cast : tensor<1x?x64xf32>
+    }
+    ```
   }];
   let dependentDialects = [
     "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
