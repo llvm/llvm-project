@@ -1151,9 +1151,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         if (!ISD::isBuildVectorAllZeros(LHS.getNode()) ||
             ISD::isBuildVectorAllZeros(RHS.getNode()))
           break;
-        // If this an avx512 target we can improve the use of zero masking by
+        // If this is an avx512 target we can improve the use of zero masking by
         // swapping the operands and inverting the condition.
-        // vselect cond, op1, op2 = vselect not(cond), op2, op1
+        // vselect cond, zero, op = vselect not(cond), op, zero
         if (Cond.getOpcode() == ISD::SETCC &&
             !ISD::isBuildVectorAllZeros(Cond.getOperand(0).getNode())) {
           ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
