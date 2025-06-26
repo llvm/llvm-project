@@ -2000,15 +2000,16 @@ struct VectorToElementsLowering
     SmallVector<Value> results(toElementsOp->getNumResults());
     for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
       // Create an extractelement operation only for results that are not dead.
-      if (!element.use_empty()) {
-        auto constIdx = rewriter.create<LLVM::ConstantOp>(
-            loc, idxType, rewriter.getIntegerAttr(idxType, idx));
-        auto llvmType = typeConverter->convertType(element.getType());
+      if (element.use_empty())
+        continue;
 
-        Value result = rewriter.create<LLVM::ExtractElementOp>(
-            loc, llvmType, source, constIdx);
-        results[idx] = result;
-      }
+      auto constIdx = rewriter.create<LLVM::ConstantOp>(
+          loc, idxType, rewriter.getIntegerAttr(idxType, idx));
+      auto llvmType = typeConverter->convertType(element.getType());
+
+      Value result = rewriter.create<LLVM::ExtractElementOp>(loc, llvmType,
+                                                             source, constIdx);
+      results[idx] = result;
     }
 
     rewriter.replaceOp(toElementsOp, results);

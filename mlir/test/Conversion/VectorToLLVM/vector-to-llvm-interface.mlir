@@ -2421,7 +2421,11 @@ func.func @from_elements_0d(%arg0: f32) -> vector<f32> {
 
 // -----
 
-// CHECK-LABEL: func.func @vector_to_elements_no_dead_elements
+//===----------------------------------------------------------------------===//
+// vector.to_elements
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @to_elements_no_dead_elements
  // CHECK-SAME:     %[[A:.*]]: vector<4xf32>)
  //      CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
  //      CHECK:   %[[ELEM0:.*]] = llvm.extractelement %[[A]][%[[C0]] : i64] : vector<4xf32>
@@ -2432,14 +2436,14 @@ func.func @from_elements_0d(%arg0: f32) -> vector<f32> {
  //      CHECK:   %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
  //      CHECK:   %[[ELEM3:.*]] = llvm.extractelement %[[A]][%[[C3]] : i64] : vector<4xf32>
  //      CHECK:   return %[[ELEM0]], %[[ELEM1]], %[[ELEM2]], %[[ELEM3]] : f32, f32, f32, f32
-func.func @vector_to_elements_no_dead_elements(%a: vector<4xf32>) -> (f32, f32, f32, f32) {
+func.func @to_elements_no_dead_elements(%a: vector<4xf32>) -> (f32, f32, f32, f32) {
   %0:4 = vector.to_elements %a : vector<4xf32>
   return %0#0, %0#1, %0#2, %0#3 : f32, f32, f32, f32
 }
 
 // -----
 
-// CHECK-LABEL: func.func @vector_to_elements_dead_elements
+// CHECK-LABEL: func.func @to_elements_dead_elements
  // CHECK-SAME:     %[[A:.*]]: vector<4xf32>)
  //  CHECK-NOT:   llvm.mlir.constant(0 : i64) : i64
  //      CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
@@ -2448,7 +2452,7 @@ func.func @vector_to_elements_no_dead_elements(%a: vector<4xf32>) -> (f32, f32, 
  //      CHECK:   %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
  //      CHECK:   %[[ELEM3:.*]] = llvm.extractelement %[[A]][%[[C3]] : i64] : vector<4xf32>
  //      CHECK:   return %[[ELEM1]], %[[ELEM3]] : f32, f32
-func.func @vector_to_elements_dead_elements(%a: vector<4xf32>) -> (f32, f32) {
+func.func @to_elements_dead_elements(%a: vector<4xf32>) -> (f32, f32) {
   %0:4 = vector.to_elements %a : vector<4xf32>
   return %0#1, %0#3 : f32, f32
 }
