@@ -165,7 +165,7 @@ struct RootParameterYamlDesc {
 };
 
 struct StaticSamplerYamlDesc {
-  uint32_t Filter = llvm::to_underlying(dxbc::StaticSamplerFilter::ANISOTROPIC);
+  uint32_t Filter = llvm::to_underlying(dxbc::SamplerFilter::Anisotropic);
   uint32_t AddressU = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
   uint32_t AddressV = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
   uint32_t AddressW = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);

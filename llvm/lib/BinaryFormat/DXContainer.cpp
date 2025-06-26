@@ -99,6 +99,16 @@ ArrayRef<EnumEntry<ShaderVisibility>> dxbc::getShaderVisibility() {
   return ArrayRef(ShaderVisibilityValues);
 }
 
+#define FILTER(Val, Enum) {#Enum, SamplerFilter::Enum},
+
+static const EnumEntry<SamplerFilter> SamplerFilterNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SamplerFilter>> dxbc::getSamplerFilters() {
+  return ArrayRef(SamplerFilterNames);
+}
+
 #define TEXTURE_ADDRESS_MODE(Val, Enum) {#Enum, TextureAddressMode::Enum},
 
 static const EnumEntry<TextureAddressMode> TextureAddressModeNames[] = {
