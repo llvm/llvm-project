@@ -29,14 +29,6 @@ namespace rootsig {
 // carried over from their values in DXC. For reference:
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/
 
-enum class RootDescriptorFlags : unsigned {
-  None = 0,
-  DataVolatile = 0x2,
-  DataStaticWhileSetAtExecute = 0x4,
-  DataStatic = 0x8,
-  ValidFlags = 0xe,
-};
-
 enum class DescriptorRangeFlags : unsigned {
   None = 0,
   DescriptorsVolatile = 0x1,
@@ -151,16 +143,16 @@ struct RootDescriptor {
   Register Reg;
   uint32_t Space = 0;
   ShaderVisibility Visibility = ShaderVisibility::All;
-  RootDescriptorFlags Flags;
+  dxbc::RootDescriptorFlags Flags;
 
   void setDefaultFlags() {
     switch (Type) {
     case DescriptorType::CBuffer:
     case DescriptorType::SRV:
-      Flags = RootDescriptorFlags::DataStaticWhileSetAtExecute;
+      Flags = dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute;
       break;
     case DescriptorType::UAV:
-      Flags = RootDescriptorFlags::DataVolatile;
+      Flags = dxbc::RootDescriptorFlags::DataVolatile;
       break;
     }
   }

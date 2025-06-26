@@ -131,7 +131,7 @@ TEST(HLSLRootSignatureTest, RootSRVDump) {
   Descriptor.Reg = {RegisterType::TReg, 0};
   Descriptor.Space = 42;
   Descriptor.Visibility = ShaderVisibility::Geometry;
-  Descriptor.Flags = RootDescriptorFlags::None;
+  Descriptor.Flags = llvm::dxbc::RootDescriptorFlags::None;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -149,7 +149,7 @@ TEST(HLSLRootSignatureTest, RootUAVDump) {
   Descriptor.Reg = {RegisterType::UReg, 92374};
   Descriptor.Space = 932847;
   Descriptor.Visibility = ShaderVisibility::Hull;
-  Descriptor.Flags = RootDescriptorFlags::ValidFlags;
+  Descriptor.Flags = llvm::dxbc::RootDescriptorFlags(0xe);
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);

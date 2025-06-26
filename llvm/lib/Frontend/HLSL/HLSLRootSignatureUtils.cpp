@@ -215,16 +215,9 @@ static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   return OS;
 }
 
-static const EnumEntry<RootDescriptorFlags> RootDescriptorFlagNames[] = {
-    {"DataVolatile", RootDescriptorFlags::DataVolatile},
-    {"DataStaticWhileSetAtExecute",
-     RootDescriptorFlags::DataStaticWhileSetAtExecute},
-    {"DataStatic", RootDescriptorFlags::DataStatic},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const RootDescriptorFlags &Flags) {
-  printFlags(OS, Flags, ArrayRef(RootDescriptorFlagNames));
+                               const dxbc::RootDescriptorFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getRootDescriptorFlags());
 
   return OS;
 }

@@ -94,7 +94,7 @@ private:
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Space;
     std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
-    std::optional<llvm::hlsl::rootsig::RootDescriptorFlags> Flags;
+    std::optional<llvm::dxbc::RootDescriptorFlags> Flags;
   };
   std::optional<ParsedRootDescriptorParams>
   parseRootDescriptorParams(RootSignatureToken::Kind RegType);
@@ -139,8 +139,7 @@ private:
   std::optional<llvm::hlsl::rootsig::ComparisonFunc> parseComparisonFunc();
   std::optional<llvm::hlsl::rootsig::StaticBorderColor>
   parseStaticBorderColor();
-  std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
-  parseRootDescriptorFlags();
+  std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
   std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
   parseDescriptorRangeFlags();
 

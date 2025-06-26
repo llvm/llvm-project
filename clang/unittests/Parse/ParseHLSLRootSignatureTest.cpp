@@ -535,7 +535,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataStaticWhileSetAtExecute);
+            llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
@@ -545,8 +545,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
             ShaderVisibility::Geometry);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::ValidFlags);
+  auto ValidRootDescriptorFlags = llvm::dxbc::RootDescriptorFlags(0xe);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, ValidRootDescriptorFlags);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
@@ -556,9 +556,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::Hull);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataVolatile);
+            llvm::dxbc::RootDescriptorFlags::DataVolatile);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataVolatile);
+            llvm::dxbc::RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3];
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
@@ -566,7 +566,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, RootDescriptorFlags::None);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            llvm::dxbc::RootDescriptorFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
