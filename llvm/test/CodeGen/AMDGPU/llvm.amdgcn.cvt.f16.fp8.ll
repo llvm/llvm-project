@@ -4,6 +4,41 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 %s -o - | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL-REAL16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 %s -o - | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL-FAKE16 %s
 
+define amdgpu_ps float @test_cvt_pk_f16_bf8_v(i16 %a) {
+; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_f16_bf8_v:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_f16_bf8 v0, v0.l
+; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_f16_bf8_v:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_f16_bf8 v0, v0
+; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_f16_bf8_v:
+; GFX1250-GISEL-REAL16:       ; %bb.0:
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_f16_bf8 v0, v0.l
+; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_f16_bf8_v:
+; GFX1250-GISEL-FAKE16:       ; %bb.0:
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f16_bf8 v0, v0
+; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
+  %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16 %a)
+  %ret = bitcast <2 x half> %cvt to float
+  ret float %ret
+}
+
+define amdgpu_ps float @test_cvt_pk_f16_bf8_s(i16 inreg %a) {
+; GFX1250-LABEL: test_cvt_pk_f16_bf8_s:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_cvt_pk_f16_bf8 v0, s0
+; GFX1250-NEXT:    ; return to shader part epilog
+  %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16 %a)
+  %ret = bitcast <2 x half> %cvt to float
+  ret float %ret
+}
+
 define amdgpu_ps float @test_cvt_pk_f16_fp8_v(i16 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_f16_fp8_v:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:

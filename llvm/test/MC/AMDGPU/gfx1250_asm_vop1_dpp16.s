@@ -62,6 +62,14 @@ v_cvt_f32_bf16 v5, v1.h quad_perm:[3,2,1,0]
 // GFX1250: v_cvt_f32_bf16_dpp v5, v1.h quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xe4,0x0a,0x7e,0x81,0x1b,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
+v_cvt_pk_f16_bf8 v1, v2.l quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf fi:1
+// GFX1250: v_cvt_pk_f16_bf8_dpp v1, v2.l quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf fi:1 ; encoding: [0xfa,0xec,0x02,0x7e,0x02,0xe4,0x04,0xff]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_cvt_pk_f16_bf8 v1, v2.h quad_perm:[0,1,2,3]
+// GFX1250: v_cvt_pk_f16_bf8_dpp v1, v2.h quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xec,0x02,0x7e,0x82,0xe4,0x00,0xff]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
 v_cvt_pk_f16_fp8 v1, v2.l quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf fi:1
 // GFX1250: v_cvt_pk_f16_fp8_dpp v1, v2.l quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf fi:1 ; encoding: [0xfa,0xea,0x02,0x7e,0x02,0xe4,0x04,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU

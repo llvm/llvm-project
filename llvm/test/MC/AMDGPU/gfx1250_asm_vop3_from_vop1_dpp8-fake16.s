@@ -2,6 +2,14 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
+v_cvt_pk_f16_bf8 v1, v128 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX1250: v_cvt_pk_f16_bf8_e64_dpp v1, v128 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x01,0x00,0xf6,0xd5,0xea,0x00,0x00,0x00,0x80,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_cvt_pk_f16_bf8 v1, v2 op_sel:[1] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250: v_cvt_pk_f16_bf8_e64_dpp v1, v2 op_sel:[1,0] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x01,0x08,0xf6,0xd5,0xe9,0x00,0x00,0x00,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
 v_cvt_f32_bf16_e64_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX1250: v_cvt_f32_bf16_e64_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0xf2,0xd5,0xe9,0x00,0x00,0x00,0x01,0x77,0x39,0x05]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
