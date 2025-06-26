@@ -17,8 +17,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/IR/DataLayout.h"
 
 namespace llvm {
 class StringRef;
@@ -64,8 +64,7 @@ public:
     translateDataLayoutFromStr();
   }
 
-  DataLayoutImporter(MLIRContext *context,
-                     StringRef dataLayoutStr)
+  DataLayoutImporter(MLIRContext *context, StringRef dataLayoutStr)
       : layoutStr(dataLayoutStr), context(context) {
     translateDataLayoutFromStr();
   }

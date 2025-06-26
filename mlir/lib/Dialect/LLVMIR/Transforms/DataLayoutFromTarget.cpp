@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Dialect/LLVMIR/DataLayoutImporter.h"
 
 namespace mlir {
 namespace LLVM {
@@ -22,7 +22,8 @@ using namespace mlir;
 using namespace mlir::LLVM;
 
 struct DataLayoutFromTargetPass
-    : public LLVM::impl::LLVMDataLayoutFromTargetBase<DataLayoutFromTargetPass> {
+    : public LLVM::impl::LLVMDataLayoutFromTargetBase<
+          DataLayoutFromTargetPass> {
   void runOnOperation() override {
     ModuleOp mod = getOperation();
 
