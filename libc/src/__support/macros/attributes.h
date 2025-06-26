@@ -91,4 +91,28 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_NO_SANITIZE_OOB_ACCESS
 #endif
 
+#if __has_attribute(lifetimebound)
+#define LIBC_LIFETIMEBOUND [[clang::lifetimebound]]
+#else
+#define LIBC_LIFETIMEBOUND
+#endif
+
+#if __has_attribute(lifetime_capture_by)
+#define LIBC_LIFETIME_CAPTURE_BY(X) [[clang::lifetime_capture_by(X)]]
+#else
+#define LIBC_LIFETIME_CAPTURE_BY(X)
+#endif
+
+#if defined(__clang__)
+#define LIBC_GSL_POINTER [[gsl::Pointer]]
+#else
+#define LIBC_GSL_POINTER
+#endif
+
+#if defined(__clang__)
+#define LIBC_GSL_OWNER [[gsl::Owner]]
+#else
+#define LIBC_GSL_OWNER
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
