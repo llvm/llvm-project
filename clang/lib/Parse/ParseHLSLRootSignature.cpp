@@ -1088,7 +1088,7 @@ RootSignatureParser::parseComparisonFunc() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::StaticBorderColor>
+std::optional<llvm::dxbc::StaticBorderColor>
 RootSignatureParser::parseStaticBorderColor() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1104,7 +1104,7 @@ RootSignatureParser::parseStaticBorderColor() {
   switch (CurToken.TokKind) {
 #define STATIC_BORDER_COLOR_ENUM(NAME, LIT)                                    \
   case TokenKind::en_##NAME:                                                   \
-    return StaticBorderColor::NAME;                                            \
+    return llvm::dxbc::StaticBorderColor::NAME;                                \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:

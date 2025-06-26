@@ -175,17 +175,9 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-static const EnumEntry<StaticBorderColor> StaticBorderColorNames[] = {
-    {"TransparentBlack", StaticBorderColor::TransparentBlack},
-    {"OpaqueBlack", StaticBorderColor::OpaqueBlack},
-    {"OpaqueWhite", StaticBorderColor::OpaqueWhite},
-    {"OpaqueBlackUint", StaticBorderColor::OpaqueBlackUint},
-    {"OpaqueWhiteUint", StaticBorderColor::OpaqueWhiteUint},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const StaticBorderColor &BorderColor) {
-  printEnum(OS, BorderColor, ArrayRef(StaticBorderColorNames));
+                               const dxbc::StaticBorderColor &BorderColor) {
+  printEnum(OS, BorderColor, dxbc::getStaticBorderColors());
 
   return OS;
 }

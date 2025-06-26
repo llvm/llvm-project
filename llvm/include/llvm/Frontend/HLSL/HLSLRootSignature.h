@@ -89,14 +89,6 @@ enum class ComparisonFunc : unsigned {
   Always = 8
 };
 
-enum class StaticBorderColor {
-  TransparentBlack = 0,
-  OpaqueBlack = 1,
-  OpaqueWhite = 2,
-  OpaqueBlackUint = 3,
-  OpaqueWhiteUint = 4
-};
-
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
@@ -181,7 +173,7 @@ struct StaticSampler {
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16;
   ComparisonFunc CompFunc = ComparisonFunc::LessEqual;
-  StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
+  dxbc::StaticBorderColor BorderColor = dxbc::StaticBorderColor::OpaqueWhite;
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t Space = 0;

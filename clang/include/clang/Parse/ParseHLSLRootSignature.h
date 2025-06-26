@@ -118,7 +118,7 @@ private:
     std::optional<float> MipLODBias;
     std::optional<uint32_t> MaxAnisotropy;
     std::optional<llvm::hlsl::rootsig::ComparisonFunc> CompFunc;
-    std::optional<llvm::hlsl::rootsig::StaticBorderColor> BorderColor;
+    std::optional<llvm::dxbc::StaticBorderColor> BorderColor;
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;
     std::optional<uint32_t> Space;
@@ -137,8 +137,7 @@ private:
   std::optional<llvm::hlsl::rootsig::TextureAddressMode>
   parseTextureAddressMode();
   std::optional<llvm::hlsl::rootsig::ComparisonFunc> parseComparisonFunc();
-  std::optional<llvm::hlsl::rootsig::StaticBorderColor>
-  parseStaticBorderColor();
+  std::optional<llvm::dxbc::StaticBorderColor> parseStaticBorderColor();
   std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
   std::optional<llvm::dxbc::DescriptorRangeFlags> parseDescriptorRangeFlags();
 

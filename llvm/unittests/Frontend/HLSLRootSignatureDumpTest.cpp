@@ -201,7 +201,7 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
   Sampler.MipLODBias = 4.8f;
   Sampler.MaxAnisotropy = 32;
   Sampler.CompFunc = ComparisonFunc::NotEqual;
-  Sampler.BorderColor = StaticBorderColor::OpaqueBlack;
+  Sampler.BorderColor = llvm::dxbc::StaticBorderColor::OpaqueBlack;
   Sampler.MinLOD = 1.0f;
   Sampler.MaxLOD = 32.0f;
   Sampler.Space = 7;
