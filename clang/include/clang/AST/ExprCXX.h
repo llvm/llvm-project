@@ -720,13 +720,11 @@ public:
 
 /// A boolean literal, per ([C++ lex.bool] Boolean literals).
 class CXXBoolLiteralExpr : public Expr {
-  SourceLocation Loc;
-
 public:
   CXXBoolLiteralExpr(bool Val, QualType Ty, SourceLocation Loc)
       : Expr(CXXBoolLiteralExprClass, Ty, VK_PRValue, OK_Ordinary) {
     CXXBoolLiteralExprBits.Value = Val;
-    this->Loc = Loc;
+    CXXBoolLiteralExprBits.Loc = Loc.getRawEncoding();
     setDependence(ExprDependence::None);
   }
 
@@ -744,8 +742,12 @@ public:
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
 
-  SourceLocation getLocation() const { return Loc; }
-  void setLocation(SourceLocation L) { Loc = L; }
+  SourceLocation getLocation() const {
+    return SourceLocation::getFromRawEncoding(CXXBoolLiteralExprBits.Loc);
+  }
+  void setLocation(SourceLocation L) {
+    CXXBoolLiteralExprBits.Loc = L.getRawEncoding();
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXBoolLiteralExprClass;
@@ -767,11 +769,10 @@ public:
 /// This also implements the null pointer literal in C23 (C23 6.4.1) which is
 /// intended to have the same semantics as the feature in C++.
 class CXXNullPtrLiteralExpr : public Expr {
-  SourceLocation Loc;
 public:
   CXXNullPtrLiteralExpr(QualType Ty, SourceLocation Loc)
       : Expr(CXXNullPtrLiteralExprClass, Ty, VK_PRValue, OK_Ordinary) {
-    this->Loc = Loc;
+    CXXNullPtrLiteralExprBits.Loc = Loc.getRawEncoding();
     setDependence(ExprDependence::None);
   }
 
@@ -781,8 +782,12 @@ public:
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
 
-  SourceLocation getLocation() const { return Loc; }
-  void setLocation(SourceLocation L) { Loc = L; }
+  SourceLocation getLocation() const {
+    return SourceLocation::getFromRawEncoding(CXXNullPtrLiteralExprBits.Loc);
+  }
+  void setLocation(SourceLocation L) {
+    CXXNullPtrLiteralExprBits.Loc = L.getRawEncoding();
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXNullPtrLiteralExprClass;
@@ -1155,14 +1160,12 @@ public:
 /// };
 /// \endcode
 class CXXThisExpr : public Expr {
-  /// The location of the "this".
-  SourceLocation Loc;
 
   CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit, ExprValueKind VK)
       : Expr(CXXThisExprClass, Ty, VK, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
     CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
-    Loc = L;
+    CXXThisExprBits.Loc = L.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -1174,8 +1177,12 @@ public:
 
   static CXXThisExpr *CreateEmpty(const ASTContext &Ctx);
 
-  SourceLocation getLocation() const { return Loc; }
-  void setLocation(SourceLocation L) { Loc = L; }
+  SourceLocation getLocation() const {
+    return SourceLocation::getFromRawEncoding(CXXThisExprBits.Loc);
+  }
+  void setLocation(SourceLocation L) {
+    CXXThisExprBits.Loc = L.getRawEncoding();
+  }
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
@@ -1216,8 +1223,6 @@ class CXXThrowExpr : public Expr {
 
   /// The optional expression in the throw statement.
   Stmt *Operand;
-  /// The location of the "throw".
-  SourceLocation ThrowLoc;
 
 public:
   // \p Ty is the void type which is used as the result type of the
@@ -1227,7 +1232,7 @@ public:
   CXXThrowExpr(Expr *Operand, QualType Ty, SourceLocation Loc,
                bool IsThrownVariableInScope)
       : Expr(CXXThrowExprClass, Ty, VK_PRValue, OK_Ordinary), Operand(Operand) {
-    ThrowLoc = Loc;
+    CXXThrowExprBits.ThrowLoc = Loc.getRawEncoding();
     CXXThrowExprBits.IsThrownVariableInScope = IsThrownVariableInScope;
     setDependence(computeDependence(this));
   }
@@ -1236,7 +1241,9 @@ public:
   const Expr *getSubExpr() const { return cast_or_null<Expr>(Operand); }
   Expr *getSubExpr() { return cast_or_null<Expr>(Operand); }
 
-  SourceLocation getThrowLoc() const { return ThrowLoc; }
+  SourceLocation getThrowLoc() const {
+    return SourceLocation::getFromRawEncoding(CXXThrowExprBits.ThrowLoc);
+  }
 
   /// Determines whether the variable thrown by this expression (if any!)
   /// is within the innermost try block.
@@ -1285,9 +1292,7 @@ class CXXDefaultArgExpr final
 
   /// The context where the default argument expression was used.
   DeclContext *UsedContext;
-  
-  /// The location where the default argument expression was used.
-  SourceLocation Loc;
+
   CXXDefaultArgExpr(StmtClass SC, SourceLocation Loc, ParmVarDecl *Param,
                     Expr *RewrittenExpr, DeclContext *UsedContext)
       : Expr(SC,
@@ -1297,7 +1302,7 @@ class CXXDefaultArgExpr final
              Param->getDefaultArg()->getValueKind(),
              Param->getDefaultArg()->getObjectKind()),
         Param(Param), UsedContext(UsedContext) {
-    this->Loc = Loc;
+    CXXDefaultArgExprBits.Loc = Loc.getRawEncoding();
     CXXDefaultArgExprBits.HasRewrittenInit = RewrittenExpr != nullptr;
     if (RewrittenExpr)
       *getTrailingObjects() = RewrittenExpr;
@@ -1351,7 +1356,9 @@ public:
   DeclContext *getUsedContext() { return UsedContext; }
 
   /// Retrieve the location where this default argument was actually used.
-  SourceLocation getUsedLocation() const { return Loc; }
+  SourceLocation getUsedLocation() const {
+    return SourceLocation::getFromRawEncoding(CXXDefaultArgExprBits.Loc);
+  }
 
   /// Default argument expressions have no representation in the
   /// source, so they have an empty source range.
@@ -1394,8 +1401,6 @@ class CXXDefaultInitExpr final
 
   /// The context where the default initializer expression was used.
   DeclContext *UsedContext;
-  /// The location where the default initializer expression was used.
-  SourceLocation Loc;
   CXXDefaultInitExpr(const ASTContext &Ctx, SourceLocation Loc,
                      FieldDecl *Field, QualType Ty, DeclContext *UsedContext,
                      Expr *RewrittenInitExpr);
@@ -1449,8 +1454,10 @@ public:
   /// actually used.
   SourceLocation getUsedLocation() const { return getBeginLoc(); }
 
-  SourceLocation getBeginLoc() const { return Loc; }
-  SourceLocation getEndLoc() const { return Loc; }
+  SourceLocation getBeginLoc() const {
+    return SourceLocation::getFromRawEncoding(CXXDefaultInitExprBits.Loc);
+  }
+  SourceLocation getEndLoc() const { return getBeginLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXDefaultInitExprClass;
@@ -2196,7 +2203,6 @@ class CXXScalarValueInitExpr : public Expr {
   friend class ASTStmtReader;
 
   TypeSourceInfo *TypeInfo;
-  SourceLocation RParenLoc;
 
 public:
   /// Create an explicitly-written scalar-value initialization
@@ -2205,7 +2211,7 @@ public:
                          SourceLocation RParenLoc)
       : Expr(CXXScalarValueInitExprClass, Type, VK_PRValue, OK_Ordinary),
         TypeInfo(TypeInfo) {
-    this->RParenLoc = RParenLoc;
+    CXXScalarValueInitExprBits.RParenLoc = RParenLoc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -2217,7 +2223,8 @@ public:
   }
 
   SourceLocation getRParenLoc() const {
-    return RParenLoc;
+    return SourceLocation::getFromRawEncoding(
+        CXXScalarValueInitExprBits.RParenLoc);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY;
@@ -2623,8 +2630,7 @@ class CXXDeleteExpr : public Expr {
 
   /// The pointer expression to be deleted.
   Stmt *Argument = nullptr;
-    /// Location of the expression.
-    SourceLocation Loc;
+
 public:
   CXXDeleteExpr(QualType Ty, bool GlobalDelete, bool ArrayForm,
                 bool ArrayFormAsWritten, bool UsualArrayDeleteWantsSize,
@@ -2635,7 +2641,7 @@ public:
     CXXDeleteExprBits.ArrayForm = ArrayForm;
     CXXDeleteExprBits.ArrayFormAsWritten = ArrayFormAsWritten;
     CXXDeleteExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
-    this->Loc = Loc;
+    CXXDeleteExprBits.Loc = Loc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -2666,7 +2672,9 @@ public:
   /// be a pointer, return an invalid type.
   QualType getDestroyedType() const;
 
-  SourceLocation getBeginLoc() const { return Loc; }
+  SourceLocation getBeginLoc() const {
+    return SourceLocation::getFromRawEncoding(CXXDeleteExprBits.Loc);
+  }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return Argument->getEndLoc();
   }

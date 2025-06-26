@@ -2723,7 +2723,6 @@ public:
 /// ArraySubscriptExpr - [C99 6.5.2.1] Array Subscripting.
 class ArraySubscriptExpr : public Expr {
   enum { LHS, RHS, END_EXPR };
-  SourceLocation RBracketLoc;
   Stmt *SubExprs[END_EXPR];
 
   bool lhsIsBase() const { return getRHS()->getType()->isIntegerType(); }
@@ -2734,7 +2733,7 @@ public:
       : Expr(ArraySubscriptExprClass, t, VK, OK) {
     SubExprs[LHS] = lhs;
     SubExprs[RHS] = rhs;
-    this->RBracketLoc = rbracketloc;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = rbracketloc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -2771,10 +2770,11 @@ public:
   SourceLocation getEndLoc() const { return getRBracketLoc(); }
 
   SourceLocation getRBracketLoc() const {
-    return RBracketLoc;
+    return SourceLocation::getFromRawEncoding(
+        ArrayOrMatrixSubscriptExprBits.RBracketLoc);
   }
   void setRBracketLoc(SourceLocation L) {
-    RBracketLoc = L;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L.getRawEncoding();
   }
 
   SourceLocation getExprLoc() const LLVM_READONLY {
@@ -2802,7 +2802,6 @@ public:
 /// exist during the initial construction of the AST.
 class MatrixSubscriptExpr : public Expr {
   enum { BASE, ROW_IDX, COLUMN_IDX, END_EXPR };
-  SourceLocation RBracketLoc;
   Stmt *SubExprs[END_EXPR];
 
 public:
@@ -2813,7 +2812,7 @@ public:
     SubExprs[BASE] = Base;
     SubExprs[ROW_IDX] = RowIdx;
     SubExprs[COLUMN_IDX] = ColumnIdx;
-    this->RBracketLoc = RBracketLoc;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = RBracketLoc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -2854,10 +2853,11 @@ public:
   }
 
   SourceLocation getRBracketLoc() const {
-    return RBracketLoc;
+    return SourceLocation::getFromRawEncoding(
+        ArrayOrMatrixSubscriptExprBits.RBracketLoc);
   }
   void setRBracketLoc(SourceLocation L) {
-    RBracketLoc = L;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L.getRawEncoding();
   }
 
   static bool classof(const Stmt *T) {
@@ -6106,8 +6106,6 @@ class GenericSelectionExpr final
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
-  /// The location of the "_Generic".
-  SourceLocation GenericLoc;
   /// The number of association expressions and the index of the result
   /// expression in the case where the generic selection expression is not
   /// result-dependent. The result index is equal to ResultDependentIndex
@@ -6457,7 +6455,8 @@ public:
   }
 
   SourceLocation getGenericLoc() const {
-    return GenericLoc;
+    return SourceLocation::getFromRawEncoding(
+        GenericSelectionExprBits.GenericLoc);
   }
   SourceLocation getDefaultLoc() const { return DefaultLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }

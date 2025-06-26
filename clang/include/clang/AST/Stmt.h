@@ -138,7 +138,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasLeadingEmptyMacro : 1;
 
- 
+    /// The location of the semi-colon.Add commentMore actions
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long SemiLoc : SourceLocation::Bits;
   };
 
   class CompoundStmtBitfields {
@@ -162,7 +164,8 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long IdentLoc : SourceLocation::Bits;
   };
 
   class AttributedStmtBitfields {
@@ -174,8 +177,6 @@ protected:
 
     /// Number of attributes.
     unsigned NumAttrs : 32 - NumStmtBits;
-
-
   };
 
   class IfStmtBitfields {
@@ -201,7 +202,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasInit : 1;
 
-
+    /// The location of the "if"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long IfLoc : SourceLocation::Bits;
   };
 
   class SwitchStmtBitfields {
@@ -224,7 +227,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned AllEnumCasesCovered : 1;
 
-
+    /// The location of the "switch".
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long SwitchLoc : SourceLocation::Bits;
   };
 
   class WhileStmtBitfields {
@@ -238,7 +243,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasVar : 1;
 
-
+    /// The location of the "while"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long WhileLoc : SourceLocation::Bits;
   };
 
   class DoStmtBitfields {
@@ -247,7 +254,9 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-
+    /// The location of the "do"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long DoLoc : SourceLocation::Bits;
   };
 
   class ForStmtBitfields {
@@ -256,7 +265,9 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-
+    /// The location of the "for"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long ForLoc : SourceLocation::Bits;
   };
 
   class GotoStmtBitfields {
@@ -266,7 +277,9 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-
+    /// The location of the "goto"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long GotoLoc : SourceLocation::Bits;
   };
 
   class ContinueStmtBitfields {
@@ -275,7 +288,9 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-
+    /// The location of the "continue"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long ContinueLoc : SourceLocation::Bits;
   };
 
   class BreakStmtBitfields {
@@ -284,7 +299,9 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-
+    /// The location of the "break"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long BreakLoc : SourceLocation::Bits;
   };
 
   class ReturnStmtBitfields {
@@ -297,7 +314,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasNRVOCandidate : 1;
 
-
+    /// The location of the "return"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long RetLoc : SourceLocation::Bits;
   };
 
   class SwitchCaseBitfields {
@@ -312,7 +331,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned CaseStmtIsGNURange : 1;
 
-
+    /// The location of the "case" or "default" keyword.
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long KeywordLoc : SourceLocation::Bits;
   };
 
   //===--- Expression bitfields classes ---===//
@@ -409,8 +430,6 @@ protected:
     /// MSVC compatibility).
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsTransparent : 1;
-
-   
   };
 
   class DeclRefExprBitfields {
@@ -530,7 +549,8 @@ protected:
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
 
-
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long RBracketLoc : SourceLocation::Bits;
   };
 
   class CallExprBitfields {
@@ -683,7 +703,9 @@ protected:
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
 
-
+    /// The location of the "_Generic"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long GenericLoc : SourceLocation::Bits;
   };
 
   class PseudoObjectExprBitfields {
@@ -790,6 +812,10 @@ protected:
     /// The value of the boolean literal.
     LLVM_PREFERRED_TYPE(bool)
     unsigned Value : 1;
+
+    /// The location of the boolean ligeral
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long Loc : SourceLocation::Bits;
   };
 
   class CXXNullPtrLiteralExprBitfields {
@@ -799,6 +825,8 @@ protected:
     unsigned : NumExprBits;
 
     /// The location of the null pointer literal.
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long Loc : SourceLocation::Bits;
   };
 
   class CXXThisExprBitfields {
@@ -816,6 +844,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned CapturedByCopyInLambdaWithExplicitObjectParameter : 1;
 
+    /// The location of the "this"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long Loc : SourceLocation::Bits;
   };
 
   class CXXThrowExprBitfields {
@@ -829,6 +860,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsThrownVariableInScope : 1;
 
+    /// The location of the "throw"
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long ThrowLoc : SourceLocation::Bits;
   };
 
   class CXXDefaultArgExprBitfields {
@@ -842,7 +876,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasRewrittenInit : 1;
 
-
+    /// The location where the default argument expression was used.
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long Loc : SourceLocation::Bits;
   };
 
   class CXXDefaultInitExprBitfields {
@@ -857,7 +893,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasRewrittenInit : 1;
 
-
+    /// The location where the default initializer expression was used.
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long Loc : SourceLocation::Bits;
   };
 
   class CXXScalarValueInitExprBitfields {
@@ -867,6 +905,9 @@ protected:
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
 
+    /// The location where the default initializer expression was used.
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long RParenLoc : SourceLocation::Bits;
   };
 
   class CXXNewExprBitfields {
@@ -941,7 +982,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned UsualArrayDeleteWantsSize : 1;
 
-  
+    /// Location of the expression
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long Loc : SourceLocation::Bits;
   };
 
   class TypeTraitExprBitfields {
@@ -1135,6 +1178,7 @@ protected:
     
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
+
     /// The location of the non-type template parameter reference.
     LLVM_PREFERRED_TYPE(SourceLocation)
     unsigned long NameLoc : SourceLocation::Bits;
@@ -1176,6 +1220,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsSatisfied : 1;
+
+    LLVM_PREFERRED_TYPE(SourceLocation)
+    unsigned long RequiresKWLoc : SourceLocation::Bits;
   };
 
   class ArrayTypeTraitExprBitfields {
@@ -1667,8 +1714,6 @@ public:
 /// NullStmt - This is the null statement ";": C99 6.8.3p3.
 ///
 class NullStmt : public Stmt {
-     /// The location of the semi-colon.
-     SourceLocation SemiLoc;
 public:
   NullStmt(SourceLocation L, bool hasLeadingEmptyMacro = false)
       : Stmt(NullStmtClass) {
@@ -1679,8 +1724,12 @@ public:
   /// Build an empty null statement.
   explicit NullStmt(EmptyShell Empty) : Stmt(NullStmtClass, Empty) {}
 
-  SourceLocation getSemiLoc() const { return SemiLoc; }
-  void setSemiLoc(SourceLocation L) { SemiLoc = L; }
+  SourceLocation getSemiLoc() const {
+    return SourceLocation::getFromRawEncoding(NullStmtBits.SemiLoc);
+  }
+  void setSemiLoc(SourceLocation L) {
+    NullStmtBits.SemiLoc = L.getRawEncoding();
+  }
 
   bool hasLeadingEmptyMacro() const {
     return NullStmtBits.HasLeadingEmptyMacro;
@@ -1860,8 +1909,6 @@ public:
 // SwitchCase is the base class for CaseStmt and DefaultStmt,
 class SwitchCase : public Stmt {
 protected:
-    /// The location of the "case" or "default" keyword.
-    SourceLocation KeywordLoc;
   /// The location of the ":".
   SourceLocation ColonLoc;
 
@@ -1884,8 +1931,12 @@ public:
   SwitchCase *getNextSwitchCase() { return NextSwitchCase; }
   void setNextSwitchCase(SwitchCase *SC) { NextSwitchCase = SC; }
 
-  SourceLocation getKeywordLoc() const { return KeywordLoc; }
-  void setKeywordLoc(SourceLocation L) { KeywordLoc = L; }
+  SourceLocation getKeywordLoc() const {
+    return SourceLocation::getFromRawEncoding(SwitchCaseBits.KeywordLoc);
+  }
+  void setKeywordLoc(SourceLocation L) {
+    SwitchCaseBits.KeywordLoc = L.getRawEncoding();
+  }
   SourceLocation getColonLoc() const { return ColonLoc; }
   void setColonLoc(SourceLocation L) { ColonLoc = L; }
 
@@ -2135,7 +2186,6 @@ public:
 /// LabelStmt - Represents a label, which has a substatement.  For example:
 ///    foo: return;
 class LabelStmt : public ValueStmt {
-  SourceLocation IdentLoc;
   LabelDecl *TheDecl;
   Stmt *SubStmt;
   bool SideEntry = false; // FIXME: could improve
@@ -2150,8 +2200,12 @@ public:
   /// Build an empty label statement.
   explicit LabelStmt(EmptyShell Empty) : ValueStmt(LabelStmtClass, Empty) {}
 
-  SourceLocation getIdentLoc() const { return IdentLoc; }
-  void setIdentLoc(SourceLocation L) { IdentLoc = L; }
+  SourceLocation getIdentLoc() const {
+    return SourceLocation::getFromRawEncoding(LabelStmtBits.IdentLoc);
+  }
+  void setIdentLoc(SourceLocation L) {
+    LabelStmtBits.IdentLoc = L.getRawEncoding();
+  }
 
   LabelDecl *getDecl() const { return TheDecl; }
   void setDecl(LabelDecl *D) { TheDecl = D; }
@@ -2268,8 +2322,6 @@ class IfStmt final
   //    Present if and only if hasElseStorage().
   enum { InitOffset = 0, ThenOffsetFromCond = 1, ElseOffsetFromCond = 2 };
   enum { NumMandatoryStmtPtr = 2 };
-      /// The location of the "if".
-      SourceLocation IfLoc;
   SourceLocation LParenLoc;
   SourceLocation RParenLoc;
 
@@ -2409,8 +2461,12 @@ public:
     getTrailingObjects<Stmt *>()[initOffset()] = Init;
   }
 
-  SourceLocation getIfLoc() const { return IfLoc; }
-  void setIfLoc(SourceLocation IfLoc) { this->IfLoc = IfLoc; }
+  SourceLocation getIfLoc() const {
+    return SourceLocation::getFromRawEncoding(IfStmtBits.IfLoc);
+  }
+  void setIfLoc(SourceLocation IfLoc) {
+    IfStmtBits.IfLoc = IfLoc.getRawEncoding();
+  }
 
   SourceLocation getElseLoc() const {
     return hasElseStorage() ? *getTrailingObjects<SourceLocation>()
@@ -2495,8 +2551,6 @@ public:
 class SwitchStmt final : public Stmt,
                          private llvm::TrailingObjects<SwitchStmt, Stmt *> {
   friend TrailingObjects;
-    /// The location of the "switch".
-    SourceLocation SwitchLoc;
   /// Points to a linked list of case and default statements.
   SwitchCase *FirstCase = nullptr;
 
@@ -2629,8 +2683,12 @@ public:
   const SwitchCase *getSwitchCaseList() const { return FirstCase; }
   void setSwitchCaseList(SwitchCase *SC) { FirstCase = SC; }
 
-  SourceLocation getSwitchLoc() const { return SwitchLoc; }
-  void setSwitchLoc(SourceLocation L) { SwitchLoc = L; }
+  SourceLocation getSwitchLoc() const {
+    return SourceLocation::getFromRawEncoding(SwitchStmtBits.SwitchLoc);
+  }
+  void setSwitchLoc(SourceLocation L) {
+    SwitchStmtBits.SwitchLoc = L.getRawEncoding();
+  }
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -2702,8 +2760,6 @@ class WhileStmt final : public Stmt,
   //
   enum { VarOffset = 0, BodyOffsetFromCond = 1 };
   enum { NumMandatoryStmtPtr = 2 };
-    /// The location of the "while".
-    SourceLocation WhileLoc;
   SourceLocation LParenLoc, RParenLoc;
 
   unsigned varOffset() const { return VarOffset; }
@@ -2788,8 +2844,12 @@ public:
     getTrailingObjects()[varOffset()] = CondVar;
   }
 
-  SourceLocation getWhileLoc() const { return WhileLoc; }
-  void setWhileLoc(SourceLocation L) { WhileLoc = L; }
+  SourceLocation getWhileLoc() const {
+    return SourceLocation::getFromRawEncoding(WhileStmtBits.WhileLoc);
+  }
+  void setWhileLoc(SourceLocation L) {
+    WhileStmtBits.WhileLoc = L.getRawEncoding();
+  }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }
@@ -2823,8 +2883,6 @@ class DoStmt : public Stmt {
   Stmt *SubExprs[END_EXPR];
   SourceLocation WhileLoc;
   SourceLocation RParenLoc; // Location of final ')' in do stmt condition.
-    /// The location of the "do".
-    SourceLocation DoLoc;
 public:
   DoStmt(Stmt *Body, Expr *Cond, SourceLocation DL, SourceLocation WL,
          SourceLocation RP)
@@ -2848,8 +2906,10 @@ public:
   const Stmt *getBody() const { return SubExprs[BODY]; }
   void setBody(Stmt *Body) { SubExprs[BODY] = Body; }
 
-  SourceLocation getDoLoc() const { return DoLoc; }
-  void setDoLoc(SourceLocation L) { DoLoc = L; }
+  SourceLocation getDoLoc() const {
+    return SourceLocation::getFromRawEncoding(DoStmtBits.DoLoc);
+  }
+  void setDoLoc(SourceLocation L) { DoStmtBits.DoLoc = L.getRawEncoding(); }
   SourceLocation getWhileLoc() const { return WhileLoc; }
   void setWhileLoc(SourceLocation L) { WhileLoc = L; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -2879,8 +2939,6 @@ class ForStmt : public Stmt {
   friend class ASTStmtReader;
 
   enum { INIT, CONDVAR, COND, INC, BODY, END_EXPR };
-      /// The location of the "for".
-      SourceLocation ForLoc;
   Stmt* SubExprs[END_EXPR]; // SubExprs[INIT] is an expression or declstmt.
   SourceLocation LParenLoc, RParenLoc;
 
@@ -2933,8 +2991,10 @@ public:
   void setInc(Expr *E) { SubExprs[INC] = reinterpret_cast<Stmt*>(E); }
   void setBody(Stmt *S) { SubExprs[BODY] = S; }
 
-  SourceLocation getForLoc() const { return ForLoc; }
-  void setForLoc(SourceLocation L) { ForLoc = L; }
+  SourceLocation getForLoc() const {
+    return SourceLocation::getFromRawEncoding(ForStmtBits.ForLoc);
+  }
+  void setForLoc(SourceLocation L) { ForStmtBits.ForLoc = L.getRawEncoding(); }
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -2960,8 +3020,6 @@ public:
 /// GotoStmt - This represents a direct goto.
 class GotoStmt : public Stmt {
   LabelDecl *Label;
-      /// The location of the "goto".
-      SourceLocation GotoLoc;
   SourceLocation LabelLoc;
 
 public:
@@ -2976,8 +3034,12 @@ public:
   LabelDecl *getLabel() const { return Label; }
   void setLabel(LabelDecl *D) { Label = D; }
 
-  SourceLocation getGotoLoc() const { return GotoLoc; }
-  void setGotoLoc(SourceLocation L) { GotoLoc = L; }
+  SourceLocation getGotoLoc() const {
+    return SourceLocation::getFromRawEncoding(GotoStmtBits.GotoLoc);
+  }
+  void setGotoLoc(SourceLocation L) {
+    GotoStmtBits.GotoLoc = L.getRawEncoding();
+  }
   SourceLocation getLabelLoc() const { return LabelLoc; }
   void setLabelLoc(SourceLocation L) { LabelLoc = L; }
 
@@ -3000,8 +3062,6 @@ public:
 
 /// IndirectGotoStmt - This represents an indirect goto.
 class IndirectGotoStmt : public Stmt {
-  /// The location of the "goto".
-  SourceLocation GotoLoc;
   SourceLocation StarLoc;
   Stmt *Target;
 
@@ -3016,8 +3076,12 @@ public:
   explicit IndirectGotoStmt(EmptyShell Empty)
       : Stmt(IndirectGotoStmtClass, Empty) {}
 
-  void setGotoLoc(SourceLocation L) { GotoLoc = L; }
-  SourceLocation getGotoLoc() const { return GotoLoc; }
+  void setGotoLoc(SourceLocation L) {
+    GotoStmtBits.GotoLoc = L.getRawEncoding();
+  }
+  SourceLocation getGotoLoc() const {
+    return SourceLocation::getFromRawEncoding(GotoStmtBits.GotoLoc);
+  }
   void setStarLoc(SourceLocation L) { StarLoc = L; }
   SourceLocation getStarLoc() const { return StarLoc; }
 
@@ -3051,8 +3115,6 @@ public:
 
 /// ContinueStmt - This represents a continue.
 class ContinueStmt : public Stmt {
-      /// The location of the "continue".
-      SourceLocation ContinueLoc;
 public:
 
   ContinueStmt(SourceLocation CL) : Stmt(ContinueStmtClass) {
@@ -3062,8 +3124,12 @@ public:
   /// Build an empty continue statement.
   explicit ContinueStmt(EmptyShell Empty) : Stmt(ContinueStmtClass, Empty) {}
 
-  SourceLocation getContinueLoc() const { return ContinueLoc; }
-  void setContinueLoc(SourceLocation L) { ContinueLoc = L; }
+  SourceLocation getContinueLoc() const {
+    return SourceLocation::getFromRawEncoding(ContinueStmtBits.ContinueLoc);
+  }
+  void setContinueLoc(SourceLocation L) {
+    ContinueStmtBits.ContinueLoc = L.getRawEncoding();
+  }
 
   SourceLocation getBeginLoc() const { return getContinueLoc(); }
   SourceLocation getEndLoc() const { return getContinueLoc(); }
@@ -3084,8 +3150,6 @@ public:
 
 /// BreakStmt - This represents a break.
 class BreakStmt : public Stmt {
-      /// The location of the "break".
-      SourceLocation BreakLoc;
 public:
   BreakStmt(SourceLocation BL) : Stmt(BreakStmtClass) {
     setBreakLoc(BL);
@@ -3094,8 +3158,12 @@ public:
   /// Build an empty break statement.
   explicit BreakStmt(EmptyShell Empty) : Stmt(BreakStmtClass, Empty) {}
 
-  SourceLocation getBreakLoc() const { return BreakLoc; }
-  void setBreakLoc(SourceLocation L) { BreakLoc = L; }
+  SourceLocation getBreakLoc() const {
+    return SourceLocation::getFromRawEncoding(BreakStmtBits.BreakLoc);
+  }
+  void setBreakLoc(SourceLocation L) {
+    BreakStmtBits.BreakLoc = L.getRawEncoding();
+  }
 
   SourceLocation getBeginLoc() const { return getBreakLoc(); }
   SourceLocation getEndLoc() const { return getBreakLoc(); }
@@ -3126,8 +3194,6 @@ class ReturnStmt final
     : public Stmt,
       private llvm::TrailingObjects<ReturnStmt, const VarDecl *> {
   friend TrailingObjects;
-    /// The location of the "return".
-    SourceLocation RetLoc;
   /// The return expression.
   Stmt *RetExpr;
 
@@ -3174,8 +3240,12 @@ public:
     *getTrailingObjects() = Var;
   }
 
-  SourceLocation getReturnLoc() const { return RetLoc; }
-  void setReturnLoc(SourceLocation L) { RetLoc = L; }
+  SourceLocation getReturnLoc() const {
+    return SourceLocation::getFromRawEncoding(ReturnStmtBits.RetLoc);
+  }
+  void setReturnLoc(SourceLocation L) {
+    ReturnStmtBits.RetLoc = L.getRawEncoding();
+  }
 
   SourceLocation getBeginLoc() const { return getReturnLoc(); }
   SourceLocation getEndLoc() const LLVM_READONLY {
