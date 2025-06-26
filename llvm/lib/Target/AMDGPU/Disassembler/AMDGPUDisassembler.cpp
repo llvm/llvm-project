@@ -817,9 +817,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX1250Only() &&
           tryDecodeInst(DecoderTableGFX125064, DecoderTableGFX1250_FAKE1664, MI,
                         QW, Address, CS))
+#else /* LLPC_BUILD_NPI */
+      // FIXME: DecoderTableGFX125064 is not defined yet.
+      if (isGFX1250() &&
+          tryDecodeInst(DecoderTableGFX1250_FAKE1664, MI, QW, Address, CS))
+#endif /* LLPC_BUILD_NPI */
         break;
 
-#endif /* LLPC_BUILD_NPI */
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
                         Address, CS))

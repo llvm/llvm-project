@@ -1898,6 +1898,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
+  IO.mapOptional("CallsiteOffsets", E.CallsiteOffsets);
 }
 
 void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(

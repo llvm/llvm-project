@@ -1506,12 +1506,14 @@ def FeatureParallelBitInsts : SubtargetFeature< "parallel-bit-insts",
 >;
 
 #endif /* LLPC_BUILD_NPI */
+// FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "DynamicVGPR",
   "true",
   "Enable dynamic VGPR mode"
 >;
 
+// FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
   "DynamicVGPRBlockSize32",
   "true",
@@ -2858,26 +2860,32 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
-#ifdef LLPC_BUILD_NPI
 def HasMTBUFInsts : Predicate<"Subtarget->hasMTBUFInsts()">,
+#ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1250Insts))>;
+#else /* LLPC_BUILD_NPI */
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
+#endif /* LLPC_BUILD_NPI */
 
 def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
+#ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1250Insts))>;
-
+#else /* LLPC_BUILD_NPI */
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 #endif /* LLPC_BUILD_NPI */
+
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
 #ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX1250Insts)))>;
 #else /* LLPC_BUILD_NPI */
-  AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+  AssemblerPredicate<(all_of (not FeatureGFX90AInsts), (not FeatureGFX1250Insts))>;
 #endif /* LLPC_BUILD_NPI */
 
 def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
 #ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1250Insts))>;
 #else /* LLPC_BUILD_NPI */
-  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX1250Insts))>;
 #endif /* LLPC_BUILD_NPI */
 
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,

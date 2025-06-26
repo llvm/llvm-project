@@ -74,6 +74,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is completely removed.
+  DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
+
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
@@ -776,6 +782,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
 #else /* LLPC_BUILD_NPI */
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
 #endif /* LLPC_BUILD_NPI */
+      DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
       UsesWholeWave(MFI.usesWholeWave()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())

@@ -11,6 +11,7 @@ class CommandScriptAliasTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_pycmd(self):
+        self.runCmd("log enable -f /tmp/gdb.log gdb-remote all")
         self.runCmd("command script import tcsacmd.py")
         self.runCmd("command script add -f tcsacmd.some_command_here attach")
 

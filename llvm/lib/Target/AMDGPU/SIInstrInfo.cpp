@@ -9438,9 +9438,8 @@ void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
 void SIInstrInfo::addUsersToMoveToVALUWorklist(
     Register DstReg, MachineRegisterInfo &MRI,
     SIInstrWorklist &Worklist) const {
-  for (MachineRegisterInfo::use_iterator I = MRI.use_begin(DstReg),
-         E = MRI.use_end(); I != E;) {
-    MachineInstr &UseMI = *I->getParent();
+  for (MachineOperand &MO : make_early_inc_range(MRI.use_operands(DstReg))) {
+    MachineInstr &UseMI = *MO.getParent();
 
     unsigned OpNo = 0;
 
@@ -9455,21 +9454,15 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
     case AMDGPU::INSERT_SUBREG:
       break;
     default:
-      OpNo = I.getOperandNo();
+      OpNo = MO.getOperandNo();
       break;
     }
 
-    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo))) {
+    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo)))
       Worklist.insert(&UseMI);
-
-      do {
-        ++I;
-      } while (I != E && I->getParent() == &UseMI);
-    } else {
+    else
+      // Legalization could change user list.
       legalizeOperandsVALUt16(UseMI, OpNo, MRI);
-
-      ++I;
-    }
   }
 }
 
@@ -10981,12 +10974,12 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
 
     return InstructionUniformity::Default;
   }
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
   if (MI.getOpcode() == AMDGPU::V_LOAD_IDX)
     return InstructionUniformity::NeverUniform;
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
 
@@ -11292,12 +11285,34 @@ bool SIInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
   return TargetInstrInfo::isGlobalMemoryObject(MI);
 }
 
+#if LLPC_BUILD_NPI
+bool SIInstrInfo::isXDLWMMA(const MachineInstr &MI) const {
+  if (!isWMMA(MI) && !isSWMMAC(MI))
+    return false;
+
+  if (AMDGPU::isGFX1250Only(ST))
+    return AMDGPU::getWMMAIsXDL(MI.getOpcode());
+
+  return true;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
+#if LLPC_BUILD_NPI
+  if (AMDGPU::isGFX12Plus(ST)) {
+    if (isDOT(MI))
+#else /* LLPC_BUILD_NPI */
   if (AMDGPU::isGFX12(ST))
     if (isWMMA(MI) || isSWMMAC(MI) || isDOT(MI))
+#endif /* LLPC_BUILD_NPI */
       return true;
+#if LLPC_BUILD_NPI
+
+    return isXDLWMMA(MI);
+  }
+#endif /* LLPC_BUILD_NPI */
 
   if (!isMAI(MI) || isDGEMM(Opcode) ||
       Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||

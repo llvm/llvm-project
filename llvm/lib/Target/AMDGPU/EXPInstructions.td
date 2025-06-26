@@ -123,9 +123,7 @@ multiclass VEXPORT_Real_gfx12 {
   def _gfx12 : EXP_Real_Row<ps, SIEncodingFamily.GFX12, "export">,
     EXPe_Row {
     let AssemblerPredicate = isGFX12Only;
-#ifdef LLPC_BUILD_NPI
     let OtherPredicates = [HasExportInsts];
-#endif /* LLPC_BUILD_NPI */
     let DecoderNamespace = "GFX12";
     let row = ps.row;
     let done = ps.done;

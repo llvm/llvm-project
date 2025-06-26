@@ -90,6 +90,7 @@ enum InstCounterType {
 #else /* LLPC_BUILD_NPI */
   BVH_CNT,                           // gfx12+ only.
   KM_CNT,                            // gfx12+ only.
+  X_CNT,                             // gfx1250.
 #endif /* LLPC_BUILD_NPI */
   NUM_EXTENDED_INST_CNTS,
   VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
@@ -123,8 +124,8 @@ struct HardwareLimits {
   unsigned SamplecntMax; // gfx12+ only.
   unsigned BvhcntMax;    // gfx12+ only.
   unsigned KmcntMax;     // gfx12+ only.
-#if LLPC_BUILD_NPI
   unsigned XcntMax;      // gfx1250.
+#if LLPC_BUILD_NPI
   unsigned SwccntMax;    //
 #endif /* LLPC_BUILD_NPI */
   unsigned VaVdstMax;    // gfx12+ expert mode only.
@@ -167,10 +168,12 @@ struct HardwareLimits {
   DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
   DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
   DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
+  DECL(VMEM_GROUP)               /* vmem group */                              \
   DECL(LDS_ACCESS)               /* lds read & write */                        \
   DECL(GDS_ACCESS)               /* gds read & write */                        \
   DECL(SQ_MESSAGE)               /* send message */                            \
   DECL(SMEM_ACCESS)              /* scalar-memory read & write */              \
+  DECL(SMEM_GROUP)               /* scalar-memory group */                     \
   DECL(EXP_GPR_LOCK)             /* export holding on its data src */          \
   DECL(GDS_GPR_LOCK)             /* GDS holding on its data and addr src */    \
   DECL(EXP_POS_ACCESS)           /* write to export position */                \
@@ -249,7 +252,7 @@ static const unsigned instrsForExtendedCounterTypes[NUM_EXTENDED_INST_CNTS] = {
 #if LLPC_BUILD_NPI
     AMDGPU::S_WAIT_KMCNT,    AMDGPU::S_WAIT_XCNT,      AMDGPU::S_WAIT_SWCCNT};
 #else /* LLPC_BUILD_NPI */
-    AMDGPU::S_WAIT_KMCNT};
+    AMDGPU::S_WAIT_KMCNT,    AMDGPU::S_WAIT_XCNT};
 #endif /* LLPC_BUILD_NPI */
 
 static bool updateVMCntOnly(const MachineInstr &Inst) {
@@ -299,6 +302,11 @@ unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
     return Wait.BvhCnt;
   case KM_CNT:
     return Wait.KmCnt;
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+  case X_CNT:
+    return Wait.XCnt;
+#endif /* LLPC_BUILD_NPI */
   case VA_VDST:
     return Wait.VaVdst;
   case VM_VSRC:
@@ -381,9 +389,9 @@ public:
       return Limits.BvhcntMax;
     case KM_CNT:
       return Limits.KmcntMax;
-#if LLPC_BUILD_NPI
     case X_CNT:
       return Limits.XcntMax;
+#if LLPC_BUILD_NPI
     case SWC_CNT:
       return Limits.SwccntMax;
 #endif /* LLPC_BUILD_NPI */
@@ -397,7 +405,6 @@ public:
     return 0;
   }
 
-#if LLPC_BUILD_NPI
   bool isSmemCounter(InstCounterType T) const {
     return T == SmemAccessCounter || T == X_CNT;
   }
@@ -411,7 +418,6 @@ public:
     llvm_unreachable("Invalid SMEM counter");
   }
 
-#endif /* LLPC_BUILD_NPI */
   unsigned getScoreLB(InstCounterType T) const {
     assert(T < NUM_INST_CNTS);
     return ScoreLBs[T];
@@ -430,13 +436,8 @@ public:
     if (GprNo < NUM_ALL_VGPRS) {
       return VgprScores[T][GprNo];
     }
-#if LLPC_BUILD_NPI
     assert(isSmemCounter(T));
     return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
-#else /* LLPC_BUILD_NPI */
-    assert(T == SmemAccessCounter);
-    return SgprScores[GprNo - NUM_ALL_VGPRS];
-#endif /* LLPC_BUILD_NPI */
   }
 
   bool merge(const WaitcntBrackets &Other);
@@ -467,9 +468,7 @@ public:
 
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
   void applyWaitcnt(InstCounterType T, unsigned Count);
-#if LLPC_BUILD_NPI
   void applyXcnt(const AMDGPU::Waitcnt &Wait);
-#endif /* LLPC_BUILD_NPI */
   void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
                      const MachineRegisterInfo *MRI, WaitEventType E,
                      MachineInstr &MI);
@@ -607,17 +606,11 @@ private:
   int VgprUB = -1;
   int SgprUB = -1;
   unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
-#if LLPC_BUILD_NPI
   // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
   // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
   // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps the
   // X_CNT score.
   unsigned SgprScores[2][SQ_MAX_PGM_SGPRS] = {{0}};
-#else /* LLPC_BUILD_NPI */
-  // Wait cnt scores for every sgpr, only DS_CNT (corresponding to LGKMcnt
-  // pre-gfx12) or KM_CNT (gfx12+ only) are relevant.
-  unsigned SgprScores[SQ_MAX_PGM_SGPRS] = {0};
-#endif /* LLPC_BUILD_NPI */
   // Bitmask of the VmemTypes of VMEM instructions that might have a pending
   // write to each vgpr.
   unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
@@ -727,9 +720,7 @@ public:
         0,
         0,
         0,
-#if LLPC_BUILD_NPI
         0,
-#endif /* LLPC_BUILD_NPI */
         0};
 
     return WaitEventMaskForInstPreGFX12;
@@ -766,8 +757,8 @@ public:
         eventMask({VMEM_SAMPLER_READ_ACCESS}),
         eventMask({VMEM_BVH_READ_ACCESS}),
         eventMask({SMEM_ACCESS, SQ_MESSAGE}),
-#if LLPC_BUILD_NPI
         eventMask({VMEM_GROUP, SMEM_GROUP}),
+#if LLPC_BUILD_NPI
         eventMask({SWC_ACCESS}),
 #endif /* LLPC_BUILD_NPI */
         eventMask({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
@@ -922,20 +913,18 @@ public:
     return VmemReadMapping[getVmemType(Inst)];
   }
 
-#if LLPC_BUILD_NPI
   bool hasXcnt() const { return ST->hasWaitXCnt(); }
 
-#endif /* LLPC_BUILD_NPI */
   std::optional<WaitEventType>
   getSoftwareHazardEventType(const MachineInstr &Inst) const;
 
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
 #if LLPC_BUILD_NPI
-  bool isVmemAccess(const MachineInstr &MI) const;
 #else /* LLPC_BUILD_NPI */
   bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
 #endif /* LLPC_BUILD_NPI */
+  bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
@@ -1088,17 +1077,9 @@ void WaitcntBrackets::setScoreByInterval(RegInterval Interval,
       VgprUB = std::max(VgprUB, RegNo);
       VgprScores[CntTy][RegNo] = Score;
     } else {
-#if LLPC_BUILD_NPI
       assert(isSmemCounter(CntTy));
-#else /* LLPC_BUILD_NPI */
-      assert(CntTy == SmemAccessCounter);
-#endif /* LLPC_BUILD_NPI */
       SgprUB = std::max(SgprUB, RegNo - NUM_ALL_VGPRS);
-#if LLPC_BUILD_NPI
       SgprScores[getSgprScoresIdx(CntTy)][RegNo - NUM_ALL_VGPRS] = Score;
-#else /* LLPC_BUILD_NPI */
-      SgprScores[RegNo - NUM_ALL_VGPRS] = Score;
-#endif /* LLPC_BUILD_NPI */
     }
   }
 }
@@ -1237,10 +1218,17 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           setScoreByOperand(&Inst, TRI, MRI, Op, EXP_CNT, CurrScore);
       }
     }
-#if LLPC_BUILD_NPI
   } else if (T == X_CNT) {
+#if LLPC_BUILD_NPI
     for (const MachineOperand &Op : Inst.all_uses())
       setScoreByOperand(&Inst, TRI, MRI, Op, X_CNT, CurrScore);
+#else /* LLPC_BUILD_NPI */
+    for (const MachineOperand &Op : Inst.all_uses()) {
+      RegInterval Interval = getRegInterval(&Inst, MRI, TRI, Op);
+      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+        setRegScore(RegNo, T, CurrScore);
+      }
+    }
 #endif /* LLPC_BUILD_NPI */
   } else if (T == VA_VDST || T == VM_VSRC) {
 #if LLPC_BUILD_NPI
@@ -1380,10 +1368,10 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
     case KM_CNT:
       OS << "    KM_CNT(" << SR << "): ";
       break;
-#if LLPC_BUILD_NPI
     case X_CNT:
       OS << "    X_CNT(" << SR << "): ";
       break;
+#if LLPC_BUILD_NPI
     case SWC_CNT:
       OS << "    SWC_CNT(" << SR << "): ";
       break;
@@ -1414,13 +1402,8 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           OS << RelScore << ":ds ";
         }
       }
-#if LLPC_BUILD_NPI
       // Also need to print sgpr scores for lgkm_cnt or xcnt.
       if (isSmemCounter(T)) {
-#else /* LLPC_BUILD_NPI */
-      // Also need to print sgpr scores for lgkm_cnt.
-      if (T == SmemAccessCounter) {
-#endif /* LLPC_BUILD_NPI */
         for (int J = 0; J <= SgprUB; J++) {
           unsigned RegScore = getRegScore(J + NUM_ALL_VGPRS, T);
           if (RegScore <= LB)
@@ -1459,8 +1442,8 @@ void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
   simplifyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
   simplifyWaitcnt(BVH_CNT, Wait.BvhCnt);
   simplifyWaitcnt(KM_CNT, Wait.KmCnt);
-#if LLPC_BUILD_NPI
   simplifyWaitcnt(X_CNT, Wait.XCnt);
+#if LLPC_BUILD_NPI
   simplifyWaitcnt(SWC_CNT, Wait.Swccnt);
 #endif /* LLPC_BUILD_NPI */
   simplifyWaitcnt(VA_VDST, Wait.VaVdst);
@@ -1537,9 +1520,7 @@ void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
   applyWaitcnt(SWC_CNT, Wait.Swccnt);
 #endif /* LLPC_BUILD_NPI */
   applyWaitcnt(KM_CNT, Wait.KmCnt);
-#if LLPC_BUILD_NPI
   applyXcnt(Wait);
-#endif /* LLPC_BUILD_NPI */
   applyWaitcnt(VA_VDST, Wait.VaVdst);
   applyWaitcnt(VM_VSRC, Wait.VmVsrc);
 }
@@ -1558,7 +1539,6 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
   }
 }
 
-#if LLPC_BUILD_NPI
 void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   // Wait on XCNT is redundant if we are already waiting for a load to complete.
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
@@ -1576,17 +1556,12 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   applyWaitcnt(X_CNT, Wait.XCnt);
 }
 
-#endif /* LLPC_BUILD_NPI */
 // Where there are multiple types of event in the bracket of a counter,
 // the decrement may go out of order.
 bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   // Scalar memory read always can go out of order.
-#if LLPC_BUILD_NPI
   if ((T == SmemAccessCounter && hasPendingEvent(SMEM_ACCESS)) ||
       (T == X_CNT && hasPendingEvent(SMEM_GROUP)))
-#else /* LLPC_BUILD_NPI */
-  if (T == SmemAccessCounter && hasPendingEvent(SMEM_ACCESS))
-#endif /* LLPC_BUILD_NPI */
     return true;
   return hasMixedPendingEvents(T);
 }
@@ -1638,9 +1613,9 @@ static std::optional<InstCounterType> counterTypeForInstr(unsigned Opcode) {
     return DS_CNT;
   case AMDGPU::S_WAIT_KMCNT:
     return KM_CNT;
-#if LLPC_BUILD_NPI
   case AMDGPU::S_WAIT_XCNT:
     return X_CNT;
+#if LLPC_BUILD_NPI
   case AMDGPU::S_WAIT_SWCCNT:
     return SWC_CNT;
 #endif /* LLPC_BUILD_NPI */
@@ -1673,7 +1648,13 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
   MachineInstr *WaitcntInstr = nullptr;
   MachineInstr *WaitcntVsCntInstr = nullptr;
 
-  LLVM_DEBUG(dbgs() << "PreGFX12::applyPreexistingWaitcnt at: " << *It);
+  LLVM_DEBUG({
+    dbgs() << "PreGFX12::applyPreexistingWaitcnt at: ";
+    if (It == OldWaitcntInstr.getParent()->instr_end())
+      dbgs() << "end of block\n";
+    else
+      dbgs() << *It;
+  });
 
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
@@ -1809,12 +1790,11 @@ WaitcntGeneratorPreGFX12::getAllZeroWaitcnt(bool IncludeVSCnt) const {
 AMDGPU::Waitcnt
 WaitcntGeneratorGFX12Plus::getAllZeroWaitcnt(bool IncludeVSCnt) const {
   unsigned ExpertVal = isExpertMode(MaxCounter) ? 0 : ~0u;
-#if LLPC_BUILD_NPI
   return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0,
+#if LLPC_BUILD_NPI
                          ~0u /* XCNT */, ~0u, ExpertVal, ExpertVal);
 #else /* LLPC_BUILD_NPI */
-  return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0, ExpertVal,
-                         ExpertVal);
+		         ~0u /* XCNT */, ExpertVal, ExpertVal);
 #endif /* LLPC_BUILD_NPI */
 }
 
@@ -1834,7 +1814,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   MachineInstr *WaitcntDepctrInstr = nullptr;
   MachineInstr *WaitInstrs[NUM_EXTENDED_INST_CNTS] = {};
 
-  LLVM_DEBUG(dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: " << *It);
+  LLVM_DEBUG({
+    dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: ";
+    if (It == OldWaitcntInstr.getParent()->instr_end())
+      dbgs() << "end of block\n";
+    else
+      dbgs() << *It;
+  });
 
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
@@ -2233,7 +2219,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
     if (!WCG->isOptNone() &&
-        (ST->isDynamicVGPREnabled() ||
+        (MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() ||
          (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
           ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
           !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
@@ -2457,9 +2443,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 #endif /* LLPC_BUILD_NPI */
             ScoreBrackets.clearVgprVmemTypes(Interval);
           }
-#if LLPC_BUILD_NPI
 
-#endif /* LLPC_BUILD_NPI */
           if (Op.isDef() || ScoreBrackets.hasPendingEvent(EXP_LDS_ACCESS)) {
             ScoreBrackets.determineWait(EXP_CNT, Interval, Wait);
           }
@@ -2467,11 +2451,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         } else {
           ScoreBrackets.determineWait(SmemAccessCounter, Interval, Wait);
         }
-#if LLPC_BUILD_NPI
 
         if (hasXcnt() && Op.isDef())
           ScoreBrackets.determineWait(X_CNT, Interval, Wait);
-#endif /* LLPC_BUILD_NPI */
       }
     }
   }
@@ -2525,9 +2507,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     Wait.BvhCnt = 0;
   if (ForceEmitWaitcnt[KM_CNT])
     Wait.KmCnt = 0;
-#if LLPC_BUILD_NPI
   if (ForceEmitWaitcnt[X_CNT])
     Wait.XCnt = 0;
+#if LLPC_BUILD_NPI
   if (ForceEmitWaitcnt[SWC_CNT])
     Wait.Swccnt = 0;
 #endif /* LLPC_BUILD_NPI */
@@ -2605,6 +2587,9 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 
 #if LLPC_BUILD_NPI
   // XCnt may be already consumed by a load wait
+#else /* LLPC_BUILD_NPI */
+  // XCnt may be already consumed by a load wait.
+#endif /* LLPC_BUILD_NPI */
   if (Wait.KmCnt == 0 && Wait.XCnt != ~0u &&
       !ScoreBrackets.hasPendingEvent(SMEM_GROUP))
     Wait.XCnt = ~0u;
@@ -2619,7 +2604,6 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   if (Wait.XCnt != ~0u && isVmemAccess(*It))
     Wait.XCnt = ~0u;
 
-#endif /* LLPC_BUILD_NPI */
   if (WCG->createNewWaitcnt(Block, It, Wait))
     Modified = true;
 
@@ -2740,9 +2724,6 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
 }
 
 #if LLPC_BUILD_NPI
-bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
-  return (TII->isFLAT(MI) && mayAccessVMEMThroughFlat(MI)) ||
-         (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
 #else /* LLPC_BUILD_NPI */
 // This is a flat memory operation. Check to see if it has memory tokens for
 // either scratch or FLAT.
@@ -2768,7 +2749,12 @@ bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
     unsigned AS = Memop->getAddrSpace();
     return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
   });
+}
+
 #endif /* LLPC_BUILD_NPI */
+bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
+  return (TII->isFLAT(MI) && mayAccessVMEMThroughFlat(MI)) ||
+         (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
 }
 
 static bool isGFX12CacheInvOrWBInst(MachineInstr &Inst) {
@@ -2842,10 +2828,9 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   // bracket and the destination operand scores.
   // TODO: Use the (TSFlags & SIInstrFlags::DS_CNT) property everywhere.
 
-#if LLPC_BUILD_NPI
   bool IsVMEMAccess = false;
   bool IsSMEMAccess = false;
-#endif /* LLPC_BUILD_NPI */
+
   if (isExpertMode(MaxCounter)) {
     if (const auto ET = getSoftwareHazardEventType(Inst))
       ScoreBrackets->updateByEvent(TII, TRI, MRI, *ET, Inst);
@@ -2889,9 +2874,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 
     if (mayAccessVMEMThroughFlat(Inst)) {
       ++FlatASCount;
-#if LLPC_BUILD_NPI
       IsVMEMAccess = true;
-#endif /* LLPC_BUILD_NPI */
       ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
                                    Inst);
     }
@@ -2914,9 +2897,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
              !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
-#if LLPC_BUILD_NPI
     IsVMEMAccess = true;
-#endif /* LLPC_BUILD_NPI */
     ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
                                  Inst);
 
@@ -2925,9 +2906,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VMW_GPR_LOCK, Inst);
     }
   } else if (TII->isSMRD(Inst)) {
-#if LLPC_BUILD_NPI
     IsSMEMAccess = true;
-#endif /* LLPC_BUILD_NPI */
     ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
   } else if (Inst.isCall()) {
     if (callWaitsOnFunctionReturn(Inst)) {
@@ -2989,7 +2968,6 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 #endif /* LLPC_BUILD_NPI */
     }
   }
-#if LLPC_BUILD_NPI
 
   if (!hasXcnt())
     return;
@@ -2999,7 +2977,6 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 
   if (IsSMEMAccess)
     ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_GROUP, Inst);
-#endif /* LLPC_BUILD_NPI */
 }
 
 bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,
@@ -3053,19 +3030,11 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     for (int J = 0; J <= VgprUB; J++)
       StrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
 
-#if LLPC_BUILD_NPI
     if (isSmemCounter(T)) {
       unsigned Idx = getSgprScoresIdx(T);
-#else /* LLPC_BUILD_NPI */
-    if (T == SmemAccessCounter) {
-#endif /* LLPC_BUILD_NPI */
       for (int J = 0; J <= SgprUB; J++)
-#if LLPC_BUILD_NPI
         StrictDom |=
             mergeScore(M, SgprScores[Idx][J], Other.SgprScores[Idx][J]);
-#else /* LLPC_BUILD_NPI */
-        StrictDom |= mergeScore(M, SgprScores[J], Other.SgprScores[J]);
-#endif /* LLPC_BUILD_NPI */
     }
   }
 
@@ -3435,14 +3404,15 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   Limits.SamplecntMax = AMDGPU::getSamplecntBitMask(IV);
   Limits.BvhcntMax = AMDGPU::getBvhcntBitMask(IV);
   Limits.KmcntMax = AMDGPU::getKmcntBitMask(IV);
-#if LLPC_BUILD_NPI
   Limits.XcntMax = AMDGPU::getXcntBitMask(IV);
+#if LLPC_BUILD_NPI
   Limits.SwccntMax = AMDGPU::getSwccntBitMask(IV);
 #endif /* LLPC_BUILD_NPI */
   Limits.VaVdstMax = AMDGPU::DepCtr::getVaVdstBitMask();
   Limits.VmVsrcMax = AMDGPU::DepCtr::getVmVsrcBitMask();
 
-  [[maybe_unused]] unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
+  [[maybe_unused]] unsigned NumVGPRsMax =
+      ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
   [[maybe_unused]] unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
@@ -3476,7 +3446,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT || CT == X_CNT ||
             CT == SWC_CNT)
 #else /* LLPC_BUILD_NPI */
-        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT)
+        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT || CT == X_CNT)
 #endif /* LLPC_BUILD_NPI */
           continue;
 
@@ -3648,7 +3618,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   // (i.e. whether we're in dynamic VGPR mode or not).
   // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
   // waveslot limited kernel runs slower with the deallocation.
-  if (ST->isDynamicVGPREnabled()) {
+  if (MFI->isDynamicVGPREnabled()) {
     for (MachineInstr *MI : ReleaseVGPRInsts) {
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
               TII->get(AMDGPU::S_ALLOC_VGPR))
@@ -3659,7 +3629,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     if (!ReleaseVGPRInsts.empty() &&
         (MF.getFrameInfo().hasCalls() ||
          ST->getOccupancyWithNumVGPRs(
-             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
+             /*IsDynamicVGPR=*/false) <
              AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
       for (MachineInstr *MI : ReleaseVGPRInsts) {
         if (ST->requiresNopBeforeDeallocVGPRs()) {

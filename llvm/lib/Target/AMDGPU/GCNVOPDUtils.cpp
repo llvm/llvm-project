@@ -52,6 +52,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     return false;
   if (!IsVOPD3 && (TII.isVOP3(FirstMI) || TII.isVOP3(SecondMI)))
     return false;
+  if (TII.isDPP(FirstMI) || TII.isDPP(SecondMI))
+    return false;
 
 #endif /* LLPC_BUILD_NPI */
   const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());

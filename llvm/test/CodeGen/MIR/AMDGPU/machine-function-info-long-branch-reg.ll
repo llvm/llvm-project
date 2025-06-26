@@ -46,6 +46,7 @@
 ; CHECK-NEXT: needIdx0Restore: false
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
 ; CHECK-NEXT: hasInitWholeWave: false
+; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: usesWholeWave: false
 ; CHECK-NEXT: body:

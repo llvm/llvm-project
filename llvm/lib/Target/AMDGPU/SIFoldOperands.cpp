@@ -2589,7 +2589,7 @@ bool SIFoldOperandsImpl::tryFoldVLoadStoreIdxOffset(MachineInstr &MI,
     auto ImmOpnd = DefMI->getOperand(1);
     if (ImmOpnd.isImm() && ImmOpnd.getImm()) {
       auto Offset =
-          (ImmOpnd.getImm() + OffOpnd->getImm()) % ST->getAddressableNumVGPRs();
+          (ImmOpnd.getImm() + OffOpnd->getImm()) % ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
       OffOpnd->setImm(Offset);
       Register IdxReg;
       if (!SMovImmZero) {

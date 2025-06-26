@@ -1294,10 +1294,6 @@ multiclass VOP1_Real_FULL_t16<GFXGen Gen, bits<9> op> :
   VOP1_Real_FULL_with_name<Gen, op, NAME,
                            !cast<VOP1_Pseudo>(!subst("_fake16", "", NAME)#"_e32").Mnemonic>;
 
-multiclass VOP1_Real_FULL_t16_gfx1250_gfx13<bits<9> op> :
-  VOP1_Real_FULL_t16<GFX1250Gen, op>,
-  VOP1_Real_FULL_t16<GFX13Gen, op>;
-
 multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<
     bits<9> op, string asmName = !tolower(NAME), string opName = NAME> {
   defm opName#"_t16" :

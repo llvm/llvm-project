@@ -6134,6 +6134,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
                                             const GCNSubtarget &ST) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   MachineFunction *MF = MBB.getParent();
+  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
 
@@ -6157,9 +6158,9 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
       Shift.addReg(SAddrOp.getReg());
     else
       Shift.addFrameIndex(SAddrOp.getIndex());
-    Shift.addImm(2u);
-    Shift.setOperandDead(3); // Dead scc
-    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+	    Shift.addImm(2u);
+	    Shift.setOperandDead(3); // Dead scc
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) * 4) {
       Offset = Offset >> 2;
     } else {
       Register AddReg = MRI.createVirtualRegister(IdxRC);
@@ -6177,7 +6178,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
   auto EmitIdxST = [&](MachineInstr &MI) {
     int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
     Register VirtualIDX = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
-    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) * 4) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), VirtualIDX).addImm(0);
       Offset = Offset >> 2;
     } else {
@@ -6202,7 +6203,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
         .addReg(SAddrReg)
         .addImm(2u)
         .setOperandDead(3); // Dead scc
-    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) * 4) {
       Offset = Offset >> 2;
     } else {
       Register AddReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
@@ -7169,35 +7170,6 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
     return isFMAFasterThanFMulAndFAdd(MF, MVT::f32);
   case 64:
     return isFMAFasterThanFMulAndFAdd(MF, MVT::f64);
-  default:
-    break;
-  }
-
-  return false;
-}
-
-// Refer to comments added to the MIR variant of isFMAFasterThanFMulAndFAdd for
-// specific details.
-bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
-                                                  Type *Ty) const {
-  switch (Ty->getScalarSizeInBits()) {
-  case 16: {
-    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
-    return Subtarget->has16BitInsts() &&
-           Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
-  }
-  case 32: {
-    if (!Subtarget->hasMadMacF32Insts())
-      return Subtarget->hasFastFMAF32();
-
-    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
-    if (Mode.FP32Denormals != DenormalMode::getPreserveSign())
-      return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
-
-    return Subtarget->hasFastFMAF32() && Subtarget->hasDLInsts();
-  }
-  case 64:
-    return true;
   default:
     break;
   }
@@ -10200,11 +10172,15 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
                     : False);
   if (IsGFX10Plus)
     Ops.push_back(IsA16 ? True : False);
-  if (!Subtarget->hasGFX90AInsts()) {
+
+  if (!Subtarget->hasGFX90AInsts())
     Ops.push_back(TFE); // tfe
-  } else if (TFE->getAsZExtVal()) {
-    report_fatal_error("TFE is not supported on this GPU");
+  else if (TFE->getAsZExtVal()) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "TFE is not supported on this GPU", DL.getDebugLoc()));
   }
+
   if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
     Ops.push_back(LWE); // lwe
   if (!IsGFX10Plus)
@@ -10242,9 +10218,23 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     if (Subtarget->hasGFX90AInsts()) {
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
                                      NumVDataDwords, NumVAddrDwords);
-      if (Opcode == -1)
-        report_fatal_error(
-            "requested image instruction is not supported on this GPU");
+      if (Opcode == -1) {
+        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+            DAG.getMachineFunction().getFunction(),
+            "requested image instruction is not supported on this GPU",
+            DL.getDebugLoc()));
+
+        unsigned Idx = 0;
+        SmallVector<SDValue, 3> RetValues(OrigResultTypes.size());
+        for (EVT VT : OrigResultTypes) {
+          if (VT == MVT::Other)
+            RetValues[Idx++] = Op.getOperand(0); // Chain
+          else
+            RetValues[Idx++] = DAG.getPOISON(VT);
+        }
+
+        return DAG.getMergeValues(RetValues, DL);
+      }
     }
     if (Opcode == -1 &&
         Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
@@ -19909,33 +19899,6 @@ bool SITargetLowering::checkForPhysRegDependency(
     return true;
   }
   return false;
-}
-
-/// Check if it is profitable to hoist instruction in then/else to if.
-bool SITargetLowering::isProfitableToHoist(Instruction *I) const {
-  if (!I->hasOneUse())
-    return true;
-
-  Instruction *User = I->user_back();
-  // TODO: Add more patterns that are not profitable to hoist and
-  // handle modifiers such as fabs and fneg
-  switch (I->getOpcode()) {
-  case Instruction::FMul: {
-    if (User->getOpcode() != Instruction::FSub &&
-        User->getOpcode() != Instruction::FAdd)
-      return true;
-
-    const TargetOptions &Options = getTargetMachine().Options;
-
-    return ((!I->hasAllowContract() || !User->hasAllowContract()) &&
-            Options.AllowFPOpFusion != FPOpFusion::Fast &&
-            !Options.UnsafeFPMath) ||
-           !isFMAFasterThanFMulAndFAdd(*I->getFunction(), User->getType());
-  }
-  default:
-    return true;
-  }
-  return true;
 }
 
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(

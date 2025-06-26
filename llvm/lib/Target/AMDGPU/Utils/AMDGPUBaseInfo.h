@@ -311,7 +311,7 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
 /// For subtargets which support it, \p EnableWavefrontSize32 should match
 /// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
 unsigned
-getVGPRAllocGranule(const MCSubtargetInfo *STI,
+getVGPRAllocGranule(const MCSubtargetInfo *STI, unsigned DynamicVGPRBlockSize,
                     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns VGPR encoding granularity for given subtarget \p STI.
@@ -334,25 +334,28 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
 
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
+unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
+                                unsigned DynamicVGPRBlockSize);
 
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned DynamicVGPRBlockSize);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-#if LLPC_BUILD_NPI
 unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
-                        unsigned NumExcludedVGRs);
+#if LLPC_BUILD_NPI
+                        unsigned DynamicVGPRBlockSize, unsigned NumExcludedVGRs);
 #else /* LLPC_BUILD_NPI */
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+                        unsigned DynamicVGPRBlockSize);
 #endif /* LLPC_BUILD_NPI */
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage for given
 /// subtarget \p STI.
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
-                                      unsigned NumVGPRs);
+                                      unsigned NumVGPRs,
+                                      unsigned DynamicVGPRBlockSize);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage, \p Granule
 /// size, \p MaxWaves possible, and \p TotalNumVGPRs available.
@@ -379,6 +382,7 @@ unsigned getEncodedNumVGPRBlocks(
 /// subtarget \p STI when \p NumVGPRs are used.
 unsigned getAllocatedNumVGPRBlocks(
     const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    unsigned DynamicVGPRBlockSize,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
@@ -1174,8 +1178,8 @@ struct Waitcnt {
   unsigned SampleCnt = ~0u; // gfx12+ only.
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
-#if LLPC_BUILD_NPI
   unsigned XCnt = ~0u;      // gfx1250.
+#if LLPC_BUILD_NPI
   unsigned Swccnt = ~0u;    // gfx13+ only.
 #endif /* LLPC_BUILD_NPI */
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
@@ -1188,31 +1192,29 @@ struct Waitcnt {
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
-#if LLPC_BUILD_NPI
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
+#if LLPC_BUILD_NPI
           unsigned Swccnt, unsigned VaVdst, unsigned VmVsrc)
 #else /* LLPC_BUILD_NPI */
-          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned VaVdst,
-          unsigned VmVsrc)
+          unsigned VaVdst, unsigned VmVsrc)
 #endif /* LLPC_BUILD_NPI */
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
-#if LLPC_BUILD_NPI
         SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
+#if LLPC_BUILD_NPI
         Swccnt(Swccnt), VaVdst(VaVdst), VmVsrc(VmVsrc) {}
 #else /* LLPC_BUILD_NPI */
-        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), VaVdst(VaVdst),
-        VmVsrc(VmVsrc) {}
+        VaVdst(VaVdst), VmVsrc(VmVsrc) {}
 #endif /* LLPC_BUILD_NPI */
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || VaVdst != ~0u ||
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u ||
 #if LLPC_BUILD_NPI
-           VmVsrc != ~0u || XCnt != ~0u || Swccnt != ~0u;
+           VaVdst != ~0u || VmVsrc != ~0u || Swccnt != ~0u;
 #else /* LLPC_BUILD_NPI */
-           VmVsrc != ~0u;
+           VaVdst != ~0u || VmVsrc != ~0u;
 #endif /* LLPC_BUILD_NPI */
   }
 
@@ -1227,13 +1229,13 @@ struct Waitcnt {
         std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
-#if LLPC_BUILD_NPI
         std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
+#if LLPC_BUILD_NPI
         std::min(Swccnt, Other.Swccnt), std::min(VaVdst, Other.VaVdst),
-#else /* LLPC_BUILD_NPI */
-        std::min(KmCnt, Other.KmCnt), std::min(VaVdst, Other.VaVdst),
-#endif /* LLPC_BUILD_NPI */
         std::min(VmVsrc, Other.VmVsrc));
+#else /* LLPC_BUILD_NPI */
+        std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
+#endif /* LLPC_BUILD_NPI */
   }
 };
 
@@ -1339,12 +1341,10 @@ unsigned getDscntBitMask(const IsaVersion &Version);
 /// Returns 0 for versions that do not support KMcnt
 unsigned getKmcntBitMask(const IsaVersion &Version);
 
-#if LLPC_BUILD_NPI
 /// \returns Xcnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support Xcnt.
 unsigned getXcntBitMask(const IsaVersion &Version);
 
-#endif /* LLPC_BUILD_NPI */
 /// \return STOREcnt or VScnt bit mask for given isa \p Version.
 /// returns 0 for versions that do not support STOREcnt or VScnt.
 /// STOREcnt and VScnt are the same counter, the name used
@@ -1563,6 +1563,12 @@ std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
 bool getSpatialClusterEnable(const Function &F);
 
 #endif /* LLPC_BUILD_NPI */
+bool hasDynamicVGPR(const Function &F);
+
+// Returns the value of the "amdgpu-dynamic-vgpr-block-size" attribute, or 0 if
+// the attribute is missing or its value is invalid.
+unsigned getDynamicVGPRBlockSize(const Function &F);
+
 LLVM_READNONE
 constexpr bool isShader(CallingConv::ID CC) {
   switch (CC) {

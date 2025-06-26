@@ -926,9 +926,7 @@ public:
   }
 
 #if LLPC_BUILD_NPI
-  static bool isXDLWMMA(const MachineInstr &MI) {
-    return (isWMMA(MI) || isSWMMAC(MI)) && AMDGPU::getWMMAIsXDL(MI.getOpcode());
-  }
+  bool isXDLWMMA(const MachineInstr &MI) const;
 
   // Instructions for which we care if their destination ends up in a laneshared
   // VGPR.

@@ -52,10 +52,6 @@ def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
 }
-#else /* LLPC_BUILD_NPI */
-def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
-def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
-#endif /* LLPC_BUILD_NPI */
 
 def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let HasClamp = 1;
@@ -65,29 +61,40 @@ def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
 }
 
-#ifdef LLPC_BUILD_NPI
+#endif /* LLPC_BUILD_NPI */
 let HasExt64BitDPP = 1 in {
 def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
+#ifdef LLPC_BUILD_NPI
 def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64> {
   let OutsVOP3DPP = Outs64;
   let AsmVOP3DPP = getAsmVOP3DPP<Asm64>.ret;
   let AsmVOP3DPP16 = getAsmVOP3DPP16<Asm64>.ret;
   let AsmVOP3DPP8 = getAsmVOP3DPP8<Asm64>.ret;
 }
+#else /* LLPC_BUILD_NPI */
+def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
 def VOP3b_I64_I1_I32_I32_I64_DPP : VOPProfile<[i64, i32, i32, i64]> {
+#else /* LLPC_BUILD_NPI */
+def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
+#endif /* LLPC_BUILD_NPI */
   let HasClamp = 1;
 
   let IsSingle = 1;
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
+#ifdef LLPC_BUILD_NPI
   let OutsVOP3DPP = Outs64;
+#endif /* LLPC_BUILD_NPI */
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
+#ifdef LLPC_BUILD_NPI
   let AsmVOP3DPP = getAsmVOP3DPP<Asm64>.ret;
   let AsmVOP3DPP16 = getAsmVOP3DPP16<Asm64>.ret;
   let AsmVOP3DPP8 = getAsmVOP3DPP8<Asm64>.ret;
+#endif /* LLPC_BUILD_NPI */
 }
 
-#endif /* LLPC_BUILD_NPI */
 class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
@@ -95,8 +102,10 @@ class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
 
 #ifdef LLPC_BUILD_NPI
 let HasExt64BitDPP = 1 in
+#endif /* LLPC_BUILD_NPI */
 def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
 
+#ifdef LLPC_BUILD_NPI
 def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64>;
 def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
 #else /* LLPC_BUILD_NPI */
@@ -105,17 +114,15 @@ def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
 #ifdef LLPC_BUILD_NPI
   let HasExt64BitDPP = 1;
+}
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
+def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
 #else /* LLPC_BUILD_NPI */
   let HasExtDPP = 0;
 #endif /* LLPC_BUILD_NPI */
 }
-#ifdef LLPC_BUILD_NPI
-def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
-def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
-  let HasClamp = 1;
-}
 } // End HasExt64BitDPP = 1;
-#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // VOP3 INTERP
@@ -931,11 +938,7 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use “0” to get ADD_U64).
 let SubtargetPredicate = HasLshlAddU64Inst in
-#ifdef LLPC_BUILD_NPI
 defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
-#else /* LLPC_BUILD_NPI */
-defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", VOP3_Profile<VOP_I64_I64_I32_I64>>;
-#endif /* LLPC_BUILD_NPI */
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
@@ -2862,8 +2865,8 @@ let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
 }
 
-#ifdef LLPC_BUILD_NPI
 // These instructions differ from GFX12 variant by supporting DPP:
+#ifdef LLPC_BUILD_NPI
 defm V_FMA_F64                       : VOP3Only_Realtriple_gfx1250_gfx13<0x214>;
 defm V_DIV_FIXUP_F64                 : VOP3Only_Realtriple_gfx1250<0x228>;
 defm V_DIV_FMAS_F64                  : VOP3Only_Realtriple_gfx1250<0x238>;
@@ -2952,8 +2955,10 @@ let WaveSizePredicate = isWave32 in {
 
 defm V_CVT_PK_FP8_F16                : VOP3Only_Realtriple<GFX13Gen, 0x1ac>;
 defm V_CVT_PK_BF8_F16                : VOP3Only_Realtriple<GFX13Gen, 0x1ad>;
-
+#else /* LLPC_BUILD_NPI */
+defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
 #endif /* LLPC_BUILD_NPI */
+
 //===----------------------------------------------------------------------===//
 // GFX10.
 //===----------------------------------------------------------------------===//

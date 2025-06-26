@@ -1749,14 +1749,9 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
             ""));
 }
 
-#ifdef LLPC_BUILD_NPI
 multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag,
                     list<Predicate> predicates = []> {
-#else /* LLPC_BUILD_NPI */
-multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> {
-#endif /* LLPC_BUILD_NPI */
   def _e64 : VOP3InstBase<OpName, P, node>;
-#ifdef LLPC_BUILD_NPI
   if P.HasExtVOP3DPP then
     def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
       let SubtargetPredicate = isGFX11Plus;
@@ -1765,12 +1760,6 @@ multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_f
     def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
       let OtherPredicates = !listconcat(predicates, [HasDPALU_DPP]);
     }
-#else /* LLPC_BUILD_NPI */
-  let SubtargetPredicate = isGFX11Plus in {
-    if P.HasExtVOP3DPP then
-      def _e64_dpp : VOP3_DPP_Pseudo <OpName, P>;
-  } // end SubtargetPredicate = isGFX11Plus
-#endif /* LLPC_BUILD_NPI */
 }
 
 class UniformUnaryFragOrOp<SDPatternOperator Op> {
@@ -2389,10 +2378,20 @@ multiclass VOP3Only_Realtriple_with_name_gfx12_not_gfx1250_gfx13<bits<10> gfx12O
                                                                  bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Not12_50Gen, gfx12Op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+#else /* LLPC_BUILD_NPI */
+multiclass VOP3Only_Real_Base_gfx12<bits<10> op> :
+  VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
+
+multiclass VOP3Only_Realtriple_with_name_gfx12_not_gfx1250<bits<10> op, string opName,
+                                                           string asmName, string pseudo_mnemonic = "",
+                                                           bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX12Not12_50Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+#endif /* LLPC_BUILD_NPI */
 
 multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
   VOP3_Real_Base<GFX1250Gen, op, NAME, 1/*IsSingle*/>;
 
+#ifdef LLPC_BUILD_NPI
 multiclass VOP3Only_Real_Base_gfx13<bits<10> op> :
   VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
 
@@ -2400,9 +2399,11 @@ multiclass VOP3Only_Real_Base_gfx1250_gfx13<bits<10> gfx1250Op, bits<10> op> :
   VOP3Only_Real_Base_gfx1250<gfx1250Op>,
   VOP3Only_Real_Base_gfx13<op>;
 
+#endif /* LLPC_BUILD_NPI */
 multiclass VOP3Only_Realtriple_gfx1250<bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX1250Gen, op, isSingle>;
 
+#ifdef LLPC_BUILD_NPI
 multiclass VOP3Only_Realtriple_gfx11_gfx12_not_gfx1250_gfx13<bits<10> gfx12Op, bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX11Not12_50Gen, gfx12Op, isSingle>,
   VOP3_Realtriple<GFX12Not12_50Gen, gfx12Op, isSingle>,
@@ -2451,11 +2452,8 @@ multiclass VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<
     let AssemblerPredicate = isGFX12Plus;
   }
 }
-#else /* LLPC_BUILD_NPI */
-multiclass VOP3Only_Real_Base_gfx12<bits<10> op> :
-  VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
 multiclass VOP3_Realtriple_t16_gfx12<bits<10> op, string asmName, string opName = NAME,
                                      string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;

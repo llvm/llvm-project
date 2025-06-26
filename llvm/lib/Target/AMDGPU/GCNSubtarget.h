@@ -772,28 +772,32 @@ public:
 
 #if LLPC_BUILD_NPI
   bool hasMTBUFInsts() const { return GFX13Insts || !hasGFX1250Insts(); }
-
-  bool hasFormattedMUBUFInsts() const {
-    return GFX13Insts || !hasGFX1250Insts();
 #else /* LLPC_BUILD_NPI */
-  bool hasExportInsts() const {
-    return !hasGFX940Insts();
+  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
 #endif /* LLPC_BUILD_NPI */
-  }
 
 #if LLPC_BUILD_NPI
+  bool hasFormattedMUBUFInsts() const {
+    return GFX13Insts || !hasGFX1250Insts();
+  }
+#else /* LLPC_BUILD_NPI */
+  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
+#endif /* LLPC_BUILD_NPI */
+
   bool hasExportInsts() const {
+#if LLPC_BUILD_NPI
     return GFX13Insts || (!hasGFX940Insts() && !hasGFX1250Insts());
 #else /* LLPC_BUILD_NPI */
-  bool hasVINTERPEncoding() const {
-    return GFX11Insts;
+    return !hasGFX940Insts() && !hasGFX1250Insts();
 #endif /* LLPC_BUILD_NPI */
   }
 
 #if LLPC_BUILD_NPI
   bool hasVINTERPEncoding() const { return GFX13Insts || !hasGFX1250Insts(); }
-
+#else /* LLPC_BUILD_NPI */
+  bool hasVINTERPEncoding() const { return GFX11Insts && !hasGFX1250Insts(); }
 #endif /* LLPC_BUILD_NPI */
+
   // DS_ADD_F64/DS_ADD_RTN_F64
 #if LLPC_BUILD_NPI
   bool hasLdsAtomicAddF64() const {
@@ -1478,7 +1482,7 @@ public:
     return GFX90AInsts || (GFX1250Insts && !GFX13Insts);
   }
 #else /* LLPC_BUILD_NPI */
-  bool needsAlignedVGPRs() const { return GFX90AInsts; }
+  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
 #endif /* LLPC_BUILD_NPI */
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
@@ -1632,7 +1636,8 @@ public:
 
   /// Return the maximum number of waves per SIMD for kernels using \p VGPRs
   /// VGPRs
-  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
+  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs,
+                                    unsigned DynamicVGPRBlockSize) const;
 
   /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
   /// be achieved when the only function running on a CU is \p F, each workgroup
@@ -1836,8 +1841,8 @@ public:
   unsigned getMaxNumSGPRs(const Function &F) const;
 
   /// \returns VGPR allocation granularity supported by the subtarget.
-  unsigned getVGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(this);
+  unsigned getVGPRAllocGranule(unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getVGPRAllocGranule(this, DynamicVGPRBlockSize);
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.
@@ -1857,26 +1862,36 @@ public:
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
-  unsigned getAddressableNumVGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this);
+  unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this, DynamicVGPRBlockSize);
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
   /// the specified number of waves \p WavesPerEU.
-  unsigned getMinNumVGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU);
+  unsigned getMinNumVGPRs(unsigned WavesPerEU,
+                          unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU,
+                                           DynamicVGPRBlockSize);
   }
 
   /// \returns the maximum number of VGPRs that can be used and still achieved
   /// at least the specified number of waves \p WavesPerEU.
 #if LLPC_BUILD_NPI
   /// The NumExcludedVGPRs is for the lane-shared VGPRs in wavegroup mode.
+#endif /* LLPC_BUILD_NPI */
   unsigned getMaxNumVGPRs(unsigned WavesPerEU,
+#if LLPC_BUILD_NPI
+                          unsigned DynamicVGPRBlockSize,
                           unsigned NumExcludedVGPRs = 0) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU, NumExcludedVGPRs);
 #else /* LLPC_BUILD_NPI */
-  unsigned getMaxNumVGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU);
+                          unsigned DynamicVGPRBlockSize) const {
+#endif /* LLPC_BUILD_NPI */
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU,
+#if LLPC_BUILD_NPI
+                                           DynamicVGPRBlockSize,
+                                           NumExcludedVGPRs);
+#else /* LLPC_BUILD_NPI */
+                                           DynamicVGPRBlockSize);
 #endif /* LLPC_BUILD_NPI */
   }
 
@@ -2002,13 +2017,18 @@ public:
   }
 #endif /* LLPC_BUILD_NPI */
 
+  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
+  unsigned getDynamicVGPRBlockSize() const {
+    return DynamicVGPRBlockSize32 ? 32 : 16;
+  }
+
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated
     // to the same register.
     return false;
   }
-
 #if LLPC_BUILD_NPI
+
   // DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 shall not be claused with anything
   // and surronded by S_WAIT_ALU(0xFFE3).
   bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
@@ -2025,10 +2045,6 @@ public:
   // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
   // payload size.
   bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
-
-#endif /* LLPC_BUILD_NPI */
-  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
-#if LLPC_BUILD_NPI
 
   /// \returns true if the subtarget supports clusters of workgroups.
   bool hasClusters() const { return GFX1250Insts; }

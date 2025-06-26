@@ -141,11 +141,7 @@ def : GCNPat <
 
 } // End SubtargetPredicate = isGFX11Only
 
-#ifdef LLPC_BUILD_NPI
 let SubtargetPredicate = isGFX12PlusNot12_50 in {
-#else /* LLPC_BUILD_NPI */
-let SubtargetPredicate = isGFX12Plus in {
-#endif /* LLPC_BUILD_NPI */
 
 def DS_DIRECT_LOAD : DSDIR_Pseudo<"ds_direct_load", VDSDIR_getIns<1>.ret, 1>;
 def DS_PARAM_LOAD : DSDIR_Pseudo<"ds_param_load", VDSDIR_getIns<0>.ret, 0>;
@@ -160,11 +156,7 @@ def : GCNPat <
   (DS_PARAM_LOAD timm:$attr, timm:$attrchan, 0, 1)
 >;
 
-#ifdef LLPC_BUILD_NPI
 } // End SubtargetPredicate = isGFX12PlusNot12_50.
-#else /* LLPC_BUILD_NPI */
-} // End SubtargetPredicate = isGFX12Only
-#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // GFX11

@@ -25,6 +25,9 @@ namespace {
 
 class AMDGPUInsertDelayAlu {
 public:
+#if LLPC_BUILD_NPI
+  const GCNSubtarget *ST;
+#endif /* LLPC_BUILD_NPI */
   const SIInstrInfo *SII;
   const TargetRegisterInfo *TRI;
 
@@ -59,7 +62,7 @@ public:
 
 #if LLPC_BUILD_NPI
   // Get the delay type for a MachineInstr.
-  static DelayType getDelayType(const MachineInstr &MI) {
+  DelayType getDelayType(const MachineInstr &MI) {
     if (SIInstrInfo::isTRANS(MI))
 #else /* LLPC_BUILD_NPI */
   // Get the delay type for an instruction with the specified TSFlags.
@@ -69,8 +72,8 @@ public:
       return TRANS;
 #if LLPC_BUILD_NPI
     // WMMA XDL ops are treated the same as TRANS.
-    if (SIInstrInfo::isXDLWMMA(MI))
-      return TRANS;
+    if (SII->isXDL(MI))
+      return AMDGPU::isGFX1250Only(*ST) ? TRANS : VALU;
     if (SIInstrInfo::isVALU(MI))
 #else /* LLPC_BUILD_NPI */
     if (TSFlags & SIInstrFlags::VALU)
@@ -470,12 +473,22 @@ public:
     LLVM_DEBUG(dbgs() << "AMDGPUInsertDelayAlu running on " << MF.getName()
                       << "\n");
 
+#if LLPC_BUILD_NPI
+    ST = &MF.getSubtarget<GCNSubtarget>();
+    if (!ST->hasDelayAlu())
+#else /* LLPC_BUILD_NPI */
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     if (!ST.hasDelayAlu())
+#endif /* LLPC_BUILD_NPI */
       return false;
 
+#if LLPC_BUILD_NPI
+    SII = ST->getInstrInfo();
+    TRI = ST->getRegisterInfo();
+#else /* LLPC_BUILD_NPI */
     SII = ST.getInstrInfo();
     TRI = ST.getRegisterInfo();
+#endif /* LLPC_BUILD_NPI */
     SchedModel = &SII->getSchedModel();
 
     // Calculate the delay state for each basic block, iterating until we reach
