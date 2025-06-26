@@ -511,7 +511,7 @@ void Preprocessor::CreateString(StringRef Str, Token &Tok,
 SourceLocation Preprocessor::SplitToken(SourceLocation Loc, unsigned Length) {
   auto &SM = getSourceManager();
   SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SpellingLoc);
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(SpellingLoc);
   bool Invalid = false;
   StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
   if (Invalid)
@@ -567,6 +567,21 @@ void Preprocessor::EnterMainSourceFile() {
     // #imported, it won't be re-entered.
     if (OptionalFileEntryRef FE = SourceMgr.getFileEntryRefForID(MainFileID))
       markIncluded(*FE);
+
+    // Record the first PP token in the main file. This is used to generate
+    // better diagnostics for C++ modules.
+    //
+    // // This is a comment.
+    // #define FOO int  // note: add 'module;' to the start of the file
+    // ^ FirstPPToken   //       to introduce a global module fragment.
+    //
+    // export module M; // error: module declaration must occur
+    //                  //        at the start of the translation unit.
+    if (getLangOpts().CPlusPlusModules) {
+      std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
+      if (FirstPPTok && FirstPPTok->isFirstPPToken())
+        FirstPPTokenLoc = FirstPPTok->getLocation();
+    }
   }
 
   // Preprocess Predefines to populate the initial preprocessor state.

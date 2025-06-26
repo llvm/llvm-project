@@ -99,13 +99,14 @@ public:
 
   // Returns a reference to the first RangeInfo that overlaps with
   // [Info.LowerBound;Info.UpperBound], or, std::nullopt if there is no overlap
-  std::optional<const RangeInfo *> getOverlapping(const RangeInfo &Info) const;
+  LLVM_ABI std::optional<const RangeInfo *>
+  getOverlapping(const RangeInfo &Info) const;
 
   // Return the mapped RangeInfo at X or nullptr if no mapping exists
-  const RangeInfo *lookup(uint32_t X) const;
+  LLVM_ABI const RangeInfo *lookup(uint32_t X) const;
 
   // Removes all entries of the ResourceRange
-  void clear();
+  LLVM_ABI void clear();
 
   // Insert the required (sub-)intervals such that the interval of [a;b] =
   // [Info.LowerBound, Info.UpperBound] is covered and points to a valid
@@ -133,7 +134,7 @@ public:
   // Returns a reference to the first RangeInfo that overlaps with
   // [Info.LowerBound;Info.UpperBound], or, std::nullopt if there is no overlap
   // (equivalent to getOverlapping)
-  std::optional<const RangeInfo *> insert(const RangeInfo &Info);
+  LLVM_ABI std::optional<const RangeInfo *> insert(const RangeInfo &Info);
 };
 
 } // namespace rootsig

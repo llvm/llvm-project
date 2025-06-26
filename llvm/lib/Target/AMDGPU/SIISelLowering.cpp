@@ -945,6 +945,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   setTargetDAGCombine({ISD::ADD,
+                       ISD::PTRADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
                        ISD::USUBO_CARRY,
@@ -15084,6 +15085,49 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
+                                               DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (N1.getOpcode() == ISD::ADD) {
+    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if z is a constant,
+    //    y is not, and (add y, z) is used only once.
+    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if y is a constant,
+    //    z is not, and (add y, z) is used only once.
+    // The goal is to move constant offsets to the outermost ptradd, to create
+    // more opportunities to fold offsets into memory instructions.
+    // Together with the generic combines in DAGCombiner.cpp, this also
+    // implements (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y)).
+    //
+    // This transform is here instead of in the general DAGCombiner as it can
+    // turn in-bounds pointer arithmetic out-of-bounds, which is problematic for
+    // AArch64's CPA.
+    SDValue X = N0;
+    SDValue Y = N1.getOperand(0);
+    SDValue Z = N1.getOperand(1);
+    if (N1.hasOneUse()) {
+      bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+      bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+      if (ZIsConstant != YIsConstant) {
+        // If both additions in the original were NUW, the new ones are as well.
+        SDNodeFlags Flags =
+            (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+        if (YIsConstant)
+          std::swap(Y, Z);
+
+        SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, Flags);
+        DCI.AddToWorklist(Inner.getNode());
+        return DAG.getMemBasePlusOffset(Inner, Z, DL, Flags);
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performSubCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -15622,6 +15666,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   case ISD::ADD:
     return performAddCombine(N, DCI);
+  case ISD::PTRADD:
+    return performPtrAddCombine(N, DCI);
   case ISD::SUB:
     return performSubCombine(N, DCI);
   case ISD::UADDO_CARRY:

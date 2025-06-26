@@ -97,6 +97,18 @@ static mlir::Value createIntCast(mlir::OpBuilder &bld, mlir::Value src,
   return bld.create<mlir::LLVM::BitcastOp>(loc, dstTy, src);
 }
 
+static mlir::LLVM::Visibility
+lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
+  switch (visibilityKind) {
+  case cir::VisibilityKind::Default:
+    return ::mlir::LLVM::Visibility::Default;
+  case cir::VisibilityKind::Hidden:
+    return ::mlir::LLVM::Visibility::Hidden;
+  case cir::VisibilityKind::Protected:
+    return ::mlir::LLVM::Visibility::Protected;
+  }
+}
+
 /// Emits the value from memory as expected by its users. Should be called when
 /// the memory represetnation of a CIR type is not equal to its scalar
 /// representation.
@@ -1014,9 +1026,12 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
   assert(!cir::MissingFeatures::opFuncCallingConv());
   for (mlir::NamedAttribute attr : func->getAttrs()) {
+    assert(!cir::MissingFeatures::opFuncCallingConv());
     if (attr.getName() == mlir::SymbolTable::getSymbolAttrName() ||
         attr.getName() == func.getFunctionTypeAttrName() ||
         attr.getName() == getLinkageAttrNameString() ||
+        attr.getName() == func.getGlobalVisibilityAttrName() ||
+        attr.getName() == func.getDsoLocalAttrName() ||
         (filterArgAndResAttrs &&
          (attr.getName() == func.getArgAttrsAttrName() ||
           attr.getName() == func.getResAttrsAttrName())))
@@ -1032,8 +1047,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
 
   cir::FuncType fnType = op.getFunctionType();
-  assert(!cir::MissingFeatures::opFuncDsoLocal());
-  bool isDsoLocal = false;
+  bool isDsoLocal = op.getDsoLocal();
   mlir::TypeConverter::SignatureConversion signatureConversion(
       fnType.getNumInputs());
 
@@ -1061,8 +1075,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
           mlir::isa<mlir::UnknownLoc>(loc)) &&
          "expected single location or unknown location here");
 
-  assert(!cir::MissingFeatures::opFuncLinkage());
-  mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::External;
+  mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   assert(!cir::MissingFeatures::opFuncCallingConv());
   mlir::LLVM::CConv cconv = mlir::LLVM::CConv::C;
   SmallVector<mlir::NamedAttribute, 4> attributes;
@@ -1072,7 +1085,11 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
       mlir::SymbolRefAttr(), attributes);
 
-  assert(!cir::MissingFeatures::opFuncVisibility());
+  assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
+
+  fn.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
+      getContext(), lowerCIRVisibilityToLLVMVisibility(
+                        op.getGlobalVisibilityAttr().getValue())));
 
   rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
   if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
@@ -1883,28 +1900,30 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMBrOpLowering,
                CIRToLLVMCallOpLowering,
                CIRToLLVMCmpOpLowering,
+               CIRToLLVMComplexCreateOpLowering,
+               CIRToLLVMComplexEqualOpLowering,
+               CIRToLLVMComplexImagOpLowering,
+               CIRToLLVMComplexRealOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMExpectOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
                CIRToLLVMSelectOpLowering,
-               CIRToLLVMSwitchFlatOpLowering,
                CIRToLLVMShiftOpLowering,
-               CIRToLLVMStackSaveOpLowering,
                CIRToLLVMStackRestoreOpLowering,
+               CIRToLLVMStackSaveOpLowering,
+               CIRToLLVMSwitchFlatOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering,
+               CIRToLLVMVecCmpOpLowering,
                CIRToLLVMVecCreateOpLowering,
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
-               CIRToLLVMVecCmpOpLowering,
-               CIRToLLVMVecSplatOpLowering,
-               CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecShuffleDynamicOpLowering,
-               CIRToLLVMVecTernaryOpLowering,
-               CIRToLLVMComplexCreateOpLowering,
-               CIRToLLVMComplexRealOpLowering
+               CIRToLLVMVecShuffleOpLowering,
+               CIRToLLVMVecSplatOpLowering,
+               CIRToLLVMVecTernaryOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2214,6 +2233,52 @@ mlir::LogicalResult CIRToLLVMComplexRealOpLowering::matchAndRewrite(
   mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
       op, resultLLVMTy, adaptor.getOperand(), llvm::ArrayRef<std::int64_t>{0});
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
+    cir::ComplexImagOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
+      op, resultLLVMTy, adaptor.getOperand(), llvm::ArrayRef<std::int64_t>{1});
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexEqualOpLowering::matchAndRewrite(
+    cir::ComplexEqualOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value lhs = adaptor.getLhs();
+  mlir::Value rhs = adaptor.getRhs();
+
+  auto complexType = mlir::cast<cir::ComplexType>(op.getLhs().getType());
+  mlir::Type complexElemTy =
+      getTypeConverter()->convertType(complexType.getElementType());
+
+  mlir::Location loc = op.getLoc();
+  auto lhsReal =
+      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 0);
+  auto lhsImag =
+      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 1);
+  auto rhsReal =
+      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 0);
+  auto rhsImag =
+      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 1);
+
+  if (complexElemTy.isInteger()) {
+    auto realCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::eq, lhsReal, rhsReal);
+    auto imagCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::eq, lhsImag, rhsImag);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, realCmp, imagCmp);
+    return mlir::success();
+  }
+
+  auto realCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+      loc, mlir::LLVM::FCmpPredicate::oeq, lhsReal, rhsReal);
+  auto imagCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+      loc, mlir::LLVM::FCmpPredicate::oeq, lhsImag, rhsImag);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, realCmp, imagCmp);
   return mlir::success();
 }
 

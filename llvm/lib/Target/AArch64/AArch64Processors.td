@@ -897,7 +897,7 @@ def ProcessorFeatures {
                                    FeatureFPAC, FeatureFP16FML, FeatureRandGen,
                                    FeatureSSBS, FeatureLS64, FeatureCLRBHB,
                                    FeatureSPECRES2, FeatureSVEAES, FeatureSVE2SM4,
-                                   FeatureSVE2SHA3, FeatureSVE2, FeatureSVEBitPerm, FeatureETE,
+                                   FeatureSVESHA3, FeatureSVE2, FeatureSVEBitPerm, FeatureETE,
                                    FeatureMEC, FeatureFAMINMAX, FeatureFP8DOT2, FeatureFP8DOT4,
                                    FeatureFP8FMA, FeatureLUT];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
@@ -910,7 +910,7 @@ def ProcessorFeatures {
                                     FeatureLS64, FeatureLUT, FeatureMEC,
                                     FeatureMTE, FeaturePerfMon, FeatureRandGen,
                                     FeatureSPE, FeatureSPE_EEF, FeatureSSBS,
-                                    FeatureSVEBitPerm, FeatureSVE2SHA3,
+                                    FeatureSVEBitPerm, FeatureSVESHA3,
                                     FeatureSVE2SM4, FeatureSVEAES];
   list<SubtargetFeature> AppleA7  = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON,FeaturePerfMon];
@@ -1107,7 +1107,7 @@ def ProcessorFeatures {
                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureSSBS, FeatureCCIDX,
                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
-  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVE2SM4, FeatureSVEAES, FeatureSVE2SHA3]);
+  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVE2SM4, FeatureSVEAES, FeatureSVESHA3]);
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not

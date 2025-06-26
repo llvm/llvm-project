@@ -1172,6 +1172,10 @@ void Verifier::visitDISubrangeType(const DISubrangeType &N) {
   CheckDI(!Bias || isa<ConstantAsMetadata>(Bias) || isa<DIVariable>(Bias) ||
               isa<DIExpression>(Bias),
           "Bias must be signed constant or DIVariable or DIExpression", &N);
+  // Subrange types currently only support constant size.
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size),
+          "SizeInBits must be a constant");
 }
 
 void Verifier::visitDISubrange(const DISubrange &N) {
@@ -1233,6 +1237,10 @@ void Verifier::visitDIBasicType(const DIBasicType &N) {
               N.getTag() == dwarf::DW_TAG_unspecified_type ||
               N.getTag() == dwarf::DW_TAG_string_type,
           "invalid tag", &N);
+  // Basic types currently only support constant size.
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size),
+          "SizeInBits must be a constant");
 }
 
 void Verifier::visitDIFixedPointType(const DIFixedPointType &N) {
@@ -1313,6 +1321,11 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
             "DWARF address space only applies to pointer or reference types",
             &N);
   }
+
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
+              isa<DIExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression");
 }
 
 /// Detect mutually exclusive flags.
@@ -1400,6 +1413,11 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
   if (N.getTag() == dwarf::DW_TAG_array_type) {
     CheckDI(N.getRawBaseType(), "array types must have a base type", &N);
   }
+
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
+              isa<DIExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression");
 }
 
 void Verifier::visitDISubroutineType(const DISubroutineType &N) {
@@ -2518,8 +2536,8 @@ void Verifier::verifyFunctionMetadata(
             "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Check(ProfName == "function_entry_count" ||
-                ProfName == "synthetic_function_entry_count",
+      Check(ProfName == MDProfLabels::FunctionEntryCount ||
+                ProfName == MDProfLabels::SyntheticFunctionEntryCount,
             "first operand should be 'function_entry_count'"
             " or 'synthetic_function_entry_count'",
             MD);
@@ -4975,7 +4993,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   StringRef ProfName = MDS->getString();
 
   // Check consistency of !prof branch_weights metadata.
-  if (ProfName == "branch_weights") {
+  if (ProfName == MDProfLabels::BranchWeights) {
     unsigned NumBranchWeights = getNumBranchWeights(*MD);
     if (isa<InvokeInst>(&I)) {
       Check(NumBranchWeights == 1 || NumBranchWeights == 2,
@@ -5008,6 +5026,9 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
             "!prof brunch_weights operand is not a const int");
     }
+  } else {
+    Check(ProfName == MDProfLabels::ValueProfile,
+          "expected either branch_weights or VP profile name", MD);
   }
 }
 

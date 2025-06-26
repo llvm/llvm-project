@@ -160,13 +160,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case NVPTXISD::StoreParam:
   case NVPTXISD::StoreParamV2:
   case NVPTXISD::StoreParamV4:
-  case NVPTXISD::StoreParamS32:
-  case NVPTXISD::StoreParamU32:
     if (tryStoreParam(N))
-      return;
-    break;
-  case ISD::INTRINSIC_WO_CHAIN:
-    if (tryIntrinsicNoChain(N))
       return;
     break;
   case ISD::INTRINSIC_W_CHAIN:
@@ -904,25 +898,6 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
   return {InstructionOrdering, Scope};
 }
 
-bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
-  unsigned IID = N->getConstantOperandVal(0);
-  switch (IID) {
-  default:
-    return false;
-  case Intrinsic::nvvm_texsurf_handle_internal:
-    SelectTexSurfHandle(N);
-    return true;
-  }
-}
-
-void NVPTXDAGToDAGISel::SelectTexSurfHandle(SDNode *N) {
-  // Op 0 is the intrinsic ID
-  SDValue Wrapper = N->getOperand(1);
-  SDValue GlobalVal = Wrapper.getOperand(0);
-  ReplaceNode(N, CurDAG->getMachineNode(NVPTX::texsurf_handles, SDLoc(N),
-                                        MVT::i64, GlobalVal));
-}
-
 void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
   SDValue Src = N->getOperand(0);
   AddrSpaceCastSDNode *CastN = cast<AddrSpaceCastSDNode>(N);
@@ -1364,20 +1339,18 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   SDValue Offset, Base;
   SelectADDR(ST->getBasePtr(), Base, Offset);
 
-  SDValue Ops[] = {Value,
+  SDValue Ops[] = {selectPossiblyImm(Value),
                    getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
                    getI32Imm(CodeAddrSpace, DL),
-                   getI32Imm(NVPTX::PTXLdStInstCode::Untyped, DL),
                    getI32Imm(ToTypeWidth, DL),
                    Base,
                    Offset,
                    Chain};
 
-  const MVT::SimpleValueType SourceVT =
-      Value.getNode()->getSimpleValueType(0).SimpleTy;
-  const std::optional<unsigned> Opcode = pickOpcodeForVT(
-      SourceVT, NVPTX::ST_i8, NVPTX::ST_i16, NVPTX::ST_i32, NVPTX::ST_i64);
+  const std::optional<unsigned> Opcode =
+      pickOpcodeForVT(Value.getSimpleValueType().SimpleTy, NVPTX::ST_i8,
+                      NVPTX::ST_i16, NVPTX::ST_i32, NVPTX::ST_i64);
   if (!Opcode)
     return false;
 
@@ -1414,7 +1387,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   const unsigned NumElts = getLoadStoreVectorNumElts(ST);
 
-  SmallVector<SDValue, 16> Ops(ST->ops().slice(1, NumElts));
+  SmallVector<SDValue, 16> Ops;
+  for (auto &V : ST->ops().slice(1, NumElts))
+    Ops.push_back(selectPossiblyImm(V));
   SDValue Addr = N->getOperand(NumElts + 1);
   const unsigned ToTypeWidth = TotalWidth / NumElts;
 
@@ -1425,9 +1400,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   SelectADDR(Addr, Base, Offset);
 
   Ops.append({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
-              getI32Imm(CodeAddrSpace, DL),
-              getI32Imm(NVPTX::PTXLdStInstCode::Untyped, DL),
-              getI32Imm(ToTypeWidth, DL), Base, Offset, Chain});
+              getI32Imm(CodeAddrSpace, DL), getI32Imm(ToTypeWidth, DL), Base,
+              Offset, Chain});
 
   const MVT::SimpleValueType EltVT =
       ST->getOperand(1).getSimpleValueType().SimpleTy;
@@ -1717,8 +1691,6 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
-  case NVPTXISD::StoreParamU32:
-  case NVPTXISD::StoreParamS32:
   case NVPTXISD::StoreParam:
     NumElts = 1;
     break;
@@ -1796,27 +1768,6 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
     }
     }
     break;
-  // Special case: if we have a sign-extend/zero-extend node, insert the
-  // conversion instruction first, and use that as the value operand to
-  // the selected StoreParam node.
-  case NVPTXISD::StoreParamU32: {
-    Opcode = NVPTX::StoreParamI32_r;
-    SDValue CvtNone = CurDAG->getTargetConstant(NVPTX::PTXCvtMode::NONE, DL,
-                                                MVT::i32);
-    SDNode *Cvt = CurDAG->getMachineNode(NVPTX::CVT_u32_u16, DL,
-                                         MVT::i32, Ops[0], CvtNone);
-    Ops[0] = SDValue(Cvt, 0);
-    break;
-  }
-  case NVPTXISD::StoreParamS32: {
-    Opcode = NVPTX::StoreParamI32_r;
-    SDValue CvtNone = CurDAG->getTargetConstant(NVPTX::PTXCvtMode::NONE, DL,
-                                                MVT::i32);
-    SDNode *Cvt = CurDAG->getMachineNode(NVPTX::CVT_s32_s16, DL,
-                                         MVT::i32, Ops[0], CvtNone);
-    Ops[0] = SDValue(Cvt, 0);
-    break;
-  }
   }
 
   SDVTList RetVTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
@@ -2105,22 +2056,14 @@ static inline bool isAddLike(const SDValue V) {
 // selectBaseADDR - Match a dag node which will serve as the base address for an
 // ADDR operand pair.
 static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
-  // Return true if TGA or ES.
-  if (N.getOpcode() == ISD::TargetGlobalAddress ||
-      N.getOpcode() == ISD::TargetExternalSymbol)
-    return N;
-
-  if (N.getOpcode() == NVPTXISD::Wrapper)
-    return N.getOperand(0);
-
-  // addrspacecast(Wrapper(arg_symbol) to addrspace(PARAM)) -> arg_symbol
-  if (AddrSpaceCastSDNode *CastN = dyn_cast<AddrSpaceCastSDNode>(N))
-    if (CastN->getSrcAddressSpace() == ADDRESS_SPACE_GENERIC &&
-        CastN->getDestAddressSpace() == ADDRESS_SPACE_PARAM &&
-        CastN->getOperand(0).getOpcode() == NVPTXISD::Wrapper)
-      return selectBaseADDR(CastN->getOperand(0).getOperand(0), DAG);
-
-  if (auto *FIN = dyn_cast<FrameIndexSDNode>(N))
+  if (const auto *GA = dyn_cast<GlobalAddressSDNode>(N))
+    return DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(N),
+                                       GA->getValueType(0), GA->getOffset(),
+                                       GA->getTargetFlags());
+  if (const auto *ES = dyn_cast<ExternalSymbolSDNode>(N))
+    return DAG->getTargetExternalSymbol(ES->getSymbol(), ES->getValueType(0),
+                                        ES->getTargetFlags());
+  if (const auto *FIN = dyn_cast<FrameIndexSDNode>(N))
     return DAG->getTargetFrameIndex(FIN->getIndex(), FIN->getValueType(0));
 
   return N;
@@ -2156,6 +2099,19 @@ bool NVPTXDAGToDAGISel::SelectADDR(SDValue Addr, SDValue &Base,
   Offset = accumulateOffset(Addr, SDLoc(Addr), CurDAG);
   Base = selectBaseADDR(Addr, CurDAG);
   return true;
+}
+
+SDValue NVPTXDAGToDAGISel::selectPossiblyImm(SDValue V) {
+  if (V.getOpcode() == ISD::BITCAST)
+    V = V.getOperand(0);
+
+  if (auto *CN = dyn_cast<ConstantSDNode>(V))
+    return CurDAG->getTargetConstant(CN->getAPIntValue(), SDLoc(V),
+                                     V.getValueType());
+  if (auto *CN = dyn_cast<ConstantFPSDNode>(V))
+    return CurDAG->getTargetConstantFP(CN->getValueAPF(), SDLoc(V),
+                                       V.getValueType());
+  return V;
 }
 
 bool NVPTXDAGToDAGISel::ChkMemSDNodeAddressSpace(SDNode *N,
