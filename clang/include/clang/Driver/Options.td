@@ -3838,6 +3838,24 @@ def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
   MarshallingInfoFlag<CodeGenOpts<"HotPatch">>;
+
+// See llvm/lib/CodeGen/WindowsSecureHotPatching.cpp
+def fms_secure_hotpatch_functions_file
+    : Joined<["-"], "fms-secure-hotpatch-functions-file=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MarshallingInfoString<CodeGenOpts<"MSSecureHotPatchFunctionsFile">>,
+      HelpText<"Path to a file that contains a list of mangled names of "
+               "functions that should be hot-patched for Windows Secure "
+               "Hot-Patching">;
+def fms_secure_hotpatch_functions_list
+    : CommaJoined<["-"], "fms-secure-hotpatch-functions-list=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MarshallingInfoStringVector<CodeGenOpts<"MSSecureHotPatchFunctionsList">>,
+      HelpText<"List of mangled symbol names of functions that should be "
+               "hot-patched for Windows Secure Hot-Patching">;
+
 def fpcc_struct_return : Flag<["-"], "fpcc-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Override the default ABI to return all structs on the stack">;
@@ -9294,6 +9312,20 @@ def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
 def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
+def fdx_rootsignature_version :
+  Joined<["-"], "fdx-rootsignature-version=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Root Signature Version">,
+  Values<"rootsig_1_0,rootsig_1_1">,
+  NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
+  NormalizedValues<["V1_0", "V1_1"]>,
+  MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
+def dxc_rootsig_ver :
+  Separate<["/", "-"], "force-rootsig-ver">,
+  Alias<fdx_rootsignature_version>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,
@@ -9326,6 +9358,16 @@ def fspv_extension_EQ
       Group<dxc_Group>,
       HelpText<"Specify the available SPIR-V extensions. If this option is not "
                "specified, then all extensions are available.">;
+def fvk_use_dx_layout
+    : DXCFlag<"fvk-use-dx-layout">,
+      HelpText<"Use DirectX memory layout for Vulkan resources.">;
+def fvk_use_gl_layout : DXCFlag<"fvk-use-gl-layout">,
+                        HelpText<"Use strict OpenGL std140/std430 memory "
+                                 "layout for Vulkan resources.">;
+def fvk_use_scalar_layout
+    : DXCFlag<"fvk-use-scalar-layout">,
+      HelpText<"Use scalar memory layout for Vulkan resources.">;
+
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,

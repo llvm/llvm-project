@@ -1610,7 +1610,7 @@ def GlobalOp : CIR_Op<"global",
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
-                       UnitAttr:$dsolocal,
+                       UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
@@ -1618,7 +1618,7 @@ def GlobalOp : CIR_Op<"global",
     (`` $global_visibility^)?
     $linkage
     (`comdat` $comdat^)?
-    (`dsolocal` $dsolocal^)?
+    (`dso_local` $dso_local^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
     attr-dict
@@ -1737,16 +1737,40 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
 def FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
+  DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   IsolatedFromAbove
 ]> {
   let summary = "Declare or define a function";
   let description = [{
     The `cir.func` operation defines a function, similar to the `mlir::FuncOp`
     built-in.
+
+    The function linkage information is specified by `linkage`, as defined by
+    `GlobalLinkageKind` attribute.
+
+    Example:
+
+    ```mlir
+    // External function definitions.
+    cir.func @abort()
+
+    // A function with internal linkage.
+    cir.func internal @count(%x: i64) -> (i64)
+      return %x : i64
+
+    // Linkage information
+    cir.func linkonce_odr @some_method(...)
+    ```
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$dso_local,
+                       DefaultValuedAttr<CIR_GlobalLinkageKind,
+                                         "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs);
 
@@ -1754,8 +1778,10 @@ def FuncOp : CIR_Op<"func", [
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
-                                 "FuncType":$type)>];
+  let builders = [OpBuilder<(ins
+    "llvm::StringRef":$sym_name, "FuncType":$type,
+    CArg<"cir::GlobalLinkageKind", "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)
+  >];
 
   let extraClassDeclaration = [{
     /// Returns the region on the current operation that is callable. This may
@@ -2372,6 +2398,64 @@ def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
+  let summary = "Extract the real part of a complex value";
+  let description = [{
+    `cir.complex.real` operation takes an operand of `!cir.complex` type and
+    yields the real part of it.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    ```
+  }];
+
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins CIR_ComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagOp
+//===----------------------------------------------------------------------===//
+
+def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
+  let summary = "Extract the imaginary part of a complex value";
+  let description = [{
+    `cir.complex.imag` operation takes an operand of `!cir.complex` type and
+    yields the imaginary part of it.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.imag %0 : !cir.complex<!cir.float> -> !cir.float
+    ```
+  }];
+
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins CIR_ComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
@@ -2390,6 +2474,43 @@ def AssumeOp : CIR_Op<"assume"> {
 
   let assemblyFormat = [{
     $predicate `:` type($predicate) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Branch Probability Operations
+//===----------------------------------------------------------------------===//
+
+def ExpectOp : CIR_Op<"expect",
+  [Pure, AllTypesMatch<["result", "val", "expected"]>]> {
+  let summary = "Tell the optimizer that two values are likely to be equal.";
+  let description = [{
+    The `cir.expect` operation may take 2 or 3 arguments.
+
+    When the argument `prob` is missing, this operation effectively models the
+    `__builtin_expect` builtin function. It tells the optimizer that `val` and
+    `expected` are likely to be equal.
+
+    When the argument `prob` is present, this operation effectively models the
+    `__builtin_expect_with_probability` builtin function. It tells the
+    optimizer that `val` and `expected` are equal to each other with a certain
+    probability.
+
+    `val` and `expected` must be integers and their types must match.
+
+    The result of this operation is always equal to `val`.
+  }];
+
+  let arguments = (ins
+    CIR_AnyFundamentalIntType:$val,
+    CIR_AnyFundamentalIntType:$expected,
+    OptionalAttr<F64Attr>:$prob
+  );
+
+  let results = (outs CIR_AnyFundamentalIntType:$result);
+
+  let assemblyFormat = [{
+    `(` $val`,` $expected (`,` $prob^)? `)` `:` type($val) attr-dict
   }];
 }
 

@@ -482,6 +482,15 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
+static void serializeInfo(const VarInfo &I, json::Object &Obj,
+                          std::optional<StringRef> RepositoryUrl) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl);
+  Obj["IsStatic"] = I.IsStatic;
+  auto TypeObj = Object();
+  serializeInfo(I.Type, TypeObj);
+  Obj["Type"] = std::move(TypeObj);
+}
+
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
                           std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
@@ -518,6 +527,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
 
   if (!I.Children.Concepts.empty())
     serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
+
+  if (!I.Children.Variables.empty()) {
+    serializeArray(I.Children.Variables, Obj, "Variables", SerializeInfo);
+  }
 
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
@@ -573,6 +586,7 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_enum:
   case InfoType::IT_function:
   case InfoType::IT_typedef:
+  case InfoType::IT_variable:
     break;
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected info type");
