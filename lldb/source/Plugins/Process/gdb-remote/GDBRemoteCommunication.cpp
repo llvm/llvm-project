@@ -944,7 +944,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 #if defined(__APPLE__)
     // Using a named pipe as debugserver does not support --pipe.
     Status error = socket_pipe.CreateWithUniqueName("debugserver-named-pipe",
-                                                    false, named_pipe_path);
+                                                    named_pipe_path);
     if (error.Fail()) {
       LLDB_LOG(log, "named pipe creation failed: {0}", error);
       return error;
@@ -953,7 +953,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     debugserver_args.AppendArgument(named_pipe_path);
 #else
     // Using an unnamed pipe as it's simpler.
-    Status error = socket_pipe.CreateNew(true);
+    Status error = socket_pipe.CreateNew();
     if (error.Fail()) {
       LLDB_LOG(log, "unnamed pipe creation failed: {0}", error);
       return error;
@@ -961,7 +961,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     pipe_t write = socket_pipe.GetWritePipe();
     debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
     debugserver_args.AppendArgument(llvm::to_string(write));
-    launch_info.AppendCloseFileAction(socket_pipe.GetReadFileDescriptor());
+    launch_info.AppendDuplicateFileAction((int64_t)write, (int64_t)write);
 #endif
   }
 
@@ -1044,7 +1044,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
   Status error;
   if (named_pipe_path.size() > 0) {
-    error = socket_pipe.OpenAsReader(named_pipe_path, false);
+    error = socket_pipe.OpenAsReader(named_pipe_path);
     if (error.Fail()) {
       LLDB_LOG(log, "failed to open named pipe {0} for reading: {1}",
                named_pipe_path, error);

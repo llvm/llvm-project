@@ -28,12 +28,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
+#define LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
+
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/MathExtras.h"
 #include <climits>
-
-#ifndef LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
-#define LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
 
 namespace clang {
 

@@ -34,16 +34,6 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 16
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP34:%.*]] = mul nuw i64 [[TMP33]], 32
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP34]]
-; CHECK-NEXT:    [[TMP36:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP37:%.*]] = mul nuw i64 [[TMP36]], 48
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP37]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 16 x i8>, ptr [[TMP29]], align 1
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 16 x i8>, ptr [[TMP35]], align 1
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 16 x i8>, ptr [[TMP38]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
@@ -64,7 +54,10 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP11]])
+; CHECK-NEXT:    [[TMP33:%.*]] = or <vscale x 16 x i1> [[TMP11]], [[TMP30]]
+; CHECK-NEXT:    [[TMP34:%.*]] = or <vscale x 16 x i1> [[TMP33]], [[TMP31]]
+; CHECK-NEXT:    [[TMP35:%.*]] = or <vscale x 16 x i1> [[TMP34]], [[TMP32]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP35]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT3]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_SPLIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]

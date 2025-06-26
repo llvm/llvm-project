@@ -647,7 +647,7 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
-
+  
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -883,6 +883,7 @@ Bug Fixes to AST Handling
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
 - Fixed dependency calculation for TypedefTypes (#GH89774)
+- Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
