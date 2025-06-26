@@ -261,12 +261,16 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Filter, SamplerFilter::Anisotropic);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Wrap);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Wrap);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU,
+            llvm::dxbc::TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV,
+            llvm::dxbc::TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW,
+            llvm::dxbc::TextureAddressMode::Wrap);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 16u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::LessEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc,
+            llvm::dxbc::ComparisonFunc::LessEqual);
   ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
             llvm::dxbc::StaticBorderColor::OpaqueWhite);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
@@ -282,12 +286,16 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Filter,
             SamplerFilter::MaximumMinPointMagLinearMipPoint);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Mirror);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Border);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Clamp);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU,
+            llvm::dxbc::TextureAddressMode::Mirror);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV,
+            llvm::dxbc::TextureAddressMode::Border);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW,
+            llvm::dxbc::TextureAddressMode::Clamp);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 230.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 3u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::NotEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc,
+            llvm::dxbc::ComparisonFunc::NotEqual);
   ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
             llvm::dxbc::StaticBorderColor::OpaqueBlackUint);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 4.2f);

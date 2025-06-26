@@ -195,12 +195,12 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
   Sampler.Reg = {RegisterType::SReg, 0};
 
   Sampler.Filter = SamplerFilter::ComparisonMinMagLinearMipPoint;
-  Sampler.AddressU = TextureAddressMode::Mirror;
-  Sampler.AddressV = TextureAddressMode::Border;
-  Sampler.AddressW = TextureAddressMode::Clamp;
+  Sampler.AddressU = llvm::dxbc::TextureAddressMode::Mirror;
+  Sampler.AddressV = llvm::dxbc::TextureAddressMode::Border;
+  Sampler.AddressW = llvm::dxbc::TextureAddressMode::Clamp;
   Sampler.MipLODBias = 4.8f;
   Sampler.MaxAnisotropy = 32;
-  Sampler.CompFunc = ComparisonFunc::NotEqual;
+  Sampler.CompFunc = llvm::dxbc::ComparisonFunc::NotEqual;
   Sampler.BorderColor = llvm::dxbc::StaticBorderColor::OpaqueBlack;
   Sampler.MinLOD = 1.0f;
   Sampler.MaxLOD = 32.0f;

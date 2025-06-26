@@ -1036,7 +1036,7 @@ RootSignatureParser::parseSamplerFilter() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::TextureAddressMode>
+std::optional<llvm::dxbc::TextureAddressMode>
 RootSignatureParser::parseTextureAddressMode() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1052,7 +1052,7 @@ RootSignatureParser::parseTextureAddressMode() {
   switch (CurToken.TokKind) {
 #define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT)                                   \
   case TokenKind::en_##NAME:                                                   \
-    return TextureAddressMode::NAME;                                           \
+    return llvm::dxbc::TextureAddressMode::NAME;                               \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
@@ -1062,7 +1062,7 @@ RootSignatureParser::parseTextureAddressMode() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::ComparisonFunc>
+std::optional<llvm::dxbc::ComparisonFunc>
 RootSignatureParser::parseComparisonFunc() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1078,7 +1078,7 @@ RootSignatureParser::parseComparisonFunc() {
   switch (CurToken.TokKind) {
 #define COMPARISON_FUNC_ENUM(NAME, LIT)                                        \
   case TokenKind::en_##NAME:                                                   \
-    return ComparisonFunc::NAME;                                               \
+    return llvm::dxbc::ComparisonFunc::NAME;                                   \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:

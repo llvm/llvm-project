@@ -112,12 +112,12 @@ private:
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<llvm::hlsl::rootsig::SamplerFilter> Filter;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressU;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressV;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressW;
+    std::optional<llvm::dxbc::TextureAddressMode> AddressU;
+    std::optional<llvm::dxbc::TextureAddressMode> AddressV;
+    std::optional<llvm::dxbc::TextureAddressMode> AddressW;
     std::optional<float> MipLODBias;
     std::optional<uint32_t> MaxAnisotropy;
-    std::optional<llvm::hlsl::rootsig::ComparisonFunc> CompFunc;
+    std::optional<llvm::dxbc::ComparisonFunc> CompFunc;
     std::optional<llvm::dxbc::StaticBorderColor> BorderColor;
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;
@@ -134,9 +134,8 @@ private:
   /// Parsing methods of various enums
   std::optional<llvm::dxbc::ShaderVisibility> parseShaderVisibility();
   std::optional<llvm::hlsl::rootsig::SamplerFilter> parseSamplerFilter();
-  std::optional<llvm::hlsl::rootsig::TextureAddressMode>
-  parseTextureAddressMode();
-  std::optional<llvm::hlsl::rootsig::ComparisonFunc> parseComparisonFunc();
+  std::optional<llvm::dxbc::TextureAddressMode> parseTextureAddressMode();
+  std::optional<llvm::dxbc::ComparisonFunc> parseComparisonFunc();
   std::optional<llvm::dxbc::StaticBorderColor> parseStaticBorderColor();
   std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
   std::optional<llvm::dxbc::DescriptorRangeFlags> parseDescriptorRangeFlags();

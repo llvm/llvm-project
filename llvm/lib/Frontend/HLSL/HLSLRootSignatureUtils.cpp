@@ -142,35 +142,16 @@ static raw_ostream &operator<<(raw_ostream &OS, const SamplerFilter &Filter) {
   return OS;
 }
 
-static const EnumEntry<TextureAddressMode> TextureAddressModeNames[] = {
-    {"Wrap", TextureAddressMode::Wrap},
-    {"Mirror", TextureAddressMode::Mirror},
-    {"Clamp", TextureAddressMode::Clamp},
-    {"Border", TextureAddressMode::Border},
-    {"MirrorOnce", TextureAddressMode::MirrorOnce},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const TextureAddressMode &Address) {
-  printEnum(OS, Address, ArrayRef(TextureAddressModeNames));
+                               const dxbc::TextureAddressMode &Address) {
+  printEnum(OS, Address, dxbc::getTextureAddressModes());
 
   return OS;
 }
 
-static const EnumEntry<ComparisonFunc> ComparisonFuncNames[] = {
-    {"Never", ComparisonFunc::Never},
-    {"Less", ComparisonFunc::Less},
-    {"Equal", ComparisonFunc::Equal},
-    {"LessEqual", ComparisonFunc::LessEqual},
-    {"Greater", ComparisonFunc::Greater},
-    {"NotEqual", ComparisonFunc::NotEqual},
-    {"GreaterEqual", ComparisonFunc::GreaterEqual},
-    {"Always", ComparisonFunc::Always},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const ComparisonFunc &CompFunc) {
-  printEnum(OS, CompFunc, ArrayRef(ComparisonFuncNames));
+                               const dxbc::ComparisonFunc &CompFunc) {
+  printEnum(OS, CompFunc, dxbc::getComparisonFuncs());
 
   return OS;
 }
