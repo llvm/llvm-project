@@ -1243,6 +1243,10 @@ void Verifier::visitDISubrangeType(const DISubrangeType &N) {
   CheckDI(!Bias || isa<ConstantAsMetadata>(Bias) || isa<DIVariable>(Bias) ||
               isa<DIExpression>(Bias),
           "Bias must be signed constant or DIVariable or DIExpression", &N);
+  // Subrange types currently only support constant size.
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size),
+          "SizeInBits must be a constant");
 }
 
 void Verifier::visitDISubrange(const DISubrange &N) {
@@ -1304,6 +1308,10 @@ void Verifier::visitDIBasicType(const DIBasicType &N) {
               N.getTag() == dwarf::DW_TAG_unspecified_type ||
               N.getTag() == dwarf::DW_TAG_string_type,
           "invalid tag", &N);
+  // Basic types currently only support constant size.
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size),
+          "SizeInBits must be a constant");
 }
 
 void Verifier::visitDIFixedPointType(const DIFixedPointType &N) {
@@ -1384,6 +1392,11 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
             "DWARF address space only applies to pointer or reference types",
             &N);
   }
+
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
+              isa<DIExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression");
 }
 
 /// Detect mutually exclusive flags.
@@ -1471,6 +1484,11 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
   if (N.getTag() == dwarf::DW_TAG_array_type) {
     CheckDI(N.getRawBaseType(), "array types must have a base type", &N);
   }
+
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
+              isa<DIExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression");
 }
 
 void Verifier::visitDISubroutineType(const DISubroutineType &N) {
