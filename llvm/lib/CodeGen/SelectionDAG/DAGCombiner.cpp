@@ -17010,8 +17010,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     return SDValue();
 
   const SDNodeFlags Flags = N->getFlags();
-  bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                              Options.UnsafeFPMath || HasFMAD);
+  bool AllowFusionGlobally =
+      (Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD);
 
   // If the subtraction is not contractable, do not combine.
   if (!AllowFusionGlobally && !N->getFlags().hasAllowContract())
@@ -17167,7 +17167,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   }
 
   auto isReassociable = [&Options](SDNode *N) {
-    return Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
+    return N->getFlags().hasAllowReassociation();
   };
 
   auto isContractableAndReassociableFMUL = [&isContractableFMUL,
@@ -17181,7 +17181,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
 
   // More folding opportunities when target permits.
   if (Aggressive && isReassociable(N)) {
-    bool CanFuse = Options.UnsafeFPMath || N->getFlags().hasAllowContract();
+    bool CanFuse = N->getFlags().hasAllowContract();
     // fold (fsub (fma x, y, (fmul u, v)), z)
     //   -> (fma x, y (fma u, v, (fneg z)))
     if (CanFuse && isFusedOp(N0) &&
