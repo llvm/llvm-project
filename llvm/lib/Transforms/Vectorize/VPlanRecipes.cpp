@@ -850,8 +850,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::AnyOf: {
-    Value *A = State.get(getOperand(0));
-    return Builder.CreateOrReduce(A);
+    Value *Res = State.get(getOperand(0));
+    for (VPValue *Op : drop_begin(operands()))
+      Res = Builder.CreateOr(Res, State.get(Op));
+    return Builder.CreateOrReduce(Res);
   }
   case VPInstruction::FirstActiveLane: {
     Value *Mask = State.get(getOperand(0));
