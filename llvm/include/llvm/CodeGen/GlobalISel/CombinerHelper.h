@@ -697,12 +697,9 @@ public:
   /// return an expression that implements it by multiplying by a magic number.
   /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
   MachineInstr *buildUDivorURemUsingMul(MachineInstr &MI) const;
-  /// Combine G_UDIV by constant into a multiply by magic constant.
-  bool matchUDivByConst(MachineInstr &MI) const;
-  void applyUDivByConst(MachineInstr &MI) const;
-  /// Combine G_UREM by constant into a multiply by magic constant.
-  bool matchURemByConst(MachineInstr &MI) const;
-  void applyURemByConst(MachineInstr &MI) const;
+  /// Combine G_UDIV or G_UREM by constant into a multiply by magic constant.
+  bool matchUDivorURemByConst(MachineInstr &MI) const;
+  void applyUDivorURemByConst(MachineInstr &MI) const;
 
   /// Given an G_SDIV \p MI expressing a signed divide by constant, return an
   /// expression that implements it by multiplying by a magic number.

@@ -5296,8 +5296,8 @@ bool CombinerHelper::matchSubAddSameReg(MachineInstr &MI,
 }
 
 MachineInstr *CombinerHelper::buildUDivorURemUsingMul(MachineInstr &MI) const {
-  unsigned opcode = MI.getOpcode();
-  assert(opcode == TargetOpcode::G_UDIV || opcode == TargetOpcode::G_UREM);
+  unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
   auto &UDivorRem = cast<GenericMachineInstr>(MI);
   Register Dst = UDivorRem.getReg(0);
   Register LHS = UDivorRem.getReg(1);
@@ -5456,15 +5456,16 @@ MachineInstr *CombinerHelper::buildUDivorURemUsingMul(MachineInstr &MI) const {
       Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
   auto ret = MIB.buildSelect(Ty, IsOne, LHS, Q);
 
-  if (opcode == TargetOpcode::G_UREM) {
+  if (Opcode == TargetOpcode::G_UREM) {
     auto Prod = MIB.buildMul(Ty, ret, RHS);
     return MIB.buildSub(Ty, LHS, Prod);
   }
   return ret;
 }
 
-bool CombinerHelper::matchUDivByConst(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_UDIV);
+bool CombinerHelper::matchUDivorURemByConst(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
   Register Dst = MI.getOperand(0).getReg();
   Register RHS = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -5481,7 +5482,8 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) const {
   if (MF.getFunction().hasMinSize())
     return false;
 
-  if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
+  if (Opcode == TargetOpcode::G_UDIV &&
+      MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     return matchUnaryPredicate(
         MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
   }
@@ -5501,51 +5503,8 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) const {
              {DstTy.isVector() ? DstTy.changeElementSize(1) : LLT::scalar(1),
               DstTy}}))
       return false;
-  }
-
-  return matchUnaryPredicate(
-      MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
-}
-
-void CombinerHelper::applyUDivByConst(MachineInstr &MI) const {
-  auto *NewMI = buildUDivorURemUsingMul(MI);
-  replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
-}
-
-bool CombinerHelper::matchURemByConst(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_UREM);
-  Register Dst = MI.getOperand(0).getReg();
-  Register RHS = MI.getOperand(2).getReg();
-  LLT DstTy = MRI.getType(Dst);
-
-  auto &MF = *MI.getMF();
-  AttributeList Attr = MF.getFunction().getAttributes();
-  const auto &TLI = getTargetLowering();
-  LLVMContext &Ctx = MF.getFunction().getContext();
-  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, Ctx), Attr))
-    return false;
-
-  // Don't do this for minsize because the instruction sequence is usually
-  // larger.
-  if (MF.getFunction().hasMinSize())
-    return false;
-
-  auto *RHSDef = MRI.getVRegDef(RHS);
-  if (!isConstantOrConstantVector(*RHSDef, MRI))
-    return false;
-
-  // Don't do this if the types are not going to be legal.
-  if (LI) {
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
-      return false;
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMULH, {DstTy}}))
-      return false;
-    if (!isLegalOrBeforeLegalizer(
-            {TargetOpcode::G_ICMP,
-             {DstTy.isVector() ? DstTy.changeElementSize(1) : LLT::scalar(1),
-              DstTy}}))
-      return false;
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
+    if (Opcode == TargetOpcode::G_UREM &&
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
       return false;
   }
 
@@ -5553,7 +5512,7 @@ bool CombinerHelper::matchURemByConst(MachineInstr &MI) const {
       MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
 }
 
-void CombinerHelper::applyURemByConst(MachineInstr &MI) const {
+void CombinerHelper::applyUDivorURemByConst(MachineInstr &MI) const {
   auto *NewMI = buildUDivorURemUsingMul(MI);
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
