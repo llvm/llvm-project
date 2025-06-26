@@ -26,10 +26,12 @@ def LLVM_TargetAttr : LLVM_Attr<"Target", "target", [LLVM_TargetAttrInterface]> 
     TODO
   }];
   let parameters = (ins "StringAttr":$triple,
-                        "StringAttr":$cpu,
-                        "TargetFeaturesAttr":$target_features);
+                        OptionalParameter<"StringAttr">:$chip,
+                        OptionalParameter<"TargetFeaturesAttr">:$features);
 
-  let assemblyFormat = "`<` $triple `,` $cpu `,` qualified($target_features) `>`";
+  let assemblyFormat = [{`<` `triple` `=` $triple
+                         (`,` `chip` `=` $chip^)?
+                         (`,` qualified($features)^)? `>`}];
 
   let extraClassDeclaration = [{
     std::optional<llvm::TargetMachine *> targetMachine = std::nullopt;

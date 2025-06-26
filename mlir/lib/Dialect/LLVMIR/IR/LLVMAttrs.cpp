@@ -433,7 +433,7 @@ FailureOr<llvm::TargetMachine *> TargetAttr::getTargetMachine() {
   std::string error;
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(getTriple(), error);
-  if (!error.empty()) {
+  if (!target || !error.empty()) {
     LLVM_DEBUG({
       llvm::dbgs() << "Failed to retrieve the target with: `" << error << "`\n";
     });
@@ -442,8 +442,8 @@ FailureOr<llvm::TargetMachine *> TargetAttr::getTargetMachine() {
   }
 
   targetMachine = {target->createTargetMachine(
-      llvm::Triple(getTriple().strref()), getCpu().strref(),
-      getTargetFeatures().getFeaturesString().c_str(), {}, {})};
+      llvm::Triple(getTriple().strref()), getChip() ? getChip().strref() : "",
+      getFeatures() ? getFeatures().getFeaturesString() : "", {}, {})};
 
   return {targetMachine.value()};
 }
@@ -467,13 +467,14 @@ FailureOr<llvm::DataLayout> TargetAttr::getDataLayout() {
 }
 
 FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
+  Attribute result;
   if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
     if (stringAttrKey.getValue() == "triple")
       return getTriple();
-    if (stringAttrKey.getValue() == "cpu")
-      return getCpu();
-    if (stringAttrKey.getValue() == "features")
-      return getTargetFeatures();
+    if (stringAttrKey.getValue() == "chip" && (result = getChip()))
+      return result;
+    if (stringAttrKey.getValue() == "features" && (result = getFeatures()))
+      return result;
   }
 
   return failure();
