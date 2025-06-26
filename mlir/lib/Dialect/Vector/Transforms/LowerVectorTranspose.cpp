@@ -436,6 +436,8 @@ private:
 void mlir::vector::populateVectorTransposeLoweringPatterns(
     RewritePatternSet &patterns,
     VectorTransposeLowering vectorTransposeLowering, PatternBenefit benefit) {
+  TransposeOp::getCanonicalizationPatterns(patterns, patterns.getContext());
+  ShapeCastOp::getCanonicalizationPatterns(patterns, patterns.getContext());
   patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
       vectorTransposeLowering, patterns.getContext(), benefit);
 }
