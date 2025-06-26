@@ -10614,8 +10614,8 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     return SDValue();
 
   EVT VT = Op.getValueType();
-  bool OverrideNEON = !Subtarget->isNeonAvailable() || VT.isFixedLengthVector();
-  if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT, OverrideNEON))
+  if (VT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
 
   bool IsParity = Op.getOpcode() == ISD::PARITY;
@@ -10639,7 +10639,9 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
       if (IsParity)
         Val = DAG.getNode(ISD::AND, DL, VT, Val, DAG.getConstant(1, DL, VT));
       return Val;
-    } else if (VT == MVT::i128) {
+    }
+
+    if (VT == MVT::i128) {
       Val = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Val);
       Val = convertToScalableVector(DAG, MVT::nxv2i64, Val);
       Val = DAG.getNode(ISD::CTPOP, DL, MVT::nxv2i64, Val);
