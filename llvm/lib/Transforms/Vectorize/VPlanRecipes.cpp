@@ -552,8 +552,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
     if (getOperand(1)->isLiveIn()) {
-        unsigned IdxToExtract = cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
-        return State.get(getOperand(0), VPLane(IdxToExtract));
+      unsigned IdxToExtract =
+          cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
+      return State.get(getOperand(0), VPLane(IdxToExtract));
     }
     Value *Vec = State.get(getOperand(0));
     Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
