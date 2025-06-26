@@ -10,7 +10,7 @@ function(get_clang_resource_dir out_var)
   cmake_parse_arguments(ARG "" "PREFIX;SUBDIR" "" ${ARGN})
 
   if(DEFINED CLANG_RESOURCE_DIR AND NOT CLANG_RESOURCE_DIR STREQUAL "")
-    set(ret_dir bin/${CLANG_RESOURCE_DIR})
+    cmake_path(APPEND bin ${CLANG_RESOURCE_DIR} OUTPUT_VARIABLE ret_dir)
   else()
     if (NOT CLANG_VERSION_MAJOR)
       string(REGEX MATCH "^[0-9]+" CLANG_VERSION_MAJOR ${PACKAGE_VERSION})
