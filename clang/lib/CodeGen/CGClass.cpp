@@ -1603,8 +1603,10 @@ namespace {
     auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
     // Clang 20 calls global operator delete after dtor call. Clang 21 and newer
     // call global operator delete inside of dtor body, as MSVC does.
-    bool Clang21AndNewer = CGF.getContext().getLangOpts().getClangABICompat() >
-                           LangOptions::ClangABI::Ver20;
+    ASTContext &Context = CGF.getContext();
+    bool Clang21AndNewer =
+        Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
+            Context.getLangOpts());
     if (Clang21AndNewer && OD->isDestroyingOperatorDelete()) {
       llvm::BasicBlock *CallDtor = CGF.createBasicBlock("dtor.call_dtor");
       llvm::BasicBlock *DontCallDtor = CGF.createBasicBlock("dtor.entry_cont");
@@ -1635,7 +1637,7 @@ namespace {
     CGF.EmitBlock(callDeleteBB);
     auto EmitDeleteAndGoToEnd = [&](const FunctionDecl *DeleteOp) {
       CGF.EmitDeleteCall(DeleteOp, LoadThisForDtorDelete(CGF, Dtor),
-                         CGF.getContext().getTagDeclType(ClassDecl));
+                         Context.getTagDeclType(ClassDecl));
       if (ReturnAfterDelete)
         CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
       else

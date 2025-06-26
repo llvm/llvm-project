@@ -894,8 +894,8 @@ void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                               const CXXDestructorDecl *Dtor) {
   // FIXME: Provide a source location here even though there's no
   // CXXMemberCallExpr for dtor call.
-  if (getContext().getLangOpts().getClangABICompat() <=
-      LangOptions::ClangABI::Ver20) {
+  if (!getContext().getTargetInfo().callGlobalDeleteInDeletingDtor(
+          getContext().getLangOpts())) {
     bool UseGlobalDelete = DE->isGlobalDelete();
     CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
     llvm::Value *MDThis =
@@ -2023,8 +2023,8 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
       llvm::IntegerType::getInt32Ty(CGF.getLLVMContext()),
       (DtorType == Dtor_Deleting) |
           4 * (D && D->isGlobalDelete() &&
-               Context.getLangOpts().getClangABICompat() >
-                   LangOptions::ClangABI::Ver20));
+               Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
+                   Context.getLangOpts())));
 
   QualType ThisTy;
   if (CE) {

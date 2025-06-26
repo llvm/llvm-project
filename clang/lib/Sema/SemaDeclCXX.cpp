@@ -11128,10 +11128,9 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       // newer call global operator delete inside of dtor body, as MSVC does.
       // So we don't really need to fetch global operator delete for Clang 20
       // ABI.
-      bool Clang21AndNewer = Context.getLangOpts().getClangABICompat() >
-                             LangOptions::ClangABI::Ver20;
-      if (Clang21AndNewer && isa<CXXMethodDecl>(OperatorDelete) &&
-          Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+      if (isa<CXXMethodDecl>(OperatorDelete) &&
+          Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
+              Context.getLangOpts())) {
         // In Microsoft ABI whenever a class has a defined operator delete,
         // scalar deleting destructors check the 3rd bit of the implicit
         // parameter and if it is set, then, global operator delete must be
