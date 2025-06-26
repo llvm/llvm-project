@@ -6239,7 +6239,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 /// pointer there's nothing we can do.
 ///
 /// If we have a GEP with more than 2 indices where the middle indices are all
-/// zeroes, we can replace it with 2 GEPs where the second has 2 operands.
+/// scalarizable, we can replace it with 2 GEPs where the second has 2 operands.
 ///
 /// If the final index isn't a vector or is a splat, we can emit a scalar GEP
 /// followed by a GEP with an all zeroes vector index. This will enable
@@ -6262,30 +6262,16 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     SmallVector<Value *, 2> Ops(GEP->operands());
 
     bool RewriteGEP = false;
-
-    if (Ops[0]->getType()->isVectorTy()) {
-      Ops[0] = getSplatValue(Ops[0]);
-      if (!Ops[0])
-        return false;
-      RewriteGEP = true;
-    }
-
     unsigned FinalIndex = Ops.size() - 1;
 
-    // Ensure all but the last index is 0.
-    // FIXME: This isn't strictly required. All that's required is that they are
-    // all scalars or splats.
-    for (unsigned i = 1; i < FinalIndex; ++i) {
-      auto *C = dyn_cast<Constant>(Ops[i]);
-      if (!C)
-        return false;
-      if (isa<VectorType>(C->getType()))
-        C = C->getSplatValue();
-      auto *CI = dyn_cast_or_null<ConstantInt>(C);
-      if (!CI || !CI->isZero())
-        return false;
-      // Scalarize the index if needed.
-      Ops[i] = CI;
+    // Ensure all but the last index are scalar
+    for (unsigned i = 0; i < FinalIndex; ++i) {
+      if (isa<VectorType>(Ops[i]->getType())) {
+        Ops[i] = getSplatValue(Ops[i]);
+        if (!Ops[i])
+          return false;
+        RewriteGEP = true;
+      }
     }
 
     // Try to scalarize the final index.
