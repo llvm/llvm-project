@@ -21041,7 +21041,7 @@ static SDValue trySQDMULHCombine(SDNode *N,
     return SDValue();
   unsigned SExtValue = RightShiftVec->getSExtValue();
 
-  if (SExtValue != ShiftAmt && SExtValue != (ShiftAmt - 1))
+  if (SExtValue != (ShiftAmt - 1))
     return SDValue();
 
   SDValue Mul = Sra.getOperand(0);
