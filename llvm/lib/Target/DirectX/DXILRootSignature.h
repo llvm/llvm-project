@@ -33,16 +33,43 @@ enum class RootSignatureElementKind {
   CBV = 5,
   DescriptorTable = 6,
 };
+
+class RootSignatureBindingInfo {
+  private:
+    SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> FuncToRsMap;
+
+  public:
+  using iterator =
+        SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>::iterator;
+
+  RootSignatureBindingInfo () = default;
+  RootSignatureBindingInfo(SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> Map) : FuncToRsMap(Map) {};
+
+  iterator find(const Function *F) { return FuncToRsMap.find(F); }
+
+  iterator end() { return FuncToRsMap.end(); }
+
+  std::optional<mcdxbc::RootSignatureDesc> getDescForFunction(const Function* F) {
+    const auto FuncRs = find(F);
+    if (FuncRs == end())
+      return std::nullopt;
+
+    return FuncRs->second;
+  }
+  
+};
+
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
   friend AnalysisInfoMixin<RootSignatureAnalysis>;
   static AnalysisKey Key;
 
 public:
-  RootSignatureAnalysis() = default;
 
-  using Result = SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>;
+RootSignatureAnalysis() = default;
 
-  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>
+  using Result = RootSignatureBindingInfo;
+  
+  RootSignatureBindingInfo
   run(Module &M, ModuleAnalysisManager &AM);
 };
 
@@ -52,20 +79,16 @@ public:
 /// passes which run through the legacy pass manager.
 class RootSignatureAnalysisWrapper : public ModulePass {
 private:
-  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> FuncToRsMap;
+  std::unique_ptr<RootSignatureBindingInfo> FuncToRsMap;
 
 public:
   static char ID;
+  using Result = RootSignatureBindingInfo;
 
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-  using iterator =
-      SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>::iterator;
-
-  iterator find(const Function *F) { return FuncToRsMap.find(F); }
-
-  iterator end() { return FuncToRsMap.end(); }
-
+  RootSignatureBindingInfo& getRSInfo() {return *FuncToRsMap;}
+  
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;

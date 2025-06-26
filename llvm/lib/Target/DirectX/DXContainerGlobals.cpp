@@ -160,7 +160,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
   assert(MMI.EntryPropertyVec.size() == 1);
 
-  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
   const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
   const auto &FuncRs = RSA.find(EntryFunction);
 
