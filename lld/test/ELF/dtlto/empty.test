@@ -4,8 +4,8 @@
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-RUN: opt t1.ll -o t1.o -O2
-RUN: opt t2.ll -o t2.o -O2
+RUN: opt t1.ll -o t1.o
+RUN: opt t2.ll -o t2.o
 
 ## Common command-line arguments. Note that mock.py does not do any compilation;
 ## instead, it simply writes the contents of the object files supplied on the
