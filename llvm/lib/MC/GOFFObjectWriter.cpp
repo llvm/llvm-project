@@ -275,6 +275,7 @@ class GOFFWriter {
 
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
+  void writeText(const MCSectionGOFF *MC);
   void writeEnd();
 
   void defineSectionSymbols(const MCSectionGOFF &Section);
@@ -405,6 +406,80 @@ void GOFFWriter::writeSymbol(const GOFFSymbol &Symbol) {
   OS.write(Name.data(), NameLength); // Name
 }
 
+namespace {
+/// Adapter stream to write a text section.
+class TextStream : public raw_ostream {
+  /// The underlying GOFFOstream.
+  GOFFOstream &OS;
+
+  /// The buffer size is the maximum number of bytes in a TXT section.
+  static constexpr size_t BufferSize = GOFF::MaxDataLength;
+
+  /// Static allocated buffer for the stream, used by the raw_ostream class. The
+  /// buffer is sized to hold the payload of a logical TXT record.
+  char Buffer[BufferSize];
+
+  /// The offset for the next TXT record. This is equal to the number of bytes
+  /// written.
+  size_t Offset;
+
+  /// The Esdid of the GOFF section.
+  const uint32_t EsdId;
+
+  /// The record style.
+  const GOFF::ESDTextStyle RecordStyle;
+
+  /// See raw_ostream::write_impl.
+  void write_impl(const char *Ptr, size_t Size) override;
+
+  uint64_t current_pos() const override { return Offset; }
+
+public:
+  explicit TextStream(GOFFOstream &OS, uint32_t EsdId,
+                      GOFF::ESDTextStyle RecordStyle)
+      : OS(OS), Offset(0), EsdId(EsdId), RecordStyle(RecordStyle) {
+    SetBuffer(Buffer, sizeof(Buffer));
+  }
+
+  ~TextStream() { flush(); }
+};
+} // namespace
+
+void TextStream::write_impl(const char *Ptr, size_t Size) {
+  size_t WrittenLength = 0;
+
+  // We only have signed 32bits of offset.
+  if (Offset + Size > std::numeric_limits<int32_t>::max())
+    report_fatal_error("TXT section too large");
+
+  while (WrittenLength < Size) {
+    size_t ToWriteLength =
+        std::min(Size - WrittenLength, size_t(GOFF::MaxDataLength));
+
+    OS.newRecord(GOFF::RT_TXT);
+    OS.writebe<uint8_t>(GOFF::Flags(4, 4, RecordStyle)); // Text Record Style
+    OS.writebe<uint32_t>(EsdId);                         // Element ESDID
+    OS.writebe<uint32_t>(0);                             // Reserved
+    OS.writebe<uint32_t>(static_cast<uint32_t>(Offset)); // Offset
+    OS.writebe<uint32_t>(0);                      // Text Field True Length
+    OS.writebe<uint16_t>(0);                      // Text Encoding
+    OS.writebe<uint16_t>(ToWriteLength);          // Data Length
+    OS.write(Ptr + WrittenLength, ToWriteLength); // Data
+
+    WrittenLength += ToWriteLength;
+    Offset += ToWriteLength;
+  }
+}
+
+void GOFFWriter::writeText(const MCSectionGOFF *Section) {
+  // A BSS section contains only zeros, no need to write this.
+  if (Section->isBSS())
+    return;
+
+  TextStream S(OS, Section->getOrdinal(), Section->getTextStyle());
+  Asm.writeSectionData(S, Section);
+}
+
 void GOFFWriter::writeEnd() {
   uint8_t F = GOFF::END_EPR_None;
   uint8_t AMODE = 0;
@@ -427,6 +502,9 @@ uint64_t GOFFWriter::writeObject() {
   writeHeader();
 
   defineSymbols();
+
+  for (const MCSection &Section : Asm)
+    writeText(static_cast<const MCSectionGOFF *>(&Section));
 
   writeEnd();
 
