@@ -3494,9 +3494,9 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
   if (error.Fail())
     return error;
 
-  error = m_gdb_comm.StartDebugserverProcess(
-      nullptr, GetTarget().GetPlatform().get(), debugserver_launch_info,
-      nullptr, nullptr, shared_socket.GetSendableFD());
+  error = m_gdb_comm.StartDebugserverProcess(shared_socket.GetSendableFD(),
+                                             GetTarget().GetPlatform().get(),
+                                             debugserver_launch_info, nullptr);
 
   if (error.Fail()) {
     Log *log = GetLog(GDBRLog::Process);
