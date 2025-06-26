@@ -38,8 +38,9 @@ void HexagonInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     OS << '\v';
     HasExtender = false;
     printInstruction(MI->getOperand(0).getInst(), Address, OS);
-  } else
+  } else {
     printInstruction(MI, Address, OS);
+  }
   HasExtender = HexagonMCInstrInfo::isImmext(*MI);
   if ((MI->getOpcode() & HexagonII::INST_PARSE_MASK) ==
       HexagonII::INST_PARSE_PACKET_END)
