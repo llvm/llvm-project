@@ -3,9 +3,12 @@
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <utility>
 
@@ -38,6 +41,8 @@ public:
 protected:
   SwiftUnsafeType(ValueObject &valobj, UnsafePointerKind kind);
   addr_t GetAddress(llvm::StringRef child_name);
+  std::optional<size_t> GetCountValue(llvm::StringRef child_name);
+  CompilerType GetArgumentType();
 
   ValueObject &m_valobj;
   const UnsafePointerKind m_kind;
@@ -133,6 +138,70 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
   return pointer_value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 }
 
+std::optional<size_t>
+SwiftUnsafeType::GetCountValue(llvm::StringRef child_name) {
+  ValueObjectSP count_value_sp(
+      m_valobj.GetChildMemberWithName(child_name, true));
+  if (!count_value_sp) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "{0}: Couldn't find ValueObject child member named '{1}'.",
+             __FUNCTION__, child_name);
+    return std::nullopt;
+  }
+
+  ValueObjectSP value_provided_child_sp;
+
+  // Implement Swift's 'value-providing synthetic children' workaround.
+  // Depending on whether the ValueObject type is a primitive or a structure,
+  // lldb should prioritize the synthetic value children.
+  // If it has no synthetic children then fallback to non synthetic children.
+  ValueObjectSP synthetic = count_value_sp->GetSyntheticValue();
+  if (synthetic)
+    value_provided_child_sp = synthetic->GetChildAtIndex(0, true);
+  if (!value_provided_child_sp)
+    value_provided_child_sp = count_value_sp->GetChildAtIndex(0, true);
+
+  // If neither child exists, fail.
+  if (!value_provided_child_sp) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "{0}: Couldn't extract 'value-providing synthetic children' from "
+             "ValueObject '{1}'.",
+             __FUNCTION__, child_name);
+    return std::nullopt;
+  }
+
+  size_t count = value_provided_child_sp->GetValueAsUnsigned(UINT64_MAX);
+
+  if (count == UINT64_MAX) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "{0}: Couldn't get a valid value for ValueObject '{1}'.",
+             __FUNCTION__, child_name);
+    return std::nullopt;
+  }
+
+  return count;
+}
+
+CompilerType SwiftUnsafeType::GetArgumentType() {
+  CompilerType type = m_valobj.GetCompilerType();
+  if (!type.IsValid()) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "{0}: Couldn't get the compiler type for the '{1}' ValueObject.",
+             __FUNCTION__, type.GetTypeName());
+    return {};
+  }
+
+  auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!type_system) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "{0}: Couldn't get {1} type system.", __FUNCTION__,
+             type.GetTypeName());
+    return {};
+  }
+
+  return type_system->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
+}
+
 class SwiftUnsafeBufferPointer final : public SwiftUnsafeType {
 public:
   SwiftUnsafeBufferPointer(ValueObject &valobj);
@@ -162,46 +231,10 @@ lldb::ChildCacheState SwiftUnsafeBufferPointer::Update() {
   // pointer address, lldb unfolds every ValueObject child until reaching
   // `pointerValue`.
 
-  static ConstString g_count("count");
-  ValueObjectSP count_value_sp(m_valobj.GetChildMemberWithName(g_count, true));
-  if (!count_value_sp) {
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-             "{0}: Couldn't find ValueObject child member named '{1}'.",
-             __FUNCTION__, g_count);
+  if (auto count = GetCountValue("count"))
+    m_count = *count;
+  else
     return ChildCacheState::eRefetch;
-  }
-
-  ValueObjectSP value_provided_child_sp = nullptr;
-
-  // Implement Swift's 'value-providing synthetic children' workaround.
-  // Depending on whether the ValueObject type is a primitive or a structure,
-  // lldb should prioritize the synthetic value children.
-  // If it has no synthetic children then fallback to non synthetic children.
-  ValueObjectSP synthetic = count_value_sp->GetSyntheticValue();
-  if (synthetic)
-    value_provided_child_sp = synthetic->GetChildAtIndex(0, true);
-  if (!value_provided_child_sp)
-    value_provided_child_sp = count_value_sp->GetChildAtIndex(0, true);
-
-  // If neither child exists, fail.
-  if (!value_provided_child_sp) {
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-             "{0}: Couldn't extract 'value-providing synthetic children' from "
-             "ValueObject 'count'.",
-             __FUNCTION__);
-    return lldb::ChildCacheState::eRefetch;
-  }
-
-  size_t count = value_provided_child_sp->GetValueAsUnsigned(UINT64_MAX);
-
-  if (count == UINT64_MAX) {
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-             "{0}: Couldn't get a valid value for ValueObject 'count'.",
-             __FUNCTION__);
-    return ChildCacheState::eRefetch;
-  }
-
-  m_count = count;
 
   addr_t start_addr = GetAddress("_position");
 
@@ -332,35 +365,10 @@ lldb::ChildCacheState SwiftUnsafePointer::Update() {
   //       - pointerValue : Int
   //
 
-  CompilerType type = m_valobj.GetCompilerType();
-  if (!type.IsValid()) {
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-             "{0}: Couldn't get the compiler type for the "
-             "'Swift.UnsafePointer' ValueObject.",
-             __FUNCTION__, type.GetTypeName());
-    return ChildCacheState::eRefetch;
-  }
-
-  auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-  if (!type_system) {
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-             "{0}: Couldn't get {1} type system.", __FUNCTION__,
-             type.GetTypeName());
-    return ChildCacheState::eRefetch;
-  }
-
-  CompilerType argument_type =
-      type_system->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
-
+  CompilerType argument_type = GetArgumentType();
   if (argument_type.IsValid())
     m_elem_type = argument_type;
 
-  if (type.GetTypeInfo() & eTypeIsEnumeration) {
-    CompilerType argument_type =
-        type_system->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
-    if (argument_type.IsValid())
-      m_elem_type = argument_type;
-  }
   assert(
       !m_elem_type.GetTypeName().GetStringRef().starts_with("Swift.Optional"));
 
@@ -380,6 +388,40 @@ lldb::ChildCacheState SwiftUnsafePointer::Update() {
 
   m_start_addr = addr;
   m_count = (m_elem_type.IsValid()) ? 1 : 0;
+
+  return ChildCacheState::eReuse;
+}
+
+class SwiftSpan final : public SwiftUnsafeType {
+public:
+  SwiftSpan(ValueObject &valobj);
+  lldb::ChildCacheState Update() override;
+};
+
+SwiftSpan::SwiftSpan(ValueObject &valobj)
+    : SwiftUnsafeType(valobj, UnsafePointerKind::eSwiftUnsafeRawBufferPointer) {
+}
+
+lldb::ChildCacheState SwiftSpan::Update() {
+  if (auto count = GetCountValue("_count"))
+    m_count = *count;
+  else
+    return ChildCacheState::eRefetch;
+
+  addr_t start_addr = GetAddress("_pointer");
+  if (!start_addr || start_addr == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "{0}: Couldn't get a valid address for ValueObject '_pointer'.",
+             __FUNCTION__);
+    return ChildCacheState::eRefetch;
+  }
+  m_start_addr = start_addr;
+
+  CompilerType argument_type = GetArgumentType();
+  if (argument_type.IsValid())
+    m_elem_type = argument_type;
+  else
+    return ChildCacheState::eRefetch;
 
   return ChildCacheState::eReuse;
 }
@@ -424,6 +466,9 @@ std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
 
   llvm::StringRef valobj_type_name(type.GetTypeName().GetCString());
   valobj_type_name.consume_front("Swift.");
+  if (valobj_type_name.consume_front("Span"))
+    return std::make_unique<SwiftSpan>(valobj);
+
   valobj_type_name.consume_front("Unsafe");
   valobj_type_name.consume_front("Mutable");
   bool is_raw = valobj_type_name.consume_front("Raw");

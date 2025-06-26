@@ -344,6 +344,12 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       ConstString("^Swift.Unsafe(Mutable)?(Raw)?(Buffer)?Pointer(<.+>)?$"),
       summary_flags, true);
 
+  AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::swift::UnsafeTypeSummaryProvider,
+                "Swift.[Mutable]Span",
+                ConstString("^Swift\\.(Mutable)?Span<.+>$"), summary_flags,
+                true);
+
   DictionaryConfig::Get().RegisterSummaryProviders(swift_category_sp,
                                                    summary_flags);
   SetConfig::Get().RegisterSummaryProviders(swift_category_sp, summary_flags);
@@ -393,6 +399,12 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEndCreator,
       "Swift.Unsafe[Mutable][Raw][Buffer]Pointer",
       ConstString("^Swift.Unsafe(Mutable)?(Raw)?(Buffer)?Pointer(<.+>)?$"),
+      synth_flags, true);
+
+  AddCXXSynthetic(
+      swift_category_sp,
+      lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEndCreator,
+      "Swift.[Mutable]Span", ConstString("^Swift\\.(Mutable)?Span<.+>?"),
       synth_flags, true);
 
   DictionaryConfig::Get().RegisterSyntheticChildrenCreators(swift_category_sp,
