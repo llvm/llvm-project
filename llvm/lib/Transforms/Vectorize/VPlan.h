@@ -2707,80 +2707,83 @@ public:
 };
 
 /// A recipe to combine multiple recipes into a 'bundle' recipe, which should be
-/// considered as single entity for cost-modeling and transforms. The recipe
-/// needs to be 'unbundled', i.e. replaced by its individual recipes before
-/// execute. The bundled recipes are completely connected from the def-use graph
-/// outside the bundled recipes. Operands not defined by recipes in the bundle
-/// are added as operands of the VPBundleRecipe and the users of the result
-/// recipe must be updated to use the VPBundleRecipe.
-class VPBundleRecipe : public VPSingleDefRecipe {
-  enum class BundleTypes {
-    ExtendedReduction,
-    MulAccumulateReduction,
-  };
-
-  /// Recipes bundled together in this VPBundleRecipe.
+/// considered a single entity for cost-modeling and transforms. The recipe
+/// needs to be 'unbundled', i.e. replaced by its bundled recipes before
+/// execute. The bundled recipes are completely disconnected from the def-use
+/// graph of other, non-bundled recipes. Def-use edges between pairs of bundled
+/// recipes remain intact, whereas every edge between a bundled and a
+/// non-bundled recipe is elevated to connect the non-bundled recipe with the
+/// VPExpression itself.
+class VPExpression : public VPSingleDefRecipe {
+  /// Recipes bundled together in this VPExpression.
   SmallVector<VPSingleDefRecipe *> BundledRecipes;
 
   /// Temporary VPValues used for external operands of the bundle, i.e. operands
   /// not defined by recipes in the bundle.
-  SmallVector<VPValue *> TmpValues;
+  SmallVector<VPValue *> BundleLiveInPlaceholders;
+
+  enum class BundleTypes {
+    /// Represents an inloop extended reduction operation, performing a
+    /// reduction on a extended vector operand into a scalar value, and adding
+    /// the result to a chain.
+    ExtendedReduction,
+    /// Represent an inloop multiply-accumulate reduction, multiplying the
+    /// extended vector operands, performing a reduction.add on the result, and
+    /// adding the scalar result to a chain.
+    ExtMulAccumulateReduction,
+    /// Represent an inloop multiply-accumulate reduction, multiplying the
+    /// vector operands, performing a reduction.add on the result, and adding
+    /// the scalar result to a chain.
+    MulAccumulateReduction,
+  };
 
   /// Type of the bundle.
   BundleTypes BundleType;
 
-  VPBundleRecipe(BundleTypes BundleType, ArrayRef<VPSingleDefRecipe *> ToBundle,
-                 ArrayRef<VPValue *> Operands)
-      : VPSingleDefRecipe(VPDef::VPBundleSC, {}, {}), BundledRecipes(ToBundle),
-        BundleType(BundleType) {
-    bundle(Operands);
-  }
-
-  /// Internalize recipes in BundledRecipes External operands (i.e. not defined
-  /// by another recipe in the bundle) are replaced by temporary VPValues and
-  /// the original operands are transferred to the VPBundleRecipe itself. Clone
-  /// recipes as needed to ensure they are only used by other recipes in the
-  /// bundle. If \p Operands is not empty, use it as operands for the new
-  /// VPBundleRecipe (used when cloning the recipe).
-  void bundle(ArrayRef<VPValue *> Operands);
+  /// Construct a new VPExpression by internalizing recipes in \p
+  /// BundledRecipes. External operands (i.e. not defined by another recipe in
+  /// the bundle) are replaced by temporary VPValues and the original operands
+  /// are transferred to the VPExpression itself. Clone recipes as needed
+  /// (excluding last) to ensure they are only used by other recipes in the
+  /// bundle.
+  VPExpression(BundleTypes BundleType, ArrayRef<VPSingleDefRecipe *> ToBundle);
 
 public:
-  VPBundleRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
-      : VPBundleRecipe(BundleTypes::ExtendedReduction, {Ext, Red}, {}) {}
-  VPBundleRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
-      : VPBundleRecipe(BundleTypes::MulAccumulateReduction, {Mul, Red}, {}) {}
-  VPBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
-                 VPWidenRecipe *Mul, VPReductionRecipe *Red)
-      : VPBundleRecipe(BundleTypes::MulAccumulateReduction,
-                       {Ext0, Ext1, Mul, Red}, {}) {}
-  VPBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
-                 VPWidenRecipe *Mul, VPWidenCastRecipe *Ext2,
-                 VPReductionRecipe *Red)
-      : VPBundleRecipe(BundleTypes::MulAccumulateReduction,
-                       {Ext0, Ext1, Mul, Ext2, Red}, {}) {}
+  VPExpression(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
+      : VPExpression(BundleTypes::ExtendedReduction, {Ext, Red}) {}
+  VPExpression(VPWidenRecipe *Mul, VPReductionRecipe *Red)
+      : VPExpression(BundleTypes::MulAccumulateReduction, {Mul, Red}) {}
+  VPExpression(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+               VPWidenRecipe *Mul, VPReductionRecipe *Red)
+      : VPExpression(BundleTypes::ExtMulAccumulateReduction,
+                     {Ext0, Ext1, Mul, Red}) {}
 
-  ~VPBundleRecipe() override {
+  ~VPExpression() override {
     SmallPtrSet<VPRecipeBase *, 4> Seen;
     for (auto *R : reverse(BundledRecipes))
       if (Seen.insert(R).second)
         delete R;
-    for (VPValue *T : TmpValues)
+    for (VPValue *T : BundleLiveInPlaceholders)
       delete T;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBundleSC)
 
-  VPBundleRecipe *clone() override {
+  VPExpression *clone() override {
     assert(!BundledRecipes.empty() && "empty bundles should be removed");
     SmallVector<VPSingleDefRecipe *> NewBundledRecipes;
     for (auto *R : BundledRecipes)
       NewBundledRecipes.push_back(R->clone());
     for (auto *New : NewBundledRecipes) {
-      for (const auto &[Idx, Old] : enumerate(BundledRecipes)) {
+      for (const auto &[Idx, Old] : enumerate(BundledRecipes))
         New->replaceUsesOfWith(Old, NewBundledRecipes[Idx]);
-      }
+      // Update placeholder operands in the cloned recipe to use the external
+      // operands, to be internalized when the cloned bundle is constructed.
+      for (const auto &[Placeholder, OutsideOp] :
+           zip(BundleLiveInPlaceholders, operands()))
+        New->replaceUsesOfWith(Placeholder, OutsideOp);
     }
-    return new VPBundleRecipe(BundleType, NewBundledRecipes, operands());
+    return new VPExpression(BundleType, NewBundledRecipes);
   }
 
   /// Return the VPSingleDefRecipe producing the final result of the bundled
@@ -2788,12 +2791,11 @@ public:
   VPSingleDefRecipe *getResultRecipe() const { return BundledRecipes.back(); }
 
   /// Insert the bundled recipes back into the VPlan, directly before the
-  /// current recipe. Leaves the bundle recipe empty and the recipe must be
-  /// removed before codegen.
+  /// current recipe. Leaves the bundle recipe empty, which must be removed
+  /// before codegen.
   void unbundle();
 
-  /// Generate the extraction of the appropriate bit from the block mask and the
-  /// conditional branch.
+  /// Method for generating code, must not be called as this recipe is abstract.
   void execute(VPTransformState &State) override {
     llvm_unreachable("recipe must be removed before execute");
   }
@@ -2806,6 +2808,13 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns true if this bundle contains recipes that may read from or write
+  /// to memory.
+  bool mayReadOrWriteMemory() const;
+
+  /// Returns true if this bundle contains recipes that may have side effects.
+  bool mayHaveSideEffects() const;
 };
 
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when

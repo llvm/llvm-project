@@ -1776,9 +1776,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-               VPReplicateRecipe, VPWidenSelectRecipe, VPWidenLoadRecipe,
-               VPWidenIntrinsicRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
+               VPWidenSelectRecipe, VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(
+              &R))
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
@@ -2942,7 +2942,22 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         IsMulAccValidAndClampRange(Ext0->getOpcode() ==
                                        Instruction::CastOps::ZExt,
                                    Mul, Ext0, Ext1, Ext)) {
-      return new VPBundleRecipe(Ext0, Ext1, Mul, Ext, Red);
+      auto *NewExt0 = new VPWidenCastRecipe(
+          Ext0->getOpcode(), Ext0->getOperand(0), Ext->getResultType(), *Ext0,
+          Ext0->getDebugLoc());
+      NewExt0->insertBefore(Ext0);
+
+      VPWidenCastRecipe *NewExt1 = NewExt0;
+      if (Ext0 != Ext1) {
+        NewExt1 = new VPWidenCastRecipe(Ext1->getOpcode(), Ext1->getOperand(0),
+                                        Ext->getResultType(), *Ext1,
+                                        Ext1->getDebugLoc());
+        NewExt1->insertBefore(Ext1);
+      }
+      Mul->setOperand(0, NewExt0);
+      Mul->setOperand(1, NewExt1);
+      Red->setOperand(1, Mul);
+      return new VPBundleRecipe(NewExt0, NewExt1, Mul, Red);
     }
   }
   return nullptr;
