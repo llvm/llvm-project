@@ -706,15 +706,15 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; PRED-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; PRED-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 257, [[TMP2]]
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; PRED-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 2
+; PRED-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 2
 ; PRED-NEXT:    [[TMP8:%.*]] = sub i64 257, [[TMP7]]
 ; PRED-NEXT:    [[TMP9:%.*]] = icmp ugt i64 257, [[TMP7]]
 ; PRED-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0

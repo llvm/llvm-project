@@ -1162,12 +1162,9 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
   // make sure that said register is in the reserve list.
   const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
   if (!TRI->isReservedReg(MF, Reg))
-    Reg = 0;
+    Reg = Register();
 
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 // Fixup floating point arguments in the ... part of a varargs call.

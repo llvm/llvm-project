@@ -107,17 +107,17 @@ class LLVM_ABI LVElement : public LVObject {
     IsAnonymous,
     LastEntry
   };
-  // Typed bitvector with properties for this element.
-  LVProperties<Property> Properties;
   static LVElementDispatch Dispatch;
-
-  /// RTTI.
-  const LVSubclassID SubclassID;
 
   // Indexes in the String Pool.
   size_t NameIndex = 0;
   size_t QualifiedNameIndex = 0;
   size_t FilenameIndex = 0;
+
+  // Typed bitvector with properties for this element.
+  LVProperties<Property> Properties;
+  /// RTTI.
+  const LVSubclassID SubclassID;
 
   uint16_t AccessibilityCode : 2; // DW_AT_accessibility.
   uint16_t InlineCode : 2;        // DW_AT_inline.
