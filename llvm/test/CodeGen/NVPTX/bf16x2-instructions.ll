@@ -723,3 +723,20 @@ define <2 x bfloat> @test_copysign(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
   ret <2 x bfloat> %r
 }
 
+define void @test_store_bf16x2(ptr %p1, ptr %p2, <2 x bfloat> %v) {
+; CHECK-LABEL: test_store_bf16x2(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_store_bf16x2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_store_bf16x2_param_2];
+; CHECK-NEXT:    st.b32 [%rd1], %r1;
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_store_bf16x2_param_1];
+; CHECK-NEXT:    st.b32 [%rd2], 1065369472;
+; CHECK-NEXT:    ret;
+  store <2 x bfloat> %v, ptr %p1
+  store <2 x bfloat> <bfloat 1.0, bfloat 1.0>, ptr %p2
+  ret void
+}
