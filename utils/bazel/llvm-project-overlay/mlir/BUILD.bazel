@@ -12872,6 +12872,7 @@ cc_library(
         ":AffineDialect",
         ":AllocationOpInterface",
         ":ArithDialect",
+        ":ArithUtils",
         ":BufferDeallocationOpInterfaceIncGen",
         ":BufferViewFlowOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
