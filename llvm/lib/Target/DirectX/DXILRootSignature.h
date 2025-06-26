@@ -19,6 +19,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
+#include <memory>
 #include <optional>
 
 namespace llvm {
@@ -68,9 +69,11 @@ public:
 RootSignatureAnalysis() = default;
 
   using Result = RootSignatureBindingInfo;
-  
-  RootSignatureBindingInfo
-  run(Module &M, ModuleAnalysisManager &AM);
+
+  Result run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  std::unique_ptr<RootSignatureBindingInfo> AnalysisResult;
 };
 
 /// Wrapper pass for the legacy pass manager.
@@ -80,6 +83,7 @@ RootSignatureAnalysis() = default;
 class RootSignatureAnalysisWrapper : public ModulePass {
 private:
   std::unique_ptr<RootSignatureBindingInfo> FuncToRsMap;
+  bool HasRun = false;
 
 public:
   static char ID;

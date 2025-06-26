@@ -28,6 +28,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -554,9 +555,12 @@ analyzeModule(Module &M) {
 
 AnalysisKey RootSignatureAnalysis::Key;
 
-RootSignatureBindingInfo RootSignatureAnalysis::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
-  return RootSignatureBindingInfo(analyzeModule(M));
+RootSignatureAnalysis::Result
+RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+  if (!AnalysisResult)
+    AnalysisResult = std::make_unique<RootSignatureBindingInfo>(
+        RootSignatureBindingInfo(analyzeModule(M)));
+  return *AnalysisResult;
 }
 
 //===----------------------------------------------------------------------===//
@@ -635,6 +639,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
+  if (HasRun)
+    return false;
   FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
       RootSignatureBindingInfo(analyzeModule(M)));
   return false;
