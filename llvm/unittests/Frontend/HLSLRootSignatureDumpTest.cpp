@@ -34,7 +34,7 @@ TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
   DescriptorTableClause Clause;
   Clause.Type = ClauseType::SRV;
   Clause.Reg = {RegisterType::TReg, 0};
-  Clause.NumDescriptors = 2;
+  Clause.NumDescriptors = NumDescriptorsUnbounded;
   Clause.Space = 42;
   Clause.Offset = 3;
   Clause.Flags = DescriptorRangeFlags::None;
@@ -44,8 +44,8 @@ TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
   OS << Clause;
   OS.flush();
 
-  std::string Expected =
-      "SRV(t0, numDescriptors = 2, space = 42, offset = 3, flags = None)";
+  std::string Expected = "SRV(t0, numDescriptors = unbounded, space = 42, "
+                         "offset = 3, flags = None)";
   EXPECT_EQ(Out, Expected);
 }
 

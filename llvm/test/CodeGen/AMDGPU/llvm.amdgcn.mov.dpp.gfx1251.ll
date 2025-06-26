@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1251 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1251 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 < %s | FileCheck -check-prefixes=GCN,GFX1251 %s
 
 ; GCN-LABEL: {{^}}mov_dpp64_test:
 ; GCN: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1

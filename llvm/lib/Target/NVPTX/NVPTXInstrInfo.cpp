@@ -39,15 +39,15 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
-  if (DestRC == &NVPTX::Int1RegsRegClass) {
+  if (DestRC == &NVPTX::B1RegClass) {
     Op = NVPTX::IMOV1r;
-  } else if (DestRC == &NVPTX::Int16RegsRegClass) {
+  } else if (DestRC == &NVPTX::B16RegClass) {
     Op = NVPTX::MOV16r;
-  } else if (DestRC == &NVPTX::Int32RegsRegClass) {
+  } else if (DestRC == &NVPTX::B32RegClass) {
     Op = NVPTX::IMOV32r;
-  } else if (DestRC == &NVPTX::Int64RegsRegClass) {
+  } else if (DestRC == &NVPTX::B64RegClass) {
     Op = NVPTX::IMOV64r;
-  } else if (DestRC == &NVPTX::Int128RegsRegClass) {
+  } else if (DestRC == &NVPTX::B128RegClass) {
     Op = NVPTX::IMOV128r;
   } else {
     llvm_unreachable("Bad register copy");

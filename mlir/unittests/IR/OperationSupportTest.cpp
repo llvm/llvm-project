@@ -44,7 +44,7 @@ TEST(OperandStorageTest, NonResizable) {
   EXPECT_EQ(user->getNumOperands(), 1u);
 
   // Removing is okay.
-  user->setOperands(std::nullopt);
+  user->setOperands({});
   EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Destroy the operations.
@@ -68,7 +68,7 @@ TEST(OperandStorageTest, Resizable) {
   EXPECT_EQ(user->getNumOperands(), 1u);
 
   // Removing is okay.
-  user->setOperands(std::nullopt);
+  user->setOperands({});
   EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Adding more operands is okay.
@@ -236,7 +236,7 @@ TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
   context.allowUnregisteredDialects();
   Operation *op = Operation::create(
       NameLoc::get(StringAttr::get(&context, "my_named_loc")),
-      OperationName("t.op", &context), builder.getIntegerType(16), std::nullopt,
+      OperationName("t.op", &context), builder.getIntegerType(16), {},
       std::nullopt, nullptr, std::nullopt, 0);
 
   std::string str;

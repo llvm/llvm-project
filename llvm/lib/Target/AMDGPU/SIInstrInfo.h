@@ -899,9 +899,7 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
-  static bool isXDLWMMA(const MachineInstr &MI) {
-    return (isWMMA(MI) || isSWMMAC(MI)) && AMDGPU::getWMMAIsXDL(MI.getOpcode());
-  }
+  bool isXDLWMMA(const MachineInstr &MI) const;
 
   // Instructions for which we care if their destination ends up in a laneshared
   // VGPR.

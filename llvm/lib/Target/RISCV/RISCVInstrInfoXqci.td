@@ -596,17 +596,20 @@ class QCILICC<bits<3> funct3, bits<2> funct2, DAGOperand InTyRs2, string opcodes
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIMVCC<bits<3> funct3, string opcodestr>
-    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
-               (ins GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
-               opcodestr, "$rd, $rs1, $rs2, $rs3">;
+    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
+               opcodestr, "$rd, $rs1, $rs2, $rs3"> {
+  let Constraints = "$rd = $rd_wb";
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
-    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
-               (ins GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
+    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
                opcodestr, "$rd, $rs1, $imm, $rs3"> {
   bits<5> imm;
-
+  
+  let Constraints = "$rd = $rd_wb";
   let rs2 = imm;
 }
 
@@ -1448,6 +1451,8 @@ def : Pat<(i32 (and GPRNoX0:$rs, 255)), (QC_EXTU GPRNoX0:$rs, 8, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 511)), (QC_EXTU GPRNoX0:$rs, 9, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 1023)), (QC_EXTU GPRNoX0:$rs, 10, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 2047)), (QC_EXTU GPRNoX0:$rs, 11, 0)>;
+
+def : Pat<(i32 (bitreverse GPRNoX0:$rs1)), (QC_BREV32 GPRNoX0:$rs1)>;
 } // Predicates = [HasVendorXqcibm, IsRV32]
 
 // If Zbb is enabled sext.b/h is preferred since they are compressible

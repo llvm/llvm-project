@@ -912,10 +912,12 @@ multiclass MUBUF_Pseudo_Atomics <string opName,
 // MUBUF Instructions
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = HasFormattedMUBUFInsts in {
+let OtherPredicates = [HasFormattedMUBUFInsts] in
 defm BUFFER_LOAD_FORMAT_X : MUBUF_Pseudo_Loads_Lds <
   "buffer_load_format_x", f32
 >;
+
+let SubtargetPredicate = HasFormattedMUBUFInsts in {
 defm BUFFER_LOAD_FORMAT_XY : MUBUF_Pseudo_Loads <
   "buffer_load_format_xy", v2f32
 >;
@@ -2346,7 +2348,7 @@ multiclass MTBUF_LoadIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
 
 multiclass MTBUF_LoadIntrinsicPat<SDPatternOperator name, ValueType vt,
                                   string opcode, ValueType memoryVt = vt> {
-  let OtherPredicates = [HasUnrestrictedSOffset] in {
+  let SubtargetPredicate = HasUnrestrictedSOffset in {
     defm : MTBUF_LoadIntrinsicPat_Common<name, vt, opcode, memoryVt>;
   }
   defm : MTBUF_LoadIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt>;
@@ -2424,7 +2426,7 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
 
 multiclass MTBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
                                   string opcode, ValueType memoryVt = vt> {
-  let OtherPredicates = [HasUnrestrictedSOffset] in {
+  let SubtargetPredicate = HasUnrestrictedSOffset in {
     defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode, memoryVt>;
   }
   defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt>;
@@ -2458,7 +2460,7 @@ let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v2f16, "TBUFFER_STORE_FORMAT_D16_XY">;
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4f16, "TBUFFER_STORE_FORMAT_D16_XYZ", v3f16>;
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4f16, "TBUFFER_STORE_FORMAT_D16_XYZW">;
-} // End HasPackedD16VMem.
+} // End HasPackedD16VMem,HasMTBUFInsts.
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.

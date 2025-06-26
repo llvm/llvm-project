@@ -25,6 +25,7 @@ namespace {
 
 class AMDGPUInsertDelayAlu {
 public:
+  const GCNSubtarget *ST;
   const SIInstrInfo *SII;
   const TargetRegisterInfo *TRI;
 
@@ -58,12 +59,12 @@ public:
   enum DelayType { VALU, TRANS, SALU, OTHER };
 
   // Get the delay type for a MachineInstr.
-  static DelayType getDelayType(const MachineInstr &MI) {
+  DelayType getDelayType(const MachineInstr &MI) {
     if (SIInstrInfo::isTRANS(MI))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if (SIInstrInfo::isXDLWMMA(MI))
-      return TRANS;
+    if (SII->isXDL(MI))
+      return AMDGPU::isGFX1250Only(*ST) ? TRANS : VALU;
     if (SIInstrInfo::isVALU(MI))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
@@ -452,12 +453,12 @@ public:
     LLVM_DEBUG(dbgs() << "AMDGPUInsertDelayAlu running on " << MF.getName()
                       << "\n");
 
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (!ST.hasDelayAlu())
+    ST = &MF.getSubtarget<GCNSubtarget>();
+    if (!ST->hasDelayAlu())
       return false;
 
-    SII = ST.getInstrInfo();
-    TRI = ST.getRegisterInfo();
+    SII = ST->getInstrInfo();
+    TRI = ST->getRegisterInfo();
     SchedModel = &SII->getSchedModel();
 
     // Calculate the delay state for each basic block, iterating until we reach

@@ -307,7 +307,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
 /// Interpret an offsetof operation.
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
-                       llvm::ArrayRef<int64_t> ArrayIndices, int64_t &Result);
+                       ArrayRef<int64_t> ArrayIndices, int64_t &Result);
 
 inline bool Invalid(InterpState &S, CodePtr OpPC);
 

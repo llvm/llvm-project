@@ -72,9 +72,11 @@ ConnectionFileDescriptor::ConnectionFileDescriptor(int fd, bool owns_fd)
   OpenCommandPipe();
 }
 
-ConnectionFileDescriptor::ConnectionFileDescriptor(Socket *socket)
-    : Connection(), m_pipe(), m_mutex(), m_shutting_down(false) {
-  InitializeSocket(socket);
+ConnectionFileDescriptor::ConnectionFileDescriptor(
+    std::unique_ptr<Socket> socket_up)
+    : m_shutting_down(false) {
+  m_uri = socket_up->GetRemoteConnectionURI();
+  m_io_sp = std::move(socket_up);
 }
 
 ConnectionFileDescriptor::~ConnectionFileDescriptor() {
@@ -795,9 +797,4 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
   return eConnectionStatusSuccess;
 #endif // LLDB_ENABLE_POSIX
   llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
-}
-
-void ConnectionFileDescriptor::InitializeSocket(Socket *socket) {
-  m_io_sp.reset(socket);
-  m_uri = socket->GetRemoteConnectionURI();
 }

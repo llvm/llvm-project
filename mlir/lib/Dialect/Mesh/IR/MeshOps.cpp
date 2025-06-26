@@ -298,12 +298,13 @@ Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
   return type;
 }
 
-static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
-                                                    Value &operandValue,
-                                                    Operation *operandOp,
-                                                    OpBuilder &builder,
-                                                    ShardOp &newShardOp) {
+void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
+                                                     OpOperand &operand,
+                                                     OpBuilder &builder,
+                                                     ShardOp &newShardOp) {
   OpBuilder::InsertionGuard insertionGuard(builder);
+  Value operandValue = operand.get();
+  Operation *operandOp = operand.getOwner();
   builder.setInsertionPointAfterValue(operandValue);
   ShardOp shardOp = dyn_cast<ShardOp>(operandOp);
   if (shardOp && sharding == shardOp.getSharding() &&
@@ -322,8 +323,9 @@ static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
         builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
                                 /*annotate_for_users*/ false);
   }
-  operandValue.replaceUsesWithIf(
-      newShardOp, [operandOp, operandValue](OpOperand &use) {
+  IRRewriter rewriter(builder);
+  rewriter.replaceUsesWithIf(
+      operandValue, newShardOp, [operandOp, operandValue](OpOperand &use) {
         return use.getOwner() == operandOp && use.get() == operandValue;
       });
 
@@ -334,20 +336,15 @@ static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
   auto newShardOp2 = builder.create<ShardOp>(operandValue.getLoc(), newShardOp,
                                              newShardOp.getSharding(),
                                              /*annotate_for_users*/ true);
-  newShardOp.getResult().replaceAllUsesExcept(newShardOp2, newShardOp2);
+  rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
 }
 
 void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                                      OpResult result,
                                                      OpBuilder &builder) {
   ShardOp newShardOp;
-  SmallVector<std::pair<Value, Operation *>> uses;
-  for (auto &use : result.getUses()) {
-    uses.emplace_back(use.get(), use.getOwner());
-  }
-  for (auto &[operandValue, operandOp] : uses) {
-    maybeInsertTargetShardingAnnotationImpl(sharding, operandValue, operandOp,
-                                            builder, newShardOp);
+  for (auto &use : llvm::make_early_inc_range(result.getUses())) {
+    maybeInsertTargetShardingAnnotation(sharding, use, builder, newShardOp);
   }
 }
 
