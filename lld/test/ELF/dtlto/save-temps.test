@@ -24,7 +24,8 @@ RUN: ld.lld @l.rsp
 RUN: ls | FileCheck %s --check-prefix=REMOVED
 REMOVED-NOT: .json
 
-## Check that DTLTO temporary files are retained with --save-temps.
+## Check that DTLTO temporary files are retained with --save-temps. Note that
+## DTLTO temporary object files include a PID component.
 RUN: ld.lld @l.rsp --save-temps
 RUN: ls | FileCheck %s --check-prefix=RETAINED
 RETAINED: my.[[#]].dist-file.json
