@@ -172,11 +172,11 @@ func.func @unpack_with_dynamic_dims(%arg0: tensor<?x1x1x1x8x32xf32>, %arg1: tens
 
 // -----
 
-func.func @unpack_with_unit_outer_dims_and_unit_inner(%arg0: tensor<1x1x1x4x1xf32>, %arg1: tensor<1x1x4xf32>) -> tensor<1x1x4xf32> {
+func.func @unpack_with_non_adjacent_inner_dims_pos_and_unit_outer(%arg0: tensor<1x1x1x4x1xf32>, %arg1: tensor<1x1x4xf32>) -> tensor<1x1x4xf32> {
   %0 = linalg.unpack %arg0 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 0] inner_tiles = [4, 1] into %arg1 : tensor<1x1x1x4x1xf32> -> tensor<1x1x4xf32>
   return %0 : tensor<1x1x4xf32>
 }
-// CHECK-LABEL: func.func @unpack_with_unit_outer_dims_and_unit_inner
+// CHECK-LABEL: func.func @unpack_with_non_adjacent_inner_dims_pos_and_unit_outer
 // CHECK-SAME:     %[[SRC:[a-zA-Z0-9]+]]
 // CHECK-SAME:     %[[DEST:[a-zA-Z0-9]+]]
 // CHECK:        %[[SLICE:.+]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0, 0] [1, 1, 1, 4, 1] [1, 1, 1, 1, 1] : tensor<1x1x1x4x1xf32> to tensor<4x1xf32>
