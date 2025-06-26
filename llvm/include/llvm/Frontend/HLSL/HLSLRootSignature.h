@@ -24,11 +24,6 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-// Definition of the various enumerations and flags. The definitions of all
-// values here correspond to their description in the d3d12.h header and are
-// carried over from their values in DXC. For reference:
-// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/
-
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
