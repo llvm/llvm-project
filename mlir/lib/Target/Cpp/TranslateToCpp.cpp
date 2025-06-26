@@ -1025,17 +1025,15 @@ static LogicalResult printOperation(CppEmitter &emitter, FieldOp fieldOp) {
 static LogicalResult printOperation(CppEmitter &emitter,
                                     GetFieldOp getFieldOp) {
   raw_indented_ostream &os = emitter.ostream();
-  Location loc = getFieldOp->getLoc();
 
-  if (getFieldOp->getNumResults() > 0) {
-    Value result = getFieldOp->getResult(0);
-    if (failed(emitter.emitType(loc, result.getType())))
-      return failure();
-    os << " ";
-    if (failed(emitter.emitOperand(result)))
-      return failure();
-    os << " = ";
-  }
+  Value result = getFieldOp.getResult();
+  if (failed(emitter.emitType(getFieldOp->getLoc(), result.getType())))
+    return failure();
+  os << " ";
+  if (failed(emitter.emitOperand(result)))
+    return failure();
+  os << " = ";
+
   os << getFieldOp.getFieldName().str();
   return success();
 }
