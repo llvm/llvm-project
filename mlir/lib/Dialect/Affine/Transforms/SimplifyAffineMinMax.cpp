@@ -10,13 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "affine-min-max"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
@@ -44,6 +49,12 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
       [&](unsigned i) {
         return Variable(affineMap.getSliceMap(i, 1), operands);
       });
+  LLVM_DEBUG({
+    DBGS() << "- constructed variables are: "
+           << llvm::interleaved_array(llvm::map_range(
+                  variables, [](const Variable &v) { return v.getMap(); }))
+           << "`\n";
+  });
 
   // Get the comparison operation.
   ComparisonOperator cmpOp =
@@ -125,8 +136,17 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
   for (auto [k, bound] : bounds)
     results.push_back(bound->getMap().getResult(0));
 
-  affineMap = AffineMap::get(affineMap.getNumDims(), affineMap.getNumSymbols(),
-                             results, rewriter.getContext());
+  LLVM_DEBUG({
+    DBGS() << "- starting from map: " << affineMap << "\n";
+    DBGS() << "- creating new map with: \n";
+    DBGS() << "--- dims: " << affineMap.getNumDims() << "\n";
+    DBGS() << "--- syms: " << affineMap.getNumSymbols() << "\n";
+    DBGS() << "--- res: " << llvm::interleaved_array(results) << "\n";
+  });
+
+  affineMap =
+      AffineMap::get(0, affineMap.getNumSymbols() + affineMap.getNumDims(),
+                     results, rewriter.getContext());
 
   // Update the affine op.
   rewriter.modifyOpInPlace(affineOp, [&]() { affineOp.setMap(affineMap); });
@@ -171,4 +191,74 @@ LogicalResult mlir::affine::simplifyAffineMinMaxOps(RewriterBase &rewriter,
   if (modified)
     *modified = changed;
   return success();
+}
+
+namespace {
+
+struct SimplifyAffineMaxOp : public OpRewritePattern<AffineMaxOp> {
+  using OpRewritePattern<AffineMaxOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineMaxOp affineOp,
+                                PatternRewriter &rewriter) const override {
+    return success(simplifyAffineMaxOp(rewriter, affineOp));
+  }
+};
+
+struct SimplifyAffineMinOp : public OpRewritePattern<AffineMinOp> {
+  using OpRewritePattern<AffineMinOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineMinOp affineOp,
+                                PatternRewriter &rewriter) const override {
+    return success(simplifyAffineMinOp(rewriter, affineOp));
+  }
+};
+
+struct SimplifyAffineApplyOp : public OpRewritePattern<AffineApplyOp> {
+  using OpRewritePattern<AffineApplyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineApplyOp affineOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap map = affineOp.getAffineMap();
+    SmallVector<Value> operands{affineOp->getOperands().begin(),
+                                affineOp->getOperands().end()};
+    fullyComposeAffineMapAndOperands(&map, &operands,
+                                     /*composeAffineMin=*/true);
+
+    // No change => failure to apply.
+    if (map == affineOp.getAffineMap())
+      return failure();
+
+    rewriter.modifyOpInPlace(affineOp, [&]() {
+      affineOp.setMap(map);
+      affineOp->setOperands(operands);
+    });
+    return success();
+  }
+};
+
+} // namespace
+
+namespace mlir {
+namespace affine {
+#define GEN_PASS_DEF_SIMPLIFYAFFINEMINMAX
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
+} // namespace mlir
+
+/// Creates a simplification pass for affine min/max/apply.
+struct SimplifyAffineMinMaxPass
+    : public affine::impl::SimplifyAffineMinMaxBase<SimplifyAffineMinMaxPass> {
+  void runOnOperation() override;
+};
+
+void SimplifyAffineMinMaxPass::runOnOperation() {
+  FunctionOpInterface func = getOperation();
+  RewritePatternSet patterns(func.getContext());
+  AffineMaxOp::getCanonicalizationPatterns(patterns, func.getContext());
+  AffineMinOp::getCanonicalizationPatterns(patterns, func.getContext());
+  patterns.add<SimplifyAffineMaxOp, SimplifyAffineMinOp, SimplifyAffineApplyOp>(
+      func.getContext());
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+  if (failed(applyPatternsGreedily(func, std::move(frozenPatterns))))
+    return signalPassFailure();
 }
