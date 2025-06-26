@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstddef>
+#include <initializer_list>
 #include <optional>
 #include <queue>
 #include <set>
@@ -123,6 +124,10 @@ private:
 using MatchResults = SmallVector<MatchResult, 2>;
 
 } // namespace
+
+#define SIZED_CONTAINER_OR_VIEW_LIST                                           \
+  "span", "array", "vector", "basic_string_view", "basic_string",              \
+      "initializer_list",
 
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
@@ -727,8 +732,8 @@ bool isCompatibleWithCountExpr(const Expr *E, const Expr *ExpectedCountExpr,
 
 // Returns true iff `C` is a C++ nclass method call to the function
 // `'ClassName'::'MethodName'` or `'ClassName'::Operator'MethodName'`:
-static bool matchCXXMethodByName(const CallExpr *C, StringRef ClassName,
-                                 StringRef MethodName) {
+static bool matchCXXMethodByName(bool isInStdNamespace, const CallExpr *C,
+                                 StringRef ClassName, StringRef MethodName) {
   const Decl *Callee = C->getCalleeDecl();
 
   if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(Callee)) {
@@ -749,12 +754,33 @@ static bool matchCXXMethodByName(const CallExpr *C, StringRef ClassName,
     }
 
     if (const auto *RD = dyn_cast<CXXRecordDecl>(MethodDecl->getParent())) {
-      if (!RD->getDeclName().isIdentifier())
+      if (!RD->getDeclName().isIdentifier() ||
+          (isInStdNamespace != RD->isInStdNamespace()))
         return false;
-      return RD->getQualifiedNameAsString() == ClassName;
+      return RD->getName() == ClassName;
     }
   }
   return false;
+}
+
+// Returns true iff `C` is a mathod call on "Class::Method", where "Class"
+// belongs to `ClassNames` and "Method" belongs to `MethodNames`.  If
+// `isInStdNamespace` is true, the `Class` must be defined in "std" namespace.
+template <typename Range>
+static bool matchAnyCXXMethods(bool isInStdNamespace, const CallExpr *C,
+                               const Range &ClassNames,
+                               const Range &MethodNames) {
+  auto matchAnyMethodName = [&isInStdNamespace, &C,
+                             &MethodNames](StringRef ClassName) -> bool {
+    return llvm::any_of(
+        MethodNames,
+        [&isInStdNamespace, &C, &ClassName](StringRef MethodName) -> bool {
+          return matchCXXMethodByName(isInStdNamespace, C, StringRef(ClassName),
+                                      MethodName);
+        });
+  };
+
+  return llvm::any_of(ClassNames, matchAnyMethodName);
 }
 
 // Returns if a pair of expressions contain method calls to .data()/.c_str() and
@@ -764,28 +790,17 @@ static bool isValidContainerRange(ASTContext &Context, const Expr *Data,
                                   bool ParamInBytes) {
   const auto *DataCall =
       dyn_cast<CXXMemberCallExpr>(Data->IgnoreParenImpCasts());
+  auto SizedContainersOrViews = {SIZED_CONTAINER_OR_VIEW_LIST};
 
-  if (!(DataCall &&
-        (matchCXXMethodByName(DataCall, "std::array", "data") ||
-         matchCXXMethodByName(DataCall, "std::basic_string", "c_str") ||
-         matchCXXMethodByName(DataCall, "std::basic_string", "data") ||
-         matchCXXMethodByName(DataCall, "std::basic_string_view", "data") ||
-         matchCXXMethodByName(DataCall, "std::span", "data") ||
-         matchCXXMethodByName(DataCall, "std::vector", "data"))))
+  if (!(DataCall && matchAnyCXXMethods(true, DataCall, SizedContainersOrViews,
+                                    {"data", "c_str"})))
     return false;
 
   const auto *SizeCall =
       dyn_cast<CXXMemberCallExpr>(Size->IgnoreParenImpCasts());
 
-  if (!(SizeCall &&
-        (matchCXXMethodByName(SizeCall, "std::array", "size") ||
-         matchCXXMethodByName(SizeCall, "std::basic_string", "length") ||
-         matchCXXMethodByName(SizeCall, "std::basic_string", "size") ||
-         matchCXXMethodByName(SizeCall, "std::basic_string_view", "length") ||
-         matchCXXMethodByName(SizeCall, "std::basic_string_view", "size") ||
-         matchCXXMethodByName(SizeCall, "std::span", "size") ||
-         matchCXXMethodByName(SizeCall, "std::span", "size_bytes") ||
-         matchCXXMethodByName(SizeCall, "std::vector", "size"))))
+  if (!(SizeCall && matchAnyCXXMethods(true, SizeCall, SizedContainersOrViews,
+                                    {"size", "length", "size_bytes"})))
     return false;
 
   const Expr *DataObj = DataCall->getImplicitObjectArgument();
@@ -812,13 +827,14 @@ const Expr *extractExtentFromSubviewDataCall(ASTContext &Context,
                                              const Expr *E) {
   auto ExtentMatcher = [](const CXXMemberCallExpr *MCE, StringRef Name,
                           unsigned N) -> const Expr * {
-    if (matchCXXMethodByName(MCE, "std::span", Name) && MCE->getNumArgs() > N)
+    if (matchCXXMethodByName(true, MCE, "span", Name) &&
+        MCE->getNumArgs() > N)
       return MCE->getArg(N);
     return nullptr;
   };
 
   if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(E->IgnoreParenImpCasts())) {
-    if (!matchCXXMethodByName(MCE, "std::span", "data"))
+    if (!matchCXXMethodByName(true, MCE, "span", "data"))
       return nullptr;
     if (const auto *DataObj = MCE->getImplicitObjectArgument())
       if (const auto *DataObjMCE =
@@ -1070,14 +1086,12 @@ bool isSinglePointerArgumentSafe(ASTContext &Context, const Expr *Arg) {
       if (UO->getOpcode() == UnaryOperator::Opcode::UO_AddrOf) {
         const Expr *Operand = UO->getSubExpr()->IgnoreParenImpCasts();
 
-        if (const auto *OPCall = dyn_cast<CXXOperatorCallExpr>(Operand))
+        if (const auto *OPCall = dyn_cast<CXXOperatorCallExpr>(Operand)) {
           // TODO: Add more classes.
-          if (matchCXXMethodByName(OPCall, "std::array", "[]") ||
-              matchCXXMethodByName(OPCall, "std::basic_string", "[]") ||
-              matchCXXMethodByName(OPCall, "std::basic_string_view", "[]") ||
-              matchCXXMethodByName(OPCall, "std::span", "[]") ||
-              matchCXXMethodByName(OPCall, "std::vector", "[]"))
+          auto SizedContainersOrViews = {SIZED_CONTAINER_OR_VIEW_LIST};
+          if (matchAnyCXXMethods(true, OPCall, SizedContainersOrViews, {"[]"}))
             return true;
+        }
       }
   }
 
@@ -1169,6 +1183,8 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
+//   8. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
+//      SIZED_CONTAINER_OR_VIEW_LIST.
 // TO_UPSTREAM(BoundsSafetyInterop) ON
 //   Interop Pattern:
 //      `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
@@ -1289,6 +1305,33 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
         }
     }
   }
+
+  // Check form 8:
+  auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
+    if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
+      const auto *MD = MC->getMethodDecl();
+      const auto *RD = MC->getRecordDecl();
+
+      if (RD && MD)
+        if (auto *II = RD->getDeclName().getAsIdentifierInfo();
+            II && RD->isInStdNamespace())
+          return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                    II->getName()) &&
+                 MD->getName() == MethodName;
+    }
+    return false;
+  };
+
+  if (IsMethodCallToSizedObject(Arg0, "begin") &&
+      IsMethodCallToSizedObject(Arg1, "end"))
+    return AreSameDRE(
+        // We know Arg0 and Arg1 are `CXXMemberCallExpr`s:
+        cast<CXXMemberCallExpr>(Arg0)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts(),
+        cast<CXXMemberCallExpr>(Arg1)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts());
 
   /* TO_UPSTREAM(BoundsSafetyInterop) ON */
   // Check interop pattern:
@@ -2618,9 +2661,8 @@ private:
     auto *method = cast<CXXMethodDecl>(callee);
     if (method->getNameAsString() == "data" &&
         method->getParent()->isInStdNamespace() &&
-        (method->getParent()->getName() == "span" ||
-         method->getParent()->getName() == "array" ||
-         method->getParent()->getName() == "vector"))
+        llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                           method->getParent()->getName()))
       return true;
     return false;
   }
