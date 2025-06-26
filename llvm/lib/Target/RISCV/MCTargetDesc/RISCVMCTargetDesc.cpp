@@ -210,7 +210,8 @@ public:
   }
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target, const MCSubtargetInfo *STI) const override {
+                      uint64_t &Target,
+                      const MCSubtargetInfo *STI) const override {
     if (isConditionalBranch(Inst)) {
       int64_t Imm;
       if (Size == 2)
@@ -244,7 +245,8 @@ public:
     case RISCV::ADDI: {
       if (!STI)
         return false;
-      unsigned int ArchRegWidth = STI->getTargetTriple().getArchPointerBitWidth();
+      unsigned int ArchRegWidth =
+          STI->getTargetTriple().getArchPointerBitWidth();
       MCRegister Reg = Inst.getOperand(1).getReg();
       auto TargetRegState = getGPRState(Reg);
       if (TargetRegState && Reg != RISCV::X0) {

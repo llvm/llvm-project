@@ -25,8 +25,8 @@ bool MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
 }
 
 bool MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
-                                     uint64_t Size,
-                                     uint64_t &Target, const MCSubtargetInfo *STI) const {
+                                     uint64_t Size, uint64_t &Target,
+                                     const MCSubtargetInfo *STI) const {
   return false;
 }
 
