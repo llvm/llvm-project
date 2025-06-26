@@ -544,12 +544,13 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
-static Value* createCombinedi32toi64Expansion(IRBuilder<> &Builder, Value *LoBytes, Value *HighBytes) {
+static Value *createCombinedi32toi64Expansion(IRBuilder<> &Builder,
+                                              Value *LoBytes,
+                                              Value *HighBytes) {
   // For int64, manually combine two int32s
   // First, zero-extend both values to i64
   Value *Lo = Builder.CreateZExt(LoBytes, Builder.getInt64Ty());
-  Value *Hi =
-    Builder.CreateZExt(HighBytes, Builder.getInt64Ty());
+  Value *Hi = Builder.CreateZExt(HighBytes, Builder.getInt64Ty());
   // Shift the high bits left by 32 bits
   Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
   // OR the high and low bits together
@@ -591,14 +592,14 @@ static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
   Value *Result = PoisonValue::get(BufferTy);
   for (unsigned I = 0; I < ExtractNum; I += 2) {
     Value *Combined = nullptr;
-    if (IsDouble) 
+    if (IsDouble)
       // For doubles, use dx_asdouble intrinsic
       Combined =
           Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
                                   {ExtractElements[I], ExtractElements[I + 1]});
     else
-      Combined = 
-          createCombinedi32toi64Expansion(Builder, ExtractElements[I], ExtractElements[I + 1]);
+      Combined = createCombinedi32toi64Expansion(Builder, ExtractElements[I],
+                                                 ExtractElements[I + 1]);
 
     if (ExtractNum == 4)
       Result = Builder.CreateInsertElement(Result, Combined,
@@ -654,7 +655,7 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
   Type *Int32Ty = Builder.getInt32Ty();
   Type *ResultTy = VectorType::get(Int32Ty, IsVector ? 4 : 2, false);
   Value *Val = PoisonValue::get(ResultTy);
-  
+
   // Handle double type(s)
   Type *SplitElementTy = Int32Ty;
   if (IsVector)
@@ -672,7 +673,7 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
   } else {
     // Handle int64 type(s)
     Value *InputVal = Orig->getOperand(2);
-     Constant *ShiftAmt = Builder.getInt64(32);
+    Constant *ShiftAmt = Builder.getInt64(32);
     if (IsVector)
       ShiftAmt = ConstantVector::getSplat(ElementCount::getFixed(2), ShiftAmt);
 
@@ -683,13 +684,13 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
   }
 
   if (IsVector) {
-      // For vector doubles, use shuffle to create the final vector
-      Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
-    } else {
-      // For scalar doubles, insert the elements
-      Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
-      Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
-    }
+    // For vector doubles, use shuffle to create the final vector
+    Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
+  } else {
+    // For scalar doubles, insert the elements
+    Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
+    Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
+  }
 
   // Create the final intrinsic call
   Builder.CreateIntrinsic(Builder.getVoidTy(),
