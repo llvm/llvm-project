@@ -48126,6 +48126,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return V;
 
   // select(~Cond, X, Y) -> select(Cond, Y, X)
+  // Limit vXi1 cases to AVX512 canonicalization of zero mask to the RHS.
   if (CondVT.getScalarType() != MVT::i1 ||
       (ISD::isBuildVectorAllZeros(LHS.getNode()) &&
        !ISD::isBuildVectorAllZeros(RHS.getNode())))
