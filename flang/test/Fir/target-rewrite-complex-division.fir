@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --complex-division-conversion --enable-arithmetic-based-complex-div | FileCheck %s
+// RUN: fir-opt %s --simplify-hlfir-intrinsics --enable-complex-div-converter | FileCheck %s
 
 func.func @test_double_complex_div(%arg0: !fir.ref<complex<f64>>, %arg1: !fir.ref<complex<f64>>, %arg2: !fir.ref<complex<f64>>) {
   %0 = fir.load %arg1 : !fir.ref<complex<f64>>
