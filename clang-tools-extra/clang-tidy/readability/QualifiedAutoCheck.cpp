@@ -106,12 +106,14 @@ QualifiedAutoCheck::QualifiedAutoCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       AddConstToQualified(Options.get("AddConstToQualified", true)),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      RespectOpaqueTypes(Options.get("RespectOpaqueTypes", false)) {}
 
 void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AddConstToQualified", AddConstToQualified);
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "RespectOpaqueTypes", RespectOpaqueTypes);
 }
 
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
@@ -174,6 +176,21 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
 
 void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Var = Result.Nodes.getNodeAs<VarDecl>("auto")) {
+    if (RespectOpaqueTypes) {
+      auto DeducedType =
+          Var->getType()->getContainedAutoType()->getDeducedType();
+
+      // Remove one sugar if the type if part of a template
+      if (llvm::isa<SubstTemplateTypeParmType>(DeducedType)) {
+        DeducedType =
+            DeducedType->getLocallyUnqualifiedSingleStepDesugaredType();
+      }
+
+      if (!isa<PointerType>(DeducedType)) {
+        return;
+      }
+    }
+
     SourceRange TypeSpecifier;
     if (std::optional<SourceRange> TypeSpec =
             getTypeSpecifierLocation(Var, Result)) {
