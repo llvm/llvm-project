@@ -1,5 +1,1 @@
-int
-main()
-{
-  return 22222;
-}
+int main() { return 22222; }

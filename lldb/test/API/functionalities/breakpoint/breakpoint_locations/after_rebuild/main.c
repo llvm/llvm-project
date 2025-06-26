@@ -1,4 +1,1 @@
-int
-main() {
-  return 1111;
-}
+int main() { return 1111; }
