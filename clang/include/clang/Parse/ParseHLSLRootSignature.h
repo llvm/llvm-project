@@ -86,14 +86,14 @@ private:
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Num32BitConstants;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::dxbc::ShaderVisibility> Visibility;
   };
   std::optional<ParsedConstantParams> parseRootConstantParams();
 
   struct ParsedRootDescriptorParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::dxbc::ShaderVisibility> Visibility;
     std::optional<llvm::dxbc::RootDescriptorFlags> Flags;
   };
   std::optional<ParsedRootDescriptorParams>
@@ -122,7 +122,7 @@ private:
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::dxbc::ShaderVisibility> Visibility;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
@@ -132,7 +132,7 @@ private:
   std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
-  std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::dxbc::ShaderVisibility> parseShaderVisibility();
   std::optional<llvm::hlsl::rootsig::SamplerFilter> parseSamplerFilter();
   std::optional<llvm::hlsl::rootsig::TextureAddressMode>
   parseTextureAddressMode();

@@ -241,7 +241,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
     return std::nullopt;
 
   DescriptorTable Table;
-  std::optional<ShaderVisibility> Visibility;
+  std::optional<llvm::dxbc::ShaderVisibility> Visibility;
 
   // Iterate as many Clauses as possible
   do {
@@ -984,7 +984,7 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::ShaderVisibility>
+std::optional<llvm::dxbc::ShaderVisibility>
 RootSignatureParser::parseShaderVisibility() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1000,7 +1000,7 @@ RootSignatureParser::parseShaderVisibility() {
   switch (CurToken.TokKind) {
 #define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
   case TokenKind::en_##NAME:                                                   \
-    return ShaderVisibility::NAME;                                             \
+    return llvm::dxbc::ShaderVisibility::NAME;                                 \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:

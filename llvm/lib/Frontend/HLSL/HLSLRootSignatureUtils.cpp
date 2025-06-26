@@ -80,20 +80,9 @@ static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
   return OS;
 }
 
-static const EnumEntry<ShaderVisibility> VisibilityNames[] = {
-    {"All", ShaderVisibility::All},
-    {"Vertex", ShaderVisibility::Vertex},
-    {"Hull", ShaderVisibility::Hull},
-    {"Domain", ShaderVisibility::Domain},
-    {"Geometry", ShaderVisibility::Geometry},
-    {"Pixel", ShaderVisibility::Pixel},
-    {"Amplification", ShaderVisibility::Amplification},
-    {"Mesh", ShaderVisibility::Mesh},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const ShaderVisibility &Visibility) {
-  printEnum(OS, Visibility, ArrayRef(VisibilityNames));
+                               const llvm::dxbc::ShaderVisibility &Visibility) {
+  printEnum(OS, Visibility, dxbc::getShaderVisibility());
 
   return OS;
 }

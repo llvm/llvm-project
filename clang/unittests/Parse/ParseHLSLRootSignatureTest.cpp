@@ -213,13 +213,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)4);
   ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
-            ShaderVisibility::Pixel);
+            llvm::dxbc::ShaderVisibility::Pixel);
 
   // Empty Descriptor Table
   Elem = Elements[5];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, 0u);
-  ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -271,7 +272,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 3.402823466e+38f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
 
   // Check values can be set as expected
   Elem = Elements[1];
@@ -291,7 +293,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 4.2f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 9000.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 4u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::Domain);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::Domain);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -439,7 +442,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootConstants>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootConstants>(Elem));
@@ -447,7 +451,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.Number, 42u);
   ASSERT_EQ(std::get<RootConstants>(Elem).Space, 3u);
-  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility, ShaderVisibility::Hull);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::Hull);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -534,7 +539,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
@@ -545,7 +551,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 42u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
-            ShaderVisibility::Geometry);
+            llvm::dxbc::ShaderVisibility::Geometry);
   auto ValidRootDescriptorFlags = llvm::dxbc::RootDescriptorFlags(0xe);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, ValidRootDescriptorFlags);
 
@@ -555,7 +561,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::Hull);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::Hull);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataVolatile);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
@@ -566,7 +573,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::None);
 

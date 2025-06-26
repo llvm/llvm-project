@@ -29,17 +29,6 @@ namespace rootsig {
 // carried over from their values in DXC. For reference:
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/
 
-enum class ShaderVisibility {
-  All = 0,
-  Vertex = 1,
-  Hull = 2,
-  Domain = 3,
-  Geometry = 4,
-  Pixel = 5,
-  Amplification = 6,
-  Mesh = 7,
-};
-
 // D3D12_FILTER enumeration:
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter
 enum class SamplerFilter {
@@ -122,7 +111,7 @@ struct RootConstants {
   uint32_t Num32BitConstants;
   Register Reg;
   uint32_t Space = 0;
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
 };
 
 enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
@@ -131,7 +120,7 @@ struct RootDescriptor {
   DescriptorType Type;
   Register Reg;
   uint32_t Space = 0;
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
   dxbc::RootDescriptorFlags Flags;
 
   void setDefaultFlags() {
@@ -149,7 +138,7 @@ struct RootDescriptor {
 
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
   // Denotes that the previous NumClauses in the RootElement array
   // are the clauses in the table.
   uint32_t NumClauses = 0;
@@ -196,7 +185,7 @@ struct StaticSampler {
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t Space = 0;
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam

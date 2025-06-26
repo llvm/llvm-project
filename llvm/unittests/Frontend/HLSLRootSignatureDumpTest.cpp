@@ -96,7 +96,7 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
 TEST(HLSLRootSignatureTest, DescriptorTableDump) {
   DescriptorTable Table;
   Table.NumClauses = 4;
-  Table.Visibility = ShaderVisibility::Geometry;
+  Table.Visibility = llvm::dxbc::ShaderVisibility::Geometry;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -130,7 +130,7 @@ TEST(HLSLRootSignatureTest, RootSRVDump) {
   Descriptor.Type = DescriptorType::SRV;
   Descriptor.Reg = {RegisterType::TReg, 0};
   Descriptor.Space = 42;
-  Descriptor.Visibility = ShaderVisibility::Geometry;
+  Descriptor.Visibility = llvm::dxbc::ShaderVisibility::Geometry;
   Descriptor.Flags = llvm::dxbc::RootDescriptorFlags::None;
 
   std::string Out;
@@ -148,7 +148,7 @@ TEST(HLSLRootSignatureTest, RootUAVDump) {
   Descriptor.Type = DescriptorType::UAV;
   Descriptor.Reg = {RegisterType::UReg, 92374};
   Descriptor.Space = 932847;
-  Descriptor.Visibility = ShaderVisibility::Hull;
+  Descriptor.Visibility = llvm::dxbc::ShaderVisibility::Hull;
   Descriptor.Flags = llvm::dxbc::RootDescriptorFlags(0xe);
 
   std::string Out;
@@ -205,7 +205,7 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
   Sampler.MinLOD = 1.0f;
   Sampler.MaxLOD = 32.0f;
   Sampler.Space = 7;
-  Sampler.Visibility = ShaderVisibility::Domain;
+  Sampler.Visibility = llvm::dxbc::ShaderVisibility::Domain;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -249,7 +249,7 @@ TEST(HLSLRootSignatureTest, SetRootConstantsDump) {
   Constants.Num32BitConstants = 983;
   Constants.Reg = {RegisterType::BReg, 34593};
   Constants.Space = 7;
-  Constants.Visibility = ShaderVisibility::Pixel;
+  Constants.Visibility = llvm::dxbc::ShaderVisibility::Pixel;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
