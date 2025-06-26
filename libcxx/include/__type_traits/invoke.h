@@ -73,7 +73,7 @@ struct __invoke_result {
 };
 
 template <class... _Args>
-__invoke_result_t<_Args...> __invoke(_Args&&... __args)
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __invoke_result_t<_Args...> __invoke(_Args&&... __args)
     _NOEXCEPT_(noexcept(__builtin_invoke(std::forward<_Args>(__args)...))) {
   return __builtin_invoke(std::forward<_Args>(__args)...);
 }
