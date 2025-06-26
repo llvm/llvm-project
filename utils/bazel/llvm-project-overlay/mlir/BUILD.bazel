@@ -3519,11 +3519,8 @@ gentbl_cc_library(
 
 cc_library(
     name = "XeGPUDialect",
-    srcs = [
-        "lib/Dialect/XeGPU/IR/XeGPUDialect.cpp",
-        "lib/Dialect/XeGPU/IR/XeGPUOps.cpp",
-    ],
-    hdrs = ["include/mlir/Dialect/XeGPU/IR/XeGPU.h"],
+    srcs = glob(["lib/Dialect/XeGPU/IR/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/XeGPU/IR/*.h"]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -4845,7 +4842,8 @@ cc_library(
     ]),
     hdrs = glob(["include/mlir/Support/*.h"]),
     includes = ["include"],
-    deps = ["//llvm:Support"],)
+    deps = ["//llvm:Support"],
+)
 
 cc_library(
     name = "Debug",
