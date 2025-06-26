@@ -359,9 +359,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // Most operations are naturally 32-bit vector operations. We only support
   // load and store of i64 vectors, so promote v2i64 vector operations to v4i32.
   for (MVT Vec64 : {MVT::v2i64, MVT::v2f64}) {
-    if (STI.hasMovB64())
-      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
-    else {
+    if (!STI.hasMovB64()) {
       setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
       AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v4i32);
     }
@@ -376,9 +374,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   for (MVT Vec64 : {MVT::v3i64, MVT::v3f64}) {
-    if (STI.hasMovB64())
-      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
-    else {
+    if (!STI.hasMovB64()) {
       setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
       AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v6i32);
     }
@@ -393,9 +389,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   for (MVT Vec64 : {MVT::v4i64, MVT::v4f64}) {
-    if (STI.hasMovB64())
-      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
-    else {
+    if (!STI.hasMovB64()) {
       setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
       AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v8i32);
     }
@@ -410,9 +404,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   for (MVT Vec64 : {MVT::v8i64, MVT::v8f64}) {
-    if (STI.hasMovB64())
-      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
-    else {
+    if (!STI.hasMovB64()) {
       setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
       AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v16i32);
     }
@@ -427,9 +419,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   for (MVT Vec64 : {MVT::v16i64, MVT::v16f64}) {
-    if (STI.hasMovB64())
-      setOperationAction(ISD::BUILD_VECTOR, Vec64, Legal);
-    else {
+    if (!STI.hasMovB64()) {
       setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
       AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v32i32);
     }
