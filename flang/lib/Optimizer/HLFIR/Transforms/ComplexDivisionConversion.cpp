@@ -16,7 +16,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <optional>
 #include "llvm/Support/Debug.h"
-#define DEBUG_TYPE "xs-complex-conversion"
+#define DEBUG_TYPE "complex-conversion"
 
 namespace hlfir {
 #define GEN_PASS_DEF_COMPLEXDIVISIONCONVERSION
@@ -28,7 +28,7 @@ static llvm::cl::opt<bool> EnableArithmeticBasedComplexDiv(
     llvm::cl::desc("Enable calling of Arithmetic-based Complex Division."));
 
 namespace {
-class HlfirArithmeticBasedComplexDivisionConversion : public mlir::OpRewritePattern<fir::CallOp> {
+class HlfirComplexDivisionConversion : public mlir::OpRewritePattern<fir::CallOp> {
   using OpRewritePattern::OpRewritePattern;
   llvm::LogicalResult matchAndRewrite(fir::CallOp callOp,
                                       mlir::PatternRewriter &rewriter) const override {
@@ -83,13 +83,13 @@ class HlfirArithmeticBasedComplexDivisionConversion : public mlir::OpRewritePatt
     return mlir::success();
   }
 };
-class ArithmeticBasedComplexDivisionConversion : public hlfir::impl::ComplexDivisionConversionBase<ArithmeticBasedComplexDivisionConversion> {
+class ComplexDivisionConversion : public hlfir::impl::ComplexDivisionConversionBase<ComplexDivisionConversion> {
 public:
   void runOnOperation() override {
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<HlfirArithmeticBasedComplexDivisionConversion>(context);
+    patterns.insert<HlfirComplexDivisionConversion>(context);
     
     mlir::GreedyRewriteConfig config;
     config.setRegionSimplificationLevel(mlir::GreedySimplifyRegionLevel::Disabled);
