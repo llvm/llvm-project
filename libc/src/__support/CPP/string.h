@@ -106,16 +106,23 @@ public:
   LIBC_INLINE constexpr const char *end() const { return data() + size_; }
   LIBC_INLINE char *end() { return data() + size_; }
 
-  LIBC_INLINE constexpr const char &front() const { return data()[0]; }
+  LIBC_INLINE constexpr const char &front() const LIBC_LIFETIMEBOUND {
+    return data()[0];
+  }
   LIBC_INLINE char &front() { return data()[0]; }
 
-  LIBC_INLINE constexpr const char &back() const { return data()[size_ - 1]; }
+  LIBC_INLINE constexpr const char &back() const LIBC_LIFETIMEBOUND {
+    return data()[size_ - 1];
+  }
   LIBC_INLINE char &back() { return data()[size_ - 1]; }
 
-  LIBC_INLINE constexpr const char &operator[](size_t index) const {
+  LIBC_INLINE constexpr const char &
+  operator[](size_t index) const LIBC_LIFETIMEBOUND {
     return data()[index];
   }
-  LIBC_INLINE char &operator[](size_t index) { return data()[index]; }
+  LIBC_INLINE char &operator[](size_t index) LIBC_LIFETIMEBOUND {
+    return data()[index];
+  }
 
   LIBC_INLINE const char *c_str() const { return data(); }
 
