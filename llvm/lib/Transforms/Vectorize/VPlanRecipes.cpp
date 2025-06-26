@@ -2608,7 +2608,7 @@ void VPSingleDefBundleRecipe::unbundle() {
   for (const auto &[Idx, Op] : enumerate(operands()))
     BundleLiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
 
-  replaceAllUsesWith(getResultRecipe());
+  replaceAllUsesWith(BundledRecipes.back());
   BundledRecipes.clear();
 }
 

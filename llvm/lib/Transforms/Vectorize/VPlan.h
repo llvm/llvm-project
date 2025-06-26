@@ -2797,9 +2797,12 @@ public:
     return new VPSingleDefBundleRecipe(BundleType, NewBundledRecipes);
   }
 
-  /// Return the VPSingleDefRecipe producing the final result of the bundled
-  /// recipe.
-  VPSingleDefRecipe *getResultRecipe() const { return BundledRecipes.back(); }
+  /// Return the VPValue to use to infer the result type of the recipe.
+  VPValue *getTypeVPValue() const {
+    unsigned OpIdx =
+        cast<VPReductionRecipe>(BundledRecipes.back())->isConditional() ? 2 : 1;
+    return getOperand(getNumOperands() - OpIdx);
+  }
 
   /// Insert the bundled recipes back into the VPlan, directly before the
   /// current recipe. Leaves the bundle recipe empty, which must be removed
