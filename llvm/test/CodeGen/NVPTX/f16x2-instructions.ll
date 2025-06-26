@@ -2295,5 +2295,25 @@ define <2 x half> @test_uitofp_2xi16_to_2xhalf(<2 x i16> %a) #0 {
   ret <2 x half> %r
 }
 
+define void @test_store_2xhalf(ptr %p1, ptr %p2, <2 x half> %v) {
+; CHECK-LABEL: test_store_2xhalf(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_store_2xhalf_param_2];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_store_2xhalf_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_store_2xhalf_param_0];
+; CHECK-NEXT:    st.b32 [%rd1], %r1;
+; CHECK-NEXT:    st.b32 [%rd2], 1006648320;
+; CHECK-NEXT:    ret;
+  store <2 x half> %v, ptr %p1
+  store <2 x half> <half 1.0, half 1.0>, ptr %p2
+  ret void
+}
+
+
+
 attributes #0 = { nounwind }
 attributes #1 = { "unsafe-fp-math" = "true" }

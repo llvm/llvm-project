@@ -1339,20 +1339,18 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   SDValue Offset, Base;
   SelectADDR(ST->getBasePtr(), Base, Offset);
 
-  SDValue Ops[] = {Value,
+  SDValue Ops[] = {selectPossiblyImm(Value),
                    getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
                    getI32Imm(CodeAddrSpace, DL),
-                   getI32Imm(NVPTX::PTXLdStInstCode::Untyped, DL),
                    getI32Imm(ToTypeWidth, DL),
                    Base,
                    Offset,
                    Chain};
 
-  const MVT::SimpleValueType SourceVT =
-      Value.getNode()->getSimpleValueType(0).SimpleTy;
-  const std::optional<unsigned> Opcode = pickOpcodeForVT(
-      SourceVT, NVPTX::ST_i8, NVPTX::ST_i16, NVPTX::ST_i32, NVPTX::ST_i64);
+  const std::optional<unsigned> Opcode =
+      pickOpcodeForVT(Value.getSimpleValueType().SimpleTy, NVPTX::ST_i8,
+                      NVPTX::ST_i16, NVPTX::ST_i32, NVPTX::ST_i64);
   if (!Opcode)
     return false;
 
@@ -1389,7 +1387,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   const unsigned NumElts = getLoadStoreVectorNumElts(ST);
 
-  SmallVector<SDValue, 16> Ops(ST->ops().slice(1, NumElts));
+  SmallVector<SDValue, 16> Ops;
+  for (auto &V : ST->ops().slice(1, NumElts))
+    Ops.push_back(selectPossiblyImm(V));
   SDValue Addr = N->getOperand(NumElts + 1);
   const unsigned ToTypeWidth = TotalWidth / NumElts;
 
@@ -1400,9 +1400,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   SelectADDR(Addr, Base, Offset);
 
   Ops.append({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
-              getI32Imm(CodeAddrSpace, DL),
-              getI32Imm(NVPTX::PTXLdStInstCode::Untyped, DL),
-              getI32Imm(ToTypeWidth, DL), Base, Offset, Chain});
+              getI32Imm(CodeAddrSpace, DL), getI32Imm(ToTypeWidth, DL), Base,
+              Offset, Chain});
 
   const MVT::SimpleValueType EltVT =
       ST->getOperand(1).getSimpleValueType().SimpleTy;
@@ -2100,6 +2099,19 @@ bool NVPTXDAGToDAGISel::SelectADDR(SDValue Addr, SDValue &Base,
   Offset = accumulateOffset(Addr, SDLoc(Addr), CurDAG);
   Base = selectBaseADDR(Addr, CurDAG);
   return true;
+}
+
+SDValue NVPTXDAGToDAGISel::selectPossiblyImm(SDValue V) {
+  if (V.getOpcode() == ISD::BITCAST)
+    V = V.getOperand(0);
+
+  if (auto *CN = dyn_cast<ConstantSDNode>(V))
+    return CurDAG->getTargetConstant(CN->getAPIntValue(), SDLoc(V),
+                                     V.getValueType());
+  if (auto *CN = dyn_cast<ConstantFPSDNode>(V))
+    return CurDAG->getTargetConstantFP(CN->getValueAPF(), SDLoc(V),
+                                       V.getValueType());
+  return V;
 }
 
 bool NVPTXDAGToDAGISel::ChkMemSDNodeAddressSpace(SDNode *N,

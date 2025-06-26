@@ -105,6 +105,7 @@ private:
   }
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
+  SDValue selectPossiblyImm(SDValue V);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 
