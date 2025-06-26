@@ -68,6 +68,11 @@ C++ Specific Potentially Breaking Changes
 
 - Added ``!nonnull/!align`` metadata to load of references for better codegen.
 
+- Fully implemented `CWG400 Using-declarations and the "struct hack" `
+  `<https://wg21.link/CWG400>`_. Invalid member using-declaration whose
+  nested-name-specifier doesn't refer to a base class such as
+  ``using CurrentClass::Foo;`` is now rejected in C++98 mode.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -158,11 +163,6 @@ Resolutions to C++ Defect Reports
 - Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
 
 - Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
-
-- Fully implemented `CWG400 Using-declarations and the "struct hack" `
-  `<https://wg21.link/CWG400>`_. Correctly rejected invalid member
-  using-declaration whose nested-name-specifier doesn't refer to a base class of
-  the current class in C++98 mode.
 
 C Language Changes
 ------------------
