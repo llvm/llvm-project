@@ -5869,6 +5869,30 @@ LogicalResult ShapeCastOp::verify() {
   return success();
 }
 
+/// Return true if `transpose` does not permute a pair of non-unit dims.
+/// By `order preserving` we mean that the flattened versions of the input and
+/// output vectors are (numerically) identical. In other words `transpose` is
+/// effectively a shape cast.
+static bool isOrderPreserving(TransposeOp transpose) {
+  ArrayRef<int64_t> permutation = transpose.getPermutation();
+  VectorType sourceType = transpose.getSourceVectorType();
+  ArrayRef<int64_t> inShape = sourceType.getShape();
+  ArrayRef<bool> inDimIsScalable = sourceType.getScalableDims();
+  auto isNonScalableUnitDim = [&](int64_t dim) {
+    return inShape[dim] == 1 && !inDimIsScalable[dim];
+  };
+  int64_t current = 0;
+  for (auto p : permutation) {
+    if (!isNonScalableUnitDim(p)) {
+      if (p < current) {
+        return false;
+      }
+      current = p;
+    }
+  }
+  return true;
+}
+
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
   VectorType resultType = getType();
@@ -5881,6 +5905,22 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
   if (auto precedingShapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
     setOperand(precedingShapeCast.getSource());
     return getResult();
+  }
+
+  // shape_cast(transpose(x)) -> shape_cast(x)
+  if (auto transpose = getSource().getDefiningOp<TransposeOp>()) {
+    if (isOrderPreserving(transpose)) {
+      setOperand(transpose.getVector());
+      return getResult();
+    }
+    return {};
+  }
+
+  // Y = shape_cast(broadcast(X))
+  //      -> X, if X and Y have same type
+  if (auto bcastOp = getSource().getDefiningOp<BroadcastOp>()) {
+    if (bcastOp.getSourceType() == resultType)
+      return bcastOp.getSource();
   }
 
   // shape_cast(constant) -> constant
@@ -6219,6 +6259,21 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
     return ub::PoisonAttr::get(getContext());
 
+  // Eliminate identity transposes, and more generally any transposes that
+  // preserves the shape without permuting elements.
+  //
+  // Examples of what to fold:
+  // %0 = vector.transpose %arg, [0, 1] : vector<1x1xi8> to vector<1x1xi8>
+  // %0 = vector.transpose %arg, [0, 1] : vector<2x2xi8> to vector<2x2xi8>
+  // %0 = vector.transpose %arg, [1, 0] : vector<1x1xi8> to vector<1x1xi8>
+  //
+  // Example of what NOT to fold:
+  //
+  // %0 = vector.transpose %arg, [1, 0] : vector<2x2xi8> to vector<2x2xi8>
+  if (getSourceVectorType() == getResultVectorType() &&
+      isOrderPreserving(*this))
+    return getVector();
+
   return {};
 }
 
@@ -6432,30 +6487,6 @@ public:
     return success();
   }
 };
-
-/// Return true if `transpose` does not permute a pair of non-unit dims.
-/// By `order preserving` we mean that the flattened versions of the input and
-/// output vectors are (numerically) identical. In other words `transpose` is
-/// effectively a shape cast.
-static bool isOrderPreserving(TransposeOp transpose) {
-  ArrayRef<int64_t> permutation = transpose.getPermutation();
-  VectorType sourceType = transpose.getSourceVectorType();
-  ArrayRef<int64_t> inShape = sourceType.getShape();
-  ArrayRef<bool> inDimIsScalable = sourceType.getScalableDims();
-  auto isNonScalableUnitDim = [&](int64_t dim) {
-    return inShape[dim] == 1 && !inDimIsScalable[dim];
-  };
-  int64_t current = 0;
-  for (auto p : permutation) {
-    if (!isNonScalableUnitDim(p)) {
-      if (p < current) {
-        return false;
-      }
-      current = p;
-    }
-  }
-  return true;
-}
 
 /// BEFORE:
 /// %0 = vector.transpose %arg0, [0, 2, 1] :
