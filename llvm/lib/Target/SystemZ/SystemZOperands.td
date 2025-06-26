@@ -307,11 +307,14 @@ def U3Imm  : ImmediateAsmOperand<"U3Imm">;
 def U4Imm  : ImmediateAsmOperand<"U4Imm">;
 def S8Imm  : ImmediateAsmOperand<"S8Imm">;
 def U8Imm  : ImmediateAsmOperand<"U8Imm">;
+def X8Imm  : ImmediateAsmOperand<"X8Imm">;
 def U12Imm : ImmediateAsmOperand<"U12Imm">;
 def S16Imm : ImmediateAsmOperand<"S16Imm">;
 def U16Imm : ImmediateAsmOperand<"U16Imm">;
+def X16Imm : ImmediateAsmOperand<"X16Imm">;
 def S32Imm : ImmediateAsmOperand<"S32Imm">;
 def U32Imm : ImmediateAsmOperand<"U32Imm">;
+def X32Imm : ImmediateAsmOperand<"X32Imm">;
 def U48Imm : ImmediateAsmOperand<"U48Imm">;
 
 //===----------------------------------------------------------------------===//
@@ -371,6 +374,10 @@ defm imm32zx8 : Immediate<i32, [{
   return N->getAPIntValue().isIntN(8);
 }], UIMM8, "U8Imm">;
 
+defm imm32xx8 : Immediate<i32, [{
+  return false;
+}], UIMM8, "X8Imm">;
+
 defm imm32zx8trunc : Immediate<i32, [{}], UIMM8, "U8Imm">;
 
 defm imm32zx12 : Immediate<i32, [{
@@ -388,6 +395,10 @@ defm imm32sx16n : Immediate<i32, [{
 defm imm32zx16 : Immediate<i32, [{
   return N->getAPIntValue().isIntN(16);
 }], UIMM16, "U16Imm">;
+
+defm imm32xx16 : Immediate<i32, [{
+  return false;
+}], UIMM16, "X16Imm">;
 
 defm imm32sx16trunc : Immediate<i32, [{}], SIMM16, "S16Imm">;
 defm imm32zx16trunc : Immediate<i32, [{}], UIMM16, "U16Imm">;
@@ -514,6 +525,10 @@ defm imm64sx32n : Immediate<i64, [{
 defm imm64zx32 : Immediate<i64, [{
   return N->getAPIntValue().isIntN(32);
 }], UIMM32, "U32Imm">;
+
+defm imm64xx32 : Immediate<i64, [{
+  return false;
+}], UIMM32, "X32Imm">;
 
 defm imm64zx32n : Immediate<i64, [{
   return (-N->getAPIntValue()).isIntN(32);

@@ -1768,7 +1768,28 @@ class DirectiveInsnE<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst = enc;
 }
 
-class DirectiveInsnRI<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstI<0, outs, ins, asmstr, pattern> {
+    bits<16> enc;
+
+    let Inst{15-8} = enc{15-8};
+  }
+
+class DirectiveInsnIE<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstIE<0, outs, ins, asmstr, pattern> {
+    bits<32> enc;
+
+    let Inst{31-16} = enc{31-16};
+  }
+
+  class DirectiveInsnMII<dag outs, dag ins, string asmstr, list<dag> pattern>
+      : InstMII<0, outs, ins, asmstr, pattern> {
+    bits<48> enc;
+
+    let Inst{47-40} = enc{47-40};
+  }
+
+class DirectiveInsnRIa<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRIa<0, outs, ins, asmstr, pattern> {
   bits<32> enc;
 
@@ -1776,7 +1797,47 @@ class DirectiveInsnRI<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{19-16} = enc{19-16};
 }
 
-class DirectiveInsnRIE<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnRIb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIb<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+  let Inst{19-16} = enc{19-16};
+}
+
+class DirectiveInsnRIc<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIc<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+  let Inst{19-16} = enc{19-16};
+}
+
+class DirectiveInsnRIEa<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIEa<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRIEb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIEb<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRIEc<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIEc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRIEd<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRIEd<0, outs, ins, asmstr, pattern> {
   bits<48> enc;
 
@@ -1784,10 +1845,52 @@ class DirectiveInsnRIE<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = enc{7-0};
 }
 
-class DirectiveInsnRIL<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnRIEe<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIEe<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRIEf<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIEf<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRIEg<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIEg<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRILa<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRILa<0, outs, ins, asmstr, pattern> {
   bits<48> enc;
-  string type;
+  // string type;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{35-32} = enc{35-32};
+}
+
+class DirectiveInsnRILb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRILb<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+  // string type;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{35-32} = enc{35-32};
+}
+
+class DirectiveInsnRILc<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRILc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+  // string type;
 
   let Inst{47-40} = enc{47-40};
   let Inst{35-32} = enc{35-32};
@@ -1808,6 +1911,13 @@ class DirectiveInsnRR<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15-8} = enc{15-8};
 }
 
+class DirectiveInsnRRD<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRRD<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-16} = enc{31-16};
+}
+
 class DirectiveInsnRRE<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRRE<0, outs, ins, asmstr, pattern> {
   bits<32> enc;
@@ -1815,8 +1925,31 @@ class DirectiveInsnRRE<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{31-16} = enc{31-16};
 }
 
-class DirectiveInsnRRF<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnRRFa<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRRFa<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-16} = enc{31-16};
+}
+
+// RRF-b is identical to RRF-a, and is thus omitted
+
+class DirectiveInsnRRFc<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRRFc<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-16} = enc{31-16};
+}
+
+class DirectiveInsnRRFd<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRRFd<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-16} = enc{31-16};
+}
+
+class DirectiveInsnRRFe<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRRFe<0, outs, ins, asmstr, pattern> {
   bits<32> enc;
 
   let Inst{31-16} = enc{31-16};
@@ -1830,8 +1963,15 @@ class DirectiveInsnRRS<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = enc{7-0};
 }
 
-class DirectiveInsnRS<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnRSa<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRSa<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+}
+
+class DirectiveInsnRSb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRSb<0, outs, ins, asmstr, pattern> {
   bits<32> enc;
 
   let Inst{31-24} = enc{31-24};
@@ -1852,7 +1992,23 @@ class DirectiveInsnRSI<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{31-24} = enc{31-24};
 }
 
-class DirectiveInsnRSY<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnRSLa<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRSLa<0, outs, ins, asmstr, pattern> {
+    bits <48> enc;
+
+    let Inst{47-40} = enc{47-40};
+    let Inst{7-0} = enc{7-0};
+}
+
+class DirectiveInsnRSLb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRSLb<0, outs, ins, asmstr, pattern> {
+    bits <48> enc;
+
+    let Inst{47-40} = enc{47-40};
+    let Inst{7-0} = enc{7-0};
+}
+
+class DirectiveInsnRSYa<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRSYa<0, outs, ins, asmstr, pattern> {
   bits<48> enc;
 
@@ -1860,8 +2016,23 @@ class DirectiveInsnRSY<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = enc{7-0};
 }
 
-class DirectiveInsnRX<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnRSYb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRSYb<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRXa<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRXa<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+}
+
+class DirectiveInsnRXb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRXb<0, outs, ins, asmstr, pattern> {
   bits<32> enc;
 
   let Inst{31-24} = enc{31-24};
@@ -1885,7 +2056,23 @@ class DirectiveInsnRXF<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = enc{7-0};
 }
 
-class DirectiveInsnRXY<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnRXYa<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRXYa<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRXYb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRXYb<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRXYc<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstRXYa<0, outs, ins, asmstr, pattern> {
   bits<48> enc;
 
@@ -1922,8 +2109,51 @@ class DirectiveInsnSIL<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{47-32} = enc{47-32};
 }
 
-class DirectiveInsnSS<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnSMI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSMI<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+}
+
+
+class DirectiveInsnSSa<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSSa<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+}
+
+class DirectiveInsnSSb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSSb<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+}
+
+class DirectiveInsnSSc<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSSc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+}
+
+class DirectiveInsnSSd<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSSd<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+}
+
+class DirectiveInsnSSe<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSSe<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+}
+
+class DirectiveInsnSSf<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSSf<0, outs, ins, asmstr, pattern> {
   bits<48> enc;
 
   let Inst{47-40} = enc{47-40};
@@ -1944,7 +2174,39 @@ class DirectiveInsnSSF<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{35-32} = enc{35-32};
 }
 
-class DirectiveInsnVRI<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnVRIa<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIa<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIb<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIc<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRId<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRId<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIe<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstVRIe<0, outs, ins, asmstr, pattern> {
   bits<48> enc;
 
@@ -1952,7 +2214,79 @@ class DirectiveInsnVRI<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = enc{7-0};
 }
 
-class DirectiveInsnVRR<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnVRIf<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIf<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIg<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIg<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIh<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIh<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIi<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIi<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIj<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIj<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIk<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIk<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRIl<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIl<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRa<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRa<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRb<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRc<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstVRRc<0, outs, ins, asmstr, pattern> {
   bits<48> enc;
 
@@ -1960,8 +2294,96 @@ class DirectiveInsnVRR<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = enc{7-0};
 }
 
-class DirectiveInsnVRS<dag outs, dag ins, string asmstr, list<dag> pattern>
+class DirectiveInsnVRRd<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRd<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRe<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRe<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRf<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRf<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRg<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRg<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRh<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRh<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRi<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRi<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRj<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRj<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRRk<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRk<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRSa<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRSa<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRSb<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRSb<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRSc<dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstVRSc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRSd<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRSd<0, outs, ins, asmstr, pattern> {
   bits<48> enc;
 
   let Inst{47-40} = enc{47-40};

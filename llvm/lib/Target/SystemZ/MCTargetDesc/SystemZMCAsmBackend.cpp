@@ -54,6 +54,12 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
     return Value;
   };
 
+  auto handleXImmValue = [&] (unsigned W) -> uint64_t {
+    if (!checkFixupInRange(minIntN(W), maxUIntN(W)))
+      return 0;
+    return Value;
+  };
+
   switch (unsigned(Kind)) {
   case SystemZ::FK_390_PC12DBL:
     return handlePCRelFixupValue(12);
@@ -91,12 +97,18 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
     return handleImmValue(false, 4);
   case SystemZ::FK_390_U8Imm:
     return handleImmValue(false, 8);
+  case SystemZ::FK_390_X8Imm:
+    return handleXImmValue(8);
   case SystemZ::FK_390_U12Imm:
     return handleImmValue(false, 12);
   case SystemZ::FK_390_U16Imm:
     return handleImmValue(false, 16);
+  case SystemZ::FK_390_X16Imm:
+    return handleXImmValue(16);
   case SystemZ::FK_390_U32Imm:
     return handleImmValue(false, 32);
+  case SystemZ::FK_390_X32Imm:
+    return handleXImmValue(32);
   case SystemZ::FK_390_U48Imm:
     return handleImmValue(false, 48);
   }
