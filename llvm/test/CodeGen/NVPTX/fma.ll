@@ -40,12 +40,7 @@ define ptx_device float @t2_f32(float %x, float %y, float %z, float %w) {
 ; CHECK-NEXT:    .param .b32 param1;
 ; CHECK-NEXT:    st.param.b32 [param1], %r6;
 ; CHECK-NEXT:    .param .b32 retval0;
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    dummy_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), dummy_f32, (param0, param1);
 ; CHECK-NEXT:    ld.param.b32 %r7, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
@@ -92,12 +87,7 @@ define ptx_device double @t2_f64(double %x, double %y, double %z, double %w) {
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    st.param.b64 [param1], %rd6;
 ; CHECK-NEXT:    .param .b64 retval0;
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    dummy_f64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), dummy_f64, (param0, param1);
 ; CHECK-NEXT:    ld.param.b64 %rd7, [retval0];
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd7;

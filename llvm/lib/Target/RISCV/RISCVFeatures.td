@@ -373,13 +373,6 @@ def HasStdExtZhinx : Predicate<"Subtarget->hasStdExtZhinx()">,
 def NoStdExtZhinx : Predicate<"!Subtarget->hasStdExtZhinx()">;
 
 // Compressed Extensions
-def FeatureNoRVCHints
-    : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
-                       "Disable RVC Hint Instructions.">;
-def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
-                  AssemblerPredicate<(all_of(not FeatureNoRVCHints)),
-                                     "RVC Hint Instructions">;
-
 def FeatureStdExtZca
     : RISCVExtension<1, 0,
                      "part of the C extension, excluding compressed "
@@ -1298,12 +1291,12 @@ def HasVendorXSfvqmaccqoq
 
 def FeatureVendorXSfvfwmaccqqq
     : RISCVExtension<1, 0,
-                     "SiFive Matrix Multiply Accumulate Instruction and 4-by-4)",
+                     "SiFive Matrix Multiply Accumulate Instruction (4-by-4)",
                      [FeatureStdExtZvfbfmin]>;
 def HasVendorXSfvfwmaccqqq
     : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),
-                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))">;
+                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))">;
 
 def FeatureVendorXSfvfnrclipxfqf
     : RISCVExtension<1, 0,

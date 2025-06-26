@@ -222,6 +222,7 @@ C Language Changes
 
     char buf1[3] = "foo"; // -Wunterminated-string-initialization
     char buf2[3] = "flarp"; // -Wexcess-initializers
+    char buf3[3] = "fo\0";  // This is fine, no warning.
 
   This diagnostic can be suppressed by adding the new ``nonstring`` attribute
   to the field or variable being initialized. #GH137705
@@ -329,6 +330,9 @@ Non-comprehensive list of changes in this release
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 - Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
   polymorphic object.
+- ``libclang`` receives a family of new bindings to query basic facts about
+  GCC-style inline assembly blocks, including whether the block is ``volatile``
+  and its template string following the LLVM IR ``asm`` format. (#GH143424)
 - Clang no longer rejects reinterpret_cast conversions between indirect
   ARC-managed pointers and other pointer types. The prior behavior was overly
   strict and inconsistent with the ARC specification.
@@ -644,7 +648,7 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
-
+  
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -880,6 +884,7 @@ Bug Fixes to AST Handling
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
 - Fixed dependency calculation for TypedefTypes (#GH89774)
+- Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
