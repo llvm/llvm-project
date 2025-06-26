@@ -222,6 +222,9 @@ void DWARFCFIAnalysis::checkRegDiff(
   switch (PrevLoc.getLocation()) {
   case dwarf::UnwindLocation::Same:
   case dwarf::UnwindLocation::RegPlusOffset:
+    assert(MaybePrevRefReg &&
+           "when the unwinding rule is the same value, or reg plus offset, "
+           "there should always exist a reference register");
     if (Writes.count(MaybePrevRefReg.value())) {
       Context->reportError(
           Inst.getLoc(),
