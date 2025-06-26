@@ -49,8 +49,7 @@ protected:
   }
 
   std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
-                                         TrivialModuleLoader &ModLoader,
-                                         StringRef PreDefines = {}) {
+                                         TrivialModuleLoader &ModLoader) {
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
@@ -63,7 +62,7 @@ protected:
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
     if (!PreDefines.empty())
-      PP->setPredefines(PreDefines.str());
+      PP->setPredefines(PreDefines);
     PP->Initialize(*Target);
     PP->EnterMainSourceFile();
     return PP;
@@ -111,6 +110,7 @@ protected:
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
   std::unique_ptr<Preprocessor> PP;
+  std::string PreDefines;
 };
 
 TEST_F(LexerTest, GetSourceTextExpandsToMaximumInMacroArgument) {
@@ -773,6 +773,7 @@ TEST(LexerPreambleTest, PreambleBounds) {
 }
 
 TEST_F(LexerTest, CheckFirstPPToken) {
+  LangOpts.CPlusPlusModules = true;
   {
     TrivialModuleLoader ModLoader;
     auto PP = CreatePP("// This is a comment\n"
@@ -781,9 +782,8 @@ TEST_F(LexerTest, CheckFirstPPToken) {
     Token Tok;
     PP->Lex(Tok);
     EXPECT_TRUE(Tok.is(tok::kw_int));
-    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
-    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
-    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::kw_int));
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc().isValid());
+    EXPECT_EQ(PP->getMainFileFirstPPTokenLoc(), Tok.getLocation());
   }
   {
     TrivialModuleLoader ModLoader;
@@ -794,24 +794,28 @@ TEST_F(LexerTest, CheckFirstPPToken) {
     Token Tok;
     PP->Lex(Tok);
     EXPECT_TRUE(Tok.is(tok::kw_int));
-    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
-    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
-    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::hash));
+    EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
+                                    PP->getSourceManager(), PP->getLangOpts(),
+                                    /*IgnoreWhiteSpace=*/false));
+    EXPECT_TRUE(Tok.isFirstPPToken());
+    EXPECT_TRUE(Tok.is(tok::hash));
   }
 
   {
+    PreDefines = "#define FOO int\n";
     TrivialModuleLoader ModLoader;
     auto PP = CreatePP("// This is a comment\n"
                        "FOO a;",
-                       ModLoader, "#define FOO int\n");
+                       ModLoader);
     Token Tok;
     PP->Lex(Tok);
     EXPECT_TRUE(Tok.is(tok::kw_int));
-    EXPECT_TRUE(PP->hasSeenMainFileFirstPPToken());
-    EXPECT_TRUE(PP->getMainFileFirstPPToken().isFirstPPToken());
-    EXPECT_TRUE(PP->getMainFileFirstPPToken().is(tok::identifier));
-    EXPECT_TRUE(
-        PP->getMainFileFirstPPToken().getIdentifierInfo()->isStr("FOO"));
+    EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
+                                    PP->getSourceManager(), PP->getLangOpts(),
+                                    /*IgnoreWhiteSpace=*/false));
+    EXPECT_TRUE(Tok.isFirstPPToken());
+    EXPECT_TRUE(Tok.is(tok::raw_identifier));
+    EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
   }
 }
 } // anonymous namespace
