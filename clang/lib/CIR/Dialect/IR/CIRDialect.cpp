@@ -1403,11 +1403,27 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(fnType));
 
+  bool hasAlias = false;
+  mlir::StringAttr aliaseeNameAttr = getAliaseeAttrName(state.name);
+  if (parser.parseOptionalKeyword("alias").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    mlir::StringAttr aliaseeAttr;
+    if (parser.parseOptionalSymbolName(aliaseeAttr).failed())
+      return failure();
+    state.addAttribute(aliaseeNameAttr, FlatSymbolRefAttr::get(aliaseeAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+    hasAlias = true;
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, arguments, /*enableNameShadowing=*/false);
   if (parseResult.has_value()) {
+    if (hasAlias)
+      return parser.emitError(loc, "function alias shall not have a body");
     if (failed(*parseResult))
       return failure();
     // Function body was parsed, make sure its not empty.

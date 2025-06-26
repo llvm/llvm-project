@@ -904,13 +904,9 @@ void CIRGenModule::replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF) {
     if (!call)
       continue;
 
-    mlir::OperandRange argOps = call.getArgs();
-    mlir::ArrayRef<mlir::Type> funcArgTypes =
-        newF.getFunctionType().getInputs();
-    // In the case of variadic functions, the call may have more arguments that
-    // the function type, so we can't use llvm::enumerate here.
-    for (unsigned i = 0; i < funcArgTypes.size(); i++) {
-      if (argOps[i].getType() == funcArgTypes[i])
+    for (const auto [argOp, fnArgType] :
+         llvm::zip(call.getArgs(), newF.getFunctionType().getInputs())) {
+      if (argOp.getType() == fnArgType)
         continue;
 
       // The purpose of this entire function is to insert bitcasts in the case
