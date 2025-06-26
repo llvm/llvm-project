@@ -18,7 +18,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
-class string;
 // This is very simple alternate of the std::string_view class. There is no
 // bounds check performed in any of the methods. The callers are expected to
 // do the checks before invoking the methods.
