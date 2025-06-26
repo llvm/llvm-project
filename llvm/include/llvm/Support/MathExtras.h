@@ -303,8 +303,8 @@ constexpr bool isPowerOf2_64(uint64_t Value) {
 /// If true, \p MaskIdx will specify the index of the lowest set bit and \p
 /// MaskLen is updated to specify the length of the mask, else neither are
 /// updated.
-inline bool isShiftedMask_32(uint32_t Value, unsigned &MaskIdx,
-                             unsigned &MaskLen) {
+inline constexpr bool isShiftedMask_32(uint32_t Value, unsigned &MaskIdx,
+                                       unsigned &MaskLen) {
   if (!isShiftedMask_32(Value))
     return false;
   MaskIdx = llvm::countr_zero(Value);
@@ -316,8 +316,8 @@ inline bool isShiftedMask_32(uint32_t Value, unsigned &MaskIdx,
 /// remainder zero (64 bit version.) If true, \p MaskIdx will specify the index
 /// of the lowest set bit and \p MaskLen is updated to specify the length of the
 /// mask, else neither are updated.
-inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
-                             unsigned &MaskLen) {
+inline constexpr bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
+                                       unsigned &MaskLen) {
   if (!isShiftedMask_64(Value))
     return false;
   MaskIdx = llvm::countr_zero(Value);
@@ -337,26 +337,26 @@ template <> constexpr size_t CTLog2<1>() { return 0; }
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
 /// Ex. Log2_32(32) == 5, Log2_32(1) == 0, Log2_32(0) == -1, Log2_32(6) == 2
-inline unsigned Log2_32(uint32_t Value) {
+inline constexpr unsigned Log2_32(uint32_t Value) {
   return 31 - llvm::countl_zero(Value);
 }
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (64 bit edition.)
-inline unsigned Log2_64(uint64_t Value) {
+inline constexpr unsigned Log2_64(uint64_t Value) {
   return 63 - llvm::countl_zero(Value);
 }
 
 /// Return the ceil log base 2 of the specified value, 32 if the value is zero.
 /// (32 bit edition).
 /// Ex. Log2_32_Ceil(32) == 5, Log2_32_Ceil(1) == 0, Log2_32_Ceil(6) == 3
-inline unsigned Log2_32_Ceil(uint32_t Value) {
+inline constexpr unsigned Log2_32_Ceil(uint32_t Value) {
   return 32 - llvm::countl_zero(Value - 1);
 }
 
 /// Return the ceil log base 2 of the specified value, 64 if the value is zero.
 /// (64 bit edition.)
-inline unsigned Log2_64_Ceil(uint64_t Value) {
+inline constexpr unsigned Log2_64_Ceil(uint64_t Value) {
   return 64 - llvm::countl_zero(Value - 1);
 }
 
@@ -391,7 +391,7 @@ constexpr uint64_t NextPowerOf2(uint64_t A) {
 
 /// Returns the power of two which is greater than or equal to the given value.
 /// Essentially, it is a ceil operation across the domain of powers of two.
-inline uint64_t PowerOf2Ceil(uint64_t A) {
+inline constexpr uint64_t PowerOf2Ceil(uint64_t A) {
   if (!A || A > UINT64_MAX / 2)
     return 0;
   return UINT64_C(1) << Log2_64_Ceil(A);
@@ -569,7 +569,7 @@ template <unsigned B> constexpr int32_t SignExtend32(uint32_t X) {
 
 /// Sign-extend the number in the bottom B bits of X to a 32-bit integer.
 /// Requires B <= 32.
-inline int32_t SignExtend32(uint32_t X, unsigned B) {
+inline constexpr int32_t SignExtend32(uint32_t X, unsigned B) {
   assert(B <= 32 && "Bit width out of range.");
   if (B == 0)
     return 0;
@@ -587,7 +587,7 @@ template <unsigned B> constexpr int64_t SignExtend64(uint64_t x) {
 
 /// Sign-extend the number in the bottom B bits of X to a 64-bit integer.
 /// Requires B <= 64.
-inline int64_t SignExtend64(uint64_t X, unsigned B) {
+inline constexpr int64_t SignExtend64(uint64_t X, unsigned B) {
   assert(B <= 64 && "Bit width out of range.");
   if (B == 0)
     return 0;
@@ -614,9 +614,9 @@ constexpr T AbsoluteDifference(U X, V Y) {
 /// maximum representable value of T on overflow.  ResultOverflowed indicates if
 /// the result is larger than the maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned_v<T>, T>
+constexpr std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
-  bool Dummy;
+  bool Dummy = 0;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
   // Hacker's Delight, p. 29
   T Z = X + Y;
@@ -630,8 +630,8 @@ SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
 /// Add multiple unsigned integers of type T.  Clamp the result to the
 /// maximum representable value of T on overflow.
 template <class T, class... Ts>
-std::enable_if_t<std::is_unsigned_v<T>, T> SaturatingAdd(T X, T Y, T Z,
-                                                         Ts... Args) {
+constexpr std::enable_if_t<std::is_unsigned_v<T>, T>
+SaturatingAdd(T X, T Y, T Z, Ts... Args) {
   bool Overflowed = false;
   T XY = SaturatingAdd(X, Y, &Overflowed);
   if (Overflowed)
@@ -643,9 +643,9 @@ std::enable_if_t<std::is_unsigned_v<T>, T> SaturatingAdd(T X, T Y, T Z,
 /// maximum representable value of T on overflow.  ResultOverflowed indicates if
 /// the result is larger than the maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned_v<T>, T>
+constexpr std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
-  bool Dummy;
+  bool Dummy = 0;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
 
   // Hacker's Delight, p. 30 has a different algorithm, but we don't use that
@@ -689,9 +689,9 @@ SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
 /// overflow. ResultOverflowed indicates if the result is larger than the
 /// maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned_v<T>, T>
+constexpr std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
-  bool Dummy;
+  bool Dummy = 0;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
 
   T Product = SaturatingMultiply(X, Y, &Overflowed);
@@ -707,7 +707,8 @@ LLVM_ABI extern const float huge_valf;
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
+constexpr std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y,
+                                                               T &Result) {
 #if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(X, Y, &Result);
 #else
@@ -733,7 +734,8 @@ std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
 /// Subtract two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
+constexpr std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y,
+                                                               T &Result) {
 #if __has_builtin(__builtin_sub_overflow)
   return __builtin_sub_overflow(X, Y, &Result);
 #else
@@ -759,7 +761,8 @@ std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+constexpr std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y,
+                                                               T &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else

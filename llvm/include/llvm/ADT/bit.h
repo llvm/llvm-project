@@ -154,7 +154,7 @@ template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
-template <typename T> [[nodiscard]] int countr_zero(T Val) {
+template <typename T> [[nodiscard]] constexpr int countr_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   if (!Val)
@@ -200,7 +200,7 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
-template <typename T> [[nodiscard]] int countl_zero(T Val) {
+template <typename T> [[nodiscard]] constexpr int countl_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   if (!Val)
@@ -244,7 +244,7 @@ template <typename T> [[nodiscard]] int countl_zero(T Val) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of all ones.
-template <typename T> [[nodiscard]] int countl_one(T Value) {
+template <typename T> [[nodiscard]] constexpr int countl_one(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countl_zero<T>(~Value);
@@ -257,7 +257,7 @@ template <typename T> [[nodiscard]] int countl_one(T Value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of all ones.
-template <typename T> [[nodiscard]] int countr_one(T Value) {
+template <typename T> [[nodiscard]] constexpr int countr_one(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countr_zero<T>(~Value);
@@ -267,7 +267,7 @@ template <typename T> [[nodiscard]] int countr_one(T Value) {
 /// Returns 0 otherwise.
 ///
 /// Ex. bit_width(5) == 3.
-template <typename T> [[nodiscard]] int bit_width(T Value) {
+template <typename T> [[nodiscard]] constexpr int bit_width(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return std::numeric_limits<T>::digits - llvm::countl_zero(Value);
@@ -277,7 +277,7 @@ template <typename T> [[nodiscard]] int bit_width(T Value) {
 /// nonzero.  Returns 0 otherwise.
 ///
 /// Ex. bit_floor(5) == 4.
-template <typename T> [[nodiscard]] T bit_floor(T Value) {
+template <typename T> [[nodiscard]] constexpr T bit_floor(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   if (!Value)
@@ -292,7 +292,7 @@ template <typename T> [[nodiscard]] T bit_floor(T Value) {
 ///
 /// The return value is undefined if the input is larger than the largest power
 /// of two representable in T.
-template <typename T> [[nodiscard]] T bit_ceil(T Value) {
+template <typename T> [[nodiscard]] constexpr T bit_ceil(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   if (Value < 2)
@@ -304,7 +304,7 @@ template <typename T> [[nodiscard]] T bit_ceil(T Value) {
 /// Ex. popcount(0xF000F000) = 8
 /// Returns 0 if the word is zero.
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] inline int popcount(T Value) noexcept {
+[[nodiscard]] inline constexpr int popcount(T Value) noexcept {
   if constexpr (sizeof(T) <= 4) {
 #if defined(__GNUC__)
     return (int)__builtin_popcount(Value);
