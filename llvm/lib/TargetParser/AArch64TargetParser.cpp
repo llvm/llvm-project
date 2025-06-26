@@ -58,18 +58,23 @@ std::optional<AArch64::FMVInfo> lookupFMVByID(AArch64::ArchExtKind ExtID) {
 uint64_t AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
   // Transitively enable the Arch Extensions which correspond to each feature.
   ExtensionSet FeatureBits;
+  uint64_t PriorityMask = 0;
   for (const StringRef Feature : Features) {
     std::optional<FMVInfo> FMV = parseFMVExtension(Feature);
     if (!FMV && Feature.starts_with('+')) {
       if (std::optional<ExtensionInfo> Info = targetFeatureToExtension(Feature))
         FMV = lookupFMVByID(Info->ID);
     }
-    if (FMV && FMV->ID)
-      FeatureBits.enable(*FMV->ID);
+    if (FMV) {
+      // FMV feature without a corresponding Arch Extension may affect priority
+      if (FMV->ID)
+        FeatureBits.enable(*FMV->ID);
+      else
+        PriorityMask |= (1ULL << FMV->PriorityBit);
+    }
   }
 
   // Construct a bitmask for all the transitively enabled Arch Extensions.
-  uint64_t PriorityMask = 0;
   for (const FMVInfo &Info : getFMVInfo())
     if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
       PriorityMask |= (1ULL << Info.PriorityBit);
