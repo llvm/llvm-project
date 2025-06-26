@@ -14,6 +14,7 @@
 #define LLVMIR_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   let description = [{
@@ -529,6 +530,48 @@ def LLVM_DIRecursiveTypeAttrInterface
       Build a rec-self instance using the provided `recId`.
     }], "DIRecursiveTypeAttrInterface", "getRecSelf",
     (ins "DistinctAttr":$recId)>
+  ];
+}
+
+def LLVM_TargetAttrInterface
+  : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
+  let description = [{
+    TODO
+
+    NEEDS TO document which TI keys it responds to.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the target triple identifier.",
+      /*retTy=*/"::llvm::StringRef",
+      /*methodName=*/"getTriple",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target cpu identifier.",
+      /*retTy=*/"::llvm::StringRef",
+      /*methodName=*/"getCpu",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target features as a string.",
+      /*retTy=*/"::mlir::LLVM::TargetFeaturesAttr",
+      /*methodName=*/"getTargetFeatures",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target machine.",
+      /*retTy=*/"FailureOr<::llvm::TargetMachine *>",
+      /*methodName=*/"getTargetMachine",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the data layout associated to the target machine.",
+      /*retTy=*/"FailureOr<::llvm::DataLayout>",
+      /*methodName=*/"getDataLayout",
+      /*args=*/(ins)
+    >
   ];
 }
 

@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DataLayoutImporter.h"
+//#include "DataLayoutImporter.h"
+//#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
+#include "mlir/Dialect/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -274,19 +276,7 @@ DataLayoutImporter::tryToEmplaceLegalIntWidthsEntry(StringRef token) {
   return success();
 }
 
-void DataLayoutImporter::translateDataLayout(
-    const llvm::DataLayout &llvmDataLayout) {
-  dataLayout = {};
-
-  // Transform the data layout to its string representation and append the
-  // default data layout string specified in the language reference
-  // (https://llvm.org/docs/LangRef.html#data-layout). The translation then
-  // parses the string and ignores the default value if a specific kind occurs
-  // in both strings. Additionally, the following default values exist:
-  // - non-default address space pointer specifications default to the default
-  //   address space pointer specification
-  // - the alloca address space defaults to the default address space.
-  layoutStr = llvmDataLayout.getStringRepresentation();
+void DataLayoutImporter::translateDataLayoutFromStr() {
   if (!layoutStr.empty())
     layoutStr += "-";
   layoutStr += kDefaultDataLayout;

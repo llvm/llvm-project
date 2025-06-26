@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -18,8 +19,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include <optional>
+#include "llvm/Support/TargetSelect.h"
+
+#define DEBUG_TYPE "llvm-attrs"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -403,4 +407,74 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return emitError() << "only integer and string values are currently "
                         "supported for unknown key '"
                      << key << "'";
+}
+
+FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
+  if (auto stringKey = dyn_cast<StringAttr>(key))
+    if (contains(stringKey))
+      return UnitAttr::get(getContext());
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM_TargetAttr
+//===----------------------------------------------------------------------===//
+
+FailureOr<llvm::TargetMachine *> TargetAttr::getTargetMachine() {
+  if (targetMachine.has_value()) {
+    llvm::TargetMachine *tm = targetMachine.value();
+    if (tm != nullptr)
+      return {tm};
+    return failure();
+  }
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+
+  std::string error;
+  const llvm::Target *target =
+      llvm::TargetRegistry::lookupTarget(getTriple(), error);
+  if (!error.empty()) {
+    LLVM_DEBUG({
+      llvm::dbgs() << "Failed to retrieve the target with: `" << error << "`\n";
+    });
+    targetMachine = {nullptr};
+    return failure();
+  }
+
+  targetMachine = {target->createTargetMachine(
+      llvm::Triple(getTriple().strref()), getCpu().strref(),
+      getTargetFeatures().getFeaturesString().c_str(), {}, {})};
+
+  return {targetMachine.value()};
+}
+
+FailureOr<llvm::DataLayout> TargetAttr::getDataLayout() {
+  if (dataLayout.has_value()) {
+    return dataLayout.value();
+  }
+
+  FailureOr<llvm::TargetMachine *> targetMachine = getTargetMachine();
+  if (failed(targetMachine)) {
+    LLVM_DEBUG({
+      llvm::dbgs()
+          << "Failed to retrieve the target machine for data layout.\n";
+    });
+    dataLayout = std::nullopt;
+    return failure();
+  }
+  dataLayout = (targetMachine.value())->createDataLayout();
+  return dataLayout.value();
+}
+
+FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
+  if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
+    if (stringAttrKey.getValue() == "triple")
+      return getTriple();
+    if (stringAttrKey.getValue() == "cpu")
+      return getCpu();
+    if (stringAttrKey.getValue() == "features")
+      return getTargetFeatures();
+  }
+
+  return failure();
 }

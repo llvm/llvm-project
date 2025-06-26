@@ -7,11 +7,20 @@ mlir_tablegen(LLVMOpsDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(LLVMOpsDialect.cpp.inc -gen-dialect-defs)
 mlir_tablegen(LLVMOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(LLVMOpsEnums.cpp.inc -gen-enum-defs)
-mlir_tablegen(LLVMOpsAttrDefs.h.inc -gen-attrdef-decls
-              -attrdefs-dialect=llvm)
 mlir_tablegen(LLVMOpsAttrDefs.cpp.inc -gen-attrdef-defs
               -attrdefs-dialect=llvm)
 add_public_tablegen_target(MLIRLLVMOpsIncGen)
+
+# FIXME: explain how this solves generated header recursive dependency
+set(LLVM_TARGET_DEFINITIONS LLVMAttrAndEnumDefs.td)
+mlir_tablegen(LLVMOpsAttrDefs.h.inc -gen-attrdef-decls -attrdefs-dialect=llvm)
+add_public_tablegen_target(MLIRLLVMAttrsIncGen)
+
+# FIXME: explain how this solves generated header recursive dependency
+set(LLVM_TARGET_DEFINITIONS LLVMTargetFeaturesAttrDefs.td)
+mlir_tablegen(LLVMTargetFeaturesAttrDefs.h.inc -gen-attrdef-decls)
+mlir_tablegen(LLVMTargetFeaturesAttrDefs.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRLLVMTargetFeaturesAttrsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS LLVMTypes.td)
 mlir_tablegen(LLVMTypes.h.inc -gen-typedef-decls -typedefs-dialect=llvm)
