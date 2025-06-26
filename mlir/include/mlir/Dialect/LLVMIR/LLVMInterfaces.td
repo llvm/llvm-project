@@ -549,15 +549,15 @@ def LLVM_TargetAttrInterface
       /*args=*/(ins)
     >,
     InterfaceMethod<
-      /*description=*/"Returns the target cpu identifier.",
+      /*description=*/"Returns the target chip (i.e. \"cpu\") identifier.",
       /*retTy=*/"::llvm::StringRef",
-      /*methodName=*/"getCpu",
+      /*methodName=*/"getChip",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the target features as a string.",
       /*retTy=*/"::mlir::LLVM::TargetFeaturesAttr",
-      /*methodName=*/"getTargetFeatures",
+      /*methodName=*/"getFeatures",
       /*args=*/(ins)
     >,
     InterfaceMethod<

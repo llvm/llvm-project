@@ -40,6 +40,7 @@ struct DataLayoutFromTargetPass
         mod->emitError() << "failed to obtain llvm::DataLayout from "
                          << targetAttr;
         passFailed = true;
+        return;
       }
       auto dataLayoutAttr = DataLayoutAttr::get(
           &getContext(), dataLayout->getStringRepresentation());
