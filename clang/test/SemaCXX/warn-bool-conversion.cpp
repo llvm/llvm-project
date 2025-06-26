@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,expected-cxx11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,expected-cxx11 -std=c++11 %s
+// RUN: not %clang_cc1 -fsyntax-only %s -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
 
 namespace BooleanFalse {
 int* j = false;
@@ -245,7 +246,8 @@ struct B {
 void test(const B& b);
 
 void test0(B* b) {
-  test(b); // expected-warning {{implicit conversion from 'B *' to 'const B' calls}}
+  test(b); // expected-warning {{implicit conversion from 'B *' to 'const B' calls 'implicit_constructor_bool::B::B'; did you intend to dereference ?}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:8-[[@LINE-1]]:8}:"*"
   test((const B&)b);
   test(B(b));
   test((bool)b);
@@ -258,7 +260,7 @@ struct C {
   explicit C(bool V) : a(V) {}
 };
 
-void testC(const C& b); // expected-note {{candidate function not viable: no known conversion from 'C *' to 'const C'}}
+void testC(const C& b); // expected-note {{candidate function not viable: no known conversion from 'C *' to 'const C' for 1st argument; dereference the argument with *}}
 
 void testC0(C* b) {
   testC(b); // expected-error {{no matching function for call to 'testC'}}

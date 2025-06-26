@@ -4398,7 +4398,7 @@ def ext_ms_impcast_fn_obj : ExtWarn<
   "Microsoft extension">, InGroup<MicrosoftCast>;
 
 def warn_imp_constructor_pointer_to_bool : Warning<
-    "implicit conversion from %0 to %1 calls %q2; maybe you intended to dereference">,
+    "implicit conversion from %0 to %1 calls %q2; did you intend to dereference ?">,
     InGroup<PointerBoolConversion>;
 def warn_impcast_pointer_to_bool : Warning<
     "address of %select{'%1'|function '%1'|array '%1'|lambda function pointer "
