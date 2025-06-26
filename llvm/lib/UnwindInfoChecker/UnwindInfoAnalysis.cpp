@@ -76,7 +76,7 @@ getUnwindRuleRefReg(const dwarf::UnwindTable::const_iterator &UnwindRow,
   }
 }
 
-UnwindInfoAnalysis::UnwindInfoAnalysis(MCContext *Context,
+DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context,
                                        MCInstrInfo const &MCII, bool IsEH,
                                        ArrayRef<MCCFIInstruction> Prologue)
     : Context(Context), MCII(MCII), MCRI(Context->getRegisterInfo()),
@@ -120,8 +120,8 @@ UnwindInfoAnalysis::UnwindInfoAnalysis(MCContext *Context,
   }
 }
 
-void UnwindInfoAnalysis::update(const MCInst &Inst,
-                                ArrayRef<MCCFIInstruction> CFIDirectives) {
+void DWARFCFIAnalysis::update(const MCInst &Inst,
+                                ArrayRef<MCCFIInstruction> Directives) {
   const MCInstrDesc &MCInstInfo = MCII.get(Inst.getOpcode());
 
   auto MaybePrevRow = State.getCurrentUnwindRow();
@@ -129,7 +129,7 @@ void UnwindInfoAnalysis::update(const MCInst &Inst,
                          "history with at least one row by now");
   auto PrevRow = MaybePrevRow.value();
 
-  for (auto &&Directive : CFIDirectives)
+  for (auto &&Directive : Directives)
     State.update(Directive);
 
   SmallSet<DWARFRegNum, 4> Writes, Reads;
@@ -165,7 +165,7 @@ void UnwindInfoAnalysis::update(const MCInst &Inst,
   }
 }
 
-void UnwindInfoAnalysis::checkRegDiff(
+void DWARFCFIAnalysis::checkRegDiff(
     const MCInst &Inst, DWARFRegNum Reg,
     const dwarf::UnwindTable::const_iterator &PrevRow,
     const dwarf::UnwindTable::const_iterator &NextRow,
@@ -239,7 +239,7 @@ void UnwindInfoAnalysis::checkRegDiff(
   }
 }
 
-void UnwindInfoAnalysis::checkCFADiff(
+void DWARFCFIAnalysis::checkCFADiff(
     const MCInst &Inst, const dwarf::UnwindTable::const_iterator &PrevRow,
     const dwarf::UnwindTable::const_iterator &NextRow,
     const SmallSet<DWARFRegNum, 4> &Reads,

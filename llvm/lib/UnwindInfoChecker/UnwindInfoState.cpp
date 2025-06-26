@@ -19,14 +19,14 @@
 using namespace llvm;
 
 std::optional<dwarf::UnwindTable::const_iterator>
-UnwindInfoState::getCurrentUnwindRow() const {
+DWARFCFIState::getCurrentUnwindRow() const {
   if (!Table.size())
     return std::nullopt;
 
   return --Table.end();
 }
 
-void UnwindInfoState::update(const MCCFIInstruction &Directive) {
+void DWARFCFIState::update(const MCCFIInstruction &Directive) {
   auto MaybeCFIP = convert(Directive);
   if (!MaybeCFIP) {
     Context->reportError(
@@ -54,7 +54,7 @@ void UnwindInfoState::update(const MCCFIInstruction &Directive) {
 }
 
 std::optional<dwarf::CFIProgram>
-UnwindInfoState::convert(MCCFIInstruction Directive) {
+DWARFCFIState::convert(MCCFIInstruction Directive) {
   auto CFIP = dwarf::CFIProgram(
       /* CodeAlignmentFactor */ 1, /* DataAlignmentFactor */ 1,
       Context->getTargetTriple().getArch());

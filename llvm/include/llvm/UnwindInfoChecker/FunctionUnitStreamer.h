@@ -7,32 +7,31 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file declares FunctionUnitStreamer class.
+/// This file declares CFIFunctionFrameStreamer class.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_FUNCTIONUNITSTREAMER_H
-#define LLVM_UNWINDINFOCHECKER_FUNCTIONUNITSTREAMER_H
+#ifndef LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
+#define LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
 
 #include "FunctionUnitAnalyzer.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
-#include <cstdio>
 #include <memory>
 #include <optional>
 
 namespace llvm {
 
-class FunctionUnitStreamer : public MCStreamer {
+class CFIFunctionFrameStreamer : public MCStreamer {
 private:
   std::pair<unsigned, unsigned> updateDirectivesRange();
   void updateAnalyzer();
 
 public:
-  FunctionUnitStreamer(MCContext &Context,
-                       std::unique_ptr<FunctionUnitAnalyzer> Analyzer)
+  CFIFunctionFrameStreamer(MCContext &Context,
+                           std::unique_ptr<CFIFunctionFrameReceiver> Analyzer)
       : MCStreamer(Context), LastInstruction(std::nullopt),
         Analyzer(std::move(Analyzer)), LastDirectiveIndex(0) {
     assert(this->Analyzer && "Analyzer should not be null");
@@ -63,7 +62,7 @@ public:
 private:
   std::vector<unsigned> FrameIndices;
   std::optional<MCInst> LastInstruction;
-  std::unique_ptr<FunctionUnitAnalyzer> Analyzer;
+  std::unique_ptr<CFIFunctionFrameReceiver> Analyzer;
   unsigned LastDirectiveIndex;
 };
 

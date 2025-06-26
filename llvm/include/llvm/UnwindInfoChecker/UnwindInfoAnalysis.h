@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file declares UnwindInfoAnalysis class.
+/// This file declares DWARFCFIAnalysis class.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_UNWINDINFOANALYSIS_H
-#define LLVM_UNWINDINFOCHECKER_UNWINDINFOANALYSIS_H
+#ifndef LLVM_UNWINDINFOCHECKER_DWARFCFIANALYSIS_H
+#define LLVM_UNWINDINFOCHECKER_DWARFCFIANALYSIS_H
 
 #include "UnwindInfoState.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -31,18 +31,18 @@
 
 namespace llvm {
 
-class UnwindInfoAnalysis {
+class DWARFCFIAnalysis {
   MCContext *Context;
   MCInstrInfo const &MCII;
   MCRegisterInfo const *MCRI;
-  UnwindInfoState State;
+  DWARFCFIState State;
   bool IsEH;
 
 public:
-  UnwindInfoAnalysis(MCContext *Context, MCInstrInfo const &MCII, bool IsEH,
-                     ArrayRef<MCCFIInstruction> Prologue);
+  DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII, bool IsEH,
+                   ArrayRef<MCCFIInstruction> Prologue);
 
-  void update(const MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives);
+  void update(const MCInst &Inst, ArrayRef<MCCFIInstruction> Directives);
 
 private:
   void checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,

@@ -10,19 +10,19 @@
 
 using namespace llvm;
 
-void FunctionUnitUnwindInfoAnalyzer::startFunctionUnit(
+void CFIFunctionFrameAnalyzer::startFunctionUnit(
     bool IsEH, ArrayRef<MCCFIInstruction> Prologue) {
   UIAs.emplace_back(&getContext(), MCII, IsEH, Prologue);
 }
 
-void FunctionUnitUnwindInfoAnalyzer::emitInstructionAndDirectives(
+void CFIFunctionFrameAnalyzer::emitInstructionAndDirectives(
     const MCInst &Inst, ArrayRef<MCCFIInstruction> Directives) {
   assert(!UIAs.empty() && "If the instruction is in a frame, there should be "
                           "a analysis instantiated for it");
   UIAs.back().update(Inst, Directives);
 }
 
-void FunctionUnitUnwindInfoAnalyzer::finishFunctionUnit() {
+void CFIFunctionFrameAnalyzer::finishFunctionUnit() {
   assert(!UIAs.empty() && "There should be an analysis for each frame");
   UIAs.pop_back();
 }

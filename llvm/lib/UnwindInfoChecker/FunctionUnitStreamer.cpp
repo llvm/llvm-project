@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-std::pair<unsigned, unsigned> FunctionUnitStreamer::updateDirectivesRange() {
+std::pair<unsigned, unsigned> CFIFunctionFrameStreamer::updateDirectivesRange() {
   auto Frames = getDwarfFrameInfos();
   unsigned CurrentCFIDirectiveIndex = 0;
   if (hasUnfinishedDwarfFrameInfo()) {
@@ -34,7 +34,7 @@ std::pair<unsigned, unsigned> FunctionUnitStreamer::updateDirectivesRange() {
   return CFIDirectivesRange;
 }
 
-void FunctionUnitStreamer::updateAnalyzer() {
+void CFIFunctionFrameStreamer::updateAnalyzer() {
   if (FrameIndices.empty()) {
     auto CFIDirectivesRange = updateDirectivesRange();
     assert(CFIDirectivesRange.first == CFIDirectivesRange.second &&
@@ -61,13 +61,13 @@ void FunctionUnitStreamer::updateAnalyzer() {
   }
 }
 
-void FunctionUnitStreamer::emitInstruction(const MCInst &Inst,
+void CFIFunctionFrameStreamer::emitInstruction(const MCInst &Inst,
                                            const MCSubtargetInfo &STI) {
   updateAnalyzer();
   LastInstruction = Inst;
 }
 
-void FunctionUnitStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
+void CFIFunctionFrameStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
   updateAnalyzer();
   FrameIndices.push_back(getNumFrameInfos());
   LastInstruction = std::nullopt;
@@ -75,7 +75,7 @@ void FunctionUnitStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
   MCStreamer::emitCFIStartProcImpl(Frame);
 }
 
-void FunctionUnitStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) {
+void CFIFunctionFrameStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) {
   updateAnalyzer();
 
   assert(!FrameIndices.empty() && "There should be at least one frame to pop");

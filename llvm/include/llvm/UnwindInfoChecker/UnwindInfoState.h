@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file declares UnwindInfoState class.
+/// This file declares DWARFCFIState class.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -23,18 +23,18 @@ namespace llvm {
 
 using DWARFRegNum = uint32_t;
 
-class UnwindInfoState {
+class DWARFCFIState {
 public:
-  UnwindInfoState(MCContext *Context) : Context(Context) {};
+  DWARFCFIState(MCContext *Context) : Context(Context) {};
 
   std::optional<dwarf::UnwindTable::const_iterator> getCurrentUnwindRow() const;
-  void update(const MCCFIInstruction &CFIDirective);
+  void update(const MCCFIInstruction &Directive);
 
 private:
   MCContext *Context;
   dwarf::UnwindTable::RowContainer Table;
 
-  std::optional<dwarf::CFIProgram> convert(MCCFIInstruction CFIDirective);
+  std::optional<dwarf::CFIProgram> convert(MCCFIInstruction Directive);
 };
 } // namespace llvm
 

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file declares FunctionUnitUnwindInfoAnalyzer class.
+/// This file declares CFIFunctionFrameAnalyzer class.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_FUNCTIONUNITUNWINDINFOANALYZER_H
-#define LLVM_UNWINDINFOCHECKER_FUNCTIONUNITUNWINDINFOANALYZER_H
+#ifndef LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
+#define LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
 
 #include "FunctionUnitAnalyzer.h"
 #include "UnwindInfoAnalysis.h"
@@ -20,14 +20,14 @@
 
 namespace llvm {
 
-class FunctionUnitUnwindInfoAnalyzer : public FunctionUnitAnalyzer {
+class CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
 private:
-  std::vector<UnwindInfoAnalysis> UIAs;
+  std::vector<DWARFCFIAnalysis> UIAs;
   MCInstrInfo const &MCII;
 
 public:
-  FunctionUnitUnwindInfoAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
-      : FunctionUnitAnalyzer(Context), MCII(MCII) {}
+  CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
+      : CFIFunctionFrameReceiver(Context), MCII(MCII) {}
 
   void startFunctionUnit(bool IsEH,
                          ArrayRef<MCCFIInstruction> Prologue) override;

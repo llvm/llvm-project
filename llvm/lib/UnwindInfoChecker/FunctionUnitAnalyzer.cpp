@@ -10,12 +10,12 @@
 
 using namespace llvm;
 
-FunctionUnitAnalyzer::~FunctionUnitAnalyzer() = default;
+CFIFunctionFrameReceiver::~CFIFunctionFrameReceiver() = default;
 
-void FunctionUnitAnalyzer::startFunctionUnit(
+void CFIFunctionFrameReceiver::startFunctionUnit(
     bool IsEH, ArrayRef<MCCFIInstruction> Prologue) {}
 
-void FunctionUnitAnalyzer::emitInstructionAndDirectives(
+void CFIFunctionFrameReceiver::emitInstructionAndDirectives(
     const MCInst &Inst, ArrayRef<MCCFIInstruction> Directives) {}
 
-void FunctionUnitAnalyzer::finishFunctionUnit() {}
+void CFIFunctionFrameReceiver::finishFunctionUnit() {}

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file declares FunctionUnitAnalyzer class.
+/// This file declares CFIFunctionFrameReceiver class.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_FUNCTIONUNITANALYZER_H
-#define LLVM_UNWINDINFOCHECKER_FUNCTIONUNITANALYZER_H
+#ifndef LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMERECEIVER_H
+#define LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMERECEIVER_H
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -22,16 +22,17 @@ class MCCFIInstruction;
 class MCContext;
 class MCInst;
 
-class FunctionUnitAnalyzer {
+class CFIFunctionFrameReceiver {
 private:
   MCContext &Context;
 
 public:
-  FunctionUnitAnalyzer(const FunctionUnitAnalyzer &) = delete;
-  FunctionUnitAnalyzer &operator=(const FunctionUnitAnalyzer &) = delete;
-  virtual ~FunctionUnitAnalyzer();
+  CFIFunctionFrameReceiver(const CFIFunctionFrameReceiver &) = delete;
+  CFIFunctionFrameReceiver &
+  operator=(const CFIFunctionFrameReceiver &) = delete;
+  virtual ~CFIFunctionFrameReceiver();
 
-  FunctionUnitAnalyzer(MCContext &Context) : Context(Context) {}
+  CFIFunctionFrameReceiver(MCContext &Context) : Context(Context) {}
 
   MCContext &getContext() const { return Context; }
 
