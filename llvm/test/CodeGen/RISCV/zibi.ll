@@ -22,7 +22,6 @@ test2:
 end:
   ret void
 }
-!0 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_beq_neg(ptr %b) nounwind {
 ; ZIBI-LABEL: test_beq_neg:
@@ -35,14 +34,13 @@ define void @test_beq_neg(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp eq i32 %val1, -1
-  br i1 %tst1, label %end, label %test2, !prof !1
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!1 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_bne_zero(ptr %b) nounwind {
 ; ZIBI-LABEL: test_bne_zero:
@@ -55,14 +53,13 @@ define void @test_bne_zero(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp ne i32 %val1, 0
-  br i1 %tst1, label %end, label %test2, !prof !2
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!2 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_beq_zero(ptr %b) nounwind {
 ; ZIBI-LABEL: test_beq_zero:
@@ -75,14 +72,13 @@ define void @test_beq_zero(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp eq i32 %val1, 0
-  br i1 %tst1, label %end, label %test2, !prof !3
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!3 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_bne_1(ptr %b) nounwind {
 ; ZIBI-LABEL: test_bne_1:
@@ -95,14 +91,13 @@ define void @test_bne_1(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp ne i32 %val1, 1
-  br i1 %tst1, label %end, label %test2, !prof !4
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!4 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_beq_1(ptr %b) nounwind {
 ; ZIBI-LABEL: test_beq_1:
@@ -115,14 +110,13 @@ define void @test_beq_1(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp eq i32 %val1, 1
-  br i1 %tst1, label %end, label %test2, !prof !5
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!5 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_bne_31(ptr %b) nounwind {
 ; ZIBI-LABEL: test_bne_31:
@@ -135,14 +129,13 @@ define void @test_bne_31(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp ne i32 %val1, 31
-  br i1 %tst1, label %end, label %test2, !prof !6
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!6 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_beq_31(ptr %b) nounwind {
 ; ZIBI-LABEL: test_beq_31:
@@ -155,14 +148,13 @@ define void @test_beq_31(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp eq i32 %val1, 1
-  br i1 %tst1, label %end, label %test2, !prof !7
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!7 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_bne_32(ptr %b) nounwind {
 ; ZIBI-LABEL: test_bne_32:
@@ -176,14 +168,13 @@ define void @test_bne_32(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp ne i32 %val1, 32
-  br i1 %tst1, label %end, label %test2, !prof !8
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!8 = !{!"branch_weights", i32 1, i32 99}
 
 define void @test_beq_32(ptr %b) nounwind {
 ; ZIBI-LABEL: test_beq_32:
@@ -197,11 +188,11 @@ define void @test_beq_32(ptr %b) nounwind {
 ; ZIBI-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp eq i32 %val1, 32
-  br i1 %tst1, label %end, label %test2, !prof !9
+  br i1 %tst1, label %end, label %test2, !prof !0
 test2:
   %val2 = load volatile i32, ptr %b
   br label %end
 end:
   ret void
 }
-!9 = !{!"branch_weights", i32 1, i32 99}
+!0 = !{!"branch_weights", i32 1, i32 99}
