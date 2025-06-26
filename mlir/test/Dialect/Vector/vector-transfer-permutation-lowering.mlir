@@ -160,6 +160,31 @@ func.func @xfer_write_non_minor_identity_with_mask_out_of_bounds(
   return
 }
 
+// CHECK-LABEL:   func.func @xfer_write_non_minor_identity_with_mask_broadcast(
+// CHECK-SAME:      %[[MEM:.*]]: memref<?x?x?xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<7x8xf32>,
+// CHECK-SAME:      %[[MASK:.*]]: vector<7x8xi1>,
+// CHECK-SAME:      %[[IDX_1:.*]]: index, %[[IDX_2:.*]]: index, %[[IDX_3:.*]]: index) {
+// CHECK:           %[[BC:.*]] = vector.broadcast %[[VEC]] : vector<7x8xf32> to vector<1x7x8xf32>
+// CHECK:           %[[MBC:.*]] = vector.broadcast %[[MASK]] : vector<7x8xi1> to vector<1x7x8xi1>
+// CHECK:           %[[MTR:.*]] = vector.transpose %[[MBC]], [1, 0, 2] : vector<1x7x8xi1> to vector<7x1x8xi1>
+// CHECK:           %[[TR:.*]] = vector.transpose %[[BC]], [1, 0, 2] : vector<1x7x8xf32> to vector<7x1x8xf32>
+// CHECK:           vector.transfer_write %[[TR]], %[[MEM]]{{\[}}%[[IDX_1]], %[[IDX_2]], %[[IDX_3]]], %[[MTR]] {in_bounds = [false, true, false]} : vector<7x1x8xf32>, memref<?x?x?xf32>
+func.func @xfer_write_non_minor_identity_with_mask_broadcast_and_transpose(
+    %mem : memref<?x?x?xf32>,
+    %vec : vector<7x8xf32>,
+    %mask : vector<7x8xi1>,
+    %idx_1 : index,
+    %idx_2 : index,
+    %idx_3 : index) {
+
+  vector.transfer_write %vec, %mem[%idx_1, %idx_2, %idx_3], %mask {
+    permutation_map = affine_map<(d0, d1, d2) -> (d0, d2)>
+  } : vector<7x8xf32>, memref<?x?x?xf32>
+
+  return
+}
+
 // CHECK-LABEL:     func.func @xfer_write_non_minor_identity_with_mask_scalable(
 // CHECK-SAME:        %[[VEC:.*]]: vector<4x[8]xi16>,
 // CHECK-SAME:        %[[MEM:.*]]: memref<1x4x?x1xi16>,
