@@ -85,6 +85,97 @@ enum VariableTypeDescriptorKind : uint16_t {
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
 
+<<<<<<< HEAD
+=======
+static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
+  switch (ID) {
+  case SanitizerHandler::AddOverflow:
+    return "Signed integer addition overflowed";
+
+  case SanitizerHandler::BuiltinUnreachable:
+    return "_builtin_unreachable(), execution reached an unreachable program "
+           "point";
+
+  case SanitizerHandler::CFICheckFail:
+    return "Control flow integrity check failed";
+
+  case SanitizerHandler::DivremOverflow:
+    return "Signed integer divide or remainder overflowed";
+
+  case SanitizerHandler::DynamicTypeCacheMiss:
+    return "Dynamic-type cache miss";
+
+  case SanitizerHandler::FloatCastOverflow:
+    return "Floating-point to integer conversion overflowed";
+
+  case SanitizerHandler::FunctionTypeMismatch:
+    return "Function called with mismatched signature";
+
+  case SanitizerHandler::ImplicitConversion:
+    return "Implicit integer conversion overflowed or lost data";
+
+  case SanitizerHandler::InvalidBuiltin:
+    return "Invalid use of builtin function";
+
+  case SanitizerHandler::InvalidObjCCast:
+    return "Invalid Objective-C cast";
+
+  case SanitizerHandler::LoadInvalidValue:
+    return "Loaded an invalid or uninitialized value for the type";
+
+  case SanitizerHandler::MissingReturn:
+    return "Execution reached the end of a value-returning function without "
+           "returning a value";
+
+  case SanitizerHandler::MulOverflow:
+    return "Signed integer multiplication overflowed";
+
+  case SanitizerHandler::NegateOverflow:
+    return "Signed integer negation overflowed";
+
+  case SanitizerHandler::NullabilityArg:
+    return "Passing null as an argument which is annotated with "
+           "_Nonnull";
+
+  case SanitizerHandler::NullabilityReturn:
+    return "Returning null from a function with a return type annotated with "
+           "_Nonnull";
+
+  case SanitizerHandler::NonnullArg:
+    return "Passing null pointer as an argument which is declared to never be "
+           "null";
+
+  case SanitizerHandler::NonnullReturn:
+    return "Returning null pointer from a function which is declared to never "
+           "return null";
+
+  case SanitizerHandler::OutOfBounds:
+    return "Array index out of bounds";
+
+  case SanitizerHandler::PointerOverflow:
+    return "Pointer arithmetic overflowed bounds";
+
+  case SanitizerHandler::ShiftOutOfBounds:
+    return "Shift exponent is too large for the type";
+
+  case SanitizerHandler::SubOverflow:
+    return "Signed integer subtraction overflowed";
+
+  case SanitizerHandler::TypeMismatch:
+    return "Type mismatch in operation";
+
+  case SanitizerHandler::AlignmentAssumption:
+    return "Alignment assumption violated";
+
+  case SanitizerHandler::VLABoundNotPositive:
+    return "Variable length array bound evaluates to non-positive value";
+
+  case SanitizerHandler::BoundsSafety:
+    return {};
+  }
+}
+
+>>>>>>> 592f9d2f8f85 (Addressed most of Dan's comments and added remaining test cases)
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
 RawAddress
@@ -4051,6 +4142,17 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
+<<<<<<< HEAD
+=======
+  llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+  llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+
+  if (getDebugInfo()) {
+    TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+        TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
+  }
+
+>>>>>>> 592f9d2f8f85 (Addressed most of Dan's comments and added remaining test cases)
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
@@ -4059,8 +4161,13 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
+<<<<<<< HEAD
     Call->applyMergedLocation(Call->getDebugLoc(),
                               Builder.getCurrentDebugLocation());
+=======
+    Call->applyMergedLocation(Call->getDebugLoc(), TrapLocation);
+
+>>>>>>> 592f9d2f8f85 (Addressed most of Dan's comments and added remaining test cases)
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
   } else {
