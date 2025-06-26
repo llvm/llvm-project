@@ -2713,9 +2713,9 @@ public:
 /// graph of other, non-bundled recipes. Def-use edges between pairs of bundled
 /// recipes remain intact, whereas every edge between a bundled and a
 /// non-bundled recipe is elevated to connect the non-bundled recipe with the
-/// VPExpression itself.
-class VPExpression : public VPSingleDefRecipe {
-  /// Recipes bundled together in this VPExpression.
+/// VPSingleDefBundleRecipe itself.
+class VPSingleDefBundleRecipe : public VPSingleDefRecipe {
+  /// Recipes bundled together in this VPSingleDefBundleRecipe.
   SmallVector<VPSingleDefRecipe *> BundledRecipes;
 
   /// Temporary VPValues used for external operands of the bundle, i.e. operands
@@ -2740,25 +2740,27 @@ class VPExpression : public VPSingleDefRecipe {
   /// Type of the bundle.
   BundleTypes BundleType;
 
-  /// Construct a new VPExpression by internalizing recipes in \p
+  /// Construct a new VPSingleDefBundleRecipe by internalizing recipes in \p
   /// BundledRecipes. External operands (i.e. not defined by another recipe in
   /// the bundle) are replaced by temporary VPValues and the original operands
-  /// are transferred to the VPExpression itself. Clone recipes as needed
-  /// (excluding last) to ensure they are only used by other recipes in the
-  /// bundle.
-  VPExpression(BundleTypes BundleType, ArrayRef<VPSingleDefRecipe *> ToBundle);
+  /// are transferred to the VPSingleDefBundleRecipe itself. Clone recipes as
+  /// needed (excluding last) to ensure they are only used by other recipes in
+  /// the bundle.
+  VPSingleDefBundleRecipe(BundleTypes BundleType,
+                          ArrayRef<VPSingleDefRecipe *> ToBundle);
 
 public:
-  VPExpression(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
-      : VPExpression(BundleTypes::ExtendedReduction, {Ext, Red}) {}
-  VPExpression(VPWidenRecipe *Mul, VPReductionRecipe *Red)
-      : VPExpression(BundleTypes::MulAccumulateReduction, {Mul, Red}) {}
-  VPExpression(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
-               VPWidenRecipe *Mul, VPReductionRecipe *Red)
-      : VPExpression(BundleTypes::ExtMulAccumulateReduction,
-                     {Ext0, Ext1, Mul, Red}) {}
+  VPSingleDefBundleRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
+      : VPSingleDefBundleRecipe(BundleTypes::ExtendedReduction, {Ext, Red}) {}
+  VPSingleDefBundleRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
+      : VPSingleDefBundleRecipe(BundleTypes::MulAccumulateReduction,
+                                {Mul, Red}) {}
+  VPSingleDefBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+                          VPWidenRecipe *Mul, VPReductionRecipe *Red)
+      : VPSingleDefBundleRecipe(BundleTypes::ExtMulAccumulateReduction,
+                                {Ext0, Ext1, Mul, Red}) {}
 
-  ~VPExpression() override {
+  ~VPSingleDefBundleRecipe() override {
     SmallPtrSet<VPRecipeBase *, 4> Seen;
     for (auto *R : reverse(BundledRecipes))
       if (Seen.insert(R).second)
@@ -2769,7 +2771,7 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPBundleSC)
 
-  VPExpression *clone() override {
+  VPSingleDefBundleRecipe *clone() override {
     assert(!BundledRecipes.empty() && "empty bundles should be removed");
     SmallVector<VPSingleDefRecipe *> NewBundledRecipes;
     for (auto *R : BundledRecipes)
@@ -2783,7 +2785,7 @@ public:
            zip(BundleLiveInPlaceholders, operands()))
         New->replaceUsesOfWith(Placeholder, OutsideOp);
     }
-    return new VPExpression(BundleType, NewBundledRecipes);
+    return new VPSingleDefBundleRecipe(BundleType, NewBundledRecipes);
   }
 
   /// Return the VPSingleDefRecipe producing the final result of the bundled

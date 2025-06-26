@@ -2710,7 +2710,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
       ToRemove.push_back(VPI);
     }
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (auto *Bundle = dyn_cast<VPBundleRecipe>(&R)) {
+      if (auto *Bundle = dyn_cast<VPSingleDefBundleRecipe>(&R)) {
         Bundle->unbundle();
         Bundle->eraseFromParent();
       }
@@ -2813,10 +2813,10 @@ void VPlanTransforms::handleUncountableEarlyExit(
 }
 
 /// This function tries convert extended in-loop reductions to
-/// VPBundleRecipe and clamp the \p Range if it is beneficial and
+/// VPSingleDefBundleRecipe and clamp the \p Range if it is beneficial and
 /// valid. The created recipe must be unbundled to its constituent
 /// recipes before execution.
-static VPBundleRecipe *
+static VPSingleDefBundleRecipe *
 tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                                      VFRange &Range) {
   using namespace VPlanPatternMatch;
@@ -2850,19 +2850,20 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
           cast<VPWidenCastRecipe>(VecOp)->getOpcode() ==
               Instruction::CastOps::ZExt,
           Ctx.Types.inferScalarType(A)))
-    return new VPBundleRecipe(cast<VPWidenCastRecipe>(VecOp), Red);
+    return new VPSingleDefBundleRecipe(cast<VPWidenCastRecipe>(VecOp), Red);
 
   return nullptr;
 }
 
 /// This function tries convert extended in-loop reductions to
-/// VPBundleRecipe and clamp the \p Range if it is beneficial
-/// and valid. The created VPBundleRecipe must be unbundled to its constituent
-/// recipes before execution. Patterns of the VPBundleRecipe:
+/// VPSingleDefBundleRecipe and clamp the \p Range if it is beneficial
+/// and valid. The created VPSingleDefBundleRecipe must be unbundled to its
+/// constituent recipes before execution. Patterns of the
+/// VPSingleDefBundleRecipe:
 ///   reduce.add(mul(...)),
 ///   reduce.add(mul(ext(A), ext(B))),
 ///   reduce.add(ext(mul(ext(A), ext(B)))).
-static VPBundleRecipe *
+static VPSingleDefBundleRecipe *
 tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
   using namespace VPlanPatternMatch;
@@ -2919,11 +2920,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
                                    Mul, RecipeA, RecipeB, nullptr)) {
-      return new VPBundleRecipe(RecipeA, RecipeB, Mul, Red);
+      return new VPSingleDefBundleRecipe(RecipeA, RecipeB, Mul, Red);
     }
     // Match reduce.add(mul).
     if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr)) {
-      return new VPBundleRecipe(Mul, Red);
+      return new VPSingleDefBundleRecipe(Mul, Red);
     }
   }
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
@@ -2957,7 +2958,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
       Mul->setOperand(0, NewExt0);
       Mul->setOperand(1, NewExt1);
       Red->setOperand(1, Mul);
-      return new VPBundleRecipe(NewExt0, NewExt1, Mul, Red);
+      return new VPSingleDefBundleRecipe(NewExt0, NewExt1, Mul, Red);
     }
   }
   return nullptr;
@@ -2968,7 +2969,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
                                                VPCostContext &Ctx,
                                                VFRange &Range) {
-  VPBundleRecipe *AbstractR = nullptr;
+  VPSingleDefBundleRecipe *AbstractR = nullptr;
   auto IP = std::next(Red->getIterator());
   auto *VPBB = Red->getParent();
   if (auto *MulAcc = tryToMatchAndCreateMulAccumulateReduction(Red, Ctx, Range))

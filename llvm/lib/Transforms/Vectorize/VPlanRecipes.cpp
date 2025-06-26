@@ -50,7 +50,7 @@ using VectorParts = SmallVector<Value *, 2>;
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPBundleSC:
-    return cast<VPBundleRecipe>(this)->mayReadOrWriteMemory();
+    return cast<VPSingleDefBundleRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPInterleaveSC:
@@ -100,7 +100,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
   case VPBundleSC:
-    return cast<VPBundleRecipe>(this)->mayReadOrWriteMemory();
+    return cast<VPSingleDefBundleRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPWidenLoadEVLSC:
@@ -148,7 +148,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
   case VPBundleSC:
-    return cast<VPBundleRecipe>(this)->mayHaveSideEffects();
+    return cast<VPSingleDefBundleRecipe>(this)->mayHaveSideEffects();
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
@@ -2506,8 +2506,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             Ctx.CostKind);
 }
 
-VPBundleRecipe::VPBundleRecipe(BundleTypes BundleType,
-                               ArrayRef<VPSingleDefRecipe *> ToBundle)
+VPSingleDefBundleRecipe::VPSingleDefBundleRecipe(
+    BundleTypes BundleType, ArrayRef<VPSingleDefRecipe *> ToBundle)
     : VPSingleDefRecipe(VPDef::VPBundleSC, {}, {}),
       BundledRecipes(
           SetVector<VPSingleDefRecipe *>(ToBundle.begin(), ToBundle.end())
@@ -2544,7 +2544,7 @@ VPBundleRecipe::VPBundleRecipe(BundleTypes BundleType,
   // Internalize all external operands to the bundled recipes. To do so,
   // create new temporary VPValues for all operands defined by a recipe outside
   // the bundle. The original operands are added as operands of the
-  // VPBundleRecipe itself.
+  // VPSingleDefBundleRecipe itself.
   for (auto *R : BundledRecipes) {
     for (const auto &[Idx, Op] : enumerate(R->operands())) {
       auto *Def = Op->getDefiningRecipe();
@@ -2557,7 +2557,7 @@ VPBundleRecipe::VPBundleRecipe(BundleTypes BundleType,
   }
 }
 
-void VPBundleRecipe::unbundle() {
+void VPSingleDefBundleRecipe::unbundle() {
   for (auto *R : BundledRecipes)
       R->insertBefore(this);
 
@@ -2568,13 +2568,13 @@ void VPBundleRecipe::unbundle() {
   BundledRecipes.clear();
 }
 
-InstructionCost VPBundleRecipe::computeCost(ElementCount VF,
-                                            VPCostContext &Ctx) const {
+InstructionCost VPSingleDefBundleRecipe::computeCost(ElementCount VF,
+                                                     VPCostContext &Ctx) const {
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy = cast<VectorType>(
       toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
   assert(RedTy->isIntegerTy() &&
-         "VPBundleRecipe only supports integer types currently.");
+         "VPSingleDefBundleRecipe only supports integer types currently.");
   switch (BundleType) {
   case BundleTypes::ExtendedReduction: {
     unsigned Opcode = RecurrenceDescriptor::getOpcode(
@@ -2596,21 +2596,21 @@ InstructionCost VPBundleRecipe::computeCost(ElementCount VF,
   }
 }
 
-bool VPBundleRecipe::mayReadOrWriteMemory() const {
+bool VPSingleDefBundleRecipe::mayReadOrWriteMemory() const {
   return any_of(BundledRecipes, [](VPSingleDefRecipe *R) {
     return R->mayReadFromMemory() || R->mayWriteToMemory();
   });
 }
 
-bool VPBundleRecipe::mayHaveSideEffects() const {
+bool VPSingleDefBundleRecipe::mayHaveSideEffects() const {
   return any_of(BundledRecipes,
                 [](VPSingleDefRecipe *R) { return R->mayHaveSideEffects(); });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
-void VPBundleRecipe::print(raw_ostream &O, const Twine &Indent,
-                           VPSlotTracker &SlotTracker) const {
+void VPSingleDefBundleRecipe::print(raw_ostream &O, const Twine &Indent,
+                                    VPSlotTracker &SlotTracker) const {
   O << Indent << "BUNDLE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
