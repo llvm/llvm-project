@@ -615,6 +615,12 @@ def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
 
+def FeatureZCRegMoveFPR64 : SubtargetFeature<"zcm-fpr64", "HasZeroCycleRegMoveFPR64", "true",
+                                        "Has zero-cycle register moves for FPR64 registers">;
+
+def FeatureZCRegMoveFPR32 : SubtargetFeature<"zcm-fpr32", "HasZeroCycleRegMoveFPR32", "true",
+                                        "Has zero-cycle register moves for FPR32 registers">;
+
 def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
                                         "Has zero-cycle zeroing instructions for generic registers">;
 
