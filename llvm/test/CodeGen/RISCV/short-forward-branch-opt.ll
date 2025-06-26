@@ -1731,11 +1731,11 @@ define i64 @select_bfoz(i64 %A, i64 %B, i1 zeroext %cond) {
 ;
 ; RV64SFBANDESAX45-LABEL: select_bfoz:
 ; RV64SFBANDESAX45:       # %bb.0: # %entry
-; RV64SFBANDESAX45-NEXT:    nds.bfoz a0, a0, 25, 23
-; RV64SFBANDESAX45-NEXT:    beqz a2, .LBB39_2
+; RV64SFBANDESAX45-NEXT:    bnez a2, .LBB39_2
 ; RV64SFBANDESAX45-NEXT:  # %bb.1: # %entry
-; RV64SFBANDESAX45-NEXT:    mv a0, a1
+; RV64SFBANDESAX45-NEXT:    nds.bfoz a1, a0, 25, 23
 ; RV64SFBANDESAX45-NEXT:  .LBB39_2: # %entry
+; RV64SFBANDESAX45-NEXT:    mv a0, a1
 ; RV64SFBANDESAX45-NEXT:    ret
 ;
 ; ZICOND-LABEL: select_bfoz:
@@ -1792,11 +1792,11 @@ define i64 @select_bfos(i64 %A, i64 %B, i1 zeroext %cond) {
 ;
 ; RV64SFBANDESAX45-LABEL: select_bfos:
 ; RV64SFBANDESAX45:       # %bb.0: # %entry
-; RV64SFBANDESAX45-NEXT:    nds.bfos a0, a0, 14, 46
-; RV64SFBANDESAX45-NEXT:    beqz a2, .LBB40_2
+; RV64SFBANDESAX45-NEXT:    bnez a2, .LBB40_2
 ; RV64SFBANDESAX45-NEXT:  # %bb.1: # %entry
-; RV64SFBANDESAX45-NEXT:    mv a0, a1
+; RV64SFBANDESAX45-NEXT:    nds.bfos a1, a0, 14, 46
 ; RV64SFBANDESAX45-NEXT:  .LBB40_2: # %entry
+; RV64SFBANDESAX45-NEXT:    mv a0, a1
 ; RV64SFBANDESAX45-NEXT:    ret
 ;
 ; ZICOND-LABEL: select_bfos:
