@@ -100,7 +100,7 @@ struct DescriptorRangeYaml {
 
   LLVM_ABI uint32_t getEncodedFlags() const;
 
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) bool Val = false;
+#define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag) bool Enum = false;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 

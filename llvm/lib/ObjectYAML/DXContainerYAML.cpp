@@ -63,9 +63,9 @@ readDescriptorRanges(DXContainerYAML::RootParameterHeaderYaml &Header,
     NewR.RangeType = R.RangeType;
     if constexpr (std::is_same_v<T, dxbc::RTS0::v2::DescriptorRange>) {
       // Set all flag fields for v2
-#define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
-  NewR.Val =                                                                   \
-      (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlag::Val)) != 0;
+#define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
+  NewR.Enum =                                                                  \
+      (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlags::Enum)) != 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     }
     TableYaml.Ranges.push_back(NewR);
@@ -205,12 +205,12 @@ uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
 }
 
 uint32_t DXContainerYAML::DescriptorRangeYaml::getEncodedFlags() const {
-  uint64_t Flag = 0;
-#define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
-  if (Val)                                                                     \
-    Flag |= (uint32_t)dxbc::DescriptorRangeFlag::Val;
+  uint64_t Flags = 0;
+#define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
+  if (Enum)                                                                    \
+    Flags |= (uint32_t)dxbc::DescriptorRangeFlags::Enum;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-  return Flag;
+  return Flags;
 }
 
 uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
@@ -405,7 +405,8 @@ void MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml>::mapping(
   IO.mapRequired("RegisterSpace", R.RegisterSpace);
   IO.mapRequired("OffsetInDescriptorsFromTableStart",
                  R.OffsetInDescriptorsFromTableStart);
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) IO.mapOptional(#Val, R.Val, false);
+#define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
+  IO.mapOptional(#Flag, R.Enum, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 

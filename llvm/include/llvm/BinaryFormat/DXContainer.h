@@ -171,12 +171,14 @@ enum class RootDescriptorFlags : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootDescriptorFlags>> getRootDescriptorFlags();
 
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
-enum class DescriptorRangeFlag : uint32_t {
+#define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag) Enum = Num,
+enum class DescriptorRangeFlags : uint32_t {
 #include "DXContainerConstants.def"
 
-  LLVM_MARK_AS_BITMASK_ENUM(DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS)
+  LLVM_MARK_AS_BITMASK_ENUM(DescriptorsStaticKeepingBufferBoundsChecks)
 };
+
+LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeFlags>> getDescriptorRangeFlags();
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
