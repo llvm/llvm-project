@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #ifndef LLVM_MC_DXCONTAINERROOTSIGNATURE_H
 #define LLVM_MC_DXCONTAINERROOTSIGNATURE_H
 
@@ -120,5 +119,4 @@ struct RootSignatureDesc {
 };
 } // namespace mcdxbc
 } // namespace llvm
-
 #endif // LLVM_MC_DXCONTAINERROOTSIGNATURE_H

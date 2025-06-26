@@ -26,6 +26,16 @@
 namespace llvm {
 namespace dxil {
 
+enum class RootSignatureElementKind {
+  Error = 0,
+  RootFlags = 1,
+  RootConstants = 2,
+  SRV = 3,
+  UAV = 4,
+  CBV = 5,
+  DescriptorTable = 6,
+};
+
 class RootSignatureBindingInfo {
 private:
   SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> FuncToRsMap;
@@ -96,4 +106,4 @@ public:
 
 } // namespace dxil
 } // namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_DIRECTX_DXILROOTSIGNATURE_H

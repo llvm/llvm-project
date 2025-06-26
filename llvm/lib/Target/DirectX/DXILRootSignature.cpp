@@ -29,6 +29,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -233,7 +235,7 @@ bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
 
 void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 
 char RootSignatureAnalysisWrapper::ID = 0;
@@ -241,6 +243,7 @@ char RootSignatureAnalysisWrapper::ID = 0;
 INITIALIZE_PASS_BEGIN(RootSignatureAnalysisWrapper,
                       "dxil-root-signature-analysis",
                       "DXIL Root Signature Analysis", true, true)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_END(RootSignatureAnalysisWrapper,
                     "dxil-root-signature-analysis",
                     "DXIL Root Signature Analysis", true, true)
