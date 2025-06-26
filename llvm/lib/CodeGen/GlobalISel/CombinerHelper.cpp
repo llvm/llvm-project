@@ -4629,10 +4629,17 @@ bool CombinerHelper::matchBitfieldExtractFromSExtInReg(
   if (ShiftImm < 0 || ShiftImm + Width > Ty.getScalarSizeInBits())
     return false;
 
+  const RegisterBank *RB = getRegBank(ShiftSrc);
+
   MatchInfo = [=](MachineIRBuilder &B) {
     auto Cst1 = B.buildConstant(ExtractTy, ShiftImm);
     auto Cst2 = B.buildConstant(ExtractTy, Width);
     B.buildSbfx(Dst, ShiftSrc, Cst1, Cst2);
+
+    if (RB) {
+      MRI.setRegBank(Cst1.getReg(0), *RB);
+      MRI.setRegBank(Cst2.getReg(0), *RB);
+    }
   };
   return true;
 }
@@ -4667,10 +4674,18 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(MachineInstr &MI,
     return false;
 
   uint64_t Width = APInt(Size, AndImm).countr_one();
+
+  const RegisterBank *RB = getRegBank(ShiftSrc);
+
   MatchInfo = [=](MachineIRBuilder &B) {
     auto WidthCst = B.buildConstant(ExtractTy, Width);
     auto LSBCst = B.buildConstant(ExtractTy, LSBImm);
     B.buildInstr(TargetOpcode::G_UBFX, {Dst}, {ShiftSrc, LSBCst, WidthCst});
+
+    if (RB) {
+      MRI.setRegBank(WidthCst.getReg(0), *RB);
+      MRI.setRegBank(LSBCst.getReg(0), *RB);
+    }
   };
   return true;
 }
@@ -4717,10 +4732,17 @@ bool CombinerHelper::matchBitfieldExtractFromShr(
   const int64_t Pos = ShrAmt - ShlAmt;
   const int64_t Width = Size - ShrAmt;
 
+  const RegisterBank *RB = getRegBank(ShlSrc);
+
   MatchInfo = [=](MachineIRBuilder &B) {
     auto WidthCst = B.buildConstant(ExtractTy, Width);
     auto PosCst = B.buildConstant(ExtractTy, Pos);
     B.buildInstr(ExtrOpcode, {Dst}, {ShlSrc, PosCst, WidthCst});
+
+    if (RB) {
+      MRI.setRegBank(WidthCst.getReg(0), *RB);
+      MRI.setRegBank(PosCst.getReg(0), *RB);
+    }
   };
   return true;
 }
@@ -4775,10 +4797,17 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   if (Opcode == TargetOpcode::G_ASHR && Width + ShrAmt == Size)
     return false;
 
+  const RegisterBank *RB = getRegBank(AndSrc);
+
   MatchInfo = [=](MachineIRBuilder &B) {
     auto WidthCst = B.buildConstant(ExtractTy, Width);
     auto PosCst = B.buildConstant(ExtractTy, Pos);
     B.buildInstr(TargetOpcode::G_UBFX, {Dst}, {AndSrc, PosCst, WidthCst});
+
+    if (RB) {
+      MRI.setRegBank(WidthCst.getReg(0), *RB);
+      MRI.setRegBank(PosCst.getReg(0), *RB);
+    }
   };
   return true;
 }
