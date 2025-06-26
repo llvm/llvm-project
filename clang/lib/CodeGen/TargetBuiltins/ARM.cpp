@@ -6499,12 +6499,38 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   case clang::AArch64::BI_InterlockedAdd:
-  case clang::AArch64::BI_InterlockedAdd64: {
+  case clang::AArch64::BI_InterlockedAdd_acq:
+  case clang::AArch64::BI_InterlockedAdd_rel:
+  case clang::AArch64::BI_InterlockedAdd_nf:
+  case clang::AArch64::BI_InterlockedAdd64:
+  case clang::AArch64::BI_InterlockedAdd64_acq:
+  case clang::AArch64::BI_InterlockedAdd64_rel:
+  case clang::AArch64::BI_InterlockedAdd64_nf: {
     Address DestAddr = CheckAtomicAlignment(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(1));
+    llvm::AtomicOrdering Ordering;
+    switch (BuiltinID) {
+    case clang::AArch64::BI_InterlockedAdd:
+    case clang::AArch64::BI_InterlockedAdd64:
+      Ordering = llvm::AtomicOrdering::SequentiallyConsistent;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_acq:
+    case clang::AArch64::BI_InterlockedAdd64_acq:
+      Ordering = llvm::AtomicOrdering::Acquire;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_rel:
+    case clang::AArch64::BI_InterlockedAdd64_rel:
+      Ordering = llvm::AtomicOrdering::Release;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_nf:
+    case clang::AArch64::BI_InterlockedAdd64_nf:
+      Ordering = llvm::AtomicOrdering::Monotonic;
+      break;
+    default:
+      llvm_unreachable("missing builtin ID in switch!");
+    }
     AtomicRMWInst *RMWI =
-        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val,
-                                llvm::AtomicOrdering::SequentiallyConsistent);
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val, Ordering);
     return Builder.CreateAdd(RMWI, Val);
   }
   }
