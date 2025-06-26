@@ -443,7 +443,7 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_sext(<2 x i16> %x, <2 x i16> %b) {
 ; CHECK-LABEL: add_v2i16_v2i64_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q2, #0xffff
+; CHECK-NEXT:    vmov.i64 q2, #0xffff
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vmov r0, s4
@@ -1363,7 +1363,7 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v2i8_v2i64_sext(<2 x i8> %x, <2 x i8> %b) {
 ; CHECK-LABEL: add_v2i8_v2i64_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q2, #0xff
+; CHECK-NEXT:    vmov.i64 q2, #0xff
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vmov r0, s4
@@ -1870,7 +1870,7 @@ define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_acc_sext(<2 x i16> %x, <2 x i16> %b,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov.i32 q2, #0xffff
+; CHECK-NEXT:    vmov.i64 q2, #0xffff
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vmov r2, s4
@@ -2544,7 +2544,7 @@ define arm_aapcs_vfpcc i64 @add_v2i8_v2i64_acc_sext(<2 x i8> %x, <2 x i8> %b, i6
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov.i32 q2, #0xff
+; CHECK-NEXT:    vmov.i64 q2, #0xff
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vmov r2, s4
