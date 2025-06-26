@@ -358,8 +358,8 @@ gpu.module @test_kernel {
   // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK-COUNT-2: xegpu.create_tdesc [[arg0]], {{.*}} : ui64, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
   // CHECK-COUNT-2: xegpu.prefetch {{.*}} : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
-   // CHECK-COUNT-2: xegpu.update_offset {{.*}} : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>, vector<16xindex>
-   // CHECK-COUNT-2: xegpu.load  {{.*}} : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>, vector<16xi1> -> vector<16xf32>
+  // CHECK-COUNT-2: xegpu.update_offset {{.*}} : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>, vector<16xindex>
+  // CHECK-COUNT-2: xegpu.load  {{.*}} : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>, vector<16xi1> -> vector<16xf32>
   // CHECK-COUNT-2: xegpu.store  {{.*}} : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>, vector<16xi1>
 
   gpu.func @test_prefetch_load_store_update(%src: ui64)  {
@@ -406,8 +406,8 @@ gpu.module @test_kernel   {
   // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK-COUNT-4: xegpu.create_tdesc [[arg0]], {{.*}} : ui64, vector<16xindex> -> !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
   // CHECK-COUNT-4: xegpu.prefetch {{.*}} : !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
-   // CHECK-COUNT-4: xegpu.update_offset {{.*}} : !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<16xindex>
-   // CHECK-COUNT-4: xegpu.load  {{.*}} : !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<16xi1> -> vector<16x2xf32>
+  // CHECK-COUNT-4: xegpu.update_offset {{.*}} : !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<16xindex>
+  // CHECK-COUNT-4: xegpu.load  {{.*}} : !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<16xi1> -> vector<16x2xf32>
   // CHECK-COUNT-4: xegpu.store  {{.*}} : vector<16x2xf32>, !xegpu.tensor_desc<16x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<16xi1>
 
   gpu.func @test_prefetch_load_store_update_chunk(%src: ui64)  {
@@ -446,4 +446,87 @@ gpu.module @test_kernel   {
   }
 }
 
+// -----
+#l = #xegpu.layout<inst_data = [8,32,16]>
+gpu.module @test_kernel {
+  gpu.func @test_3d_block_tensor_desc(%A: memref<1024x1024x1024xf16>, %B: memref<1024x1024x1024xf16>, %C: memref<1024x1024x1024xf16>) {
+    %c0 = arith.constant 0 : index
+    %c32 = arith.constant 32 : index
+    %c1024 = arith.constant 1024 : index
+    %block_id_x = gpu.block_id x
+    %m = arith.muli %block_id_x, %c32 : index
 
+    %a_tdesc = xegpu.create_nd_tdesc %A[%m, %m, %c0] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<32x32x32xf16, #l>
+    %b_tdesc = xegpu.create_nd_tdesc %B[%m, %m, %c0] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<32x32x32xf16, #l>
+    %c_tdesc = xegpu.create_nd_tdesc %C[%m, %m, %c0] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<32x32x32xf16, #l>
+
+    %out:3 = scf.for %k = %c0 to %c1024 step %c32
+      iter_args(%arg0 = %a_tdesc, %arg1 = %b_tdesc, %arg2 = %c_tdesc)
+      -> (!xegpu.tensor_desc<32x32x32xf16, #l>, !xegpu.tensor_desc<32x32x32xf16, #l>, !xegpu.tensor_desc<32x32x32xf16, #l>) {
+      //CHECK-COUNT-16: xegpu.load_nd {{.*}}  : !xegpu.tensor_desc<8x32x16xf16> -> vector<8x32x16xf16>
+      %a = xegpu.load_nd %arg0 : !xegpu.tensor_desc<32x32x32xf16, #l> -> vector<32x32x32xf16>
+      %b = xegpu.load_nd %arg1 : !xegpu.tensor_desc<32x32x32xf16, #l> -> vector<32x32x32xf16>
+
+      //CHECK-COUNT-8: arith.addf {{.*}} : vector<8x32x16xf16>
+      %c = arith.addf %a, %b {layout_result_0 = #l} : vector<32x32x32xf16>
+
+      //CHECK-COUNT-8: xegpu.store_nd {{.*}} : vector<8x32x16xf16>, !xegpu.tensor_desc<8x32x16xf16>
+      xegpu.store_nd %c, %arg2: vector<32x32x32xf16>, !xegpu.tensor_desc<32x32x32xf16, #l>
+
+      //CHECK-COUNT-24: xegpu.update_nd_offset {{.*}} : !xegpu.tensor_desc<8x32x16xf16>
+      %a_next_tdesc = xegpu.update_nd_offset %arg0, [0, 0, %c32] : !xegpu.tensor_desc<32x32x32xf16, #l>
+      %b_next_tdesc = xegpu.update_nd_offset %arg1, [0, 0, %c32] : !xegpu.tensor_desc<32x32x32xf16, #l>
+      %c_next_tdesc = xegpu.update_nd_offset %arg2, [0, 0, %c32] : !xegpu.tensor_desc<32x32x32xf16, #l>
+      scf.yield %a_next_tdesc, %b_next_tdesc, %c_next_tdesc
+        : !xegpu.tensor_desc<32x32x32xf16, #l>, !xegpu.tensor_desc<32x32x32xf16, #l>, !xegpu.tensor_desc<32x32x32xf16, #l>
+    }
+    gpu.return
+  }
+}
+
+// -----
+#l = #xegpu.layout<inst_data = [2, 8, 2]>
+gpu.module @test_kernel   {
+  // CHECK-LABEL: test_3d_scattered_tensor_desc
+  // CHECK-SAME: [[arg0:%.+]]: ui64
+  // CHECK-COUNT-4: xegpu.create_tdesc [[arg0]], {{.*}} : ui64, vector<2x8xindex> -> !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
+  // CHECK-COUNT-4: xegpu.prefetch {{.*}} : !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
+   // CHECK-COUNT-4: xegpu.update_offset {{.*}} : !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<2x8xindex>
+   // CHECK-COUNT-4: xegpu.load  {{.*}} : !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<2x8xi1> -> vector<2x8x2xf32>
+  // CHECK-COUNT-4: xegpu.store  {{.*}} : vector<2x8x2xf32>, !xegpu.tensor_desc<2x8x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<2x8xi1>
+
+
+  gpu.func @test_3d_scattered_tensor_desc(%src: ui64)  {
+
+    %cst = arith.constant dense<[
+      [0,   8,  16,  24,  32,  40,  48,  56],
+      [64,  72,  80,  88,  96, 104, 112, 120],
+      [128, 136, 144, 152, 160, 168, 176, 184],
+      [192, 200, 208, 216, 224, 232, 240, 248]
+    ]> : vector<4x8xindex>
+
+    %tdesc = xegpu.create_tdesc %src, %cst : ui64, vector<4x8xindex> -> !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>
+    xegpu.prefetch %tdesc: !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>
+
+    %delta = arith.constant dense<[
+      [32,   32,  32,  32,  32,  32,  32,  32],
+      [32,   32,  32,  32,  32,  32,  32,  64],
+      [128, 128, 128, 128, 128, 128, 128, 128],
+      [128, 128, 128, 128, 128, 128, 128, 256]
+    ]> : vector<4x8xindex>
+    %new_tdesc = xegpu.update_offset %tdesc, %delta
+              : !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>, vector<4x8xindex>
+
+    %c4 = arith.constant 4: index
+    %mask = vector.create_mask %c4, %c4: vector<4x8xi1>
+
+    %ld_vec = xegpu.load %new_tdesc, %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>, vector<4x8xi1> -> vector<4x8x4xf32>
+
+    %st_vec = arith.addf %ld_vec, %ld_vec : vector<4x8x4xf32>
+    xegpu.store %st_vec, %tdesc, %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>:
+                 vector<4x8x4xf32>,
+                 !xegpu.tensor_desc<4x8x4xf32, #xegpu.scatter_tdesc_attr<chunk_size=4>, #l>,
+                 vector<4x8xi1>
+    gpu.return
+  }
+}
