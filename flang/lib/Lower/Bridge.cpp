@@ -701,8 +701,7 @@ public:
   }
   mlir::Type genType(Fortran::common::TypeCategory tc) override final {
     return Fortran::lower::getFIRType(
-        &getMLIRContext(), tc, bridge.getDefaultKinds().GetDefaultKind(tc),
-        std::nullopt);
+        &getMLIRContext(), tc, bridge.getDefaultKinds().GetDefaultKind(tc), {});
   }
 
   Fortran::lower::TypeConstructionStack &
