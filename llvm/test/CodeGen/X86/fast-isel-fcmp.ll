@@ -3,6 +3,7 @@
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 | FileCheck %s --check-prefixes=FAST,FAST_NOAVX
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=avx | FileCheck %s --check-prefixes=FAST,FAST_AVX
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=avx512f | FileCheck %s --check-prefixes=FAST,FAST_AVX
+; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=zu | FileCheck %s --check-prefix=FAST_ZU
 
 define zeroext i1 @fcmp_oeq(float %x, float %y) {
 ; SDAG-LABEL: fcmp_oeq:
@@ -30,6 +31,15 @@ define zeroext i1 @fcmp_oeq(float %x, float %y) {
 ; FAST_AVX-NEXT:    andb %cl, %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_oeq:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzue %cl
+; FAST_ZU-NEXT:    setzunp %al
+; FAST_ZU-NEXT:    andb %cl, %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp oeq float %x, %y
   ret i1 %1
 }
@@ -54,6 +64,13 @@ define zeroext i1 @fcmp_ogt(float %x, float %y) {
 ; FAST_AVX-NEXT:    seta %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ogt:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzua %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ogt float %x, %y
   ret i1 %1
 }
@@ -78,6 +95,13 @@ define zeroext i1 @fcmp_oge(float %x, float %y) {
 ; FAST_AVX-NEXT:    setae %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_oge:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzuae %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp oge float %x, %y
   ret i1 %1
 }
@@ -102,6 +126,13 @@ define zeroext i1 @fcmp_olt(float %x, float %y) {
 ; FAST_AVX-NEXT:    seta %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_olt:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm1
+; FAST_ZU-NEXT:    setzua %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp olt float %x, %y
   ret i1 %1
 }
@@ -126,6 +157,13 @@ define zeroext i1 @fcmp_ole(float %x, float %y) {
 ; FAST_AVX-NEXT:    setae %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ole:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm1
+; FAST_ZU-NEXT:    setzuae %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ole float %x, %y
   ret i1 %1
 }
@@ -150,6 +188,13 @@ define zeroext i1 @fcmp_one(float %x, float %y) {
 ; FAST_AVX-NEXT:    setne %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_one:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzune %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp one float %x, %y
   ret i1 %1
 }
@@ -174,6 +219,13 @@ define zeroext i1 @fcmp_ord(float %x, float %y) {
 ; FAST_AVX-NEXT:    setnp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ord:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzunp %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ord float %x, %y
   ret i1 %1
 }
@@ -198,6 +250,13 @@ define zeroext i1 @fcmp_uno(float %x, float %y) {
 ; FAST_AVX-NEXT:    setp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_uno:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzup %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp uno float %x, %y
   ret i1 %1
 }
@@ -222,6 +281,13 @@ define zeroext i1 @fcmp_ueq(float %x, float %y) {
 ; FAST_AVX-NEXT:    sete %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ueq:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzue %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ueq float %x, %y
   ret i1 %1
 }
@@ -246,6 +312,13 @@ define zeroext i1 @fcmp_ugt(float %x, float %y) {
 ; FAST_AVX-NEXT:    setb %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ugt:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm1
+; FAST_ZU-NEXT:    setzub %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ugt float %x, %y
   ret i1 %1
 }
@@ -270,6 +343,13 @@ define zeroext i1 @fcmp_uge(float %x, float %y) {
 ; FAST_AVX-NEXT:    setbe %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_uge:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm1
+; FAST_ZU-NEXT:    setzube %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp uge float %x, %y
   ret i1 %1
 }
@@ -294,6 +374,13 @@ define zeroext i1 @fcmp_ult(float %x, float %y) {
 ; FAST_AVX-NEXT:    setb %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ult:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzub %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ult float %x, %y
   ret i1 %1
 }
@@ -318,6 +405,13 @@ define zeroext i1 @fcmp_ule(float %x, float %y) {
 ; FAST_AVX-NEXT:    setbe %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ule:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzube %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ule float %x, %y
   ret i1 %1
 }
@@ -348,6 +442,15 @@ define zeroext i1 @fcmp_une(float %x, float %y) {
 ; FAST_AVX-NEXT:    orb %cl, %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_une:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzune %cl
+; FAST_ZU-NEXT:    setzup %al
+; FAST_ZU-NEXT:    orb %cl, %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp une float %x, %y
   ret i1 %1
 }
@@ -365,6 +468,13 @@ define zeroext i1 @icmp_eq(i32 %x, i32 %y) {
 ; FAST-NEXT:    sete %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_eq:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzue %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp eq i32 %x, %y
   ret i1 %1
 }
@@ -382,6 +492,13 @@ define zeroext i1 @icmp_ne(i32 %x, i32 %y) {
 ; FAST-NEXT:    setne %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_ne:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzune %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp ne i32 %x, %y
   ret i1 %1
 }
@@ -399,6 +516,13 @@ define zeroext i1 @icmp_ugt(i32 %x, i32 %y) {
 ; FAST-NEXT:    seta %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_ugt:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzua %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp ugt i32 %x, %y
   ret i1 %1
 }
@@ -416,6 +540,13 @@ define zeroext i1 @icmp_uge(i32 %x, i32 %y) {
 ; FAST-NEXT:    setae %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_uge:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzuae %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp uge i32 %x, %y
   ret i1 %1
 }
@@ -433,6 +564,13 @@ define zeroext i1 @icmp_ult(i32 %x, i32 %y) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_ult:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzub %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp ult i32 %x, %y
   ret i1 %1
 }
@@ -450,6 +588,13 @@ define zeroext i1 @icmp_ule(i32 %x, i32 %y) {
 ; FAST-NEXT:    setbe %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_ule:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzube %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp ule i32 %x, %y
   ret i1 %1
 }
@@ -467,6 +612,13 @@ define zeroext i1 @icmp_sgt(i32 %x, i32 %y) {
 ; FAST-NEXT:    setg %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_sgt:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzug %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp sgt i32 %x, %y
   ret i1 %1
 }
@@ -484,6 +636,13 @@ define zeroext i1 @icmp_sge(i32 %x, i32 %y) {
 ; FAST-NEXT:    setge %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_sge:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzuge %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp sge i32 %x, %y
   ret i1 %1
 }
@@ -501,6 +660,13 @@ define zeroext i1 @icmp_slt(i32 %x, i32 %y) {
 ; FAST-NEXT:    setl %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_slt:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzul %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp slt i32 %x, %y
   ret i1 %1
 }
@@ -518,6 +684,13 @@ define zeroext i1 @icmp_sle(i32 %x, i32 %y) {
 ; FAST-NEXT:    setle %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: icmp_sle:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    cmpl %esi, %edi
+; FAST_ZU-NEXT:    setzule %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = icmp sle i32 %x, %y
   ret i1 %1
 }
@@ -543,6 +716,13 @@ define zeroext i1 @fcmp_oeq2(float %x) {
 ; FAST_AVX-NEXT:    setnp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_oeq2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzunp %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp oeq float %x, %x
   ret i1 %1
 }
@@ -576,6 +756,16 @@ define zeroext i1 @fcmp_oeq3(float %x) {
 ; FAST_AVX-NEXT:    andb %cl, %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_oeq3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzue %cl
+; FAST_ZU-NEXT:    setzunp %al
+; FAST_ZU-NEXT:    andb %cl, %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp oeq float %x, 0.000000e+00
   ret i1 %1
 }
@@ -592,6 +782,13 @@ define zeroext i1 @fcmp_ogt2(float %x) {
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ogt2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorl %eax, %eax
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    ## kill: def $al killed $al killed $eax
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ogt float %x, %x
   ret i1 %1
 }
@@ -619,6 +816,14 @@ define zeroext i1 @fcmp_ogt3(float %x) {
 ; FAST_AVX-NEXT:    seta %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ogt3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzua %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ogt float %x, 0.000000e+00
   ret i1 %1
 }
@@ -643,6 +848,13 @@ define zeroext i1 @fcmp_oge2(float %x) {
 ; FAST_AVX-NEXT:    setnp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_oge2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzunp %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp oge float %x, %x
   ret i1 %1
 }
@@ -670,6 +882,14 @@ define zeroext i1 @fcmp_oge3(float %x) {
 ; FAST_AVX-NEXT:    setae %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_oge3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzuae %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp oge float %x, 0.000000e+00
   ret i1 %1
 }
@@ -686,6 +906,13 @@ define zeroext i1 @fcmp_olt2(float %x) {
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_olt2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorl %eax, %eax
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    ## kill: def $al killed $al killed $eax
+; FAST_ZU-NEXT:    retq
   %1 = fcmp olt float %x, %x
   ret i1 %1
 }
@@ -713,6 +940,14 @@ define zeroext i1 @fcmp_olt3(float %x) {
 ; FAST_AVX-NEXT:    seta %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_olt3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm1
+; FAST_ZU-NEXT:    setzua %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp olt float %x, 0.000000e+00
   ret i1 %1
 }
@@ -737,6 +972,13 @@ define zeroext i1 @fcmp_ole2(float %x) {
 ; FAST_AVX-NEXT:    setnp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ole2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzunp %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ole float %x, %x
   ret i1 %1
 }
@@ -764,6 +1006,14 @@ define zeroext i1 @fcmp_ole3(float %x) {
 ; FAST_AVX-NEXT:    setae %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ole3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm1
+; FAST_ZU-NEXT:    setzuae %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ole float %x, 0.000000e+00
   ret i1 %1
 }
@@ -780,6 +1030,13 @@ define zeroext i1 @fcmp_one2(float %x) {
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_one2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorl %eax, %eax
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    ## kill: def $al killed $al killed $eax
+; FAST_ZU-NEXT:    retq
   %1 = fcmp one float %x, %x
   ret i1 %1
 }
@@ -807,6 +1064,14 @@ define zeroext i1 @fcmp_one3(float %x) {
 ; FAST_AVX-NEXT:    setne %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_one3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzune %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp one float %x, 0.000000e+00
   ret i1 %1
 }
@@ -831,6 +1096,13 @@ define zeroext i1 @fcmp_ord2(float %x) {
 ; FAST_AVX-NEXT:    setnp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ord2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzunp %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ord float %x, %x
   ret i1 %1
 }
@@ -855,6 +1127,13 @@ define zeroext i1 @fcmp_ord3(float %x) {
 ; FAST_AVX-NEXT:    setnp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ord3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzunp %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ord float %x, 0.000000e+00
   ret i1 %1
 }
@@ -879,6 +1158,13 @@ define zeroext i1 @fcmp_uno2(float %x) {
 ; FAST_AVX-NEXT:    setp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_uno2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzup %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp uno float %x, %x
   ret i1 %1
 }
@@ -903,6 +1189,13 @@ define zeroext i1 @fcmp_uno3(float %x) {
 ; FAST_AVX-NEXT:    setp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_uno3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzup %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp uno float %x, 0.000000e+00
   ret i1 %1
 }
@@ -918,6 +1211,12 @@ define zeroext i1 @fcmp_ueq2(float %x) {
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ueq2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    movb $1, %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ueq float %x, %x
   ret i1 %1
 }
@@ -945,6 +1244,14 @@ define zeroext i1 @fcmp_ueq3(float %x) {
 ; FAST_AVX-NEXT:    sete %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ueq3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzue %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ueq float %x, 0.000000e+00
   ret i1 %1
 }
@@ -969,6 +1276,13 @@ define zeroext i1 @fcmp_ugt2(float %x) {
 ; FAST_AVX-NEXT:    setp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ugt2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzup %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ugt float %x, %x
   ret i1 %1
 }
@@ -996,6 +1310,14 @@ define zeroext i1 @fcmp_ugt3(float %x) {
 ; FAST_AVX-NEXT:    setb %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ugt3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm1
+; FAST_ZU-NEXT:    setzub %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ugt float %x, 0.000000e+00
   ret i1 %1
 }
@@ -1011,6 +1333,12 @@ define zeroext i1 @fcmp_uge2(float %x) {
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_uge2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    movb $1, %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp uge float %x, %x
   ret i1 %1
 }
@@ -1038,6 +1366,14 @@ define zeroext i1 @fcmp_uge3(float %x) {
 ; FAST_AVX-NEXT:    setbe %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_uge3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm1
+; FAST_ZU-NEXT:    setzube %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp uge float %x, 0.000000e+00
   ret i1 %1
 }
@@ -1062,6 +1398,13 @@ define zeroext i1 @fcmp_ult2(float %x) {
 ; FAST_AVX-NEXT:    setp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ult2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzup %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ult float %x, %x
   ret i1 %1
 }
@@ -1089,6 +1432,14 @@ define zeroext i1 @fcmp_ult3(float %x) {
 ; FAST_AVX-NEXT:    setb %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ult3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzub %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ult float %x, 0.000000e+00
   ret i1 %1
 }
@@ -1104,6 +1455,12 @@ define zeroext i1 @fcmp_ule2(float %x) {
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ule2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    movb $1, %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ule float %x, %x
   ret i1 %1
 }
@@ -1131,6 +1488,14 @@ define zeroext i1 @fcmp_ule3(float %x) {
 ; FAST_AVX-NEXT:    setbe %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_ule3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzube %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp ule float %x, 0.000000e+00
   ret i1 %1
 }
@@ -1155,6 +1520,13 @@ define zeroext i1 @fcmp_une2(float %x) {
 ; FAST_AVX-NEXT:    setp %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_une2:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    ucomiss %xmm0, %xmm0
+; FAST_ZU-NEXT:    setzup %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp une float %x, %x
   ret i1 %1
 }
@@ -1188,6 +1560,16 @@ define zeroext i1 @fcmp_une3(float %x) {
 ; FAST_AVX-NEXT:    orb %cl, %al
 ; FAST_AVX-NEXT:    andb $1, %al
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_ZU-LABEL: fcmp_une3:
+; FAST_ZU:       ## %bb.0:
+; FAST_ZU-NEXT:    xorps %xmm1, %xmm1
+; FAST_ZU-NEXT:    ucomiss %xmm1, %xmm0
+; FAST_ZU-NEXT:    setzune %cl
+; FAST_ZU-NEXT:    setzup %al
+; FAST_ZU-NEXT:    orb %cl, %al
+; FAST_ZU-NEXT:    andb $1, %al
+; FAST_ZU-NEXT:    retq
   %1 = fcmp une float %x, 0.000000e+00
   ret i1 %1
 }
