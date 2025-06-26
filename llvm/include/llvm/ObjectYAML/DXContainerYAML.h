@@ -203,7 +203,7 @@ struct RootSignatureYamlDesc {
   LLVM_ABI static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
   create(const object::DirectX::RootSignature &Data);
 
-#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
+#define ROOT_SIGNATURE_FLAG(Num, Val) bool Val = false;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 

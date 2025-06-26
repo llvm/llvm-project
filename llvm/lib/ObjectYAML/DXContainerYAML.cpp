@@ -180,9 +180,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     RootSigDesc.StaticSamplers.push_back(NewS);
   }
 
-#define ROOT_ELEMENT_FLAG(Num, Val)                                            \
-  RootSigDesc.Val =                                                            \
-      (Flags & llvm::to_underlying(dxbc::RootElementFlag::Val)) > 0;
+#define ROOT_SIGNATURE_FLAG(Num, Val)                                          \
+  RootSigDesc.Val = (Flags & llvm::to_underlying(dxbc::RootFlags::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   return RootSigDesc;
 }
@@ -198,9 +197,9 @@ uint32_t DXContainerYAML::RootDescriptorYaml::getEncodedFlags() const {
 
 uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
   uint64_t Flag = 0;
-#define ROOT_ELEMENT_FLAG(Num, Val)                                            \
+#define ROOT_SIGNATURE_FLAG(Num, Val)                                          \
   if (Val)                                                                     \
-    Flag |= (uint32_t)dxbc::RootElementFlag::Val;
+    Flag |= (uint32_t)dxbc::RootFlags::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   return Flag;
 }
@@ -382,7 +381,7 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
   IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
   IO.mapRequired("Parameters", S.Parameters.Locations, S);
   IO.mapOptional("Samplers", S.StaticSamplers);
-#define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
+#define ROOT_SIGNATURE_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 

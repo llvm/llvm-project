@@ -60,6 +60,15 @@ ArrayRef<EnumEntry<SigComponentType>> dxbc::getSigComponentTypes() {
   return ArrayRef(SigComponentTypes);
 }
 
+static const EnumEntry<RootFlags> RootFlagNames[] = {
+#define ROOT_SIGNATURE_FLAG(Val, Enum) {#Enum, RootFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootFlags>> dxbc::getRootFlags() {
+  return ArrayRef(RootFlagNames);
+}
+
 #define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},
 
 static const EnumEntry<ShaderVisibility> ShaderVisibilityValues[] = {

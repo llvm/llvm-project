@@ -55,26 +55,30 @@ SHADER_FEATURE_FLAG(33, 39, NextUnusedBit, "Next reserved shader flag bit (not a
 #undef SHADER_FEATURE_FLAG
 #endif // SHADER_FEATURE_FLAG
 
+// Below is the definition of root signature enumerations and flags. The
+// definitions of all values here correspond to their description in the
+// d3d12.h header and are carried over from their values in DXC. For reference:
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/
 
-// ROOT_ELEMENT_FLAG(bit offset for the flag, name).
-#ifdef ROOT_ELEMENT_FLAG
+// ROOT_SIGNATURE_FLAG(flag value, name).
+#ifdef ROOT_SIGNATURE_FLAG
 
-ROOT_ELEMENT_FLAG(0, NONE)
-ROOT_ELEMENT_FLAG(0x1, AllowInputAssemblerInputLayout)
-ROOT_ELEMENT_FLAG(0x2, DenyVertexShaderRootAccess)
-ROOT_ELEMENT_FLAG(0x4, DenyHullShaderRootAccess)
-ROOT_ELEMENT_FLAG(0x8, DenyDomainShaderRootAccess)
-ROOT_ELEMENT_FLAG(0x10, DenyGeometryShaderRootAccess)
-ROOT_ELEMENT_FLAG(0x20, DenyPixelShaderRootAccess)
-ROOT_ELEMENT_FLAG(0x40, AllowStreamOutput)
-ROOT_ELEMENT_FLAG(0x80, LocalRootSignature)
-ROOT_ELEMENT_FLAG(0x100, DenyAmplificationShaderRootAccess)
-ROOT_ELEMENT_FLAG(0x200, DenyMeshShaderRootAccess)
-ROOT_ELEMENT_FLAG(0x400, CBVSRVUAVHeapDirectlyIndexed)
-ROOT_ELEMENT_FLAG(0x800, SamplerHeapDirectlyIndexed)
-#undef ROOT_ELEMENT_FLAG
-#endif // ROOT_ELEMENT_FLAG
+ROOT_SIGNATURE_FLAG(0, None)
+ROOT_SIGNATURE_FLAG(0x1, AllowInputAssemblerInputLayout)
+ROOT_SIGNATURE_FLAG(0x2, DenyVertexShaderRootAccess)
+ROOT_SIGNATURE_FLAG(0x4, DenyHullShaderRootAccess)
+ROOT_SIGNATURE_FLAG(0x8, DenyDomainShaderRootAccess)
+ROOT_SIGNATURE_FLAG(0x10, DenyGeometryShaderRootAccess)
+ROOT_SIGNATURE_FLAG(0x20, DenyPixelShaderRootAccess)
+ROOT_SIGNATURE_FLAG(0x40, AllowStreamOutput)
+ROOT_SIGNATURE_FLAG(0x80, LocalRootSignature)
+ROOT_SIGNATURE_FLAG(0x100, DenyAmplificationShaderRootAccess)
+ROOT_SIGNATURE_FLAG(0x200, DenyMeshShaderRootAccess)
+ROOT_SIGNATURE_FLAG(0x400, CBVSRVUAVHeapDirectlyIndexed)
+ROOT_SIGNATURE_FLAG(0x800, SamplerHeapDirectlyIndexed)
 
+#undef ROOT_SIGNATURE_FLAG
+#endif // ROOT_SIGNATURE_FLAG
  
 // ROOT_DESCRIPTOR_FLAG(bit offset for the flag, name).
 #ifdef ROOT_DESCRIPTOR_FLAG
