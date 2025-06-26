@@ -1241,9 +1241,6 @@ void Preprocessor::HandleDirective(Token &Result) {
   // pp-directive.
   bool ReadAnyTokensBeforeDirective =CurPPLexer->MIOpt.getHasReadAnyTokensVal();
 
-  if (!hasSeenMainFileFirstPPToken())
-    HandleMainFileFirstPPToken(Result);
-
   // Save the '#' token in case we need to return it later.
   Token SavedHash = Result;
 
