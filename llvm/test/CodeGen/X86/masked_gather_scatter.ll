@@ -4475,7 +4475,7 @@ define <4 x i32> @splat_ptr_gather(ptr %ptr, <4 x i1> %mask, <4 x i32> %passthru
 ; X64-SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X64-SKX-NEXT:    vpmovd2m %xmm0, %k1
 ; X64-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X64-SKX-NEXT:    vpgatherdd (%rdi,%xmm0,4), %xmm1 {%k1}
+; X64-SKX-NEXT:    vpgatherdd (%rdi,%xmm0), %xmm1 {%k1}
 ; X64-SKX-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-SKX-NEXT:    retq
 ;
@@ -4485,7 +4485,7 @@ define <4 x i32> @splat_ptr_gather(ptr %ptr, <4 x i1> %mask, <4 x i32> %passthru
 ; X86-SKX-NEXT:    vpmovd2m %xmm0, %k1
 ; X86-SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X86-SKX-NEXT:    vpgatherdd (%eax,%xmm0,4), %xmm1 {%k1}
+; X86-SKX-NEXT:    vpgatherdd (%eax,%xmm0), %xmm1 {%k1}
 ; X86-SKX-NEXT:    vmovdqa %xmm1, %xmm0
 ; X86-SKX-NEXT:    retl
   %1 = insertelement <4 x ptr> undef, ptr %ptr, i32 0
@@ -4581,7 +4581,7 @@ define void @splat_ptr_scatter(ptr %ptr, <4 x i1> %mask, <4 x i32> %val) {
 ; X64-SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X64-SKX-NEXT:    vpmovd2m %xmm0, %k1
 ; X64-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X64-SKX-NEXT:    vpscatterdd %xmm1, (%rdi,%xmm0,4) {%k1}
+; X64-SKX-NEXT:    vpscatterdd %xmm1, (%rdi,%xmm0) {%k1}
 ; X64-SKX-NEXT:    retq
 ;
 ; X86-SKX-LABEL: splat_ptr_scatter:
@@ -4590,7 +4590,7 @@ define void @splat_ptr_scatter(ptr %ptr, <4 x i1> %mask, <4 x i32> %val) {
 ; X86-SKX-NEXT:    vpmovd2m %xmm0, %k1
 ; X86-SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X86-SKX-NEXT:    vpscatterdd %xmm1, (%eax,%xmm0,4) {%k1}
+; X86-SKX-NEXT:    vpscatterdd %xmm1, (%eax,%xmm0) {%k1}
 ; X86-SKX-NEXT:    retl
   %1 = insertelement <4 x ptr> undef, ptr %ptr, i32 0
   %2 = shufflevector <4 x ptr> %1, <4 x ptr> undef, <4 x i32> zeroinitializer

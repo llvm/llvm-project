@@ -85,7 +85,8 @@ define <vscale x 4 x i32> @global_struct_splat(<vscale x 4 x i1> %mask) #0 {
 
 define <vscale x 4 x i32> @splat_ptr_gather(ptr %ptr, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) #0 {
 ; CHECK-LABEL: @splat_ptr_gather(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], <vscale x 4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[PTR:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 4 x ptr> [[TMP3]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[TMP1]], i32 4, <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i32> [[PASSTHRU:%.*]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 ;
@@ -97,7 +98,8 @@ define <vscale x 4 x i32> @splat_ptr_gather(ptr %ptr, <vscale x 4 x i1> %mask, <
 
 define void @splat_ptr_scatter(ptr %ptr, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %val) #0 {
 ; CHECK-LABEL: @splat_ptr_scatter(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], <vscale x 4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[PTR:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 4 x ptr> [[TMP2]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[VAL:%.*]], <vscale x 4 x ptr> [[TMP1]], i32 4, <vscale x 4 x i1> [[MASK:%.*]])
 ; CHECK-NEXT:    ret void
 ;

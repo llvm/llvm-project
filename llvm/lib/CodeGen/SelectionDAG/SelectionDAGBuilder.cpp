@@ -4888,14 +4888,9 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
 
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
 
-  // Handle splat constant pointer.
-  if (auto *C = dyn_cast<Constant>(Ptr)) {
-    C = C->getSplatValue();
-    if (!C)
-      return false;
-
-    Base = SDB->getValue(C);
-
+  // Handle splat (possibly constant) pointer.
+  if (Value *ScalarV = getSplatValue(Ptr)) {
+    Base = SDB->getValue(ScalarV);
     ElementCount NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
     EVT VT = EVT::getVectorVT(*DAG.getContext(), TLI.getPointerTy(DL), NumElts);
     Index = DAG.getConstant(0, SDB->getCurSDLoc(), VT);
