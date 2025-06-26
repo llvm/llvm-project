@@ -332,7 +332,7 @@ if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
   endif()
 endif()
 
-if (LLVM_EXECUTE_ONLY_CODE)
+if (RUNTIMES_EXECUTE_ONLY_CODE)
   add_compile_definitions(_LIBUNWIND_EXECUTE_ONLY_CODE)
 endif()
 
