@@ -87,7 +87,7 @@ struct RootDescriptorYaml {
 
   LLVM_ABI uint32_t getEncodedFlags() const;
 
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) bool Val = false;
+#define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag) bool Enum = false;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 

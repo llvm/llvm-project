@@ -164,10 +164,12 @@ enum class RootFlags : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootFlags>> getRootFlags();
 
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = Num,
-enum class RootDescriptorFlag : uint32_t {
+#define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag) Enum = Num,
+enum class RootDescriptorFlags : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+LLVM_ABI ArrayRef<EnumEntry<RootDescriptorFlags>> getRootDescriptorFlags();
 
 #define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
 enum class DescriptorRangeFlag : uint32_t {

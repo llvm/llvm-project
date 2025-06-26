@@ -140,10 +140,10 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       YamlDescriptor.ShaderRegister = Descriptor.ShaderRegister;
       YamlDescriptor.RegisterSpace = Descriptor.RegisterSpace;
       if (Version > 1) {
-#define ROOT_DESCRIPTOR_FLAG(Num, Val)                                         \
-  YamlDescriptor.Val =                                                         \
+#define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag)                                  \
+  YamlDescriptor.Enum =                                                        \
       (Descriptor.Flags &                                                      \
-       llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
+       llvm::to_underlying(dxbc::RootDescriptorFlags::Enum)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
     } else if (auto *DTV =
@@ -187,12 +187,12 @@ DXContainerYAML::RootSignatureYamlDesc::create(
 }
 
 uint32_t DXContainerYAML::RootDescriptorYaml::getEncodedFlags() const {
-  uint64_t Flag = 0;
-#define ROOT_DESCRIPTOR_FLAG(Num, Val)                                         \
-  if (Val)                                                                     \
-    Flag |= (uint32_t)dxbc::RootDescriptorFlag::Val;
+  uint64_t Flags = 0;
+#define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag)                                  \
+  if (Enum)                                                                    \
+    Flags |= (uint32_t)dxbc::RootDescriptorFlags::Enum;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-  return Flag;
+  return Flags;
 }
 
 uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
@@ -458,7 +458,8 @@ void MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml>::mapping(
     IO &IO, llvm::DXContainerYAML::RootDescriptorYaml &D) {
   IO.mapRequired("RegisterSpace", D.RegisterSpace);
   IO.mapRequired("ShaderRegister", D.ShaderRegister);
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) IO.mapOptional(#Val, D.Val, false);
+#define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag)                                  \
+  IO.mapOptional(#Flag, D.Enum, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 

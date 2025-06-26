@@ -69,6 +69,16 @@ ArrayRef<EnumEntry<RootFlags>> dxbc::getRootFlags() {
   return ArrayRef(RootFlagNames);
 }
 
+static const EnumEntry<RootDescriptorFlags> RootDescriptorFlagNames[] = {
+#define ROOT_DESCRIPTOR_FLAG(Val, Enum, Flag)                                  \
+  {#Enum, RootDescriptorFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootDescriptorFlags>> dxbc::getRootDescriptorFlags() {
+  return ArrayRef(RootDescriptorFlagNames);
+}
+
 #define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},
 
 static const EnumEntry<ShaderVisibility> ShaderVisibilityValues[] = {
