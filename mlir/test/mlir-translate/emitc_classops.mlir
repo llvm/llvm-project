@@ -1,4 +1,4 @@
-// RUN: mlir-translate --mlir-to-cpp -split-input-file %s | FileCheck %s
+// RUN: mlir-translate --mlir-to-cpp %s | FileCheck %s
 
 emitc.class @modelClass {
     emitc.field @fieldName0 : !emitc.array<1xf32> 
