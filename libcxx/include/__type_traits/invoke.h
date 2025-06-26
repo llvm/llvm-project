@@ -68,6 +68,11 @@ template <class... _Args>
 using __invoke_result_t = decltype(__builtin_invoke(std::declval<_Args>()...));
 
 template <class... _Args>
+struct __invoke_result {
+  using type _LIBCPP_NODEBUG = __invoke_result_t<_Args...>;
+};
+
+template <class... _Args>
 __invoke_result_t<_Args...> __invoke(_Args&&... __args)
     _NOEXCEPT_(noexcept(__builtin_invoke(std::forward<_Args>(__args)...))) {
   return __builtin_invoke(std::forward<_Args>(__args)...);
