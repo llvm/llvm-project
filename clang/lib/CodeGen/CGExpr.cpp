@@ -85,13 +85,14 @@ enum VariableTypeDescriptorKind : uint16_t {
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
 
-static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
+static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
   switch (ID) {
   case SanitizerHandler::AddOverflow:
-    return "Signed integer addition overflowed.";
+    return "Signed integer addition overflowed";
 
   case SanitizerHandler::BuiltinUnreachable:
-    return "_builtin_unreachable() executed.";
+    return "_builtin_unreachable(), execution reached an unreachable program "
+           "point";
 
   case SanitizerHandler::CFICheckFail:
     return "Control flow integrity check failed";
@@ -115,13 +116,14 @@ static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
     return "Invalid use of builtin function";
 
   case SanitizerHandler::InvalidObjCCast:
-    return "Invalid Objective-C cast.";
+    return "Invalid Objective-C cast";
 
   case SanitizerHandler::LoadInvalidValue:
-    return "Loaded an invalid or uninitialized value";
+    return "Loaded an invalid or uninitialized value for the type";
 
   case SanitizerHandler::MissingReturn:
-    return "Non-void function fell off end without return";
+    return "Execution reached the end of a value-returning function without "
+           "returning a value";
 
   case SanitizerHandler::MulOverflow:
     return "Signed integer multiplication overflowed";
@@ -130,7 +132,7 @@ static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
     return "Signed integer negation overflowed";
 
   case SanitizerHandler::NullabilityArg:
-    return "Passing null as a function parameter which is annotated with "
+    return "Passing null as an argument which is annotated with "
            "_Nonnull";
 
   case SanitizerHandler::NullabilityReturn:
@@ -138,12 +140,12 @@ static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
            "_Nonnull";
 
   case SanitizerHandler::NonnullArg:
-    return "Passing null as a function parameter which is declared to never be "
+    return "Passing null pointer as an argument which is declared to never be "
            "null";
 
   case SanitizerHandler::NonnullReturn:
     return "Returning null pointer from a function which is declared to never "
-           "be null";
+           "return null";
 
   case SanitizerHandler::OutOfBounds:
     return "Array index out of bounds";
@@ -152,7 +154,7 @@ static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
     return "Pointer arithmetic overflowed bounds";
 
   case SanitizerHandler::ShiftOutOfBounds:
-    return "Shift amount exceeds bit-width of operand";
+    return "Shift exponent is too large for the type";
 
   case SanitizerHandler::SubOverflow:
     return "Signed integer subtraction overflowed";
@@ -160,14 +162,14 @@ static llvm::StringRef GetTrapMessageForHandler(SanitizerHandler ID) {
   case SanitizerHandler::TypeMismatch:
     return "Type mismatch in operation";
 
-  case SanitizerHandler::AlignmentAssumption: // Help on bottom 2
+  case SanitizerHandler::AlignmentAssumption:
     return "Alignment assumption violated";
 
   case SanitizerHandler::VLABoundNotPositive:
-    return "Variable-length array bound is not positive";
+    return "Variable length array bound evaluates to non-positive value";
 
-  default:
-    return "";
+  case SanitizerHandler::BoundsSafety:
+    return {};
   }
 }
 
@@ -4138,12 +4140,11 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
-  llvm::StringRef Category = "UBSan Trap Reason";
-  llvm::StringRef TrapMessage = GetTrapMessageForHandler(CheckHandlerID);
+  llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
 
-  if (getDebugInfo() && !Category.empty()) {
+  if (getDebugInfo()) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-        TrapLocation, Category, TrapMessage);
+        TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
   }
 
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
@@ -4154,15 +4155,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
-    // Call->applyMergedLocation(Call->getDebugLoc(),
-    //                           Builder.getCurrentDebugLocation());
     Call->applyMergedLocation(Call->getDebugLoc(), TrapLocation);
-
-    auto Unreachable = ++TrapBB->begin();
-    if (isa<llvm::UnreachableInst>(Unreachable)) {
-      Unreachable->applyMergedLocation(Unreachable->getDebugLoc(),
-                                       TrapLocation);
-    }
 
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
