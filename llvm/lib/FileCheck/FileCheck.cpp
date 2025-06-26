@@ -276,7 +276,8 @@ Expected<std::string> NumericSubstitution::getResultRegex() const {
 
 Expected<std::string> NumericSubstitution::getResultForDiagnostics() const {
   // The "regex" returned by getResultRegex() is just a numeric value
-  // like '42', '0x2A', '-17', 'DEADBEEF' etc. This is already suitable for use in diagnostics.
+  // like '42', '0x2A', '-17', 'DEADBEEF' etc. This is already suitable for use
+  // in diagnostics.
   Expected<std::string> Literal = getResultRegex();
   if (!Literal)
     return Literal;
@@ -293,35 +294,35 @@ Expected<std::string> StringSubstitution::getResultRegex() const {
 }
 
 Expected<std::string> StringSubstitution::getResultForDiagnostics() const {
-    Expected<StringRef> VarVal = Context->getPatternVarValue(FromStr);
-    if (!VarVal)
-      return VarVal.takeError();
+  Expected<StringRef> VarVal = Context->getPatternVarValue(FromStr);
+  if (!VarVal)
+    return VarVal.takeError();
 
-    std::string Result;
-    Result.reserve(VarVal->size() + 2);
-    raw_string_ostream OS(Result);
+  std::string Result;
+  Result.reserve(VarVal->size() + 2);
+  raw_string_ostream OS(Result);
 
-    OS << '"';
-    // Escape the string if it contains any characters that
-    // make it hard to read, such as tabs, newlines, quotes, and non-printable characters.
-    // These are the characters that are escaped by write_escaped(),
-    // except we do not include backslashes, because they are
-    // common in Windows paths and escaping them would make the output
-    // harder to read.
-    // However, when we do escape, backslashes are escaped as well,
-    // otherwise the output would be ambiguous.
-    const bool NeedsEscaping = llvm::any_of(*VarVal, [](char C) {
-      return C == '\t' || C == '\n' || C == '"' || !isPrint(C);
-    });
-    if (NeedsEscaping)
-      OS.write_escaped(*VarVal);
-    else
-      OS << *VarVal;
-    OS << '"';
-    if (NeedsEscaping)
-      OS << " (escaped value)";
-    
-    return Result;
+  OS << '"';
+  // Escape the string if it contains any characters that
+  // make it hard to read, such as tabs, newlines, quotes, and non-printable
+  // characters. These are the characters that are escaped by write_escaped(),
+  // except we do not include backslashes, because they are
+  // common in Windows paths and escaping them would make the output
+  // harder to read.
+  // However, when we do escape, backslashes are escaped as well,
+  // otherwise the output would be ambiguous.
+  const bool NeedsEscaping = llvm::any_of(*VarVal, [](char C) {
+    return C == '\t' || C == '\n' || C == '"' || !isPrint(C);
+  });
+  if (NeedsEscaping)
+    OS.write_escaped(*VarVal);
+  else
+    OS << *VarVal;
+  OS << '"';
+  if (NeedsEscaping)
+    OS << " (escaped value)";
+
+  return Result;
 }
 
 bool Pattern::isValidVarNameStart(char C) { return C == '_' || isAlpha(C); }
@@ -1252,7 +1253,8 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       SmallString<256> Msg;
       raw_svector_ostream OS(Msg);
 
-      Expected<std::string> MatchedValue = Substitution->getResultForDiagnostics();
+      Expected<std::string> MatchedValue =
+          Substitution->getResultForDiagnostics();
       // Substitution failures are handled in printNoMatch().
       if (!MatchedValue) {
         consumeError(MatchedValue.takeError());

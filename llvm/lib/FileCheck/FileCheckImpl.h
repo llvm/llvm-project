@@ -387,7 +387,8 @@ public:
   Expected<std::string> getResultRegex() const override;
 
   /// \returns the text that the string variable in this substitution matched
-  /// when defined, in a form suitable for diagnostics, or an error if the variable is undefined.
+  /// when defined, in a form suitable for diagnostics, or an error if the
+  /// variable is undefined.
   Expected<std::string> getResultForDiagnostics() const override;
 };
 
