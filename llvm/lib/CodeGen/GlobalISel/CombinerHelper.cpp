@@ -5546,7 +5546,7 @@ bool CombinerHelper::matchURemByConst(MachineInstr &MI) const {
               DstTy}}))
       return false;
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
-        return false;
+      return false;
   }
 
   return matchUnaryPredicate(
