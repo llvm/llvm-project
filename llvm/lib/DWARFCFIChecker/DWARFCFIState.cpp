@@ -100,7 +100,7 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
                             (*MaybeCurrentRow)->getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpEscape:
-    // TODO: DWARFExpressions are not supported yet.
+    // TODO: DWARFExpressions are not supported yet, ignoring expression here.
     break;
   case MCCFIInstruction::OpRestore:
     CFIP.addInstruction(dwarf::DW_CFA_restore);
@@ -126,6 +126,8 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     break;
   case MCCFIInstruction::OpLabel:
     // TODO: I don't know what it is, I have to implement it.
+    llvm_unreachable("CFI label instruction is not implemented yet, and it is "
+                     "not decided to be ignored.");
     break;
   case MCCFIInstruction::OpValOffset:
     CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),
