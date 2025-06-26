@@ -128,11 +128,14 @@ ScatterTensorDescAttr::get(mlir::MLIRContext *context,
 LogicalResult ScatterTensorDescAttr::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     MemorySpaceAttr memory_space, IntegerAttr chunk_size) {
-  int64_t chunkSize = chunk_size.getInt();
-  SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
-                                              16, 32, 64, 128, 256};
-  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
-    return emitError() << "invalid chunk size";
+
+  if (chunk_size) {
+    int64_t chunkSize = chunk_size.getInt();
+    SmallVector<int64_t> supportedChunkSizes = {2,  3,  4,   8,  16,
+                                                32, 64, 128, 256};
+    if (!llvm::is_contained(supportedChunkSizes, chunkSize))
+      return emitError() << "invalid chunk size";
+  }
 
   return success();
 }
@@ -319,7 +322,7 @@ LogicalResult TensorDescType::verify(
     MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
     if (rank > 1 && memorySpaceAttr &&
         memorySpaceAttr.getValue() == MemorySpace::SLM)
-      return emitError() << "SLM is not supported for 2D block tensor";
+      return emitError() << "SLM is only supported for 1D block tensor";
   }
 
   // for gather and scatter ops, Low-precision types are packed in 32-bit units.
@@ -330,16 +333,18 @@ LogicalResult TensorDescType::verify(
           : 1;
   auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
   if (scatterAttr) {
-    unsigned chunkSize = scatterAttr.getChunkSize().getInt();
+    int64_t chunkSize = scatterAttr.getChunkSizeOrDefault();
+    if (rank == 1 && chunkSize != 1)
+      return emitError() << "expected non-contiguous elements for 1D tensor";
+
     // If chunk size > 1, the second dimension of the tensor shape must be
     // equal to chunk size and it must be a multiple of the
     // chunkAlignmentFactor.
     if (chunkSize > 1) {
       if (shape.back() != chunkSize)
-        return emitError() << "expected tensor shape[1] to match chunk size";
+        return emitError() << "expected last dim of tensor to match chunk size";
       if (shape.back() % chunkAlignmentFactor != 0)
-        return emitError() << "expected tensor shape[1] to be a multiple of "
-                              "chunk alignment factor "
+        return emitError() << "expected last dim of tensor to be a multiple of "
                            << chunkAlignmentFactor;
     }
   }

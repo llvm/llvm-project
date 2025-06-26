@@ -185,7 +185,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       auto scatter_attr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(attr);
       assert((!attr || scatter_attr) && "invalid on non ScatterTensorDescAttr.");
       if (scatter_attr)
-        return scatter_attr.getChunkSize().getInt();
+        return scatter_attr.getChunkSizeOrDefault();
       return 1;
     }
 

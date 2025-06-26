@@ -43,8 +43,8 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
 
   let parameters = (ins
     OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr", "1">: $array_length,
-    OptionalParameter<"BoolAttr", "true">: $boundary_check
+    OptionalParameter<"IntegerAttr">: $array_length,
+    OptionalParameter<"BoolAttr">: $boundary_check
   );
 
   let builders = [
@@ -77,9 +77,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
       "Data memory location"
     >: $memory_space,
-    DefaultValuedParameter<
+    OptionalParameter<
       "IntegerAttr",
-      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
       "Number of contiguous elements"
     >: $chunk_size
   );
@@ -90,6 +89,14 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       CArg<"int", "1">: $chunk_size
     )>
   ];
+
+  let extraClassDeclaration = [{
+    int64_t getChunkSizeOrDefault() {
+      if (auto attr = getChunkSize())
+        return attr.getInt();
+      return 1;
+    }
+  }];
 
   let genVerifyDecl = 1;
  }
