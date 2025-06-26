@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/types/wchar_t.h"
 #include "hdr/errno_macros.h"
+#include "hdr/types/wchar_t.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/wcrtomb_bounded.h"
 #include "test/UnitTest/Test.h"
 
-// The majority of the following tests are the same as tests/src/wchar/wcrtomb_test.cpp
+// The majority of the following tests are the same as
+// tests/src/wchar/wcrtomb_test.cpp
 
 TEST(LlvmLibcWCRToMBBoundedTest, OneByte) {
   LIBC_NAMESPACE::internal::mbstate state;
@@ -103,13 +104,15 @@ TEST(LlvmLibcWCRToMBBoundedTest, ContinueConversion) {
   char mb[5] = {'\x01', '\x01', '\x01', '\x01', '\x01'};
   auto result = LIBC_NAMESPACE::internal::wcrtomb_bounded(mb, wc, &state, 1);
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(result.value(), static_cast<size_t>(-1)); // conversion not completed
+  ASSERT_EQ(result.value(),
+            static_cast<size_t>(-1)); // conversion not completed
   ASSERT_EQ(mb[0], '\xF0');
   ASSERT_EQ(mb[1], '\x01');
 
   result = LIBC_NAMESPACE::internal::wcrtomb_bounded(mb + 1, wc, &state, 2);
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(result.value(), static_cast<size_t>(-1)); // conversion not completed
+  ASSERT_EQ(result.value(),
+            static_cast<size_t>(-1)); // conversion not completed
   ASSERT_EQ(mb[0], '\xF0');
   ASSERT_EQ(mb[1], '\x9F');
   ASSERT_EQ(mb[2], '\xA4');
