@@ -1150,7 +1150,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
 
       if (CondSVT == MVT::i1) {
         assert(Subtarget->hasAVX512() && "Expected AVX512 support!");
-        if (!ISD::isBuildVectorAllZeros(LHS.getNode()) ||
+        if (!Cond->hasOneUse() || !ISD::isBuildVectorAllZeros(LHS.getNode()) ||
             ISD::isBuildVectorAllZeros(RHS.getNode()))
           break;
         // If this is an avx512 target we can improve the use of zero masking by
