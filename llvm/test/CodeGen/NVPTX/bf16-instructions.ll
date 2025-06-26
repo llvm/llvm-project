@@ -1605,5 +1605,23 @@ define <2 x bfloat> @test_maxnum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
   ret <2 x bfloat> %r
 }
 
+define void @store_bf16(ptr %p1, ptr %p2, bfloat %v) {
+; CHECK-LABEL: store_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [store_bf16_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [store_bf16_param_2];
+; CHECK-NEXT:    st.b16 [%rd1], %rs1;
+; CHECK-NEXT:    ld.param.b64 %rd2, [store_bf16_param_1];
+; CHECK-NEXT:    st.b16 [%rd2], 0x3F80;
+; CHECK-NEXT:    ret;
+  store bfloat %v, ptr %p1
+  store bfloat 1.0, ptr %p2
+  ret void
+}
+
 declare bfloat @llvm.maximum.bf16(bfloat, bfloat)
 declare <2 x bfloat> @llvm.maximum.v2bf16(<2 x bfloat>, <2 x bfloat>)
