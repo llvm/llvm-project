@@ -2,7 +2,7 @@
 
 int global;
 void acc_compute(int parmVar) {
-  // CHECK: cir.func @acc_compute(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_compute(%[[ARG:.*]]: !s32i{{.*}}) {
   // CHECK-NEXT: %[[PARM:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["parmVar", init]
   int localVar1;
   short localVar2;
@@ -646,7 +646,7 @@ typedef struct StructTy {
 } Struct ;
 
 void acc_compute_members() {
-  // CHECK: cir.func @acc_compute_members()
+  // CHECK: cir.func{{.*}} @acc_compute_members()
   Struct localStruct;
   // CHECK-NEXT: %[[LOCALSTRUCT:.*]] = cir.alloca !rec_StructTy, !cir.ptr<!rec_StructTy>, ["localStruct"]
 
