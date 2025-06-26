@@ -1959,6 +1959,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
       .Case("is_assignable", TypeTrait::BTT_IsAssignable)
       .Case("is_empty", TypeTrait::UTT_IsEmpty)
+      .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
       .Default(std::nullopt);
 }
 
@@ -2382,6 +2383,150 @@ static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
   }
 }
 
+static bool hasMultipleDataBaseClassesWithFields(const CXXRecordDecl *D) {
+  int NumBasesWithFields = 0;
+  for (const CXXBaseSpecifier &Base : D->bases()) {
+    const CXXRecordDecl *BaseRD = Base.getType()->getAsCXXRecordDecl();
+    if (!BaseRD || BaseRD->isInvalidDecl())
+      continue;
+
+    for (const FieldDecl *Field : BaseRD->fields()) {
+      if (!Field->isUnnamedBitField()) {
+        if (++NumBasesWithFields > 1)
+          return true; // found more than one base class with fields
+        break;         // no need to check further fields in this base class
+      }
+    }
+  }
+  return false;
+}
+
+static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
+                                            const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
+    if (B.isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    }
+    if (!B.getType()->isStandardLayoutType()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonStandardLayoutBase << B.getType()
+          << B.getSourceRange();
+    }
+  }
+  // Check for mixed access specifiers in fields.
+  const FieldDecl *FirstField = nullptr;
+  AccessSpecifier FirstAccess = AS_none;
+
+  for (const FieldDecl *Field : D->fields()) {
+    if (Field->isUnnamedBitField())
+      continue;
+
+    // Record the first field we see
+    if (!FirstField) {
+      FirstField = Field;
+      FirstAccess = Field->getAccess();
+      continue;
+    }
+
+    // Check if the field has a different access specifier than the first one.
+    if (Field->getAccess() != FirstAccess) {
+      // Emit a diagnostic about mixed access specifiers.
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::MixedAccess;
+
+      SemaRef.Diag(FirstField->getLocation(), diag::note_defined_here)
+          << FirstField;
+
+      SemaRef.Diag(Field->getLocation(), diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::MixedAccessField << Field
+          << FirstField;
+
+      // No need to check further fields, as we already found mixed access.
+      break;
+    }
+  }
+  if (hasMultipleDataBaseClassesWithFields(D)) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::MultipleDataBase;
+  }
+  if (D->isPolymorphic()) {
+    // Find the best location to point “defined here” at.
+    const CXXMethodDecl *VirtualMD = nullptr;
+    // First, look for a virtual method.
+    for (const auto *M : D->methods()) {
+      if (M->isVirtual()) {
+        VirtualMD = M;
+        break;
+      }
+    }
+    if (VirtualMD) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << VirtualMD;
+      SemaRef.Diag(VirtualMD->getLocation(), diag::note_defined_here)
+          << VirtualMD;
+    } else {
+      // If no virtual method, point to the record declaration itself.
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << D;
+      SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+    }
+  }
+  for (const FieldDecl *Field : D->fields()) {
+    if (!Field->getType()->isStandardLayoutType()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonStandardLayoutMember << Field
+          << Field->getType() << Field->getSourceRange();
+    }
+  }
+  // Find any indirect base classes that have fields.
+  if (D->hasDirectFields()) {
+    const CXXRecordDecl *Indirect = nullptr;
+    D->forallBases([&](const CXXRecordDecl *BaseDef) {
+      if (BaseDef->hasDirectFields()) {
+        Indirect = BaseDef;
+        return false; // stop traversal
+      }
+      return true; // continue to the next base
+    });
+    if (Indirect) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::IndirectBaseWithFields << Indirect
+          << Indirect->getSourceRange();
+    }
+  }
+}
+
+static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
+                                            QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::StandardLayout;
+
+  // Check type-level exclusion first.
+  if (T->isVariablyModifiedType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::VLA;
+    return;
+  }
+
+  if (T->isReferenceType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+    return;
+  }
+  T = T.getNonReferenceType();
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonStandardLayoutReason(SemaRef, Loc, D);
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2407,6 +2552,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsEmpty:
     DiagnoseIsEmptyReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_IsStandardLayout:
+    DiagnoseNonStandardLayoutReason(*this, E->getBeginLoc(), Args[0]);
     break;
   default:
     break;
