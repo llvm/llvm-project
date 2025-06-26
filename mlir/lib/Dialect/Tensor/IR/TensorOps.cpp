@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
@@ -3792,6 +3793,29 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
 };
 
 } // namespace
+
+LogicalResult
+PadOp::reifyResultShapes(OpBuilder &b,
+                         ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
+  SmallVector<OpFoldResult> lp = getMixedLowPad();
+  SmallVector<OpFoldResult> hp = getMixedHighPad();
+  for (int64_t i = 0; i < getResultType().getRank(); ++i) {
+    if (!getType().isDynamicDim(i)) {
+      reifiedReturnShapes[0][i] = b.getIndexAttr(getType().getDimSize(i));
+      continue;
+    }
+    Location loc = getLoc();
+    Value dim = b.createOrFold<tensor::DimOp>(
+        loc, getSource(), b.create<arith::ConstantIndexOp>(loc, i));
+
+    AffineExpr d0, d1, d2;
+    bindDims(b.getContext(), d0, d1, d2);
+    reifiedReturnShapes[0][i] = affine::makeComposedFoldedAffineApply(
+        b, loc, {d0 + d1 + d2}, {dim, lp[i], hp[i]});
+  }
+  return success();
+}
 
 void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
