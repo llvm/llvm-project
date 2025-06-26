@@ -345,7 +345,7 @@ void ReferenceFunctionByCallingIt() {
 }
 
 void NegativeMoved(ExpensiveToCopyType A) {
-  A Copy = std::move(A);
+  ExpensiveToCopyType Copy = std::move(A);
 }
 
 // Virtual method overrides of dependent types cannot be recognized unless they

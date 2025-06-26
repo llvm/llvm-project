@@ -43,13 +43,12 @@ bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
 
 bool isArgOfStdMove(const DeclRefExpr &DeclRef, const Decl &Decl,
                     ASTContext &Context) {
-  auto Matches = match(
-      traverse(TK_AsIs, decl(forEachDescendant(callExpr(
+  return !match(
+      traverse(TK_AsIs, decl(hasDescendant(callExpr(
                             callee(functionDecl(hasName("std::move"))),
                             hasArgument(0, ignoringParenImpCasts(declRefExpr(
                                                equalsNode(&DeclRef)))))))),
-      Decl, Context);
-  return Matches.empty();
+      Decl, Context).empty();
 }
 
 } // namespace
