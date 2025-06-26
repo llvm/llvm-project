@@ -154,12 +154,6 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
-- New :doc:`readability-use-numeric-limits
-  <clang-tidy/checks/readability/use-numeric-limits>` check.
-
-  Finds certain integer literals and suggests replacing them with equivalent
-  ``std::numeric_limits`` calls.
-
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -178,6 +172,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
+
+- Improved :doc: `bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check by adding
+  `WarnOnSizeOfInLoopTermination` option to detect misuses of ``sizeof``
+  expression in loop conditions.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
@@ -207,6 +206,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
 
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
+  adding the option `IgnoreMacros` to ignore classes defined in macros.
+
 - Improved :doc:`google-readability-namespace-comments
   <clang-tidy/checks/google/readability-namespace-comments>` check by adding
   the option `AllowOmittingNamespaceComments` to accept if a namespace comment
@@ -215,6 +218,10 @@ Changes in existing checks
 - Improved :doc:`hicpp-avoid-goto
   <clang-tidy/checks/hicpp/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
+
+- Improved :doc:`hicpp-special-member-functions
+  <clang-tidy/checks/hicpp/special-member-functions>` check by adding the
+  option `IgnoreMacros` to ignore classes defined in macros.
 
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check by adding the option

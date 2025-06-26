@@ -3202,18 +3202,19 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
   return PP->HandleEndOfFile(Result, isPragmaLexer());
 }
 
-/// isNextPPTokenLParen - Return 1 if the next unexpanded token lexed from
-/// the specified lexer will return a tok::l_paren token, 0 if it is something
-/// else and 2 if there are no more tokens in the buffer controlled by the
-/// lexer.
-unsigned Lexer::isNextPPTokenLParen() {
+/// peekNextPPToken - Return std::nullopt if there are no more tokens in the
+/// buffer controlled by this lexer, otherwise return the next unexpanded
+/// token.
+std::optional<Token> Lexer::peekNextPPToken() {
   assert(!LexingRawMode && "How can we expand a macro from a skipping buffer?");
 
   if (isDependencyDirectivesLexer()) {
     if (NextDepDirectiveTokenIndex == DepDirectives.front().Tokens.size())
-      return 2;
-    return DepDirectives.front().Tokens[NextDepDirectiveTokenIndex].is(
-        tok::l_paren);
+      return std::nullopt;
+    Token Result;
+    (void)convertDependencyDirectiveToken(
+        DepDirectives.front().Tokens[NextDepDirectiveTokenIndex], Result);
+    return Result;
   }
 
   // Switch to 'skipping' mode.  This will ensure that we can lex a token
@@ -3227,6 +3228,7 @@ unsigned Lexer::isNextPPTokenLParen() {
   bool atStartOfLine = IsAtStartOfLine;
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
   bool leadingSpace = HasLeadingSpace;
+  bool isFirstPPToken = IsFirstPPToken;
 
   Token Tok;
   Lex(Tok);
@@ -3237,13 +3239,13 @@ unsigned Lexer::isNextPPTokenLParen() {
   HasLeadingSpace = leadingSpace;
   IsAtStartOfLine = atStartOfLine;
   IsAtPhysicalStartOfLine = atPhysicalStartOfLine;
-
+  IsFirstPPToken = isFirstPPToken;
   // Restore the lexer back to non-skipping mode.
   LexingRawMode = false;
 
   if (Tok.is(tok::eof))
-    return 2;
-  return Tok.is(tok::l_paren);
+    return std::nullopt;
+  return Tok;
 }
 
 /// Find the end of a version control conflict marker.
@@ -3739,10 +3741,6 @@ bool Lexer::Lex(Token &Result) {
   bool returnedToken = LexTokenInternal(Result, atPhysicalStartOfLine);
   // (After the LexTokenInternal call, the lexer might be destroyed.)
   assert((returnedToken || !isRawLex) && "Raw lex must succeed");
-
-  if (returnedToken && Result.isFirstPPToken() && PP &&
-      !PP->hasSeenMainFileFirstPPToken())
-    PP->HandleMainFileFirstPPToken(Result);
   return returnedToken;
 }
 
@@ -4546,8 +4544,6 @@ const char *Lexer::convertDependencyDirectiveToken(
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
   Result.setLength(DDTok.Length);
   BufferPtr = TokPtr + DDTok.Length;
-  if (PP && !PP->hasSeenMainFileFirstPPToken() && Result.isFirstPPToken())
-    PP->HandleMainFileFirstPPToken(Result);
   return TokPtr;
 }
 

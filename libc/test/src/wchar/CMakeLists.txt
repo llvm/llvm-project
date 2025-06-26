@@ -31,10 +31,25 @@ add_libc_test(
     mbrtowc_test.cpp
   DEPENDS
     libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
     libc.src.string.memset
     libc.src.wchar.mbrtowc
     libc.hdr.types.mbstate_t
     libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mbtowc_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbtowc_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.wchar.mbtowc
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -59,6 +74,19 @@ add_libc_test(
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t
     libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  wctomb_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wctomb_test.cpp
+  DEPENDS
+    libc.src.wchar.wctomb
+    libc.hdr.types.wchar_t
 )
 
 add_libc_test(
@@ -231,4 +259,24 @@ add_libc_test(
     wcscpy_test.cpp
   DEPENDS
     libc.src.wchar.wcscpy
+)
+
+add_libc_test(
+  wcpcpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcpcpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcpcpy
+)
+
+add_libc_test(
+  wcpncpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcpncpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcpncpy
 )

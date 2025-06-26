@@ -90,10 +90,10 @@ TEST_F(SocketTest, CreatePair) {
     Socket &b = *expected_socket_pair->second;
     size_t num_bytes = 1;
     ASSERT_THAT_ERROR(a.Write("a", num_bytes).takeError(), llvm::Succeeded());
-    ASSERT_EQ(num_bytes, 1);
+    ASSERT_EQ(num_bytes, 1U);
     char c;
     ASSERT_THAT_ERROR(b.Read(&c, num_bytes).takeError(), llvm::Succeeded());
-    ASSERT_EQ(num_bytes, 1);
+    ASSERT_EQ(num_bytes, 1U);
     ASSERT_EQ(c, 'a');
   }
 
