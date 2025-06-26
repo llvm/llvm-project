@@ -13,13 +13,16 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCASMINFO_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCASMINFO_H
 
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/Support/Casting.h"
 
 namespace llvm {
 class MCStreamer;
+class MCValue;
 class Triple;
 
 struct AArch64MCAsmInfoDarwin : public MCAsmInfoDarwin {
