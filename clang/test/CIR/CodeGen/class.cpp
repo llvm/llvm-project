@@ -51,7 +51,7 @@ public:
 
 int use(Derived *d) { return d->b; }
 
-// CIR: cir.func @_Z3useP7Derived(%[[ARG0:.*]]: !cir.ptr<!rec_Derived>
+// CIR: cir.func{{.*}} @_Z3useP7Derived(%[[ARG0:.*]]: !cir.ptr<!rec_Derived>
 // CIR:  %[[D_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["d", init]
 // CIR:  cir.store %[[ARG0]], %[[D_ADDR]]
 // CIR:  %[[D_PTR:.*]] = cir.load align(8) %0
@@ -69,7 +69,7 @@ int use_base() {
   return d.a;
 }
 
-// CIR: cir.func @_Z8use_basev
+// CIR: cir.func{{.*}} @_Z8use_basev
 // CIR:   %[[D_ADDR:.*]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["d"]
 // CIR:   %[[BASE_ADDR:.*]] cir.base_class_addr %[[D_ADDR]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
 // CIR:   %[[D_A_ADDR:.*]] = cir.get_member %2[0] {name = "a"} : !cir.ptr<!rec_Base> -> !cir.ptr<!s32i>
@@ -87,7 +87,7 @@ int use_base_via_pointer(Derived *d) {
   return d->a;
 }
 
-// CIR: cir.func @_Z20use_base_via_pointerP7Derived(%[[ARG0:.*]]: !cir.ptr<!rec_Derived>
+// CIR: cir.func{{.*}} @_Z20use_base_via_pointerP7Derived(%[[ARG0:.*]]: !cir.ptr<!rec_Derived>
 // CIR:   %[[D_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["d", init]
 // CIR:   cir.store %[[ARG0]], %[[D_ADDR]]
 // CIR:   %[[D:.*]] = cir.load align(8) %[[D_ADDR]]

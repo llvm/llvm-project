@@ -149,6 +149,8 @@ private:
     return true;
   }
 
+  static bool darwinHasExp10(const Triple &TT);
+
   /// Return true if the target has sincosf/sincos/sincosl functions
   static bool hasSinCos(const Triple &TT) {
     return TT.isGNUEnvironment() || TT.isOSFuchsia() ||

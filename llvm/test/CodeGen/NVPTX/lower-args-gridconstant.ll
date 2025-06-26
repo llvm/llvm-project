@@ -133,12 +133,7 @@ define ptx_kernel void @grid_const_escape(ptr byval(%struct.s) align 4 %input) {
 ; PTX-NEXT:    st.param.b64 [param0], %rd3;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    prototype_0 : .callprototype (.param .b32 _) _ (.param .b64 _);
-; PTX-NEXT:    call (retval0),
-; PTX-NEXT:    %rd1,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    )
-; PTX-NEXT:    , prototype_0;
+; PTX-NEXT:    call (retval0), %rd1, (param0), prototype_0;
 ; PTX-NEXT:    ld.param.b32 %r1, [retval0];
 ; PTX-NEXT:    } // callseq 0
 ; PTX-NEXT:    ret;
@@ -182,14 +177,7 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-NEXT:    st.param.b64 [param2], %rd4;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b64 _, .param .b64 _, .param .b64 _);
-; PTX-NEXT:    call (retval0),
-; PTX-NEXT:    %rd1,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0,
-; PTX-NEXT:    param1,
-; PTX-NEXT:    param2
-; PTX-NEXT:    )
-; PTX-NEXT:    , prototype_1;
+; PTX-NEXT:    call (retval0), %rd1, (param0, param1, param2), prototype_1;
 ; PTX-NEXT:    ld.param.b32 %r2, [retval0];
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
@@ -284,12 +272,7 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) %input, ptr %ou
 ; PTX-NEXT:    st.param.b64 [param0], %rd5;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    prototype_2 : .callprototype (.param .b32 _) _ (.param .b64 _);
-; PTX-NEXT:    call (retval0),
-; PTX-NEXT:    %rd1,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    )
-; PTX-NEXT:    , prototype_2;
+; PTX-NEXT:    call (retval0), %rd1, (param0), prototype_2;
 ; PTX-NEXT:    ld.param.b32 %r3, [retval0];
 ; PTX-NEXT:    } // callseq 2
 ; PTX-NEXT:    ret;
@@ -330,12 +313,7 @@ define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) %input,
 ; PTX-NEXT:    st.param.b64 [param0], %rd5;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    prototype_3 : .callprototype (.param .b32 _) _ (.param .b64 _);
-; PTX-NEXT:    call (retval0),
-; PTX-NEXT:    %rd1,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    )
-; PTX-NEXT:    , prototype_3;
+; PTX-NEXT:    call (retval0), %rd1, (param0), prototype_3;
 ; PTX-NEXT:    ld.param.b32 %r4, [retval0];
 ; PTX-NEXT:    } // callseq 3
 ; PTX-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -561,11 +539,7 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 ; PTX-NEXT:    { // callseq 4, 0
 ; PTX-NEXT:    .param .align 4 .b8 param0[4];
 ; PTX-NEXT:    st.param.b32 [param0], %r1;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    device_func,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni device_func, (param0);
 ; PTX-NEXT:    } // callseq 4
 ; PTX-NEXT:    ret;
   call void @device_func(ptr byval(i32) align 4 %input)
