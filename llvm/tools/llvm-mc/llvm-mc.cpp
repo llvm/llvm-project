@@ -526,15 +526,14 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 
-  std::unique_ptr<CFIFunctionFrameAnalyzer> FUUIA(
-      new CFIFunctionFrameAnalyzer(Ctx, *MCII));
+  auto FFA = std::make_unique<CFIFunctionFrameAnalyzer>(Ctx, *MCII);
 
   std::unique_ptr<MCInstPrinter> IP;
   if (ValidateCFI) {
     assert(FileType == OFT_Null);
-    auto *FUS = new CFIFunctionFrameStreamer(Ctx, std::move(FUUIA));
-    TheTarget->createNullTargetStreamer(*FUS);
-    Str.reset(FUS);
+    auto *FFS = new CFIFunctionFrameStreamer(Ctx, std::move(FFA));
+    TheTarget->createNullTargetStreamer(*FFS);
+    Str.reset(FFS);
   } else if (FileType == OFT_AssemblyFile) {
     IP.reset(TheTarget->createMCInstPrinter(
         Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
