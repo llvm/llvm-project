@@ -141,6 +141,7 @@ public:
     //   rhs: (d0, d1, d2) -> (d1, d2)
     //   acc: (d0, d1, d2) -> (d0, d1)
     // This corresponds to matrix multiplication with transposed RHS.
+    // It also follows the operands' ranks are 2.
     if (op.getIndexingMapsArray()[0] !=
             AffineMap::getMultiDimMapWithTargets(3, ArrayRef{0u, 2u},
                                                  op.getContext()) ||
@@ -154,10 +155,6 @@ public:
 
     mlir::VectorType lhsType = op.getLhsType();
     mlir::VectorType rhsType = op.getRhsType();
-
-    // Check the rank of the types so we can safely examine their dimensions.
-    if (lhsType.getRank() != 2 || rhsType.getRank() != 2)
-      return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
     auto M = lhsType.getDimSize(0);
     auto N = rhsType.getDimSize(0);
