@@ -67,7 +67,7 @@ body:             |
     ; CHECK: renamable $vpr = MVE_VCMPu32 renamable $q1, renamable $q5, 2, 0, $noreg, $noreg
     ; CHECK: renamable $r4 = t2ADDrr renamable $r2, renamable $r10, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: VSTR_P0_off renamable $vpr, $sp, 0, 14 /* CC::al */, $noreg
-    ; CHECK: BUNDLE implicit-def $q6, implicit-def $d12, implicit-def $s24, implicit-def $s25, implicit-def $d13, implicit-def $s26, implicit-def $s27, implicit $vpr, implicit killed $r4 {
+    ; CHECK: BUNDLE implicit-def $q6, implicit $vpr, implicit killed $r4 {
     ; CHECK:   MVE_VPST 8, implicit $vpr
     ; CHECK:   renamable $q6 = MVE_VLDRBU32 killed renamable $r4, 0, 1, renamable $vpr, $noreg
     ; CHECK: }
