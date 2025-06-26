@@ -148,7 +148,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       BuildMI(MF, getDebugLoc(FirstMI, LastMI), TII->get(TargetOpcode::BUNDLE));
   Bundle.prepend(MIB);
 
-  SmallSetVector<Register, 32> LocalDefsV;
+  SmallSetVector<Register, 32> LocalDefs;
   SmallSetVector<MCRegUnit, 32> LocalDefsP;
   SmallSet<Register, 8> DeadDefSet;
   SmallSet<Register, 16> KilledDefSet;
@@ -165,7 +165,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (containReg(LocalDefsV, LocalDefsP, Reg, TRI)) {
+      if (containReg(LocalDefs, LocalDefsP, Reg, TRI)) {
         MO.setIsInternalRead();
         if (MO.isKill()) {
           // Internal def is now killed.
@@ -188,7 +188,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (LocalDefsV.insert(Reg)) {
+      if (LocalDefs.insert(Reg)) {
         if (MO.isDead())
           DeadDefSet.insert(Reg);
       } else {
@@ -201,7 +201,6 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       }
 
       if (!MO.isDead() && Reg.isPhysical()) {
-        LocalDefsV.insert_range(TRI->subregs(Reg));
         for (MCRegUnit Unit : TRI->regunits(MCRegister::from(Reg.id())))
           LocalDefsP.insert(Unit);
       }
@@ -215,7 +214,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       MIB.setMIFlag(MachineInstr::FrameDestroy);
   }
 
-  for (Register Reg : LocalDefsV) {
+  for (Register Reg : LocalDefs) {
     // If it's not live beyond end of the bundle, mark it dead.
     bool isDead = DeadDefSet.contains(Reg) || KilledDefSet.contains(Reg);
     MIB.addReg(Reg, getDefRegState(true) | getDeadRegState(isDead) |
