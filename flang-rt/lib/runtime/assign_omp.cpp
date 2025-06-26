@@ -1,4 +1,5 @@
-//===-- lib/runtime/assign_omp.cpp ----------------------------------*- C++ -*-===//
+//===-- lib/runtime/assign_omp.cpp ----------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/assign.h"
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/descriptor.h"
@@ -14,6 +14,7 @@
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
+#include "flang/Runtime/assign.h"
 
 #include <omp.h>
 
