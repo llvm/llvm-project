@@ -13089,7 +13089,7 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   bool IsFAllOne = ISD::isBuildVectorAllOnes(FVal.getNode());
 
   // no vselect(cond, 0/-1, X) or vselect(cond, X, 0/-1), return
-  if (!(IsTAllZero || IsTAllOne || IsFAllZero || IsFAllOne))
+  if (!IsTAllZero && !IsTAllOne && !IsFAllZero && !IsFAllOne)
     return SDValue();
 
   // select Cond, 0, 0 → 0
@@ -13104,6 +13104,10 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   // Don't check if the types themselves are equal because that excludes
   // vector floating-point selects.
   if (CondVT.getScalarSizeInBits() != VT.getScalarSizeInBits())
+    return SDValue();
+
+  // Cond value must be 'sign splat' to be converted to a logical op.
+  if (DAG.ComputeNumSignBits(Cond) != CondVT.getScalarSizeInBits())
     return SDValue();
 
   // Try inverting Cond and swapping T/F if it gives all-ones/all-zeros form
@@ -13122,10 +13126,6 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
       std::swap(IsTAllZero, IsFAllZero);
     }
   }
-
-  // Cond value must be 'sign splat' to be converted to a logical op.
-  if (DAG.ComputeNumSignBits(Cond) != CondVT.getScalarSizeInBits())
-    return SDValue();
 
   // select Cond, -1, 0 → bitcast Cond
   if (IsTAllOne && IsFAllZero)
