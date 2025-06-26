@@ -22,14 +22,15 @@ LLVM_LIBC_FUNCTION(int, wctomb, (char *s, wchar_t wc)) {
   if (s == nullptr)
     return 0;
 
-  auto result = internal::wcrtomb(s, wc, &internal_mbstate);
+  auto result = internal::wcrtomb(wc, &internal_mbstate);
 
   if (!result.has_value()) { // invalid wide character
     libc_errno = EILSEQ;
     return -1;
   }
 
-  return static_cast<int>(result.value());
+  __builtin_memcpy(s, result.value().mbs, result.value().count);
+  return static_cast<int>(result.value().count);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

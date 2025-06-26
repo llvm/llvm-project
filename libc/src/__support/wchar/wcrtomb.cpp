@@ -21,32 +21,26 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
-                        mbstate *__restrict ps) {
+ErrorOr<wcrtomb_result> wcrtomb(wchar_t wc, mbstate *ps) {
   static_assert(sizeof(wchar_t) == 4);
 
+  wcrtomb_result out;
   CharacterConverter cr(ps);
 
   if (!cr.isValidState())
     return Error(EINVAL);
 
-  if (s == nullptr)
-    return Error(EILSEQ);
-
   int status = cr.push(static_cast<char32_t>(wc));
   if (status != 0)
     return Error(EILSEQ);
 
-  size_t count = 0;
   while (!cr.isEmpty()) {
     auto utf8 = cr.pop_utf8(); // can never fail as long as the push succeeded
     LIBC_ASSERT(utf8.has_value());
-
-    *s = utf8.value();
-    s++;
-    count++;
+    out.mbs[out.count++] = utf8.value();
   }
-  return count;
+
+  return out;
 }
 
 } // namespace internal
