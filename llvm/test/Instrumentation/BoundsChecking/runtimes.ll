@@ -205,7 +205,7 @@ define void @f1(i64 %x) nounwind {
 ; TR-GUARD: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
 ;.
 ; RT-GUARD: attributes #[[ATTR0]] = { nounwind }
-; RT-GUARD: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+; RT-GUARD: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; RT-GUARD: attributes #[[ATTR2]] = { nomerge nounwind }
 ;.
 ; TR: [[META0]] = !{}
