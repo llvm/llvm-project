@@ -9,9 +9,8 @@ define void @simpleOneInstructionPromotion(<2 x i32>* %addr1, i32* %dest) {
 ; ASM-LABEL: simpleOneInstructionPromotion:
 ; ASM:       ; %bb.0:
 ; ASM-NEXT:    ldr d0, [x0]
-; ASM-NEXT:    mov.s w8, v0[1]
-; ASM-NEXT:    orr w8, w8, #0x1
-; ASM-NEXT:    str w8, [x1]
+; ASM-NEXT:    orr.2s v0, #1
+; ASM-NEXT:    st1.s { v0 }[1], [x1]
 ; ASM-NEXT:    ret
   %in1 = load <2 x i32>, <2 x i32>* %addr1, align 8
   %extract = extractelement <2 x i32> %in1, i32 1
@@ -68,9 +67,8 @@ define void @chainOfInstructionsToPromote(<2 x i32>* %addr1, i32* %dest) {
 ; ASM-LABEL: chainOfInstructionsToPromote:
 ; ASM:       ; %bb.0:
 ; ASM-NEXT:    ldr d0, [x0]
-; ASM-NEXT:    fmov w8, s0
-; ASM-NEXT:    orr w8, w8, #0x1
-; ASM-NEXT:    str w8, [x1]
+; ASM-NEXT:    orr.2s v0, #1
+; ASM-NEXT:    str s0, [x1]
 ; ASM-NEXT:    ret
   %in1 = load <2 x i32>, <2 x i32>* %addr1, align 8
   %extract = extractelement <2 x i32> %in1, i32 0
@@ -404,10 +402,10 @@ define void @simpleOneInstructionPromotionVariableIdx(<2 x i32>* %addr1, i32* %d
 define void @simpleOneInstructionPromotion8x8(<8 x i8>* %addr1, i8* %dest) {
 ; ASM-LABEL: simpleOneInstructionPromotion8x8:
 ; ASM:       ; %bb.0:
-; ASM-NEXT:    ldr d0, [x0]
-; ASM-NEXT:    umov.b w8, v0[1]
-; ASM-NEXT:    orr w8, w8, #0x1
-; ASM-NEXT:    strb w8, [x1]
+; ASM-NEXT:    movi.8b v0, #1
+; ASM-NEXT:    ldr d1, [x0]
+; ASM-NEXT:    orr.8b v0, v1, v0
+; ASM-NEXT:    st1.b { v0 }[1], [x1]
 ; ASM-NEXT:    ret
   %in1 = load <8 x i8>, <8 x i8>* %addr1, align 8
   %extract = extractelement <8 x i8> %in1, i32 1
@@ -424,9 +422,9 @@ define void @simpleOneInstructionPromotion8x8(<8 x i8>* %addr1, i8* %dest) {
 define void @simpleOneInstructionPromotion4x32(<4 x i32>* %addr1, i32* %dest) {
 ; ASM-LABEL: simpleOneInstructionPromotion4x32:
 ; ASM:       ; %bb.0:
-; ASM-NEXT:    ldr w8, [x0, #4]
-; ASM-NEXT:    orr w8, w8, #0x1
-; ASM-NEXT:    str w8, [x1]
+; ASM-NEXT:    ldr q0, [x0]
+; ASM-NEXT:    orr.4s v0, #1
+; ASM-NEXT:    st1.s { v0 }[1], [x1]
 ; ASM-NEXT:    ret
   %in1 = load <4 x i32>, <4 x i32>* %addr1, align 8
   %extract = extractelement <4 x i32> %in1, i32 1
