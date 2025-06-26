@@ -858,6 +858,57 @@ public:
     }
   }
 
+  void VisitCopyInClause(const OpenACCCopyInClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp>) {
+      for (auto var : clause.getVarList())
+        addDataOperand<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_copyin, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. data, declare, combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitCopyOutClause(const OpenACCCopyOutClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp>) {
+      for (auto var : clause.getVarList())
+        addDataOperand<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
+            var, mlir::acc::DataClause::acc_copyout, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. data, declare, combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitCreateClause(const OpenACCCreateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp>) {
+      for (auto var : clause.getVarList())
+        addDataOperand<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_create, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. data, declare, combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
   void VisitUseDeviceClause(const OpenACCUseDeviceClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::HostDataOp>) {
       for (auto var : clause.getVarList())
