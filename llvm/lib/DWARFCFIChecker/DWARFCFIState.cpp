@@ -30,11 +30,19 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
   auto CFIP = convert(Directive);
 
   auto MaybeCurrentRow = getCurrentUnwindRow();
-  dwarf::UnwindRow Row = MaybeCurrentRow.has_value()
-                             ? *(MaybeCurrentRow.value())
-                             : dwarf::UnwindRow();
-  dwarf::UnwindTable::RowContainer NewRows;
-  if (Error Err = parseRows(CFIP, Row, nullptr).moveInto(NewRows)) {
+
+  // This is a copy of the last row of the table (or a new empty row), its value
+  // will be updated by `parseRows`.
+  dwarf::UnwindRow NewRow = MaybeCurrentRow.has_value()
+                                ? *(MaybeCurrentRow.value())
+                                : dwarf::UnwindRow();
+
+  // `parseRows` updates the current row by applying the `CFIProgram` to it.
+  // During this process, it may create multiple rows that should be placed in
+  // the unwinding table, preceding the newly updated row and following the
+  // previous rows. These middle rows are stored in `PrecedingRows`.
+  dwarf::UnwindTable::RowContainer PrecedingRows;
+  if (Error Err = parseRows(CFIP, NewRow, nullptr).moveInto(PrecedingRows)) {
     Context->reportError(
         Directive.getLoc(),
         formatv("could not parse this CFI directive due to: {0}",
@@ -43,8 +51,9 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
     // Proceed the analysis by ignoring this CFI directive.
     return;
   }
-  Table.insert(Table.end(), NewRows.begin(), NewRows.end());
-  Table.push_back(Row);
+
+  Table.insert(Table.end(), PrecedingRows.begin(), PrecedingRows.end());
+  Table.push_back(NewRow);
 }
 
 dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
