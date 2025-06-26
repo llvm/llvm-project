@@ -3494,13 +3494,13 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   auto Removable =
       isAllocSiteRemovable(&MI, Users, TLI, KnowInitZero | KnowInitUndef);
   if (Removable) {
-    for (unsigned i = 0, e = Users.size(); i != e; ++i) {
+    for (WeakTrackingVH &User : Users) {
       // Lowering all @llvm.objectsize and MTI calls first because they may use
       // a bitcast/GEP of the alloca we are removing.
-      if (!Users[i])
-       continue;
+      if (!User)
+        continue;
 
-      Instruction *I = cast<Instruction>(&*Users[i]);
+      Instruction *I = cast<Instruction>(&*User);
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
@@ -3511,7 +3511,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
             Worklist.add(Inserted);
           replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
-          Users[i] = nullptr; // Skip examining in the next loop.
+          User = nullptr; // Skip examining in the next loop.
           continue;
         }
         if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
@@ -3527,11 +3527,11 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         }
       }
     }
-    for (unsigned i = 0, e = Users.size(); i != e; ++i) {
-      if (!Users[i])
+    for (WeakTrackingVH &User : Users) {
+      if (!User)
         continue;
 
-      Instruction *I = cast<Instruction>(&*Users[i]);
+      Instruction *I = cast<Instruction>(&*User);
 
       if (ICmpInst *C = dyn_cast<ICmpInst>(I)) {
         replaceInstUsesWith(*C,
