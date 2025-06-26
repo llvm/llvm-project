@@ -41,8 +41,10 @@ define i8 @test_disjoint_or(i8 %a, i8 %b) sanitize_memory {
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i8 [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i8 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i8 [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i8 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i8 [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[C:%.*]] = or disjoint i8 [[A]], [[B]]
-; CHECK-NEXT:    store i8 [[TMP11]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i8 [[TMP12]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %c = or disjoint i8 %a, %b

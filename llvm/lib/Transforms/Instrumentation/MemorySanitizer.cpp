@@ -2497,11 +2497,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitOr(BinaryOperator &I) {
     IRBuilder<> IRB(&I);
-    //  "Or" of 1 and a poisoned value results in unpoisoned value.
-    //  1|1 => 1;     0|1 => 1;     p|1 => 1;
-    //  1|0 => 1;     0|0 => 0;     p|0 => p;
-    //  1|p => 1;     0|p => p;     p|p => p;
-    //  S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
+    //  "Or" of 1 and a poisoned value results in unpoisoned value:
+    //    1|1 => 1;     0|1 => 1;     p|1 => 1;
+    //    1|0 => 1;     0|0 => 0;     p|0 => p;
+    //    1|p => 1;     0|p => p;     p|p => p;
+    //
+    //    S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
+    //
+    //  Addendum if the "Or" is "disjoint":
+    //    1|1 => p;
+    //    S = S | (V1 & V2)
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
     Value *V1 = IRB.CreateNot(I.getOperand(0));
@@ -2513,7 +2518,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S1S2 = IRB.CreateAnd(S1, S2);
     Value *V1S2 = IRB.CreateAnd(V1, S2);
     Value *S1V2 = IRB.CreateAnd(S1, V2);
-    setShadow(&I, IRB.CreateOr({S1S2, V1S2, S1V2}));
+
+    Value *S = IRB.CreateOr({S1S2, V1S2, S1V2});
+    auto* MaybeDisjoint = cast<PossiblyDisjointInst>(&I);
+    if (MaybeDisjoint->isDisjoint()) {
+      Value *V1V2 = IRB.CreateAnd(V1, V2);
+      S = IRB.CreateOr({S, V1V2});
+    }
+
+    setShadow(&I, S);
     setOriginForNaryOp(I);
   }
 
