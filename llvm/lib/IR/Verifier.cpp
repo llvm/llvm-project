@@ -2534,8 +2534,8 @@ void Verifier::verifyFunctionMetadata(
             "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Check(ProfName == "function_entry_count" ||
-                ProfName == "synthetic_function_entry_count",
+      Check(ProfName == MDProfLabels::FunctionEntryCount ||
+                ProfName == MDProfLabels::SyntheticFunctionEntryCount,
             "first operand should be 'function_entry_count'"
             " or 'synthetic_function_entry_count'",
             MD);
@@ -4991,7 +4991,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   StringRef ProfName = MDS->getString();
 
   // Check consistency of !prof branch_weights metadata.
-  if (ProfName == "branch_weights") {
+  if (ProfName == MDProfLabels::BranchWeights) {
     unsigned NumBranchWeights = getNumBranchWeights(*MD);
     if (isa<InvokeInst>(&I)) {
       Check(NumBranchWeights == 1 || NumBranchWeights == 2,
@@ -5024,6 +5024,9 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
             "!prof brunch_weights operand is not a const int");
     }
+  } else {
+    Check(ProfName == MDProfLabels::ValueProfile,
+          "expected either branch_weights or VP profile name", MD);
   }
 }
 
