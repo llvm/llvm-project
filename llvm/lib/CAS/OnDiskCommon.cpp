@@ -8,6 +8,7 @@
 
 #include "OnDiskCommon.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Process.h"
 #include <mutex>
@@ -21,6 +22,10 @@
 #else
 #define HAVE_FLOCK 0
 #endif
+#endif
+
+#if __has_include(<fcntl.h>)
+#include <fcntl.h>
 #endif
 
 using namespace llvm;
@@ -106,5 +111,33 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
   return sys::fs::tryLockFile(FD, Timeout, Exclusive);
 #else
   return make_error_code(std::errc::no_lock_available);
+#endif
+}
+
+Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize, size_t NewSize) {
+  auto CreateErrorFromErrno = [&]() -> Expected<size_t> {
+    std::error_code EC = errnoAsErrorCode();
+    if (EC == std::errc::not_supported)
+      // Ignore ENOTSUP in case the filesystem cannot preallocate.
+      return NewSize;
+    return createStringError(EC, "failed to allocate to CAS file: " + EC.message());
+  };
+#if defined(HAVE_POSIX_FALLOCATE)
+  if (posix_fallocate(FD, CurrentSize, NewSize - CurrentSize))
+    return CreateErrorFromErrno();
+  return NewSize;
+#elif defined(__APPLE__)
+  fstore_t FAlloc;
+  FAlloc.fst_flags = F_ALLOCATEALL | F_ALLOCATEPERSIST;
+  FAlloc.fst_posmode = F_PEOFPOSMODE;
+  FAlloc.fst_offset = 0;
+  FAlloc.fst_length = NewSize - CurrentSize;
+  FAlloc.fst_bytesalloc = 0;
+  if (fcntl(FD, F_PREALLOCATE, &FAlloc))
+    return CreateErrorFromErrno();
+  assert(CurrentSize + FAlloc.fst_bytesalloc >= NewSize);
+  return CurrentSize + FAlloc.fst_bytesalloc;
+#else
+  return NewSize; // Pretend it worked.
 #endif
 }

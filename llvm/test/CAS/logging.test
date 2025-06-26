@@ -8,29 +8,29 @@ RUN: FileCheck %s --input-file %t/cas/v1.log
 RUN: FileCheck %s --input-file %t/cas/v1.log --check-prefix=STANDALONE
 
 
-// CHECK: resize mapped file '{{.*}}v8.index'
-// CHECK: mmap '{{.*}}v8.index' [[INDEX:0x[0-9a-f]+]]
-// CHECK: resize mapped file '{{.*}}v8.data'
-// CHECK: mmap '{{.*}}v8.data' [[DATA:0x[0-9a-f]+]]
-// CHECK: resize mapped file '{{.*}}v3.actions'
-// CHECK: mmap '{{.*}}v3.actions' [[ACTIONS:0x[0-9a-f]+]]
+// CHECK: resize mapped file '{{.*}}v9.index'
+// CHECK: mmap '{{.*}}v9.index' [[INDEX:0x[0-9a-f]+]]
+// CHECK: resize mapped file '{{.*}}v9.data'
+// CHECK: mmap '{{.*}}v9.data' [[DATA:0x[0-9a-f]+]]
+// CHECK: resize mapped file '{{.*}}v4.actions'
+// CHECK: mmap '{{.*}}v4.actions' [[ACTIONS:0x[0-9a-f]+]]
 
 // store input/a contents into the datapool
 // CHECK: create record region=[[INDEX]] offset=[[INPUT_A_OFF:0x[0-9a-f]+]] hash=9b096cd140f119
 // CHECK: cmpxcgh subtrie region=[[INDEX]] offset={{.*}} slot={{.*}} expected=0x0 new=[[INPUT_A_OFF]] prev=0x0
 // CHECK: alloc [[DATA]]
 
-// CHECK: resize mapped file '{{.*}}v3.actions'
-// CHECK: close mmap '{{.*}}v3.actions'
-// CHECK: resize mapped file '{{.*}}v8.data'
-// CHECK: close mmap '{{.*}}v8.data'
-// CHECK: resize mapped file '{{.*}}v8.index'
-// CHECK: close mmap '{{.*}}v8.index'
+// CHECK: resize mapped file '{{.*}}v4.actions'
+// CHECK: close mmap '{{.*}}v4.actions'
+// CHECK: resize mapped file '{{.*}}v9.data'
+// CHECK: close mmap '{{.*}}v9.data'
+// CHECK: resize mapped file '{{.*}}v9.index'
+// CHECK: close mmap '{{.*}}v9.index'
 
 // CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT:[0-9]+]] last-valid=0 check-hash=1 allow-recovery=0 force=0 llvm-cas={{.*}}llvm-cas
 // CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT]] last-valid=[[BOOT]] check-hash=0 allow-recovery=1 force=1 llvm-cas={{.*}}llvm-cas
 
-// STANDALONE: standalone file create '[[PATH:.*v8.[0-9a-f]*.leaf]].[[SUFFIX:[0-9a-f]*]]'
+// STANDALONE: standalone file create '[[PATH:.*v9.[0-9a-f]*.leaf]].[[SUFFIX:[0-9a-f]*]]'
 // STANDALONE: standalone file rename '[[PATH]].[[SUFFIX]]' to '[[PATH]]'
 
 //--- input/a

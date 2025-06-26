@@ -379,6 +379,7 @@ check_symbol_exists(mallinfo2 malloc.h HAVE_MALLINFO2)
 check_symbol_exists(malloc_zone_statistics malloc/malloc.h
                     HAVE_MALLOC_ZONE_STATISTICS)
 check_symbol_exists(posix_spawn spawn.h HAVE_POSIX_SPAWN)
+check_symbol_exists(posix_fallocate fcntl.h HAVE_POSIX_FALLOCATE)
 check_symbol_exists(pread unistd.h HAVE_PREAD)
 check_symbol_exists(sbrk unistd.h HAVE_SBRK)
 check_symbol_exists(strerror_r string.h HAVE_STRERROR_R)

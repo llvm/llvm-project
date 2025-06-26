@@ -43,6 +43,14 @@ std::error_code tryLockFileThreadSafe(
     int FD, std::chrono::milliseconds Timeout = std::chrono::milliseconds(0),
     bool Exclusive = true);
 
+/// Allocate space for the file \p FD on disk, if the filesystem supports it.
+///
+/// On filesystems that support this operation, this ensures errors such as
+/// \c std::errc::no_space_on_device are detected before we write data.
+///
+/// \returns the new size of the file, or an \c Error.
+Expected<size_t> preallocateFileTail(int FD, size_t CurrentSize, size_t NewSize);
+
 } // namespace llvm::cas::ondisk
 
 #endif // LLVM_LIB_CAS_ONDISKCOMMON_H

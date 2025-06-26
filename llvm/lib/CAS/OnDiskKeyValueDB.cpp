@@ -19,7 +19,7 @@ using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 
 static constexpr StringLiteral ActionCacheFile = "actions";
-static constexpr StringLiteral FilePrefix = "v3.";
+static constexpr StringLiteral FilePrefix = "v4.";
 
 Expected<ArrayRef<char>> OnDiskKeyValueDB::put(ArrayRef<uint8_t> Key,
                                                ArrayRef<char> Value) {

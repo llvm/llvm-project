@@ -160,7 +160,7 @@ TEST(OnDiskHashMappedTrieTest, OutOfSpace) {
   // Just enough for root node but not enough for any insertion.
   ASSERT_THAT_ERROR(OnDiskHashMappedTrie::create(
                         Temp.path("NoSpace2").str(), "index",
-                        /*NumHashBits=*/8, /*DataSize=*/8, /*MaxFileSize=*/100,
+                        /*NumHashBits=*/8, /*DataSize=*/8, /*MaxFileSize=*/108,
                         /*NewInitialFileSize=*/std::nullopt, /*Logger=*/nullptr,
                         /*NewTableNumRootBits=*/1, /*NewTableNumSubtrieBits=*/1)
                         .moveInto(Trie),

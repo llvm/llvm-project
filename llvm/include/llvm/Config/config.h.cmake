@@ -134,6 +134,9 @@
 /* Define to 1 if you have the `posix_spawn' function. */
 #cmakedefine HAVE_POSIX_SPAWN ${HAVE_POSIX_SPAWN}
 
+/* Define to 1 if you have the `posix_fallocate' function. */
+#cmakedefine HAVE_POSIX_FALLOCATE ${HAVE_POSIX_FALLOCATE}
+
 /* Define to 1 if you have the `pread' function. */
 #cmakedefine HAVE_PREAD ${HAVE_PREAD}
 
