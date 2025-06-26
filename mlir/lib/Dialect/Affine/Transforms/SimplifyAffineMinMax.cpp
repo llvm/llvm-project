@@ -240,14 +240,15 @@ struct SimplifyAffineApplyOp : public OpRewritePattern<AffineApplyOp> {
 
 namespace mlir {
 namespace affine {
-#define GEN_PASS_DEF_SIMPLIFYAFFINEMINMAX
+#define GEN_PASS_DEF_SIMPLIFYAFFINEMINMAXPASS
 #include "mlir/Dialect/Affine/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
 /// Creates a simplification pass for affine min/max/apply.
 struct SimplifyAffineMinMaxPass
-    : public affine::impl::SimplifyAffineMinMaxBase<SimplifyAffineMinMaxPass> {
+    : public affine::impl::SimplifyAffineMinMaxPassBase<
+          SimplifyAffineMinMaxPass> {
   void runOnOperation() override;
 };
 
