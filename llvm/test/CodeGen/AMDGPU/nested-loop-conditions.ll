@@ -236,8 +236,8 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) nocapture %ar
 ; IR-NEXT:    [[MY_TMP17:%.*]] = bitcast i64 [[MY_TMP3]] to <2 x i32>
 ; IR-NEXT:    br label %[[BB18:.*]]
 ; IR:       [[FLOW1]]:
-; IR-NEXT:    [[TMP11]] = phi <4 x i32> [ [[MY_TMP9:%.*]], %[[BB21:.*]] ], [ undef, %[[BB14]] ]
-; IR-NEXT:    [[TMP12]] = phi i32 [ [[MY_TMP10:%.*]], %[[BB21]] ], [ undef, %[[BB14]] ]
+; IR-NEXT:    [[TMP11]] = phi <4 x i32> [ [[MY_TMP9:%.*]], %[[BB21:.*]] ], [ poison, %[[BB14]] ]
+; IR-NEXT:    [[TMP12]] = phi i32 [ [[MY_TMP10:%.*]], %[[BB21]] ], [ poison, %[[BB14]] ]
 ; IR-NEXT:    [[TMP13:%.*]] = phi i1 [ [[MY_TMP12:%.*]], %[[BB21]] ], [ true, %[[BB14]] ]
 ; IR-NEXT:    [[TMP14]] = phi i1 [ [[MY_TMP12]], %[[BB21]] ], [ false, %[[BB14]] ]
 ; IR-NEXT:    [[TMP15:%.*]] = phi i1 [ false, %[[BB21]] ], [ true, %[[BB14]] ]
