@@ -282,6 +282,12 @@ static cl::opt<bool> ClPoisonUndefVectors(
              "unaffected by this flag (see -msan-poison-undef)."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClPreciseDisjointOr(
+    "msan-precise-disjoint-or",
+    cl::desc("Precisely poison disjoint OR. If false (legacy behavior), "
+             "disjointedness is ignored (i.e., 1|1 is initialized)."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool>
     ClHandleICmp("msan-handle-icmp",
                  cl::desc("propagate shadow through ICmpEQ and ICmpNE"),
@@ -2520,10 +2526,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S1V2 = IRB.CreateAnd(S1, V2);
 
     Value *S = IRB.CreateOr({S1S2, V1S2, S1V2});
-    auto *MaybeDisjoint = cast<PossiblyDisjointInst>(&I);
-    if (MaybeDisjoint->isDisjoint()) {
-      Value *V1V2 = IRB.CreateAnd(V1, V2);
-      S = IRB.CreateOr({S, V1V2});
+    if (ClPreciseDisjointOr) {
+      auto *MaybeDisjoint = cast<PossiblyDisjointInst>(&I);
+      if (MaybeDisjoint->isDisjoint()) {
+        Value *V1V2 = IRB.CreateAnd(V1, V2);
+        S = IRB.CreateOr({S, V1V2});
+      }
     }
 
     setShadow(&I, S);
