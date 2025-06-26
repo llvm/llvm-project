@@ -72,6 +72,7 @@
 #include "Error.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/StringSaver.h"
 #include <functional>
@@ -89,32 +90,32 @@ using AstPtr = std::unique_ptr<ASTNode>;
 // and Lambdas that are registered with it.
 class Template {
 public:
-  Template(StringRef TemplateStr);
+  LLVM_ABI Template(StringRef TemplateStr);
 
   Template(const Template &) = delete;
 
   Template &operator=(const Template &) = delete;
 
-  Template(Template &&Other) noexcept;
+  LLVM_ABI Template(Template &&Other) noexcept;
 
   // Define this in the cpp file to  work around ASTNode being an incomplete
   // type.
-  ~Template();
+  LLVM_ABI ~Template();
 
-  Template &operator=(Template &&Other) noexcept;
+  LLVM_ABI Template &operator=(Template &&Other) noexcept;
 
-  void render(const llvm::json::Value &Data, llvm::raw_ostream &OS);
+  LLVM_ABI void render(const llvm::json::Value &Data, llvm::raw_ostream &OS);
 
-  void registerPartial(std::string Name, std::string Partial);
+  LLVM_ABI void registerPartial(std::string Name, std::string Partial);
 
-  void registerLambda(std::string Name, Lambda Lambda);
+  LLVM_ABI void registerLambda(std::string Name, Lambda Lambda);
 
-  void registerLambda(std::string Name, SectionLambda Lambda);
+  LLVM_ABI void registerLambda(std::string Name, SectionLambda Lambda);
 
   // By default the Mustache Spec Specifies that HTML special characters
   // should be escaped. This function allows the user to specify which
   // characters should be escaped.
-  void overrideEscapeCharacters(DenseMap<char, std::string> Escapes);
+  LLVM_ABI void overrideEscapeCharacters(DenseMap<char, std::string> Escapes);
 
 private:
   StringMap<AstPtr> Partials;

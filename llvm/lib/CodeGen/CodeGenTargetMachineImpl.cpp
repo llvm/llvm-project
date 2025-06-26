@@ -103,7 +103,7 @@ CodeGenTargetMachineImpl::CodeGenTargetMachineImpl(
 
 TargetTransformInfo
 CodeGenTargetMachineImpl::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(BasicTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<BasicTTIImpl>(this, F));
 }
 
 /// addPassesToX helper drives creation and initialization of TargetPassConfig.
@@ -197,7 +197,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
       return make_error<StringError>("createMCAsmBackend failed",
                                      inconvertibleErrorCode());
 
-    Triple T(getTargetTriple().str());
+    Triple T(getTargetTriple());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
         T, Context, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)

@@ -13,7 +13,7 @@
 
 namespace lldb_dap {
 
-/// An Error that is reported as a DAP Error Message, which may be presented to
+/// An error that is reported as a DAP Error Message, which may be presented to
 /// the user.
 class DAPError : public llvm::ErrorInfo<DAPError> {
 public:
@@ -30,7 +30,7 @@ public:
   const std::string &getMessage() const { return m_message; }
   bool getShowUser() const { return m_show_user; }
   const std::optional<std::string> &getURL() const { return m_url; }
-  const std::optional<std::string> &getURLLabel() const { return m_url; }
+  const std::optional<std::string> &getURLLabel() const { return m_url_label; }
 
 private:
   std::string m_message;
@@ -38,6 +38,15 @@ private:
   bool m_show_user;
   std::optional<std::string> m_url;
   std::optional<std::string> m_url_label;
+};
+
+/// An error that indicates the current request handler cannot execute because
+/// the process is not stopped.
+class NotStoppedError : public llvm::ErrorInfo<NotStoppedError> {
+public:
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override;
+  std::error_code convertToErrorCode() const override;
 };
 
 } // namespace lldb_dap

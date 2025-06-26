@@ -75,6 +75,29 @@ static DimensionSize operator*(DimensionSize lhs, DimensionSize rhs) {
   return lhs.value() * rhs.value();
 }
 
+SmallVector<Value> mlir::mesh::getMixedAsValues(OpBuilder b,
+                                                const Location &loc,
+                                                llvm::ArrayRef<int64_t> statics,
+                                                ValueRange dynamics,
+                                                Type type) {
+  SmallVector<Value> values;
+  auto dyn = dynamics.begin();
+  Type i64 = b.getI64Type();
+  if (!type)
+    type = i64;
+  assert((i64 == type || b.getIndexType() == type) &&
+         "expected an i64 or an intex type");
+  for (auto s : statics) {
+    if (s == ShapedType::kDynamic) {
+      values.emplace_back(*(dyn++));
+    } else {
+      TypedAttr val = type == i64 ? b.getI64IntegerAttr(s) : b.getIndexAttr(s);
+      values.emplace_back(b.create<arith::ConstantOp>(loc, type, val));
+    }
+  }
+  return values;
+}
+
 //===----------------------------------------------------------------------===//
 // Inliner
 //===----------------------------------------------------------------------===//
@@ -314,7 +337,6 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                              newShardOp.getSharding(),
                                              /*annotate_for_users*/ true);
   rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
-  return;
 }
 
 void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
@@ -1505,7 +1527,7 @@ LogicalResult ShiftOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   auto meshAxes = getMeshAxes();
   auto shiftAxis = getShiftAxis().getZExtValue();
-  if (llvm::find(meshAxes, shiftAxis) == meshAxes.end()) {
+  if (!llvm::is_contained(meshAxes, shiftAxis)) {
     return emitError() << "Invalid shift axis " << shiftAxis
                        << ". It must be one of the grouping mesh axes.";
   }

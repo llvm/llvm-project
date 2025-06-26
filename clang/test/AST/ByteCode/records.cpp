@@ -1810,3 +1810,35 @@ namespace AccessMismatch {
   static_assert(B().cmp(), ""); // both-error {{constant expression}} \
                                 // both-note {{in call}}
 }
+
+namespace GlobalDtor {
+  struct A {
+  };
+  constexpr A a = {};
+  constexpr void destroy1() { // both-error {{constexpr}}
+    a.~A(); // both-note {{cannot modify an object that is visible outside}}
+  }
+}
+
+namespace NullDtor {
+  struct S {};
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+     S *s = nullptr;
+     s->~S(); // both-note 2{{destruction of dereferenced null pointer is not allowed in a constant expression}}
+     return 10;
+  }
+  static_assert(foo() == 10, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{in call to}}
+}
+
+namespace DiamondDowncast {
+  struct Top {};
+  struct Middle1 : Top {};
+  struct Middle2 : Top {};
+  struct Bottom : Middle1, Middle2 {};
+
+  constexpr Bottom bottom;
+  constexpr Top &top1 = (Middle1&)bottom;
+  constexpr Middle2 &fail = (Middle2&)top1; // both-error {{must be initialized by a constant expression}} \
+                                            // both-note {{cannot cast object of dynamic type 'const Bottom' to type 'Middle2'}}
+}

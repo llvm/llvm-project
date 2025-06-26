@@ -256,8 +256,8 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
   /// Allocated API-exposed wrappters for Diagnostics.
   SmallVector<std::unique_ptr<CXStoredDiagnostic>, 8> DiagnosticsWrappers;
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
-  
+  DiagnosticOptions DiagOpts;
+
   /// Diag object
   IntrusiveRefCntPtr<DiagnosticsEngine> Diag;
   
@@ -356,9 +356,9 @@ static std::atomic<unsigned> CodeCompletionResultObjects;
 
 AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     IntrusiveRefCntPtr<FileManager> FileMgr)
-    : CXCodeCompleteResults(), DiagOpts(new DiagnosticOptions),
+    : CXCodeCompleteResults(),
       Diag(new DiagnosticsEngine(
-          IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts)),
+          IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts)),
       FileMgr(std::move(FileMgr)),
       SourceMgr(new SourceManager(*Diag, *this->FileMgr)),
       CodeCompletionAllocator(
@@ -369,7 +369,7 @@ AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     fprintf(stderr, "+++ %u completion results\n",
             ++CodeCompletionResultObjects);
 }
-  
+
 AllocatedCXCodeCompleteResults::~AllocatedCXCodeCompleteResults() {
   delete [] Results;
 

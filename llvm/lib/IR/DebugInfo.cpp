@@ -13,6 +13,7 @@
 
 #include "llvm-c/DebugInfo.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -240,23 +241,14 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
       processType(T);
     else
       processSubprogram(cast<DISubprogram>(RT));
-  for (auto *Import : CU->getImportedEntities()) {
-    auto *Entity = Import->getEntity();
-    if (auto *T = dyn_cast<DIType>(Entity))
-      processType(T);
-    else if (auto *SP = dyn_cast<DISubprogram>(Entity))
-      processSubprogram(SP);
-    else if (auto *NS = dyn_cast<DINamespace>(Entity))
-      processScope(NS->getScope());
-    else if (auto *M = dyn_cast<DIModule>(Entity))
-      processScope(M->getScope());
-  }
+  for (auto *Import : CU->getImportedEntities())
+    processImportedEntity(Import);
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-    processVariable(M, DVI->getVariable());
+    processVariable(DVI->getVariable());
 
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
@@ -274,7 +266,7 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
 
 void DebugInfoFinder::processDbgRecord(const Module &M, const DbgRecord &DR) {
   if (const DbgVariableRecord *DVR = dyn_cast<const DbgVariableRecord>(&DR))
-    processVariable(M, DVR->getVariable());
+    processVariable(DVR->getVariable());
   processLocation(M, DR.getDebugLoc().get());
 }
 
@@ -300,6 +292,18 @@ void DebugInfoFinder::processType(DIType *DT) {
   if (auto *DDT = dyn_cast<DIDerivedType>(DT)) {
     processType(DDT->getBaseType());
   }
+}
+
+void DebugInfoFinder::processImportedEntity(DIImportedEntity *Import) {
+  auto *Entity = Import->getEntity();
+  if (auto *T = dyn_cast<DIType>(Entity))
+    processType(T);
+  else if (auto *SP = dyn_cast<DISubprogram>(Entity))
+    processSubprogram(SP);
+  else if (auto *NS = dyn_cast<DINamespace>(Entity))
+    processScope(NS->getScope());
+  else if (auto *M = dyn_cast<DIModule>(Entity))
+    processScope(M->getScope());
 }
 
 void DebugInfoFinder::processScope(DIScope *Scope) {
@@ -349,10 +353,16 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       processType(TVal->getType());
     }
   }
+
+  for (auto *N : SP->getRetainedNodes()) {
+    if (auto *Var = dyn_cast_or_null<DILocalVariable>(N))
+      processVariable(Var);
+    else if (auto *Import = dyn_cast_or_null<DIImportedEntity>(N))
+      processImportedEntity(Import);
+  }
 }
 
-void DebugInfoFinder::processVariable(const Module &M,
-                                      const DILocalVariable *DV) {
+void DebugInfoFinder::processVariable(DILocalVariable *DV) {
   if (!NodesSeen.insert(DV).second)
     return;
   processScope(DV->getScope());
@@ -576,11 +586,6 @@ bool llvm::stripDebugInfo(Function &F) {
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
     for (Instruction &I : llvm::make_early_inc_range(BB)) {
-      if (isa<DbgInfoIntrinsic>(&I)) {
-        I.eraseFromParent();
-        Changed = true;
-        continue;
-      }
       if (I.getDebugLoc()) {
         Changed = true;
         I.setDebugLoc(DebugLoc());
@@ -950,8 +955,8 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
   return 0;
 }
 
-void Instruction::applyMergedLocation(DILocation *LocA, DILocation *LocB) {
-  setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
+void Instruction::applyMergedLocation(DebugLoc LocA, DebugLoc LocB) {
+  setDebugLoc(DebugLoc::getMergedLocation(LocA, LocB));
 }
 
 void Instruction::mergeDIAssignID(
@@ -987,8 +992,10 @@ void Instruction::updateLocationAfterHoist() { dropLocation(); }
 
 void Instruction::dropLocation() {
   const DebugLoc &DL = getDebugLoc();
-  if (!DL)
+  if (!DL) {
+    setDebugLoc(DebugLoc::getDropped());
     return;
+  }
 
   // If this isn't a call, drop the location to allow a location from a
   // preceding instruction to propagate.
@@ -1000,7 +1007,7 @@ void Instruction::dropLocation() {
   }
 
   if (!MayLowerToCall) {
-    setDebugLoc(DebugLoc());
+    setDebugLoc(DebugLoc::getDropped());
     return;
   }
 
@@ -1019,7 +1026,7 @@ void Instruction::dropLocation() {
     //
     // One alternative is to set a line 0 location with the existing scope and
     // inlinedAt info. The location might be sensitive to when inlining occurs.
-    setDebugLoc(DebugLoc());
+    setDebugLoc(DebugLoc::getDropped());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1295,6 +1302,15 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               LLVMBool IsUnsigned) {
   return wrap(unwrap(Builder)->createEnumerator({Name, NameLen}, Value,
                                                 IsUnsigned != 0));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    uint64_t SizeInBits, const uint64_t Words[], LLVMBool IsUnsigned) {
+  uint64_t NumWords = (SizeInBits + 63) / 64;
+  return wrap(unwrap(Builder)->createEnumerator(
+      {Name, NameLen},
+      APSInt(APInt(SizeInBits, ArrayRef(Words, NumWords)), IsUnsigned != 0)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateEnumerationType(
@@ -1797,6 +1813,12 @@ unsigned LLVMDISubprogramGetLine(LLVMMetadataRef Subprogram) {
   return unwrapDI<DISubprogram>(Subprogram)->getLine();
 }
 
+void LLVMDISubprogramReplaceType(LLVMMetadataRef Subprogram,
+                                 LLVMMetadataRef SubroutineType) {
+  unwrapDI<DISubprogram>(Subprogram)
+      ->replaceType(unwrapDI<DISubroutineType>(SubroutineType));
+}
+
 LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst) {
   return wrap(unwrap<Instruction>(Inst)->getDebugLoc().getAsMDNode());
 }
@@ -2102,22 +2124,10 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
     Expr = *R;
   }
   DIExpression *AddrExpr = DIExpression::get(StoreLikeInst.getContext(), {});
-  if (StoreLikeInst.getParent()->IsNewDbgInfoFormat) {
-    auto *Assign = DbgVariableRecord::createLinkedDVRAssign(
-        &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
-    (void)Assign;
-    LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
-    return;
-  }
-  auto Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
-                                    AddrExpr, VarRec.DL);
+  auto *Assign = DbgVariableRecord::createLinkedDVRAssign(
+      &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
   (void)Assign;
-  LLVM_DEBUG(if (!Assign.isNull()) {
-    if (const auto *Record = dyn_cast<DbgRecord *>(Assign))
-      errs() << " > INSERT: " << *Record << "\n";
-    else
-      errs() << " > INSERT: " << *cast<Instruction *>(Assign) << "\n";
-  });
+  LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
 }
 
 #undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).

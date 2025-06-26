@@ -864,8 +864,7 @@ multiclass VPatAVGADD_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
 
 // 7.4. Vector Unit-Stride Instructions
 foreach vti = AllVectors in
-  let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       GetVTypePredicates<vti>.Predicates) in 
+  let Predicates = GetVTypeMinimalPredicates<vti>.Predicates in
   defm : VPatUSLoadStoreSDNode<vti.Vector, vti.RegClass, vti.Log2SEW, vti.LMul,
                                vti.AVL, vti.RegClass>;
 foreach mti = AllMasks in
@@ -904,6 +903,18 @@ foreach vti = AllIntegerVectors in {
               (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX)
                     (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
                     (NegImm simm5_plus1:$rs2), vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+}
+
+// (add v, C) -> (sub v, -C) if -C cheaper to materialize
+foreach vti = I64IntegerVectors in {
+  let Predicates = [HasVInstructionsI64] in {
+    def : Pat<(add (vti.Vector vti.RegClass:$rs1),
+                   (vti.Vector (SplatPat_imm64_neg i64:$rs2))),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX)
+                   (vti.Vector (IMPLICIT_DEF)),
+                   vti.RegClass:$rs1,
+                   negImm:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
 
@@ -1360,6 +1371,8 @@ foreach vti = AllFloatVectors in {
 // 13.11. Vector Floating-Point MIN/MAX Instructions
 defm : VPatBinaryFPSDNode_VV_VF<fminnum, "PseudoVFMIN", isSEWAware=1>;
 defm : VPatBinaryFPSDNode_VV_VF<fmaxnum, "PseudoVFMAX", isSEWAware=1>;
+defm : VPatBinaryFPSDNode_VV_VF<fminimumnum, "PseudoVFMIN", isSEWAware=1>;
+defm : VPatBinaryFPSDNode_VV_VF<fmaximumnum, "PseudoVFMAX", isSEWAware=1>;
 
 // 13.13. Vector Floating-Point Compare Instructions
 defm : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
@@ -1435,9 +1448,8 @@ defm : VPatNConvertI2FPSDNode_W_RM<any_uint_to_fp, "PseudoVFNCVT_F_XU_W">;
 foreach fvtiToFWti = AllWidenableFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  let Predicates = !if(!eq(fvti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       !listconcat(GetVTypePredicates<fvti>.Predicates,
-                                   GetVTypePredicates<fwti>.Predicates)) in
+  let Predicates = !listconcat(GetVTypeMinimalPredicates<fvti>.Predicates,
+                               GetVTypeMinimalPredicates<fwti>.Predicates) in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
             (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
                 (fvti.Vector (IMPLICIT_DEF)),

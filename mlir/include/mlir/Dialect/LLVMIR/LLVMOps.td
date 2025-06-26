@@ -291,7 +291,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
                    Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
                    TypeAttr:$elem_type,
-                   UnitAttr:$inbounds);
+                   GEPNoWrapFlagsProp:$noWrapFlags);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
 
@@ -303,8 +303,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     as indices. In the case of indexing within a structure, it is required to
     either use constant indices directly, or supply a constant SSA value.
 
-    An optional 'inbounds' attribute specifies the low-level pointer arithmetic
+    The no-wrap flags can be used to specify the low-level pointer arithmetic
     overflow behavior that LLVM uses after lowering the operation to LLVM IR.
+    Valid options include 'inbounds' (pointer arithmetic must be within object
+    bounds), 'nusw' (no unsigned signed wrap), and 'nuw' (no unsigned wrap).
+    Note that 'inbounds' implies 'nusw' which is ensured by the enum
+    definition. The flags can be set individually or in combination.
 
     Examples:
 
@@ -323,10 +327,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
 
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
-               "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
+               "ValueRange":$indices,
+               CArg<"GEPNoWrapFlags", "GEPNoWrapFlags::none">:$noWrapFlags,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
-               "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
+               "ArrayRef<GEPArg>":$indices,
+               CArg<"GEPNoWrapFlags", "GEPNoWrapFlags::none">:$noWrapFlags,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
   ];
   let llvmBuilder = [{
@@ -343,10 +349,13 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     }
     Type baseElementType = op.getElemType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
-    $res = builder.CreateGEP(elementType, $base, indices, "", $inbounds);
+    $res = builder.CreateGEP(elementType, $base, indices, "",
+                             llvm::GEPNoWrapFlags::fromRaw(
+                                 static_cast<unsigned>(
+                                     op.getNoWrapFlags())));
   }];
   let assemblyFormat = [{
-    (`inbounds` $inbounds^)?
+    ($noWrapFlags^)?
     $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
     `:` functional-type(operands, results) `,` $elem_type
   }];
@@ -651,12 +660,12 @@ def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 
 // Call-related operations.
-def LLVM_InvokeOp : LLVM_Op<"invoke", [
-                      AttrSizedOperandSegments,
-                      DeclareOpInterfaceMethods<BranchOpInterface>,
-                      DeclareOpInterfaceMethods<CallOpInterface>,
-                      DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-                      Terminator]> {
+def LLVM_InvokeOp
+    : LLVM_Op<"invoke", [AttrSizedOperandSegments,
+                         DeclareOpInterfaceMethods<BranchOpInterface>,
+                         DeclareOpInterfaceMethods<CallOpInterface>,
+                         DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                         Terminator]> {
   let arguments = (ins
                    OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
                    OptionalAttr<FlatSymbolRefAttr>:$callee,
@@ -725,12 +734,12 @@ def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
-                    [AttrSizedOperandSegments,
-                     DeclareOpInterfaceMethods<FastmathFlagsInterface>,
-                     DeclareOpInterfaceMethods<CallOpInterface>,
-                     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-                     DeclareOpInterfaceMethods<BranchWeightOpInterface>]> {
+def LLVM_CallOp
+    : LLVM_MemAccessOpBase<
+          "call", [AttrSizedOperandSegments,
+                   DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+                   DeclareOpInterfaceMethods<CallOpInterface>,
+                   DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
     In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
@@ -749,9 +758,9 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     the LLVM function type that uses an explicit void type to model functions
     that do not return a value.
 
-    If this operatin has the `no_inline` attribute, then this specific function call 
-    will never be inlined. The opposite behavior will occur if the call has `always_inline` 
-    attribute. The `inline_hint` attribute indicates that it is desirable to inline 
+    If this operatin has the `no_inline` attribute, then this specific function call
+    will never be inlined. The opposite behavior will occur if the call has `always_inline`
+    attribute. The `inline_hint` attribute indicates that it is desirable to inline
     this function call.
 
     Examples:
@@ -779,21 +788,16 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
       OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<LLVM_Type>:$callee_operands,
       DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
-      OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
       DefaultValuedAttr<CConv, "CConv::C">:$CConv,
       DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
       OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
-      UnitAttr:$convergent,
-      UnitAttr:$no_unwind,
-      UnitAttr:$will_return,
+      UnitAttr:$convergent, UnitAttr:$no_unwind, UnitAttr:$will_return,
       VariadicOfVariadic<LLVM_Type, "op_bundle_sizes">:$op_bundle_operands,
       DenseI32ArrayAttr:$op_bundle_sizes,
       OptionalAttr<ArrayAttr>:$op_bundle_tags,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
-      OptionalAttr<DictArrayAttr>:$res_attrs,
-      UnitAttr:$no_inline,
-      UnitAttr:$always_inline,
-      UnitAttr:$inline_hint);
+      OptionalAttr<DictArrayAttr>:$res_attrs, UnitAttr:$no_inline,
+      UnitAttr:$always_inline, UnitAttr:$inline_hint);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -1038,11 +1042,12 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     LLVM_TerminatorPassthroughOpBuilder
   ];
 }
-def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
-    [AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<BranchOpInterface>,
-     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-     Pure]> {
+def LLVM_CondBrOp
+    : LLVM_TerminatorOp<
+          "cond_br", [AttrSizedOperandSegments,
+                      DeclareOpInterfaceMethods<BranchOpInterface>,
+                      DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                      Pure]> {
   let arguments = (ins I1:$condition,
                    Variadic<LLVM_Type>:$trueDestOperands,
                    Variadic<LLVM_Type>:$falseDestOperands,
@@ -1127,11 +1132,12 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
   }];
 }
 
-def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
-    [AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<BranchOpInterface>,
-     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-     Pure]> {
+def LLVM_SwitchOp
+    : LLVM_TerminatorOp<
+          "switch", [AttrSizedOperandSegments,
+                     DeclareOpInterfaceMethods<BranchOpInterface>,
+                     DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                     Pure]> {
   let arguments = (ins
     AnySignlessInteger:$value,
     Variadic<AnyType>:$defaultOperands,
@@ -1820,7 +1826,7 @@ def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTa
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
-    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface
+    AffineScope, AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -1884,6 +1890,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
     OptionalAttr<StrAttr>:$target_cpu,
     OptionalAttr<StrAttr>:$tune_cpu,
+    OptionalAttr<StrAttr>:$reciprocal_estimates,
+    OptionalAttr<StrAttr>:$prefer_vector_width,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
     OptionalAttr<BoolAttr>:$unsafe_fp_math,
     OptionalAttr<BoolAttr>:$no_infs_fp_math,
@@ -1893,6 +1901,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$denormal_fp_math,
     OptionalAttr<StrAttr>:$denormal_fp_math_f32,
     OptionalAttr<StrAttr>:$fp_contract,
+    OptionalAttr<StrAttr>:$instrument_function_entry,
+    OptionalAttr<StrAttr>:$instrument_function_exit,
     OptionalAttr<UnitAttr>:$no_inline,
     OptionalAttr<UnitAttr>:$always_inline,
     OptionalAttr<UnitAttr>:$no_unwind,
@@ -2062,9 +2072,9 @@ def LLVM_ConstantOp
     Unlike LLVM IR, MLIR does not have first-class constant values. Therefore,
     all constants must be created as SSA values before being used in other
     operations. `llvm.mlir.constant` creates such values for scalars, vectors,
-    strings, and structs. It has a mandatory `value` attribute whose type
-    depends on the type of the constant value. The type of the constant value
-    must correspond to the attribute type converted to LLVM IR type.
+    strings, structs, and array of structs. It has a mandatory `value` attribute
+    whose type depends on the type of the constant value. The type of the constant
+    value must correspond to the attribute type converted to LLVM IR type.
 
     When creating constant scalars, the `value` attribute must be either an
     integer attribute or a floating point attribute. The type of the attribute
@@ -2085,6 +2095,11 @@ def LLVM_ConstantOp
     number of elements in the attribute, and the type of each LLVM struct field
     must correspond to the type of the corresponding attribute element converted
     to LLVM IR.
+
+    When creating an array of structs, the `value` attribute must be an array
+    attribute, itself containing zero, or undef, or array attributes for each
+    potential nested array type, and the elements of the leaf array attributes
+    for must match the struct element types or be zero or undef attributes.
 
     Examples:
 
@@ -2282,6 +2297,9 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
     written, or referenced.
     Attempting to define or reference any symbol or any global behavior is
     considered undefined behavior at this time.
+    If `tail_call_kind` is used, the operation behaves like the specified
+    tail call kind. The `musttail` kind it's not available for this operation,
+    since it isn't supported by LLVM's inline asm.
   }];
   let arguments = (
     ins Variadic<LLVM_Type>:$operands,
@@ -2289,6 +2307,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
         StrAttr:$constraints,
         UnitAttr:$has_side_effects,
         UnitAttr:$is_align_stack,
+        DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$tail_call_kind,
         OptionalAttr<
           DefaultValuedAttr<AsmATTOrIntel, "AsmDialect::AD_ATT">>:$asm_dialect,
         OptionalAttr<ArrayAttr>:$operand_attrs);
@@ -2298,6 +2317,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
   let assemblyFormat = [{
     (`has_side_effects` $has_side_effects^)?
     (`is_align_stack` $is_align_stack^)?
+    (`tail_call_kind` `=` $tail_call_kind^)?
     (`asm_dialect` `=` $asm_dialect^)?
     (`operand_attrs` `=` $operand_attrs^)?
     attr-dict
@@ -2310,6 +2330,8 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
       return "elementtype";
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 //===--------------------------------------------------------------------===//

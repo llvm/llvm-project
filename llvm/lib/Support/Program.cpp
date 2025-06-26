@@ -74,10 +74,7 @@ ProcessInfo sys::ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
 
 bool sys::commandLineFitsWithinSystemLimits(StringRef Program,
                                             ArrayRef<const char *> Args) {
-  SmallVector<StringRef, 8> StringRefArgs;
-  StringRefArgs.reserve(Args.size());
-  for (const char *A : Args)
-    StringRefArgs.emplace_back(A);
+  SmallVector<StringRef, 8> StringRefArgs(Args);
   return commandLineFitsWithinSystemLimits(Program, StringRefArgs);
 }
 

@@ -61,7 +61,7 @@ just a release, which looks like the following:
 However, it is best practice to specify an exact commit SHA from which to pull
 the action from, noting the version in a comment:
 
-We plan on revisting this reccomendation once Github's immutable actions have
+We plan on revisiting this recommendation once Github's immutable actions have
 been rolled out as GA.
 
 .. code-block:: yaml

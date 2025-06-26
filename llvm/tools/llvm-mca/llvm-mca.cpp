@@ -454,8 +454,6 @@ int main(int argc, char **argv) {
   // Tell SrcMgr about this buffer, which is what the parser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
 
-  std::unique_ptr<buffer_ostream> BOS;
-
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 

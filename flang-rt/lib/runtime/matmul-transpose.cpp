@@ -183,7 +183,7 @@ inline static RT_API_ATTRS void DoMatmulTranspose(
     for (int j{0}; j < resRank; ++j) {
       result.GetDimension(j).SetBounds(1, extent[j]);
     }
-    if (int stat{result.Allocate(kNoAsyncId)}) {
+    if (int stat{result.Allocate(kNoAsyncObject)}) {
       terminator.Crash(
           "MATMUL-TRANSPOSE: could not allocate memory for result; STAT=%d",
           stat);

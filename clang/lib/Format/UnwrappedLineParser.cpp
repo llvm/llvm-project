@@ -14,7 +14,6 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
-#include "FormatTokenLexer.h"
 #include "FormatTokenSource.h"
 #include "Macros.h"
 #include "TokenAnnotator.h"
@@ -25,7 +24,6 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <utility>
 
 #define DEBUG_TYPE "format-parser"
@@ -271,7 +269,7 @@ void UnwrappedLineParser::parseFile() {
   bool MustBeDeclaration = !Line->InPPDirective && !Style.isJavaScript();
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
-  if (Style.isTextProto())
+  if (Style.isTextProto() || (Style.isJson() && FormatTok->IsFirst))
     parseBracedList();
   else
     parseLevel();
@@ -295,6 +293,7 @@ void UnwrappedLineParser::parseCSharpGenericTypeConstraint() {
   do {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_brace:
+    case tok::semi:
       return;
     default:
       if (FormatTok->is(Keywords.kw_where)) {
@@ -1356,7 +1355,7 @@ bool UnwrappedLineParser::parseModuleImport() {
     // Handle import <foo/bar.h> as we would an include statement.
     else if (FormatTok->is(tok::less)) {
       nextToken();
-      while (!FormatTok->isOneOf(tok::semi, tok::greater, tok::eof)) {
+      while (!FormatTok->isOneOf(tok::semi, tok::greater) && !eof()) {
         // Mark tokens up to the trailing line comments as implicit string
         // literals.
         if (FormatTok->isNot(tok::comment) &&
@@ -1703,6 +1702,11 @@ void UnwrappedLineParser::parseStructuralElement(
         *HasLabel = true;
       return;
     }
+    if (Style.isJava() && FormatTok->is(Keywords.kw_record)) {
+      parseRecord(/*ParseAsExpr=*/false, /*IsJavaRecord=*/true);
+      addUnwrappedLine();
+      return;
+    }
     // In all other cases, parse the declaration.
     break;
   default:
@@ -1833,8 +1837,8 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       if (FormatTok->is(tok::l_paren)) {
         parseParens();
-        assert(FormatTok->Previous);
-        if (FormatTok->Previous->endsSequence(tok::r_paren, tok::kw_auto,
+        if (FormatTok->Previous &&
+            FormatTok->Previous->endsSequence(tok::r_paren, tok::kw_auto,
                                               tok::l_paren)) {
           Line->SeenDecltypeAuto = true;
         }
@@ -2088,7 +2092,13 @@ void UnwrappedLineParser::parseStructuralElement(
       parseSquare();
       break;
     case tok::kw_new:
-      parseNew();
+      if (Style.isCSharp() &&
+          (Tokens->peekNextToken()->isAccessSpecifierKeyword() ||
+           (Previous && Previous->isAccessSpecifierKeyword()))) {
+        nextToken();
+      } else {
+        parseNew();
+      }
       break;
     case tok::kw_switch:
       if (Style.isJava())
@@ -2592,7 +2602,8 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
       if (Prev) {
         auto OptionalParens = [&] {
           if (MightBeStmtExpr || MightBeFoldExpr || Line->InMacroBody ||
-              SeenComma || Style.RemoveParentheses == FormatStyle::RPS_Leave) {
+              SeenComma || Style.RemoveParentheses == FormatStyle::RPS_Leave ||
+              RParen->getPreviousNonComment() == LParen) {
             return false;
           }
           const bool DoubleParens =
@@ -3105,7 +3116,7 @@ void UnwrappedLineParser::parseTryCatch() {
         parseParens();
         continue;
       }
-      if (FormatTok->isOneOf(tok::semi, tok::r_brace, tok::eof)) {
+      if (FormatTok->isOneOf(tok::semi, tok::r_brace) || eof()) {
         if (Style.RemoveBracesLLVM)
           NestedTooDeep.pop_back();
         return;
@@ -3474,6 +3485,7 @@ bool UnwrappedLineParser::parseRequires(bool SeenEqual) {
   case tok::r_paren:
   case tok::kw_noexcept:
   case tok::kw_const:
+  case tok::star:
   case tok::amp:
     // This is a requires clause.
     parseRequiresClause(RequiresToken);
@@ -3988,11 +4000,13 @@ void UnwrappedLineParser::parseJavaEnumBody() {
   addUnwrappedLine();
 }
 
-void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
+void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
+  assert(!IsJavaRecord || FormatTok->is(Keywords.kw_record));
   const FormatToken &InitialToken = *FormatTok;
   nextToken();
 
-  FormatToken *ClassName = nullptr;
+  FormatToken *ClassName =
+      IsJavaRecord && FormatTok->is(tok::identifier) ? FormatTok : nullptr;
   bool IsDerived = false;
   auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
@@ -4027,7 +4041,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
       // We can have macros in between 'class' and the class name.
-      if (!IsNonMacroIdentifier(Previous) ||
+      if (IsJavaRecord || !IsNonMacroIdentifier(Previous) ||
           // e.g. `struct macro(a) S { int i; };`
           Previous->Previous == &InitialToken) {
         parseParens();

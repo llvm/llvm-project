@@ -89,6 +89,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO.h"
@@ -481,7 +482,7 @@ static cl::opt<bool> HasClosedWorldAssumption(
     cl::desc("Whether has closed-world assumption at link time"),
     cl::init(false), cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
   RegisterTargetMachine<GCNTargetMachine> Y(getTheGCNTarget());
@@ -495,6 +496,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeR600EmitClauseMarkersPass(*PR);
   initializeR600MachineCFGStructurizerPass(*PR);
   initializeGlobalISel(*PR);
+  initializeAMDGPUAsmPrinterPass(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
@@ -515,7 +517,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUSwLowerLDSLegacyPass(*PR);
-  initializeAMDGPUAttributorLegacyPass(*PR);
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
   initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
@@ -527,7 +528,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
-  initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
@@ -536,7 +536,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUReserveWWMRegsLegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
-  initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeSIInsertHardClausesLegacyPass(*PR);
@@ -565,6 +564,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
+  initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -686,10 +686,9 @@ static StringRef computeDataLayout(const Triple &TT) {
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
   // like getelementptr.
   return "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-         "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-"
-         "v32:32-v48:64-v96:"
-         "128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-"
-         "G1-ni:7:8:9";
+         "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
+         "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-"
+         "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
 
 LLVM_READNONE
@@ -750,7 +749,7 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
 llvm::ScheduleDAGInstrs *
 AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
@@ -809,6 +808,22 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+
+  PB.registerScalarOptimizerLateEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
+          return;
+
+        FPM.addPass(InferAddressSpacesPass());
+      });
+
+  PB.registerVectorizerEndEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
+          return;
+
+        FPM.addPass(InferAddressSpacesPass());
+      });
 
   PB.registerPipelineEarlySimplificationEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level,
@@ -884,8 +899,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                             OptimizationLevel Level,
                                             ThinOrFullLTOPhase Phase) {
     if (Level != OptimizationLevel::O0) {
-      if (!isLTOPreLink(Phase))
-        MPM.addPass(AMDGPUAttributorPass(*this));
+      if (!isLTOPreLink(Phase)) {
+        AMDGPUAttributorOptions Opts;
+        MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+      }
     }
   });
 
@@ -905,6 +922,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (Level != OptimizationLevel::O0) {
+          // We only want to run this with O2 or higher since inliner and SROA
+          // don't run in O1.
+          if (Level != OptimizationLevel::O1) {
+            PM.addPass(
+                createModuleToFunctionPassAdaptor(InferAddressSpacesPass()));
+          }
           // Do we really need internalization in LTO?
           if (InternalizeSymbols) {
             PM.addPass(InternalizePass(mustPreserveGV));
@@ -914,7 +937,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             AMDGPUAttributorOptions Opt;
             if (HasClosedWorldAssumption)
               Opt.IsClosedWorld = true;
-            PM.addPass(AMDGPUAttributorPass(*this, Opt));
+            PM.addPass(AMDGPUAttributorPass(
+                *this, Opt, ThinOrFullLTOPhase::FullLTOPostLink));
           }
         }
         if (!NoKernelInfoEndLTO) {
@@ -951,6 +975,12 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 }
 
 unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
+  if (auto *Arg = dyn_cast<Argument>(V);
+      Arg &&
+      AMDGPU::isModuleEntryFunctionCC(Arg->getParent()->getCallingConv()) &&
+      !Arg->hasByRefAttr())
+    return AMDGPUAS::GLOBAL_ADDRESS;
+
   const auto *LD = dyn_cast<LoadInst>(V);
   if (!LD) // TODO: Handle invariant load like constant.
     return AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
@@ -1070,7 +1100,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(GCNTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<GCNTTIImpl>(this, F));
 }
 
 Error GCNTargetMachine::buildCodeGenPipeline(
@@ -1125,6 +1155,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
        getOptLevel() >= CodeGenOptLevel::Less) &&
       EnableVOPD)
     DAG->addMutation(createVOPDPairingMutation());
+  DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   return DAG;
 }
 //===----------------------------------------------------------------------===//
@@ -1260,9 +1291,6 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(createInferAddressSpacesPass());
-
   // Run atomic optimizer before Atomic Expand
   if ((TM.getTargetTriple().isAMDGCN()) &&
       (TM.getOptLevel() >= CodeGenOptLevel::Less) &&
@@ -1317,6 +1345,10 @@ void AMDGPUPassConfig::addIRPasses() {
 }
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
+  if (TM->getTargetTriple().isAMDGCN() &&
+      TM->getOptLevel() > CodeGenOptLevel::None)
+    addPass(createAMDGPUPreloadKernelArgumentsLegacyPass(TM));
+
   if (TM->getTargetTriple().isAMDGCN() && EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
@@ -1603,7 +1635,7 @@ static const char RegAllocOptNotSupportedMessage[] =
 
 bool GCNPassConfig::addRegAssignAndRewriteFast() {
   if (!usingDefaultRegAlloc())
-    report_fatal_error(RegAllocOptNotSupportedMessage);
+    reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
   addPass(&GCNPreRALongBranchRegID);
 
@@ -1629,7 +1661,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
 bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   if (!usingDefaultRegAlloc())
-    report_fatal_error(RegAllocOptNotSupportedMessage);
+    reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
   addPass(&GCNPreRALongBranchRegID);
 
@@ -2001,9 +2033,6 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(InferAddressSpacesPass());
-
   // Run atomic optimizer before Atomic Expand
   if (TM.getOptLevel() >= CodeGenOptLevel::Less &&
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
@@ -2043,8 +2072,8 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 }
 
 void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
-  // AMDGPUAnnotateKernelFeaturesPass is missing here, but it will hopefully be
-  // deleted soon.
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(AMDGPUPreloadKernelArgumentsPass(TM));
 
   if (EnableLowerKernelArguments)
     addPass(AMDGPULowerKernelArgumentsPass(TM));
@@ -2158,6 +2187,52 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
   }
   addPass(DeadMachineInstructionElimPass());
   addPass(SIShrinkInstructionsPass());
+}
+
+
+
+Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
+    AddMachinePass &addPass) const {
+  // TODO: Check --regalloc-npm option
+
+  addPass(GCNPreRALongBranchRegPass());
+
+  addPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}));
+
+  // Commit allocated register changes. This is mostly necessary because too
+  // many things rely on the use lists of the physical registers, such as the
+  // verifier. This is only necessary with allocators which use LiveIntervals,
+  // since FastRegAlloc does the replacements itself.
+  addPass(VirtRegRewriterPass(false));
+
+  // At this point, the sgpr-regalloc has been done and it is good to have the
+  // stack slot coloring to try to optimize the SGPR spill stack indices before
+  // attempting the custom SGPR spill lowering.
+  addPass(StackSlotColoringPass());
+
+  // Equivalent of PEI for SGPRs.
+  addPass(SILowerSGPRSpillsPass());
+
+  // To Allocate wwm registers used in whole quad mode operations (for shaders).
+  addPass(SIPreAllocateWWMRegsPass());
+
+  // For allocating other wwm register operands.
+  // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::WWM);
+  addPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}));
+  addPass(SILowerWWMCopiesPass());
+  addPass(VirtRegRewriterPass(false));
+  addPass(AMDGPUReserveWWMRegsPass());
+
+  // For allocating per-thread VGPRs.
+  // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::VGPR);
+  addPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}));
+
+
+  addPreRewrite(addPass);
+  addPass(VirtRegRewriterPass(true));
+
+  // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
+  return Error::success();
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {

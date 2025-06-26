@@ -342,6 +342,16 @@ memref.global "priate" constant @memref5 : memref<2xf32>  = uninitialized
 
 // -----
 
+// expected-error @+1 {{op initial value element expected to be of type 'f16', but was of type 'f32'}}
+"memref.global"() <{constant, initial_value = dense<1.000000e+00> : tensor<1xf32>, sym_name = "memref6", sym_visibility = "private", type = memref<1xf16>}> : () -> ()
+
+// -----
+
+// expected-error @+1 {{op initial value shape expected to be 1, 2 but was 2, 2}}
+"memref.global"() <{constant, initial_value = dense<1.000000e+00> : tensor<2x2xf16>, sym_name = "memref7", sym_visibility = "private", type = memref<1x2xf16>}> : () -> ()
+
+// -----
+
 func.func @nonexistent_global_memref() {
   // expected-error @+1 {{'gv' does not reference a valid global memref}}
   %0 = memref.get_global @gv : memref<3xf32>
@@ -878,7 +888,7 @@ func.func @invalid_memref_cast() {
 // alignment is not power of 2.
 func.func @assume_alignment(%0: memref<4x4xf16>) {
   // expected-error@+1 {{alignment must be power of 2}}
-  memref.assume_alignment %0, 12 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 12 : memref<4x4xf16>
   return
 }
 
@@ -887,7 +897,7 @@ func.func @assume_alignment(%0: memref<4x4xf16>) {
 // 0 alignment value.
 func.func @assume_alignment(%0: memref<4x4xf16>) {
   // expected-error@+1 {{attribute 'alignment' failed to satisfy constraint: 32-bit signless integer attribute whose value is positive}}
-  memref.assume_alignment %0, 0 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 0 : memref<4x4xf16>
   return
 }
 

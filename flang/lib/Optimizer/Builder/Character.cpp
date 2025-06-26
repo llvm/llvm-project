@@ -271,7 +271,9 @@ fir::factory::CharacterExprHelper::createElementAddr(mlir::Value buffer,
   auto extent = fir::SequenceType::getUnknownExtent();
   if (charTy.getLen() != fir::CharacterType::unknownLen())
     extent = charTy.getLen();
-  auto coorTy = builder.getRefType(fir::SequenceType::get({extent}, singleTy));
+  const bool isVolatile = fir::isa_volatile_type(buffer.getType());
+  auto sequenceType = fir::SequenceType::get({extent}, singleTy);
+  auto coorTy = builder.getRefType(sequenceType, isVolatile);
 
   auto coor = builder.createConvert(loc, coorTy, buffer);
   auto i = builder.createConvert(loc, builder.getIndexType(), index);
@@ -330,6 +332,8 @@ void fir::factory::CharacterExprHelper::createCopy(
   // If the src and dest are the same KIND, then use memmove to move the bits.
   // We don't have to worry about overlapping ranges with memmove.
   if (getCharacterKind(dest.getBuffer().getType()) == kind) {
+    const bool isVolatile = fir::isa_volatile_type(fromBuff.getType()) ||
+                            fir::isa_volatile_type(toBuff.getType());
     auto bytes = builder.getKindMap().getCharacterBitsize(kind) / 8;
     auto i64Ty = builder.getI64Type();
     auto kindBytes = builder.createIntegerConstant(loc, i64Ty, bytes);
@@ -341,7 +345,7 @@ void fir::factory::CharacterExprHelper::createCopy(
     auto toPtr = builder.createConvert(loc, llvmPointerType, toBuff);
     auto fromPtr = builder.createConvert(loc, llvmPointerType, fromBuff);
     builder.create<mlir::LLVM::MemmoveOp>(loc, toPtr, fromPtr, totalBytes,
-                                          /*isVolatile=*/false);
+                                          isVolatile);
     return;
   }
 

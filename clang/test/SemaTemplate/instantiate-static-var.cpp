@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98 -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx11 -std=c++11 %s
 
 template<typename T, T Divisor>
 class X {
 public:
-  static const T value = 10 / Divisor; // expected-error{{in-class initializer for static data member is not a constant expression}}
+  static const T value = 10 / Divisor; // expected-error{{in-class initializer for static data member is not a constant expression}} \
+  // cxx11-note {{division by zero}} \
+  // cxx98-note {{subexpression not valid}}
 };
 
 int array1[X<int, 2>::value == 5? 1 : -1];

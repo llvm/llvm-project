@@ -140,6 +140,12 @@ def SharedVar : SubsetSubject<Var,
                               [{S->hasGlobalStorage() && !S->getTLSKind()}],
                               "global variables">;
 
+def HLSLInputBuiltin
+    : SubsetSubject<Var, [{S->hasGlobalStorage() &&
+                           S->getStorageClass() == StorageClass::SC_Static &&
+                           S->getType().isConstQualified()}],
+                    "static const globals">;
+
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
 
@@ -190,8 +196,10 @@ def FunctionPointer : SubsetSubject<DeclBase,
                                     "functions pointers">;
 
 def OpenCLKernelFunction
-    : SubsetSubject<Function, [{S->hasAttr<OpenCLKernelAttr>()}],
-                    "kernel functions">;
+    : SubsetSubject<Function, [{S->getASTContext().getLangOpts().OpenCL &&
+                               DeviceKernelAttr::isOpenCLSpelling(
+			                 S->getAttr<DeviceKernelAttr>()}],
+                               "kernel functions">;
 
 // HasFunctionProto is a more strict version of FunctionLike, so it should
 // never be specified in a Subjects list along with FunctionLike (due to the
@@ -1103,6 +1111,8 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
     return llvm::StringSwitch<llvm::StringRef>(Platform)
              .Case("iOS", "ios")
              .Case("macOS", "macos")
+             .Case("macOSX", "macos")
+             .Case("macosx", "macos")
              .Case("tvOS", "tvos")
              .Case("watchOS", "watchos")
              .Case("iOSApplicationExtension", "ios_app_extension")
@@ -1167,6 +1177,26 @@ static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environm
              .Case("library", llvm::Triple::Library)
              .Default(llvm::Triple::UnknownEnvironment);
 }
+
+static llvm::Triple::OSType getOSType(llvm::StringRef Platform) {
+    using OSType = llvm::Triple::OSType;
+    return llvm::StringSwitch<OSType>(Platform)
+             .Case("ios", OSType::IOS)
+             .Case("macos", OSType::MacOSX)
+             .Case("maccatalyst", OSType::IOS)
+             .Case("tvos", OSType::TvOS)
+             .Case("watchos", OSType::WatchOS)
+             .Case("bridgeos", OSType::BridgeOS)
+             .Case("ios_app_extension", OSType::IOS)
+             .Case("maccatalyst_app_extension", OSType::IOS)
+             .Case("macos_app_extension", OSType::MacOSX)
+             .Case("tvos_app_extension", OSType::TvOS)
+             .Case("watchos_app_extension", OSType::WatchOS)
+             .Case("xros", OSType::XROS)
+             .Case("xros_app_extension", OSType::XROS)
+             .Default(OSType::UnknownOS);
+}
+
 }];
   let HasCustomParsing = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -1354,6 +1384,17 @@ def Cleanup : InheritableAttr {
   let Args = [DeclArgument<Function, "FunctionDecl">];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
+  // FIXME: DeclArgument should be reworked to also store the
+  // Expr instead of adding attr specific hacks like the following.
+  // See the discussion in https://github.com/llvm/llvm-project/pull/14023.
+  let AdditionalMembers = [{
+private:
+    SourceLocation ArgLoc;
+
+public:
+    void setArgLoc(const SourceLocation &Loc) { ArgLoc = Loc; }
+    auto getArgLoc() const { return ArgLoc; }
+  }];
 }
 
 def CmseNSEntry : InheritableAttr, TargetSpecificAttr<TargetARM> {
@@ -1498,12 +1539,6 @@ def CUDAGridConstant : InheritableAttr {
   let Documentation = [CUDAGridConstantAttrDocs];
 }
 
-def NVPTXKernel : InheritableAttr, TargetSpecificAttr<TargetNVPTX> {
-  let Spellings = [Clang<"nvptx_kernel">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
 def HIPManaged : InheritableAttr {
   let Spellings = [GNU<"managed">, Declspec<"__managed__">];
   let Subjects = SubjectList<[Var]>;
@@ -1538,11 +1573,52 @@ def CUDAShared : InheritableAttr {
 }
 def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged]>;
 
-def SYCLKernel : InheritableAttr {
-  let Spellings = [Clang<"sycl_kernel">];
-  let Subjects = SubjectList<[FunctionTmpl]>;
-  let LangOpts = [SYCLDevice];
-  let Documentation = [SYCLKernelDocs];
+def DeviceKernel : DeclOrTypeAttr {
+  let Spellings = [Clang<"device_kernel">, Clang<"sycl_kernel">,
+                   Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
+                   CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
+  let Documentation = [DeviceKernelDocs];
+  let AdditionalMembers =
+  [{
+    static inline bool isAMDGPUSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_amdgpu_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_amdgpu_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_amdgpu_kernel;
+    }
+    static inline bool isAMDGPUSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isAMDGPUSpelling(*A);
+    }
+    static inline bool isNVPTXSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_nvptx_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_nvptx_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_nvptx_kernel;
+    }
+    static inline bool isNVPTXSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isNVPTXSpelling(*A);
+    }
+    static inline bool isSYCLSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_sycl_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_sycl_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_sycl_kernel;
+    }
+    static inline bool isSYCLSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isSYCLSpelling(*A);
+    }
+    static inline bool isOpenCLSpelling(const AttributeCommonInfo& A) {
+    // Tablegen trips underscores from spellings to build the spelling
+    // list, but here we have the same spelling with unscores and without,
+    // so handle that case manually.
+      return A.getAttributeSpellingListIndex() == Keyword_kernel ||
+      (A.getAttrName() && A.getAttrName()->getName() == "kernel");
+    }
+    static inline bool isOpenCLSpelling(const AttributeCommonInfo* A) {
+      if (!A) return false;
+      return isOpenCLSpelling(*A);
+    }
+}];
 }
 
 def SYCLKernelEntryPoint : InheritableAttr {
@@ -1606,15 +1682,6 @@ def Blocking : TypeAttr {
 def Allocating : TypeAttr {
   let Spellings = [Clang<"allocating">];
   let Documentation = [AllocatingDocs];
-}
-
-// Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because
-// the specification does not expose them with one currently.
-def OpenCLKernel : InheritableAttr {
-  let Spellings = [CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Documentation = [Undocumented];
-  let SimpleHandler = 1;
 }
 
 def OpenCLUnrollHint : StmtAttr {
@@ -1819,6 +1886,22 @@ def Final : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
+def TriviallyRelocatable : InheritableAttr {
+  let Spellings = [CustomKeyword<"trivially_relocatable_if_eligible">];
+  let SemaHandler = 0;
+  // Omitted from docs, since this is language syntax, not an attribute, as far
+  // as users are concerned.
+  let Documentation = [InternalOnly];
+}
+
+def Replaceable : InheritableAttr {
+  let Spellings = [CustomKeyword<"replaceable_if_eligible">];
+  let SemaHandler = 0;
+  // Omitted from docs, since this is language syntax, not an attribute, as far
+  // as users are concerned.
+  let Documentation = [InternalOnly];
+}
+
 def MinSize : InheritableAttr {
   let Spellings = [Clang<"minsize">];
   let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
@@ -1970,10 +2053,12 @@ private:
   ArrayRef<SourceLocation> ArgLocs;
 
 public:
-  static constexpr int THIS = 0;
-  static constexpr int INVALID = -1;
-  static constexpr int UNKNOWN = -2;
-  static constexpr int GLOBAL = -3;
+  enum ArgIndex {
+    This = 0,
+    Invalid = -1,
+    Unknown = -2,
+    Global = -3,
+  };
 
   void setArgs(ArrayRef<IdentifierInfo*> Idents, ArrayRef<SourceLocation> Locs) {
     assert(Idents.size() == params_Size);
@@ -2252,10 +2337,23 @@ def NoMicroMips : InheritableAttr, TargetSpecificAttr<TargetMips32> {
 def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
-  let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
-                           ["supervisor", "machine", "qci-nest", "qci-nonest"],
-                           ["supervisor", "machine", "qcinest", "qcinonest"],
-                           1>];
+  let Args = [VariadicEnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
+                                   [
+                                     "supervisor",
+                                     "machine",
+                                     "qci-nest",
+                                     "qci-nonest",
+                                     "SiFive-CLIC-preemptible",
+                                     "SiFive-CLIC-stack-swap",
+                                   ],
+                                   [
+                                     "supervisor",
+                                     "machine",
+                                     "qcinest",
+                                     "qcinonest",
+                                     "SiFiveCLICPreemptible",
+                                     "SiFiveCLICStackSwap",
+                                   ]>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];
 }
@@ -2320,11 +2418,6 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Args = [ExprArgument<"MaxNumWorkGroupsX">, ExprArgument<"MaxNumWorkGroupsY", 1>, ExprArgument<"MaxNumWorkGroupsZ", 1>];
   let Documentation = [AMDGPUMaxNumWorkGroupsDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
-}
-
-def AMDGPUKernelCall : DeclOrTypeAttr {
-  let Spellings = [Clang<"amdgpu_kernel">];
-  let Documentation = [Undocumented];
 }
 
 def BPFPreserveAccessIndex : InheritableAttr,
@@ -3067,6 +3160,11 @@ def SwiftVersionedRemoval : Attr {
 def NoDeref : TypeAttr {
   let Spellings = [Clang<"noderef">];
   let Documentation = [NoDerefDocs];
+}
+
+def CFIUncheckedCallee : TypeAttr {
+  let Spellings = [Clang<"cfi_unchecked_callee">];
+  let Documentation = [CFIUncheckedCalleeDocs];
 }
 
 def ReqdWorkGroupSize : InheritableAttr {
@@ -3843,6 +3941,7 @@ def AssertCapability : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
                     [Clang<"assert_shared_capability", 0>,
                      GNU<"assert_shared_lock">]>];
@@ -3860,6 +3959,7 @@ def AcquireCapability : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
                     [Clang<"acquire_shared_capability", 0>,
                      GNU<"shared_lock_function">]>];
@@ -3877,6 +3977,7 @@ def TryAcquireCapability : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
                     [Clang<"try_acquire_shared_capability", 0>,
                      GNU<"shared_trylock_function">]>];
@@ -3894,6 +3995,7 @@ def ReleaseCapability : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
                     [Clang<"release_shared_capability", 0>]>,
                    Accessor<"isGeneric",
@@ -3908,6 +4010,7 @@ def RequiresCapability : InheritableAttr {
                    Clang<"requires_shared_capability", 0>,
                    Clang<"shared_locks_required", 0>];
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -3950,6 +4053,7 @@ def PtGuardedBy : InheritableAttr {
 def AcquiredAfter : InheritableAttr {
   let Spellings = [GNU<"acquired_after">];
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -3961,6 +4065,7 @@ def AcquiredAfter : InheritableAttr {
 def AcquiredBefore : InheritableAttr {
   let Spellings = [GNU<"acquired_before">];
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -3982,12 +4087,20 @@ def LockReturned : InheritableAttr {
 def LocksExcluded : InheritableAttr {
   let Spellings = [GNU<"locks_excluded">];
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Subjects = SubjectList<[Function, ParmVar]>;
   let Documentation = [Undocumented];
+}
+
+def ReentrantCapability : InheritableAttr {
+  let Spellings = [Clang<"reentrant_capability">];
+  let Subjects = SubjectList<[Record, TypedefName]>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
 }
 
 // C/C++ consumed attributes.
@@ -4517,6 +4630,7 @@ def OMPDeclareVariant : InheritableAttr {
     OMPTraitInfoArgument<"TraitInfos">,
     VariadicExprArgument<"AdjustArgsNothing">,
     VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
+    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
@@ -4698,6 +4812,18 @@ def Error : InheritableAttr {
   let Documentation = [ErrorAttrDocs];
 }
 
+/// HLSL Root Signature Attribute
+def RootSignature : Attr {
+  /// [RootSignature(Signature)]
+  let Spellings = [Microsoft<"RootSignature">];
+  let Args = [IdentifierArgument<"SignatureIdent">,
+              DeclArgument<HLSLRootSignature, "SignatureDecl", 0, /*fake=*/1>];
+  let Subjects = SubjectList<[Function],
+                             ErrorDiag, "'function'">;
+  let LangOpts = [HLSL];
+  let Documentation = [RootSignatureDocs];
+}
+
 def HLSLNumThreads: InheritableAttr {
   let Spellings = [Microsoft<"numthreads">];
   let Args = [IntArgument<"X">, IntArgument<"Y">, IntArgument<"Z">];
@@ -4739,25 +4865,48 @@ def HLSLResourceBinding: InheritableAttr {
 
   private:
       RegisterType RegType;
-      unsigned SlotNumber;
+      std::optional<unsigned> SlotNumber;
       unsigned SpaceNumber;
+      std::optional<unsigned> ImplicitBindingOrderID;
 
   public:
-      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum) {
+      void setBinding(RegisterType RT, std::optional<unsigned> SlotNum, unsigned SpaceNum) {
         RegType = RT;
         SlotNumber = SlotNum;
         SpaceNumber = SpaceNum;
       }
+      bool hasRegisterSlot() const {
+        return SlotNumber.has_value();
+      }
       RegisterType getRegisterType() const {
+        assert(hasRegisterSlot() && "binding does not have register slot");
         return RegType;
       }
       unsigned getSlotNumber() const {
-        return SlotNumber;
+        assert(hasRegisterSlot() && "binding does not have register slot");
+        return SlotNumber.value();
       }
       unsigned getSpaceNumber() const {
         return SpaceNumber;
       }
+      void setImplicitBindingOrderID(uint32_t Value) {
+        ImplicitBindingOrderID = Value;
+      }
+      bool hasImplicitBindingOrderID() const {
+        return ImplicitBindingOrderID.has_value();
+      }
+      uint32_t getImplicitBindingOrderID() const {
+        assert(hasImplicitBindingOrderID() && "attribute does not have implicit binding order id");
+        return ImplicitBindingOrderID.value();
+      }
   }];
+}
+
+def HLSLSV_Position : HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"sv_position">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_PositionDocs];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {
@@ -4864,6 +5013,22 @@ def HLSLWaveSize: InheritableAttr {
       int getSpelledArgsCount() const { return SpelledArgsCount; }
   }];
   let Documentation = [WaveSizeDocs];
+}
+
+def HLSLVkExtBuiltinInput : InheritableAttr {
+  let Spellings = [CXX11<"vk", "ext_builtin_input">];
+  let Args = [UnsignedArgument<"BuiltIn">];
+  let Subjects = SubjectList<[HLSLInputBuiltin], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkExtBuiltinInputDocs];
+}
+
+def HLSLVkConstantId : InheritableAttr {
+  let Spellings = [CXX11<"vk", "constant_id">];
+  let Args = [IntArgument<"Id">];
+  let Subjects = SubjectList<[ExternalGlobalVar]>;
+  let LangOpts = [HLSL];
+  let Documentation = [VkConstantIdDocs];
 }
 
 def RandomizeLayout : InheritableAttr {
@@ -5010,4 +5175,10 @@ def OpenACCRoutineDecl :InheritableAttr {
     llvm::SmallVector<const OpenACCClause *> Clauses;
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
   }];
+}
+
+def NonString : InheritableAttr {
+  let Spellings = [GCC<"nonstring">];
+  let Subjects = SubjectList<[Var, Field]>;
+  let Documentation = [NonStringDocs];
 }

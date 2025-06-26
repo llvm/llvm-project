@@ -19,6 +19,7 @@
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
+#include "WebAssembly.h"
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
@@ -45,6 +46,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -752,8 +754,14 @@ bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 }
 
+char WebAssemblyAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(WebAssemblyAsmPrinter, "webassembly-asm-printer",
+                "WebAssembly Assmebly Printer", false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeWebAssemblyAsmPrinter() {
   RegisterAsmPrinter<WebAssemblyAsmPrinter> X(getTheWebAssemblyTarget32());
   RegisterAsmPrinter<WebAssemblyAsmPrinter> Y(getTheWebAssemblyTarget64());
 }

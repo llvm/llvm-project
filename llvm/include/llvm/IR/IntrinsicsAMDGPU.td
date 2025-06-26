@@ -588,6 +588,14 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
+def int_amdgcn_cvt_pk_f16_fp8 : DefaultAttrsIntrinsic<
+  [llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_cvt_pk_f16_fp8">;
+
+def int_amdgcn_cvt_pk_f16_bf8 : DefaultAttrsIntrinsic<
+  [llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_cvt_pk_f16_bf8">;
+
 class AMDGPUCvtScaleF32Intrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
   [DstTy], [Src0Ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
@@ -619,7 +627,7 @@ class AMDGPUCvtScaleFP4FP8BF8ToF1632Intrinsic<LLVMType DstTy, string name> : Def
   [llvm_i32_ty,   // src
    llvm_float_ty, // scale
    llvm_i32_ty],  // src_sel index [0..3]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<2>>]
+  [IntrNoMem, ImmArg<ArgIndex<2>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScale_pk_FromFP8BF8Intrinsic<LLVMType DstTy, string name> : DefaultAttrsIntrinsic<
@@ -646,7 +654,7 @@ class AMDGPUCvtScaleF32ToFP8BF8TiedInputIntrinsic<string name> : DefaultAttrsInt
    llvm_float_ty, // src1
    llvm_float_ty, // scale
    llvm_i1_ty],   // dst_lo_hi_sel[true false]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<4>>]
+  [IntrNoMem, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleFP8BF8ToF16TiedInputIntrinsic<LLVMType DstTy, string name> : DefaultAttrsIntrinsic<
@@ -656,7 +664,7 @@ class AMDGPUCvtScaleFP8BF8ToF16TiedInputIntrinsic<LLVMType DstTy, string name> :
    llvm_float_ty, // scale
    llvm_i32_ty,   // src_sel_index[0..3]
    llvm_i1_ty],   // dst_lo_hi_sel[true false]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
+  [IntrNoMem, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleF32ToFP4Intrinsic<string name> : DefaultAttrsIntrinsic<
@@ -666,7 +674,7 @@ class AMDGPUCvtScaleF32ToFP4Intrinsic<string name> : DefaultAttrsIntrinsic<
    llvm_float_ty, // src1
    llvm_float_ty, // scale
    llvm_i32_ty],  // dst_sel_index[0..3]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<4>>]
+  [IntrNoMem, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<LLVMType SrcTy, string name> : DefaultAttrsIntrinsic<
@@ -675,7 +683,7 @@ class AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<LLVMType SrcTy, string name> : De
    SrcTy,         // src
    llvm_float_ty, // scale
    llvm_i32_ty],  // dest_sel_index [0..3]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]
+  [IntrNoMem, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
@@ -685,7 +693,7 @@ class AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<LLVMType Src0Ty, st
    llvm_i32_ty,   // seed
    llvm_float_ty, // scale
    llvm_i32_ty],  // dst_sel_index[0..3]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<4>>]
+  [IntrNoMem, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<LLVMType DstTy, string name> : DefaultAttrsIntrinsic<
@@ -694,7 +702,7 @@ class AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<LLVMType DstTy, string name
    llvm_float_ty, // src0
    llvm_i32_ty,   // seed
    llvm_i1_ty],   // dst_lo_hi_sel[true false]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]
+  [IntrNoMem, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 def int_amdgcn_cvt_sr_bf16_f32: AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<llvm_v2bf16_ty, "cvt_sr_bf16_f32">;
@@ -1308,7 +1316,7 @@ def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
    llvm_i32_ty],   // flags
   // Attributes lifted from ptrmask + some extra argument attributes.
   [IntrNoMem, ReadNone<ArgIndex<0>>,
-   IntrSpeculatable, IntrWillReturn]>;
+   IntrSpeculatable]>;
 
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
 
@@ -2054,6 +2062,11 @@ def int_amdgcn_s_setprio :
   DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
                                 IntrHasSideEffects]>;
 
+def int_amdgcn_s_setprio_inc_wg :
+  ClangBuiltin<"__builtin_amdgcn_s_setprio_inc_wg">,
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                IntrHasSideEffects]>;
+
 def int_amdgcn_s_ttracedata :
   ClangBuiltin<"__builtin_amdgcn_s_ttracedata">,
   DefaultAttrsIntrinsic<[], [llvm_i32_ty],
@@ -2092,7 +2105,7 @@ def int_amdgcn_s_setreg :
 def int_amdgcn_s_getpc :
   ClangBuiltin<"__builtin_amdgcn_s_getpc">,
   DefaultAttrsIntrinsic<[llvm_i64_ty], [], [NoUndef<RetIndex>, IntrNoMem,
-                                IntrSpeculatable, IntrWillReturn]>;
+                                IntrSpeculatable]>;
 
 // __builtin_amdgcn_interp_mov <param>, <attr_chan>, <attr>, <m0>
 // param values: 0 = P10, 1 = P20, 2 = P0
@@ -2342,8 +2355,14 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]>;
 
-def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
+multiclass AMDGPUWaveReduceOps {
+  foreach Op =
+      ["umin", "min", "umax", "max", "add", "sub", "and", "or", "xor"] in {
+    def Op : AMDGPUWaveReduce;
+  }
+}
+
+defm int_amdgcn_wave_reduce_ : AMDGPUWaveReduceOps;
 
 def int_amdgcn_readfirstlane :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
@@ -2641,6 +2660,28 @@ def int_amdgcn_perm :
 // GFX9 Intrinsics
 //===----------------------------------------------------------------------===//
 
+/// This is a general-purpose intrinsic for all operations that take a pointer
+/// a base location in LDS, and a data size and use it to perform a gather to LDS.
+/// This allows abstracting over both global pointers (address space 1) and
+/// the buffer-resource-wrapper pointers (address space 7 and 9).
+/// TODO: add support for address space 5 and scratch_load_lds.
+class AMDGPULoadToLDS :
+  Intrinsic <
+    [],
+    [llvm_anyptr_ty,                    // Base pointer to load from. Varies per lane.
+     LLVMQualPointerType<3>,            // LDS base pointer to store to. Must be wave-uniform.
+     llvm_i32_ty,                       // Data byte size: 1/2/4 (/12/16 for gfx950)
+     llvm_i32_ty,                       // imm offset (applied to both input and LDS address)
+     llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
+                                        //                                   bit 1 = sc1,
+                                        //                                   bit 4 = scc))
+    [IntrWillReturn, IntrArgMemOnly,
+     NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>,
+     NoCapture<ArgIndex<1>>, WriteOnly<ArgIndex<1>>,
+     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
+     "", [SDNPMemOperand]>;
+def int_amdgcn_load_to_lds : AMDGPULoadToLDS;
+
 class AMDGPUGlobalLoadLDS :
   ClangBuiltin<"__builtin_amdgcn_global_load_lds">,
   Intrinsic <
@@ -2710,7 +2751,7 @@ def int_amdgcn_image_bvh_intersect_ray :
   DefaultAttrsIntrinsic<[llvm_v4i32_ty],
             [llvm_anyint_ty, llvm_float_ty, llvm_v3f32_ty, llvm_anyvector_ty,
              LLVMMatchType<1>, llvm_v4i32_ty],
-            [IntrReadMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+            [IntrReadMem]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11 Intrinsics
@@ -3511,5 +3552,5 @@ def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
 /// backend to allocate the dead lanes for operations within the corresponding
 /// incoming block.
 def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
-    [IntrNoMem, IntrWillReturn, IntrNoCallback]>;
+    [IntrNoMem]>;
 }

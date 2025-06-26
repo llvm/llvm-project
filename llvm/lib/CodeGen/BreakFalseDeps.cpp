@@ -64,8 +64,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-      MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -286,7 +285,7 @@ bool BreakFalseDeps::runOnMachineFunction(MachineFunction &mf) {
   TRI = MF->getSubtarget().getRegisterInfo();
   RDA = &getAnalysis<ReachingDefAnalysis>();
 
-  RegClassInfo.runOnMachineFunction(mf);
+  RegClassInfo.runOnMachineFunction(mf, /*Rev=*/true);
 
   LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
 

@@ -3540,7 +3540,7 @@ WRAPPER_CLASS(OmpLocatorList, std::list<OmpLocator>);
 struct OmpMapperSpecifier {
   // Absent mapper-identifier is equivalent to DEFAULT.
   TUPLE_CLASS_BOILERPLATE(OmpMapperSpecifier);
-  std::tuple<std::optional<Name>, TypeSpec, Name> t;
+  std::tuple<std::string, TypeSpec, Name> t;
 };
 
 // Ref: [4.5:222:1-5], [5.0:305:20-27], [5.1:337:11-19], [5.2:139:18-23],
@@ -4013,6 +4013,15 @@ struct OmpAbsentClause {
   WRAPPER_CLASS_BOILERPLATE(OmpAbsentClause, OmpDirectiveList);
 };
 
+struct OmpAdjustArgsClause {
+  TUPLE_CLASS_BOILERPLATE(OmpAdjustArgsClause);
+  struct OmpAdjustOp {
+    ENUM_CLASS(Value, Nothing, Need_Device_Ptr)
+    WRAPPER_CLASS_BOILERPLATE(OmpAdjustOp, Value);
+  };
+  std::tuple<OmpAdjustOp, OmpObjectList> t;
+};
+
 // Ref: [5.0:135-140], [5.1:161-166], [5.2:264-265]
 //
 // affinity-clause ->
@@ -4054,6 +4063,13 @@ struct OmpAllocateClause {
       OmpAllocatorComplexModifier);
   TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
   std::tuple<MODIFIERS(), OmpObjectList> t;
+};
+
+struct OmpAppendArgsClause {
+  struct OmpAppendOp {
+    WRAPPER_CLASS_BOILERPLATE(OmpAppendOp, std::list<OmpInteropType>);
+  };
+  WRAPPER_CLASS_BOILERPLATE(OmpAppendArgsClause, std::list<OmpAppendOp>);
 };
 
 // Ref: [5.2:216-217 (sort of, as it's only mentioned in passing)
@@ -4133,8 +4149,8 @@ struct OmpDefaultClause {
 //    PRESENT                                       // since 5.1
 struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
-  ENUM_CLASS(
-      ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default)
+  ENUM_CLASS(ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None,
+      Default, Present)
   MODIFIER_BOILERPLATE(OmpVariableCategory);
   std::tuple<ImplicitBehavior, MODIFIERS()> t;
 };
@@ -4282,6 +4298,12 @@ struct OmpHintClause {
 //   HOLDS(expr)
 struct OmpHoldsClause {
   WRAPPER_CLASS_BOILERPLATE(OmpHoldsClause, common::Indirection<Expr>);
+};
+
+// Ref: [5.2: 209]
+struct OmpIndirectClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpIndirectClause, std::optional<ScalarLogicalExpr>);
 };
 
 // Ref: [5.2:72-73], in 4.5-5.1 it's scattered over individual directives
@@ -4501,6 +4523,11 @@ struct OmpToClause {
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]
 //
+// In ATOMIC construct
+// update-clause ->
+//    UPDATE                                        // Since 4.5
+//
+// In DEPOBJ construct
 // update-clause ->
 //    UPDATE(dependence-type)                       // since 5.0, until 5.1
 // update-clause ->
@@ -4693,6 +4720,12 @@ struct OmpBlockDirective {
   CharBlock source;
 };
 
+struct OmpDeclareVariantDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpDeclareVariantDirective);
+  CharBlock source;
+  std::tuple<Verbatim, std::optional<Name>, Name, OmpClauseList> t;
+};
+
 // 2.10.6 declare-target -> DECLARE TARGET (extended-list) |
 //                          DECLARE TARGET [declare-target-clause[ [,]
 //                                          declare-target-clause]...]
@@ -4771,8 +4804,8 @@ struct OpenMPDeclarativeConstruct {
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
       OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
       OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OpenMPThreadprivate, OpenMPRequiresConstruct, OpenMPUtilityConstruct,
-      OmpMetadirectiveDirective>
+      OmpDeclareVariantDirective, OpenMPThreadprivate, OpenMPRequiresConstruct,
+      OpenMPUtilityConstruct, OmpMetadirectiveDirective>
       u;
 };
 
@@ -4830,94 +4863,37 @@ struct OmpMemoryOrderClause {
   CharBlock source;
 };
 
-// 2.17.7 Atomic construct
-//        atomic-clause -> memory-order-clause | HINT(hint-expression) |
-//        FAIL(memory-order)
-struct OmpAtomicClause {
-  UNION_CLASS_BOILERPLATE(OmpAtomicClause);
-  CharBlock source;
-  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpHintClause> u;
-};
-
-// atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
-struct OmpAtomicClauseList {
-  WRAPPER_CLASS_BOILERPLATE(OmpAtomicClauseList, std::list<OmpAtomicClause>);
-  CharBlock source;
-};
-
-// END ATOMIC
-EMPTY_CLASS(OmpEndAtomic);
-
-// ATOMIC READ
-struct OmpAtomicRead {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicRead);
-  CharBlock source;
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
-      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
-      t;
-};
-
-// ATOMIC WRITE
-struct OmpAtomicWrite {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicWrite);
-  CharBlock source;
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
-      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
-      t;
-};
-
-// ATOMIC UPDATE
-struct OmpAtomicUpdate {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicUpdate);
-  CharBlock source;
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
-      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
-      t;
-};
-
-// ATOMIC CAPTURE
-struct OmpAtomicCapture {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicCapture);
-  CharBlock source;
-  WRAPPER_CLASS(Stmt1, Statement<AssignmentStmt>);
-  WRAPPER_CLASS(Stmt2, Statement<AssignmentStmt>);
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList, Stmt1, Stmt2,
-      OmpEndAtomic>
-      t;
-};
-
-struct OmpAtomicCompareIfStmt {
-  UNION_CLASS_BOILERPLATE(OmpAtomicCompareIfStmt);
-  std::variant<common::Indirection<IfStmt>, common::Indirection<IfConstruct>> u;
-};
-
-// ATOMIC COMPARE (OpenMP 5.1, OPenMP 5.2 spec: 15.8.4)
-struct OmpAtomicCompare {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicCompare);
-  CharBlock source;
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
-      OmpAtomicCompareIfStmt, std::optional<OmpEndAtomic>>
-      t;
-};
-
-// ATOMIC
-struct OmpAtomic {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomic);
-  CharBlock source;
-  std::tuple<Verbatim, OmpAtomicClauseList, Statement<AssignmentStmt>,
-      std::optional<OmpEndAtomic>>
-      t;
-};
-
-// 2.17.7 atomic ->
-//        ATOMIC [atomic-clause-list] atomic-construct [atomic-clause-list] |
-//        ATOMIC [atomic-clause-list]
-//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE | COMPARE
 struct OpenMPAtomicConstruct {
-  UNION_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
-  std::variant<OmpAtomicRead, OmpAtomicWrite, OmpAtomicCapture, OmpAtomicUpdate,
-      OmpAtomicCompare, OmpAtomic>
-      u;
+  llvm::omp::Clause GetKind() const;
+  bool IsCapture() const;
+  bool IsCompare() const;
+  TUPLE_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
+  CharBlock source;
+  std::tuple<OmpDirectiveSpecification, Block,
+      std::optional<OmpDirectiveSpecification>>
+      t;
+
+  // Information filled out during semantic checks to avoid duplication
+  // of analyses.
+  struct Analysis {
+    static constexpr int None = 0;
+    static constexpr int Read = 1;
+    static constexpr int Write = 2;
+    static constexpr int Update = Read | Write;
+    static constexpr int Action = 3; // Bitmask for None, Read, Write, Update
+    static constexpr int IfTrue = 4;
+    static constexpr int IfFalse = 8;
+    static constexpr int Condition = 12; // Bitmask for IfTrue, IfFalse
+
+    struct Op {
+      int what;
+      AssignmentStmt::TypedAssignment assign;
+    };
+    TypedExpr atom, cond;
+    Op op0, op1;
+  };
+
+  mutable Analysis analysis;
 };
 
 // OpenMP directives that associate with loop(s)

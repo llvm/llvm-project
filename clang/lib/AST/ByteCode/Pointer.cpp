@@ -114,7 +114,6 @@ void Pointer::operator=(Pointer &&P) {
     }
 
     if (Block *Pointee = PointeeStorage.BS.Pointee) {
-      assert(P.block() != this->block());
       Pointee->removePointer(this);
       PointeeStorage.BS.Pointee = nullptr;
       Pointee->cleanup();
@@ -569,6 +568,17 @@ bool Pointer::pointsToLiteral() const {
 
   const Expr *E = block()->getDescriptor()->asExpr();
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
+}
+
+bool Pointer::pointsToStringLiteral() const {
+  if (isZero() || !isBlockPointer())
+    return false;
+
+  if (block()->isDynamic())
+    return false;
+
+  const Expr *E = block()->getDescriptor()->asExpr();
+  return E && isa<StringLiteral>(E);
 }
 
 std::optional<std::pair<Pointer, Pointer>>

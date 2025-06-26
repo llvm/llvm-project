@@ -302,13 +302,18 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(
       sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_SpecificVT(Float32VT),
                                      m_SpecificVT(Float32VT))));
+  EXPECT_FALSE(sd_match(Add, m_BitwiseLogic(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Sub, m_BitwiseLogic(m_Value(), m_Value())));
 
   EXPECT_TRUE(sd_match(And, m_c_BinOp(ISD::AND, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(And, m_And(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(And, m_BitwiseLogic(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Xor, m_c_BinOp(ISD::XOR, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Xor, m_Xor(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Xor, m_BitwiseLogic(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Or, m_c_BinOp(ISD::OR, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Or, m_Or(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Or, m_BitwiseLogic(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(Or, m_DisjointOr(m_Value(), m_Value())));
 
   EXPECT_TRUE(sd_match(DisOr, m_Or(m_Value(), m_Value())));
@@ -383,6 +388,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op0);
   SDValue Trunc = DAG->getNode(ISD::TRUNCATE, DL, Int32VT, Op1);
 
+  SDValue Abs = DAG->getNode(ISD::ABS, DL, Int32VT, Op0);
+
   SDValue Sub = DAG->getNode(ISD::SUB, DL, Int32VT, Trunc, Op0);
   SDValue Neg = DAG->getNegative(Op0, DL, Int32VT);
   SDValue Not = DAG->getNOT(DL, Op0, Int32VT);
@@ -411,6 +418,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_TRUE(sd_match(ZExtNNeg, m_SExtLike(m_Value())));
   EXPECT_FALSE(sd_match(ZExt, m_SExtLike(m_Value())));
   EXPECT_TRUE(sd_match(Trunc, m_Trunc(m_Specific(Op1))));
+
+  EXPECT_TRUE(sd_match(Abs, m_Abs(m_Specific(Op0))));
 
   EXPECT_TRUE(sd_match(Neg, m_Neg(m_Value())));
   EXPECT_TRUE(sd_match(Not, m_Not(m_Value())));
@@ -484,6 +493,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   SDValue UndefVInt32VT = DAG->getUNDEF(VInt32VT);
   EXPECT_TRUE(sd_match(UndefInt32VT, m_Undef()));
   EXPECT_TRUE(sd_match(UndefVInt32VT, m_Undef()));
+
+  SDValue PoisonInt32VT = DAG->getPOISON(Int32VT);
+  SDValue PoisonVInt32VT = DAG->getPOISON(VInt32VT);
+  EXPECT_TRUE(sd_match(PoisonInt32VT, m_Poison()));
+  EXPECT_TRUE(sd_match(PoisonVInt32VT, m_Poison()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
@@ -562,7 +576,7 @@ struct VPMatchContext : public SDPatternMatch::BasicMatchContext {
       return OpVal->getOpcode() == Opc;
 
     auto BaseOpc = ISD::getBaseOpcodeForVP(OpVal->getOpcode(), false);
-    return BaseOpc.has_value() && *BaseOpc == Opc;
+    return BaseOpc == Opc;
   }
 
   unsigned getNumOperands(SDValue N) const {

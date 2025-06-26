@@ -9,7 +9,6 @@
 #include "ClangDocTest.h"
 #include "Generators.h"
 #include "Representation.h"
-#include "Serialize.h"
 #include "clang/Basic/Version.h"
 #include "gtest/gtest.h"
 
@@ -19,14 +18,14 @@ namespace doc {
 static const std::string ClangDocVersion =
     clang::getClangToolFullVersion("clang-doc");
 
-std::unique_ptr<Generator> getHTMLGenerator() {
+static std::unique_ptr<Generator> getHTMLGenerator() {
   auto G = doc::findGeneratorByName("html");
   if (!G)
     return nullptr;
   return std::move(G.get());
 }
 
-ClangDocContext
+static ClangDocContext
 getClangDocContext(std::vector<std::string> UserStylesheets = {},
                    StringRef RepositoryUrl = "",
                    StringRef RepositoryLinePrefix = "", StringRef Base = "") {
@@ -157,8 +156,8 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   I.Path = "X/Y/Z";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"dir/test.cpp"}, true);
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "dir/test.cpp", true);
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   SmallString<16> PathTo;
   llvm::sys::path::native("path/to", PathTo);
@@ -284,8 +283,8 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"dir/test.cpp"}, false);
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "dir/test.cpp", true);
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Access = AccessSpecifier::AS_none;
 
@@ -344,8 +343,8 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"}, true);
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp", true);
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Members.emplace_back("X");
   I.Scoped = true;
@@ -401,44 +400,44 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
 TEST(HTMLGeneratorTest, emitCommentHTML) {
   FunctionInfo I;
   I.Name = "f";
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp", true);
   I.ReturnType = TypeInfo("void");
   I.Params.emplace_back(TypeInfo("int"), "I");
   I.Params.emplace_back(TypeInfo("int"), "J");
   I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;
-  Top.Kind = "FullComment";
+  Top.Kind = CommentKind::CK_FullComment;
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *BlankLine = Top.Children.back().get();
-  BlankLine->Kind = "ParagraphComment";
+  BlankLine->Kind = CommentKind::CK_ParagraphComment;
   BlankLine->Children.emplace_back(std::make_unique<CommentInfo>());
-  BlankLine->Children.back()->Kind = "TextComment";
+  BlankLine->Children.back()->Kind = CommentKind::CK_TextComment;
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Brief = Top.Children.back().get();
-  Brief->Kind = "ParagraphComment";
+  Brief->Kind = CommentKind::CK_ParagraphComment;
   Brief->Children.emplace_back(std::make_unique<CommentInfo>());
-  Brief->Children.back()->Kind = "TextComment";
+  Brief->Children.back()->Kind = CommentKind::CK_TextComment;
   Brief->Children.back()->Name = "ParagraphComment";
   Brief->Children.back()->Text = " Brief description.";
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Extended = Top.Children.back().get();
-  Extended->Kind = "ParagraphComment";
+  Extended->Kind = CommentKind::CK_ParagraphComment;
   Extended->Children.emplace_back(std::make_unique<CommentInfo>());
-  Extended->Children.back()->Kind = "TextComment";
+  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
   Extended->Children.back()->Text = " Extended description that";
   Extended->Children.emplace_back(std::make_unique<CommentInfo>());
-  Extended->Children.back()->Kind = "TextComment";
+  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
   Extended->Children.back()->Text = " continues onto the next line.";
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Entities = Top.Children.back().get();
-  Entities->Kind = "ParagraphComment";
+  Entities->Kind = CommentKind::CK_ParagraphComment;
   Entities->Children.emplace_back(std::make_unique<CommentInfo>());
-  Entities->Children.back()->Kind = "TextComment";
+  Entities->Children.back()->Kind = CommentKind::CK_TextComment;
   Entities->Children.back()->Name = "ParagraphComment";
   Entities->Children.back()->Text =
       " Comment with html entities: &, <, >, \", \'.";
@@ -464,7 +463,12 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
     <h3 id="0000000000000000000000000000000000000000">f</h3>
     <p>void f(int I, int J)</p>
-    <p>Defined at line 10 of file test.cpp</p>
+    <p>
+      Defined at line 
+      <a href="test.cpp#10">10</a>
+       of file 
+      <a href="test.cpp">test.cpp</a>
+    </p>
     <div>
       <div>
         <p> Brief description.</p>

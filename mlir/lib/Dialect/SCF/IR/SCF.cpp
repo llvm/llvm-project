@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
@@ -73,6 +74,7 @@ void SCFDialect::initialize() {
 #include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
+  declarePromisedInterface<ConvertToEmitCPatternInterface, SCFDialect>();
   declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,
                             InParallelOp, ReduceReturnOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConditionOp,
@@ -767,7 +769,7 @@ LoopNest mlir::scf::buildLoopNest(
     ValueRange steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
   // Delegate to the main function by wrapping the body builder.
-  return buildLoopNest(builder, loc, lbs, ubs, steps, std::nullopt,
+  return buildLoopNest(builder, loc, lbs, ubs, steps, {},
                        [&bodyBuilder](OpBuilder &nestedBuilder,
                                       Location nestedLoc, ValueRange ivs,
                                       ValueRange) -> ValueVector {
@@ -1785,7 +1787,7 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
-      if (iv.getUses().begin() == iv.getUses().end())
+      if (iv.hasNUses(0))
         continue;
       auto numIterations = constantTripCount(lb, ub, step);
       if (!numIterations.has_value() || numIterations.value() != 1) {
@@ -3192,7 +3194,7 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     auto newSteps = concatValues(op.getStep(), innerOp.getStep());
 
     rewriter.replaceOpWithNewOp<ParallelOp>(op, newLowerBounds, newUpperBounds,
-                                            newSteps, std::nullopt,
+                                            newSteps, ValueRange(),
                                             bodyBuilder);
     return success();
   }

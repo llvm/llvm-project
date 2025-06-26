@@ -67,6 +67,21 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
   return rewriter.create<LLVM::ExtractValueOp>(loc, val, pos);
 }
 
+// Helper that returns data layout alignment of a vector.
+LogicalResult getVectorAlignment(const LLVMTypeConverter &typeConverter,
+                                 VectorType vectorType, unsigned &align) {
+  Type convertedVectorTy = typeConverter.convertType(vectorType);
+  if (!convertedVectorTy)
+    return failure();
+
+  llvm::LLVMContext llvmContext;
+  align = LLVM::TypeToLLVMIRTranslator(llvmContext)
+              .getPreferredAlignment(convertedVectorTy,
+                                     typeConverter.getDataLayout());
+
+  return success();
+}
+
 // Helper that returns data layout alignment of a memref.
 LogicalResult getMemRefAlignment(const LLVMTypeConverter &typeConverter,
                                  MemRefType memrefType, unsigned &align) {
@@ -79,6 +94,28 @@ LogicalResult getMemRefAlignment(const LLVMTypeConverter &typeConverter,
   llvm::LLVMContext llvmContext;
   align = LLVM::TypeToLLVMIRTranslator(llvmContext)
               .getPreferredAlignment(elementTy, typeConverter.getDataLayout());
+  return success();
+}
+
+// Helper to resolve the alignment for vector load/store, gather and scatter
+// ops. If useVectorAlignment is true, get the preferred alignment for the
+// vector type in the operation. This option is used for hardware backends with
+// vectorization. Otherwise, use the preferred alignment of the element type of
+// the memref. Note that if you choose to use vector alignment, the shape of the
+// vector type must be resolved before the ConvertVectorToLLVM pass is run.
+LogicalResult getVectorToLLVMAlignment(const LLVMTypeConverter &typeConverter,
+                                       VectorType vectorType,
+                                       MemRefType memrefType, unsigned &align,
+                                       bool useVectorAlignment) {
+  if (useVectorAlignment) {
+    if (failed(getVectorAlignment(typeConverter, vectorType, align))) {
+      return failure();
+    }
+  } else {
+    if (failed(getMemRefAlignment(typeConverter, memrefType, align))) {
+      return failure();
+    }
+  }
   return success();
 }
 
@@ -224,6 +261,10 @@ static void replaceLoadOrStoreOp(vector::MaskedStoreOp storeOp,
 template <class LoadOrStoreOp>
 class VectorLoadStoreConversion : public ConvertOpToLLVMPattern<LoadOrStoreOp> {
 public:
+  explicit VectorLoadStoreConversion(const LLVMTypeConverter &typeConv,
+                                     bool useVectorAlign)
+      : ConvertOpToLLVMPattern<LoadOrStoreOp>(typeConv),
+        useVectorAlignment(useVectorAlign) {}
   using ConvertOpToLLVMPattern<LoadOrStoreOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
@@ -240,24 +281,37 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*this->getTypeConverter(), memRefTy, align)))
-      return failure();
+    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
+                                        memRefTy, align, useVectorAlignment)))
+      return rewriter.notifyMatchFailure(loadOrStoreOp,
+                                         "could not resolve alignment");
 
     // Resolve address.
     auto vtype = cast<VectorType>(
         this->typeConverter->convertType(loadOrStoreOp.getVectorType()));
-    Value dataPtr = this->getStridedElementPtr(loc, memRefTy, adaptor.getBase(),
-                                               adaptor.getIndices(), rewriter);
+    Value dataPtr = this->getStridedElementPtr(
+        rewriter, loc, memRefTy, adaptor.getBase(), adaptor.getIndices());
     replaceLoadOrStoreOp(loadOrStoreOp, adaptor, vtype, dataPtr, align,
                          rewriter);
     return success();
   }
+
+private:
+  // If true, use the preferred alignment of the vector type.
+  // If false, use the preferred alignment of the element type
+  // of the memref. This flag is intended for use with hardware
+  // backends that require alignment of vector operations.
+  const bool useVectorAlignment;
 };
 
 /// Conversion pattern for a vector.gather.
 class VectorGatherOpConversion
     : public ConvertOpToLLVMPattern<vector::GatherOp> {
 public:
+  explicit VectorGatherOpConversion(const LLVMTypeConverter &typeConv,
+                                    bool useVectorAlign)
+      : ConvertOpToLLVMPattern<vector::GatherOp>(typeConv),
+        useVectorAlignment(useVectorAlign) {}
   using ConvertOpToLLVMPattern<vector::GatherOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
@@ -278,14 +332,13 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align))) {
-      return rewriter.notifyMatchFailure(gather,
-                                         "could not resolve memref alignment");
-    }
+    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
+                                        memRefType, align, useVectorAlignment)))
+      return rewriter.notifyMatchFailure(gather, "could not resolve alignment");
 
     // Resolve address.
-    Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
-                                     adaptor.getIndices(), rewriter);
+    Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
+                                     adaptor.getBase(), adaptor.getIndices());
     Value base = adaptor.getBase();
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
@@ -297,12 +350,24 @@ public:
         adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
     return success();
   }
+
+private:
+  // If true, use the preferred alignment of the vector type.
+  // If false, use the preferred alignment of the element type
+  // of the memref. This flag is intended for use with hardware
+  // backends that require alignment of vector operations.
+  const bool useVectorAlignment;
 };
 
 /// Conversion pattern for a vector.scatter.
 class VectorScatterOpConversion
     : public ConvertOpToLLVMPattern<vector::ScatterOp> {
 public:
+  explicit VectorScatterOpConversion(const LLVMTypeConverter &typeConv,
+                                     bool useVectorAlign)
+      : ConvertOpToLLVMPattern<vector::ScatterOp>(typeConv),
+        useVectorAlignment(useVectorAlign) {}
+
   using ConvertOpToLLVMPattern<vector::ScatterOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
@@ -322,14 +387,14 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align))) {
+    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
+                                        memRefType, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(scatter,
-                                         "could not resolve memref alignment");
-    }
+                                         "could not resolve alignment");
 
     // Resolve address.
-    Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
-                                     adaptor.getIndices(), rewriter);
+    Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
+                                     adaptor.getBase(), adaptor.getIndices());
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
                        adaptor.getBase(), ptr, adaptor.getIndexVec(), vType);
@@ -340,6 +405,13 @@ public:
         rewriter.getI32IntegerAttr(align));
     return success();
   }
+
+private:
+  // If true, use the preferred alignment of the vector type.
+  // If false, use the preferred alignment of the element type
+  // of the memref. This flag is intended for use with hardware
+  // backends that require alignment of vector operations.
+  const bool useVectorAlignment;
 };
 
 /// Conversion pattern for a vector.expandload.
@@ -356,8 +428,8 @@ public:
 
     // Resolve address.
     auto vtype = typeConverter->convertType(expand.getVectorType());
-    Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
-                                     adaptor.getIndices(), rewriter);
+    Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
+                                     adaptor.getBase(), adaptor.getIndices());
 
     rewriter.replaceOpWithNewOp<LLVM::masked_expandload>(
         expand, vtype, ptr, adaptor.getMask(), adaptor.getPassThru());
@@ -378,8 +450,8 @@ public:
     MemRefType memRefType = compress.getMemRefType();
 
     // Resolve address.
-    Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
-                                     adaptor.getIndices(), rewriter);
+    Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
+                                     adaptor.getBase(), adaptor.getIndices());
 
     rewriter.replaceOpWithNewOp<LLVM::masked_compressstore>(
         compress, adaptor.getValueToStore(), ptr, adaptor.getMask());
@@ -824,8 +896,9 @@ public:
     } else if (kind == vector::CombiningKind::MAXNUMF) {
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else
+    } else {
       return failure();
+    }
 
     rewriter.replaceOp(reductionOp, result);
     return success();
@@ -1522,8 +1595,14 @@ private:
 };
 
 class VectorPrintOpConversion : public ConvertOpToLLVMPattern<vector::PrintOp> {
+  SymbolTableCollection *symbolTables = nullptr;
+
 public:
-  using ConvertOpToLLVMPattern<vector::PrintOp>::ConvertOpToLLVMPattern;
+  explicit VectorPrintOpConversion(
+      const LLVMTypeConverter &typeConverter,
+      SymbolTableCollection *symbolTables = nullptr)
+      : ConvertOpToLLVMPattern<vector::PrintOp>(typeConverter),
+        symbolTables(symbolTables) {}
 
   // Lowering implementation that relies on a small runtime support library,
   // which only needs to provide a few printing methods (single value for all
@@ -1570,13 +1649,17 @@ public:
       FailureOr<LLVM::LLVMFuncOp> op = [&]() {
         switch (punct) {
         case PrintPunctuation::Close:
-          return LLVM::lookupOrCreatePrintCloseFn(rewriter, parent);
+          return LLVM::lookupOrCreatePrintCloseFn(rewriter, parent,
+                                                  symbolTables);
         case PrintPunctuation::Open:
-          return LLVM::lookupOrCreatePrintOpenFn(rewriter, parent);
+          return LLVM::lookupOrCreatePrintOpenFn(rewriter, parent,
+                                                 symbolTables);
         case PrintPunctuation::Comma:
-          return LLVM::lookupOrCreatePrintCommaFn(rewriter, parent);
+          return LLVM::lookupOrCreatePrintCommaFn(rewriter, parent,
+                                                  symbolTables);
         case PrintPunctuation::NewLine:
-          return LLVM::lookupOrCreatePrintNewlineFn(rewriter, parent);
+          return LLVM::lookupOrCreatePrintNewlineFn(rewriter, parent,
+                                                    symbolTables);
         default:
           llvm_unreachable("unexpected punctuation");
         }
@@ -1610,17 +1693,17 @@ private:
     PrintConversion conversion = PrintConversion::None;
     FailureOr<Operation *> printer;
     if (printType.isF32()) {
-      printer = LLVM::lookupOrCreatePrintF32Fn(rewriter, parent);
+      printer = LLVM::lookupOrCreatePrintF32Fn(rewriter, parent, symbolTables);
     } else if (printType.isF64()) {
-      printer = LLVM::lookupOrCreatePrintF64Fn(rewriter, parent);
+      printer = LLVM::lookupOrCreatePrintF64Fn(rewriter, parent, symbolTables);
     } else if (printType.isF16()) {
       conversion = PrintConversion::Bitcast16; // bits!
-      printer = LLVM::lookupOrCreatePrintF16Fn(rewriter, parent);
+      printer = LLVM::lookupOrCreatePrintF16Fn(rewriter, parent, symbolTables);
     } else if (printType.isBF16()) {
       conversion = PrintConversion::Bitcast16; // bits!
-      printer = LLVM::lookupOrCreatePrintBF16Fn(rewriter, parent);
+      printer = LLVM::lookupOrCreatePrintBF16Fn(rewriter, parent, symbolTables);
     } else if (printType.isIndex()) {
-      printer = LLVM::lookupOrCreatePrintU64Fn(rewriter, parent);
+      printer = LLVM::lookupOrCreatePrintU64Fn(rewriter, parent, symbolTables);
     } else if (auto intTy = dyn_cast<IntegerType>(printType)) {
       // Integers need a zero or sign extension on the operand
       // (depending on the source type) as well as a signed or
@@ -1630,7 +1713,8 @@ private:
         if (width <= 64) {
           if (width < 64)
             conversion = PrintConversion::ZeroExt64;
-          printer = LLVM::lookupOrCreatePrintU64Fn(rewriter, parent);
+          printer =
+              LLVM::lookupOrCreatePrintU64Fn(rewriter, parent, symbolTables);
         } else {
           return failure();
         }
@@ -1643,7 +1727,8 @@ private:
             conversion = PrintConversion::ZeroExt64;
           else if (width < 64)
             conversion = PrintConversion::SignExt64;
-          printer = LLVM::lookupOrCreatePrintI64Fn(rewriter, parent);
+          printer =
+              LLVM::lookupOrCreatePrintI64Fn(rewriter, parent, symbolTables);
         } else {
           return failure();
         }
@@ -1928,21 +2013,23 @@ void mlir::vector::populateVectorRankReducingFMAPattern(
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool reassociateFPReductions, bool force32BitVectorIndices) {
+    bool reassociateFPReductions, bool force32BitVectorIndices,
+    bool useVectorAlignment) {
   // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
   patterns.add<VectorCreateMaskOpConversion>(ctx, force32BitVectorIndices);
+  patterns.add<VectorLoadStoreConversion<vector::LoadOp>,
+               VectorLoadStoreConversion<vector::MaskedLoadOp>,
+               VectorLoadStoreConversion<vector::StoreOp>,
+               VectorLoadStoreConversion<vector::MaskedStoreOp>,
+               VectorGatherOpConversion, VectorScatterOpConversion>(
+      converter, useVectorAlignment);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
                VectorExtractElementOpConversion, VectorExtractOpConversion,
                VectorFMAOp1DConversion, VectorInsertElementOpConversion,
                VectorInsertOpConversion, VectorPrintOpConversion,
                VectorTypeCastOpConversion, VectorScaleOpConversion,
-               VectorLoadStoreConversion<vector::LoadOp>,
-               VectorLoadStoreConversion<vector::MaskedLoadOp>,
-               VectorLoadStoreConversion<vector::StoreOp>,
-               VectorLoadStoreConversion<vector::MaskedStoreOp>,
-               VectorGatherOpConversion, VectorScatterOpConversion,
                VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,
                VectorSplatOpLowering, VectorSplatNdOpLowering,
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,

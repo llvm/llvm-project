@@ -61,9 +61,8 @@ define i32 @test_debug_loc_on_branch_in_loop(ptr noalias %src, ptr noalias %dst)
 ; CHECK-LABEL: define i32 @test_debug_loc_on_branch_in_loop(
 ; CHECK-LABEL: vector.body:
 ; CHECK:        [[LOAD:%.+]] = load <2 x i32>, ptr {{.+}}, align 4
-; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], splat (i32 10)
-; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], splat (i1 true), !dbg [[LOC3:!.+]]
-; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[XOR]], i32 0, !dbg [[LOC3]]
+; CHECK-NEXT:   [[CMP:%.+]] = icmp ne <2 x i32> [[LOAD]], splat (i32 10), !dbg [[LOC3:!.+]]
+; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[CMP]], i32 0, !dbg [[LOC3]]
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
@@ -101,9 +100,8 @@ define i32 @test_different_debug_loc_on_replicate_recipe(ptr noalias %src, ptr n
 ; CHECK-LABEL: define i32 @test_different_debug_loc_on_replicate_recipe(
 ; CHECK-LABEL: vector.body:
 ; CHECK:        [[LOAD:%.+]] = load <2 x i32>, ptr {{.+}}, align 4
-; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], splat (i32 10)
-; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], splat (i1 true), !dbg [[LOC4:!.+]]
-; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[XOR]], i32 0, !dbg [[LOC4]]
+; CHECK-NEXT:   [[CMP:%.+]] = icmp ne <2 x i32> [[LOAD]], splat (i32 10), !dbg [[LOC4:!.+]]
+; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[CMP]], i32 0, !dbg [[LOC4]]
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:

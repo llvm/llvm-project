@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -390,7 +391,8 @@ protected:
   /// likely simplifications post-inlining. The most important aspect we track
   /// is CFG altering simplifications -- when we prove a basic block dead, that
   /// can cause dramatic shifts in the cost of inlining a function.
-  DenseMap<Value *, Constant *> SimplifiedValues;
+  /// Note: The simplified Value may be owned by the caller function.
+  DenseMap<Value *, Value *> SimplifiedValues;
 
   /// Keep track of the values which map back (through function arguments) to
   /// allocas on the caller stack which could be simplified through SROA.
@@ -431,7 +433,7 @@ protected:
   template <typename T> T *getDirectOrSimplifiedValue(Value *V) const {
     if (auto *Direct = dyn_cast<T>(V))
       return Direct;
-    return dyn_cast_if_present<T>(SimplifiedValues.lookup(V));
+    return getSimplifiedValue<T>(V);
   }
 
   // Custom simplification helper routines.
@@ -444,6 +446,7 @@ protected:
   bool canFoldInboundsGEP(GetElementPtrInst &I);
   bool accumulateGEPOffset(GEPOperator &GEP, APInt &Offset);
   bool simplifyCallSite(Function *F, CallBase &Call);
+  bool simplifyCmpInstForRecCall(CmpInst &Cmp);
   bool simplifyInstruction(Instruction &I);
   bool simplifyIntrinsicCallIsConstant(CallBase &CB);
   bool simplifyIntrinsicCallObjectSize(CallBase &CB);
@@ -523,11 +526,33 @@ public:
 
   InlineResult analyze();
 
-  std::optional<Constant *> getSimplifiedValue(Instruction *I) {
-    auto It = SimplifiedValues.find(I);
-    if (It != SimplifiedValues.end())
-      return It->second;
-    return std::nullopt;
+  /// Lookup simplified Value. May return a value owned by the caller.
+  Value *getSimplifiedValueUnchecked(Value *V) const {
+    return SimplifiedValues.lookup(V);
+  }
+
+  /// Lookup simplified Value, but return nullptr if the simplified value is
+  /// owned by the caller.
+  template <typename T> T *getSimplifiedValue(Value *V) const {
+    Value *SimpleV = SimplifiedValues.lookup(V);
+    if (!SimpleV)
+      return nullptr;
+
+    // Skip checks if we know T is a global. This has a small, but measurable
+    // impact on compile-time.
+    if constexpr (std::is_base_of_v<Constant, T>)
+      return dyn_cast<T>(SimpleV);
+
+    // Make sure the simplified Value is owned by this function
+    if (auto *I = dyn_cast<Instruction>(SimpleV)) {
+      if (I->getFunction() != &F)
+        return nullptr;
+    } else if (auto *Arg = dyn_cast<Argument>(SimpleV)) {
+      if (Arg->getParent() != &F)
+        return nullptr;
+    } else if (!isa<Constant>(SimpleV))
+      return nullptr;
+    return dyn_cast<T>(SimpleV);
   }
 
   // Keep a bunch of stats about the cost savings found so we can print them
@@ -919,12 +944,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         if (BranchInst *BI = dyn_cast<BranchInst>(&I)) {
           // Count a conditional branch as savings if it becomes unconditional.
           if (BI->isConditional() &&
-              isa_and_nonnull<ConstantInt>(
-                  SimplifiedValues.lookup(BI->getCondition()))) {
+              getSimplifiedValue<ConstantInt>(BI->getCondition())) {
             CurrentSavings += InstrCost;
           }
         } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
-          if (isa_and_present<ConstantInt>(SimplifiedValues.lookup(SI->getCondition())))
+          if (getSimplifiedValue<ConstantInt>(SI->getCondition()))
             CurrentSavings += InstrCost;
         } else if (Value *V = dyn_cast<Value>(&I)) {
           // Count an instruction as savings if we can fold it.
@@ -1421,10 +1445,17 @@ void InlineCostAnnotationWriter::emitInstructionAnnot(
     if (Record->hasThresholdChanged())
       OS << ", threshold delta = " << Record->getThresholdDelta();
   }
-  auto C = ICCA->getSimplifiedValue(const_cast<Instruction *>(I));
-  if (C) {
+  auto *V = ICCA->getSimplifiedValueUnchecked(const_cast<Instruction *>(I));
+  if (V) {
     OS << ", simplified to ";
-    (*C)->print(OS, true);
+    V->print(OS, true);
+    if (auto *VI = dyn_cast<Instruction>(V)) {
+      if (VI->getFunction() != I->getFunction())
+        OS << " (caller instruction)";
+    } else if (auto *VArg = dyn_cast<Argument>(V)) {
+      if (VArg->getParent() != I->getFunction())
+        OS << " (caller argument)";
+    }
   }
   OS << "\n";
 }
@@ -1481,7 +1512,7 @@ bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
   SmallVector<Value *, 4> Operands;
   Operands.push_back(GEP.getOperand(0));
   for (const Use &Op : GEP.indices())
-    if (Constant *SimpleOp = SimplifiedValues.lookup(Op))
+    if (Constant *SimpleOp = getSimplifiedValue<Constant>(Op))
       Operands.push_back(SimpleOp);
     else
       Operands.push_back(Op);
@@ -1496,7 +1527,7 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   // Check whether inlining will turn a dynamic alloca into a static
   // alloca and handle that case.
   if (I.isArrayAllocation()) {
-    Constant *Size = SimplifiedValues.lookup(I.getArraySize());
+    Constant *Size = getSimplifiedValue<Constant>(I.getArraySize());
     if (auto *AllocSize = dyn_cast_or_null<ConstantInt>(Size)) {
       // Sometimes a dynamic alloca could be converted into a static alloca
       // after this constant prop, and become a huge static alloca on an
@@ -1674,6 +1705,64 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
   if (SROAArg)
     disableSROAForArg(SROAArg);
   return isGEPFree(I);
+}
+
+// Simplify \p Cmp if RHS is const and we can ValueTrack LHS.
+// This handles the case only when the Cmp instruction is guarding a recursive
+// call that will cause the Cmp to fail/succeed for the recursive call.
+bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
+  // Bail out if LHS is not a function argument or RHS is NOT const:
+  if (!isa<Argument>(Cmp.getOperand(0)) || !isa<Constant>(Cmp.getOperand(1)))
+    return false;
+  auto *CmpOp = Cmp.getOperand(0);
+  // Make sure that the callsite is recursive:
+  if (CandidateCall.getCaller() != &F)
+    return false;
+  // Only handle the case when the callsite has a single predecessor:
+  auto *CallBB = CandidateCall.getParent();
+  auto *Predecessor = CallBB->getSinglePredecessor();
+  if (!Predecessor)
+    return false;
+  // Check if the callsite is guarded by the same Cmp instruction:
+  auto *Br = dyn_cast<BranchInst>(Predecessor->getTerminator());
+  if (!Br || Br->isUnconditional() || Br->getCondition() != &Cmp)
+    return false;
+
+  // Check if there is any arg of the recursive callsite is affecting the cmp
+  // instr:
+  bool ArgFound = false;
+  Value *FuncArg = nullptr, *CallArg = nullptr;
+  for (unsigned ArgNum = 0;
+       ArgNum < F.arg_size() && ArgNum < CandidateCall.arg_size(); ArgNum++) {
+    FuncArg = F.getArg(ArgNum);
+    CallArg = CandidateCall.getArgOperand(ArgNum);
+    if (FuncArg == CmpOp && CallArg != CmpOp) {
+      ArgFound = true;
+      break;
+    }
+  }
+  if (!ArgFound)
+    return false;
+
+  // Now we have a recursive call that is guarded by a cmp instruction.
+  // Check if this cmp can be simplified:
+  SimplifyQuery SQ(DL, dyn_cast<Instruction>(CallArg));
+  CondContext CC(&Cmp);
+  CC.Invert = (CallBB != Br->getSuccessor(0));
+  SQ.CC = &CC;
+  CC.AffectedValues.insert(FuncArg);
+  Value *SimplifiedInstruction = llvm::simplifyInstructionWithOperands(
+      cast<CmpInst>(&Cmp), {CallArg, Cmp.getOperand(1)}, SQ);
+  if (auto *ConstVal = dyn_cast_or_null<ConstantInt>(SimplifiedInstruction)) {
+    // Make sure that the BB of the recursive call is NOT the true successor
+    // of the icmp. In other words, make sure that the recursion depth is 1.
+    if ((ConstVal->isOne() && CC.Invert) ||
+        (ConstVal->isZero() && !CC.Invert)) {
+      SimplifiedValues[&Cmp] = ConstVal;
+      return true;
+    }
+  }
+  return false;
 }
 
 /// Simplify \p I if its operands are constants and update SimplifiedValues.
@@ -2060,6 +2149,10 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
   if (simplifyInstruction(I))
     return true;
 
+  // Try to handle comparison that can be simplified using ValueTracking.
+  if (simplifyCmpInstForRecCall(I))
+    return true;
+
   if (I.getOpcode() == Instruction::FCmp)
     return false;
 
@@ -2223,9 +2316,18 @@ bool CallAnalyzer::visitStore(StoreInst &I) {
 }
 
 bool CallAnalyzer::visitExtractValue(ExtractValueInst &I) {
-  // Constant folding for extract value is trivial.
-  if (simplifyInstruction(I))
-    return true;
+  Value *Op = I.getAggregateOperand();
+
+  // Special handling, because we want to simplify extractvalue with a
+  // potential insertvalue from the caller.
+  if (Value *SimpleOp = getSimplifiedValueUnchecked(Op)) {
+    SimplifyQuery SQ(DL);
+    Value *SimpleV = simplifyExtractValueInst(SimpleOp, I.getIndices(), SQ);
+    if (SimpleV) {
+      SimplifiedValues[&I] = SimpleV;
+      return true;
+    }
+  }
 
   // SROA can't look through these, but they may be free.
   return Base::visitExtractValue(I);
@@ -2324,7 +2426,7 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
     // Check if this happens to be an indirect function call to a known function
     // in this inline context. If not, we've done all we can.
     Value *Callee = Call.getCalledOperand();
-    F = dyn_cast_or_null<Function>(SimplifiedValues.lookup(Callee));
+    F = getSimplifiedValue<Function>(Callee);
     if (!F || F->getFunctionType() != Call.getFunctionType()) {
       onCallArgumentSetup(Call);
 
@@ -2419,8 +2521,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
 
   Constant *TrueC = getDirectOrSimplifiedValue<Constant>(TrueVal);
   Constant *FalseC = getDirectOrSimplifiedValue<Constant>(FalseVal);
-  Constant *CondC =
-      dyn_cast_or_null<Constant>(SimplifiedValues.lookup(SI.getCondition()));
+  Constant *CondC = getSimplifiedValue<Constant>(SI.getCondition());
 
   if (!CondC) {
     // Select C, X, X => X
@@ -2769,8 +2870,9 @@ InlineResult CallAnalyzer::analyze() {
   auto CAI = CandidateCall.arg_begin();
   for (Argument &FAI : F.args()) {
     assert(CAI != CandidateCall.arg_end());
-    if (Constant *C = dyn_cast<Constant>(CAI))
-      SimplifiedValues[&FAI] = C;
+    SimplifiedValues[&FAI] = *CAI;
+    if (isa<Constant>(*CAI))
+      ++NumConstantArgs;
 
     Value *PtrArg = *CAI;
     if (ConstantInt *C = stripAndComputeInBoundsConstantOffsets(PtrArg)) {
@@ -2785,7 +2887,6 @@ InlineResult CallAnalyzer::analyze() {
     }
     ++CAI;
   }
-  NumConstantArgs = SimplifiedValues.size();
   NumConstantOffsetPtrArgs = ConstantOffsetPtrs.size();
   NumAllocaArgs = SROAArgValues.size();
 
@@ -2847,8 +2948,7 @@ InlineResult CallAnalyzer::analyze() {
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
       if (BI->isConditional()) {
         Value *Cond = BI->getCondition();
-        if (ConstantInt *SimpleCond =
-                dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
+        if (ConstantInt *SimpleCond = getSimplifiedValue<ConstantInt>(Cond)) {
           BasicBlock *NextBB = BI->getSuccessor(SimpleCond->isZero() ? 1 : 0);
           BBWorklist.insert(NextBB);
           KnownSuccessors[BB] = NextBB;
@@ -2858,8 +2958,7 @@ InlineResult CallAnalyzer::analyze() {
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
       Value *Cond = SI->getCondition();
-      if (ConstantInt *SimpleCond =
-              dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
+      if (ConstantInt *SimpleCond = getSimplifiedValue<ConstantInt>(Cond)) {
         BasicBlock *NextBB = SI->findCaseValue(SimpleCond)->getCaseSuccessor();
         BBWorklist.insert(NextBB);
         KnownSuccessors[BB] = NextBB;
@@ -3092,6 +3191,10 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // Don't inline call sites marked noinline.
   if (Call.isNoInline())
     return InlineResult::failure("noinline call site attribute");
+
+  // Don't inline functions that are loader replaceable.
+  if (Callee->hasFnAttribute("loader-replaceable"))
+    return InlineResult::failure("loader replaceable function attribute");
 
   return std::nullopt;
 }

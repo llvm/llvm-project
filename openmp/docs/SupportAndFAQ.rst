@@ -92,89 +92,38 @@ For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
 
 Q: How to build an OpenMP Nvidia offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The Cuda SDK is required on the machine that will execute the openmp application.
-
-If your build machine is not the target machine or automatic detection of the
-available GPUs failed, you should also set:
-
-- ``LIBOMPTARGET_DEVICE_ARCHITECTURES='sm_<xy>;...'`` where ``<xy>`` is the numeric
-  compute capability of your GPU. For instance, set 
-  ``LIBOMPTARGET_DEVICE_ARCHITECTURES='sm_70;sm_80'`` to target the Nvidia Volta
-  and Ampere architectures. 
-
+The CUDA SDK is required on the machine that will build and execute the
+offloading application. Normally this is only required at runtime by dynamically
+opening the CUDA driver API. This can be disabled in the build by omitting
+``cuda`` from the ``LIBOMPTARGET_DLOPEN_PLUGINS`` list which is present by
+default. With this setting we will instead find the CUDA library at LLVM build
+time and link against it directly.
 
 .. _build_amdgpu_offload_capable_compiler:
 
 Q: How to build an OpenMP AMDGPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A subset of the `ROCm <https://github.com/radeonopencompute>`_ toolchain is
-required to build the LLVM toolchain and to execute the openmp application.
-Either install ROCm somewhere that cmake's find_package can locate it, or
-build the required subcomponents ROCt and ROCr from source.
 
-The two components used are ROCT-Thunk-Interface, roct, and ROCR-Runtime, rocr.
-Roct is the userspace part of the linux driver. It calls into the driver which
-ships with the linux kernel. It is an implementation detail of Rocr from
-OpenMP's perspective. Rocr is an implementation of `HSA
-<http://www.hsafoundation.com>`_.
-
-.. code-block:: text
-
-  SOURCE_DIR=same-as-llvm-source # e.g. the checkout of llvm-project, next to openmp
-  BUILD_DIR=somewhere
-  INSTALL_PREFIX=same-as-llvm-install
-
-  cd $SOURCE_DIR
-  git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.2.x \
-    --single-branch
-  git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.2.x \
-    --single-branch
-
-  cd $BUILD_DIR && mkdir roct && cd roct
-  cmake $SOURCE_DIR/ROCT-Thunk-Interface/ -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
-    -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
-  make && make install
-
-  cd $BUILD_DIR && mkdir rocr && cd rocr
-  cmake $SOURCE_DIR/ROCR-Runtime/src -DIMAGE_SUPPORT=OFF \
-    -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_SHARED_LIBS=ON
-  make && make install
-
-``IMAGE_SUPPORT`` requires building rocr with clang and is not used by openmp.
-
-Provided cmake's find_package can find the ROCR-Runtime package, LLVM will
-build a tool ``bin/amdgpu-arch`` which will print a string like ``gfx906`` when
-run if it recognises a GPU on the local system. LLVM will also build a shared
-library, libomptarget.rtl.amdgpu.so, which is linked against rocr.
-
-With those libraries installed, then LLVM build and installed, try:
-
-.. code-block:: shell
-
-    clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa example.c -o example && ./example
-
-If your build machine is not the target machine or automatic detection of the
-available GPUs failed, you should also set:
-
-- ``LIBOMPTARGET_DEVICE_ARCHITECTURES='gfx<xyz>;...'`` where ``<xyz>`` is the
-  shader core instruction set architecture. For instance, set 
-  ``LIBOMPTARGET_DEVICE_ARCHITECTURES='gfx906;gfx90a'`` to target AMD GCN5
-  and CDNA2 devices. 
+The OpenMP AMDGPU offloading support depends on the ROCm math libraries and the
+HSA ROCr / ROCt runtimes. These are normally provided by a standard ROCm
+installation, but can be built and used independently if desired. Building the
+libraries does not depend on these libraries by default by dynamically loading
+the HSA runtime at program execution. As in the CUDA case, this can be change by
+omitting ``amdgpu`` from the ``LIBOMPTARGET_DLOPEN_PLUGINS`` list.
 
 Q: What are the known limitations of OpenMP AMDGPU offload?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-LD_LIBRARY_PATH or rpath/runpath are required to find libomp.so and libomptarget.so
 
-There is no libc. That is, malloc and printf do not exist. Libm is implemented in terms
-of the rocm device library, which will be searched for if linking with '-lm'.
+LD_LIBRARY_PATH or rpath/runpath are required to find libomp.so and
+libomptarget.so correctly. The recommended way to configure this is with the
+``-frtlib-add-rpath`` option. Alternatively, set the ``LD_LIBRARY_PATH``
+environment variable to point to the installation. Normally, these libraries are
+installed in the target specific runtime directory. For example, a typical
+installation will have
+``<install>/lib/x86_64-unknown-linux-gnu/llibomptarget.so``
 
 Some versions of the driver for the radeon vii (gfx906) will error unless the
 environment variable 'export HSA_IGNORE_SRAMECC_MISREPORT=1' is set.
-
-It is a recent addition to LLVM and the implementation differs from that which
-has been shipping in ROCm and AOMP for some time. Early adopters will encounter
-bugs.
 
 Q: What are the LLVM components used in offloading and how are they found?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -182,14 +131,7 @@ The libraries used by an executable compiled for target offloading are:
 
 - ``libomp.so`` (or similar), the host openmp runtime
 - ``libomptarget.so``, the target-agnostic target offloading openmp runtime
-- plugins loaded by libomptarget.so:
-
-  - ``libomptarget.rtl.amdgpu.so``
-  - ``libomptarget.rtl.cuda.so``
-  - ``libomptarget.rtl.x86_64.so``
-  - ``libomptarget.rtl.ve.so``
-  - and others
-
+- ``libompdevice.a``, the device-side OpenMP runtime.
 - dependencies of those plugins, e.g. cuda/rocr for nvptx/amdgpu
 
 The compiled executable is dynamically linked against a host runtime, e.g.
@@ -245,7 +187,6 @@ Q: Does OpenMP offloading support work in packages distributed as part of my OS?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 For now, the answer is most likely *no*. Please see :ref:`build_offload_capable_compiler`.
 
-
 .. _math_and_complex_in_target_regions:
 
 Q: Does Clang support `<math.h>` and `<complex.h>` operations in OpenMP target on GPUs?
@@ -274,21 +215,13 @@ through a similar mechanism. It is worth noting that this support requires
 <https://clang.llvm.org/docs/AttributeReference.html#pragma-omp-declare-variant>`__
 that are exposed through LLVM/Clang to the user as well.
 
-Q: What is a way to debug errors from mapping memory to a target device?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-An experimental way to debug these errors is to use :ref:`remote process
-offloading <remote_offloading_plugin>`.
-By using ``libomptarget.rtl.rpc.so`` and ``openmp-offloading-server``, it is
-possible to explicitly perform memory transfers between processes on the host
-CPU and run sanitizers while doing so in order to catch these errors.
-
 Q: Can I use dynamically linked libraries with OpenMP offloading?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Dynamically linked libraries can be only used if there is no device code split
+Dynamically linked libraries can be used if there is no device code shared
 between the library and application. Anything declared on the device inside the
-shared library will not be visible to the application when it's linked.
+shared library will not be visible to the application when it's linked. This is
+because device code only supports static linking.
 
 Q: How to build an OpenMP offload capable compiler with an outdated host compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -303,38 +236,6 @@ For example, if your system-wide GCC installation is too old to build LLVM and
 you would like to use a newer GCC, set ``--gcc-install-dir=``
 to inform clang of the GCC installation you would like to use in the second stage.
 
-Q: How can I include OpenMP offloading support in my CMake project?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Currently, there is an experimental CMake find module for OpenMP target
-offloading provided by LLVM. It will attempt to find OpenMP target offloading
-support for your compiler. The flags necessary for OpenMP target offloading will
-be loaded into the ``OpenMPTarget::OpenMPTarget_<device>`` target or the
-``OpenMPTarget_<device>_FLAGS`` variable if successful. Currently supported
-devices are ``AMDGPU`` and ``NVPTX``.
-
-To use this module, simply add the path to CMake's current module path and call
-``find_package``. The module will be installed with your OpenMP installation by
-default. Including OpenMP offloading support in an application should now only
-require a few additions.
-
-.. code-block:: cmake
-
-  cmake_minimum_required(VERSION 3.20.0)
-  project(offloadTest VERSION 1.0 LANGUAGES CXX)
-
-  list(APPEND CMAKE_MODULE_PATH "${PATH_TO_OPENMP_INSTALL}/lib/cmake/openmp")
-
-  find_package(OpenMPTarget REQUIRED NVPTX)
-
-  add_executable(offload)
-  target_link_libraries(offload PRIVATE OpenMPTarget::OpenMPTarget_NVPTX)
-  target_sources(offload PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp)
-
-Using this module requires at least CMake version 3.20.0. Supported languages
-are C and C++ with Fortran support planned in the future. Compiler support is
-best for Clang but this module should work for other compiler vendors such as
-IBM, GNU.
 
 Q: What does 'Stack size for entry function cannot be statically determined' mean?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -360,11 +261,11 @@ will only extract archive members if an architecture is used, allowing users to
 create generic libraries.
 
 The architecture can either be specified manually using ``--offload-arch=``. If
-``--offload-arch=`` is present no ``-fopenmp-targets=`` flag is present then the
-targets will be inferred from the architectures. Conversely, if
+``--offload-arch=`` is present and no ``-fopenmp-targets=`` flag is present then
+the targets will be inferred from the architectures. Conversely, if
 ``--fopenmp-targets=`` is present with no ``--offload-arch`` then the target
 architecture will be set to a default value, usually the architecture supported
-by the system LLVM was built on.
+by the system LLVM was built on by executing the ``offload-arch`` utility.
 
 For example, an executable can be built that runs on AMDGPU and NVIDIA hardware
 given that the necessary build tools are installed for both.
@@ -434,7 +335,7 @@ linkable device image.
    clang++ openmp.o cuda.o --offload-link -o app
 
 Q: Are libomptarget and plugins backward compatible?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 No. libomptarget and plugins are now built as LLVM libraries starting from LLVM
 15. Because LLVM libraries are not backward compatible, libomptarget and plugins
@@ -460,7 +361,7 @@ with OpenMP.
 
 .. code-block:: shell
 
-   clang++ openmp.cpp -fopenmp --offload-arch=gfx90a -lcgpu
+   clang++ openmp.cpp -fopenmp --offload-arch=gfx90a -Xoffload-linker -lc
 
 For more information on how this is implemented in LLVM/OpenMP's offloading 
 runtime, refer to the `runtime documentation <libomptarget_libc>`_.

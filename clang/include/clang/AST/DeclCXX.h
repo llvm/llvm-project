@@ -365,12 +365,10 @@ private:
       return getVBasesSlowCase();
     }
 
-    ArrayRef<CXXBaseSpecifier> bases() const {
-      return llvm::ArrayRef(getBases(), NumBases);
-    }
+    ArrayRef<CXXBaseSpecifier> bases() const { return {getBases(), NumBases}; }
 
     ArrayRef<CXXBaseSpecifier> vbases() const {
-      return llvm::ArrayRef(getVBases(), NumVBases);
+      return {getVBases(), NumVBases};
     }
 
   private:
@@ -1550,6 +1548,9 @@ public:
   /// Returns the destructor decl for this class.
   CXXDestructorDecl *getDestructor() const;
 
+  /// Returns the destructor decl for this class.
+  bool hasDeletedDestructor() const;
+
   /// Returns true if the class destructor, or any implicitly invoked
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
@@ -2603,9 +2604,6 @@ class CXXConstructorDecl final
   size_t numTrailingObjects(OverloadToken<InheritedConstructor>) const {
     return CXXConstructorDeclBits.IsInheritingConstructor;
   }
-  size_t numTrailingObjects(OverloadToken<ExplicitSpecifier>) const {
-    return CXXConstructorDeclBits.HasTrailingExplicitSpecifier;
-  }
 
   ExplicitSpecifier getExplicitSpecifierInternal() const {
     if (CXXConstructorDeclBits.HasTrailingExplicitSpecifier)
@@ -2622,8 +2620,12 @@ class CXXConstructorDecl final
   };
 
   uint64_t getTrailingAllocKind() const {
-    return numTrailingObjects(OverloadToken<InheritedConstructor>()) |
-           (numTrailingObjects(OverloadToken<ExplicitSpecifier>()) << 1);
+    uint64_t Kind = 0;
+    if (CXXConstructorDeclBits.IsInheritingConstructor)
+      Kind |= TAKInheritsConstructor;
+    if (CXXConstructorDeclBits.HasTrailingExplicitSpecifier)
+      Kind |= TAKHasTailExplicit;
+    return Kind;
   }
 
 public:
@@ -3293,7 +3295,7 @@ class LifetimeExtendedTemporaryDecl final
 
   mutable APValue *Value = nullptr;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   LifetimeExtendedTemporaryDecl(Expr *Temp, ValueDecl *EDecl, unsigned Mangling)
       : Decl(Decl::LifetimeExtendedTemporary, EDecl->getDeclContext(),
@@ -3861,8 +3863,7 @@ class UsingPackDecl final
                   InstantiatedFrom ? InstantiatedFrom->getDeclName()
                                    : DeclarationName()),
         InstantiatedFrom(InstantiatedFrom), NumExpansions(UsingDecls.size()) {
-    std::uninitialized_copy(UsingDecls.begin(), UsingDecls.end(),
-                            getTrailingObjects<NamedDecl *>());
+    llvm::uninitialized_copy(UsingDecls, getTrailingObjects());
   }
 
   void anchor() override;
@@ -3880,7 +3881,7 @@ public:
   /// Get the set of using declarations that this pack expanded into. Note that
   /// some of these may still be unresolved.
   ArrayRef<NamedDecl *> expansions() const {
-    return llvm::ArrayRef(getTrailingObjects<NamedDecl *>(), NumExpansions);
+    return getTrailingObjects(NumExpansions);
   }
 
   static UsingPackDecl *Create(ASTContext &C, DeclContext *DC,
@@ -4187,7 +4188,7 @@ public:
   Expr *getBinding() const { return Binding; }
 
   // Get the array of nested BindingDecls when the binding represents a pack.
-  llvm::ArrayRef<BindingDecl *> getBindingPackDecls() const;
+  ArrayRef<BindingDecl *> getBindingPackDecls() const;
 
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
@@ -4233,8 +4234,7 @@ class DecompositionDecl final
       : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
                 SC),
         NumBindings(Bindings.size()) {
-    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
-                            getTrailingObjects<BindingDecl *>());
+    llvm::uninitialized_copy(Bindings, getTrailingObjects());
     for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
       if (B->isParameterPack() && B->getBinding()) {
@@ -4261,17 +4261,17 @@ public:
                                                unsigned NumBindings);
 
   // Provide the range of bindings which may have a nested pack.
-  llvm::ArrayRef<BindingDecl *> bindings() const {
-    return {getTrailingObjects<BindingDecl *>(), NumBindings};
+  ArrayRef<BindingDecl *> bindings() const {
+    return getTrailingObjects(NumBindings);
   }
 
   // Provide a flattened range to visit each binding.
   auto flat_bindings() const {
-    llvm::ArrayRef<BindingDecl *> Bindings = bindings();
-    llvm::ArrayRef<BindingDecl *> PackBindings;
+    ArrayRef<BindingDecl *> Bindings = bindings();
+    ArrayRef<BindingDecl *> PackBindings;
 
     // Split the bindings into subranges split by the pack.
-    llvm::ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
+    ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
         [](BindingDecl *BD) { return BD->isParameterPack(); });
 
     Bindings = Bindings.drop_front(BeforePackBindings.size());

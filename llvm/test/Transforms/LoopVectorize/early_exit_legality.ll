@@ -442,34 +442,29 @@ loop.end:
   ret i64 %retval
 }
 
-
-define i64 @loop_contains_store(ptr %dest) {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store'
-; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops
+define void @exit_conditions_combined_in_single_branch(ptr noalias dereferenceable(40) %array, ptr readonly align 2 dereferenceable(40) %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'exit_conditions_combined_in_single_branch'
+; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
 entry:
-  %p1 = alloca [1024 x i8]
-  call void @init_mem(ptr %p1, i64 1024)
-  br label %loop
+  br label %for.body
 
-loop:
-  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
-  %arrayidx = getelementptr inbounds i32, ptr %p1, i64 %index
-  %ld1 = load i32, ptr %arrayidx, align 1
-  %arrayidx2 = getelementptr inbounds i32, ptr %dest, i64 %index
-  store i32 %ld1, ptr %arrayidx2, align 4
-  %cmp = icmp eq i32 %ld1, 1
-  br i1 %cmp, label %loop.inc, label %loop.end
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  %or.cond = select i1 %ee.cond, i1 true, i1 %counted.cond
+  br i1 %or.cond, label %exit, label %for.body
 
-loop.inc:
-  %index.next = add i64 %index, 1
-  %exitcond = icmp ne i64 %index.next, 67
-  br i1 %exitcond, label %loop, label %loop.end
-
-loop.end:
-  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
-  ret i64 %retval
+exit:                                             ; preds = %for.body
+  ret void
 }
-
 
 define i64 @uncountable_exit_in_conditional_block(ptr %mask) {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_in_conditional_block'
