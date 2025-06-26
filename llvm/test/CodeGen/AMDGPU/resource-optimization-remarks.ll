@@ -122,8 +122,8 @@ define void @test_func() !dbg !6 {
 }
 
 ; STDERR: remark: foo.cl:8:0: Function Name: empty_kernel
-; STDERR-NEXT: remark: foo.cl:8:0:     TotalSGPRs: 22
-; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs: 3
+; STDERR-NEXT: remark: foo.cl:8:0:     TotalSGPRs: 4
+; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     AGPRs: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     ScratchSize [bytes/lane]: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     Dynamic Stack: False

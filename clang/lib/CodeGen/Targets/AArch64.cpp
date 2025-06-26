@@ -507,7 +507,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
         if (FDTy->isArrayType())
           FDTy = getContext().getBaseElementType(FDTy);
         return (FDTy->isPointerOrReferenceType() &&
-                getContext().getTypeSize(FDTy) == 64) ||
+                getContext().getTypeSize(FDTy) == 64 &&
+                !FDTy->getPointeeType().hasAddressSpace()) ||
                Self(Self, FDTy);
       });
     };

@@ -535,12 +535,7 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
     return ER;
   };
 
-  ExprResult Converted = CorrectDelayedTyposInExpr(
-      Val, /*InitDecl=*/nullptr, /*RecoverUncorrectedTypos=*/false,
-      CheckAndFinish);
-  if (Converted.get() == Val.get())
-    Converted = CheckAndFinish(Val.get());
-  return Converted;
+  return CheckAndFinish(Val.get());
 }
 
 StmtResult
@@ -2344,7 +2339,7 @@ StmtResult Sema::ActOnForEachLValueExpr(Expr *E) {
 static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
                                   SourceLocation Loc, int DiagID) {
   if (Decl->getType()->isUndeducedType()) {
-    ExprResult Res = SemaRef.CorrectDelayedTyposInExpr(Init);
+    ExprResult Res = Init;
     if (!Res.isUsable()) {
       Decl->setInvalidDecl();
       return true;
@@ -3845,10 +3840,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
 StmtResult
 Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                       Scope *CurScope) {
-  // Correct typos, in case the containing function returns 'auto' and
-  // RetValExp should determine the deduced type.
-  ExprResult RetVal = CorrectDelayedTyposInExpr(
-      RetValExp, nullptr, /*RecoverUncorrectedTypos=*/true);
+  ExprResult RetVal = RetValExp;
   if (RetVal.isInvalid())
     return StmtError();
 

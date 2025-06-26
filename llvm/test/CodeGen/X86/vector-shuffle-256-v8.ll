@@ -468,7 +468,7 @@ define <8 x float> @shuffle_v8f32_08991abb(<8 x float> %a, <8 x float> %b) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[1,1]
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,2,3,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX1-NEXT:    retq
@@ -2132,7 +2132,7 @@ define <8 x i32> @shuffle_v8i32_08991abb(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-LABEL: shuffle_v8i32_08991abb:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[0,0,1,1]
-; AVX1-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,2,3,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
@@ -3402,7 +3402,7 @@ define <8 x i32> @shuffle_v8i32_0dcd3f14(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-LABEL: shuffle_v8i32_0dcd3f14:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm0[1,2,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm2 = xmm2[0],xmm0[1,2,3]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,1,1,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,2,3]

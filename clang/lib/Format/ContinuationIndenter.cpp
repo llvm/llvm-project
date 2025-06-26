@@ -329,9 +329,9 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   // statement and we are aligning lambda blocks to their signatures.
   if (Previous.is(tok::l_brace) && State.Stack.size() > 1 &&
       State.Stack[State.Stack.size() - 2].NestedBlockInlined &&
-      State.Stack[State.Stack.size() - 2].HasMultipleNestedBlocks &&
-      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature) {
-    return false;
+      State.Stack[State.Stack.size() - 2].HasMultipleNestedBlocks) {
+    return Style.isCpp() &&
+           Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope;
   }
 
   // Don't break after very short return types (e.g. "void") as that is often
@@ -706,42 +706,48 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   const FormatToken &Previous = *State.NextToken->Previous;
   auto &CurrentState = State.Stack.back();
 
-  bool DisallowLineBreaksOnThisLine =
-      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature &&
-      // Deal with lambda arguments in C++. The aim here is to ensure that we
-      // don't over-indent lambda function bodies when lambdas are passed as
-      // arguments to function calls. We do this by ensuring that either all
-      // arguments (including any lambdas) go on the same line as the function
-      // call, or we break before the first argument.
-      Style.isCpp() && [&] {
-        // For example, `/*Newline=*/false`.
-        if (Previous.is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
-          return false;
-        const auto *PrevNonComment = Current.getPreviousNonComment();
-        if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
-          return false;
-        if (Current.isOneOf(tok::comment, tok::l_paren, TT_LambdaLSquare))
-          return false;
-        auto BlockParameterCount = PrevNonComment->BlockParameterCount;
-        if (BlockParameterCount == 0)
-          return false;
+  // Deal with lambda arguments in C++. The aim here is to ensure that we don't
+  // over-indent lambda function bodies when lambdas are passed as arguments to
+  // function calls. We do this by ensuring that either all arguments (including
+  // any lambdas) go on the same line as the function call, or we break before
+  // the first argument.
+  auto DisallowLineBreaks = [&] {
+    if (!Style.isCpp() ||
+        Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope) {
+      return false;
+    }
 
-        // Multiple lambdas in the same function call.
-        if (BlockParameterCount > 1)
-          return true;
+    // For example, `/*Newline=*/false`.
+    if (Previous.is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
+      return false;
 
-        // A lambda followed by another arg.
-        if (!PrevNonComment->Role)
-          return false;
-        auto Comma = PrevNonComment->Role->lastComma();
-        if (!Comma)
-          return false;
-        auto Next = Comma->getNextNonComment();
-        return Next &&
-               !Next->isOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret);
-      }();
+    if (Current.isOneOf(tok::comment, tok::l_paren, TT_LambdaLSquare))
+      return false;
 
-  if (DisallowLineBreaksOnThisLine)
+    const auto *Prev = Current.getPreviousNonComment();
+    if (!Prev || Prev->isNot(tok::l_paren))
+      return false;
+
+    if (Prev->BlockParameterCount == 0)
+      return false;
+
+    // Multiple lambdas in the same function call.
+    if (Prev->BlockParameterCount > 1)
+      return true;
+
+    // A lambda followed by another arg.
+    if (!Prev->Role)
+      return false;
+
+    const auto *Comma = Prev->Role->lastComma();
+    if (!Comma)
+      return false;
+
+    const auto *Next = Comma->getNextNonComment();
+    return Next && !Next->isOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret);
+  };
+
+  if (DisallowLineBreaks())
     State.NoLineBreak = true;
 
   if (Current.is(tok::equal) &&

@@ -463,7 +463,7 @@ bool AMDGPURegisterBankInfo::isScalarLoadLegal(const MachineInstr &MI) const {
          (IsConst || !MMO->isVolatile()) &&
          // Memory must be known constant, or not written before this load.
          (IsConst || MMO->isInvariant() || (MMO->getFlags() & MONoClobber)) &&
-         AMDGPUInstrInfo::isUniformMMO(MMO);
+         AMDGPU::isUniformMMO(MMO);
 }
 
 RegisterBankInfo::InstructionMappings
@@ -4009,6 +4009,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINIMUM:
   case AMDGPU::G_FMAXIMUM:
+  case AMDGPU::G_FMINIMUMNUM:
+  case AMDGPU::G_FMAXIMUMNUM:
   case AMDGPU::G_INTRINSIC_TRUNC:
   case AMDGPU::G_STRICT_FADD:
   case AMDGPU::G_STRICT_FSUB:
@@ -4539,6 +4541,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pknorm_u16:
     case Intrinsic::amdgcn_cvt_pk_i16:
     case Intrinsic::amdgcn_cvt_pk_u16:
+    case Intrinsic::amdgcn_cvt_pk_f16_fp8:
+    case Intrinsic::amdgcn_cvt_pk_f16_bf8:
     case Intrinsic::amdgcn_fmed3:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_cubema:
@@ -5004,8 +5008,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
       break;
     }
+    case Intrinsic::amdgcn_wave_reduce_add:
+    case Intrinsic::amdgcn_wave_reduce_sub:
+    case Intrinsic::amdgcn_wave_reduce_min:
     case Intrinsic::amdgcn_wave_reduce_umin:
-    case Intrinsic::amdgcn_wave_reduce_umax: {
+    case Intrinsic::amdgcn_wave_reduce_max:
+    case Intrinsic::amdgcn_wave_reduce_umax:
+    case Intrinsic::amdgcn_wave_reduce_and:
+    case Intrinsic::amdgcn_wave_reduce_or:
+    case Intrinsic::amdgcn_wave_reduce_xor: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, DstSize);
       unsigned OpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();

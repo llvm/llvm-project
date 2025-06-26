@@ -139,7 +139,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  M->setIsNewDbgInfoFormat(true);
   M->removeDebugIntrinsicDeclarations();
 
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);

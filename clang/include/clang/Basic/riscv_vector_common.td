@@ -593,7 +593,7 @@ let UnMaskedPolicyScheme = HasPolicyOperand,
   multiclass RVVSlideUpBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilfd",
                                [["vx","v", "vvvz"]]>;
-    let RequiredFeatures = ["zvfh"] in
+    let RequiredFeatures = ["zvfhmin"] in
       defm "" : RVVOutBuiltinSet<NAME, "x",
                                  [["vx","v", "vvvz"]]>;
     defm "" : RVVOutBuiltinSet<NAME, "csil",
@@ -618,7 +618,7 @@ let UnMaskedPolicyScheme = HasPassthruOperand,
   multiclass RVVSlideDownBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilfd",
                                [["vx","v", "vvz"]]>;
-    let RequiredFeatures = ["zvfh"] in
+    let RequiredFeatures = ["zvfhmin"] in
       defm "" : RVVOutBuiltinSet<NAME, "x",
                                  [["vx","v", "vvz"]]>;
     defm "" : RVVOutBuiltinSet<NAME, "csil",

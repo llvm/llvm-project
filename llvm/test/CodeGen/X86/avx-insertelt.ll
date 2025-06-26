@@ -94,7 +94,7 @@ define <8 x float> @insert_f32_firstelt_of_high_subvector(<8 x float> %x, float 
 ; AVX-LABEL: insert_f32_firstelt_of_high_subvector:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
@@ -111,7 +111,7 @@ define <4 x double> @insert_f64_firstelt_of_high_subvector(<4 x double> %x, doub
 ; AVX-LABEL: insert_f64_firstelt_of_high_subvector:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = xmm1[0],xmm2[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
@@ -202,9 +202,9 @@ define <4 x i64> @insert_i64_firstelt_of_high_subvector(<4 x i64> %x, i64 %s) {
 define <8 x float> @insert_f32_firstelts(<8 x float> %x, float %s) {
 ; AVX-LABEL: insert_f32_firstelts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX-NEXT:    retq
 ;

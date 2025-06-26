@@ -16,7 +16,7 @@
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_next_free_vgpr 3
-; OSABI-AMDHSA-ASM:     .amdhsa_next_free_sgpr 16
+; OSABI-AMDHSA-ASM:     .amdhsa_next_free_sgpr 10
 ; OSABI-AMDHSA-ASM:     .amdhsa_reserve_vcc 0
 ; OSABI-AMDHSA-ASM:     .amdhsa_reserve_flat_scratch 0
 ; OSABI-AMDHSA-ASM: .end_amdhsa_kernel
@@ -35,7 +35,7 @@
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_next_free_vgpr 3
-; OSABI-AMDHSA-ASM:     .amdhsa_next_free_sgpr 16
+; OSABI-AMDHSA-ASM:     .amdhsa_next_free_sgpr 10
 ; OSABI-AMDHSA-ASM:     .amdhsa_reserve_vcc 0
 ; OSABI-AMDHSA-ASM:     .amdhsa_reserve_flat_scratch 0
 ; OSABI-AMDHSA-ASM: .end_amdhsa_kernel
@@ -93,7 +93,7 @@ entry:
 ; registers used.
 ;
 ; ALL-ASM-LABEL: {{^}}empty:
-; ALL-ASM:     .amdhsa_next_free_vgpr 3
+; ALL-ASM:     .amdhsa_next_free_vgpr 1
 ; ALL-ASM:     .amdhsa_next_free_sgpr 1
 define amdgpu_kernel void @empty(
     i32 %i,

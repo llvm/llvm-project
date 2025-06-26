@@ -526,7 +526,7 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
-  return llvm::is_contained({16u, 32u, 64u}, type.getWidth()) && !type.isBF16();
+  return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
 }
 
 bool ScalarType::isValid(IntegerType type) {
@@ -535,6 +535,11 @@ bool ScalarType::isValid(IntegerType type) {
 
 void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                std::optional<StorageClass> storage) {
+  if (isa<BFloat16Type>(*this)) {
+    static const Extension ext = Extension::SPV_KHR_bfloat16;
+    extensions.push_back(ext);
+  }
+
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
   // SPV_KHR_8bit_storage for more details.
@@ -640,7 +645,16 @@ void ScalarType::getCapabilities(
   } else {
     assert(llvm::isa<FloatType>(*this));
     switch (bitwidth) {
-      WIDTH_CASE(Float, 16);
+    case 16: {
+      if (isa<BFloat16Type>(*this)) {
+        static const Capability cap = Capability::BFloat16TypeKHR;
+        capabilities.push_back(cap);
+      } else {
+        static const Capability cap = Capability::Float16;
+        capabilities.push_back(cap);
+      }
+      break;
+    }
       WIDTH_CASE(Float, 64);
     case 32:
       break;

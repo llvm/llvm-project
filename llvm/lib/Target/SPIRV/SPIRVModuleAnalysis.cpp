@@ -595,8 +595,6 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
-        } else if (OpCode == SPIRV::OpExecutionMode) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
         } else if (TII->isAliasingInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {

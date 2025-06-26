@@ -10,8 +10,8 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 #include "hdr/unistd_macros.h"
 #include <stdint.h>      // For uint64_t.

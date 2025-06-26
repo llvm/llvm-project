@@ -383,9 +383,8 @@ define i8 @xvmsk_eq_vsel_slt_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) 
 ; CHECK-LABEL: xvmsk_eq_vsel_slt_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvseq.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvslti.w $xr1, $xr2, 0
-; CHECK-NEXT:    xvrepli.b $xr2, -1
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr2, $xr0
+; CHECK-NEXT:    xvrepli.b $xr1, -1
+; CHECK-NEXT:    xvbitsel.v $xr0, $xr2, $xr1, $xr0
 ; CHECK-NEXT:    xvmskltz.w $xr0, $xr0
 ; CHECK-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; CHECK-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
@@ -408,8 +407,7 @@ define i8 @xvmsk_sel_eq_or_eq_or_slt_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i3
 ; CHECK-NEXT:    xvreplgr2vr.w $xr4, $a0
 ; CHECK-NEXT:    xvand.v $xr2, $xr2, $xr4
 ; CHECK-NEXT:    xvseq.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvslti.w $xr1, $xr3, 0
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvor.v $xr0, $xr3, $xr0
 ; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr2
 ; CHECK-NEXT:    xvmskltz.w $xr0, $xr0
 ; CHECK-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
@@ -530,7 +528,6 @@ define i8 @xvmsk_eq_v2i64_concat_poison(<2 x i64> %vec) {
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
 ; CHECK-NEXT:    vpackev.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vslli.h $vr0, $vr0, 15
-; CHECK-NEXT:    vsrai.h $vr0, $vr0, 15
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -558,7 +555,6 @@ define i8 @xvmsk_ne_v4i32_concat_poison(<4 x i32> %vec) {
 ; CHECK-NEXT:    st.h $a0, $sp, 0
 ; CHECK-NEXT:    vld $vr0, $sp, 0
 ; CHECK-NEXT:    vslli.h $vr0, $vr0, 15
-; CHECK-NEXT:    vsrai.h $vr0, $vr0, 15
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -586,7 +582,6 @@ define i8 @xvmsk_ogt_v4f64_concat_poison(<4 x double> %vec) {
 ; CHECK-NEXT:    st.h $a0, $sp, 0
 ; CHECK-NEXT:    vld $vr0, $sp, 0
 ; CHECK-NEXT:    vslli.h $vr0, $vr0, 15
-; CHECK-NEXT:    vsrai.h $vr0, $vr0, 15
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -601,7 +596,6 @@ define i32 @xvmsk_trunc_i8(<32 x i8> %a) {
 ; CHECK-LABEL: xvmsk_trunc_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvslli.b $xr0, $xr0, 7
-; CHECK-NEXT:    xvsrai.b $xr0, $xr0, 7
 ; CHECK-NEXT:    xvmskltz.b $xr0, $xr0
 ; CHECK-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; CHECK-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
@@ -616,7 +610,6 @@ define i16 @xvmsk_trunc_i16(<16 x i16> %a) {
 ; CHECK-LABEL: xvmsk_trunc_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvslli.h $xr0, $xr0, 15
-; CHECK-NEXT:    xvsrai.h $xr0, $xr0, 15
 ; CHECK-NEXT:    xvmskltz.h $xr0, $xr0
 ; CHECK-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; CHECK-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
@@ -631,7 +624,6 @@ define i8 @xvmsk_trunc_i32(<8 x i32> %a) {
 ; CHECK-LABEL: xvmsk_trunc_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvslli.w $xr0, $xr0, 31
-; CHECK-NEXT:    xvsrai.w $xr0, $xr0, 31
 ; CHECK-NEXT:    xvmskltz.w $xr0, $xr0
 ; CHECK-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; CHECK-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
@@ -646,7 +638,6 @@ define i4 @xvmsk_trunc_i64(<4 x i64> %a) {
 ; CHECK-LABEL: xvmsk_trunc_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvslli.d $xr0, $xr0, 63
-; CHECK-NEXT:    xvsrai.d $xr0, $xr0, 63
 ; CHECK-NEXT:    xvmskltz.d $xr0, $xr0
 ; CHECK-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; CHECK-NEXT:    xvpickve2gr.wu $a1, $xr0, 4

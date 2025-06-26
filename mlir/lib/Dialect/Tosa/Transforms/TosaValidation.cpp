@@ -1244,10 +1244,36 @@ bool checkErrorIfCondIf(Operation *op) {
   return true;
 }
 
+bool checkErrorIfScatter(Operation *op) {
+  auto scatterOp = dyn_cast<tosa::ScatterOp>(op);
+  if (!scatterOp)
+    return true;
+
+  // for constant indices, check that there are no duplicate values
+  DenseIntElementsAttr indicesAttr;
+  if (!matchPattern(scatterOp.getIndices(), m_Constant(&indicesAttr)))
+    return true;
+
+  auto const indicesType =
+      dyn_cast<ShapedType>(scatterOp.getIndices().getType());
+  if (!indicesType || !indicesType.hasRank()) {
+    op->emitOpError("expect ranked indices tensor");
+    return false;
+  }
+
+  if (!hasUniqueConstantScatterIndices(indicesType, indicesAttr)) {
+    op->emitOpError("indices values contain duplicates");
+    return false;
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
       !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
-      !checkErrorIfPad(op) || !checkErrorIfCondIf(op))
+      !checkErrorIfPad(op) || !checkErrorIfCondIf(op) ||
+      !checkErrorIfScatter(op))
     return failure();
   return success();
 }

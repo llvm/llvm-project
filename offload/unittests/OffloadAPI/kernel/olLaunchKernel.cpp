@@ -19,13 +19,8 @@ struct LaunchKernelTestBase : OffloadQueueTest {
                                    DeviceBin->getBufferSize(), &Program));
     ASSERT_SUCCESS(olGetKernel(Program, kernel, &Kernel));
     LaunchArgs.Dimensions = 1;
-    LaunchArgs.GroupSizeX = 64;
-    LaunchArgs.GroupSizeY = 1;
-    LaunchArgs.GroupSizeZ = 1;
-
-    LaunchArgs.NumGroupsX = 1;
-    LaunchArgs.NumGroupsY = 1;
-    LaunchArgs.NumGroupsZ = 1;
+    LaunchArgs.GroupSize = {64, 1, 1};
+    LaunchArgs.NumGroups = {1, 1, 1};
 
     LaunchArgs.DynSharedMemory = 0;
   }
@@ -60,7 +55,7 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelNoArgsTest);
 TEST_P(olLaunchKernelTest, Success) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
-                            LaunchArgs.GroupSizeX * sizeof(uint32_t), &Mem));
+                            LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
   struct {
     void *Mem;
   } Args{Mem};
@@ -71,7 +66,7 @@ TEST_P(olLaunchKernelTest, Success) {
   ASSERT_SUCCESS(olWaitQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
-  for (int i = 0; i < 64; i++) {
+  for (uint32_t i = 0; i < 64; i++) {
     ASSERT_EQ(Data[i], i);
   }
 
@@ -88,7 +83,7 @@ TEST_P(olLaunchKernelNoArgsTest, Success) {
 TEST_P(olLaunchKernelTest, SuccessSynchronous) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
-                            LaunchArgs.GroupSizeX * sizeof(uint32_t), &Mem));
+                            LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   struct {
     void *Mem;
@@ -98,7 +93,7 @@ TEST_P(olLaunchKernelTest, SuccessSynchronous) {
                                 &LaunchArgs, nullptr));
 
   uint32_t *Data = (uint32_t *)Mem;
-  for (int i = 0; i < 64; i++) {
+  for (uint32_t i = 0; i < 64; i++) {
     ASSERT_EQ(Data[i], i);
   }
 

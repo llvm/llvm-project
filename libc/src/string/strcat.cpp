@@ -9,7 +9,6 @@
 #include "src/string/strcat.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
-#include "src/string/strcpy.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
@@ -21,9 +20,11 @@ LLVM_LIBC_FUNCTION(char *, strcat,
   LIBC_CRASH_ON_NULLPTR(dest);
   LIBC_CRASH_ON_NULLPTR(src);
   size_t dest_length = internal::string_length(dest);
-  size_t src_length = internal::string_length(src);
-  LIBC_NAMESPACE::strcpy(dest + dest_length, src);
-  dest[dest_length + src_length] = '\0';
+  size_t i;
+  for (i = 0; src[i] != '\0'; ++i)
+    dest[dest_length + i] = src[i];
+
+  dest[dest_length + i] = '\0';
   return dest;
 }
 

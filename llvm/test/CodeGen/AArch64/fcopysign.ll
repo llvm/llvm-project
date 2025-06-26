@@ -33,7 +33,7 @@ define float @copysign_f32(float %a, float %b) {
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $d0
 ; CHECK-GI-NEXT:    // kill: def $s1 killed $s1 def $d1
 ; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call float @llvm.copysign.f32(float %a, float %b)
@@ -56,7 +56,7 @@ define half @copysign_f16(half %a, half %b) {
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call half @llvm.copysign.f16(half %a, half %b)

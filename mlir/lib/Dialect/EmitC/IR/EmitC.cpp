@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -386,9 +386,7 @@ OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 Operation *ExpressionOp::getRootOp() {
   auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
   Value yieldedValue = yieldOp.getResult();
-  Operation *rootOp = yieldedValue.getDefiningOp();
-  assert(rootOp && "Yielded value not defined within expression");
-  return rootOp;
+  return yieldedValue.getDefiningOp();
 }
 
 LogicalResult ExpressionOp::verify() {
@@ -406,13 +404,21 @@ LogicalResult ExpressionOp::verify() {
   if (!yieldResult)
     return emitOpError("must yield a value at termination");
 
+  Operation *rootOp = yieldResult.getDefiningOp();
+
+  if (!rootOp)
+    return emitOpError("yielded value has no defining op");
+
+  if (rootOp->getParentOp() != getOperation())
+    return emitOpError("yielded value not defined within expression");
+
   Type yieldType = yieldResult.getType();
 
   if (resultType != yieldType)
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!op.hasTrait<OpTrait::emitc::CExpression>())
+    if (!isa<emitc::CExpressionInterface>(op))
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
@@ -1395,8 +1401,53 @@ void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
 }
 
 //===----------------------------------------------------------------------===//
+// FieldOp
+//===----------------------------------------------------------------------===//
+LogicalResult FieldOp::verify() {
+  if (!isSupportedEmitCType(getType()))
+    return emitOpError("expected valid emitc type");
+
+  Operation *parentOp = getOperation()->getParentOp();
+  if (!parentOp || !isa<emitc::ClassOp>(parentOp))
+    return emitOpError("field must be nested within an emitc.class operation");
+
+  StringAttr symName = getSymNameAttr();
+  if (!symName || symName.getValue().empty())
+    return emitOpError("field must have a non-empty symbol name");
+
+  if (!getAttrs())
+    return success();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetFieldOp
+//===----------------------------------------------------------------------===//
+LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();
+  FieldOp fieldOp =
+      symbolTable.lookupNearestSymbolFrom<FieldOp>(*this, fieldNameAttr);
+  if (!fieldOp)
+    return emitOpError("field '")
+           << fieldNameAttr << "' not found in the class";
+
+  Type getFieldResultType = getResult().getType();
+  Type fieldType = fieldOp.getType();
+
+  if (fieldType != getFieldResultType)
+    return emitOpError("result type ")
+           << getFieldResultType << " does not match field '" << fieldNameAttr
+           << "' type " << fieldType;
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"

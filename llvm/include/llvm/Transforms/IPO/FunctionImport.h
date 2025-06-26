@@ -272,8 +272,9 @@ public:
   // A map from destination modules to lists of imports.
   class ImportListsTy {
   public:
-    ImportListsTy() : EmptyList(ImportIDs) {}
-    ImportListsTy(size_t Size) : EmptyList(ImportIDs), ListsImpl(Size) {}
+    ImportListsTy() : ImportIDs(), EmptyList(ImportIDs) {}
+    ImportListsTy(size_t Size)
+        : ImportIDs(), EmptyList(ImportIDs), ListsImpl(Size) {}
 
     ImportMapTy &operator[](StringRef DestMod) {
       return ListsImpl.try_emplace(DestMod, ImportIDs).first->second;
@@ -293,9 +294,9 @@ public:
     const_iterator end() const { return ListsImpl.end(); }
 
   private:
+    ImportIDTable ImportIDs;
     ImportMapTy EmptyList;
     DenseMap<StringRef, ImportMapTy> ListsImpl;
-    ImportIDTable ImportIDs;
   };
 
   /// The set contains an entry for every global value that the module exports.

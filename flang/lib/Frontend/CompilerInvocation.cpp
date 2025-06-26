@@ -26,9 +26,11 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Options.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -43,6 +45,7 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
+#include <sstream>
 
 using namespace Fortran::frontend;
 
@@ -439,6 +442,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.PICLevel = picLevel;
     if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
       opts.IsPIE = 1;
+  }
+
+  if (args.hasArg(clang::driver::options::OPT_fprofile_generate)) {
+    opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+  }
+
+  if (auto A = args.getLastArg(clang::driver::options::OPT_fprofile_use_EQ)) {
+    opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+    opts.ProfileInstrumentUsePath = A->getValue();
   }
 
   // -mcmodel option.
@@ -1001,7 +1013,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -W(no-)<feature>
-      } else if (!features.ApplyCliOption(wArg)) {
+      } else if (!features.EnableWarning(wArg)) {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;
@@ -1126,15 +1138,51 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
-  // By default OpenMP is set to 3.1 version
-  res.getLangOpts().OpenMPVersion = 31;
+  constexpr unsigned newestFullySupported = 31;
+  // By default OpenMP is set to the most recent fully supported version
+  res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
-  if (int Version = getLastArgIntValue(
-          args, clang::driver::options::OPT_fopenmp_version_EQ,
-          res.getLangOpts().OpenMPVersion, diags)) {
-    res.getLangOpts().OpenMPVersion = Version;
+  if (auto *arg =
+          args.getLastArg(clang::driver::options::OPT_fopenmp_version_EQ)) {
+    llvm::ArrayRef<unsigned> ompVersions = llvm::omp::getOpenMPVersions();
+    unsigned oldVersions[] = {11, 20, 25, 30};
+    unsigned version = 0;
+
+    auto reportBadVersion = [&](llvm::StringRef value) {
+      const unsigned diagID =
+          diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                "'%0' is not a valid OpenMP version in '%1', "
+                                "valid versions are %2");
+      std::string buffer;
+      llvm::raw_string_ostream versions(buffer);
+      llvm::interleaveComma(ompVersions, versions);
+
+      diags.Report(diagID) << value << arg->getAsString(args) << versions.str();
+    };
+
+    llvm::StringRef value = arg->getValue();
+    if (!value.getAsInteger(/*radix=*/10, version)) {
+      if (llvm::is_contained(ompVersions, version)) {
+        res.getLangOpts().OpenMPVersion = version;
+
+        if (version > newestFullySupported)
+          diags.Report(clang::diag::warn_openmp_incomplete) << version;
+      } else if (llvm::is_contained(oldVersions, version)) {
+        const unsigned diagID =
+            diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                  "OpenMP version %0 is no longer supported, "
+                                  "assuming version %1");
+        std::string assumed = std::to_string(res.getLangOpts().OpenMPVersion);
+        diags.Report(diagID) << value << assumed;
+      } else {
+        reportBadVersion(value);
+      }
+    } else {
+      reportBadVersion(value);
+    }
   }
+
   if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
     res.getLangOpts().OpenMPForceUSM = 1;
   }

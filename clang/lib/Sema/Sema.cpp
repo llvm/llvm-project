@@ -1227,15 +1227,6 @@ void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
   assert(LateParsedInstantiations.empty() &&
          "end of TU template instantiation should not create more "
          "late-parsed templates");
-
-  // Report diagnostics for uncorrected delayed typos. Ideally all of them
-  // should have been corrected by that time, but it is very hard to cover all
-  // cases in practice.
-  for (const auto &Typo : DelayedTypos) {
-    // We pass an empty TypoCorrection to indicate no correction was performed.
-    Typo.second.DiagHandler(TypoCorrection());
-  }
-  DelayedTypos.clear();
 }
 
 void Sema::ActOnEndOfTranslationUnit() {

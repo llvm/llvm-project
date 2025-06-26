@@ -47,7 +47,7 @@ struct RVVIntrinsicDef {
   std::string BuiltinName;
 
   /// Mapping to RequiredFeatures in riscv_vector.td
-  std::string RequiredExtensions;
+  StringRef RequiredExtensions;
 
   /// Function signature, first element is return type.
   RVVTypes Signature;
@@ -1438,8 +1438,15 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
            !FeatureMap.lookup("zvfhmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D)
         << Ty << "zvfh or zvfhmin";
-  else if (Info.ElementType->isBFloat16Type() && !FeatureMap.lookup("zvfbfmin"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
+  else if (Info.ElementType->isBFloat16Type() &&
+           !FeatureMap.lookup("zvfbfmin") &&
+           !FeatureMap.lookup("xandesvbfhcvt"))
+    if (DeclareAndesVectorBuiltins) {
+      Diag(Loc, diag::err_riscv_type_requires_extension, D)
+          << Ty << "zvfbfmin or xandesvbfhcvt";
+    } else {
+      Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
+    }
   else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
            !FeatureMap.lookup("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
