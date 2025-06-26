@@ -894,9 +894,17 @@ public:
       }
     } else {
       // Complex Comparison: can only be an equality comparison.
-      assert(!cir::MissingFeatures::complexType());
-      cgf.cgm.errorNYI(loc, "complex comparison");
-      result = builder.getBool(false, loc);
+      assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
+
+      BinOpInfo boInfo = emitBinOps(e);
+      if (e->getOpcode() == BO_EQ) {
+        result =
+            builder.create<cir::ComplexEqualOp>(loc, boInfo.lhs, boInfo.rhs);
+      } else {
+        assert(!cir::MissingFeatures::complexType());
+        cgf.cgm.errorNYI(loc, "complex not equal");
+        result = builder.getBool(false, loc);
+      }
     }
 
     return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
