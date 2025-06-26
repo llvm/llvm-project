@@ -1699,184 +1699,17 @@ bool PreRARematStage::allUsesAvailableAt(const MachineInstr *InstToRemat,
   return true;
 }
 
-namespace {
-/// Models excess register pressure in a region and tracks our progress as we
-/// identify rematerialization opportunities.
-struct ExcessRP {
-  /// Number of excess SGPRs.
-  unsigned SGPRs = 0;
-  /// Number of excess ArchVGPRs.
-  unsigned ArchVGPRs = 0;
-  /// Number of excess AGPRs.
-  unsigned AGPRs = 0;
-  /// For unified register files, number of excess VGPRs. 0 otherwise.
-  unsigned VGPRs = 0;
-  /// For unified register files with AGPR usage, number of excess ArchVGPRs to
-  /// save before we are able to save a whole allocation granule.
-  unsigned ArchVGPRsToAlignment = 0;
-  /// Whether the region uses AGPRs.
-  bool HasAGPRs = false;
-  /// Whether the subtarget has a unified RF.
-  bool UnifiedRF;
-  /// Whether we consider that the register allocator will be able to swap
-  /// between ArchVGPRs and AGPRs by copying them to a super register class.
-  /// Concretely, this allows savings of one kind of VGPR to help toward savings
-  /// the other kind of VGPR.
-  bool CombineVGPRSavings;
-
-  /// Constructs the excess RP model; determines the excess pressure w.r.t. a
-  /// maximum number of allowed SGPRs/VGPRs.
-  ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP, unsigned MaxSGPRs,
-           unsigned MaxVGPRs, bool CombineVGPRSavings);
-
-  /// Accounts for \p NumRegs saved SGPRs in the model. Returns whether saving
-  /// these SGPRs helped reduce excess pressure.
-  bool saveSGPRs(unsigned NumRegs) { return saveRegs(SGPRs, NumRegs); }
-
-  /// Accounts for \p NumRegs saved ArchVGPRs in the model. Returns whether
-  /// saving these ArchGPRs helped reduce excess pressure.
-  bool saveArchVGPRs(unsigned NumRegs);
-
-  /// Accounts for \p NumRegs saved AGPRs in the model. Returns whether saving
-  /// these AGPRs helped reduce excess pressure.
-  bool saveAGPRs(unsigned NumRegs);
-
-  /// Returns whether there is any excess register pressure.
-  operator bool() const { return SGPRs || ArchVGPRs || AGPRs || VGPRs; }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  friend raw_ostream &operator<<(raw_ostream &OS, const ExcessRP &Excess) {
-    OS << Excess.SGPRs << " SGPRs, " << Excess.ArchVGPRs << " ArchVGPRs, and "
-       << Excess.AGPRs << " AGPRs, (" << Excess.VGPRs
-       << " VGPRs in total, next ArchVGPR aligment in "
-       << Excess.ArchVGPRsToAlignment << " registers)\n";
-    return OS;
-  }
-#endif
-
-private:
-  static inline bool saveRegs(unsigned &LeftToSave, unsigned &NumRegs) {
-    unsigned NumSaved = std::min(LeftToSave, NumRegs);
-    NumRegs -= NumSaved;
-    LeftToSave -= NumSaved;
-    return NumSaved;
-  }
-};
-} // namespace
-
-ExcessRP::ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP,
-                   unsigned MaxSGPRs, unsigned MaxVGPRs,
-                   bool CombineVGPRSavings)
-    : UnifiedRF(ST.hasGFX90AInsts()), CombineVGPRSavings(CombineVGPRSavings) {
-  // Compute excess SGPR pressure.
-  unsigned NumSGPRs = RP.getSGPRNum();
-  if (NumSGPRs > MaxSGPRs)
-    SGPRs = NumSGPRs - MaxSGPRs;
-
-  // Compute excess ArchVGPR/AGPR pressure.
-  unsigned NumArchVGPRs = RP.getArchVGPRNum();
-  unsigned NumAGPRs = RP.getAGPRNum();
-  HasAGPRs = NumAGPRs;
-  if (!UnifiedRF) {
-    // Non-unified RF. Account for excess pressure for ArchVGPRs and AGPRs
-    // independently.
-    if (NumArchVGPRs > MaxVGPRs)
-      ArchVGPRs = NumArchVGPRs - MaxVGPRs;
-    if (NumAGPRs > MaxVGPRs)
-      AGPRs = NumAGPRs - MaxVGPRs;
-    return;
-  }
-
-  // Independently of whether overall VGPR pressure is under the limit, we still
-  // have to check whether ArchVGPR pressure or AGPR pressure alone exceeds the
-  // number of addressable registers in each category.
-  const unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
-  if (NumArchVGPRs > MaxArchVGPRs) {
-    ArchVGPRs = NumArchVGPRs - MaxArchVGPRs;
-    NumArchVGPRs = MaxArchVGPRs;
-  }
-  if (NumAGPRs > MaxArchVGPRs) {
-    AGPRs = NumAGPRs - MaxArchVGPRs;
-    NumAGPRs = MaxArchVGPRs;
-  }
-
-  // Check overall VGPR usage against the limit; any excess above addressable
-  // register limits has already been accounted for.
-  const unsigned Granule = AMDGPU::IsaInfo::getArchVGPRAllocGranule();
-  unsigned NumVGPRs = GCNRegPressure::getUnifiedVGPRNum(NumArchVGPRs, NumAGPRs);
-  if (NumVGPRs > MaxVGPRs) {
-    VGPRs = NumVGPRs - MaxVGPRs;
-    ArchVGPRsToAlignment = NumArchVGPRs - alignDown(NumArchVGPRs, Granule);
-    if (!ArchVGPRsToAlignment)
-      ArchVGPRsToAlignment = Granule;
-  }
-}
-
-bool ExcessRP::saveArchVGPRs(unsigned NumRegs) {
-  bool Progress = saveRegs(ArchVGPRs, NumRegs);
-  if (!NumRegs)
-    return Progress;
-
-  if (!UnifiedRF) {
-    if (CombineVGPRSavings)
-      Progress |= saveRegs(AGPRs, NumRegs);
-  } else if (HasAGPRs && (VGPRs || (CombineVGPRSavings && AGPRs))) {
-    // There is progress as long as there are VGPRs left to save, even if the
-    // save induced by this particular call does not cross an ArchVGPR alignment
-    // barrier.
-    Progress = true;
-
-    // ArchVGPRs can only be allocated as a multiple of a granule in unified RF.
-    unsigned NumSavedRegs = 0;
-
-    // Count the number of whole ArchVGPR allocation granules we can save.
-    const unsigned Granule = AMDGPU::IsaInfo::getArchVGPRAllocGranule();
-    if (unsigned NumGranules = NumRegs / Granule; NumGranules) {
-      NumSavedRegs = NumGranules * Granule;
-      NumRegs -= NumSavedRegs;
-    }
-
-    // We may be able to save one more whole ArchVGPR allocation granule.
-    if (NumRegs >= ArchVGPRsToAlignment) {
-      NumSavedRegs += Granule;
-      ArchVGPRsToAlignment = Granule - (NumRegs - ArchVGPRsToAlignment);
-    } else {
-      ArchVGPRsToAlignment -= NumRegs;
-    }
-
-    // Prioritize saving generic VGPRs, then AGPRs if we consider that the
-    // register allocator will be able to replace an AGPR with an ArchVGPR.
-    saveRegs(VGPRs, NumSavedRegs);
-    if (CombineVGPRSavings)
-      saveRegs(AGPRs, NumSavedRegs);
-  } else {
-    // No AGPR usage in the region i.e., no allocation granule to worry about.
-    Progress |= saveRegs(VGPRs, NumRegs);
-  }
-  return Progress;
-}
-
-bool ExcessRP::saveAGPRs(unsigned NumRegs) {
-  bool Progress = saveRegs(AGPRs, NumRegs);
-  if (UnifiedRF)
-    Progress |= saveRegs(VGPRs, NumRegs);
-  if (CombineVGPRSavings)
-    Progress |= saveRegs(ArchVGPRs, NumRegs);
-  return Progress;
-}
-
 bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
-  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(DAG.TRI);
-
   REMAT_DEBUG({
     dbgs() << "Collecting rematerializable instructions in ";
     MF.getFunction().printAsOperand(dbgs(), false);
     dbgs() << '\n';
   });
 
-  // Maps optimizable regions (i.e., regions at minimum and VGPR-limited
-  // occupancy, or regions with VGPR spilling) to a model of their excess RP.
-  DenseMap<unsigned, ExcessRP> OptRegions;
+  // Maps optimizable regions (i.e., regions at minimum and register-limited
+  // occupancy, or regions with spilling) to the target RP we would like to
+  // reach.
+  DenseMap<unsigned, GCNRPTarget> OptRegions;
   const Function &F = MF.getFunction();
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
@@ -1901,32 +1734,35 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
     // the register allocator i.e., the scheduler will not be able to reason
     // about these savings and will not report an increase in the achievable
     // occupancy, triggering rollbacks.
-    ExcessRP Excess(ST, RP, MaxSGPRsNoSpill, MaxVGPRsNoSpill,
-                    /*CombineVGPRSavings=*/true);
-    if (Excess && IncreaseOccupancy) {
+    GCNRPTarget Target(MaxSGPRsNoSpill, MaxVGPRsNoSpill, MF, RP,
+                       /*CombineVGPRSavings=*/true);
+    if (!Target.satisfied() && IncreaseOccupancy) {
       // There is spilling in the region and we were so far trying to increase
       // occupancy. Strop trying that and focus on reducing spilling.
       IncreaseOccupancy = false;
       OptRegions.clear();
     } else if (IncreaseOccupancy) {
       // There is no spilling in the region, try to increase occupancy.
-      Excess = ExcessRP(ST, RP, MaxSGPRsIncOcc, MaxVGPRsIncOcc,
-                        /*CombineVGPRSavings=*/false);
+      Target = GCNRPTarget(MaxSGPRsIncOcc, MaxVGPRsIncOcc, MF, RP,
+                           /*CombineVGPRSavings=*/false);
     }
-    if (Excess)
-      OptRegions.insert({I, Excess});
+    if (!Target.satisfied())
+      OptRegions.insert({I, Target});
   }
   if (OptRegions.empty())
     return false;
 
 #ifndef NDEBUG
-  if (IncreaseOccupancy)
-    REMAT_DEBUG(dbgs() << "Occupancy minimal in regions:\n");
-  else
-    REMAT_DEBUG(dbgs() << "Spilling in regions:\n");
+  if (IncreaseOccupancy) {
+    REMAT_DEBUG(dbgs() << "Occupancy minimal (" << DAG.MinOccupancy
+                       << ") in regions:\n");
+  } else {
+    REMAT_DEBUG(dbgs() << "Spilling w.r.t. minimum target occupancy ("
+                       << WavesPerEU.first << ") in regions:\n");
+  }
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     if (auto OptIt = OptRegions.find(I); OptIt != OptRegions.end())
-      REMAT_DEBUG(dbgs() << "  " << I << ": " << OptIt->getSecond() << '\n');
+      REMAT_DEBUG(dbgs() << "  [" << I << "] " << OptIt->getSecond() << '\n');
   }
 #endif
 
@@ -1941,18 +1777,14 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   // estimate that we have identified enough rematerialization opportunities to
   // achieve our goal, and sets Progress to true when this particular reduction
   // in pressure was helpful toward that goal.
-  auto ReduceRPInRegion = [&](auto OptIt, LaneBitmask Mask,
-                              const TargetRegisterClass *RC,
+  auto ReduceRPInRegion = [&](auto OptIt, Register Reg, LaneBitmask Mask,
                               bool &Progress) -> bool {
-    ExcessRP &Excess = OptIt->getSecond();
-    unsigned NumRegs = SIRegisterInfo::getNumCoveredRegs(Mask);
-    if (SRI->isSGPRClass(RC))
-      Progress |= Excess.saveSGPRs(NumRegs);
-    else if (SRI->isAGPRClass(RC))
-      Progress |= Excess.saveAGPRs(NumRegs);
-    else
-      Progress |= Excess.saveArchVGPRs(NumRegs);
-    if (!Excess)
+    GCNRPTarget &Target = OptIt->getSecond();
+    if (!Target.isSaveBeneficial(Reg, DAG.MRI))
+      return false;
+    Progress = true;
+    Target.saveReg(Reg, Mask, DAG.MRI);
+    if (Target.satisfied())
       OptRegions.erase(OptIt->getFirst());
     return OptRegions.empty();
   };
@@ -2013,7 +1845,6 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
           Rematerializations.try_emplace(&DefMI, UseMI).first->second;
 
       bool RematUseful = false;
-      const TargetRegisterClass *RC = DAG.MRI.getRegClass(Reg);
       if (auto It = OptRegions.find(I); It != OptRegions.end()) {
         // Optimistically consider that moving the instruction out of its
         // defining region will reduce RP in the latter; this assumes that
@@ -2021,7 +1852,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
         // instruction and the end of the region.
         REMAT_DEBUG(dbgs() << "  Defining region is optimizable\n");
         LaneBitmask Mask = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I)[Reg];
-        if (ReduceRPInRegion(It, Mask, RC, RematUseful))
+        if (ReduceRPInRegion(It, Reg, Mask, RematUseful))
           return true;
       }
 
@@ -2041,7 +1872,8 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
         // instruction's use.
         if (auto It = OptRegions.find(LIRegion); It != OptRegions.end()) {
           REMAT_DEBUG(dbgs() << "  Live-in in region " << LIRegion << '\n');
-          if (ReduceRPInRegion(It, DAG.LiveIns[LIRegion][Reg], RC, RematUseful))
+          if (ReduceRPInRegion(It, Reg, DAG.LiveIns[LIRegion][Reg],
+                               RematUseful))
             return true;
         }
       }

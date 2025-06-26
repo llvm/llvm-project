@@ -108,6 +108,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::AnyOf:
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
     return SetResultTyFromOp();
   case VPInstruction::FirstActiveLane:
     return Type::getIntNTy(Ctx, 64);
