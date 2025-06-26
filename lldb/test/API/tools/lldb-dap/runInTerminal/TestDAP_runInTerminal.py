@@ -2,7 +2,7 @@
 Test lldb-dap runInTerminal reverse request
 """
 
-from lldbsuite.test.decorators import skipIfBuildType, skipIfWindows, skipIf, no_match
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 import lldbdap_testcase
 import os
@@ -26,21 +26,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         with open(fifo_file, "r") as file:
             return file.readline()
 
-    def isTestSupported(self):
-        # For some strange reason, this test fails on python3.6
-        if not (sys.version_info.major == 3 and sys.version_info.minor >= 7):
-            return False
-        try:
-            # We skip this test for debug builds because it takes too long parsing lldb's own
-            # debug info. Release builds are fine.
-            # Checking the size of the lldb-dap binary seems to be a decent proxy for a quick
-            # detection. It should be far less than 1 MB in Release builds.
-            if os.path.getsize(os.environ["LLDBDAP_EXEC"]) < 1000000:
-                return True
-        except:
-            return False
-
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
+    @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
@@ -88,6 +75,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
         self.continue_to_exit()
 
+    @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminalWithObjectEnv(self):
