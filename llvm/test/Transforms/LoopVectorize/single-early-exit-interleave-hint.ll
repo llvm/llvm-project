@@ -5,7 +5,7 @@
 
 declare void @init_mem(ptr, i64);
 
-; DEBUG: Interleaving not currently supported for loops with uncountable early exits
+; DEBUG: Interleaving not supported for loops with uncountable early exits
 
 define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-LABEL: define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
