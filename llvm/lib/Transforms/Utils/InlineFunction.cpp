@@ -2336,16 +2336,14 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
           Worklist.push_back(Succ);
   }
 
-  assert(
-      llvm::all_of(CalleeCounterMap, [&](const auto &V) { return V != 0; }) &&
-      "Counter index mapping should be either to -1 or to non-zero index, "
-      "because the 0 "
-      "index corresponds to the entry BB of the caller");
-  assert(
-      llvm::all_of(CalleeCallsiteMap, [&](const auto &V) { return V != 0; }) &&
-      "Callsite index mapping should be either to -1 or to non-zero index, "
-      "because there should have been at least a callsite - the inlined one "
-      "- which would have had a 0 index.");
+  assert(!llvm::is_contained(CalleeCounterMap, 0) &&
+         "Counter index mapping should be either to -1 or to non-zero index, "
+         "because the 0 "
+         "index corresponds to the entry BB of the caller");
+  assert(!llvm::is_contained(CalleeCallsiteMap, 0) &&
+         "Callsite index mapping should be either to -1 or to non-zero index, "
+         "because there should have been at least a callsite - the inlined one "
+         "- which would have had a 0 index.");
 
   return {std::move(CalleeCounterMap), std::move(CalleeCallsiteMap)};
 }

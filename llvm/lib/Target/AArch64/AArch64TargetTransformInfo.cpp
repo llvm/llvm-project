@@ -4855,7 +4855,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   auto *Latch = L->getLoopLatch();
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
   if (!Term || !Term->isConditional() || Preds.size() == 1 ||
-      none_of(Preds, [Header](BasicBlock *Pred) { return Header == Pred; }) ||
+      !llvm::is_contained(Preds, Header) ||
       none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
     return;
 
