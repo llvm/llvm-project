@@ -56,7 +56,8 @@ public:
 
   std::unique_ptr<sema::RISCVIntrinsicManager> IntrinsicManager;
 
-  bool checkTargetVersionAttr(const StringRef Param, const SourceLocation Loc);
+  bool checkTargetVersionAttr(const StringRef Param, const SourceLocation Loc,
+                              SmallString<64> &NewParam);
   bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
                              SmallVectorImpl<SourceLocation> &Locs,
                              SmallVectorImpl<SmallString<64>> &NewParams);
