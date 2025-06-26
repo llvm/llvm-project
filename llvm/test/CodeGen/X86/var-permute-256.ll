@@ -148,11 +148,11 @@ define <4 x i64> @var_shuffle_zero_v4i64(<4 x i64> %v, <4 x i64> %indices) nounw
 ; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [3,3,3,3]
+; AVX512-NEXT:    vpcmpnleuq %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512-NEXT:    vpblendmq %zmm3, %zmm1, %zmm3 {%k1}
 ; AVX512-NEXT:    vpcmpleuq %zmm2, %zmm1, %k1
-; AVX512-NEXT:    vpcmpnleuq %zmm2, %zmm1, %k2
-; AVX512-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm1 {%k2}
-; AVX512-NEXT:    vpermq %zmm0, %zmm1, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpermq %zmm0, %zmm3, %zmm0 {%k1} {z}
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
 ;
@@ -1193,11 +1193,11 @@ define <4 x double> @var_shuffle_zero_v4f64(<4 x double> %v, <4 x i64> %indices)
 ; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [3,3,3,3]
+; AVX512-NEXT:    vpcmpnleuq %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512-NEXT:    vpblendmq %zmm3, %zmm1, %zmm3 {%k1}
 ; AVX512-NEXT:    vpcmpleuq %zmm2, %zmm1, %k1
-; AVX512-NEXT:    vpcmpnleuq %zmm2, %zmm1, %k2
-; AVX512-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm1 {%k2}
-; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpermpd %zmm0, %zmm3, %zmm0 {%k1} {z}
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
 ;

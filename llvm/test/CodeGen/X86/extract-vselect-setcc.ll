@@ -5,8 +5,7 @@ define void @PR117684(i1 %cond, <8 x float> %vec, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: PR117684:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vcmpltss %xmm1, %xmm0, %k0
-; CHECK-NEXT:    knotb %k0, %k1
+; CHECK-NEXT:    vcmpnltss %xmm1, %xmm0, %k1
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm0, %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm0

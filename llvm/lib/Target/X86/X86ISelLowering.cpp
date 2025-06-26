@@ -5415,20 +5415,6 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
     }
   }
 
-  // Match not(insert_subvector(undef, setcc(), c))
-  // --> insert_subvector(undef, not(setcc()), c)
-  if (V.getOpcode() == ISD::INSERT_SUBVECTOR && V.getOperand(0).isUndef() &&
-      V.getOperand(1).getOpcode() == ISD::SETCC &&
-      V.getValueType().getScalarType() == MVT::i1) {
-    SDValue Cond = V.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-    CC = ISD::getSetCCInverse(CC, Cond.getOperand(0).getValueType());
-    SDValue NotSub = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(),
-                                  Cond.getOperand(0), Cond.getOperand(1), CC);
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(V), V.getValueType(),
-                       V.getOperand(0), NotSub, V.getOperand(2));
-  }
-
   // Match not(concat_vectors(not(X), not(Y))) -> concat_vectors(X, Y).
   SmallVector<SDValue, 2> CatOps;
   if (collectConcatOps(V.getNode(), CatOps, DAG)) {
@@ -48134,29 +48120,27 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
 
-  if (CondVT.getScalarType() != MVT::i1) {
-    // select(pcmpeq(and(X,Pow2),0),A,B) -> select(pcmpeq(and(X,Pow2),Pow2),B,A)
-    if (Cond.getOpcode() == X86ISD::PCMPEQ &&
-        Cond.getOperand(0).getOpcode() == ISD::AND &&
-        ISD::isBuildVectorAllZeros(Cond.getOperand(1).getNode()) &&
-        isConstantPowerOf2(Cond.getOperand(0).getOperand(1),
-                           Cond.getScalarValueSizeInBits(),
-                           /*AllowUndefs=*/true) &&
-        Cond.hasOneUse()) {
-      Cond = DAG.getNode(X86ISD::PCMPEQ, DL, CondVT, Cond.getOperand(0),
-                         Cond.getOperand(0).getOperand(1));
-      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
-    }
+  // select(pcmpeq(and(X,Pow2),0),A,B) -> select(pcmpeq(and(X,Pow2),Pow2),B,A)
+  if (Cond.getOpcode() == X86ISD::PCMPEQ &&
+      Cond.getOperand(0).getOpcode() == ISD::AND &&
+      ISD::isBuildVectorAllZeros(Cond.getOperand(1).getNode()) &&
+      isConstantPowerOf2(Cond.getOperand(0).getOperand(1),
+                         Cond.getScalarValueSizeInBits(),
+                         /*AllowUndefs=*/true) &&
+      Cond.hasOneUse()) {
+    Cond = DAG.getNode(X86ISD::PCMPEQ, DL, CondVT, Cond.getOperand(0),
+                       Cond.getOperand(0).getOperand(1));
+    return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
+  }
 
-    // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
-    // signbit.
-    if (Cond.getOpcode() == X86ISD::PCMPGT &&
-        ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode()) &&
-        Cond.hasOneUse()) {
-      Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
-                         DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
-      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
-    }
+  // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
+  // signbit.
+  if (Cond.getOpcode() == X86ISD::PCMPGT &&
+      ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode()) &&
+      Cond.hasOneUse()) {
+    Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
+                       DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
+    return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
   }
 
   // Try to optimize vXi1 selects if both operands are either all constants or
