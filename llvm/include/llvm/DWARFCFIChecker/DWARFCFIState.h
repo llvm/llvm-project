@@ -11,14 +11,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_UNWINDINFOSTATE_H
-#define LLVM_UNWINDINFOCHECKER_UNWINDINFOSTATE_H
+#ifndef LLVM_DWARFCFICHECKER_UNWINDINFOSTATE_H
+#define LLVM_DWARFCFICHECKER_UNWINDINFOSTATE_H
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
-#include <cstdint>
 #include <optional>
+
 namespace llvm {
 
 using DWARFRegNum = uint32_t;
@@ -36,6 +36,7 @@ private:
 
   std::optional<dwarf::CFIProgram> convert(MCCFIInstruction Directive);
 };
+
 } // namespace llvm
 
 #endif

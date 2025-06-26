@@ -7,7 +7,7 @@ set(LLVM_LINK_COMPONENTS
   MCParser
   Support
   TargetParser
-  UnwindInfoChecker
+  DWARFCFIChecker
   )
 
 add_llvm_tool(llvm-mc

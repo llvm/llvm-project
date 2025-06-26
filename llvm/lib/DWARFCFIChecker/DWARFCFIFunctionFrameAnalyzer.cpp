@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/UnwindInfoChecker/FunctionUnitUnwindInfoAnalyzer.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
 
 using namespace llvm;
 

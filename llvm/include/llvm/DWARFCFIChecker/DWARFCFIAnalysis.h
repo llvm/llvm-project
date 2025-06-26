@@ -11,10 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_DWARFCFIANALYSIS_H
-#define LLVM_UNWINDINFOCHECKER_DWARFCFIANALYSIS_H
+#ifndef LLVM_DWARFCFICHECKER_DWARFCFIANALYSIS_H
+#define LLVM_DWARFCFICHECKER_DWARFCFIANALYSIS_H
 
-#include "UnwindInfoState.h"
+#include "DWARFCFIState.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -59,4 +59,5 @@ private:
 };
 
 } // namespace llvm
+
 #endif

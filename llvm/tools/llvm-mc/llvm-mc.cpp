@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -38,8 +40,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/UnwindInfoChecker/FunctionUnitStreamer.h"
-#include "llvm/UnwindInfoChecker/FunctionUnitUnwindInfoAnalyzer.h"
 #include <memory>
 
 using namespace llvm;
@@ -526,13 +526,13 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 
-  std::unique_ptr<FunctionUnitUnwindInfoAnalyzer> FUUIA(
-      new FunctionUnitUnwindInfoAnalyzer(Ctx, *MCII));
+  std::unique_ptr<CFIFunctionFrameAnalyzer> FUUIA(
+      new CFIFunctionFrameAnalyzer(Ctx, *MCII));
 
   std::unique_ptr<MCInstPrinter> IP;
   if (ValidateCFI) {
     assert(FileType == OFT_Null);
-    auto *FUS = new FunctionUnitStreamer(Ctx, std::move(FUUIA));
+    auto *FUS = new CFIFunctionFrameStreamer(Ctx, std::move(FUUIA));
     TheTarget->createNullTargetStreamer(*FUS);
     Str.reset(FUS);
   } else if (FileType == OFT_AssemblyFile) {

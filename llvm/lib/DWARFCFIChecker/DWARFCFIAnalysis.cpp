@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/UnwindInfoChecker/UnwindInfoAnalysis.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIAnalysis.h"
 #include "Registers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIState.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -25,7 +26,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/UnwindInfoChecker/UnwindInfoState.h"
 #include <optional>
 
 using namespace llvm;
@@ -76,9 +76,9 @@ getUnwindRuleRefReg(const dwarf::UnwindTable::const_iterator &UnwindRow,
   }
 }
 
-DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context,
-                                       MCInstrInfo const &MCII, bool IsEH,
-                                       ArrayRef<MCCFIInstruction> Prologue)
+DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
+                                   bool IsEH,
+                                   ArrayRef<MCCFIInstruction> Prologue)
     : Context(Context), MCII(MCII), MCRI(Context->getRegisterInfo()),
       State(Context), IsEH(IsEH) {
 
@@ -121,7 +121,7 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context,
 }
 
 void DWARFCFIAnalysis::update(const MCInst &Inst,
-                                ArrayRef<MCCFIInstruction> Directives) {
+                              ArrayRef<MCCFIInstruction> Directives) {
   const MCInstrDesc &MCInstInfo = MCII.get(Inst.getOpcode());
 
   auto MaybePrevRow = State.getCurrentUnwindRow();

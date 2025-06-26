@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/UnwindInfoChecker/UnwindInfoState.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIState.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCDwarf.h"

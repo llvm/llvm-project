@@ -11,11 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
-#define LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
+#ifndef LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
+#define LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
 
-#include "FunctionUnitAnalyzer.h"
-#include "UnwindInfoAnalysis.h"
+#include "DWARFCFIAnalysis.h"
+#include "DWARFCFIFunctionFrameReceiver.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace llvm {

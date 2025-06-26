@@ -11,10 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
-#define LLVM_UNWINDINFOCHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
+#ifndef LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
+#define LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
 
-#include "FunctionUnitAnalyzer.h"
+#include "DWARFCFIFunctionFrameReceiver.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -67,4 +67,5 @@ private:
 };
 
 } // namespace llvm
+
 #endif

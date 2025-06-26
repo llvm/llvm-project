@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/UnwindInfoChecker/FunctionUnitStreamer.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -17,7 +17,8 @@
 
 using namespace llvm;
 
-std::pair<unsigned, unsigned> CFIFunctionFrameStreamer::updateDirectivesRange() {
+std::pair<unsigned, unsigned>
+CFIFunctionFrameStreamer::updateDirectivesRange() {
   auto Frames = getDwarfFrameInfos();
   unsigned CurrentCFIDirectiveIndex = 0;
   if (hasUnfinishedDwarfFrameInfo()) {
@@ -42,7 +43,8 @@ void CFIFunctionFrameStreamer::updateAnalyzer() {
     return;
   }
 
-  const MCDwarfFrameInfo *LastFrame = &getDwarfFrameInfos()[FrameIndices.back()];
+  const MCDwarfFrameInfo *LastFrame =
+      &getDwarfFrameInfos()[FrameIndices.back()];
 
   auto DirectivesRange = updateDirectivesRange();
   ArrayRef<MCCFIInstruction> Directives;
@@ -62,7 +64,7 @@ void CFIFunctionFrameStreamer::updateAnalyzer() {
 }
 
 void CFIFunctionFrameStreamer::emitInstruction(const MCInst &Inst,
-                                           const MCSubtargetInfo &STI) {
+                                               const MCSubtargetInfo &STI) {
   updateAnalyzer();
   LastInstruction = Inst;
 }

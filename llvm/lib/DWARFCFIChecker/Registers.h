@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UNWINDINFOCHECKER_REGISTERS_H
-#define LLVM_UNWINDINFOCHECKER_REGISTERS_H
+#ifndef LLVM_DWARFCFICHECKER_REGISTERS_H
+#define LLVM_DWARFCFICHECKER_REGISTERS_H
 
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
