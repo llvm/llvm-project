@@ -69,7 +69,6 @@ private:
 #include "NVPTXGenDAGISel.inc"
 
   void Select(SDNode *N) override;
-  bool tryIntrinsicNoChain(SDNode *N);
   bool tryIntrinsicChain(SDNode *N);
   bool tryIntrinsicVoid(SDNode *N);
   void SelectTexSurfHandle(SDNode *N);

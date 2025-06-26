@@ -332,12 +332,8 @@ public:
   }
 
   unsigned getSgprScoresIdx(InstCounterType T) const {
-    if (T == SmemAccessCounter)
-      return 0;
-    if (T == X_CNT)
-      return 1;
-
-    llvm_unreachable("Invalid SMEM counter");
+    assert(isSmemCounter(T) && "Invalid SMEM counter");
+    return T == X_CNT ? 1 : 0;
   }
 
   unsigned getScoreLB(InstCounterType T) const {
@@ -355,10 +351,8 @@ public:
   }
 
   unsigned getRegScore(int GprNo, InstCounterType T) const {
-    if (GprNo < NUM_ALL_VGPRS) {
+    if (GprNo < NUM_ALL_VGPRS)
       return VgprScores[T][GprNo];
-    }
-    assert(isSmemCounter(T));
     return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
   }
 
@@ -909,7 +903,6 @@ void WaitcntBrackets::setScoreByInterval(RegInterval Interval,
       VgprUB = std::max(VgprUB, RegNo);
       VgprScores[CntTy][RegNo] = Score;
     } else {
-      assert(isSmemCounter(CntTy));
       SgprUB = std::max(SgprUB, RegNo - NUM_ALL_VGPRS);
       SgprScores[getSgprScoresIdx(CntTy)][RegNo - NUM_ALL_VGPRS] = Score;
     }
@@ -1051,12 +1044,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
     }
   } else if (T == X_CNT) {
-    for (const MachineOperand &Op : Inst.all_uses()) {
-      RegInterval Interval = getRegInterval(&Inst, MRI, TRI, Op);
-      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-        setRegScore(RegNo, T, CurrScore);
-      }
-    }
+    for (const MachineOperand &Op : Inst.all_uses())
+      setScoreByOperand(&Inst, TRI, MRI, Op, T, CurrScore);
   } else if (T == VA_VDST || T == VM_VSRC) {
     // Match the score to the VGPR destination or source registers as
     // appropriate
