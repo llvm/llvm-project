@@ -71,6 +71,7 @@
 #include <functional>
 #include <iterator>
 #include <optional>
+#include <queue>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -22451,11 +22452,80 @@ SDValue DAGCombiner::visitATOMIC_STORE(SDNode *N) {
   return SDValue();
 }
 
+static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
+                                 const SDLoc &Dl) {
+  using namespace llvm::SDPatternMatch;
+
+  if (!Store->isSimple() || Store->isTruncatingStore())
+    return SDValue();
+
+  SDValue StoredVal = Store->getValue();
+  SDValue StorePtr = Store->getBasePtr();
+  SDValue StoreOffset = Store->getOffset();
+  EVT VT = Store->getMemoryVT();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  if (!TLI.isTypeLegal(VT) || !TLI.isOperationLegalOrCustom(ISD::MSTORE, VT))
+    return SDValue();
+
+  SDValue Mask, TrueVec, LoadCh;
+  if (!sd_match(StoredVal,
+                m_VSelect(m_Value(Mask), m_Value(TrueVec),
+                          m_Load(m_Value(LoadCh), m_Specific(StorePtr),
+                                 m_Specific(StoreOffset)))))
+    return SDValue();
+
+  LoadSDNode *Load = cast<LoadSDNode>(StoredVal.getOperand(2));
+  if (!Load->isSimple())
+    return SDValue();
+
+  auto IsSafeToFold = [](StoreSDNode *Store, LoadSDNode *Load) {
+    std::queue<SDValue> Worklist;
+
+    Worklist.push(Store->getChain());
+
+    while (!Worklist.empty()) {
+      SDValue Chain = Worklist.front();
+      Worklist.pop();
+
+      SDNode *Node = Chain.getNode();
+      if (!Node)
+        return false;
+
+      if (Node == Load)
+        return true;
+
+      if (const auto *MemNode = dyn_cast<MemSDNode>(Node))
+        if (!MemNode->isSimple() || MemNode->writeMem())
+          return false;
+
+      if (Node->getOpcode() == ISD::TokenFactor) {
+        for (unsigned i = 0; i < Node->getNumOperands(); ++i)
+          Worklist.push(Node->getOperand(i));
+      } else {
+        Worklist.push(Node->getOperand(0));
+      }
+    }
+
+    return false;
+  };
+
+  if (!IsSafeToFold(Store, Load))
+    return SDValue();
+
+  return DAG.getMaskedStore(Store->getChain(), Dl, TrueVec, StorePtr,
+                            StoreOffset, Mask, VT, Store->getMemOperand(),
+                            Store->getAddressingMode());
+}
+
 SDValue DAGCombiner::visitSTORE(SDNode *N) {
   StoreSDNode *ST  = cast<StoreSDNode>(N);
   SDValue Chain = ST->getChain();
   SDValue Value = ST->getValue();
   SDValue Ptr   = ST->getBasePtr();
+
+  if (SDValue MaskedStore = foldToMaskedStore(ST, DAG, SDLoc(N)))
+    return MaskedStore;
 
   // If this is a store of a bit convert, store the input value if the
   // resultant store does not need a higher alignment than the original.
