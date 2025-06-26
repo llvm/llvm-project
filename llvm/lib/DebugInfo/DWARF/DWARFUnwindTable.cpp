@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFUnwindTable.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -103,7 +104,7 @@ void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DWARFExpr: {
     if (Expr)
-      DWARFExpressionPrinter::print(&(*Expr), OS, DumpOpts, nullptr);
+      printDwarfExpression(&(*Expr), OS, DumpOpts, nullptr);
     break;
   }
   case Constant:
