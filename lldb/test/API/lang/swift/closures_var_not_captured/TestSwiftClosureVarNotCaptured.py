@@ -103,3 +103,11 @@ class TestSwiftClosureVarNotCaptured(TestBase):
             self, thread.frames[0], "var_in_outer_closure", "closure #1 in func_3(arg:)"
         )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
+
+    @swiftTest
+    def test_ctor_class_closure(self):
+        self.build()
+        (target, process, thread, bkpt) = self.get_to_bkpt("break_ctor_class")
+        check_not_captured_error(self, thread.frames[0], "input", "MY_STRUCT.init(input:)")
+        check_not_captured_error(self, thread.frames[0], "find_me", "MY_STRUCT.init(input:)")
+        check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
