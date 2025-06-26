@@ -2,8 +2,6 @@
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=20 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS2-REMARK
 ; Test minimum count threshold - should prevent func1 promotion (count 10 < threshold 15)
-; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-minimum-count-threshold=15 -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=MIN-COUNT-BLOCK
-; Test minimum count threshold - should allow func4 promotion (count 1030 > threshold 15) 
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-minimum-count-threshold=15 -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=MIN-COUNT-ALLOW
 ; Test edge case - threshold exactly at count value
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-minimum-count-threshold=10 -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=MIN-COUNT-EDGE
@@ -17,11 +15,6 @@
 ; PASS2-REMARK: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
 ; PASS2-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func3
 ; PASS2-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func1
-
-; MIN-COUNT-BLOCK: remark: <unknown>:0:0: Promote indirect call to func4 with count 1030 out of 1600
-; MIN-COUNT-BLOCK: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
-; MIN-COUNT-BLOCK: remark: <unknown>:0:0: Promote indirect call to func3 with count 150 out of 160
-; MIN-COUNT-BLOCK-NOT: remark: <unknown>:0:0: Promote indirect call to func1
 
 ; MIN-COUNT-ALLOW: remark: <unknown>:0:0: Promote indirect call to func4 with count 1030 out of 1600
 ; MIN-COUNT-ALLOW: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
