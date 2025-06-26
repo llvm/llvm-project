@@ -782,12 +782,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       (beginDir.v == llvm::omp::Directive::OMPD_distribute_simd)) {
     CheckDistLinear(x);
   }
-  if (beginDir.v == llvm::omp::Directive::OMPD_tile) {
-    const auto &clauses{std::get<parser::OmpClauseList>(beginLoopDir.t)};
-    for (auto &clause : clauses.v) {
-
-    }
-  }
 }
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {

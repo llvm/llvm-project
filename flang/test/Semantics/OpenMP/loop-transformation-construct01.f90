@@ -26,3 +26,21 @@ subroutine loop_transformation_construct2
   !ERROR: The END TILE directive must follow the DO loop associated with the loop construct
   !$omp end tile
 end subroutine
+
+subroutine loop_transformation_construct2
+  implicit none
+  integer :: i = 5
+  integer :: y
+  integer :: v(i)
+
+  !$omp do
+  !ERROR: Only OpenMP Loop Transformation Constructs can be nested within OpenMPLoopConstruct's
+  !$omp parallel do
+  do x = 1, i
+    v(x) = x(x) * 2
+  end do
+  !! This error occurs because the `parallel do` end directive never gets matched.
+  !ERROR: The END PARALLEL DO directive must follow the DO loop associated with the loop construct
+  !$omp end parallel do
+  !$omp end do
+end subroutine
