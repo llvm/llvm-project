@@ -19,11 +19,14 @@
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -32,10 +35,13 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
+#include <iostream>
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower"
@@ -177,6 +183,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT})
       for (auto T : {MVT::i32, MVT::i64})
         setOperationAction(Op, T, Custom);
+
+  // Folding adds with global addresses into load offset
+  setTargetDAGCombine(ISD::LOAD);
 
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
@@ -3212,6 +3221,42 @@ static SDValue performTruncateCombine(SDNode *N,
   return truncateVectorWithNARROW(OutVT, In, DL, DAG);
 }
 
+static SDValue performLoadCombine(SDNode *N, SelectionDAG &DAG) {
+  using namespace SDPatternMatch;
+
+  SDLoc DL(N);
+  SDValue Add = N->getOperand(1);
+  SDValue Offset = Add.getOperand(0), Global = Add.getOperand(1);
+
+  // INFO: we're folding this
+  //     t4: i64 = sign_extend t2
+  //     t5: i64 = add nuw t4, GlobalAddress:i64<ptr @data> 0
+  //     t8: i8,ch = load<(load (s8) from %ir.arrayidx)> t0, t5, undef:i64
+  // into this:
+  //     t4: i64 = sign_extend t2
+  //     t8: i8,ch = load<(load (s8) from %ir.arrayidx)> t0,
+  //     GlobalAddress:i64<ptr @data>, t4
+
+  if (Add->getFlags().hasNoUnsignedWrap()) {
+    if (isa<GlobalAddressSDNode>(Global)) {
+      auto *LD = dyn_cast<LoadSDNode>(N);
+      // SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType
+      // ExtType,
+      //                               EVT VT, const SDLoc &dl, SDValue Chain,
+      //                               SDValue Ptr, SDValue Offset, EVT MemVT,
+      //                               MachineMemOperand *MMO) {
+
+      // INFO: Use the above signature for now, the previous getLoad signatuer
+      // automatically creates undef
+      return DAG.getLoad(ISD::MemIndexedMode::PRE_INC,
+                         ISD::LoadExtType::NON_EXTLOAD, LD->getValueType(0), DL,
+                         LD->getChain(), Global, Offset, LD->getValueType(0),
+                         LD->getMemOperand());
+    }
+  }
+  return SDValue();
+}
+
 static SDValue performBitcastCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
@@ -3408,6 +3453,8 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default:
     return SDValue();
+  case ISD::LOAD:
+    return performLoadCombine(N, DCI.DAG);
   case ISD::BITCAST:
     return performBitcastCombine(N, DCI);
   case ISD::SETCC:
