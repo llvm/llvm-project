@@ -1,4 +1,4 @@
-# REQUIRES: x86-registered-target
+# REQUIRES: webassembly-registered-target
 
 # Test that DWARF tombstones are correctly detected/respected in wasm
 # 32 bit object files.
