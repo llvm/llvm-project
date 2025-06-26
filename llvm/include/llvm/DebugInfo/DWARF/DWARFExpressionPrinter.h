@@ -30,9 +30,9 @@ class raw_ostream;
 /// \param E to be printed
 /// \param OS to this stream
 /// \param GetNameForDWARFReg callback to return dwarf register name
-void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
-                          DIDumpOptions DumpOpts, DWARFUnit *U,
-                          bool IsEH = false);
+LLVM_ABI void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
+                                   DIDumpOptions DumpOpts, DWARFUnit *U,
+                                   bool IsEH = false);
 
 /// Print the expression in a format intended to be compact and useful to a
 /// user, but not perfectly unambiguous, or capable of representing every
@@ -44,7 +44,7 @@ void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
 /// \param GetNameForDWARFReg callback to return dwarf register name
 ///
 /// \returns true if the expression was successfully printed
-bool printDwarfExpressionCompact(
+LLVM_ABI bool printDwarfExpressionCompact(
     const DWARFExpression *E, raw_ostream &OS,
     std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg =
         nullptr);
@@ -57,9 +57,9 @@ bool printDwarfExpressionCompact(
 /// \param Operands to the opcode
 ///
 /// returns true if the Op was successfully printed
-bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
-                           DIDumpOptions DumpOpts, uint8_t Opcode,
-                           ArrayRef<uint64_t> Operands);
+LLVM_ABI bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
+                                    DIDumpOptions DumpOpts, uint8_t Opcode,
+                                    ArrayRef<uint64_t> Operands);
 
 } // end namespace llvm
 
