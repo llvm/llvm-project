@@ -21,9 +21,6 @@
 
 namespace llvm {
 
-namespace AArch64MCExpr {
-using Specifier = uint16_t;
-} // namespace AArch64MCExpr
 
 } // end namespace llvm
 
