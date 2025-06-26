@@ -345,7 +345,8 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     if (ToSkip.contains(&R) || isa<VPIRInstruction>(&R))
       continue;
 
-    // Add all VPValues for all parts to AnyOf, FirstActiveLaneMask and Compute*Result which combine all parts to compute the final value.
+    // Add all VPValues for all parts to AnyOf, FirstActiveLaneMask and
+    // Compute*Result which combine all parts to compute the final value.
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::FirstActiveLane>(
