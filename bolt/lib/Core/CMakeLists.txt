@@ -1,6 +1,5 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
-  DebugInfoDWARFLowLevel
   Demangle
   MC
   MCDisassembler
