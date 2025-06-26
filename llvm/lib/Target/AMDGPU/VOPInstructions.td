@@ -15,6 +15,7 @@ class LetDummies {
   bit isConvertibleToThreeAddress;
   bit isMoveImm;
   bit isReMaterializable;
+  bit isConvergent;
   bit isAsCheapAsAMove;
   bit FPDPRounding;
   Predicate SubtargetPredicate;
