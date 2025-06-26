@@ -187,9 +187,12 @@ void DWARFCFIAnalysis::checkRegDiff(
 
   auto MaybeLLVMReg = MCRI->getLLVMRegNum(Reg, IsEH);
   if (!MaybeLLVMReg) {
-    assert(PrevLoc == NextLoc &&
-           "The dwarf register does not have a LLVM number, so the unwind info "
-           "for it should not change");
+    if (!(PrevLoc == NextLoc))
+      Context->reportWarning(
+          Inst.getLoc(),
+          formatv("the dwarf register {0} does not have a LLVM number, but its "
+                  "unwind info changed. Ignoring this change",
+                  Reg));
     return;
   }
   const char *RegName = MCRI->getName(*MaybeLLVMReg);
