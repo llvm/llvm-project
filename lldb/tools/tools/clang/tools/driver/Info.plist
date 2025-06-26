@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>CFBundleIdentifier</key>
+        <string>org.llvm.clang</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>CFBundleName</key>
+        <string>clang</string>
+	<key>CFBundleShortVersionString</key>
+	<string>21.0.0git</string>
+        <key>CFBundleVersion</key>
+        <string>21.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+</dict>
+</plist>

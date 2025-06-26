@@ -1,0 +1,1 @@
+command source -C --silent-run true lit-lldb-init
