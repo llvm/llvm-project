@@ -2459,8 +2459,30 @@ static OpFoldResult foldFromElementsToElements(FromElementsOp fromElementsOp) {
   return {};
 }
 
+/// Fold vector.from_elements to a constant when all operands are constants.
+/// Example:
+///   %c1 = arith.constant 1 : i32
+///   %c2 = arith.constant 2 : i32
+///   %v = vector.from_elements %c1, %c2 : vector<2xi32>
+/// =>
+///   %v = arith.constant dense<[1, 2]> : vector<2xi32>
+///
+static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
+                                               ArrayRef<Attribute> elements) {
+  if (llvm::any_of(elements, [](Attribute attr) { return !attr; }))
+    return {};
+
+  auto destType = cast<VectorType>(fromElementsOp.getType());
+  return DenseElementsAttr::get(destType, elements);
+}
+
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
-  return foldFromElementsToElements(*this);
+  if (auto res = foldFromElementsToElements(*this))
+    return res;
+  if (auto res = foldFromElementsToConstant(*this, adaptor.getElements()))
+    return res;
+
+  return {};
 }
 
 /// Rewrite a vector.from_elements into a vector.splat if all elements are the
