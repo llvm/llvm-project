@@ -21,6 +21,8 @@ LLVM_LIBC_FUNCTION(void *, realloc, (void *ptr, size_t size)) {
 #ifndef LIBC_TARGET_ARCH_IS_NVPTX
   return gpu::reallocate(ptr, size);
 #else
+  (void)ptr;
+  (void)size;
   return nullptr;
 #endif
 }
