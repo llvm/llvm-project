@@ -1980,7 +1980,7 @@ private:
   FileIDAndOffset
   getDecomposedExpansionLocSlowCase(const SrcMgr::SLocEntry *E) const;
   FileIDAndOffset getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
-                                                   unsigned Offset) const;
+                                                   SourceLocation::UIntTy Offset) const;
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
   void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,
                                          FileID FID,

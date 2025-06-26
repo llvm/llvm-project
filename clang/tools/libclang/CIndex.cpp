@@ -276,15 +276,10 @@ bool CursorVisitor::visitFileRegion() {
   ASTUnit *Unit = cxtu::getASTUnit(TU);
   SourceManager &SM = Unit->getSourceManager();
 
-<<<<<<< HEAD
   FileIDAndOffset Begin = SM.getDecomposedLoc(
                       SM.getFileLoc(RegionOfInterest.getBegin())),
                   End = SM.getDecomposedLoc(
                       SM.getFileLoc(RegionOfInterest.getEnd()));
-=======
-  auto Begin = SM.getDecomposedLoc(SM.getFileLoc(RegionOfInterest.getBegin())),
-       End = SM.getDecomposedLoc(SM.getFileLoc(RegionOfInterest.getEnd()));
->>>>>>> 795e9705ad62 (64-bit source location)
 
   if (End.first != Begin.first) {
     // If the end does not reside in the same file, try to recover by
@@ -7648,13 +7643,8 @@ CXString clang_getTokenSpelling(CXTranslationUnit TU, CXToken CXTok) {
   if (!CXXUnit)
     return cxstring::createEmpty();
 
-<<<<<<< HEAD
-  SourceLocation Loc = SourceLocation::getFromRawEncoding(CXTok.int_data[1]);
-  FileIDAndOffset LocInfo =
-=======
   SourceLocation Loc = SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(), CXTok.int_data[1]);
   auto LocInfo =
->>>>>>> 795e9705ad62 (64-bit source location)
       CXXUnit->getSourceManager().getDecomposedSpellingLoc(Loc);
   bool Invalid = false;
   StringRef Buffer =
@@ -7698,15 +7688,9 @@ CXSourceRange clang_getTokenExtent(CXTranslationUnit TU, CXToken CXTok) {
 static bool getTokens(ASTUnit *CXXUnit, SourceRange Range,
                       SmallVectorImpl<CXToken> &CXTokens) {
   SourceManager &SourceMgr = CXXUnit->getSourceManager();
-<<<<<<< HEAD
   FileIDAndOffset BeginLocInfo =
       SourceMgr.getDecomposedSpellingLoc(Range.getBegin());
   FileIDAndOffset EndLocInfo =
-=======
-  auto BeginLocInfo =
-      SourceMgr.getDecomposedSpellingLoc(Range.getBegin());
-  auto EndLocInfo =
->>>>>>> 795e9705ad62 (64-bit source location)
       SourceMgr.getDecomposedSpellingLoc(Range.getEnd());
 
   // Cannot tokenize across files.
@@ -7792,11 +7776,7 @@ CXToken *clang_getToken(CXTranslationUnit TU, CXSourceLocation Location) {
   if (Begin.isInvalid())
     return nullptr;
   SourceManager &SM = CXXUnit->getSourceManager();
-<<<<<<< HEAD
   FileIDAndOffset DecomposedEnd = SM.getDecomposedLoc(Begin);
-=======
-  auto DecomposedEnd = SM.getDecomposedLoc(Begin);
->>>>>>> 795e9705ad62 (64-bit source location)
   DecomposedEnd.second +=
       Lexer::MeasureTokenLength(Begin, SM, CXXUnit->getLangOpts());
 
@@ -8452,15 +8432,9 @@ static void annotatePreprocessorTokens(CXTranslationUnit TU,
 
   Preprocessor &PP = CXXUnit->getPreprocessor();
   SourceManager &SourceMgr = CXXUnit->getSourceManager();
-<<<<<<< HEAD
   FileIDAndOffset BeginLocInfo =
       SourceMgr.getDecomposedSpellingLoc(RegionOfInterest.getBegin());
   FileIDAndOffset EndLocInfo =
-=======
-  auto BeginLocInfo =
-      SourceMgr.getDecomposedSpellingLoc(RegionOfInterest.getBegin());
-  auto EndLocInfo =
->>>>>>> 795e9705ad62 (64-bit source location)
       SourceMgr.getDecomposedSpellingLoc(RegionOfInterest.getEnd());
 
   if (BeginLocInfo.first != EndLocInfo.first)
