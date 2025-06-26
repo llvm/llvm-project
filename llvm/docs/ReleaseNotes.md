@@ -177,6 +177,8 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqciio` (External Input Output)
   extension.
+* Adds experimental assembler and code generation support for the 'Zibi` (Branch with Immediate)
+  extension.
 * Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
   extension.
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
