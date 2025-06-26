@@ -206,16 +206,18 @@ void DWARFCFIAnalysis::checkRegDiff(
     if (PrevLoc.getLocation() == NextLoc.getLocation()) {
       Context->reportWarning(
           Inst.getLoc(),
-          formatv("unknown change happened to %{0} unwinding rule values",
-                  RegName));
+          formatv(
+              "unknown change happened to register {0} unwinding rule values",
+              RegName));
       //! FIXME: Check if the register is changed or not
       return;
     }
 
     Context->reportWarning(
         Inst.getLoc(),
-        formatv("unknown change happened to %{0} unwinding rule structure",
-                RegName));
+        formatv(
+            "unknown change happened to register {0} unwinding rule structure",
+            RegName));
     return;
   }
 
@@ -228,7 +230,7 @@ void DWARFCFIAnalysis::checkRegDiff(
     if (Writes.count(MaybePrevRefReg.value())) {
       Context->reportError(
           Inst.getLoc(),
-          formatv("changed %{1}, that %{0} unwinding rule "
+          formatv("changed register {1}, that register {0}'s unwinding rule "
                   "uses, but there is no CFI directives about it",
                   RegName, MCRI->getName(*PrevRefLLVMReg)));
       return;
@@ -289,7 +291,7 @@ void DWARFCFIAnalysis::checkCFADiff(
       return;
     Context->reportError(
         Inst.getLoc(),
-        formatv("modified CFA register (%{0}) but not changed CFA rule",
+        formatv("modified CFA register ({0}) but not changed CFA rule",
                 PrevCFARegName));
   }
 
@@ -299,6 +301,6 @@ void DWARFCFIAnalysis::checkCFADiff(
 
   Context->reportError(
       Inst.getLoc(),
-      formatv("did not modify CFA register (%{0}) but changed CFA rule",
+      formatv("did not modify CFA register ({0}) but changed CFA rule",
               PrevCFARegName));
 }

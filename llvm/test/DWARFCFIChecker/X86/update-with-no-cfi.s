@@ -12,16 +12,16 @@ f:
         .cfi_same_value %rdx
 
         movq $10, %rax
-        # CHECK: error: changed %RAX, that %RAX unwinding rule uses, but there is no CFI directives about it
+        # CHECK: error: changed register RAX, that register RAX's unwinding rule uses, but there is no CFI directives about it
 
         movq $10, %rbx
-        # CHECK: error: changed %RBX, that %RBX unwinding rule uses, but there is no CFI directives about it
+        # CHECK: error: changed register RBX, that register RBX's unwinding rule uses, but there is no CFI directives about it
 
         movq $10, %rcx
-        # CHECK: error: changed %RCX, that %RCX unwinding rule uses, but there is no CFI directives about it
+        # CHECK: error: changed register RCX, that register RCX's unwinding rule uses, but there is no CFI directives about it
 
         movq $10, %rdx
-        # CHECK: error: changed %RDX, that %RDX unwinding rule uses, but there is no CFI directives about it
+        # CHECK: error: changed register RDX, that register RDX's unwinding rule uses, but there is no CFI directives about it
 
         retq
 

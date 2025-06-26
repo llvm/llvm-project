@@ -9,7 +9,7 @@ f:
         .cfi_undefined %rax
 
         pushq   %rbp
-        # CHECK: warning: unknown change happened to %RBP unwinding rule structure
+        # CHECK: warning: unknown change happened to register RBP unwinding rule structure
         .cfi_def_cfa_offset 17
         .cfi_offset %rbp, -16
 
