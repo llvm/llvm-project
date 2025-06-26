@@ -10,8 +10,8 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
-  const time_t t_ptr = 0;
-  struct tm *result = LIBC_NAMESPACE::time_utils::linux::localtime(&t_ptr);
+  time_t t_ptr = 0;
+  struct tm *result = LIBC_NAMESPACE::localtime(&t_ptr);
 
   ASSERT_EQ(70, result->tm_year);
   ASSERT_EQ(0, result->tm_mon);
