@@ -14,6 +14,8 @@ add_llvm_library(LLVMTestingSupport
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Testing/Support
 
+  DISABLE_LLVM_LINK_LLVM_DYLIB
+
   LINK_COMPONENTS
   Support
   )
