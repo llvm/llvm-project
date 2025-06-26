@@ -480,11 +480,10 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
   } else {
     // Test for successors as back edge
     BasicBlock *BB = N->getNodeAs<BasicBlock>();
-    BranchInst *Term = cast<BranchInst>(BB->getTerminator());
-
-    for (BasicBlock *Succ : Term->successors())
-      if (Visited.count(Succ))
-        Loops[Succ] = BB;
+    if (BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator()); Term)
+      for (BasicBlock *Succ : Term->successors())
+        if (Visited.count(Succ))
+          Loops[Succ] = BB;
   }
 }
 
@@ -516,7 +515,7 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
 
   for (BasicBlock *P : predecessors(BB)) {
     // Ignore it if it's a branch from outside into our region entry
-    if (!ParentRegion->contains(P))
+    if (!ParentRegion->contains(P) || !dyn_cast<BranchInst>(P->getTerminator()))
       continue;
 
     Region *R = RI->getRegionFor(P);
