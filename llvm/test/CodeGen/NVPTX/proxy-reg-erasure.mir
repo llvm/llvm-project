@@ -84,7 +84,7 @@ body:             |
     %6:b32 = ProxyRegB32 killed %2
     %7:b32 = ProxyRegB32 killed %3
     ; CHECK: STV_i32_v4 killed %0, killed %1, killed %2, killed %3
-    STV_i32_v4 killed %4, killed %5, killed %6, killed %7, 0, 0, 101, 3, 32, &func_retval0, 0 :: (store (s128), addrspace 101)
+    STV_i32_v4 killed %4, killed %5, killed %6, killed %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s128), addrspace 101)
 
     %8:b32 = LoadParamMemI32 0
     ; CHECK-NOT: ProxyReg
@@ -92,7 +92,7 @@ body:             |
     %10:b32 = ProxyRegB32 killed %9
     %11:b32 = ProxyRegB32 killed %10
     ; CHECK: ST_i32 killed %8
-    ST_i32 killed %11, 0, 0, 101, 3, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
+    ST_i32 killed %11, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
     Return
 
 ...

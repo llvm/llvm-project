@@ -43,8 +43,7 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: test_ret_const(
-; CHECK:      mov.b16         [[R:%rs[0-9]+]], 0x3C00;
-; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
+; CHECK: st.param.b16    [func_retval0], 0x3C00;
 ; CHECK-NEXT: ret;
 define half @test_ret_const() #0 {
   ret half 1.0
