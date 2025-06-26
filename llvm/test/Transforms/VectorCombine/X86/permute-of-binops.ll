@@ -7,12 +7,20 @@
 declare void @use_v4f64(<4 x double>)
 
 define <4 x double> @fadd_v4f64(<4 x double> %a, <4 x double> %b) {
-; CHECK-LABEL: define <4 x double> @fadd_v4f64(
-; CHECK-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[POST:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <4 x double> [[POST]]
+; SSE-LABEL: define <4 x double> @fadd_v4f64(
+; SSE-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; SSE-NEXT:    [[POST:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    ret <4 x double> [[POST]]
+;
+; AVX-LABEL: define <4 x double> @fadd_v4f64(
+; AVX-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+; AVX-NEXT:    [[A1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; AVX-NEXT:    [[B1:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; AVX-NEXT:    [[OP:%.*]] = fadd <4 x double> [[A1]], [[B1]]
+; AVX-NEXT:    [[POST:%.*]] = shufflevector <4 x double> [[OP]], <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; AVX-NEXT:    ret <4 x double> [[POST]]
 ;
   %a1 = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %b1 = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
@@ -22,12 +30,20 @@ define <4 x double> @fadd_v4f64(<4 x double> %a, <4 x double> %b) {
 }
 
 define <4 x double> @fadd_v4f64_poison_idx(<4 x double> %a, <4 x double> %b) {
-; CHECK-LABEL: define <4 x double> @fadd_v4f64_poison_idx(
-; CHECK-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 poison>
-; CHECK-NEXT:    [[POST:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <4 x double> [[POST]]
+; SSE-LABEL: define <4 x double> @fadd_v4f64_poison_idx(
+; SSE-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 poison>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 poison>
+; SSE-NEXT:    [[POST:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    ret <4 x double> [[POST]]
+;
+; AVX-LABEL: define <4 x double> @fadd_v4f64_poison_idx(
+; AVX-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[A1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; AVX-NEXT:    [[B1:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; AVX-NEXT:    [[OP:%.*]] = fadd <4 x double> [[A1]], [[B1]]
+; AVX-NEXT:    [[POST:%.*]] = shufflevector <4 x double> [[OP]], <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 4>
+; AVX-NEXT:    ret <4 x double> [[POST]]
 ;
   %a1 = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %b1 = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
@@ -37,12 +53,20 @@ define <4 x double> @fadd_v4f64_poison_idx(<4 x double> %a, <4 x double> %b) {
 }
 
 define <4 x double> @fadd_v4f64_mixed_types(<4 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: define <4 x double> @fadd_v4f64_mixed_types(
-; CHECK-SAME: <4 x double> [[A:%.*]], <2 x double> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[B]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[POST:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <4 x double> [[POST]]
+; SSE-LABEL: define <4 x double> @fadd_v4f64_mixed_types(
+; SSE-SAME: <4 x double> [[A:%.*]], <2 x double> [[B:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[B]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; SSE-NEXT:    [[POST:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    ret <4 x double> [[POST]]
+;
+; AVX-LABEL: define <4 x double> @fadd_v4f64_mixed_types(
+; AVX-SAME: <4 x double> [[A:%.*]], <2 x double> [[B:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[A1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; AVX-NEXT:    [[B1:%.*]] = shufflevector <2 x double> [[B]], <2 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; AVX-NEXT:    [[OP:%.*]] = fadd <4 x double> [[A1]], [[B1]]
+; AVX-NEXT:    [[POST:%.*]] = shufflevector <4 x double> [[OP]], <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; AVX-NEXT:    ret <4 x double> [[POST]]
 ;
   %a1 = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %b1 = shufflevector <2 x double> %b, <2 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
@@ -53,7 +77,7 @@ define <4 x double> @fadd_v4f64_mixed_types(<4 x double> %a, <2 x double> %b) {
 
 define <4 x float> @fadd_v4f32_mixed_types(<4 x float> %a0) {
 ; CHECK-LABEL: define <4 x float> @fadd_v4f32_mixed_types(
-; CHECK-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> zeroinitializer, <4 x i32> <i32 1, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[POST:%.*]] = fmul <4 x float> [[TMP1]], <float 0.000000e+00, float 0.000000e+00, float undef, float undef>
 ; CHECK-NEXT:    ret <4 x float> [[POST]]
@@ -104,10 +128,11 @@ define <4 x double> @fadd_v4f64_multiuse_shuffle(<4 x double> %a, <4 x double> %
 define <4 x i32> @sdiv_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define <4 x i32> @sdiv_v4i32(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[POST:%.*]] = sdiv <4 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <4 x i32> [[POST]]
+; CHECK-NEXT:    [[POST1:%.*]] = shufflevector <4 x i32> [[POST]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 0>
+; CHECK-NEXT:    ret <4 x i32> [[POST1]]
 ;
   %a1 = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %b1 = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>

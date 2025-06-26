@@ -5468,12 +5468,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   return Cost;
 }
 
-InstructionCost
-AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost AArch64TTIImpl::getShuffleCostImpl(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -5565,10 +5564,10 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
       // of element moves into a new vector.
       InstructionCost NCost =
           NumSources <= 2
-              ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
-                                               : TTI::SK_PermuteTwoSrc,
-                               NTp, NTp, NMask, CostKind, 0, nullptr, Args,
-                               CxtI)
+              ? getShuffleCostImpl(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
+                                                   : TTI::SK_PermuteTwoSrc,
+                                   NTp, NTp, NMask, CostKind, 0, nullptr, Args,
+                                   CxtI)
               : LTNumElts;
       Result.first->second = NCost;
       Cost += NCost;
@@ -5815,8 +5814,8 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   // Restore optimal kind.
   if (IsExtractSubvector)
     Kind = TTI::SK_ExtractSubvector;
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
-                               Args, CxtI);
+  return BaseT::getShuffleCostImpl(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                                   SubTp, Args, CxtI);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,

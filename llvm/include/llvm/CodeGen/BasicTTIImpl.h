@@ -331,7 +331,8 @@ private:
         thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
     if (VD->isMasked()) {
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
-      Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
+      Cost +=
+          thisT()->getShuffleCostImpl(TargetTransformInfo::SK_Broadcast, VecTy,
                                       VecTy, {}, CostKind, 0, nullptr, {});
     }
 
@@ -1155,10 +1156,11 @@ public:
   }
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override {
+  getShuffleCostImpl(TTI::ShuffleKind Kind, VectorType *DstTy,
+                     VectorType *SrcTy, ArrayRef<int> Mask,
+                     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+                     ArrayRef<const Value *> Args = {},
+                     const Instruction *CxtI = nullptr) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(SrcTy))
@@ -1181,6 +1183,122 @@ public:
                                         cast<FixedVectorType>(SubTp));
     }
     llvm_unreachable("Unknown TTI::ShuffleKind");
+  }
+
+  InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
+                 const Instruction *CxtI = nullptr) const override {
+    // TODO: move more of this inside improveShuffleKindFromMask?
+    if (auto *Shuffle = dyn_cast_if_present<ShuffleVectorInst>(CxtI)) {
+      int NumSubElts, SubIndex;
+
+      if (Shuffle->changesLength()) {
+        // Treat a 'subvector widening' as a free shuffle.
+        if (Shuffle->increasesLength() && Shuffle->isIdentityWithPadding())
+          return 0;
+
+        if (Shuffle->isExtractSubvectorMask(SubIndex))
+          return thisT()->getShuffleCostImpl(TTI::SK_ExtractSubvector, DstTy,
+                                             SrcTy, Mask, CostKind, SubIndex,
+                                             DstTy, Args, Shuffle);
+
+        if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
+          return thisT()->getShuffleCostImpl(
+              TTI::SK_InsertSubvector, DstTy, SrcTy, Mask, CostKind, SubIndex,
+              FixedVectorType::get(DstTy->getScalarType(), NumSubElts), Args,
+              Shuffle);
+
+        int ReplicationFactor, VF;
+        if (Shuffle->isReplicationMask(ReplicationFactor, VF)) {
+          APInt DemandedDstElts = APInt::getZero(Mask.size());
+          for (auto I : enumerate(Mask)) {
+            if (I.value() != PoisonMaskElem)
+              DemandedDstElts.setBit(I.index());
+          }
+          return thisT()->getReplicationShuffleCost(SrcTy->getElementType(),
+                                                    ReplicationFactor, VF,
+                                                    DemandedDstElts, CostKind);
+        }
+
+        bool IsUnary = Args.size() < 2 || isa<UndefValue>(Args[1]);
+        NumSubElts = SrcTy->getElementCount().getKnownMinValue();
+        SmallVector<int, 16> AdjustMask(Mask);
+
+        // Widening shuffle - widening the source(s) to the new length
+        // (treated as free - see above), and then perform the adjusted
+        // shuffle at that width.
+        if (Shuffle->increasesLength()) {
+          for (int &M : AdjustMask)
+            M = M >= NumSubElts ? (M + (Mask.size() - NumSubElts)) : M;
+
+          return thisT()->getShuffleCostImpl(
+              IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc, DstTy,
+              DstTy, AdjustMask, CostKind, 0, nullptr, Args, Shuffle);
+        }
+
+        // Narrowing shuffle - perform shuffle at original wider width and
+        // then extract the lower elements.
+        // FIXME: This can assume widening, which is not true of all vector
+        // architectures (and is not even the default).
+        AdjustMask.append(NumSubElts - Mask.size(), PoisonMaskElem);
+
+        InstructionCost ShuffleCost = thisT()->getShuffleCostImpl(
+            IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc, SrcTy,
+            SrcTy, AdjustMask, CostKind, 0, nullptr, Args, Shuffle);
+
+        SmallVector<int, 16> ExtractMask(Mask.size());
+        std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
+        return ShuffleCost + thisT()->getShuffleCostImpl(
+                                 TTI::SK_ExtractSubvector, DstTy, SrcTy,
+                                 ExtractMask, CostKind, 0, DstTy, {}, Shuffle);
+      }
+
+      if (Shuffle->isIdentity())
+        return 0;
+
+      if (Shuffle->isReverse())
+        return thisT()->getShuffleCostImpl(TTI::SK_Reverse, DstTy, SrcTy, Mask,
+                                           CostKind, 0, nullptr, Args, Shuffle);
+
+      if (Shuffle->isSelect())
+        return thisT()->getShuffleCostImpl(TTI::SK_Select, DstTy, SrcTy, Mask,
+                                           CostKind, 0, nullptr, Args, Shuffle);
+
+      if (Shuffle->isTranspose())
+        return thisT()->getShuffleCostImpl(TTI::SK_Transpose, DstTy, SrcTy,
+                                           Mask, CostKind, 0, nullptr, Args,
+                                           Shuffle);
+
+      if (Shuffle->isZeroEltSplat())
+        return thisT()->getShuffleCostImpl(TTI::SK_Broadcast, DstTy, SrcTy,
+                                           Mask, CostKind, 0, nullptr, Args,
+                                           Shuffle);
+
+      if (Shuffle->isSingleSource())
+        return thisT()->getShuffleCostImpl(TTI::SK_PermuteSingleSrc, DstTy,
+                                           SrcTy, Mask, CostKind, 0, nullptr,
+                                           Args, Shuffle);
+
+      if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
+        return thisT()->getShuffleCostImpl(
+            TTI::SK_InsertSubvector, DstTy, SrcTy, Mask, CostKind, SubIndex,
+            FixedVectorType::get(DstTy->getScalarType(), NumSubElts), Args,
+            Shuffle);
+
+      if (Shuffle->isSplice(SubIndex))
+        return thisT()->getShuffleCostImpl(TTI::SK_Splice, DstTy, SrcTy, Mask,
+                                           CostKind, SubIndex, nullptr, Args,
+                                           Shuffle);
+
+      return thisT()->getShuffleCostImpl(TTI::SK_PermuteTwoSrc, DstTy, SrcTy,
+                                         Mask, CostKind, Index, SubTp, Args,
+                                         CxtI);
+    }
+
+    return thisT()->getShuffleCostImpl(Kind, DstTy, SrcTy, Mask, CostKind,
+                                       Index, SubTp, Args, CxtI);
   }
 
   InstructionCost

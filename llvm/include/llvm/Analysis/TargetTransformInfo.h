@@ -1394,6 +1394,12 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const;
+  LLVM_ABI InstructionCost getShuffleCostImpl(
+      ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+      ArrayRef<int> Mask = {},
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
+      VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///

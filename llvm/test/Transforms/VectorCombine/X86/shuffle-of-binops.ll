@@ -133,12 +133,19 @@ define <2 x i64> @shuf_sub_add_v2i64_yy(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z
 ; type change via shuffle
 
 define <8 x float> @shuf_fmul_v4f32_xx_type(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
-; CHECK-LABEL: define <8 x float> @shuf_fmul_v4f32_xx_type(
-; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = fmul <4 x float> [[X]], [[Y]]
-; CHECK-NEXT:    [[B1:%.*]] = fmul <4 x float> [[Z]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[B0]], <4 x float> [[B1]], <8 x i32> <i32 0, i32 3, i32 4, i32 7, i32 0, i32 1, i32 1, i32 6>
-; CHECK-NEXT:    ret <8 x float> [[R]]
+; SSE-LABEL: define <8 x float> @shuf_fmul_v4f32_xx_type(
+; SSE-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[B0:%.*]] = fmul <4 x float> [[X]], [[Y]]
+; SSE-NEXT:    [[B1:%.*]] = fmul <4 x float> [[Z]], [[X]]
+; SSE-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[B0]], <4 x float> [[B1]], <8 x i32> <i32 0, i32 3, i32 4, i32 7, i32 0, i32 1, i32 1, i32 6>
+; SSE-NEXT:    ret <8 x float> [[R]]
+;
+; AVX-LABEL: define <8 x float> @shuf_fmul_v4f32_xx_type(
+; AVX-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <8 x i32> <i32 0, i32 3, i32 4, i32 7, i32 0, i32 1, i32 1, i32 6>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <8 x i32> <i32 0, i32 3, i32 0, i32 3, i32 0, i32 1, i32 1, i32 2>
+; AVX-NEXT:    [[R:%.*]] = fmul <8 x float> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    ret <8 x float> [[R]]
 ;
   %b0 = fmul <4 x float> %x, %y
   %b1 = fmul <4 x float> %z, %x

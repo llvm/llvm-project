@@ -236,10 +236,11 @@ public:
   InstructionCost getVectorSplitCost() const { return 0; }
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+  getShuffleCostImpl(TTI::ShuffleKind Kind, VectorType *DstTy,
+                     VectorType *SrcTy, ArrayRef<int> Mask,
+                     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+                     ArrayRef<const Value *> Args = {},
+                     const Instruction *CxtI = nullptr) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
