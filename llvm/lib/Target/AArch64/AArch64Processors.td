@@ -1131,7 +1131,7 @@ def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
 def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
-def : ProcessorModel<"cortex-a320", CortexA510Model, ProcessorFeatures.A320,
+def : ProcessorModel<"cortex-a320", CortexA320Model, ProcessorFeatures.A320,
                      [TuneA320]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA53]>;

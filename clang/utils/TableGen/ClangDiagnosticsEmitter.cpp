@@ -2225,13 +2225,10 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
       else
         OS << "Also controls ";
 
-      bool First = true;
       sort(GroupInfo.SubGroups);
-      for (StringRef Name : GroupInfo.SubGroups) {
-        if (!First) OS << ", ";
-        OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
-        First = false;
-      }
+      ListSeparator LS;
+      for (StringRef Name : GroupInfo.SubGroups)
+        OS << LS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
       OS << ".\n\n";
     }
 

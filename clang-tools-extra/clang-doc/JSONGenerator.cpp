@@ -26,6 +26,15 @@ static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
                           std::optional<StringRef> RepositoryUrl);
 static void serializeInfo(const EnumInfo &I, json::Object &Obj,
                           std::optional<StringRef> RepositoryUrl);
+static void serializeInfo(const ConstraintInfo &I, Object &Obj);
+
+// Convenience lambda to pass to serializeArray.
+// If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
+// the optional.
+static auto SerializeInfoLambda = [](const ConstraintInfo &Info,
+                                     Object &Object) {
+  serializeInfo(Info, Object);
+};
 
 static json::Object serializeLocation(const Location &Loc,
                                       std::optional<StringRef> RepositoryUrl) {
@@ -248,6 +257,27 @@ static void serializeCommonChildren(const ScopeChildren &Children,
   }
 }
 
+template <typename T, typename SerializationFunc>
+static void serializeArray(const std::vector<T> &Records, Object &Obj,
+                           const std::string &Key,
+                           SerializationFunc SerializeInfo) {
+  json::Value RecordsArray = Array();
+  auto &RecordsArrayRef = *RecordsArray.getAsArray();
+  RecordsArrayRef.reserve(Records.size());
+  for (const auto &Item : Records) {
+    json::Value ItemVal = Object();
+    auto &ItemObj = *ItemVal.getAsObject();
+    SerializeInfo(Item, ItemObj);
+    RecordsArrayRef.push_back(ItemVal);
+  }
+  Obj[Key] = RecordsArray;
+}
+
+static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
+  serializeReference(I.ConceptRef, Obj);
+  Obj["Expression"] = I.ConstraintExpr;
+}
+
 static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
   json::Value TemplateVal = Object();
   auto &TemplateObj = *TemplateVal.getAsObject();
@@ -277,7 +307,19 @@ static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
     TemplateObj["Parameters"] = ParamsArray;
   }
 
+  if (!Template.Constraints.empty())
+    serializeArray(Template.Constraints, TemplateObj, "Constraints",
+                   SerializeInfoLambda);
+
   Obj["Template"] = TemplateVal;
+}
+
+static void serializeInfo(const ConceptInfo &I, Object &Obj,
+                          std::optional<StringRef> RepositoryUrl) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl);
+  Obj["IsType"] = I.IsType;
+  Obj["ConstraintExpression"] = I.ConstraintExpression;
+  serializeInfo(I.Template, Obj);
 }
 
 static void serializeInfo(const TypeInfo &I, Object &Obj) {
@@ -440,6 +482,15 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
+static void serializeInfo(const VarInfo &I, json::Object &Obj,
+                          std::optional<StringRef> RepositoryUrl) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl);
+  Obj["IsStatic"] = I.IsStatic;
+  auto TypeObj = Object();
+  serializeInfo(I.Type, TypeObj);
+  Obj["Type"] = std::move(TypeObj);
+}
+
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
                           std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
@@ -457,6 +508,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["Namespaces"] = NamespacesArray;
   }
 
+  auto SerializeInfo = [RepositoryUrl](const auto &Info, Object &Object) {
+    serializeInfo(Info, Object, RepositoryUrl);
+  };
+
   if (!I.Children.Functions.empty()) {
     json::Value FunctionsArray = Array();
     auto &FunctionsArrayRef = *FunctionsArray.getAsArray();
@@ -468,6 +523,13 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
       FunctionsArrayRef.push_back(FunctionVal);
     }
     Obj["Functions"] = FunctionsArray;
+  }
+
+  if (!I.Children.Concepts.empty())
+    serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
+
+  if (!I.Children.Variables.empty()) {
+    serializeArray(I.Children.Variables, Obj, "Variables", SerializeInfo);
   }
 
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
@@ -520,9 +582,11 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_record:
     serializeInfo(*static_cast<RecordInfo *>(I), Obj, CDCtx.RepositoryUrl);
     break;
+  case InfoType::IT_concept:
   case InfoType::IT_enum:
   case InfoType::IT_function:
   case InfoType::IT_typedef:
+  case InfoType::IT_variable:
     break;
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected info type");

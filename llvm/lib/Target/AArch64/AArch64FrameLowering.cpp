@@ -2578,20 +2578,33 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                     DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
                     NeedsWinCFI, &HasWinCFI);
   } else if (SVEStackSize) {
-    // If we have stack realignment or variable sized objects on the stack,
-    // restore the stack pointer from the frame pointer prior to SVE CSR
-    // restoration.
-    if (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) {
-      if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
-        // Set SP to start of SVE callee-save area from which they can
-        // be reloaded. The code below will deallocate the stack space
-        // space by moving FP -> SP.
-        emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::FP,
-                        StackOffset::getScalable(-CalleeSavedSize), TII,
+    int64_t SVECalleeSavedSize = AFI->getSVECalleeSavedStackSize();
+    // If we have stack realignment or variable-sized objects we must use the
+    // FP to restore SVE callee saves (as there is an unknown amount of
+    // data/padding between the SP and SVE CS area).
+    Register BaseForSVEDealloc =
+        (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) ? AArch64::FP
+                                                              : AArch64::SP;
+    if (SVECalleeSavedSize && BaseForSVEDealloc == AArch64::FP) {
+      Register CalleeSaveBase = AArch64::FP;
+      if (int64_t CalleeSaveBaseOffset =
+              AFI->getCalleeSaveBaseToFrameRecordOffset()) {
+        // If we have have an non-zero offset to the non-SVE CS base we need to
+        // compute the base address by subtracting the offest in a temporary
+        // register first (to avoid briefly deallocating the SVE CS).
+        CalleeSaveBase = MBB.getParent()->getRegInfo().createVirtualRegister(
+            &AArch64::GPR64RegClass);
+        emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
+                        StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
                         MachineInstr::FrameDestroy);
       }
-    } else {
-      if (AFI->getSVECalleeSavedStackSize()) {
+      // The code below will deallocate the stack space space by moving the
+      // SP to the start of the SVE callee-save area.
+      emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
+                      StackOffset::getScalable(-SVECalleeSavedSize), TII,
+                      MachineInstr::FrameDestroy);
+    } else if (BaseForSVEDealloc == AArch64::SP) {
+      if (SVECalleeSavedSize) {
         // Deallocate the non-SVE locals first before we can deallocate (and
         // restore callee saves) from the SVE area.
         emitFrameOffset(

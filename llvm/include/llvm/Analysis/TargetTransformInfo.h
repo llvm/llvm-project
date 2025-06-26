@@ -1332,8 +1332,8 @@ public:
   LLVM_ABI InstructionCost getPartialReductionCost(
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, PartialReductionExtendKind OpAExtend,
-      PartialReductionExtendKind OpBExtend,
-      std::optional<unsigned> BinOp = std::nullopt) const;
+      PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind) const;
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
@@ -1381,16 +1381,16 @@ public:
       const SmallBitVector &OpcodeMask,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
-  /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
-  /// The exact mask may be passed as Mask, or else the array will be empty.
-  /// The index and subtype parameters are used by the subvector insertion and
-  /// extraction shuffle kinds to show the insert/extract point and the type of
-  /// the subvector being inserted/extracted. The operands of the shuffle can be
-  /// passed through \p Args, which helps improve the cost estimation in some
-  /// cases, like in broadcast loads.
-  /// NOTE: For subvector extractions Tp represents the source type.
+  /// \return The cost of a shuffle instruction of kind Kind with inputs of type
+  /// SrcTy, producing a vector of type DstTy. The exact mask may be passed as
+  /// Mask, or else the array will be empty. The Index and SubTp parameters
+  /// are used by the subvector insertions shuffle kinds to show the insert
+  /// point and the type of the subvector being inserted. The operands of the
+  /// shuffle can be passed through \p Args, which helps improve the cost
+  /// estimation in some cases, like in broadcast loads.
   LLVM_ABI InstructionCost getShuffleCost(
-      ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask = {},
+      ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+      ArrayRef<int> Mask = {},
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const;
@@ -1850,11 +1850,9 @@ public:
   /// \name Vector Predication Information
   /// @{
   /// Whether the target supports the %evl parameter of VP intrinsic efficiently
-  /// in hardware, for the given opcode and type/alignment. (see LLVM Language
-  /// Reference - "Vector Predication Intrinsics").
-  /// Use of %evl is discouraged when that is not the case.
-  LLVM_ABI bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                                      Align Alignment) const;
+  /// in hardware. (see LLVM Language Reference - "Vector Predication
+  /// Intrinsics"). Use of %evl is discouraged when that is not the case.
+  LLVM_ABI bool hasActiveVectorLength() const;
 
   /// Return true if sinking I's operands to the same basic block as I is
   /// profitable, e.g. because the operands can be folded into a target

@@ -149,7 +149,7 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
 }
 
 // CHECK-LABEL: @vector_broadcast
-func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>) -> vector<8x16xf32> {
+func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>, %f: vector<8x1x!llvm.ptr<1>>) {
   // CHECK: vector.broadcast %{{.*}} : f32 to vector<f32>
   %0 = vector.broadcast %a : f32 to vector<f32>
   // CHECK: vector.broadcast %{{.*}} : vector<f32> to vector<4xf32>
@@ -162,7 +162,9 @@ func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: ve
   %4 = vector.broadcast %d : vector<1x16xf32> to vector<8x16xf32>
   // CHECK-NEXT: vector.broadcast %{{.*}} : vector<8x1xf32> to vector<8x16xf32>
   %5 = vector.broadcast %e : vector<8x1xf32> to vector<8x16xf32>
-  return %4 : vector<8x16xf32>
+  // CHECK-NEXT: vector.broadcast %{{.*}} : vector<8x1x!llvm.ptr<1>> to vector<8x16x!llvm.ptr<1>>
+  %6 = vector.broadcast %f : vector<8x1x!llvm.ptr<1>> to vector<8x16x!llvm.ptr<1>>
+  return
 }
 
 // CHECK-LABEL: @shuffle0D
@@ -959,13 +961,16 @@ func.func @vector_scan(%0: vector<4x8x16x32xf32>) -> vector<4x8x16x32xf32> {
 }
 
 // CHECK-LABEL: func @test_splat_op
-// CHECK-SAME: [[S:%arg[0-9]+]]: f32
-func.func @test_splat_op(%s : f32) {
-  // CHECK: vector.splat [[S]] : vector<8xf32>
+// CHECK-SAME: %[[s:.*]]: f32, %[[s2:.*]]: !llvm.ptr<1>
+func.func @test_splat_op(%s : f32, %s2 : !llvm.ptr<1>) {
+  // CHECK: vector.splat %[[s]] : vector<8xf32>
   %v = vector.splat %s : vector<8xf32>
 
-  // CHECK: vector.splat [[S]] : vector<4xf32>
+  // CHECK: vector.splat %[[s]] : vector<4xf32>
   %u = "vector.splat"(%s) : (f32) -> vector<4xf32>
+
+  // CHECK: vector.splat %[[s2]] : vector<16x!llvm.ptr<1>>
+  %w = vector.splat %s2 : vector<16x!llvm.ptr<1>>
   return
 }
 
@@ -1173,6 +1178,24 @@ func.func @deinterleave_nd_scalable(%arg:vector<2x3x4x[6]xf32>) -> (vector<2x3x4
   // CHECK: vector.deinterleave %{{.*}} : vector<2x3x4x[6]xf32> -> vector<2x3x4x[3]xf32>
   %0, %1 = vector.deinterleave %arg : vector<2x3x4x[6]xf32> -> vector<2x3x4x[3]xf32>
   return %0, %1 : vector<2x3x4x[3]xf32>, vector<2x3x4x[3]xf32>
+}
+
+// CHECK-LABEL: func @to_elements(
+//  CHECK-SAME:     %[[A_VEC:.*]]: vector<f32>, %[[B_VEC:.*]]: vector<1xf32>,
+//  CHECK-SAME:     %[[C_VEC:.*]]: vector<1x2xf32>, %[[D_VEC:.*]]: vector<2x2xf32>)
+func.func @to_elements(%a_vec : vector<f32>, %b_vec : vector<1xf32>,
+                       %c_vec : vector<1x2xf32>, %d_vec : vector<2x2xf32>)
+                   -> (f32, f32, f32, f32, f32, f32, f32, f32) {
+  // CHECK: %[[A_ELEMS:.*]] = vector.to_elements %[[A_VEC]] : vector<f32>
+  %0 = vector.to_elements %a_vec : vector<f32>
+  // CHECK: %[[B_ELEMS:.*]] = vector.to_elements %[[B_VEC]] : vector<1xf32>
+  %1 = vector.to_elements %b_vec : vector<1xf32>
+  // CHECK: %[[C_ELEMS:.*]]:2 = vector.to_elements %[[C_VEC]] : vector<1x2xf32>
+  %2:2 = vector.to_elements %c_vec : vector<1x2xf32>
+  // CHECK: %[[D_ELEMS:.*]]:4 = vector.to_elements %[[D_VEC]] : vector<2x2xf32>
+  %3:4 = vector.to_elements %d_vec : vector<2x2xf32>
+  // CHECK: return %[[A_ELEMS]], %[[B_ELEMS]], %[[C_ELEMS]]#0, %[[C_ELEMS]]#1, %[[D_ELEMS]]#0, %[[D_ELEMS]]#1, %[[D_ELEMS]]#2, %[[D_ELEMS]]#3
+  return %0, %1, %2#0, %2#1, %3#0, %3#1, %3#2, %3#3: f32, f32, f32, f32, f32, f32, f32, f32
 }
 
 // CHECK-LABEL: func @from_elements(

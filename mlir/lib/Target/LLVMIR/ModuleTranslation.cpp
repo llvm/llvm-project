@@ -777,7 +777,7 @@ ModuleTranslation::ModuleTranslation(Operation *module,
 }
 
 ModuleTranslation::~ModuleTranslation() {
-  if (ompBuilder)
+  if (ompBuilder && !ompBuilder->isFinalized())
     ompBuilder->finalize();
 }
 
@@ -1055,7 +1055,7 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
       return failure();
 
     // Set the branch weight metadata on the translated instruction.
-    if (auto iface = dyn_cast<BranchWeightOpInterface>(op))
+    if (auto iface = dyn_cast<WeightedBranchOpInterface>(op))
       setBranchWeightsMetadata(iface);
   }
 
@@ -2026,14 +2026,15 @@ void ModuleTranslation::setDereferenceableMetadata(
   inst->setMetadata(kindId, derefSizeNode);
 }
 
-void ModuleTranslation::setBranchWeightsMetadata(BranchWeightOpInterface op) {
-  DenseI32ArrayAttr weightsAttr = op.getBranchWeightsOrNull();
-  if (!weightsAttr)
+void ModuleTranslation::setBranchWeightsMetadata(WeightedBranchOpInterface op) {
+  SmallVector<uint32_t> weights;
+  llvm::transform(op.getWeights(), std::back_inserter(weights),
+                  [](int32_t value) { return static_cast<uint32_t>(value); });
+  if (weights.empty())
     return;
 
   llvm::Instruction *inst = isa<CallOp>(op) ? lookupCall(op) : lookupBranch(op);
   assert(inst && "expected the operation to have a mapping to an instruction");
-  SmallVector<uint32_t> weights(weightsAttr.asArrayRef());
   inst->setMetadata(
       llvm::LLVMContext::MD_prof,
       llvm::MDBuilder(getLLVMContext()).createBranchWeights(weights));
@@ -2224,8 +2225,6 @@ ModuleTranslation::getOrInsertNamedModuleMetadata(StringRef name) {
   return llvmModule->getOrInsertNamedMetadata(name);
 }
 
-void ModuleTranslation::StackFrame::anchor() {}
-
 static std::unique_ptr<llvm::Module>
 prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                   StringRef name) {
@@ -2331,6 +2330,10 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.
   translator.debugTranslation->addModuleFlagsIfNotPresent();
+
+  // Call the OpenMP IR Builder callbacks prior to verifying the module
+  if (auto *ompBuilder = translator.getOpenMPBuilder())
+    ompBuilder->finalize();
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

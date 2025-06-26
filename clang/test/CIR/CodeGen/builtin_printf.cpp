@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// CIR: cir.global "private" cir_private dsolocal @".str" = #cir.const_array<"%s\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3> 
-// CIR: cir.global "private" cir_private dsolocal @".str.1" = #cir.const_array<"%s %d\0A\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>
+// CIR: cir.global "private" cir_private dso_local @".str" = #cir.const_array<"%s\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3> 
+// CIR: cir.global "private" cir_private dso_local @".str.1" = #cir.const_array<"%s %d\0A\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>
 // LLVM: @.str = private global [3 x i8] c"%s\00"
 // LLVM: @.str.1 = private global [7 x i8] c"%s %d\0A\00"
 // OGCG: @.str = private unnamed_addr constant [3 x i8] c"%s\00"
@@ -18,9 +18,9 @@ void func(char const * const str, int i) {
   __builtin_printf("%s %d\n", str, i);
 }
 
-// CIR: cir.func @printf(!cir.ptr<!s8i>, ...) -> !s32i
+// CIR: cir.func{{.*}} @printf(!cir.ptr<!s8i>, ...) -> !s32i
 
-// CIR: cir.func @_Z4funcPKci(%[[arg0:.+]]: !cir.ptr<!s8i>{{.*}}, %[[arg1:.+]]: !s32i{{.*}}) {
+// CIR: cir.func{{.*}} @_Z4funcPKci(%[[arg0:.+]]: !cir.ptr<!s8i>{{.*}}, %[[arg1:.+]]: !s32i{{.*}}) {
 // CIR:   %[[str_ptr:.+]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["str", init, const]
 // CIR:   %[[i_ptr:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
 // CIR:   cir.store %[[arg0]], %[[str_ptr]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
@@ -38,7 +38,7 @@ void func(char const * const str, int i) {
 // CIR:   %[[printf_result3:.+]] = cir.call @printf(%[[full_fmt_ptr]], %[[str_val2]], %[[i_val]]) : (!cir.ptr<!s8i>, !cir.ptr<!s8i>, !s32i) -> !s32i
 // CIR:   cir.return
 
-// LLVM: define void @_Z4funcPKci(ptr %[[arg0:.+]], i32 %[[arg1:.+]])
+// LLVM: define{{.*}} void @_Z4funcPKci(ptr %[[arg0:.+]], i32 %[[arg1:.+]])
 // LLVM:   %[[str_ptr:.+]] = alloca ptr
 // LLVM:   %[[i_ptr:.+]] = alloca i32
 // LLVM:   store ptr %[[arg0]], ptr %[[str_ptr]]{{.*}}
@@ -51,7 +51,7 @@ void func(char const * const str, int i) {
 // LLVM:   %[[printf_result3:.+]] = call i32 (ptr, ...) @printf(ptr @.str.1, ptr %[[str_val2]], i32 %[[i_val]])
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z4funcPKci(ptr noundef %[[arg0:.+]], i32 noundef %[[arg1:.+]])
+// OGCG: define{{.*}} void @_Z4funcPKci(ptr noundef %[[arg0:.+]], i32 noundef %[[arg1:.+]])
 // OGCG:   %[[str_ptr:.+]] = alloca ptr
 // OGCG:   %[[i_ptr:.+]] = alloca i32
 // OGCG:   store ptr %[[arg0]], ptr %[[str_ptr]]{{.*}}

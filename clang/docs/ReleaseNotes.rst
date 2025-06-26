@@ -65,8 +65,10 @@ C++ Specific Potentially Breaking Changes
   standard library already have their own bespoke builtins.
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
-
 - Added ``!nonnull/!align`` metadata to load of references for better codegen.
+- Checking for int->enum conversions in constant expressions is more strict;
+  in particular, ``const E x = (E)-1;`` is not treated as a constant if it's
+  out of range. This impacts old versions of Boost.  (#GH143034)
 
 ABI Changes in This Version
 ---------------------------
@@ -293,6 +295,8 @@ C23 Feature Support
   type. Fixes #GH140887
 - Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
   which clarified how Clang is handling underspecified object declarations.
+- Clang now accepts single variadic parameter in type-name. It's a part of
+  `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -325,6 +329,12 @@ Non-comprehensive list of changes in this release
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 - Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
   polymorphic object.
+- ``libclang`` receives a family of new bindings to query basic facts about
+  GCC-style inline assembly blocks, including whether the block is ``volatile``
+  and its template string following the LLVM IR ``asm`` format. (#GH143424)
+- Clang no longer rejects reinterpret_cast conversions between indirect
+  ARC-managed pointers and other pointer types. The prior behavior was overly
+  strict and inconsistent with the ARC specification.
 
 New Compiler Flags
 ------------------
@@ -360,6 +370,10 @@ Modified Compiler Flags
 - The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
 
 - The ``-fveclib=libmvec`` option now supports AArch64 targets (requires GLIBC 2.40 or newer).
+
+- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``,
+  reducing performance slightly while reducing the number of optimized-out
+  variables. (#GH118026)
 
 Removed Compiler Flags
 -------------------------
@@ -633,7 +647,7 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
-
+  
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -711,6 +725,7 @@ Bug Fixes in This Version
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
+- Fixed a bug when use unicode character name in macro concatenation. (#GH145240) 
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -847,6 +862,7 @@ Bug Fixes to C++ Support
 - Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
 - Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 - Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
+- Fixed a function declaration mismatch that caused inconsistencies between concepts and variable template declarations. (#GH139476)
 - Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
 - Fix an incorrect deduction when calling an explicit object member function template through an overload set address.
 - Fixed bug in constant evaluation that would allow using the value of a
@@ -1057,6 +1073,9 @@ impact the linker behaviour like the other `-static-*` flags.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash in ``UnixAPIMisuseChecker`` and ``MallocChecker`` when analyzing
+  code with non-standard ``getline`` or ``getdelim`` function signatures. (#GH144884)
 
 Improvements
 ^^^^^^^^^^^^

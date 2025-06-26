@@ -32,6 +32,7 @@ class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let HasExtDPP = 0;
 }
 
+let HasExt64BitDPP = 1 in {
 def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
 def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
 
@@ -48,10 +49,13 @@ class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtDPP = 0;
 }
 
+def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
+
 def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
 }
+} // End HasExt64BitDPP = 1;
 
 //===----------------------------------------------------------------------===//
 // VOP3 INTERP
@@ -319,9 +323,19 @@ let SchedRW = [Write64Bit] in {
 } // End SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat<
   (i32 (DivergentUnaryFrag<sext> i16:$src)),
   (i32 (V_BFE_I32_e64 i16:$src, (i32 0), (i32 0x10)))
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<sext> i16:$src)),
+  (i32 (V_BFE_I32_e64
+       (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+       (i32 0), (i32 0x10)))
 >;
 
 let isReMaterializable = 1 in {
@@ -423,10 +437,24 @@ def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32
 
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat<
   (i64 (DivergentUnaryFrag<sext> i16:$src)),
     (REG_SEQUENCE VReg_64,
       (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10)))), sub0,
+      (i32 (COPY_TO_REGCLASS
+         (V_ASHRREV_I32_e32 (S_MOV_B32 (i32 0x1f)), (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
+      ), VGPR_32)), sub1)
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<sext> i16:$src)),
+    (REG_SEQUENCE VReg_64,
+      (i32 (V_BFE_I32_e64
+            (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+            (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10)))), sub0,
       (i32 (COPY_TO_REGCLASS
          (V_ASHRREV_I32_e32 (S_MOV_B32 (i32 0x1f)), (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
       ), VGPR_32)), sub1)
@@ -698,7 +726,7 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use “0” to get ADD_U64).
 let SubtargetPredicate = HasLshlAddU64Inst in
-defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", VOP3_Profile<VOP_I64_I64_I32_I64>>;
+defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
@@ -1126,6 +1154,9 @@ class VOP3_CVT_SCALEF32_PK_F864_Profile<VOPProfile P> : VOP3_Profile<P> {
   let HasModifiers = 0;
   let HasSrc0IntMods = 0;
   let HasSrc1IntMods = 0;
+  let HasSrc0FloatMods = 0;
+  let HasSrc1FloatMods = 0;
+  let HasSrc2FloatMods = 0;
   let HasOMod = 0;
   let HasOpSel = 0;
   let HasClamp = 0;
@@ -1562,9 +1593,12 @@ let SubtargetPredicate = HasPseudoScalarTrans in {
   def : PseudoScalarPatF16<any_amdgcn_sqrt, V_S_SQRT_F16_e64>;
 }
 
+let HasModifiers = 1 in
+def ASHR_PK_I8_Profile : VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>;
+
 let SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1 in {
-  defm V_ASHR_PK_I8_I32 : VOP3Inst<"v_ashr_pk_i8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>, int_amdgcn_ashr_pk_i8_i32>;
-  defm V_ASHR_PK_U8_I32 : VOP3Inst<"v_ashr_pk_u8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>, int_amdgcn_ashr_pk_u8_i32>;
+  defm V_ASHR_PK_I8_I32 : VOP3Inst<"v_ashr_pk_i8_i32", ASHR_PK_I8_Profile, int_amdgcn_ashr_pk_i8_i32>;
+  defm V_ASHR_PK_U8_I32 : VOP3Inst<"v_ashr_pk_u8_i32", ASHR_PK_I8_Profile, int_amdgcn_ashr_pk_u8_i32>;
 } // End SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1
 
 class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
@@ -1858,6 +1892,9 @@ let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_add3_nc_u32", "v_add3_u32">;
   def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
 }
+
+// These instructions differ from GFX12 variant by supporting DPP:
+defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
