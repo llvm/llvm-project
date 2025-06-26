@@ -1,6 +1,7 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRVectorTestPasses
   TestVectorTransforms.cpp
+  TestVectorLinearize.cpp
 
   EXCLUDE_FROM_LIBMLIR
   )
