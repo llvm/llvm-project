@@ -3809,7 +3809,6 @@ PadOp::reifyResultShapes(OpBuilder &b,
     Value dim = b.createOrFold<tensor::DimOp>(
         loc, getSource(), b.create<arith::ConstantIndexOp>(loc, i));
 
-    affine::AffineBuilder ab(b, loc);
     AffineExpr d0, d1, d2;
     bindDims(b.getContext(), d0, d1, d2);
     reifiedReturnShapes[0][i] = affine::makeComposedFoldedAffineApply(

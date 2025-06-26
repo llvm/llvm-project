@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
@@ -195,9 +194,12 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
         reifiedShapes = true;
         auto &shape =
             resultDims[llvm::cast<OpResult>(shapedValue).getResultNumber()];
-        for (const auto &dim : enumerate(tensorType.getShape()))
-          if (ShapedType::isDynamic(dim.value()))
-            dynamicSizes.push_back(cast<Value>(shape[dim.index()]));
+        for (const auto &dim : enumerate(tensorType.getShape())) {
+          if (ShapedType::isDynamic(dim.value())) {
+            dynamicSizes.push_back(
+                getValueOrCreateConstantIndexOp(b, loc, shape[dim.index()]));
+          }
+        }
       }
     }
 
