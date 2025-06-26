@@ -572,12 +572,12 @@ void UnmapShadow(ThreadState* thr, uptr addr, uptr size) {
   // unmap shadow is related to semantic of mmap/munmap, so we
   // should clear the whole shadow range, including the tail shadow
   // while addr + size % kShadowCell != 0.
-  uptr size_for_shadow = RoundUp(addr + size, kShadowCell) - addr;
-  DontNeedShadowFor(addr, size_for_shadow);
+  uptr rounded_size_shadow = RoundUp(addr + size, kShadowCell) - addr;
+  DontNeedShadowFor(addr, rounded_size_shadow);
   ScopedGlobalProcessor sgp;
   SlotLocker locker(thr, true);
-  uptr size_for_meta = RoundUp(addr + size, kMetaShadowCell) - addr;
-  ctx->metamap.ResetRange(thr->proc(), addr, size_for_meta, true);
+  uptr rounded_size_meta = RoundUp(addr + size, kMetaShadowCell) - addr;
+  ctx->metamap.ResetRange(thr->proc(), addr, rounded_size_meta, true);
 }
 #endif
 
