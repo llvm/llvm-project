@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H
 
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
