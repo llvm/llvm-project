@@ -539,12 +539,6 @@ m_Load(const T0_P &Ch, const T1_P &Ptr, const T2_P &Offset) {
 
 template <typename T0_P, typename T1_P, typename T2_P>
 inline TernaryOpc_match<T0_P, T1_P, T2_P>
-m_Load(const T0_P &Ch, const T1_P &Ptr, const T2_P &Offset) {
-  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::LOAD, Ch, Ptr, Offset);
-}
-
-template <typename T0_P, typename T1_P, typename T2_P>
-inline TernaryOpc_match<T0_P, T1_P, T2_P>
 m_InsertElt(const T0_P &Vec, const T1_P &Val, const T2_P &Idx) {
   return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::INSERT_VECTOR_ELT, Vec, Val,
                                             Idx);
