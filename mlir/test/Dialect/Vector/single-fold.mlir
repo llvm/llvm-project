@@ -35,5 +35,4 @@ func.func @fold_insert_in_single_pass() -> vector<2xf16> {
   // CHECK: arith.constant dense<[0.000000e+00, 2.500000e+00]> : vector<2xf16>
   %0 = vector.insert %c2, %cst [%c1] : f16 into vector<2xf16>
   return %0 : vector<2xf16>
-}
-
+} 
