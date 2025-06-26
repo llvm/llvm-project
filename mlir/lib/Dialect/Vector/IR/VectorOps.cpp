@@ -3149,38 +3149,15 @@ LogicalResult InsertOp::verify() {
   return success();
 }
 
-// Calculate the linearized position for inserting elements and extract values
-// from the source attribute. Returns the starting position in the destination
-// vector where elements should be inserted.
-static int64_t calculateInsertPositionAndExtractValues(
-    VectorType destTy, ArrayRef<int64_t> positions, Attribute srcAttr,
-    SmallVectorImpl<Attribute> &valueToInsert) {
+// Calculate the linearized position of the continuous chunk of elements to
+// insert, based on the shape of the value to insert and the positions to insert
+// at.
+static int64_t calculateInsertPosition(VectorType destTy,
+                                       ArrayRef<int64_t> positions) {
   llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
   copy(positions, completePositions.begin());
   int64_t insertBeginPosition =
       linearize(completePositions, computeStrides(destTy.getShape()));
-
-  Type destEltType = destTy.getElementType();
-
-  /// Converts the expected type to an IntegerAttr if there's
-  /// a mismatch.
-  auto convertIntegerAttr = [](Attribute attr, Type expectedType) -> Attribute {
-    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
-      if (intAttr.getType() != expectedType)
-        return IntegerAttr::get(expectedType, intAttr.getInt());
-    }
-    return attr;
-  };
-
-  // The `convertIntegerAttr` method specifically handles the case
-  // for `llvm.mlir.constant` which can hold an attribute with a
-  // different type than the return type.
-  if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
-    for (auto value : denseSource.getValues<Attribute>())
-      valueToInsert.push_back(convertIntegerAttr(value, destEltType));
-  } else {
-    valueToInsert.push_back(convertIntegerAttr(srcAttr, destEltType));
-  }
 
   return insertBeginPosition;
 }
@@ -3231,7 +3208,7 @@ public:
 ///
 /// This pattern identifies chains of vector.insert operations that:
 /// 1. Start from an ub.poison operation.
-/// 2. Insert only constant values at static positions.
+/// 2. Only insert values at static positions.
 /// 3. Completely initialize all elements in the resulting vector.
 /// 4. All intermediate insert operations have only one use.
 ///
@@ -3265,7 +3242,6 @@ public:
     InsertOp firstInsertOp;
     InsertOp previousInsertOp = op;
     SmallVector<InsertOp> chainInsertOps;
-    SmallVector<Attribute> srcAttrs;
     while (previousInsertOp) {
       // Dynamic position is not supported.
       if (previousInsertOp.hasDynamicPosition())
@@ -3273,22 +3249,12 @@ public:
 
       // The inserted content must be constant.
       chainInsertOps.push_back(previousInsertOp);
-      srcAttrs.push_back(Attribute());
-      matchPattern(previousInsertOp.getValueToStore(),
-                   m_Constant(&srcAttrs.back()));
-      if (!srcAttrs.back())
-        return failure();
-
-      // An insertion at poison index makes the entire chain poisoned.
-      if (is_contained(previousInsertOp.getStaticPosition(),
-                       InsertOp::kPoisonIndex))
-        return failure();
 
       firstInsertOp = previousInsertOp;
       previousInsertOp = previousInsertOp.getDest().getDefiningOp<InsertOp>();
 
       // Check that intermediate inserts have only one use to avoid an explosion
-      // of constants.
+      // of vectors.
       if (previousInsertOp && !previousInsertOp->hasOneUse())
         return failure();
     }
@@ -3301,23 +3267,50 @@ public:
     int64_t vectorSize = destTy.getNumElements();
     int64_t initializedCount = 0;
     SmallVector<bool> initialized(vectorSize, false);
-    SmallVector<Attribute> initValues(vectorSize);
+    SmallVector<Value> elements(vectorSize);
 
-    for (auto [insertOp, srcAttr] : llvm::zip(chainInsertOps, srcAttrs)) {
-      // Calculate the linearized position for inserting elements, as well as
-      // convert the source attribute to the proper type.
-      SmallVector<Attribute> valueToInsert;
-      int64_t insertBeginPosition = calculateInsertPositionAndExtractValues(
-          destTy, insertOp.getStaticPosition(), srcAttr, valueToInsert);
+    for (auto insertOp : chainInsertOps) {
+      // The insert op folder will fold an insert at poison index into a
+      // ub.poison, which truncates the insert chain's backward traversal.
+      if (is_contained(previousInsertOp.getStaticPosition(),
+                       InsertOp::kPoisonIndex))
+        return failure();
+
+      // Calculate the linearized position for inserting elements.
+      int64_t insertBeginPosition =
+          calculateInsertPosition(destTy, insertOp.getStaticPosition());
+
+      // The valueToStore operand may be a vector or a scalar. Need to handle
+      // both cases.
+      SmallVector<Value> elementsToInsert;
+      int64_t elementsToInsertSize = 1;
+      if (auto srcVectorType =
+              llvm::dyn_cast<VectorType>(insertOp.getValueToStoreType())) {
+
+        elementsToInsertSize = srcVectorType.getNumElements();
+        elementsToInsert.reserve(elementsToInsertSize);
+        SmallVector<int64_t> strides = computeStrides(srcVectorType.getShape());
+        // Get all elements from the vector in row-major order.
+        for (int64_t linearIdx = 0; linearIdx < elementsToInsertSize;
+             linearIdx++) {
+          SmallVector<int64_t> position = delinearize(linearIdx, strides);
+          Value extractedElement = rewriter.create<vector::ExtractOp>(
+              insertOp.getLoc(), insertOp.getValueToStore(), position);
+          elementsToInsert.push_back(extractedElement);
+        }
+      } else {
+        elementsToInsert.push_back(insertOp.getValueToStore());
+      }
+
       for (auto index :
            llvm::seq<int64_t>(insertBeginPosition,
-                              insertBeginPosition + valueToInsert.size())) {
+                              insertBeginPosition + elementsToInsertSize)) {
         if (initialized[index])
           continue;
 
         initialized[index] = true;
         ++initializedCount;
-        initValues[index] = valueToInsert[index - insertBeginPosition];
+        elements[index] = elementsToInsert[index - insertBeginPosition];
       }
       // If all elements in the vector have been initialized, we can stop
       // processing the remaining insert operations in the chain.
@@ -3329,8 +3322,7 @@ public:
     if (initializedCount != vectorSize)
       return failure();
 
-    auto newAttr = DenseElementsAttr::get(destTy, initValues);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, destTy, newAttr);
+    rewriter.replaceOpWithNewOp<vector::FromElementsOp>(op, destTy, elements);
     return success();
   }
 };
@@ -3361,11 +3353,31 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
       !insertOp->hasOneUse())
     return {};
 
-  // Calculate the linearized position for inserting elements, as well as
-  // convert the source attribute to the proper type.
+  // Calculate the linearized position for inserting elements.
+  int64_t insertBeginPosition =
+      calculateInsertPosition(destTy, insertOp.getStaticPosition());
   SmallVector<Attribute> insertedValues;
-  int64_t insertBeginPosition = calculateInsertPositionAndExtractValues(
-      destTy, insertOp.getStaticPosition(), srcAttr, insertedValues);
+  Type destEltType = destTy.getElementType();
+
+  /// Converts the expected type to an IntegerAttr if there's
+  /// a mismatch.
+  auto convertIntegerAttr = [](Attribute attr, Type expectedType) -> Attribute {
+    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
+      if (intAttr.getType() != expectedType)
+        return IntegerAttr::get(expectedType, intAttr.getInt());
+    }
+    return attr;
+  };
+
+  // The `convertIntegerAttr` method specifically handles the case
+  // for `llvm.mlir.constant` which can hold an attribute with a
+  // different type than the return type.
+  if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
+    for (auto value : denseSource.getValues<Attribute>())
+      insertedValues.push_back(convertIntegerAttr(value, destEltType));
+  } else {
+    insertedValues.push_back(convertIntegerAttr(srcAttr, destEltType));
+  }
 
   auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
   copy(insertedValues, allValues.begin() + insertBeginPosition);
