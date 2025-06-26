@@ -3040,7 +3040,6 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
     loopInfos.push_back(*loopResult);
   }
 
-  //  llvm::OpenMPIRBuilder::InsertPointTy afterIP = builder.saveIP();
   llvm::OpenMPIRBuilder::InsertPointTy afterIP =
       loopInfos.front()->getAfterIP();
 
@@ -3061,10 +3060,10 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
     std::vector<llvm::CanonicalLoopInfo *> NewLoops =
         ompBuilder->tileLoops(ompLoc.DL, loopInfos, TileSizes);
 
-    // Collapse loops. Store the insertion point because LoopInfos may get
-    // invalidated.
-    auto AfterBB = NewLoops.front()->getAfter();
-    auto AfterAfterBB = AfterBB->getSingleSuccessor();
+    // Update afterIP to get the correct insertion point after
+    // tiling.
+    llvm::BasicBlock *AfterBB = NewLoops.front()->getAfter();
+    llvm::BasicBlock  *AfterAfterBB = AfterBB->getSingleSuccessor();
     afterIP = {AfterAfterBB, AfterAfterBB->begin()};
     NewTopLoopInfo = NewLoops[0];
 

@@ -152,23 +152,19 @@ private:
       // Keep track of the loops to handle the end loop directives
       llvm::SmallVector<parser::OpenMPLoopConstruct *> loops;
       loops.push_back(&x);
-      if (auto *innerConstruct{
-              GetConstructIf<parser::OpenMPConstruct>(*nextIt)}) {
-        if (auto *innerOmpLoop{
-                std::get_if<parser::OpenMPLoopConstruct>(&innerConstruct->u)}) {
-          auto &innerBeginDir{
-              std::get<parser::OmpBeginLoopDirective>(innerOmpLoop->t)};
-          auto &innerDir{std::get<parser::OmpLoopDirective>(innerBeginDir.t)};
-          if (innerDir.v == llvm::omp::Directive::OMPD_tile) {
-            auto &innerLoop = std::get<std::optional<
-                common::Indirection<parser::OpenMPLoopConstruct>>>(
-                loops.back()->t);
-            innerLoop = std::move(*innerOmpLoop);
-            // Retrieveing the address so that DoConstruct or inner loop can be
-            // set later.
-            loops.push_back(&(innerLoop.value().value()));
-            nextIt = block.erase(nextIt);
-          }
+      if (auto *innerOmpLoop{GetOmpIf<parser::OpenMPLoopConstruct>(*nextIt)}) {
+        auto &innerBeginDir{
+            std::get<parser::OmpBeginLoopDirective>(innerOmpLoop->t)};
+        auto &innerDir{std::get<parser::OmpLoopDirective>(innerBeginDir.t)};
+        if (innerDir.v == llvm::omp::Directive::OMPD_tile) {
+          auto &innerLoop = std::get<
+              std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
+              loops.back()->t);
+          innerLoop = std::move(*innerOmpLoop);
+          // Retrieveing the address so that DoConstruct or inner loop can be
+          // set later.
+          loops.push_back(&(innerLoop.value().value()));
+          nextIt = block.erase(nextIt);
         }
       }
 
