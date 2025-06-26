@@ -90,7 +90,6 @@ define void @maxArray(ptr noalias nocapture %x, ptr noalias nocapture readonly %
 ; BASE-NEXT:    jne .LBB0_1
 ; BASE-NEXT:  # %bb.2: # %exit
 ; BASE-NEXT:    retq
-;
 ; FUSE-LABEL: maxArray:
 ; FUSE:       # %bb.0: # %entry
 ; FUSE-NEXT:    xorl %eax, %eax
