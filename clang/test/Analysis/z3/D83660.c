@@ -9,7 +9,7 @@
 // RUN:   -analyzer-checker=core %s -verify
 //
 // REQUIRES: z3, asserts, shell, system-linux
-
+//
 // Works only with the z3 constraint manager.
 // expected-no-diagnostics
 
