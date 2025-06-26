@@ -11,6 +11,7 @@
 
 #include "hdr/types/struct_tm.h"
 #include "hdr/types/time_t.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
