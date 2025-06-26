@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPC.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"

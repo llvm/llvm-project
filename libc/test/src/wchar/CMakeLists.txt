@@ -31,10 +31,12 @@ add_libc_test(
     mbrtowc_test.cpp
   DEPENDS
     libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
     libc.src.string.memset
     libc.src.wchar.mbrtowc
     libc.hdr.types.mbstate_t
     libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -72,6 +74,8 @@ add_libc_test(
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t
     libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
