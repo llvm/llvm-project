@@ -80,3 +80,67 @@ define i32 @all_true_4_i64(<4 x i64> %v) {
   %conv3 = zext i1 %3 to i32
   ret i32 %conv3
 }
+
+
+; setcc (iN (bitcast (set_cc (vNi1 X), 0, ne)), 0, ne
+;   => any_true (set_cc (X), 0, ne)
+;   => any_true (X)
+define i32 @any_true_1_4_i32(<4 x i32> %v) {
+; CHECK-LABEL: any_true_1_4_i32:
+; CHECK:         .functype any_true_1_4_i32 (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.ne $push1=, $0, $pop0
+; CHECK-NEXT:    v128.any_true $push2=, $pop1
+; CHECK-NEXT:    return $pop2
+  %1 = icmp ne <4 x i32> %v, zeroinitializer
+  %2 = bitcast <4 x i1> %1 to i4
+  %3 = icmp ne i4 %2, 0
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+; setcc (iN (bitcast (set_cc (vNi1 X), 0, eq)), -1, ne
+;   => not all_true (set_cc (X), 0, eq)
+;   => not all_true (set_cc (X), 0, eq)
+;   => not not any_true (X)
+;   => any_true (X)
+define i32 @any_true_2_4_i32(<4 x i32> %v) {
+; CHECK-LABEL: any_true_2_4_i32:
+; CHECK:         .functype any_true_2_4_i32 (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push1=, $0, $pop0
+; CHECK-NEXT:    i32x4.all_true $push2=, $pop1
+; CHECK-NEXT:    i32.const $push3=, -1
+; CHECK-NEXT:    i32.xor $push4=, $pop2, $pop3
+; CHECK-NEXT:    i32.const $push5=, 1
+; CHECK-NEXT:    i32.and $push6=, $pop4, $pop5
+; CHECK-NEXT:    return $pop6
+  %1 = icmp eq <4 x i32> %v, zeroinitializer
+  %2 = bitcast <4 x i1> %1 to i4
+  %3 = icmp ne i4 %2, -1
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+
+; setcc (iN (bitcast (set_cc (vNi1 X), 0, ne)), -1, eq
+;   => all_true (set_cc (X), 0, ne)
+;   => all_true (X)
+define i32 @all_true_2_4_i32(<4 x i32> %v) {
+; CHECK-LABEL: all_true_2_4_i32:
+; CHECK:         .functype all_true_2_4_i32 (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.ne $push1=, $0, $pop0
+; CHECK-NEXT:    i32x4.all_true $push2=, $pop1
+; CHECK-NEXT:    return $pop2
+  %1 = icmp ne <4 x i32> %v, zeroinitializer
+  %2 = bitcast <4 x i1> %1 to i4
+  %3 = icmp eq i4 %2, -1
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+
