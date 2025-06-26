@@ -3220,7 +3220,7 @@ public:
 ///   %0 = vector.insert %c1, %poison[0] : i32 into vector<2xi32>
 ///   %1 = vector.insert %c2, %0[1] : i32 into vector<2xi32>
 /// ->
-///   %result = arith.constant dense<[1, 2]> : vector<2xi32>
+///   %result = vector.from_elements %c1, %c2 : vector<2xi32>
 /// TODO: Support the case where only some elements of the poison vector are
 /// set. Currently, MLIR doesn't support partial poison vectors.
 class InsertConstantToPoison final : public OpRewritePattern<InsertOp> {
