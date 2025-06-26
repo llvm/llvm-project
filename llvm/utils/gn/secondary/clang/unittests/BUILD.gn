@@ -46,3 +46,9 @@ group("unittests") {
   }
   testonly = true
 }
+
+# CMake puts most tests into an AllClangUnitTests target. The GN build
+# doesn't do this. This keeps the sync script happy.
+group("dummy_sources") {
+  sources = [ "AllClangUnitTests.cpp" ]
+}

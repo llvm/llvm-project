@@ -1154,8 +1154,9 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
+  constexpr unsigned newestFullySupported = 52;
   // By default OpenMP is set to 5.2 version
-  res.getLangOpts().OpenMPVersion = 52;
+  res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg =
@@ -1180,6 +1181,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (!value.getAsInteger(/*radix=*/10, version)) {
       if (llvm::is_contained(ompVersions, version)) {
         res.getLangOpts().OpenMPVersion = version;
+
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
             diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,

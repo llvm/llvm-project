@@ -373,8 +373,11 @@ def FeatureAliasSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
 def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
   "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
 
-def FeatureSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3", "FEAT_SVE_SHA3",
-  "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
+def FeatureSVESHA3 : ExtensionWithMArch<"sve-sha3", "SVESHA3", "FEAT_SVE_SHA3",
+  "Enable SVE SHA3 instructions", [FeatureSHA3]>;
+
+def FeatureAliasSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3",
+  "", "Shorthand for +sve2+sve-sha3", [FeatureSVE2, FeatureSVESHA3]>;
 
 def FeatureSVEBitPerm : ExtensionWithMArch<"sve-bitperm", "SVEBitPerm",
   "FEAT_SVE_BitPerm",  "Enable bit permutation SVE2 instructions">;
