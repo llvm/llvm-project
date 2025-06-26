@@ -14,8 +14,8 @@ using namespace mlir;
 static Operation *createOp(MLIRContext *context) {
   context->allowUnregisteredDialects();
   return Operation::create(
-      UnknownLoc::get(context), OperationName("foo.bar", context), std::nullopt,
-      std::nullopt, std::nullopt, /*properties=*/nullptr, std::nullopt, 0);
+      UnknownLoc::get(context), OperationName("foo.bar", context), {}, {},
+      std::nullopt, /*properties=*/nullptr, std::nullopt, 0);
 }
 
 namespace {

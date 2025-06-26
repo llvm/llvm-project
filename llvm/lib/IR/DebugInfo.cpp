@@ -586,11 +586,6 @@ bool llvm::stripDebugInfo(Function &F) {
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
     for (Instruction &I : llvm::make_early_inc_range(BB)) {
-      if (isa<DbgInfoIntrinsic>(&I)) {
-        I.eraseFromParent();
-        Changed = true;
-        continue;
-      }
       if (I.getDebugLoc()) {
         Changed = true;
         I.setDebugLoc(DebugLoc());
@@ -960,8 +955,8 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
   return 0;
 }
 
-void Instruction::applyMergedLocation(DILocation *LocA, DILocation *LocB) {
-  setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
+void Instruction::applyMergedLocation(DebugLoc LocA, DebugLoc LocB) {
+  setDebugLoc(DebugLoc::getMergedLocation(LocA, LocB));
 }
 
 void Instruction::mergeDIAssignID(
@@ -1818,6 +1813,12 @@ unsigned LLVMDISubprogramGetLine(LLVMMetadataRef Subprogram) {
   return unwrapDI<DISubprogram>(Subprogram)->getLine();
 }
 
+void LLVMDISubprogramReplaceType(LLVMMetadataRef Subprogram,
+                                 LLVMMetadataRef SubroutineType) {
+  unwrapDI<DISubprogram>(Subprogram)
+      ->replaceType(unwrapDI<DISubroutineType>(SubroutineType));
+}
+
 LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst) {
   return wrap(unwrap<Instruction>(Inst)->getDebugLoc().getAsMDNode());
 }
@@ -2123,22 +2124,10 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
     Expr = *R;
   }
   DIExpression *AddrExpr = DIExpression::get(StoreLikeInst.getContext(), {});
-  if (StoreLikeInst.getParent()->IsNewDbgInfoFormat) {
-    auto *Assign = DbgVariableRecord::createLinkedDVRAssign(
-        &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
-    (void)Assign;
-    LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
-    return;
-  }
-  auto Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
-                                    AddrExpr, VarRec.DL);
+  auto *Assign = DbgVariableRecord::createLinkedDVRAssign(
+      &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
   (void)Assign;
-  LLVM_DEBUG(if (!Assign.isNull()) {
-    if (const auto *Record = dyn_cast<DbgRecord *>(Assign))
-      errs() << " > INSERT: " << *Record << "\n";
-    else
-      errs() << " > INSERT: " << *cast<Instruction *>(Assign) << "\n";
-  });
+  LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
 }
 
 #undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).

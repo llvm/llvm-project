@@ -232,13 +232,8 @@ public:
   /// single edge between \p From and \p To.
   static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
                            VPBlockBase *BlockPtr) {
-    auto &Successors = From->getSuccessors();
-    auto &Predecessors = To->getPredecessors();
-    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
-           "must have single between From and To");
-    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
-    unsigned PredIx =
-        std::distance(Predecessors.begin(), find(Predecessors, From));
+    unsigned SuccIdx = From->getIndexForSuccessor(To);
+    unsigned PredIx = To->getIndexForPredecessor(From);
     VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
     VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
   }

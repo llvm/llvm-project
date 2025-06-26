@@ -15,8 +15,12 @@
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -35,11 +39,27 @@ enum Libcall {
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
 };
+} // namespace RTLIB
+
+template <> struct enum_iteration_traits<RTLIB::Libcall> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace RTLIB {
+
+// Return an iterator over all Libcall values.
+static inline auto libcalls() {
+  return enum_seq(static_cast<RTLIB::Libcall>(0), RTLIB::UNKNOWN_LIBCALL);
+}
 
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
-  explicit RuntimeLibcallsInfo(const Triple &TT) {
-    initLibcalls(TT);
+  explicit RuntimeLibcallsInfo(
+      const Triple &TT,
+      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      FloatABI::ABIType FloatABI = FloatABI::Default,
+      EABI EABIVersion = EABI::Default, StringRef ABIName = "") {
+    initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
   }
 
   /// Rename the default libcall routine name for the specified libcall.
@@ -67,19 +87,54 @@ struct RuntimeLibcallsInfo {
     return LibcallCallingConvs[Call];
   }
 
-  iterator_range<const char **> getLibcallNames() {
-    return llvm::make_range(LibcallRoutineNames,
-                            LibcallRoutineNames + RTLIB::UNKNOWN_LIBCALL);
+  ArrayRef<const char *> getLibcallNames() const {
+    // Trim UNKNOWN_LIBCALL from the end
+    return ArrayRef(LibcallRoutineNames).drop_back();
+  }
+
+  /// Get the comparison predicate that's to be used to test the result of the
+  /// comparison libcall against zero. This should only be used with
+  /// floating-point compare libcalls.
+  CmpInst::Predicate
+  getSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call) const {
+    return SoftFloatCompareLibcallPredicates[Call];
+  }
+
+  // FIXME: This should be removed. This should be private constant.
+  void setSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call,
+                                       CmpInst::Predicate Pred) {
+    SoftFloatCompareLibcallPredicates[Call] = Pred;
+  }
+
+  /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
+  /// unsupported.
+  const char *getMemcpyName() const {
+    if (const char *Memcpy = getLibcallName(RTLIB::MEMCPY))
+      return Memcpy;
+
+    // Fallback to memmove if memcpy isn't available.
+    return getLibcallName(RTLIB::MEMMOVE);
   }
 
 private:
   /// Stores the name each libcall.
-  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
+  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1] = {nullptr};
+
+  static_assert(static_cast<int>(CallingConv::C) == 0,
+                "default calling conv should be encoded as 0");
 
   /// Stores the CallingConv that should be used for each libcall.
-  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL];
+  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL] = {};
 
-  static bool darwinHasSinCos(const Triple &TT) {
+  /// The condition type that should be used to test the result of each of the
+  /// soft floating-point comparison libcall against integer zero.
+  ///
+  // FIXME: This is only relevant for the handful of floating-point comparison
+  // runtime calls; it's excessive to have a table entry for every single
+  // opcode.
+  CmpInst::Predicate SoftFloatCompareLibcallPredicates[RTLIB::UNKNOWN_LIBCALL];
+
+  static bool darwinHasSinCosStret(const Triple &TT) {
     assert(TT.isOSDarwin() && "should be called with darwin triple");
     // Don't bother with 32 bit x86.
     if (TT.getArch() == Triple::x86)
@@ -94,9 +149,21 @@ private:
     return true;
   }
 
+  static bool darwinHasExp10(const Triple &TT);
+
+  /// Return true if the target has sincosf/sincos/sincosl functions
+  static bool hasSinCos(const Triple &TT) {
+    return TT.isGNUEnvironment() || TT.isOSFuchsia() ||
+           (TT.isAndroid() && !TT.isAndroidVersionLT(9));
+  }
+
+  void initSoftFloatCmpLibcallPredicates();
+
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
-  void initLibcalls(const Triple &TT);
+  LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
+                             FloatABI::ABIType FloatABI, EABI ABIType,
+                             StringRef ABIName);
 };
 
 } // namespace RTLIB

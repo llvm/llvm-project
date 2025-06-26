@@ -29,13 +29,15 @@ static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
 }
 
 size_t RootSignatureDesc::getSize() const {
-  size_t Size = sizeof(dxbc::RootSignatureHeader) +
-                ParametersContainer.size() * sizeof(dxbc::RootParameterHeader);
+  size_t Size =
+      sizeof(dxbc::RTS0::v1::RootSignatureHeader) +
+      ParametersContainer.size() * sizeof(dxbc::RTS0::v1::RootParameterHeader) +
+      StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
 
   for (const RootParameterInfo &I : ParametersContainer) {
     switch (I.Header.ParameterType) {
     case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      Size += sizeof(dxbc::RootConstants);
+      Size += sizeof(dxbc::RTS0::v1::RootConstants);
       break;
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
@@ -45,6 +47,18 @@ size_t RootSignatureDesc::getSize() const {
       else
         Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
 
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+      const DescriptorTable &Table =
+          ParametersContainer.getDescriptorTable(I.Location);
+
+      // 4 bytes for the number of ranges in table and
+      // 4 bytes for the ranges offset
+      Size += 2 * sizeof(uint32_t);
+      if (Version == 1)
+        Size += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
+      else
+        Size += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
       break;
     }
   }
@@ -81,7 +95,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     const auto &[Type, Loc] = ParametersContainer.getTypeAndLocForParameter(I);
     switch (Type) {
     case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
-      const dxbc::RootConstants &Constants =
+      const dxbc::RTS0::v1::RootConstants &Constants =
           ParametersContainer.getConstant(Loc);
       support::endian::write(BOS, Constants.ShaderRegister,
                              llvm::endianness::little);
@@ -105,7 +119,43 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
         support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
       break;
     }
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      const DescriptorTable &Table =
+          ParametersContainer.getDescriptorTable(Loc);
+      support::endian::write(BOS, (uint32_t)Table.Ranges.size(),
+                             llvm::endianness::little);
+      rewriteOffsetToCurrentByte(BOS, writePlaceholder(BOS));
+      for (const auto &Range : Table) {
+        support::endian::write(BOS, Range.RangeType, llvm::endianness::little);
+        support::endian::write(BOS, Range.NumDescriptors,
+                               llvm::endianness::little);
+        support::endian::write(BOS, Range.BaseShaderRegister,
+                               llvm::endianness::little);
+        support::endian::write(BOS, Range.RegisterSpace,
+                               llvm::endianness::little);
+        if (Version > 1)
+          support::endian::write(BOS, Range.Flags, llvm::endianness::little);
+        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
+                               llvm::endianness::little);
+      }
+      break;
     }
+    }
+  }
+  for (const auto &S : StaticSamplers) {
+    support::endian::write(BOS, S.Filter, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressU, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressV, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressW, llvm::endianness::little);
+    support::endian::write(BOS, S.MipLODBias, llvm::endianness::little);
+    support::endian::write(BOS, S.MaxAnisotropy, llvm::endianness::little);
+    support::endian::write(BOS, S.ComparisonFunc, llvm::endianness::little);
+    support::endian::write(BOS, S.BorderColor, llvm::endianness::little);
+    support::endian::write(BOS, S.MinLOD, llvm::endianness::little);
+    support::endian::write(BOS, S.MaxLOD, llvm::endianness::little);
+    support::endian::write(BOS, S.ShaderRegister, llvm::endianness::little);
+    support::endian::write(BOS, S.RegisterSpace, llvm::endianness::little);
+    support::endian::write(BOS, S.ShaderVisibility, llvm::endianness::little);
   }
   assert(Storage.size() == getSize());
   OS.write(Storage.data(), Storage.size());

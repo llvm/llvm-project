@@ -263,12 +263,7 @@ declare half @test_callee(half %a, half %b) #0
 ; CHECK-DAG:  st.param.b16    [param0], [[A]];
 ; CHECK-DAG:  st.param.b16    [param1], [[B]];
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
-; CHECK:      call.uni (retval0),
-; CHECK-NEXT:        test_callee,
-; CHECK-NEXT: (
-; CHECK-NEXT:        param0,
-; CHECK-NEXT:        param1
-; CHECK-NEXT: );
+; CHECK:      call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
@@ -287,12 +282,7 @@ define half @test_call(half %a, half %b) #0 {
 ; CHECK-DAG:  st.param.b16    [param0], [[B]];
 ; CHECK-DAG:  st.param.b16    [param1], [[A]];
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
-; CHECK:      call.uni (retval0),
-; CHECK-NEXT:        test_callee,
-; CHECK-NEXT: (
-; CHECK-NEXT:        param0,
-; CHECK-NEXT:        param1
-; CHECK-NEXT: );
+; CHECK:      call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
@@ -311,12 +301,7 @@ define half @test_call_flipped(half %a, half %b) #0 {
 ; CHECK-DAG:  st.param.b16    [param0], [[B]];
 ; CHECK-DAG:  st.param.b16    [param1], [[A]];
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
-; CHECK:      call.uni (retval0),
-; CHECK-NEXT:        test_callee,
-; CHECK-NEXT: (
-; CHECK-NEXT:        param0,
-; CHECK-NEXT:        param1
-; CHECK-NEXT: );
+; CHECK:      call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
@@ -650,8 +635,7 @@ else:
 ; CHECK:      ld.b16  [[AB:%rs[0-9]+]], [%[[P1]]];
 ; CHECK:      {
 ; CHECK:      st.param.b64    [param0], %[[P1]];
-; CHECK:      call.uni (retval0),
-; CHECK-NEXT: test_dummy
+; CHECK:      call.uni (retval0), test_dummy
 ; CHECK:      }
 ; CHECK:      setp.ne.b32     [[PRED:%p[0-9]+]], %r{{[0-9]+}}, 0;
 ; CHECK:      @[[PRED]] bra   [[LOOP]];
@@ -1043,8 +1027,7 @@ define half @test_copysign(half %a, half %b) #0 {
 
 ; CHECK-LABEL: test_copysign_f32(
 ; CHECK-DAG:  ld.param.b16    [[AH:%rs[0-9]+]], [test_copysign_f32_param_0];
-; CHECK-DAG:  ld.param.b32    [[BF:%r[0-9]+]], [test_copysign_f32_param_1];
-; CHECK-DAG:  mov.b32         [[B:%r[0-9]+]], [[BF]];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_copysign_f32_param_1];
 ; CHECK-DAG:  and.b16         [[AX:%rs[0-9]+]], [[AH]], 32767;
 ; CHECK-DAG:  and.b32         [[BX0:%r[0-9]+]], [[B]], -2147483648;
 ; CHECK-DAG:  mov.b32         {tmp, [[BX2:%rs[0-9]+]]}, [[BX0]];
@@ -1059,8 +1042,7 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 
 ; CHECK-LABEL: test_copysign_f64(
 ; CHECK-DAG:  ld.param.b16    [[AH:%rs[0-9]+]], [test_copysign_f64_param_0];
-; CHECK-DAG:  ld.param.b64    [[BD:%rd[0-9]+]], [test_copysign_f64_param_1];
-; CHECK-DAG:  mov.b64         [[B:%rd[0-9]+]], [[BD]];
+; CHECK-DAG:  ld.param.b64    [[B:%rd[0-9]+]], [test_copysign_f64_param_1];
 ; CHECK-DAG:  and.b16         [[AX:%rs[0-9]+]], [[AH]], 32767;
 ; CHECK-DAG:  and.b64         [[BX0:%rd[0-9]+]], [[B]], -9223372036854775808;
 ; CHECK-DAG:  shr.u64         [[BX1:%rd[0-9]+]], [[BX0]], 48;

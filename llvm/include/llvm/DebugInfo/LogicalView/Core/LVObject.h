@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSupport.h"
+#include "llvm/Support/Compiler.h"
 #include <limits>
 #include <list>
 #include <string>
@@ -35,7 +36,7 @@ namespace logicalview {
 using LVSectionIndex = uint64_t;
 using LVAddress = uint64_t;
 using LVHalf = uint16_t;
-using LVLevel = uint32_t;
+using LVLevel = uint16_t;
 using LVOffset = uint64_t;
 using LVSigned = int64_t;
 using LVUnsigned = uint64_t;
@@ -54,11 +55,11 @@ class LVType;
 class LVOptions;
 class LVPatterns;
 
-StringRef typeNone();
-StringRef typeVoid();
-StringRef typeInt();
-StringRef typeUnknown();
-StringRef emptyString();
+LLVM_ABI StringRef typeNone();
+LLVM_ABI StringRef typeVoid();
+LLVM_ABI StringRef typeInt();
+LLVM_ABI StringRef typeUnknown();
+LLVM_ABI StringRef emptyString();
 
 using LVElementSetFunction = void (LVElement::*)();
 using LVElementGetFunction = bool (LVElement::*)() const;
@@ -83,6 +84,14 @@ using LVTypes = SmallVector<LVType *, 8>;
 
 using LVOffsets = SmallVector<LVOffset, 8>;
 
+// The following DWARF documents detail the 'tombstone' concept:
+//   https://dwarfstd.org/issues/231013.1.html
+//   https://dwarfstd.org/issues/200609.1.html
+//
+// The value of the largest representable address offset (for example,
+// 0xffffffff when the size of an address is 32 bits).
+//
+// -1 (0xffffffff) => Valid tombstone
 const LVAddress MaxAddress = std::numeric_limits<uint64_t>::max();
 
 enum class LVBinaryType { NONE, ELF, COFF };
@@ -105,7 +114,7 @@ struct LVCounter {
   }
 };
 
-class LVObject {
+class LLVM_ABI LVObject {
   enum class Property {
     IsLocation,          // Location.
     IsGlobalReference,   // This object is being referenced from another CU.
@@ -128,8 +137,6 @@ class LVObject {
     HasCodeViewLocation, // CodeView object with debug location.
     LastEntry
   };
-  // Typed bitvector with properties for this object.
-  LVProperties<Property> Properties;
 
   LVOffset Offset = 0;
   uint32_t LineNumber = 0;
@@ -139,6 +146,14 @@ class LVObject {
     dwarf::Attribute Attr;
     LVSmall Opcode;
   } TagAttrOpcode = {dwarf::DW_TAG_null};
+  // Typed bitvector with properties for this object.
+  LVProperties<Property> Properties;
+
+  // This is an internal ID used for debugging logical elements. It is used
+  // for cases where an unique offset within the binary input file is not
+  // available.
+  static uint32_t GID;
+  uint32_t ID = 0;
 
   // The parent of this object (nullptr if the root scope). For locations,
   // the parent is a symbol object; otherwise it is a scope object.
@@ -154,9 +169,7 @@ class LVObject {
   // copy constructor to create that object; it is used to print a reference
   // to another object and in the case of templates, to print its encoded args.
   LVObject(const LVObject &Object) {
-#ifndef NDEBUG
     incID();
-#endif
     Properties = Object.Properties;
     Offset = Object.Offset;
     LineNumber = Object.LineNumber;
@@ -165,18 +178,10 @@ class LVObject {
     Parent = Object.Parent;
   }
 
-#ifndef NDEBUG
-  // This is an internal ID used for debugging logical elements. It is used
-  // for cases where an unique offset within the binary input file is not
-  // available.
-  static uint64_t GID;
-  uint64_t ID = 0;
-
   void incID() {
     ++GID;
     ID = GID;
   }
-#endif
 
 protected:
   // Get a string representation for the given number and discriminator.
@@ -192,11 +197,7 @@ protected:
   virtual void printFileIndex(raw_ostream &OS, bool Full = true) const {}
 
 public:
-  LVObject() {
-#ifndef NDEBUG
-    incID();
-#endif
-  };
+  LVObject() { incID(); };
   LVObject &operator=(const LVObject &) = delete;
   virtual ~LVObject() = default;
 
@@ -312,17 +313,10 @@ public:
   virtual void printExtra(raw_ostream &OS, bool Full = true) const {}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  virtual void dump() const { print(dbgs()); }
+  void dump() const { print(dbgs()); }
 #endif
 
-  uint64_t getID() const {
-    return
-#ifndef NDEBUG
-        ID;
-#else
-        0;
-#endif
-  }
+  uint32_t getID() const { return ID; }
 };
 
 } // end namespace logicalview

@@ -246,6 +246,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/ioctl.h entrypoints
+    libc.src.sys.ioctl.ioctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
@@ -364,6 +367,25 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.btowc
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
+    libc.src.wchar.wmemmove
+    libc.src.wchar.wmemset
+    libc.src.wchar.wcschr
+    libc.src.wchar.wcsncmp
+    libc.src.wchar.wcscmp
+    libc.src.wchar.wcspbrk
+    libc.src.wchar.wcsrchr
+    libc.src.wchar.wcsspn
+    libc.src.wchar.wmemcmp
+    libc.src.wchar.wmempcpy
+    libc.src.wchar.wmemcpy
+    libc.src.wchar.wcsncpy
+    libc.src.wchar.wcscat
+    libc.src.wchar.wcsstr
+    libc.src.wchar.wcsncat
+    libc.src.wchar.wcscpy
+    libc.src.wchar.wmemchr
+    libc.src.wchar.wcpcpy
+    libc.src.wchar.wcpncpy
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -667,6 +689,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.acospif16
     libc.src.math.asinf16
     libc.src.math.asinhf16
+    libc.src.math.atanf16
     libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
@@ -1096,6 +1119,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.perror
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -1222,6 +1246,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recv
     libc.src.sys.socket.recvfrom
     libc.src.sys.socket.recvmsg
+
+    # wchar.h entrypoints
+    libc.src.wchar.mbrtowc
+    libc.src.wchar.mbtowc
+    libc.src.wchar.wcrtomb
+    libc.src.wchar.wctomb
   )
 endif()
 

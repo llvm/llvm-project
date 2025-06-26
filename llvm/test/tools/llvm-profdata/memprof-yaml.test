@@ -20,6 +20,14 @@
 
 ;--- memprof-in.yaml
 ---
+# MemProfSummary:
+#   Total contexts: 2
+#   Total cold contexts: 0
+#   Total hot contexts: 0
+#   Maximum cold context total size: 0
+#   Maximum warm context total size: 666
+#   Maximum hot context total size: 0
+---
 HeapProfileRecords:
   - GUID:            0xdeadbeef12345678
     AllocSites:
@@ -69,6 +77,14 @@ DataAccessProfiles:
 ...
 ;--- memprof-in-v3.yaml
 ---
+# MemProfSummary:
+#   Total contexts: 2
+#   Total cold contexts: 0
+#   Total hot contexts: 0
+#   Maximum cold context total size: 0
+#   Maximum warm context total size: 666
+#   Maximum hot context total size: 0
+---
 HeapProfileRecords:
   - GUID:            0xdeadbeef12345678
     AllocSites:
@@ -97,6 +113,14 @@ HeapProfileRecords:
         - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
 ...
 ;--- memprof-in-no-dap.yaml
+---
+# MemProfSummary:
+#   Total contexts: 2
+#   Total cold contexts: 0
+#   Total hot contexts: 0
+#   Maximum cold context total size: 0
+#   Maximum warm context total size: 666
+#   Maximum hot context total size: 0
 ---
 HeapProfileRecords:
   - GUID:            0xdeadbeef12345678

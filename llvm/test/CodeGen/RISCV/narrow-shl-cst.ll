@@ -246,7 +246,7 @@ define signext i32 @test14(i32 signext %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slliw a0, a0, 10
 ; RV64-NEXT:    lui a1, 8
-; RV64-NEXT:    addiw a1, a1, -1027
+; RV64-NEXT:    addi a1, a1, -1027
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
   %or = shl i32 %x, 10
@@ -269,7 +269,7 @@ define signext i32 @test15(i32 signext %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slliw a0, a0, 10
 ; RV64-NEXT:    lui a1, 8
-; RV64-NEXT:    addiw a1, a1, -515
+; RV64-NEXT:    addi a1, a1, -515
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    ret
   %xor = shl i32 %x, 10

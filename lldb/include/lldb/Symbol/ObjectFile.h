@@ -709,6 +709,13 @@ public:
       llvm::StringRef name,
       lldb::SymbolType symbol_type_hint = lldb::eSymbolTypeUndefined);
 
+  /// Parses the section type from a section name for DWARF sections.
+  ///
+  /// The \a name must be stripped of the default prefix (e.g. ".debug_" or
+  /// "__debug_"). If there's no matching section type, \a eSectionTypeOther
+  /// will be returned.
+  static lldb::SectionType GetDWARFSectionTypeFromName(llvm::StringRef name);
+
   /// Loads this objfile to memory.
   ///
   /// Loads the bits needed to create an executable image to the memory. It is

@@ -163,14 +163,12 @@ define <2 x half> @test_ldu_v2f16(ptr addrspace(1) %ptr) {
 define i8 @test_ldg_i8(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_i8_param_0];
-; CHECK-NEXT:    ld.global.nc.b8 %rs1, [%rd1];
-; CHECK-NEXT:    cvt.u32.u8 %r1, %rs1;
+; CHECK-NEXT:    ld.global.nc.b8 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i8 @llvm.nvvm.ldg.global.i.i8.p1(ptr addrspace(1) %ptr, i32 4)
@@ -180,14 +178,12 @@ define i8 @test_ldg_i8(ptr addrspace(1) %ptr) {
 define i16 @test_ldg_i16(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_i16_param_0];
-; CHECK-NEXT:    ld.global.nc.b16 %rs1, [%rd1];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    ld.global.nc.b16 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i16 @llvm.nvvm.ldg.global.i.i16.p1(ptr addrspace(1) %ptr, i32 2)

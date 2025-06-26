@@ -414,6 +414,16 @@ const Symbol *IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
   return nullptr;
 }
 
+template <typename T>
+bool isStructureComponent(const Fortran::evaluate::Expr<T> &expr) {
+  if (auto dataRef{ExtractDataRef(expr, /*intoSubstring=*/false)}) {
+    const Fortran::evaluate::DataRef *ref{&*dataRef};
+    return std::holds_alternative<Fortran::evaluate::Component>(ref->u);
+  }
+
+  return false;
+}
+
 template <typename A>
 std::optional<NamedEntity> ExtractNamedEntity(const A &x) {
   if (auto dataRef{ExtractDataRef(x)}) {
@@ -480,26 +490,30 @@ template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   }
 }
 
-struct ExtractSubstringHelper {
-  template <typename T> static std::optional<Substring> visit(T &&) {
+template <typename TARGET> struct ExtractFromExprDesignatorHelper {
+  template <typename T> static std::optional<TARGET> visit(T &&) {
     return std::nullopt;
   }
 
-  static std::optional<Substring> visit(const Substring &e) { return e; }
+  static std::optional<TARGET> visit(const TARGET &t) { return t; }
 
   template <typename T>
-  static std::optional<Substring> visit(const Designator<T> &e) {
+  static std::optional<TARGET> visit(const Designator<T> &e) {
     return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
-  template <typename T>
-  static std::optional<Substring> visit(const Expr<T> &e) {
+  template <typename T> static std::optional<TARGET> visit(const Expr<T> &e) {
     return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 };
 
 template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
-  return ExtractSubstringHelper::visit(x);
+  return ExtractFromExprDesignatorHelper<Substring>::visit(x);
+}
+
+template <typename A>
+std::optional<ComplexPart> ExtractComplexPart(const A &x) {
+  return ExtractFromExprDesignatorHelper<ComplexPart>::visit(x);
 }
 
 // If an expression is simply a whole symbol data designator,
@@ -1374,6 +1388,154 @@ inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   bool hasConstant{HasConstant(expr)};
   return (hasConstant || (hostSymbols > 0)) && deviceSymbols > 0;
 }
+
+// Checks whether the symbol on the LHS is present in the RHS expression.
+bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
+
+namespace operation {
+
+enum class Operator {
+  Unknown,
+  Add,
+  And,
+  Associated,
+  Call,
+  Constant,
+  Convert,
+  Div,
+  Eq,
+  Eqv,
+  False,
+  Ge,
+  Gt,
+  Identity,
+  Intrinsic,
+  Le,
+  Lt,
+  Max,
+  Min,
+  Mul,
+  Ne,
+  Neqv,
+  Not,
+  Or,
+  Pow,
+  Resize, // Convert within the same TypeCategory
+  Sub,
+  True,
+};
+
+std::string ToString(Operator op);
+
+template <typename... Ts, int Kind>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::LogicalOperation<Kind>, Ts...> &op) {
+  switch (op.derived().logicalOperator) {
+  case common::LogicalOperator::And:
+    return Operator::And;
+  case common::LogicalOperator::Or:
+    return Operator::Or;
+  case common::LogicalOperator::Eqv:
+    return Operator::Eqv;
+  case common::LogicalOperator::Neqv:
+    return Operator::Neqv;
+  case common::LogicalOperator::Not:
+    return Operator::Not;
+  }
+  return Operator::Unknown;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Relational<T>, Ts...> &op) {
+  switch (op.derived().opr) {
+  case common::RelationalOperator::LT:
+    return Operator::Lt;
+  case common::RelationalOperator::LE:
+    return Operator::Le;
+  case common::RelationalOperator::EQ:
+    return Operator::Eq;
+  case common::RelationalOperator::NE:
+    return Operator::Ne;
+  case common::RelationalOperator::GE:
+    return Operator::Ge;
+  case common::RelationalOperator::GT:
+    return Operator::Gt;
+  }
+  return Operator::Unknown;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(const evaluate::Operation<evaluate::Add<T>, Ts...> &op) {
+  return Operator::Add;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Subtract<T>, Ts...> &op) {
+  return Operator::Sub;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Multiply<T>, Ts...> &op) {
+  return Operator::Mul;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Divide<T>, Ts...> &op) {
+  return Operator::Div;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Power<T>, Ts...> &op) {
+  return Operator::Pow;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::RealToIntPower<T>, Ts...> &op) {
+  return Operator::Pow;
+}
+
+template <typename T, common::TypeCategory C, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Convert<T, C>, Ts...> &op) {
+  if constexpr (C == T::category) {
+    return Operator::Resize;
+  } else {
+    return Operator::Convert;
+  }
+}
+
+template <typename T> Operator OperationCode(const evaluate::Constant<T> &x) {
+  return Operator::Constant;
+}
+
+template <typename T> Operator OperationCode(const T &) {
+  return Operator::Unknown;
+}
+
+Operator OperationCode(const evaluate::ProcedureDesignator &proc);
+
+} // namespace operation
+
+// Return information about the top-level operation (ignoring parentheses):
+// the operation code and the list of arguments.
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperation(const Expr<SomeType> &expr);
+
+// Check if expr is same as x, or a sequence of Convert operations on x.
+bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x);
+
+// Strip away any top-level Convert operations (if any exist) and return
+// the input value. A ComplexConstructor(x, 0) is also considered as a
+// convert operation.
+// If the input is not Operation, Designator, FunctionRef or Constant,
+// it returns std::nullopt.
+std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
 } // namespace Fortran::evaluate
 

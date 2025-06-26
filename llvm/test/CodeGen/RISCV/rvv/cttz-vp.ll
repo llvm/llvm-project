@@ -1338,10 +1338,10 @@ define <vscale x 1 x i64> @vp_cttz_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -1426,10 +1426,10 @@ define <vscale x 1 x i64> @vp_cttz_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -1516,10 +1516,10 @@ define <vscale x 2 x i64> @vp_cttz_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -1604,10 +1604,10 @@ define <vscale x 2 x i64> @vp_cttz_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32 
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -1694,10 +1694,10 @@ define <vscale x 4 x i64> @vp_cttz_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -1782,10 +1782,10 @@ define <vscale x 4 x i64> @vp_cttz_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -1872,10 +1872,10 @@ define <vscale x 7 x i64> @vp_cttz_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -1960,10 +1960,10 @@ define <vscale x 7 x i64> @vp_cttz_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32 
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -2050,10 +2050,10 @@ define <vscale x 8 x i64> @vp_cttz_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -2138,10 +2138,10 @@ define <vscale x 8 x i64> @vp_cttz_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32 
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -2334,10 +2334,10 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; RV64-NEXT:    lui a5, 4112
 ; RV64-NEXT:    srli a6, a1, 3
 ; RV64-NEXT:    sub a7, a0, a1
-; RV64-NEXT:    addiw a2, a2, 1365
-; RV64-NEXT:    addiw a3, a3, 819
-; RV64-NEXT:    addiw a4, a4, -241
-; RV64-NEXT:    addiw t0, a5, 257
+; RV64-NEXT:    addi a2, a2, 1365
+; RV64-NEXT:    addi a3, a3, 819
+; RV64-NEXT:    addi a4, a4, -241
+; RV64-NEXT:    addi t0, a5, 257
 ; RV64-NEXT:    vslidedown.vx v0, v0, a6
 ; RV64-NEXT:    slli a6, a2, 32
 ; RV64-NEXT:    add a6, a2, a6
@@ -2537,10 +2537,10 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64_unmasked(<vscale x 16 x i64> %va, i
 ; RV64-NEXT:    lui a4, 61681
 ; RV64-NEXT:    lui a5, 4112
 ; RV64-NEXT:    sub a6, a0, a1
-; RV64-NEXT:    addiw a2, a2, 1365
-; RV64-NEXT:    addiw a3, a3, 819
-; RV64-NEXT:    addiw a7, a4, -241
-; RV64-NEXT:    addiw t0, a5, 257
+; RV64-NEXT:    addi a2, a2, 1365
+; RV64-NEXT:    addi a3, a3, 819
+; RV64-NEXT:    addi a7, a4, -241
+; RV64-NEXT:    addi t0, a5, 257
 ; RV64-NEXT:    slli a5, a2, 32
 ; RV64-NEXT:    add a5, a2, a5
 ; RV64-NEXT:    slli a4, a3, 32

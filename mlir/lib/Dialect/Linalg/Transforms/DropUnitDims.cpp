@@ -398,7 +398,10 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
     return rewriter.notifyMatchFailure(genericOp,
                                        "invalid indexing maps for operation");
   }
-  SmallVector<int64_t> dims = genericOp.getStaticShape();
+
+  SmallVector<int64_t> allShapesSizes;
+  for (OpOperand &opOperand : genericOp->getOpOperands())
+    llvm::append_range(allShapesSizes, genericOp.getShape(&opOperand));
 
   // 1a. Get the allowed list of dimensions to drop from the `options`.
   SmallVector<unsigned> allowedUnitDims = options.controlFn(genericOp);
@@ -411,7 +414,7 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   llvm::SmallDenseSet<unsigned> unitDims;
   for (const auto &expr : enumerate(invertedMap.getResults())) {
     if (AffineDimExpr dimExpr = dyn_cast<AffineDimExpr>(expr.value())) {
-      if (dims[dimExpr.getPosition()] == 1 &&
+      if (allShapesSizes[dimExpr.getPosition()] == 1 &&
           unitDimsFilter.count(expr.index()))
         unitDims.insert(expr.index());
     }
@@ -606,8 +609,7 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
     int64_t padRank = sourceShape.size();
 
     auto isStaticZero = [](OpFoldResult f) {
-      std::optional<int64_t> maybeInt = getConstantIntValue(f);
-      return maybeInt && *maybeInt == 0;
+      return getConstantIntValue(f) == 0;
     };
 
     llvm::SmallDenseSet<unsigned> unitDimsFilter(allowedUnitDims.begin(),

@@ -185,7 +185,7 @@ bb:
   Function &LLVMF = *M->getFunction("foo");
 
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -240,7 +240,7 @@ bb:
   Function &LLVMF = *M->getFunction("foo");
 
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -305,7 +305,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -349,7 +349,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -409,7 +409,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -450,7 +450,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -493,7 +493,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
