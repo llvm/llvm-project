@@ -13,10 +13,6 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
 
-        self.expect("frame var ints", substrs=["2 values", "[0] = 6", "[1] = 7"])
-        self.expect(
-            "frame var strings", substrs=["2 values", '[0] = "six"', '[1] = "seven"']
-        )
-        self.expect(
-            "frame var things", substrs=["1 value", "[0] = (id = 67, odd = true)"]
-        )
+        self.expect("frame var ints_span", substrs=["[0] = 6", "[1] = 7"])
+        self.expect("frame var strings_span", substrs=['[0] = "six"', '[1] = "seven"'])
+        self.expect("frame var things_span", substrs=["[0] = (id = 67, odd = true)"])

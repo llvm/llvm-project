@@ -466,11 +466,12 @@ std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
 
   llvm::StringRef valobj_type_name(type.GetTypeName().GetCString());
   valobj_type_name.consume_front("Swift.");
-  if (valobj_type_name.consume_front("Span"))
+  bool is_unsafe = valobj_type_name.consume_front("Unsafe");
+  valobj_type_name.consume_front("Mutable");
+
+  if (!is_unsafe && valobj_type_name.consume_front("Span"))
     return std::make_unique<SwiftSpan>(valobj);
 
-  valobj_type_name.consume_front("Unsafe");
-  valobj_type_name.consume_front("Mutable");
   bool is_raw = valobj_type_name.consume_front("Raw");
   bool is_buffer_ptr = valobj_type_name.consume_front("Buffer");
   UnsafePointerKind kind =

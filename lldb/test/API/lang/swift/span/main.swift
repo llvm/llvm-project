@@ -11,8 +11,11 @@ struct Thing {
 @main struct Entry {
     static func main() {
         let ints = [6, 7]
+        let ints_span = ints.span
         let strings = ["six", "seven"]
+        let strings_span = strings.span
         let things = [Thing(67)]
+        let things_span = things.span
         print("break here")
     }
 }
