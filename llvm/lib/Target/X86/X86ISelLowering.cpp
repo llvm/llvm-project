@@ -66,7 +66,6 @@
 #include <bitset>
 #include <cctype>
 #include <numeric>
-#include <queue>
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-isel"
@@ -53389,80 +53388,6 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
-                                 const SDLoc &Dl,
-                                 const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasAVX() && !Subtarget.hasAVX2() && !Subtarget.hasAVX512())
-    return SDValue();
-
-  if (!Store->isSimple())
-    return SDValue();
-
-  SDValue StoredVal = Store->getValue();
-  SDValue StorePtr = Store->getBasePtr();
-  SDValue StoreOffset = Store->getOffset();
-  EVT VT = StoredVal.getValueType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  if (!TLI.isTypeLegal(VT) || !TLI.isOperationLegalOrCustom(ISD::MSTORE, VT))
-    return SDValue();
-
-  if (StoredVal.getOpcode() != ISD::VSELECT)
-    return SDValue();
-
-  SDValue Mask = StoredVal.getOperand(0);
-  SDValue TrueVec = StoredVal.getOperand(1);
-  SDValue FalseVec = StoredVal.getOperand(2);
-
-  LoadSDNode *Load = cast<LoadSDNode>(FalseVec.getNode());
-  if (!Load || !Load->isSimple())
-    return SDValue();
-
-  SDValue LoadPtr = Load->getBasePtr();
-  SDValue LoadOffset = Load->getOffset();
-
-  if (StorePtr != LoadPtr || StoreOffset != LoadOffset)
-    return SDValue();
-
-  auto IsSafeToFold = [](StoreSDNode *Store, LoadSDNode *Load) {
-    std::queue<SDValue> Worklist;
-
-    Worklist.push(Store->getChain());
-
-    while (!Worklist.empty()) {
-      SDValue Chain = Worklist.front();
-      Worklist.pop();
-
-      SDNode *Node = Chain.getNode();
-      if (!Node)
-        return false;
-
-      if (const auto *MemNode = dyn_cast<MemSDNode>(Node))
-        if (!MemNode->isSimple() || MemNode->writeMem())
-          return false;
-
-      if (Node == Load)
-        return true;
-
-      if (Node->getOpcode() == ISD::TokenFactor) {
-        for (unsigned i = 0; i < Node->getNumOperands(); ++i)
-          Worklist.push(Node->getOperand(i));
-      } else {
-        Worklist.push(Node->getOperand(0));
-      }
-    }
-
-    return false;
-  };
-
-  if (!IsSafeToFold(Store, Load))
-    return SDValue();
-
-  return DAG.getMaskedStore(Store->getChain(), Dl, TrueVec, StorePtr,
-                            StoreOffset, Mask, Store->getMemoryVT(),
-                            Store->getMemOperand(), Store->getAddressingMode());
-}
-
 static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
@@ -53787,9 +53712,6 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                         St->getPointerInfo(), St->getBaseAlign(),
                         St->getMemOperand()->getFlags());
   }
-
-  if (SDValue MaskedStore = foldToMaskedStore(St, DAG, dl, Subtarget))
-    return MaskedStore;
 
   return SDValue();
 }
