@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -emit-llvm -o - %s | FileCheck %s
 // REQUIRES: amdgpu-registered-target
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+typedef half __attribute__((ext_vector_type(2))) half2;
+
 // CHECK-LABEL: @test_setprio_inc_wg(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @llvm.amdgcn.s.setprio.inc.wg(i16 10)
