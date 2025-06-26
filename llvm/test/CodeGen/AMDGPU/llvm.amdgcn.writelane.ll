@@ -987,7 +987,7 @@ define amdgpu_kernel void @test_writelane_vreg_lane_f64(ptr addrspace(1) %out, p
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1100-SDAG-NEXT:    s_mov_b32 s2, 0x40280000
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v1, s2, s3
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v0, 0, s3
 ; GFX1100-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

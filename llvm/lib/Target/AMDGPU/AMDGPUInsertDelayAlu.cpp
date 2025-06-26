@@ -49,9 +49,12 @@ public:
 
   static bool instructionWaitsForSGPRWrites(const MachineInstr &MI) {
     // These instruction types wait for VA_SDST==0 before issuing.
-    const uint64_t VA_SDST_0 = SIInstrFlags::SALU | SIInstrFlags::SMRD;
-    if (MI.getDesc().TSFlags & VA_SDST_0) {
-      for (auto &Op : MI.uses())
+    uint64_t MIFlags = MI.getDesc().TSFlags;
+    if (MIFlags & SIInstrFlags::SMRD)
+      return true;
+
+    if (MIFlags & SIInstrFlags::SALU) {
+      for (auto &Op : MI.operands())
         if (Op.isReg())
           return true;
     }
