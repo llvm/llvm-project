@@ -10168,6 +10168,7 @@ td_library(
     ]),
     includes = ["include"],
     deps = [
+        ":LinalgOpsTdFiles",
         ":SCFTdFiles",
         ":TransformDialectTdFiles",
     ],

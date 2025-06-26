@@ -28,6 +28,20 @@ struct is_assignable {
 
 template <typename T, typename U>
 constexpr bool is_assignable_v = __is_assignable(T, U);
+
+template <typename T>
+struct is_empty {
+    static constexpr bool value = __is_empty(T);
+};
+template <typename T>
+constexpr bool is_empty_v = __is_empty(T);
+
+template <typename T>
+struct is_standard_layout {
+static constexpr bool value = __is_standard_layout(T);
+};
+template <typename T>
+constexpr bool is_standard_layout_v = __is_standard_layout(T);
 #endif
 
 #ifdef STD2
@@ -63,6 +77,26 @@ using is_assignable = __details_is_assignable<T, U>;
 
 template <typename T, typename U>
 constexpr bool is_assignable_v = __is_assignable(T, U);
+
+template <typename T>
+struct __details_is_empty {
+    static constexpr bool value = __is_empty(T);
+};
+template <typename T>
+using is_empty  = __details_is_empty<T>;
+template <typename T>
+constexpr bool is_empty_v = __is_empty(T);
+
+template <typename T>
+struct __details_is_standard_layout {
+static constexpr bool value = __is_standard_layout(T);
+
+
+};
+template <typename T>
+using is_standard_layout = __details_is_standard_layout<T>;
+template <typename T>
+constexpr bool is_standard_layout_v = __is_standard_layout(T);
 #endif
 
 
@@ -101,6 +135,20 @@ using is_assignable  = __details_is_assignable<T, U>;
 
 template <typename T, typename U>
 constexpr bool is_assignable_v = is_assignable<T, U>::value;
+
+template <typename T>
+struct __details_is_empty : bool_constant<__is_empty(T)> {};
+template <typename T>
+using is_empty  = __details_is_empty<T>;
+template <typename T>
+constexpr bool is_empty_v = is_empty<T>::value;
+
+template <typename T>
+struct __details_is_standard_layout : bool_constant<__is_standard_layout(T)> {};
+template <typename T>
+using is_standard_layout = __details_is_standard_layout<T>;
+template <typename T>
+constexpr bool is_standard_layout_v = is_standard_layout<T>::value;
 #endif
 
 }
@@ -126,6 +174,33 @@ static_assert(std::is_trivially_copyable_v<int&>);
 // expected-error@-1 {{static assertion failed due to requirement 'std::is_trivially_copyable_v<int &>'}} \
 // expected-note@-1 {{'int &' is not trivially copyable}} \
 // expected-note@-1 {{because it is a reference type}}
+
+
+ // Direct tests
+ static_assert(std::is_standard_layout<int>::value);
+ static_assert(std::is_standard_layout_v<int>);
+
+ static_assert(std::is_standard_layout<int&>::value);
+ // expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_standard_layout<int &>::value'}} \
+ // expected-note@-1 {{'int &' is not standard-layout}} \
+ // expected-note@-1 {{because it is a reference type}}
+
+ static_assert(std::is_standard_layout_v<int&>);
+ // expected-error@-1 {{static assertion failed due to requirement 'std::is_standard_layout_v<int &>'}} \
+ // expected-note@-1 {{'int &' is not standard-layout}} \
+ // expected-note@-1 {{because it is a reference type}}
+
+static_assert(!std::is_empty<int>::value);
+
+static_assert(std::is_empty<int&>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_empty<int &>::value'}} \
+// expected-note@-1 {{'int &' is not empty}} \
+// expected-note@-1 {{because it is a reference type}}
+static_assert(std::is_empty_v<int&>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_empty_v<int &>'}} \
+// expected-note@-1 {{'int &' is not empty}} \
+// expected-note@-1 {{because it is a reference type}}
+
 
 static_assert(std::is_assignable<int&, int>::value);
 
@@ -156,12 +231,31 @@ namespace test_namespace {
     // expected-note@-1 {{'int &' is not trivially copyable}} \
     // expected-note@-1 {{because it is a reference type}}
 
+    static_assert(is_standard_layout<int&>::value);
+     // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_standard_layout<int &>::value'}} \
+     // expected-note@-1 {{'int &' is not standard-layout}} \
+     // expected-note@-1 {{because it is a reference type}}
+
+     static_assert(is_standard_layout_v<int&>);
+     // expected-error@-1 {{static assertion failed due to requirement 'is_standard_layout_v<int &>'}} \
+     // expected-note@-1 {{'int &' is not standard-layout}} \
+     // expected-note@-1 {{because it is a reference type}}
+
     static_assert(is_assignable<int&, void>::value);
     // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_assignable<int &, void>::value'}} \
     // expected-error@-1 {{assigning to 'int' from incompatible type 'void'}}
     static_assert(is_assignable_v<int&, void>);
     // expected-error@-1 {{static assertion failed due to requirement 'is_assignable_v<int &, void>'}} \
     // expected-error@-1 {{assigning to 'int' from incompatible type 'void'}}
+
+    static_assert(is_empty<int&>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_empty<int &>::value'}} \
+    // expected-note@-1 {{'int &' is not empty}} \
+    // expected-note@-1 {{because it is a reference type}} 
+    static_assert(is_empty_v<int&>);
+    // expected-error@-1 {{static assertion failed due to requirement 'is_empty_v<int &>'}} \
+    // expected-note@-1 {{'int &' is not empty}} \
+    // expected-note@-1 {{because it is a reference type}}
 }
 
 
