@@ -19,3 +19,14 @@ add_libc_test(
   DEPENDS
     libc.src.__support.wchar.character_converter
 )
+
+add_libc_test(
+  wcrtomb_bounded_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wcrtomb_bounded_test.cpp
+  DEPENDS
+    libc.src.__support.wchar.wcrtomb_bounded
+    libc.src.__support.wchar.mbstate
+)

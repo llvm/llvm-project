@@ -13,7 +13,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wchar/mbstate.h"
-#include "src/__support/wchar/wcrtomb.h"
+#include "src/__support/wchar/wcrtomb_bounded.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(int, wctomb, (char *s, wchar_t wc)) {
   if (s == nullptr)
     return 0;
 
-  auto result = internal::wcrtomb(s, wc, &internal_mbstate);
+  auto result = internal::wcrtomb_bounded(s, wc, &internal_mbstate, sizeof(wchar_t));
 
   if (!result.has_value()) { // invalid wide character
     libc_errno = EILSEQ;

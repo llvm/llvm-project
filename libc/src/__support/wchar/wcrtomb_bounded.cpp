@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/wchar/wcrtomb.h"
+#include "src/__support/wchar/wcrtomb_bounded.h"
 #include "src/__support/error_or.h"
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/mbstate.h"
@@ -21,8 +21,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
-                        mbstate *__restrict ps) {
+ErrorOr<size_t> wcrtomb_bounded(char *__restrict s, wchar_t wc,
+                                mbstate *__restrict ps, size_t max_written) {
   static_assert(sizeof(wchar_t) == 4);
 
   CharacterConverter cr(ps);
@@ -30,15 +30,19 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
   if (!cr.isValidState())
     return Error(EINVAL);
 
+  char buf[sizeof(wchar_t) / sizeof(char)];
   if (s == nullptr)
-    return Error(EILSEQ);
+    s = buf;
 
-  int status = cr.push(static_cast<char32_t>(wc));
-  if (status != 0)
-    return Error(EILSEQ);
+  // if cr isnt empty, it should be represented in mbstate already
+  if (cr.isEmpty()) {
+    int status = cr.push(static_cast<char32_t>(wc));
+    if (status != 0)
+      return Error(EILSEQ);
+  }
 
   size_t count = 0;
-  while (!cr.isEmpty()) {
+  while (!cr.isEmpty() && count < max_written) {
     auto utf8 = cr.pop_utf8(); // can never fail as long as the push succeeded
     LIBC_ASSERT(utf8.has_value());
 
@@ -46,6 +50,10 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
     s++;
     count++;
   }
+
+  if (!cr.isEmpty()) // didn't complete the conversion
+    return -1;
+
   return count;
 }
 

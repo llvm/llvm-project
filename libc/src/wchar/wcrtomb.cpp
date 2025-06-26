@@ -14,7 +14,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wchar/mbstate.h"
-#include "src/__support/wchar/wcrtomb.h"
+#include "src/__support/wchar/wcrtomb_bounded.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -23,16 +23,14 @@ LLVM_LIBC_FUNCTION(size_t, wcrtomb,
   static internal::mbstate internal_mbstate;
 
   // when s is nullptr, this is equivalent to wcrtomb(buf, L'\0', ps)
-  char buf[sizeof(wchar_t) / sizeof(char)];
-  if (s == nullptr) {
-    s = buf;
+  if (s == nullptr)
     wc = L'\0';
-  }
 
-  auto result = internal::wcrtomb(
+  auto result = internal::wcrtomb_bounded(
       s, wc,
       ps == nullptr ? &internal_mbstate
-                    : reinterpret_cast<internal::mbstate *>(ps));
+                    : reinterpret_cast<internal::mbstate *>(ps),
+      sizeof(wchar_t));
 
   if (!result.has_value()) {
     libc_errno = result.error();

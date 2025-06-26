@@ -21,11 +21,11 @@ add_object_library(
 )
 
 add_object_library(
-  wcrtomb
+  wcrtomb_bounded
   HDRS
-    wcrtomb.h
+    wcrtomb_bounded.h
   SRCS 
-    wcrtomb.cpp
+    wcrtomb_bounded.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.types.char32_t

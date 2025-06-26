@@ -44,7 +44,7 @@ add_entrypoint_object(
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t
     libc.src.__support.libc_errno
-    libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.wcrtomb_bounded
     libc.src.__support.wchar.mbstate
 )
 
@@ -56,7 +56,7 @@ add_entrypoint_object(
     wctomb.h
   DEPENDS
     libc.hdr.types.wchar_t
-    libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.wcrtomb_bounded
     libc.src.__support.wchar.mbstate
     libc.src.__support.libc_errno
 )
