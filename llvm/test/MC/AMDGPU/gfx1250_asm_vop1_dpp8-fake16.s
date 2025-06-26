@@ -17,3 +17,7 @@ v_cvt_f32_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
 v_cvt_pk_f16_fp8 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX1250: v_cvt_pk_f16_fp8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xea,0x02,0x7e,0x02,0x77,0x39,0x05]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_cvt_pk_f16_bf8 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX1250: v_cvt_pk_f16_bf8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xec,0x02,0x7e,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
