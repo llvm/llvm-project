@@ -205,17 +205,6 @@ add_custom_target(clang-test)
 add_dependencies(clang-test check-clang)
 set_target_properties(clang-test PROPERTIES FOLDER "Clang/Tests")
 
-# Allow running Clang Python binding tests separately from CI.
-add_lit_testsuite(check-clang-python "Running the Clang Python tests"
-  ${CMAKE_CURRENT_BINARY_DIR}
-  #LIT ${LLVM_LIT}
-  PARAMS ${CLANG_TEST_PARAMS}
-  DEPENDS ${CLANG_TEST_DEPS}
-  ARGS ${CLANG_TEST_EXTRA_ARGS} --filter=bindings.sh
-  # Avoid running tests twice.
-  EXCLUDE_FROM_CHECK_ALL
-  )
-
 # FIXME: This logic can be removed once all buildbots have moved
 # debuginfo-test from clang/test to llvm/projects or monorepo.
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests)
