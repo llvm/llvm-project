@@ -1412,11 +1412,10 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   int64_t C0, C1;
   if (isFromLoadImm(MRI, LHS, C0) && isFromLoadImm(MRI, RHS, C1)) {
     unsigned NewOpc = evaluateCondBranch(CC, C0, C1) ? RISCV::BEQ : RISCV::BNE;
-    MachineOperand Zero = MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false);
     // Build the new branch and remove the old one.
     BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
-        .add(Zero)
-        .add(Zero)
+        .addReg(RISCV::X0)
+        .addReg(RISCV::X0)
         .addMBB(TBB);
     MI.eraseFromParent();
     return true;
