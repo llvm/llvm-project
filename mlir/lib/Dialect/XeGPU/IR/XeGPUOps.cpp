@@ -203,11 +203,9 @@ LogicalResult CreateNdDescOp::verify() {
         "is a memref) should match with each other.");
 
   // check result TensorDesc rank
-  invalidRank = (getType().getRank() > 2 || getType().getRank() > rank);
-
-  if (invalidRank)
+  if (getType().getRank() > rank)
     return emitOpError(
-        "Expecting the TensorDesc rank is up to 2 and not greater than the "
+        "Expecting the TensorDesc rank is not greater than the "
         "ranks of shape, strides, offsets or the memref source.");
 
   if (invalidElemTy)
@@ -246,9 +244,6 @@ LogicalResult PrefetchNdOp::verify() {
 LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
-
-  if (tdescTy.getRank() > 2)
-    return emitOpError("Expecting a 1D/2D TensorDesc.\n");
 
   if (tdescTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
@@ -316,15 +311,13 @@ LogicalResult LoadNdOp::verify() {
   }
 
   auto array_len = tdescTy.getArrayLength();
-  if (array_len > 1) {
+  if (array_len > 1)
     tdescShape.insert(tdescShape.begin(), array_len);
-  }
 
-  if (tdescShape != valueShape) {
+  if (tdescShape != valueShape)
     return emitOpError() << "Result shape " << makeString(valueShape)
                          << " is not consistent with tensor descriptor "
                          << tdescTy;
-  }
 
   return success();
 }
@@ -335,9 +328,6 @@ LogicalResult LoadNdOp::verify() {
 LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
-
-  if (dstTy.getRank() > 2)
-    return emitOpError("Expecting a 1D/2D TensorDesc.\n");
 
   if (dstTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
@@ -370,22 +360,21 @@ LogicalResult StoreNdOp::verify() {
       return emitOpError()
              << "TensorDesc doesn't need LayoutAttr for SIMT code";
 
-    if (tdescElems % valueElems) {
+    if (tdescElems % valueElems)
       return emitOpError()
              << "Value shape " << makeString(getShapeOf(valTy))
              << " is not a valid distribution for tensor descriptor " << dstTy;
-    }
+
     return success();
   }
 
   // SIMD code should have the same shape as the tensor descriptor.
   auto tdescShape = getShapeOf(dstTy);
   auto valueShape = getShapeOf(valTy);
-  if (tdescShape != valueShape) {
+  if (tdescShape != valueShape)
     return emitOpError() << "Value shape " << makeString(valueShape)
                          << " is not consistent with tensor descriptor "
                          << dstTy;
-  }
 
   return success();
 }
