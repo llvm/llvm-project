@@ -489,7 +489,8 @@ public:
   LLVM_ABI LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI,
-                                            unsigned MaxLen = 0);
+                                            unsigned MaxLen = 0,
+                                            bool SkipVolatile = false);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);
 };
 
