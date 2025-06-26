@@ -9,6 +9,22 @@ from lldbsuite.test import lldbutil
 
 
 class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
+    def check_reference(self, var_name: str, expected_type: str):
+        self.expect_var_path(
+            var_name,
+            summary="size=1",
+            type=expected_type,
+            children=[
+                ValueCheck(
+                    name="[0]",
+                    children=[
+                        ValueCheck(name="first", summary='"Hello"'),
+                        ValueCheck(name="second", summary='"World"'),
+                    ],
+                ),
+            ],
+        )
+
     @add_test_categories(["libc++"])
     def test_iterator_formatters(self):
         """Test that std::unordered_map related structures are formatted correctly when printed.
@@ -68,123 +84,12 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(process, bkpt)
 
         # Test references to std::unordered_map
-        self.expect_var_path(
-            "ref1",
-            summary="size=2",
-            type="const StringMapT &",
-            children=[
-                ValueCheck(
-                    name="[0]",
-                    children=[
-                        ValueCheck(name="first", summary='"Baz"'),
-                        ValueCheck(name="second", summary='"Qux"'),
-                    ],
-                ),
-                ValueCheck(
-                    name="[1]",
-                    children=[
-                        ValueCheck(name="first", summary='"Foo"'),
-                        ValueCheck(name="second", summary='"Bar"'),
-                    ],
-                ),
-            ],
-        )
-
-        self.expect_var_path(
-            "ref2",
-            summary="size=2",
-            type="StringMapT &",
-            children=[
-                ValueCheck(
-                    name="[0]",
-                    children=[
-                        ValueCheck(name="first", summary='"Baz"'),
-                        ValueCheck(name="second", summary='"Qux"'),
-                    ],
-                ),
-                ValueCheck(
-                    name="[1]",
-                    children=[
-                        ValueCheck(name="first", summary='"Foo"'),
-                        ValueCheck(name="second", summary='"Bar"'),
-                    ],
-                ),
-            ],
-        )
-
-        self.expect_var_path(
-            "ref3",
-            summary="size=2",
-            type="StringMapTRef",
-            children=[
-                ValueCheck(
-                    name="[0]",
-                    children=[
-                        ValueCheck(name="first", summary='"Baz"'),
-                        ValueCheck(name="second", summary='"Qux"'),
-                    ],
-                ),
-                ValueCheck(
-                    name="[1]",
-                    children=[
-                        ValueCheck(name="first", summary='"Foo"'),
-                        ValueCheck(name="second", summary='"Bar"'),
-                    ],
-                ),
-            ],
-        )
-
-        self.expect_var_path(
-            "ref4",
-            summary="size=2",
-            type="const StringMapT &",
-            children=[
-                ValueCheck(
-                    name="[0]",
-                    children=[
-                        ValueCheck(name="first", summary='"Baz"'),
-                        ValueCheck(name="second", summary='"Qux"'),
-                    ],
-                ),
-                ValueCheck(
-                    name="[1]",
-                    children=[
-                        ValueCheck(name="first", summary='"Foo"'),
-                        ValueCheck(name="second", summary='"Bar"'),
-                    ],
-                ),
-            ],
-        )
-
-        self.expect_var_path(
-            "ref5",
-            summary="size=1",
-            type="const StringMapT &&",
-            children=[
-                ValueCheck(
-                    name="[0]",
-                    children=[
-                        ValueCheck(name="first", summary='"Foo"'),
-                        ValueCheck(name="second", summary='"Bar"'),
-                    ],
-                ),
-            ],
-        )
-
-        self.expect_var_path(
-            "ref6",
-            summary="size=1",
-            type="StringMapT &&",
-            children=[
-                ValueCheck(
-                    name="[0]",
-                    children=[
-                        ValueCheck(name="first", summary='"Baz"'),
-                        ValueCheck(name="second", summary='"Qux"'),
-                    ],
-                ),
-            ],
-        )
+        self.check_reference("ref1", "const StringMapT &")
+        self.check_reference("ref2", "StringMapT &")
+        self.check_reference("ref3", "StringMapTRef")
+        self.check_reference("ref4", "const StringMapT &")
+        self.check_reference("ref5", "const StringMapT &&")
+        self.check_reference("ref6", "StringMapT &&")
 
         # FIXME: we're getting this wrong.
         self.expect_var_path(

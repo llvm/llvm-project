@@ -5,10 +5,10 @@
 using StringMapT = std::unordered_map<std::string, std::string>;
 using StringMapTRef = const StringMapT &;
 
-void check_references(const StringMapT &ref1, StringMapT &ref2,
-                      StringMapTRef ref3, StringMapTRef &ref4,
-                      const StringMapT &&ref5, StringMapT &&ref6,
-                      const StringMapT *const &ref7) {
+static void check_references(const StringMapT &ref1, StringMapT &ref2,
+                             StringMapTRef ref3, StringMapTRef &ref4,
+                             const StringMapT &&ref5, StringMapT &&ref6,
+                             const StringMapT *const &ref7) {
   std::printf("Break here");
 }
 
@@ -32,9 +32,9 @@ int main() {
 
     std::printf("Break here");
 
-    check_references(string_map, string_map, string_map, string_map,
-                     StringMapT{{"Foo", "Bar"}}, StringMapT{{"Baz", "Qux"}},
-                     &string_map);
+    StringMapT tmp{{"Hello", "World"}};
+    check_references(tmp, tmp, tmp, tmp, StringMapT{tmp}, StringMapT{tmp},
+                     &tmp);
   }
 
   return 0;
