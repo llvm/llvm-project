@@ -4,15 +4,15 @@
 # RUN:   | llvm-objdump --mattr=+xmipslsp,+xmipscmov,+xmipscbop -M no-aliases -d - \
 # RUN:   | FileCheck -check-prefix=CHECK-DIS %s
 
-# CHECK-INST: mips.perf	8, 511(a0)
+# CHECK-INST: mips.pref 8, 511(a0)
 # CHECK-ENC:  encoding: [0x0b,0x04,0xf5,0x1f]
-mips.perf	8, 511(a0)
+mips.pref	8, 511(a0)
 
 # CHECK-DIS: mips.perf 0x8, 0x1ff(a0)
 
-# CHECK-INST: mips.perf	9, 0(a0)
+# CHECK-INST: mips.pref 9, 0(a0)
 # CHECK-ENC:  encoding: [0x8b,0x04,0x05,0x00]
-mips.perf	9, 0(a0)
+mips.pref	9, 0(a0)
 
 # CHECK-DIS: mips.perf 0x9, 0x0(a0)
 

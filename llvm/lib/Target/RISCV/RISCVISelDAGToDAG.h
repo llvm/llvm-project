@@ -45,9 +45,6 @@ public:
                                     InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
-  bool SelectAddrFrameIndexOffset(SDValue Addr, SDValue &Base, SDValue &Offset,
-                                  unsigned OffsetBits,
-                                  unsigned ShiftAmount);
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm9(SDValue Addr, SDValue &Base, SDValue &Offset);

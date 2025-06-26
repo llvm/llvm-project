@@ -1527,7 +1527,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidUImm9:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 1,
-        "immediate must be a multiple of 9 bytes in the range");
+        "immediate offset must be in the range[0-511]");
   case Match_InvalidBareSImm9Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 8), (1 << 8) - 2,

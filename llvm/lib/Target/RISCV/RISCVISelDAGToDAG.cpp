@@ -2926,7 +2926,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 }
 
 /// Similar to SelectAddrRegImm, except that the offset restricted for
-/// nine bits.
+/// unsinged nine bits.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2936,7 +2936,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
-
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
     if (isUInt<9>(CVal)) {
       Base = Addr.getOperand(0);
@@ -2947,13 +2946,13 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
       return true;
     }
 
-    // Handle with 12 bit ofset  immediates with ADDI.
+    // Handle with 12 bit offset with sign bit off with ADDI.
+    // For Immediate Range [0, 2047]
     else if (Addr.getOpcode() == ISD::ADD &&
              isa<ConstantSDNode>(Addr.getOperand(1))) {
-      int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
       assert(!isUInt<9>(CVal) && "uimm9 not already handled?");
 
-      if (isUInt<12>(CVal)) {
+      if (isUInt<11>(CVal)) {
         Base = SDValue(CurDAG->getMachineNode(
                            RISCV::ADDI, DL, VT, Addr.getOperand(0),
                            CurDAG->getSignedTargetConstant(CVal, DL, VT)),
@@ -2963,10 +2962,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
       }
     }
   }
-  // Immediates more than 12 bits i.e LUI,ADDI,ADD
-  if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset,
-                         /*IsPrefetch=*/true))
-    return true;
 
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
