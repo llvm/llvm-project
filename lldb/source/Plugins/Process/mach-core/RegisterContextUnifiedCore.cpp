@@ -29,6 +29,7 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
   // If we have thread metadata, check if the keys for register
   // definitions are present; if not, clear the ObjectSP.
   if (metadata_thread_registers &&
+      metadata_thread_registers->GetAsDictionary() &&
       metadata_thread_registers->GetAsDictionary()->HasKey("register_info")) {
     metadata_registers_dict = metadata_thread_registers->GetAsDictionary()
                                   ->GetValueForKey("register_info")
@@ -43,9 +44,10 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
   // the LC_THREAD aka core_thread_regctx_sp register sets
   // will be used at the same indexes.
   // Any additional sets named by the thread metadata registers
-  // will be added.  If the thread metadata registers specify
-  // a set with the same name, the already-used index from the
-  // core register context will be used.
+  // will be added after them.  If the thread metadata
+  // specify a set with the same name as LC_THREAD, the already-used
+  // index from the core register context will be used in
+  // the RegisterInfo.
   std::map<size_t, size_t> metadata_regset_to_combined_regset;
 
   // Calculate the total size of the register store buffer we need
