@@ -1477,9 +1477,9 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     if (!NumThreadsVal)
       NumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, -1);
     else
-      NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty),
+      NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
-      assert(IfCondVal && "Expected a value");
+    assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
     if (CGM.getLangOpts().OpenMPNoNestedParallelism &&
         CGM.IsSPMDExecutionMode()) {

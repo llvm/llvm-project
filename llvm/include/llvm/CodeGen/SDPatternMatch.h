@@ -108,6 +108,23 @@ inline Value_match m_Specific(SDValue N) {
   return Value_match(N);
 }
 
+template <unsigned ResNo, typename Pattern> struct Result_match {
+  Pattern P;
+
+  explicit Result_match(const Pattern &P) : P(P) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return N.getResNo() == ResNo && P.match(Ctx, N);
+  }
+};
+
+/// Match only if the SDValue is a certain result at ResNo.
+template <unsigned ResNo, typename Pattern>
+inline Result_match<ResNo, Pattern> m_Result(const Pattern &P) {
+  return Result_match<ResNo, Pattern>(P);
+}
+
 struct DeferredValue_match {
   SDValue &MatchVal;
 

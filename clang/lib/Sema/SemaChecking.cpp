@@ -10805,10 +10805,9 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
         return std::nullopt;
 
       // If the range was previously non-negative, we need an extra bit for the
-      // sign bit. If the range was not non-negative, we need an extra bit
-      // because the negation of the most-negative value is one bit wider than
-      // that value.
-      return IntRange(SubRange->Width + 1, false);
+      // sign bit. Otherwise, we need an extra bit because the negation of the
+      // most-negative value is one bit wider than that value.
+      return IntRange(std::min(SubRange->Width + 1, MaxWidth), false);
     }
 
     case UO_Not: {
@@ -10825,7 +10824,9 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
 
       // The width increments by 1 if the sub-expression cannot be negative
       // since it now can be.
-      return IntRange(SubRange->Width + (int)SubRange->NonNegative, false);
+      return IntRange(
+          std::min(SubRange->Width + (int)SubRange->NonNegative, MaxWidth),
+          false);
     }
 
     default:
