@@ -2233,7 +2233,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
 // profile. Note: we only update the "name" and "index" operands in the
 // instrumentation intrinsics, we leave the hash and total nr of indices as-is,
 // it's not worth updating those.
-static const std::pair<std::vector<int64_t>, std::vector<int64_t>>
+static std::pair<std::vector<int64_t>, std::vector<int64_t>>
 remapIndices(Function &Caller, BasicBlock *StartBB,
              PGOContextualProfile &CtxProf, uint32_t CalleeCounters,
              uint32_t CalleeCallsites) {
