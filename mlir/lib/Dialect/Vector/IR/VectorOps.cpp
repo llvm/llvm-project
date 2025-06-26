@@ -3204,7 +3204,7 @@ public:
   }
 };
 
-/// Pattern to optimize a chain of constant insertions into a poison vector.
+/// Pattern to optimize a chain of insertions into a poison vector.
 ///
 /// This pattern identifies chains of vector.insert operations that:
 /// 1. Start from an ub.poison operation.
@@ -3213,7 +3213,7 @@ public:
 /// 4. All intermediate insert operations have only one use.
 ///
 /// When these conditions are met, the entire chain can be replaced with a
-/// single arith.constant operation containing a dense elements attribute.
+/// single vector.from_elements operation.
 ///
 /// Example transformation:
 ///   %poison = ub.poison : vector<2xi32>
@@ -3223,7 +3223,7 @@ public:
 ///   %result = vector.from_elements %c1, %c2 : vector<2xi32>
 /// TODO: Support the case where only some elements of the poison vector are
 /// set. Currently, MLIR doesn't support partial poison vectors.
-class InsertConstantToPoison final : public OpRewritePattern<InsertOp> {
+class InsertToPoison final : public OpRewritePattern<InsertOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(InsertOp op,
@@ -3247,7 +3247,6 @@ public:
       if (previousInsertOp.hasDynamicPosition())
         return failure();
 
-      // The inserted content must be constant.
       chainInsertOps.push_back(previousInsertOp);
 
       firstInsertOp = previousInsertOp;
@@ -3272,8 +3271,7 @@ public:
     for (auto insertOp : chainInsertOps) {
       // The insert op folder will fold an insert at poison index into a
       // ub.poison, which truncates the insert chain's backward traversal.
-      if (is_contained(previousInsertOp.getStaticPosition(),
-                       InsertOp::kPoisonIndex))
+      if (is_contained(insertOp.getStaticPosition(), InsertOp::kPoisonIndex))
         return failure();
 
       // Calculate the linearized position for inserting elements.
@@ -3389,7 +3387,7 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
-              InsertConstantToPoison>(context);
+              InsertToPoison>(context);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
