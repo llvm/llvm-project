@@ -15,13 +15,15 @@
 // Make sure that the `future` destructor keeps the data alive until the thread finished. This test fails by triggering
 // TSan. It may not be observable by normal means.
 
+// See https://github.com/llvm/llvm-project/pull/125433#issuecomment-2703618927 for more details.
+
 #include <atomic>
 #include <future>
 #include <mutex>
 
 std::mutex mux;
 
-int main() {
+int main(int, char**) {
   using namespace std::chrono_literals;
   std::unique_lock lock(mux);
   std::atomic<bool> in_async = false;
@@ -34,4 +36,6 @@ int main() {
   });
   in_async.wait(true);
   lock.unlock();
+
+  return 0;
 }
