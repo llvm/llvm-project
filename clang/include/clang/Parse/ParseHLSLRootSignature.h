@@ -104,7 +104,7 @@ private:
     std::optional<uint32_t> NumDescriptors;
     std::optional<uint32_t> Space;
     std::optional<uint32_t> Offset;
-    std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags> Flags;
+    std::optional<llvm::dxbc::DescriptorRangeFlags> Flags;
   };
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
@@ -140,8 +140,7 @@ private:
   std::optional<llvm::hlsl::rootsig::StaticBorderColor>
   parseStaticBorderColor();
   std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
-  std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
-  parseDescriptorRangeFlags();
+  std::optional<llvm::dxbc::DescriptorRangeFlags> parseDescriptorRangeFlags();
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer

@@ -37,7 +37,7 @@ TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
   Clause.NumDescriptors = NumDescriptorsUnbounded;
   Clause.Space = 42;
   Clause.Offset = 3;
-  Clause.Flags = DescriptorRangeFlags::None;
+  Clause.Flags = llvm::dxbc::DescriptorRangeFlags::None;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -56,7 +56,7 @@ TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
   Clause.NumDescriptors = 3298;
   Clause.Space = 932847;
   Clause.Offset = 1;
-  Clause.Flags = DescriptorRangeFlags::ValidFlags;
+  Clause.Flags = llvm::dxbc::DescriptorRangeFlags(0x1000f);
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -80,7 +80,7 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
   Clause.NumDescriptors = 2;
   Clause.Space = 42;
   Clause.Offset = DescriptorTableOffsetAppend;
-  Clause.Flags = DescriptorRangeFlags::ValidSamplerFlags;
+  Clause.Flags = llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);

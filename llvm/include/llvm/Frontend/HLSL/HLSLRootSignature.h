@@ -29,17 +29,6 @@ namespace rootsig {
 // carried over from their values in DXC. For reference:
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/
 
-enum class DescriptorRangeFlags : unsigned {
-  None = 0,
-  DescriptorsVolatile = 0x1,
-  DataVolatile = 0x2,
-  DataStaticWhileSetAtExecute = 0x4,
-  DataStatic = 0x8,
-  DescriptorsStaticKeepingBufferBoundsChecks = 0x10000,
-  ValidFlags = 0x1000f,
-  ValidSamplerFlags = DescriptorsVolatile,
-};
-
 enum class ShaderVisibility {
   All = 0,
   Vertex = 1,
@@ -176,19 +165,19 @@ struct DescriptorTableClause {
   uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
   uint32_t Offset = DescriptorTableOffsetAppend;
-  DescriptorRangeFlags Flags;
+  dxbc::DescriptorRangeFlags Flags;
 
   void setDefaultFlags() {
     switch (Type) {
     case ClauseType::CBuffer:
     case ClauseType::SRV:
-      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      Flags = dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute;
       break;
     case ClauseType::UAV:
-      Flags = DescriptorRangeFlags::DataVolatile;
+      Flags = dxbc::DescriptorRangeFlags::DataVolatile;
       break;
     case ClauseType::Sampler:
-      Flags = DescriptorRangeFlags::None;
+      Flags = dxbc::DescriptorRangeFlags::None;
       break;
     }
   }

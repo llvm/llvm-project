@@ -1153,7 +1153,7 @@ RootSignatureParser::parseRootDescriptorFlags() {
   return Flags;
 }
 
-std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
+std::optional<llvm::dxbc::DescriptorRangeFlags>
 RootSignatureParser::parseDescriptorRangeFlags() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1164,7 +1164,7 @@ RootSignatureParser::parseDescriptorRangeFlags() {
       getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
-    return DescriptorRangeFlags::None;
+    return llvm::dxbc::DescriptorRangeFlags::None;
   }
 
   TokenKind Expected[] = {
@@ -1172,15 +1172,15 @@ RootSignatureParser::parseDescriptorRangeFlags() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  std::optional<DescriptorRangeFlags> Flags;
+  std::optional<llvm::dxbc::DescriptorRangeFlags> Flags;
 
   do {
     if (tryConsumeExpectedToken(Expected)) {
       switch (CurToken.TokKind) {
 #define DESCRIPTOR_RANGE_FLAG_ENUM(NAME, LIT, ON)                              \
   case TokenKind::en_##NAME:                                                   \
-    Flags =                                                                    \
-        maybeOrFlag<DescriptorRangeFlags>(Flags, DescriptorRangeFlags::NAME);  \
+    Flags = maybeOrFlag<llvm::dxbc::DescriptorRangeFlags>(                     \
+        Flags, llvm::dxbc::DescriptorRangeFlags::NAME);                        \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
       default:

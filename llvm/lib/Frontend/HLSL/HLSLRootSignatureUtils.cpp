@@ -222,19 +222,9 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-static const EnumEntry<DescriptorRangeFlags> DescriptorRangeFlagNames[] = {
-    {"DescriptorsVolatile", DescriptorRangeFlags::DescriptorsVolatile},
-    {"DataVolatile", DescriptorRangeFlags::DataVolatile},
-    {"DataStaticWhileSetAtExecute",
-     DescriptorRangeFlags::DataStaticWhileSetAtExecute},
-    {"DataStatic", DescriptorRangeFlags::DataStatic},
-    {"DescriptorsStaticKeepingBufferBoundsChecks",
-     DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const DescriptorRangeFlags &Flags) {
-  printFlags(OS, Flags, ArrayRef(DescriptorRangeFlagNames));
+                               const llvm::dxbc::DescriptorRangeFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getDescriptorRangeFlags());
 
   return OS;
 }
