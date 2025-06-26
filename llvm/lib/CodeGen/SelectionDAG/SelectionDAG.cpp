@@ -13600,9 +13600,6 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   SDUse *Ops = OperandRecycler.allocate(
       ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
 
-  // Init it to "false" even fro not divergent targets as there is no other init
-  // point for it
-  Node->SDNodeBits.IsDivergent = false;
   bool IsDivergent = false;
   for (unsigned I = 0; I != Vals.size(); ++I) {
     Ops[I].setUser(Node);
