@@ -35,9 +35,10 @@ static llvm::cl::opt<bool> forceMatmulAsElemental(
     llvm::cl::desc("Expand hlfir.matmul as elemental operation"),
     llvm::cl::init(false));
 
-static llvm::cl::opt<bool> EnableComplexDivConverter(
-    "enable-complex-div-converter", llvm::cl::init(false), llvm::cl::Hidden,
-    llvm::cl::desc("Enable calling of Complex Divi Converter."));
+static llvm::cl::opt<bool> forceComplexDivAsArithmetic(
+    "flang-complex-div-converter", llvm::cl::init(false), llvm::cl::Hidden,
+    llvm::cl::desc("Force complex div as arithmetic calculation."));
+
 namespace {
 
 // Helper class to generate operations related to computing
@@ -2324,11 +2325,11 @@ private:
 };
 
 /// This rewrite pattern class performs a custom transformation on FIR
-/// 'fir.call' operations that invoke the '__divdc3' runtime function, which is
+/// 'fir.call' operation that invoke the '__divdc3' runtime function, which is
 /// typically used to perform double-precision complex division.
 ///
-/// When the 'EnableComplexDivConverter' flag is enabled, this pattern
-/// matches calls to '__divdc3', extracts the real and imaginary components of
+/// If the 'forceComplexDivAsArithmetic' flag option is true, this pattern
+/// matches call to '__divdc3', extracts the real and imaginary components of
 /// the numerator and denominator, and replaces the function call with an
 /// explicit computation using MLIR's arithmetic operations.
 ///
@@ -2339,15 +2340,15 @@ private:
 ///     imag_part = (y0*x1 - x0*y1) / (x1^2 + y1^2)
 /// The result is then reassembled into a 'complex<f64>' value using FIR's
 /// 'InsertValueOp' instructions.
-class ComplexDivisionConversion
-    : public mlir::OpRewritePattern<fir::CallOp> {
+class ComplexDivisionConversion : public mlir::OpRewritePattern<fir::CallOp> {
   using OpRewritePattern::OpRewritePattern;
   llvm::LogicalResult
   matchAndRewrite(fir::CallOp callOp,
                   mlir::PatternRewriter &rewriter) const override {
-    if (!EnableComplexDivConverter) {
-      LLVM_DEBUG(llvm::dbgs() << "Arithmetic-based Complex Division support is "
-                                 "currently disabled \n");
+    if (!forceComplexDivAsArithmetic) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Complex division with arithmetic calculation support is "
+                    "currently disabled \n");
       return mlir::failure();
     }
     fir::FirOpBuilder builder{rewriter, callOp.getOperation()};
@@ -2461,7 +2462,13 @@ public:
 
     patterns.insert<DotProductConversion>(context);
     patterns.insert<ReshapeAsElementalConversion>(context);
-    patterns.insert<ComplexDivisionConversion>(context);
+
+    /// If the 'forceComplexDivAsArithmetic' flag option is true, this pattern
+    /// matches call to '__divdc3', extracts the real and imaginary components
+    /// of the numerator and denominator, and replaces the function call with an
+    /// explicit computation using MLIR's arithmetic operations.
+    if (forceComplexDivAsArithmetic)
+      patterns.insert<ComplexDivisionConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
