@@ -354,6 +354,16 @@ bool WebAssemblyDAGToDAGISel::SelectAddrAddOperands(MVT OffsetType, SDValue N,
       Addr = OtherOp;
       return true;
     }
+
+    // Fold Add of Global Address straight into load
+    if (Op.getOpcode() == WebAssemblyISD::Wrapper)
+      Op = Op.getOperand(0);
+
+    if (Op.getOpcode() == ISD::TargetGlobalAddress) {
+      Addr = OtherOp;
+      Offset = Op;
+      return true;
+    }
   }
   return false;
 }

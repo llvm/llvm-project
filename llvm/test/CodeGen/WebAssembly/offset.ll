@@ -65,10 +65,8 @@ define i32 @load_i32_with_folded_gep_offset_nuw(ptr %p) {
 define hidden signext i8 @global_load_i32_with_folded_gep_offset_nonconst_nuw(i32 noundef %idx) local_unnamed_addr {
 ; CHECK-LABEL: global_load_i32_with_folded_gep_offset_nonconst_nuw:
 ; CHECK:         .functype global_load_i32_with_folded_gep_offset_nonconst_nuw (i32) -> (i32)
-; CHECK:    i32.const $push0=, global_data
-; CHECK:    i32.add $push1=, $0, $pop0
-; CHECK:    i32.load8_s $push2=, 0($pop1)
-; CHECK:    return $pop2
+; CHECK:    i32.load8_s $push0=, global_data($0)
+; CHECK:    return $pop0
 entry:
   %arrayidx = getelementptr inbounds nuw [12 x i8], ptr @global_data, i32 0, i32 %idx
   %0 = load i8, ptr %arrayidx, align 1
