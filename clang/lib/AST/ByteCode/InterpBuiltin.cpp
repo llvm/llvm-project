@@ -57,6 +57,21 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(T);
 
   unsigned BitWidth = S.getASTContext().getTypeSize(QT);
+
+  if (T == PT_IntAPS) {
+    auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
+    Result.copy(Val);
+    S.Stk.push<IntegralAP<true>>(Result);
+    return;
+  }
+
+  if (T == PT_IntAP) {
+    auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
+    Result.copy(Val);
+    S.Stk.push<IntegralAP<false>>(Result);
+    return;
+  }
+
   if (QT->isSignedIntegerOrEnumerationType()) {
     int64_t V = Val.getSExtValue();
     INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
@@ -81,10 +96,21 @@ static void pushInteger(InterpState &S, T Val, QualType QT) {
                 QT);
 }
 
-static void assignInteger(const Pointer &Dest, PrimType ValueT,
+static void assignInteger(InterpState &S, const Pointer &Dest, PrimType ValueT,
                           const APSInt &Value) {
-  INT_TYPE_SWITCH_NO_BOOL(
-      ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
+
+  if (ValueT == PT_IntAPS) {
+    Dest.deref<IntegralAP<true>>() =
+        S.allocAP<IntegralAP<true>>(Value.getBitWidth());
+    Dest.deref<IntegralAP<true>>().copy(Value);
+  } else if (ValueT == PT_IntAP) {
+    Dest.deref<IntegralAP<false>>() =
+        S.allocAP<IntegralAP<false>>(Value.getBitWidth());
+    Dest.deref<IntegralAP<false>>().copy(Value);
+  } else {
+    INT_TYPE_SWITCH_NO_BOOL(
+        ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
+  }
 }
 
 static QualType getElemType(const Pointer &P) {
@@ -327,13 +353,13 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
       S.getASTContext().getFloatTypeSemantics(
           Call->getDirectCallee()->getReturnType());
 
-  Floating Result;
+  Floating Result = S.allocFloat(TargetSemantics);
   if (S.getASTContext().getTargetInfo().isNan2008()) {
     if (Signaling)
-      Result = Floating(
+      Result.copy(
           llvm::APFloat::getSNaN(TargetSemantics, /*Negative=*/false, &Fill));
     else
-      Result = Floating(
+      Result.copy(
           llvm::APFloat::getQNaN(TargetSemantics, /*Negative=*/false, &Fill));
   } else {
     // Prior to IEEE 754-2008, architectures were allowed to choose whether
@@ -342,10 +368,10 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
     // 2008 revisions, MIPS interpreted sNaN-2008 as qNan and qNaN-2008 as
     // sNaN. This is now known as "legacy NaN" encoding.
     if (Signaling)
-      Result = Floating(
+      Result.copy(
           llvm::APFloat::getQNaN(TargetSemantics, /*Negative=*/false, &Fill));
     else
-      Result = Floating(
+      Result.copy(
           llvm::APFloat::getSNaN(TargetSemantics, /*Negative=*/false, &Fill));
   }
 
@@ -360,7 +386,9 @@ static bool interp__builtin_inf(InterpState &S, CodePtr OpPC,
       S.getASTContext().getFloatTypeSemantics(
           Call->getDirectCallee()->getReturnType());
 
-  S.Stk.push<Floating>(Floating::getInf(TargetSemantics));
+  Floating Result = S.allocFloat(TargetSemantics);
+  Result.copy(APFloat::getInf(TargetSemantics));
+  S.Stk.push<Floating>(Result);
   return true;
 }
 
@@ -368,10 +396,12 @@ static bool interp__builtin_copysign(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame) {
   const Floating &Arg2 = S.Stk.pop<Floating>();
   const Floating &Arg1 = S.Stk.pop<Floating>();
+  Floating Result = S.allocFloat(Arg1.getSemantics());
 
   APFloat Copy = Arg1.getAPFloat();
   Copy.copySign(Arg2.getAPFloat());
-  S.Stk.push<Floating>(Floating(Copy));
+  Result.copy(Copy);
+  S.Stk.push<Floating>(Result);
 
   return true;
 }
@@ -380,11 +410,13 @@ static bool interp__builtin_fmin(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame, bool IsNumBuiltin) {
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
+  Floating Result = S.allocFloat(LHS.getSemantics());
 
   if (IsNumBuiltin)
-    S.Stk.push<Floating>(llvm::minimumnum(LHS.getAPFloat(), RHS.getAPFloat()));
+    Result.copy(llvm::minimumnum(LHS.getAPFloat(), RHS.getAPFloat()));
   else
-    S.Stk.push<Floating>(minnum(LHS.getAPFloat(), RHS.getAPFloat()));
+    Result.copy(minnum(LHS.getAPFloat(), RHS.getAPFloat()));
+  S.Stk.push<Floating>(Result);
   return true;
 }
 
@@ -392,11 +424,13 @@ static bool interp__builtin_fmax(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame, bool IsNumBuiltin) {
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
+  Floating Result = S.allocFloat(LHS.getSemantics());
 
   if (IsNumBuiltin)
-    S.Stk.push<Floating>(llvm::maximumnum(LHS.getAPFloat(), RHS.getAPFloat()));
+    Result.copy(llvm::maximumnum(LHS.getAPFloat(), RHS.getAPFloat()));
   else
-    S.Stk.push<Floating>(maxnum(LHS.getAPFloat(), RHS.getAPFloat()));
+    Result.copy(maxnum(LHS.getAPFloat(), RHS.getAPFloat()));
+  S.Stk.push<Floating>(Result);
   return true;
 }
 
@@ -571,8 +605,16 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame) {
   const Floating &Val = S.Stk.pop<Floating>();
+  APFloat F = Val.getAPFloat();
+  if (!F.isNegative()) {
+    S.Stk.push<Floating>(Val);
+    return true;
+  }
 
-  S.Stk.push<Floating>(Floating::abs(Val));
+  Floating Result = S.allocFloat(Val.getSemantics());
+  F.changeSign();
+  Result.copy(F);
+  S.Stk.push<Floating>(Result);
   return true;
 }
 
@@ -818,7 +860,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   }
 
   // Write Result to ResultPtr and put Overflow on the stack.
-  assignInteger(ResultPtr, ResultT, Result);
+  assignInteger(S, ResultPtr, ResultT, Result);
   ResultPtr.initialize();
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -871,7 +913,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(CarryOutPtr, CarryOutT, CarryOut);
+  assignInteger(S, CarryOutPtr, CarryOutT, CarryOut);
   CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
@@ -1383,7 +1425,7 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(CarryOutPtr, CarryOutT, APSInt(Result, true));
+  assignInteger(S, CarryOutPtr, CarryOutT, APSInt(Result, true));
 
   pushInteger(S, CarryOut, Call->getType());
 
@@ -1447,7 +1489,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     // The std::nothrow_t arg never gets put on the stack.
     if (Call->getArg(NumArgs - 1)->getType()->isNothrowT())
       --NumArgs;
-    auto Args = llvm::ArrayRef(Call->getArgs(), Call->getNumArgs());
+    auto Args = ArrayRef(Call->getArgs(), Call->getNumArgs());
     // First arg is needed.
     Args = Args.drop_front();
 
@@ -2595,8 +2637,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
-                       llvm::ArrayRef<int64_t> ArrayIndices,
-                       int64_t &IntResult) {
+                       ArrayRef<int64_t> ArrayIndices, int64_t &IntResult) {
   CharUnits Result;
   unsigned N = E->getNumComponents();
   assert(N > 0);

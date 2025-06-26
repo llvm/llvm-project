@@ -107,31 +107,39 @@ DependencyScanningFilesystemSharedCache::getShardForUID(
   return CacheShards[Hash % NumShards];
 }
 
-std::vector<StringRef>
-DependencyScanningFilesystemSharedCache::getInvalidNegativeStatCachedPaths(
+std::vector<DependencyScanningFilesystemSharedCache::OutOfDateEntry>
+DependencyScanningFilesystemSharedCache::getOutOfDateEntries(
     llvm::vfs::FileSystem &UnderlyingFS) const {
   // Iterate through all shards and look for cached stat errors.
-  std::vector<StringRef> InvalidPaths;
+  std::vector<OutOfDateEntry> InvalidDiagInfo;
   for (unsigned i = 0; i < NumShards; i++) {
     const CacheShard &Shard = CacheShards[i];
     std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
     for (const auto &[Path, CachedPair] : Shard.CacheByFilename) {
       const CachedFileSystemEntry *Entry = CachedPair.first;
 
-      if (Entry->getError()) {
-        // Only examine cached errors.
-        llvm::ErrorOr<llvm::vfs::Status> Stat = UnderlyingFS.status(Path);
-        if (Stat) {
+      llvm::ErrorOr<llvm::vfs::Status> Status = UnderlyingFS.status(Path);
+      if (Status) {
+        if (Entry->getError()) {
           // This is the case where we have cached the non-existence
-          // of the file at Path first, and a a file at the path is created
+          // of the file at Path first, and a file at the path is created
           // later. The cache entry is not invalidated (as we have no good
           // way to do it now), which may lead to missing file build errors.
-          InvalidPaths.push_back(Path);
+          InvalidDiagInfo.emplace_back(Path.data());
+        } else {
+          llvm::vfs::Status CachedStatus = Entry->getStatus();
+          uint64_t CachedSize = CachedStatus.getSize();
+          uint64_t ActualSize = Status->getSize();
+          if (CachedSize != ActualSize) {
+            // This is the case where the cached file has a different size
+            // from the actual file that comes from the underlying FS.
+            InvalidDiagInfo.emplace_back(Path.data(), CachedSize, ActualSize);
+          }
         }
       }
     }
   }
-  return InvalidPaths;
+  return InvalidDiagInfo;
 }
 
 const CachedFileSystemEntry *

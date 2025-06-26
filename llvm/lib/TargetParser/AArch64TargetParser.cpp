@@ -298,6 +298,13 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
   if (E == AEK_SVE2AES)
     disable(AEK_SVEAES);
 
+  // sve2-sha3 was historically associated with both FEAT_SVE2 and
+  // FEAT_SVE_SHA3, the latter is now associated with sve-sha3 and sve2-sha3 has
+  // become shorthand for +sve2+sve-sha3. For backwards compatibility, when we
+  // disable sve2-sha3 we must also disable sve-sha3.
+  if (E == AEK_SVE2SHA3)
+    disable(AEK_SVESHA3);
+
   if (E == AEK_SVE2BITPERM){
     disable(AEK_SVEBITPERM);
     disable(AEK_SVE2);
