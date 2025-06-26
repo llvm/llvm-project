@@ -174,7 +174,7 @@ struct StaticSamplerYamlDesc {
   uint32_t ComparisonFunc =
       llvm::to_underlying(dxbc::SamplersComparisonFunction::LessEqual);
   uint32_t BorderColor =
-      llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueWhite);
+      llvm::to_underlying(dxbc::StaticBorderColor::OpaqueWhite);
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t ShaderRegister;

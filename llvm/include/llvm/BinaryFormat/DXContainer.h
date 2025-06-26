@@ -237,9 +237,11 @@ enum class SamplersComparisonFunction : uint32_t {
 };
 
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
-enum class SamplersBorderColor : uint32_t {
+enum class StaticBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 
 LLVM_ABI PartType parsePartType(StringRef S);
 

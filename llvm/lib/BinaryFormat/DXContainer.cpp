@@ -99,6 +99,16 @@ ArrayRef<EnumEntry<ShaderVisibility>> dxbc::getShaderVisibility() {
   return ArrayRef(ShaderVisibilityValues);
 }
 
+#define STATIC_BORDER_COLOR(Val, Enum) {#Enum, StaticBorderColor::Enum},
+
+static const EnumEntry<StaticBorderColor> StaticBorderColorValues[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<StaticBorderColor>> dxbc::getStaticBorderColors() {
+  return ArrayRef(StaticBorderColorValues);
+}
+
 #define ROOT_PARAMETER(Val, Enum) {#Enum, RootParameterType::Enum},
 
 static const EnumEntry<RootParameterType> RootParameterTypes[] = {
