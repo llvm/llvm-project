@@ -305,6 +305,7 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_MIMGG16MappingTable_IMPL
 #define GET_MAIInstInfoTable_IMPL
 #define GET_WMMAInstInfoTable_IMPL
+#define GET_FLATInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -612,6 +613,11 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
 bool getWMMAIsXDL(unsigned Opc) {
   const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
   return Info ? Info->is_wmma_xdl : false;
+}
+
+bool isVDDS(unsigned Opc) {
+  const FLATInfo *Info = isFlatOpcodeHelper(Opc);
+  return Info ? Info->IsVDDS : false;
 }
 
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
@@ -3693,7 +3699,7 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
 
   // Only GVS mode is supported.
   return hasNamedOperand(Opcode, OpName::vaddr) &&
-         hasNamedOperand(Opcode, OpName::saddr);
+         hasNamedOperand(Opcode, OpName::saddr) && !isVDDS(Opcode);
 
   return false;
 }

@@ -260,7 +260,7 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
-                    bool NeedIOffset = true) const;
+                    bool NeedIOffset = true, bool NeedScaleOffset = true) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
@@ -272,7 +272,11 @@ private:
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffsetScaleOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffsetM0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoScaleOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;

@@ -13,6 +13,8 @@ let WantsRoot = true in {
 
   def GlobalSAddrNoIOffset : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffset", [], [], -3>;
   def GlobalSAddrNoIOffsetM0 : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffsetM0", [], [], -3>;
+  def GlobalSAddrNoScaleOffset : ComplexPattern<iPTR, 4, "SelectGlobalSAddrNoScaleOffset", [], [], -3>;
+  def GlobalSAddrNoIOffsetScaleOffset : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffsetScaleOffset", [], [], -3>;
   def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [], -10>;
   def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [], -10>;
   def GlobalSAddrCPol : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPol", [], [], -10>;
@@ -165,6 +167,9 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList, opName # ps.AsmOperands, []>,
   Enc96 {
 
+  Instruction Opcode = !cast<Instruction>(NAME);
+
+  field bit IsVDDS = 0;
   let FLAT = 1;
 
   // copy relevant pseudo op flags
@@ -1662,8 +1667,8 @@ class FlatLoadLDSSignedPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 class GlobalLoadLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
-                             ValueType saddr_vt, RegisterClass saddr_rc = getSRegForVT<saddr_vt>.ret> : GCNPat <
-  (node (GlobalSAddrNoIOffset (saddr_vt saddr_rc:$saddr), (i32 VGPR_32:$voffset), CPol:$cpol), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm)),
+                             ValueType saddr_vt, ComplexPattern Pat = GlobalSAddrNoIOffset, RegisterClass saddr_rc = getSRegForVT<saddr_vt>.ret> : GCNPat <
+  (node (Pat (saddr_vt saddr_rc:$saddr), (i32 VGPR_32:$voffset), CPol:$cpol), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm)),
   (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
 >;
 
@@ -1689,8 +1694,8 @@ class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
 >;
 
 class FlatLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
-                        ValueType saddr_vt, RegisterClass saddr_rc> : GCNPat <
-  (vt (node (GlobalSAddr (saddr_vt saddr_rc:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+                        ValueType saddr_vt, RegisterClass saddr_rc, ComplexPattern Pat = GlobalSAddr> : GCNPat <
+  (vt (node (Pat (saddr_vt saddr_rc:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
   (inst $saddr, $voffset, $offset, $cpol)
 >;
 
@@ -1930,7 +1935,7 @@ multiclass DDSLoadLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
     let AddedComplexity = 10;
   }
 
-  def : GlobalLoadLDSSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, i32> {
+  def : GlobalLoadLDSSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, i32, GlobalSAddrNoIOffsetScaleOffset> {
     let AddedComplexity = 11;
   }
 }
@@ -1960,7 +1965,7 @@ multiclass DDSFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType v
     let AddedComplexity = 10;
   }
 
-  def : FlatLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt, i32, SReg_32> {
+  def : FlatLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt, i32, SReg_32, GlobalSAddrNoScaleOffset> {
     let AddedComplexity = 11;
   }
 }
@@ -4033,8 +4038,10 @@ multiclass VFLAT_Real_gfx13 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemoni
 
 multiclass VDDS_Real_gfx13 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
+  let IsVDDS = 1 in
   def _gfx13 : VFLAT_Real_Base_gfx13 <op, ps, name> {
     let Inst{25-24} = 0b11;
+    let Inst{48} = 0;
   }
 }
 
@@ -4345,4 +4352,13 @@ def True16D16Table : GenericTable {
   let Fields = ["T16Op", "HiOp", "LoOp"];
   let PrimaryKey = ["T16Op"];
   let PrimaryKeyName = "getT16D16Helper";
+}
+
+def FLATInfoTable : GenericTable {
+  let FilterClass = "VFLAT_Real";
+  let CppTypeName = "FLATInfo";
+  let Fields = ["Opcode", "IsVDDS"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "isFlatOpcodeHelper";
 }
