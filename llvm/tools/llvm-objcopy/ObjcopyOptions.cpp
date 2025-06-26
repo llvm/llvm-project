@@ -286,7 +286,7 @@ static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
   return type;
 }
 
-static void llvm::objcopy::parseDumpOffloadBundle(StringRef URI) {
+static void parseDumpOffloadBundle(StringRef URI) {
   if (Error Err = object::extractOffloadBundleByURI(URI))
     outs() << "Failed to extract from URI.";
 }
@@ -758,9 +758,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
                              "too many positional arguments");
 
   if (Arg *A = InputArgs.getLastArg(OBJCOPY_dump_offload_bundle)) {
-    for (StringRef URIStr : llvm::split(A->getValue(), ",")) {
-      llvm::objcopy::parseDumpOffloadBundle(URIStr);
-    }
+    for (StringRef URIStr : llvm::split(A->getValue(), ","))
+      parseDumpOffloadBundle(URIStr);
   }
 
   if (Config.NeedPositional) {

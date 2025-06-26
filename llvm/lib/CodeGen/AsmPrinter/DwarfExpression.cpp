@@ -991,11 +991,9 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     if (IsFragment)
       emitOp(dwarf::DW_OP_lit0);
 
-    unsigned RegSize = 0;
     for (auto &Reg : Regs) {
       if (Reg.SubRegSize % 8)
         return std::nullopt;
-      RegSize += Reg.SubRegSize;
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
       emitOp(dwarf::DW_OP_piece);
