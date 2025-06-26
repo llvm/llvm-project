@@ -3,7 +3,6 @@
 
 declare void @init_mem(ptr, i64);
 
-; FIXME: Computes incorrect final IV when early exit is taken.
 define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-LABEL: define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:  entry:
@@ -87,7 +86,6 @@ e2:
   ret i64 %p2
 }
 
-; FIXME: Computes incorrect final IV when early exit is taken.
 define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-LABEL: define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:  entry:
@@ -103,6 +101,22 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 0
+; VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
+; VF4IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 8
+; VF4IC4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
+; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
+; VF4IC4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 0
+; VF4IC4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 4
+; VF4IC4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 8
+; VF4IC4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP19]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP20]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP21]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP22]], align 1
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD5]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
@@ -182,7 +196,6 @@ loop.end:
   ret i64 %retval
 }
 
-; FIXME: Computes incorrect final IV when early exit is taken.
 define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-LABEL: define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:  entry:
@@ -197,6 +210,13 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VF4IC4-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1]], i64 [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
+; VF4IC4-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 4
+; VF4IC4-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 8
+; VF4IC4-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP12]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP14]], align 1
 ; VF4IC4-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], splat (i8 72)
 ; VF4IC4-NEXT:    [[TMP15:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD1]], splat (i8 72)
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], splat (i8 72)
@@ -269,7 +289,6 @@ loop.end:
   ret ptr %retval
 }
 
-; FIXME: Computes incorrect final IV when early exit is taken.
 define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-LABEL: define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-NEXT:  entry:
@@ -285,6 +304,22 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 0
+; VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
+; VF4IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 8
+; VF4IC4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
+; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
+; VF4IC4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 0
+; VF4IC4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 4
+; VF4IC4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 8
+; VF4IC4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP19]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP20]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP21]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP22]], align 1
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD5]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
@@ -364,7 +399,6 @@ loop.end:
   ret i64 %retval
 }
 
-; FIXME: Computes incorrect final IV when early exit is taken.
 define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4-LABEL: define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:  entry:
@@ -380,6 +414,22 @@ define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 0
+; VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
+; VF4IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 8
+; VF4IC4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
+; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
+; VF4IC4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 0
+; VF4IC4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 4
+; VF4IC4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 8
+; VF4IC4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP19]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP20]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP21]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP22]], align 1
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD5]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
@@ -466,7 +516,6 @@ loop.end:
   ret i64 %retval2
 }
 
-; FIXME: Computes incorrect final IV when early exit is taken.
 define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4-LABEL: define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4-NEXT:  entry:
@@ -482,6 +531,22 @@ define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 0
+; VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
+; VF4IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 8
+; VF4IC4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
+; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
+; VF4IC4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 0
+; VF4IC4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 4
+; VF4IC4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 8
+; VF4IC4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP19]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP20]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP21]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP22]], align 1
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD5]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
@@ -568,7 +633,6 @@ loop.end:
   ret i64 %retval2
 }
 
-; FIXME: Computes incorrect final IV when early exit is taken.
 define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-LABEL: define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:  entry:
@@ -586,11 +650,12 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 0
 ; VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 -3
 ; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 -4
-; VF4IC4-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 -8
+; VF4IC4-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 -3
+; VF4IC4-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 -8
 ; VF4IC4-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i32 -3
-; VF4IC4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 -12
+; VF4IC4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 -12
 ; VF4IC4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 -3
-; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
 ; VF4IC4-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD1]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
 ; VF4IC4-NEXT:    [[REVERSE10:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD9]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -598,10 +663,27 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[REVERSE12:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD11]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
 ; VF4IC4-NEXT:    [[REVERSE14:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD13]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i8> [[REVERSE]], [[REVERSE2]]
-; VF4IC4-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i8> [[REVERSE3]], [[REVERSE10]]
-; VF4IC4-NEXT:    [[TMP20:%.*]] = icmp ne <4 x i8> [[REVERSE4]], [[REVERSE12]]
-; VF4IC4-NEXT:    [[TMP21:%.*]] = icmp ne <4 x i8> [[REVERSE6]], [[REVERSE14]]
+; VF4IC4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
+; VF4IC4-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i32 0
+; VF4IC4-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i32 -3
+; VF4IC4-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i32 -4
+; VF4IC4-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr [[TMP28]], i32 -3
+; VF4IC4-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i32 -8
+; VF4IC4-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i8, ptr [[TMP30]], i32 -3
+; VF4IC4-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i32 -12
+; VF4IC4-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, ptr [[TMP45]], i32 -3
+; VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP27]], align 1
+; VF4IC4-NEXT:    [[REVERSE8:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD7]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i8>, ptr [[TMP29]], align 1
+; VF4IC4-NEXT:    [[REVERSE11:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD10]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i8>, ptr [[TMP44]], align 1
+; VF4IC4-NEXT:    [[REVERSE13:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD12]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i8>, ptr [[TMP46]], align 1
+; VF4IC4-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD14]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i8> [[REVERSE2]], [[REVERSE8]]
+; VF4IC4-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i8> [[REVERSE10]], [[REVERSE11]]
+; VF4IC4-NEXT:    [[TMP20:%.*]] = icmp ne <4 x i8> [[REVERSE12]], [[REVERSE13]]
+; VF4IC4-NEXT:    [[TMP21:%.*]] = icmp ne <4 x i8> [[REVERSE14]], [[REVERSE15]]
 ; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP22:%.*]] = or <4 x i1> [[TMP6]], [[TMP19]]
 ; VF4IC4-NEXT:    [[TMP23:%.*]] = or <4 x i1> [[TMP22]], [[TMP20]]
@@ -693,6 +775,30 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 0
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
+; VF4IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 8
+; VF4IC4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP10]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
+; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; VF4IC4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 0
+; VF4IC4-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 4
+; VF4IC4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 8
+; VF4IC4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 12
+; VF4IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP19]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP29]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP8]], align 1
+; VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP9]], align 1
+; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
+; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
+; VF4IC4-NEXT:    [[TMP13:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; VF4IC4-NEXT:    [[TMP14:%.*]] = or <4 x i1> [[TMP4]], [[TMP11]]
+; VF4IC4-NEXT:    [[TMP15:%.*]] = or <4 x i1> [[TMP14]], [[TMP12]]
+; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP13]]
+; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; VF4IC4-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; VF4IC4-NEXT:    br i1 [[TMP7]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
@@ -782,6 +888,50 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 -4
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i32 -3
 ; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 -8
+; VF4IC4-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 -3
+; VF4IC4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 -12
+; VF4IC4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 -3
+; VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
+; VF4IC4-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP11]], align 1
+; VF4IC4-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD1]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP37]], align 1
+; VF4IC4-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD3]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP8]], align 1
+; VF4IC4-NEXT:    [[REVERSE6:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD5]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
+; VF4IC4-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i32 0
+; VF4IC4-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i8, ptr [[TMP38]], i32 -3
+; VF4IC4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i32 -4
+; VF4IC4-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i32 -3
+; VF4IC4-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i32 -8
+; VF4IC4-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i32 -3
+; VF4IC4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i32 -12
+; VF4IC4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 -3
+; VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP39]], align 1
+; VF4IC4-NEXT:    [[REVERSE8:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD7]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
+; VF4IC4-NEXT:    [[REVERSE10:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD9]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i8>, ptr [[TMP15]], align 1
+; VF4IC4-NEXT:    [[REVERSE12:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD11]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
+; VF4IC4-NEXT:    [[REVERSE14:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD13]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i8> [[REVERSE]], [[REVERSE8]]
+; VF4IC4-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i8> [[REVERSE2]], [[REVERSE10]]
+; VF4IC4-NEXT:    [[TMP20:%.*]] = icmp ne <4 x i8> [[REVERSE4]], [[REVERSE12]]
+; VF4IC4-NEXT:    [[TMP21:%.*]] = icmp ne <4 x i8> [[REVERSE6]], [[REVERSE14]]
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; VF4IC4-NEXT:    [[TMP22:%.*]] = or <4 x i1> [[TMP6]], [[TMP19]]
+; VF4IC4-NEXT:    [[TMP23:%.*]] = or <4 x i1> [[TMP22]], [[TMP20]]
+; VF4IC4-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP23]], [[TMP21]]
+; VF4IC4-NEXT:    [[TMP25:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
+; VF4IC4-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1008
+; VF4IC4-NEXT:    [[TMP27:%.*]] = or i1 [[TMP25]], [[TMP26]]
+; VF4IC4-NEXT:    br i1 [[TMP27]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; VF4IC4:       middle.split:
+; VF4IC4-NEXT:    br i1 [[TMP25]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; VF4IC4:       middle.block:
+; VF4IC4-NEXT:    br i1 false, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP21]], i1 true)
 ; VF4IC4-NEXT:    [[TMP28:%.*]] = add i64 12, [[FIRST_ACTIVE_LANE1]]
