@@ -162,6 +162,134 @@ static inline raw_ostream &operator<<(raw_ostream &OS,
   return Ref.print(OS);
 }
 
+/// Instruction-matching helpers operating on a single instruction at a time.
+///
+/// Unlike MCPlusBuilder::MCInstMatcher, this matchInst() function focuses on
+/// the cases where a precise control over the instruction order is important:
+///
+///     // Bring the short names into the local scope:
+///     using namespace MCInstMatcher;
+///     // Declare the registers to capture:
+///     Reg Xn, Xm;
+///     // Capture the 0th and 1st operands, match the 2nd operand against the
+///     // just captured Xm register, match the 3rd operand against literal 0:
+///     if (!matchInst(MaybeAdd, AArch64::ADDXrs, Xm, Xn, Xm, Imm(0))
+///       return AArch64::NoRegister;
+///     // Match the 0th operand against Xm:
+///     if (!matchInst(MaybeBr, AArch64::BR, Xm))
+///       return AArch64::NoRegister;
+///     // Return the matched register:
+///     return Xm.get();
+namespace MCInstMatcher {
+
+// The base class to match an operand of type T.
+//
+// The subclasses of OpMatcher are intended to be allocated on the stack and
+// to only be used by passing them to matchInst() and by calling their get()
+// function, thus the peculiar `mutable` specifiers: to make the calling code
+// compact and readable, the templated matchInst() function has to accept both
+// long-lived Imm/Reg wrappers declared as local variables (intended to capture
+// the first operand's value and match the subsequent operands, whether inside
+// a single instruction or across multiple instructions), as well as temporary
+// wrappers around literal values to match, f.e. Imm(42) or Reg(AArch64::XZR).
+template <typename T> class OpMatcher {
+  mutable std::optional<T> Value;
+  mutable std::optional<T> SavedValue;
+
+  // Remember/restore the last Value - to be called by matchInst.
+  void remember() const { SavedValue = Value; }
+  void restore() const { Value = SavedValue; }
+
+  template <class... OpMatchers>
+  friend bool matchInst(const MCInst &, unsigned, const OpMatchers &...);
+
+protected:
+  OpMatcher(std::optional<T> ValueToMatch) : Value(ValueToMatch) {}
+
+  bool matchValue(T OpValue) const {
+    // Check that OpValue does not contradict the existing Value.
+    bool MatchResult = !Value || *Value == OpValue;
+    // If MatchResult is false, all matchers will be reset before returning from
+    // matchInst, including this one, thus no need to assign conditionally.
+    Value = OpValue;
+
+    return MatchResult;
+  }
+
+public:
+  /// Returns the captured value.
+  T get() const {
+    assert(Value.has_value());
+    return *Value;
+  }
+};
+
+class Reg : public OpMatcher<MCPhysReg> {
+  bool matches(const MCOperand &Op) const {
+    if (!Op.isReg())
+      return false;
+
+    return matchValue(Op.getReg());
+  }
+
+  template <class... OpMatchers>
+  friend bool matchInst(const MCInst &, unsigned, const OpMatchers &...);
+
+public:
+  Reg(std::optional<MCPhysReg> RegToMatch = std::nullopt)
+      : OpMatcher<MCPhysReg>(RegToMatch) {}
+};
+
+class Imm : public OpMatcher<int64_t> {
+  bool matches(const MCOperand &Op) const {
+    if (!Op.isImm())
+      return false;
+
+    return matchValue(Op.getImm());
+  }
+
+  template <class... OpMatchers>
+  friend bool matchInst(const MCInst &, unsigned, const OpMatchers &...);
+
+public:
+  Imm(std::optional<int64_t> ImmToMatch = std::nullopt)
+      : OpMatcher<int64_t>(ImmToMatch) {}
+};
+
+/// Tries to match Inst and updates Ops on success.
+///
+/// If Inst has the specified Opcode and its operand list prefix matches Ops,
+/// this function returns true and updates Ops, otherwise false is returned and
+/// values of Ops are kept as before matchInst was called.
+///
+/// Please note that while Ops are technically passed by a const reference to
+/// make invocations like `matchInst(MI, Opcode, Imm(42))` possible, all their
+/// fields are marked mutable.
+template <class... OpMatchers>
+bool matchInst(const MCInst &Inst, unsigned Opcode, const OpMatchers &...Ops) {
+  if (Inst.getOpcode() != Opcode)
+    return false;
+  assert(sizeof...(Ops) <= Inst.getNumOperands() &&
+         "Too many operands are matched for the Opcode");
+
+  // Ask each matcher to remember its current value in case of rollback.
+  (Ops.remember(), ...);
+
+  // Check if all matchers match the corresponding operands.
+  auto It = Inst.begin();
+  auto AllMatched = (Ops.matches(*(It++)) && ... && true);
+
+  // If match failed, restore the original captured values.
+  if (!AllMatched) {
+    (Ops.restore(), ...);
+    return false;
+  }
+
+  return true;
+}
+
+} // namespace MCInstMatcher
+
 } // namespace bolt
 } // namespace llvm
 
