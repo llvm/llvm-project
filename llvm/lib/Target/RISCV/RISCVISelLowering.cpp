@@ -2855,7 +2855,7 @@ static SDValue convertToScalableVector(EVT VT, SDValue V, SelectionDAG &DAG,
   assert(V.getValueType().isFixedLengthVector() &&
          "Expected a fixed length vector operand!");
   SDLoc DL(V);
-  return DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), V, 0);
+  return DAG.getInsertSubvector(DL, DAG.getPOISON(VT), V, 0);
 }
 
 // Shrink V so it's just big enough to maintain a VT's worth of data.
@@ -4330,7 +4330,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           DAG.getNode(ISD::BUILD_VECTOR, DL, OneRegVT, OneVRegOfOps);
       SubBV = convertToScalableVector(M1VT, SubBV, DAG, Subtarget);
       unsigned InsertIdx = (i / ElemsPerVReg) * NumOpElts;
-      Vec = DAG.getInsertSubvector(DL, Vec, SubBV, InsertIdx);
+      Vec = DAG.getInsertSubvector(DL, Vec, SubBV, InsertIdx,
+                                   /*SkipUndef=*/true);
     }
     return convertFromScalableVector(VT, Vec, DAG, Subtarget);
   }
@@ -7822,10 +7823,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue Vec = DAG.getUNDEF(VT);
     for (const auto &OpIdx : enumerate(Op->ops())) {
       SDValue SubVec = OpIdx.value();
-      // Don't insert undef subvectors.
-      if (SubVec.isUndef())
-        continue;
-      Vec = DAG.getInsertSubvector(DL, Vec, SubVec, OpIdx.index() * NumOpElts);
+      Vec = DAG.getInsertSubvector(DL, Vec, SubVec, OpIdx.index() * NumOpElts,
+                                   /*SkipUndef=*/true);
     }
     return Vec;
   }
@@ -12245,9 +12244,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
       Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, HiVT, Hi);
       // Reassemble the low and high pieces reversed.
       // FIXME: This is a CONCAT_VECTORS.
-      SDValue Res = DAG.getInsertSubvector(DL, DAG.getUNDEF(VecVT), Hi, 0);
-      return DAG.getInsertSubvector(DL, Res, Lo,
-                                    LoVT.getVectorMinNumElements());
+      SDValue Res = DAG.getInsertSubvector(DL, DAG.getUNDEF(VecVT), Hi, 0,
+                                           /*SkipUndef=*/true);
+      return DAG.getInsertSubvector(DL, Res, Lo, LoVT.getVectorMinNumElements(),
+                                    /*SkipUndef=*/true);
     }
 
     // Just promote the int type to i16 which will double the LMUL.

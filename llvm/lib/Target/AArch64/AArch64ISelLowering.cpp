@@ -15103,11 +15103,14 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
   if (PreferDUPAndInsert) {
     // First, build a constant vector with the common element.
-    SmallVector<SDValue, 8> Ops(NumElts, Value);
+    // Make sure to freeze the common element first, since we will use it also
+    // for indices that should be UNDEF (so we want to avoid making those
+    // elements more poisonous).
+    SmallVector<SDValue, 8> Ops(NumElts, DAG.getFreeze(Value));
     SDValue NewVector = LowerBUILD_VECTOR(DAG.getBuildVector(VT, dl, Ops), DAG);
     // Next, insert the elements that do not match the common value.
     for (unsigned I = 0; I < NumElts; ++I)
-      if (Op.getOperand(I) != Value)
+      if (Op.getOperand(I) != Value && !Op.getOperand(I).isUndef())
         NewVector =
             DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, NewVector,
                         Op.getOperand(I), DAG.getConstant(I, dl, MVT::i64));
@@ -28698,7 +28701,7 @@ static SDValue convertToScalableVector(SelectionDAG &DAG, EVT VT, SDValue V) {
          "Expected a fixed length vector operand!");
   SDLoc DL(V);
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), V, Zero);
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getPOISON(VT), V, Zero);
 }
 
 // Shrink V so it's just big enough to maintain a VT's worth of data.
