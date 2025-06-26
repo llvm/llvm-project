@@ -13,7 +13,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-void RedundantFunctionPtrDereferenceCheck::registerMatchers(MatchFinder *Finder) {
+void RedundantFunctionPtrDereferenceCheck::registerMatchers(
+    MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(TK_AsIs, unaryOperator(hasOperatorName("*"),
                                       has(implicitCastExpr(hasCastKind(
@@ -22,7 +23,8 @@ void RedundantFunctionPtrDereferenceCheck::registerMatchers(MatchFinder *Finder)
       this);
 }
 
-void RedundantFunctionPtrDereferenceCheck::check(const MatchFinder::MatchResult &Result) {
+void RedundantFunctionPtrDereferenceCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Operator = Result.Nodes.getNodeAs<UnaryOperator>("op");
   diag(Operator->getOperatorLoc(),
        "redundant repeated dereference of function pointer")

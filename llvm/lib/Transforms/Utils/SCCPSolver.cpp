@@ -348,7 +348,9 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
         NewUnreachableBB =
             BasicBlock::Create(DefaultDest->getContext(), "default.unreachable",
                                DefaultDest->getParent(), DefaultDest);
-        new UnreachableInst(DefaultDest->getContext(), NewUnreachableBB);
+        auto *UI =
+            new UnreachableInst(DefaultDest->getContext(), NewUnreachableBB);
+        UI->setDebugLoc(DebugLoc::getTemporary());
       }
 
       DefaultDest->removePredecessor(BB);
@@ -487,6 +489,8 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   DenseMap<Value *, SmallSetVector<User *, 2>> AdditionalUsers;
 
   LLVMContext &Ctx;
+
+  BumpPtrAllocator PredicateInfoAllocator;
 
 private:
   ConstantInt *getConstantInt(const ValueLatticeElement &IV, Type *Ty) const {
@@ -759,7 +763,28 @@ private:
 
 public:
   void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC) {
-    FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(F, DT, AC)});
+    FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(
+                                    F, DT, AC, PredicateInfoAllocator)});
+  }
+
+  void removeSSACopies(Function &F) {
+    auto It = FnPredicateInfo.find(&F);
+    if (It == FnPredicateInfo.end())
+      return;
+
+    for (BasicBlock &BB : F) {
+      for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
+        if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+          if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
+            if (It->second->getPredicateInfoFor(&Inst)) {
+              Value *Op = II->getOperand(0);
+              Inst.replaceAllUsesWith(Op);
+              Inst.eraseFromParent();
+            }
+          }
+        }
+      }
+    }
   }
 
   void visitCallInst(CallInst &I) { visitCallBase(I); }
@@ -2164,6 +2189,10 @@ SCCPSolver::~SCCPSolver() = default;
 void SCCPSolver::addPredicateInfo(Function &F, DominatorTree &DT,
                                   AssumptionCache &AC) {
   Visitor->addPredicateInfo(F, DT, AC);
+}
+
+void SCCPSolver::removeSSACopies(Function &F) {
+  Visitor->removeSSACopies(F);
 }
 
 bool SCCPSolver::markBlockExecutable(BasicBlock *BB) {

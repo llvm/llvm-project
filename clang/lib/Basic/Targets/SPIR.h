@@ -46,7 +46,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0,  // ptr32_sptr
     0,  // ptr32_uptr
     0,  // ptr64
-    0,  // hlsl_groupshared
+    3,  // hlsl_groupshared
     12, // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
@@ -82,7 +82,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     0,  // ptr32_sptr
     0,  // ptr32_uptr
     0,  // ptr64
-    0,  // hlsl_groupshared
+    3,  // hlsl_groupshared
     0,  // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device

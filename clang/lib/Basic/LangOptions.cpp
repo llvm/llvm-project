@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangOptions.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;

@@ -416,9 +416,34 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::IncompleteArray: {
+    const IncompleteArrayType *arrTy = cast<IncompleteArrayType>(ty);
+    if (arrTy->getIndexTypeCVRQualifiers() != 0)
+      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
+
+    mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+    // int X[] -> [0 x int], unless the element type is not sized.  If it is
+    // unsized (e.g. an incomplete record) just use [0 x i8].
+    if (!builder.isSized(elemTy)) {
+      elemTy = cgm.SInt8Ty;
+    }
+
+    resultType = cir::ArrayType::get(elemTy, 0);
+    break;
+  }
+
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+
+    // TODO(CIR): In LLVM, "lower arrays of undefined struct type to arrays of
+    // i8 just to have a concrete type"
+    if (!builder.isSized(elemTy)) {
+      cgm.errorNYI(SourceLocation(), "arrays of undefined struct type", type);
+      resultType = cgm.UInt32Ty;
+      break;
+    }
+
     resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
@@ -432,10 +457,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   case Type::Enum: {
-    // TODO(cir): Implement updateCompletedType for enums.
-    assert(!cir::MissingFeatures::updateCompletedType());
-    const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
-    if (auto integerType = ED->getIntegerType(); !integerType.isNull())
+    const EnumDecl *ed = cast<EnumType>(ty)->getDecl();
+    if (auto integerType = ed->getIntegerType(); !integerType.isNull())
       return convertType(integerType);
     // Return a placeholder 'i32' type.  This can be changed later when the
     // type is defined (see UpdateCompletedType), but is likely to be the
@@ -585,4 +608,41 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
   }
 
   return arrangeFunctionDeclaration(fd);
+}
+
+// When we find the full definition for a TagDecl, replace the 'opaque' type we
+// previously made for it if applicable.
+void CIRGenTypes::updateCompletedType(const TagDecl *td) {
+  // If this is an enum being completed, then we flush all non-struct types
+  // from the cache. This allows function types and other things that may be
+  // derived from the enum to be recomputed.
+  if (const auto *ed = dyn_cast<EnumDecl>(td)) {
+    // Classic codegen clears the type cache if it contains an entry for this
+    // enum type that doesn't use i32 as the underlying type, but I can't find
+    // a test case that meets that condition. C++ doesn't allow forward
+    // declaration of enums, and C doesn't allow an incomplete forward
+    // declaration with a non-default type.
+    assert(
+        !typeCache.count(ed->getTypeForDecl()) ||
+        (convertType(ed->getIntegerType()) == typeCache[ed->getTypeForDecl()]));
+    // If necessary, provide the full definition of a type only used with a
+    // declaration so far.
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return;
+  }
+
+  // If we completed a RecordDecl that we previously used and converted to an
+  // anonymous type, then go ahead and complete it now.
+  const auto *rd = cast<RecordDecl>(td);
+  if (rd->isDependentType())
+    return;
+
+  // Only complete if we converted it already. If we haven't converted it yet,
+  // we'll just do it lazily.
+  if (recordDeclTypes.count(astContext.getTagDeclType(rd).getTypePtr()))
+    convertRecordDeclType(rd);
+
+  // If necessary, provide the full definition of a type only used with a
+  // declaration so far.
+  assert(!cir::MissingFeatures::generateDebugInfo());
 }

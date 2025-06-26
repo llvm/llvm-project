@@ -76,6 +76,24 @@ same_section:
 same_section_extern:
   nop
 
+.option relax
+
+# ASM: qc.e.j same_section
+# OBJ: qc.e.j 0x38 <same_section_extern+0x4>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 same_section{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.e.j same_section
+
+# ASM: qc.e.jal same_section
+# OBJ-NEXT: qc.e.jal 0x3e <same_section_extern+0xa>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 same_section{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.e.jal same_section
+
+.option norelax
+
 .section .text.other, "ax", @progbits
 
 # ASM-LABEL: other_section:

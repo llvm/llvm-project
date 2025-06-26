@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_float.h"
 #include "src/__support/uint128.h"
-#include "src/errno/libc_errno.h"
 
 #include "test/UnitTest/Test.h"
 
@@ -67,7 +67,6 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
                                       const int expectedErrno = 0) {
     StorageType actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
-    LIBC_NAMESPACE::libc_errno = 0;
 
     auto result = internal::simple_decimal_conversion<T>(numStart);
 

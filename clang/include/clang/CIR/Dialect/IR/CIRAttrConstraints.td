@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -38,5 +37,12 @@ def CIR_AnyIntOrFloatAttr : AnyAttrOf<[CIR_AnyIntAttr, CIR_AnyFPAttr],
     "integer or floating point type"> {
   string cppType = "::mlir::TypedAttr";
 }
+
+//===----------------------------------------------------------------------===//
+// ArrayAttr constraints
+//===----------------------------------------------------------------------===//
+
+def CIR_IntArrayAttr : TypedArrayAttrBase<CIR_AnyIntAttr,
+   "integer array attribute">;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRCONSTRAINTS_TD

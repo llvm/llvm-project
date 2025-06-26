@@ -256,8 +256,10 @@ class ELFFile {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  // Default ctor required to instantiate the template for DLL export.
+  // Default ctor and copy assignment operator required to instantiate the
+  // template for DLL export.
   ELFFile(const ELFFile &) = default;
+  ELFFile &operator=(const ELFFile &) = default;
 
   // This is a callback that can be passed to a number of functions.
   // It can be used to ignore non-critical errors (warnings), which is

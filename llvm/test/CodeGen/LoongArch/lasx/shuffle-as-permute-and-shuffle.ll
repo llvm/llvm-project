@@ -4,76 +4,14 @@
 define <32 x i8> @shuffle_v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    ld.h $a0, $sp, 16
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr1, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr1, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr1, 2
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr1, 3
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr1, 4
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr1, 5
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vpickve2gr.h $a1, $vr1, 6
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
-; CHECK-NEXT:    ld.h $a0, $sp, 18
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
-; CHECK-NEXT:    ld.h $a0, $sp, 20
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 2
-; CHECK-NEXT:    ld.h $a0, $sp, 22
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 3
-; CHECK-NEXT:    ld.h $a0, $sp, 24
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 4
-; CHECK-NEXT:    ld.h $a0, $sp, 26
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 5
-; CHECK-NEXT:    ld.h $a0, $sp, 28
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 6
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 7
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI0_0)
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_1)
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI0_1)
+; CHECK-NEXT:    xvpermi.d $xr3, $xr0, 78
+; CHECK-NEXT:    xvshuf.d $xr2, $xr0, $xr3
+; CHECK-NEXT:    xvshuf.h $xr1, $xr2, $xr0
+; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> <i32 16, i32 17, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <32 x i8> %shuffle
@@ -83,21 +21,13 @@ define <32 x i8> @shuffle_v32i8(<32 x i8> %a) {
 define <16 x i16> @shuffle_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 4
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a0, 0
-; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 0
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a1, 1
-; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 1
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a1, 2
-; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a1, 3
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a0, 4
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 5
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a0, 5
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 6
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a0, 6
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a0, 7
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI1_0)
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_1)
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI1_1)
+; CHECK-NEXT:    xvpermi.d $xr3, $xr0, 78
+; CHECK-NEXT:    xvshuf.d $xr2, $xr0, $xr3
+; CHECK-NEXT:    xvshuf.w $xr1, $xr2, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> <i32 8, i32 9, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -107,13 +37,13 @@ define <16 x i16> @shuffle_v16i16(<16 x i16> %a) {
 define <8 x i32> @shuffle_v8i32(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 0
-; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 0
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a1, 1
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 2
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 3
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI2_0)
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_1)
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI2_1)
+; CHECK-NEXT:    xvpermi.d $xr3, $xr0, 78
+; CHECK-NEXT:    xvshuf.d $xr2, $xr0, $xr3
+; CHECK-NEXT:    xvshuf.d $xr1, $xr2, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 4, i32 5, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7>
@@ -123,14 +53,13 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %a) {
 define <4 x i64> @shuffle_v4i64(<4 x i64> %a) {
 ; CHECK-LABEL: shuffle_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 0
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 1
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 2
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 3
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI3_0)
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI3_1)
+; CHECK-NEXT:    xvpermi.d $xr3, $xr0, 78
+; CHECK-NEXT:    xvshuf.d $xr2, $xr0, $xr3
+; CHECK-NEXT:    xvshuf.d $xr1, $xr2, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
@@ -140,19 +69,13 @@ define <4 x i64> @shuffle_v4i64(<4 x i64> %a) {
 define <8 x float> @shuffle_v8f32(<8 x float> %a) {
 ; CHECK-LABEL: shuffle_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
-; CHECK-NEXT:    movgr2fr.d $fa1, $a0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa1
-; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 0
-; CHECK-NEXT:    movgr2fr.d $fa2, $a1
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 0
-; CHECK-NEXT:    movfr2gr.d $a1, $fa2
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a1, 1
-; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
-; CHECK-NEXT:    movgr2fr.d $fa0, $a1
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 2
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 3
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI4_0)
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_1)
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI4_1)
+; CHECK-NEXT:    xvpermi.d $xr3, $xr0, 78
+; CHECK-NEXT:    xvshuf.d $xr2, $xr0, $xr3
+; CHECK-NEXT:    xvshuf.d $xr1, $xr2, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7>
@@ -162,22 +85,13 @@ define <8 x float> @shuffle_v8f32(<8 x float> %a) {
 define <4 x double> @shuffle_v4f64(<4 x double> %a) {
 ; CHECK-LABEL: shuffle_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    movgr2fr.d $fa1, $a0
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
-; CHECK-NEXT:    movgr2fr.d $fa2, $a0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa1
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa2
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 1
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
-; CHECK-NEXT:    movgr2fr.d $fa2, $a0
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
-; CHECK-NEXT:    movgr2fr.d $fa0, $a0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa2
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 2
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 3
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI5_0)
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI5_1)
+; CHECK-NEXT:    xvpermi.d $xr3, $xr0, 78
+; CHECK-NEXT:    xvshuf.d $xr2, $xr0, $xr3
+; CHECK-NEXT:    xvshuf.d $xr1, $xr2, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 3, i32 1, i32 2, i32 0>

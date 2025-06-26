@@ -15,10 +15,8 @@ add_header_library(
   HDRS
     string_utils.h
   DEPENDS
-    .memory_utils.inline_bzero
-    .memory_utils.inline_memcpy
     libc.hdr.types.size_t
-    libc.include.stdlib
+    libc.hdr.limits_macros
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
@@ -89,7 +87,6 @@ add_entrypoint_object(
   HDRS
     stpcpy.h
   DEPENDS
-    .mempcpy
     .string_utils
 )
 
@@ -110,7 +107,6 @@ add_entrypoint_object(
   HDRS
     strcat.h
   DEPENDS
-    .strcpy
     .string_utils
     libc.include.llvm-libc-types.size_t
 )
@@ -267,7 +263,6 @@ add_entrypoint_object(
   HDRS
     strncat.h
   DEPENDS
-    .strncpy
     .string_utils
     libc.include.llvm-libc-types.size_t
 )

@@ -837,7 +837,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       Version = Data.getU8(Cur);
       if (!Cur)
         break;
-      if (Version > 2)
+      if (Version > 3)
         return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                            Twine(static_cast<int>(Version)));
       Feature = Data.getU8(Cur); // Feature byte
@@ -847,10 +847,16 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       if (!FeatEnableOrErr)
         return FeatEnableOrErr.takeError();
       FeatEnable = *FeatEnableOrErr;
-      if (Feature != 0 && Version < 2 && Cur)
+      if (FeatEnable.hasPGOAnalysis() && Version < 2)
         return createError(
             "version should be >= 2 for SHT_LLVM_BB_ADDR_MAP when "
             "PGO features are enabled: version = " +
+            Twine(static_cast<int>(Version)) +
+            " feature = " + Twine(static_cast<int>(Feature)));
+      if (FeatEnable.CallsiteOffsets && Version < 3)
+        return createError(
+            "version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when "
+            "callsite offsets feature is enabled: version = " +
             Twine(static_cast<int>(Version)) +
             " feature = " + Twine(static_cast<int>(Feature)));
     }
@@ -893,7 +899,23 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
                             ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
                             : BlockIndex;
           uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          // Read the callsite offsets.
+          uint32_t LastCallsiteOffset = 0;
+          SmallVector<uint32_t, 1> CallsiteOffsets;
+          if (FeatEnable.CallsiteOffsets) {
+            uint32_t NumCallsites =
+                readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+            CallsiteOffsets.reserve(NumCallsites);
+            for (uint32_t CallsiteIndex = 0;
+                 !ULEBSizeErr && Cur && (CallsiteIndex < NumCallsites);
+                 ++CallsiteIndex) {
+              LastCallsiteOffset +=
+                  readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+              CallsiteOffsets.push_back(LastCallsiteOffset);
+            }
+          }
+          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr) +
+                          LastCallsiteOffset;
           uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           if (Version >= 1) {
             // Offset is calculated relative to the end of the previous BB.
@@ -906,7 +928,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
             MetadataDecodeErr = MetadataOrErr.takeError();
             break;
           }
-          BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
+          BBEntries.push_back(
+              {ID, Offset, Size, *MetadataOrErr, CallsiteOffsets});
         }
         TotalNumBlocks += BBEntries.size();
       }
