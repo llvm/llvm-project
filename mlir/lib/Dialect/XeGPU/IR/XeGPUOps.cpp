@@ -87,9 +87,12 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
     return emitError()
            << "Value should have the same element type as TensorDesc.";
 
-  if (tdescShape[0] != maskShape[0])
+  llvm::SmallVector<int64_t> expectedMaskShape(tdescShape);
+  if (chunkSize > 1)
+    expectedMaskShape.pop_back();
+  if (expectedMaskShape != maskShape)
     return emitError()
-           << "dim-0 of the Mask and TensorDesc should be the same.";
+           << "Mask should match TensorDesc except the chunk size dim.";
 
   // a valid shape for SIMT case
   if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
@@ -550,6 +553,23 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
                            Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
   auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
   build(builder, state, tensorDesc, ofrs);
+}
+
+LogicalResult UpdateOffsetOp::verify() {
+  auto tdescTy = getTensorDescType();
+  if (!tdescTy.isScattered())
+    return emitOpError("Expects a scattered TensorDesc.\n");
+
+  auto expectedOffsetShape = getShapeOf(tdescTy);
+  auto offsetShape = getShapeOf(getOffsetsType());
+  if (tdescTy.getChunkSize() > 1)
+    expectedOffsetShape.pop_back();
+
+  if (expectedOffsetShape != offsetShape)
+    return emitOpError(
+        "Offsets should match TensorDesc except the chunk size dim.");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
