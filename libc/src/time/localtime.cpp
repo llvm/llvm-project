@@ -1,4 +1,4 @@
-//===-- Linux implementation of localtime_r function ----------------------===//
+//===-- Linux implementation of the localtime function --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/time/localtime_r.h"
+#include "src/time/localtime.h"
+#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(struct tm *, localtime_r,
-                   (const time_t *timer, struct tm *buf)) {
+LLVM_LIBC_FUNCTION(struct tm *, localtime, (const time_t *timer)) {
+  static struct tm buf;
+
   if (timer == nullptr) {
     return nullptr;
   }
 
-  return time_utils::localtime_internal(timer, buf);
+  return time_utils::localtime_internal(timer, &buf);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
