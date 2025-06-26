@@ -8736,11 +8736,15 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
                     : False);
   if (IsGFX10Plus)
     Ops.push_back(IsA16 ? True : False);
-  if (!Subtarget->hasGFX90AInsts()) {
+
+  if (!Subtarget->hasGFX90AInsts())
     Ops.push_back(TFE); // tfe
-  } else if (TFE->getAsZExtVal()) {
-    report_fatal_error("TFE is not supported on this GPU");
+  else if (TFE->getAsZExtVal()) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "TFE is not supported on this GPU", DL.getDebugLoc()));
   }
+
   if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
     Ops.push_back(LWE); // lwe
   if (!IsGFX10Plus)
@@ -8771,9 +8775,23 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     if (Subtarget->hasGFX90AInsts()) {
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
                                      NumVDataDwords, NumVAddrDwords);
-      if (Opcode == -1)
-        report_fatal_error(
-            "requested image instruction is not supported on this GPU");
+      if (Opcode == -1) {
+        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+            DAG.getMachineFunction().getFunction(),
+            "requested image instruction is not supported on this GPU",
+            DL.getDebugLoc()));
+
+        unsigned Idx = 0;
+        SmallVector<SDValue, 3> RetValues(OrigResultTypes.size());
+        for (EVT VT : OrigResultTypes) {
+          if (VT == MVT::Other)
+            RetValues[Idx++] = Op.getOperand(0); // Chain
+          else
+            RetValues[Idx++] = DAG.getPOISON(VT);
+        }
+
+        return DAG.getMergeValues(RetValues, DL);
+      }
     }
     if (Opcode == -1 &&
         Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
