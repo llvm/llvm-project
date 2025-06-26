@@ -12,7 +12,7 @@
 
 #include "PPCMCCodeEmitter.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
-#include "PPCMCExpr.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
