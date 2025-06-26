@@ -10,7 +10,7 @@ define void @foo(i32 %i) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b32 %r2, [foo_param_0];
@@ -24,20 +24,16 @@ define void @foo(i32 %i) {
 ; CHECK-NEXT:     $L__BB0_5;
 ; CHECK-NEXT:    brx.idx %r2, $L_brx_0;
 ; CHECK-NEXT:  $L__BB0_2: // %case0
-; CHECK-NEXT:    mov.b32 %r6, 0;
-; CHECK-NEXT:    st.global.b32 [out], %r6;
+; CHECK-NEXT:    st.global.b32 [out], 0;
 ; CHECK-NEXT:    bra.uni $L__BB0_6;
 ; CHECK-NEXT:  $L__BB0_4: // %case2
-; CHECK-NEXT:    mov.b32 %r4, 2;
-; CHECK-NEXT:    st.global.b32 [out], %r4;
+; CHECK-NEXT:    st.global.b32 [out], 2;
 ; CHECK-NEXT:    bra.uni $L__BB0_6;
 ; CHECK-NEXT:  $L__BB0_5: // %case3
-; CHECK-NEXT:    mov.b32 %r3, 3;
-; CHECK-NEXT:    st.global.b32 [out], %r3;
+; CHECK-NEXT:    st.global.b32 [out], 3;
 ; CHECK-NEXT:    bra.uni $L__BB0_6;
 ; CHECK-NEXT:  $L__BB0_3: // %case1
-; CHECK-NEXT:    mov.b32 %r5, 1;
-; CHECK-NEXT:    st.global.b32 [out], %r5;
+; CHECK-NEXT:    st.global.b32 [out], 1;
 ; CHECK-NEXT:  $L__BB0_6: // %end
 ; CHECK-NEXT:    ret;
 entry:

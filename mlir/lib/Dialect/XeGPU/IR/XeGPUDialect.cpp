@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -309,11 +310,23 @@ LogicalResult TensorDescType::verify(
     llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
     mlir::Attribute encoding, mlir::Attribute layout) {
   size_t rank = shape.size();
-  // Low-precision types are packed in 32-bit units.
-  int32_t packingFactor = 32 / elementType.getIntOrFloatBitWidth();
   if (rank != 1 && rank != 2)
     return emitError() << "expected 1D or 2D tensor";
 
+  auto blockAttr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding);
+  if (blockAttr) {
+    MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
+    if (rank == 2 && memorySpaceAttr &&
+        memorySpaceAttr.getValue() == MemorySpace::SLM)
+      return emitError() << "SLM is not supported for 2D block tensor";
+  }
+
+  // for gather and scatter ops, Low-precision types are packed in 32-bit units.
+  unsigned bitWidth = elementType.getIntOrFloatBitWidth();
+  int chunkAlignmentFactor =
+      bitWidth < targetinfo::packedSizeInBitsForGatherScatter
+          ? targetinfo::packedSizeInBitsForGatherScatter / bitWidth
+          : 1;
   auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
   if (scatterAttr) {
     // Expected tensor ranks for scattered data:
@@ -329,19 +342,11 @@ LogicalResult TensorDescType::verify(
     if (chunkSize > 1) {
       if (shape.back() != chunkSize)
         return emitError() << "expected tensor shape[1] to match chunk size";
-      if (shape.back() % packingFactor != 0)
-        return emitError()
-               << "expected tensor shape[1] to be a multiple of packing factor "
-               << packingFactor;
+      if (shape.back() % chunkAlignmentFactor != 0)
+        return emitError() << "expected tensor shape[1] to be a multiple of "
+                              "chunk alignment factor "
+                           << chunkAlignmentFactor;
     }
-  }
-
-  auto blockAttr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding);
-  if (blockAttr) {
-    MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
-    if (rank == 2 && memorySpaceAttr &&
-        memorySpaceAttr.getValue() == MemorySpace::SLM)
-      return emitError() << "SLM is not supported for 2D block tensor";
   }
 
   auto layoutAttr = llvm::dyn_cast_if_present<LayoutAttr>(layout);
@@ -360,7 +365,7 @@ LogicalResult TensorDescType::verify(
       if (rank > 1 && laneData[0] != 1)
         return emitError()
                << "cannot map over non-contiguous scattered row elements";
-      if (laneData[rank - 1] != packingFactor)
+      if (laneData[rank - 1] != chunkAlignmentFactor)
         return emitError() << "work item data mapping must match the number of "
                               "contiguous elements";
     }
