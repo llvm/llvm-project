@@ -250,10 +250,10 @@ CleanupPointerRootUsers(GlobalVariable *GV,
     }
   }
 
-  for (int i = 0, e = Dead.size(); i != e; ++i) {
-    if (IsSafeComputationToRemove(Dead[i].first, GetTLI)) {
-      Dead[i].second->eraseFromParent();
-      Instruction *I = Dead[i].first;
+  for (const auto &[Inst, Store] : Dead) {
+    if (IsSafeComputationToRemove(Inst, GetTLI)) {
+      Store->eraseFromParent();
+      Instruction *I = Inst;
       do {
         if (isAllocationFn(I, GetTLI))
           break;

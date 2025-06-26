@@ -124,10 +124,6 @@ if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
     )
 endif()    
 
-set(CLANG_TEST_PARAMS
-  USE_Z3_SOLVER=0
-  )
-
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS
     llvm-config
@@ -195,13 +191,11 @@ set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang/Tests")
 add_lit_testsuite(check-clang "Running the Clang regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   #LIT ${LLVM_LIT}
-  PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
-  PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
   FOLDER "Clang tests/Suites"
 )
@@ -210,6 +204,17 @@ add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
 add_custom_target(clang-test)
 add_dependencies(clang-test check-clang)
 set_target_properties(clang-test PROPERTIES FOLDER "Clang/Tests")
+
+# Allow running Clang Python binding tests separately from CI.
+add_lit_testsuite(check-clang-python "Running the Clang Python tests"
+  ${CMAKE_CURRENT_BINARY_DIR}
+  #LIT ${LLVM_LIT}
+  PARAMS ${CLANG_TEST_PARAMS}
+  DEPENDS ${CLANG_TEST_DEPS}
+  ARGS ${CLANG_TEST_EXTRA_ARGS} --filter=bindings.sh
+  # Avoid running tests twice.
+  EXCLUDE_FROM_CHECK_ALL
+  )
 
 # FIXME: This logic can be removed once all buildbots have moved
 # debuginfo-test from clang/test to llvm/projects or monorepo.
