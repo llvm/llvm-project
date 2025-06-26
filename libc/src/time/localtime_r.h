@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_SRC_TIME_LOCALTIME_R_H
 #define LLVM_LIBC_SRC_TIME_LOCALTIME_R_H
 
-#include "src/time/time_utils.h"
+#include "hdr/types/time_t.h"
+#include "hdr/types/struct_tm.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

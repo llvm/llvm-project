@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/time/time_utils.h"
 #include "src/time/localtime_r.h"
 
 namespace LIBC_NAMESPACE_DECL {

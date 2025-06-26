@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/common.h"
 #include "src/time/localtime.h"
 #include "src/time/time_utils.h"
 
