@@ -30,9 +30,9 @@ NOINDEXFILES-NOT: .thinlto.bc
 
 # Check that index files are created with --thinlto-emit-index-files.
 RUN: ld.lld @l.rsp --thinlto-emit-index-files
-RUN: ls | FileCheck %s --check-prefix=INDEXFILES
-INDEXFILES: t1.bc.thinlto.bc
-INDEXFILES: t2.bc.thinlto.bc
+RUN: ls | sort | FileCheck %s --check-prefix=INDEXFILES
+INDEXFILES: {{^}}t1.bc.thinlto.bc{{$}}
+INDEXFILES: {{^}}t2.bc.thinlto.bc{{$}}
 
 #--- t1.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

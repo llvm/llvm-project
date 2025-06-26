@@ -24,9 +24,9 @@ RUN:   --lto-partitions=3
 
 # DTLTO temporary object files include the task number and a PID component. The
 # task number should incorporate the LTO partition number.
-RUN: ls | FileCheck %s
-CHECK: thin1.3.[[#]].native.o
-CHECK: thin2.4.[[#]].native.o
+RUN: ls | sort | FileCheck %s
+CHECK: {{^}}thin1.3.[[PID:[a-zA-Z0-9_]+]].native.o{{$}}
+CHECK: {{^}}thin2.4.[[PID]].native.o{{$}}
 
 #--- full.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

@@ -27,9 +27,9 @@ NOIMPORTSFILES-NOT: .imports
 
 # Check that imports files are created with --thinlto-emit-imports-files.
 RUN: ld.lld @l.rsp --thinlto-emit-imports-files
-RUN: ls | FileCheck %s --check-prefix=IMPORTSFILES
-IMPORTSFILES: t1.bc.imports
-IMPORTSFILES: t2.bc.imports
+RUN: ls | sort | FileCheck %s --check-prefix=IMPORTSFILES
+IMPORTSFILES: {{^}}t1.bc.imports{{$}}
+IMPORTSFILES: {{^}}t2.bc.imports{{$}}
 
 #--- t1.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

@@ -13,23 +13,28 @@
 // RUN:   --thinlto-remote-compiler-arg=--save-temps
 
 /// Check that the required output files have been created.
-// RUN: ls | count 10
-// RUN: ls | FileCheck %s
+// RUN: ls | sort | FileCheck %s
 
-/// Produced by the bitcode compilation.
-// CHECK-DAG: {{^}}dtlto.o{{$}}
+/// No files are expected before.
+// CHECK-NOT: {{.}}
 
 /// Linked ELF.
-// CHECK-DAG: {{^}}a.out{{$}}
+// CHECK: {{^}}a.out{{$}}
+
+/// Produced by the bitcode compilation.
+// CHECK-NEXT: {{^}}dtlto.o{{$}}
 
 /// --save-temps output for the backend compilation.
-// CHECK-DAG: {{^}}dtlto.s{{$}}
-// CHECK-DAG: {{^}}dtlto.s.0.preopt.bc{{$}}
-// CHECK-DAG: {{^}}dtlto.s.1.promote.bc{{$}}
-// CHECK-DAG: {{^}}dtlto.s.2.internalize.bc{{$}}
-// CHECK-DAG: {{^}}dtlto.s.3.import.bc{{$}}
-// CHECK-DAG: {{^}}dtlto.s.4.opt.bc{{$}}
-// CHECK-DAG: {{^}}dtlto.s.5.precodegen.bc{{$}}
-// CHECK-DAG: {{^}}dtlto.s.resolution.txt{{$}}
+// CHECK-NEXT: {{^}}dtlto.s{{$}}
+// CHECK-NEXT: {{^}}dtlto.s.0.preopt.bc{{$}}
+// CHECK-NEXT: {{^}}dtlto.s.1.promote.bc{{$}}
+// CHECK-NEXT: {{^}}dtlto.s.2.internalize.bc{{$}}
+// CHECK-NEXT: {{^}}dtlto.s.3.import.bc{{$}}
+// CHECK-NEXT: {{^}}dtlto.s.4.opt.bc{{$}}
+// CHECK-NEXT: {{^}}dtlto.s.5.precodegen.bc{{$}}
+// CHECK-NEXT: {{^}}dtlto.s.resolution.txt{{$}}
+
+/// No files are expected after.
+// CHECK-NOT: {{.}}
 
 int _start() { return 0; }
