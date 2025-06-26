@@ -89,6 +89,9 @@ define i8 @extractelement_bitcast_insert_extra_use_bitcast(<vscale x 2 x i32> %a
   ret i8 %r
 }
 
+; while it may be that the extract is out-of-bounds, any valid index
+; is going to yield %v (because the mask is all-zeros).
+
 define i32 @extractelement_shuffle_maybe_out_of_range(i32 %v) {
 ; CHECK-LABEL: @extractelement_shuffle_maybe_out_of_range(
 ; CHECK-NEXT:    ret i32 [[V:%.*]]
