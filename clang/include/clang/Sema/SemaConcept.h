@@ -287,11 +287,11 @@ protected:
 
 public:
   using NormalizedConstraint::getParameterMapping;
+  using NormalizedConstraint::getUsedTemplateParamList;
   using NormalizedConstraint::hasMatchingParameterMapping;
   using NormalizedConstraint::hasParameterMapping;
   using NormalizedConstraint::mappingOccurenceList;
   using NormalizedConstraint::updateParameterMapping;
-  using NormalizedConstraint::getUsedTemplateParamList;
 
   const NamedDecl *getConstraintDecl() const { return Atomic.ConstraintDecl; }
 
