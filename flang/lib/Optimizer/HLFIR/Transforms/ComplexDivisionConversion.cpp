@@ -14,38 +14,59 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include <optional>
 #include "llvm/Support/Debug.h"
+#include <optional>
 #define DEBUG_TYPE "complex-conversion"
 
 namespace hlfir {
 #define GEN_PASS_DEF_COMPLEXDIVISIONCONVERSION
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
-} 
+} // namespace hlfir
 
 static llvm::cl::opt<bool> EnableArithmeticBasedComplexDiv(
-    "enable-arithmetic-based-complex-div", llvm::cl::init(false), llvm::cl::Hidden,
+    "enable-arithmetic-based-complex-div", llvm::cl::init(false),
+    llvm::cl::Hidden,
     llvm::cl::desc("Enable calling of Arithmetic-based Complex Division."));
 
 namespace {
-class HlfirComplexDivisionConversion : public mlir::OpRewritePattern<fir::CallOp> {
+/// This rewrite pattern class performs a custom transformation on FIR
+/// 'fir.call' operations that invoke the '__divdc3' runtime function, which is
+/// typically used to perform double-precision complex division.
+///
+/// When the 'EnableArithmeticBasedComplexDiv' flag is enabled, this pattern
+/// matches calls to '__divdc3', extracts the real and imaginary components of
+/// the numerator and denominator, and replaces the function call with an
+/// explicit computation using MLIR's arithmetic operations.
+///
+/// Specifically, it replaces the call to '__divdc3(x0, y0, x1, y1)' —where
+/// (x0 + y0i) / (x1 + y1i) is the intended operation—with the mathematically
+/// equivalent expression:
+///     real_part = (x0*x1 + y0*y1) / (x1^2 + y1^2)
+///     imag_part = (y0*x1 - x0*y1) / (x1^2 + y1^2)
+/// The result is then reassembled into a 'complex<f64>' value using FIR's
+/// 'InsertValueOp' instructions.
+class HlfirComplexDivisionConversion
+    : public mlir::OpRewritePattern<fir::CallOp> {
   using OpRewritePattern::OpRewritePattern;
-  llvm::LogicalResult matchAndRewrite(fir::CallOp callOp,
-                                      mlir::PatternRewriter &rewriter) const override {
+  llvm::LogicalResult
+  matchAndRewrite(fir::CallOp callOp,
+                  mlir::PatternRewriter &rewriter) const override {
     if (!EnableArithmeticBasedComplexDiv) {
-      LLVM_DEBUG(llvm::dbgs() << "Arithmetic-based Complex Division support is currently disabled \n");
+      LLVM_DEBUG(llvm::dbgs() << "Arithmetic-based Complex Division support is "
+                                 "currently disabled \n");
       return mlir::failure();
     }
     fir::FirOpBuilder builder{rewriter, callOp.getOperation()};
     const mlir::Location &loc = callOp.getLoc();
     if (!callOp.getCallee()) {
-      LLVM_DEBUG(llvm::dbgs() << "No callee found for CallOp at " << loc << "\n");
+      LLVM_DEBUG(llvm::dbgs()
+                 << "No callee found for CallOp at " << loc << "\n");
       return mlir::failure();
-    } 
+    }
 
     const mlir::SymbolRefAttr &callee = *callOp.getCallee();
     const auto &fctName = callee.getRootReference().getValue();
-    if (fctName!= "__divdc3")
+    if (fctName != "__divdc3")
       return mlir::failure();
 
     const mlir::Type &eleTy = callOp.getOperands()[0].getType();
@@ -57,48 +78,70 @@ class HlfirComplexDivisionConversion : public mlir::OpRewritePattern<fir::CallOp
     auto y1 = callOp.getOperands()[3]; // imaginary part of denominator : y1
 
     // standard complex division formula:
-    // (x0 + y0i)/(x1 + y1i) = ((x0*x1 + y0*y1)/(x1² + y1²)) + ((y0*x1 - x0*y1)/(x1² + y1²))i
-    auto x0x1 = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x0, x1); // x0 * x1
-    auto x1Squared = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x1, x1); // x1^2
-    auto y0x1 = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y0, x1); // y0 * x1
-    auto x0y1 = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x0, y1); // x0 * y1
-    auto y0y1 = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y0, y1); // y0 * y1
-    auto y1Squared = rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y1, y1); // y1^2
+    // (x0 + y0i)/(x1 + y1i) = ((x0*x1 + y0*y1)/(x1^2 + y1^2)) + ((y0*x1 -
+    // x0*y1)/(x1^2 + y1^2))i
+    auto x0x1 =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x0, x1); // x0 * x1
+    auto x1Squared =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x1, x1); // x1^2
+    auto y0x1 =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y0, x1); // y0 * x1
+    auto x0y1 =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x0, y1); // x0 * y1
+    auto y0y1 =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y0, y1); // y0 * y1
+    auto y1Squared =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y1, y1); // y1^2
 
-    auto denom = rewriter.create<mlir::arith::AddFOp>(loc, eleTy, x1Squared, y1Squared); // x1^2 + y1^2
-    auto realNumerator = rewriter.create<mlir::arith::AddFOp>(loc, eleTy, x0x1, y0y1); // x0*x1 + y0*y1
-    auto imagNumerator = rewriter.create<mlir::arith::SubFOp>(loc, eleTy, y0x1, x0y1); // y0*x1 - x0*y1
+    auto denom = rewriter.create<mlir::arith::AddFOp>(loc, eleTy, x1Squared,
+                                                      y1Squared); // x1^2 + y1^2
+    auto realNumerator = rewriter.create<mlir::arith::AddFOp>(
+        loc, eleTy, x0x1, y0y1); // x0*x1 + y0*y1
+    auto imagNumerator = rewriter.create<mlir::arith::SubFOp>(
+        loc, eleTy, y0x1, x0y1); // y0*x1 - x0*y1
 
     // compute final real and imaginary parts
-    auto realResult = rewriter.create<mlir::arith::DivFOp>(loc, eleTy, realNumerator, denom);
-    auto imagResult = rewriter.create<mlir::arith::DivFOp>(loc, eleTy, imagNumerator, denom);
+    auto realResult =
+        rewriter.create<mlir::arith::DivFOp>(loc, eleTy, realNumerator, denom);
+    auto imagResult =
+        rewriter.create<mlir::arith::DivFOp>(loc, eleTy, imagNumerator, denom);
 
     // construct the result complex number
     auto undefComplex = rewriter.create<fir::UndefOp>(loc, resTy);
-    auto index0 = builder.getArrayAttr({builder.getI32IntegerAttr(0)}); // index for real part
-    auto index1 = builder.getArrayAttr({builder.getI32IntegerAttr(1)}); // index for imag part
-    auto complexWithReal = rewriter.create<fir::InsertValueOp>(loc, resTy, undefComplex, realResult, index0); // Insert real part
-    auto resComplex = rewriter.create<fir::InsertValueOp>(loc, resTy, complexWithReal, imagResult, index1); // Insert imaginary part
+    auto index0 = builder.getArrayAttr(
+        {builder.getI32IntegerAttr(0)}); // index for real part
+    auto index1 = builder.getArrayAttr(
+        {builder.getI32IntegerAttr(1)}); // index for imag part
+    auto complexWithReal = rewriter.create<fir::InsertValueOp>(
+        loc, resTy, undefComplex, realResult, index0); // Insert real part
+    auto resComplex = rewriter.create<fir::InsertValueOp>(
+        loc, resTy, complexWithReal, imagResult,
+        index1); // Insert imaginary part
     rewriter.replaceOp(callOp, resComplex.getResult());
     return mlir::success();
   }
 };
-class ComplexDivisionConversion : public hlfir::impl::ComplexDivisionConversionBase<ComplexDivisionConversion> {
+class ComplexDivisionConversion
+    : public hlfir::impl::ComplexDivisionConversionBase<
+          ComplexDivisionConversion> {
 public:
   void runOnOperation() override {
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
     patterns.insert<HlfirComplexDivisionConversion>(context);
-    
-    mlir::GreedyRewriteConfig config;
-    config.setRegionSimplificationLevel(mlir::GreedySimplifyRegionLevel::Disabled);
 
-    if (mlir::failed(mlir::applyPatternsGreedily(module, std::move(patterns), config)))
-    {
-      mlir::emitError(mlir::UnknownLoc::get(context), "failure in Arithmetic-based Complex Division HLFIR intrinsic lowering");
+    mlir::GreedyRewriteConfig config;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
+
+    if (mlir::failed(
+            mlir::applyPatternsGreedily(module, std::move(patterns), config))) {
+      mlir::emitError(mlir::UnknownLoc::get(context),
+                      "failure in Arithmetic-based Complex Division HLFIR "
+                      "intrinsic lowering");
       signalPassFailure();
     }
   }
 };
-} 
+} // namespace
