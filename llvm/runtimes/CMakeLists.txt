@@ -510,6 +510,13 @@ if(build_runtimes)
   endif()
 
   # TODO: We need to consider passing it as '-DRUNTIMES_x86_64_LLVM_ENABLE_RUNTIMES'.
+  if("libclc" IN_LIST LLVM_ENABLE_RUNTIMES)
+    foreach(dep clang llvm-as llvm-link opt)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
+  endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     if (${LLVM_TOOL_FLANG_BUILD})
       message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
