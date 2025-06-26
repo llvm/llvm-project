@@ -27,7 +27,7 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD || SANITIZER_AIX
 // The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
 // that, it was never implemented.  So just define it to zero.
 #undef  MAP_NORESERVE
