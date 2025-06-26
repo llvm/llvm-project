@@ -5,7 +5,7 @@
 //
 // RUN: Z3_SOLVER_RESULTS="SAT,SAT,SAT,SAT,UNDEF" \
 // RUN: LD_PRELOAD="%t/MockZ3_solver_check.so" \
-// RUN: %clang_cc1 -analyze -analyzer-constraints=z3 -setup-static-analyzer \
+// RUN: %clang_analyze_cc1 -analyzer-constraints=z3 -setup-static-analyzer \
 // RUN:   -analyzer-checker=core %s -verify
 //
 // REQUIRES: z3, asserts, shell, system-linux
