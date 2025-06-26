@@ -730,7 +730,8 @@ static bool buildVectorSupportsSourceMods(const SDNode *N) {
   if (N->getValueType(0) != MVT::v2f32)
     return true;
 
-  if (N->getOperand(0) != ISD::SELECT || N->getOperand(1) != ISD::SELECT)
+  if (N->getOperand(0)->getOpcode() != ISD::SELECT ||
+      N->getOperand(1)->getOpcode() != ISD::SELECT)
     return true;
 
   return false;
