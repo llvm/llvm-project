@@ -1816,7 +1816,7 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, round_mode, vl)
     // Masked:   (passthru, op0, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
+    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -2013,7 +2013,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 }
 
 // Zvfbfmin - Vector convert BF16 to FP32
-let Log2LMUL = [-2, -1, 0, 1, 2] in
+let RequiredFeatures = ["zvfbfmin"], Log2LMUL = [-2, -1, 0, 1, 2] in
 def vfwcvtbf16_f_f_v : RVVConvBuiltin<"Fw", "Fwv", "y", "vfwcvtbf16_f">;
 
 let ManualCodegen = [{
@@ -2021,7 +2021,7 @@ let ManualCodegen = [{
     // LLVM intrinsic
     // Unmasked: (passthru, op0, frm, vl)
     // Masked:   (passthru, op0, mask, frm, vl, policy)
-    SmallVector<llvm::Value*, 7> Operands;
+    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -2121,7 +2121,8 @@ let ManualCodegen = [{
     }
 
     // Zvfbfmin - Vector convert FP32 to BF16
-    let Log2LMUL = [-2, -1, 0, 1, 2],
+    let RequiredFeatures = ["zvfbfmin"],
+        Log2LMUL = [-2, -1, 0, 1, 2],
         OverloadedName = "vfncvtbf16_f" in
     defm : RVVConvBuiltinSet<"vfncvtbf16_f_f_w", "y", [["v", "vFwu"]]>;
   }
@@ -2225,7 +2226,7 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, op1, round_mode, vl)
     // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
+    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
