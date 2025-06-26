@@ -3057,7 +3057,7 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
     // Update afterIP to get the correct insertion point after
     // tiling.
     llvm::BasicBlock *AfterBB = NewLoops.front()->getAfter();
-    llvm::BasicBlock  *AfterAfterBB = AfterBB->getSingleSuccessor();
+    llvm::BasicBlock *AfterAfterBB = AfterBB->getSingleSuccessor();
     afterIP = {AfterAfterBB, AfterAfterBB->begin()};
     NewTopLoopInfo = NewLoops[0];
 
