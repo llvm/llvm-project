@@ -27,13 +27,7 @@ DWARFCFIState::getCurrentUnwindRow() const {
 }
 
 void DWARFCFIState::update(const MCCFIInstruction &Directive) {
-  auto MaybeCFIP = convert(Directive);
-  if (!MaybeCFIP) {
-    Context->reportError(
-        Directive.getLoc(),
-        "couldn't apply this directive to the unwinding information state");
-  }
-  auto CFIP = *MaybeCFIP;
+  auto CFIP = convert(Directive);
 
   auto MaybeCurrentRow = getCurrentUnwindRow();
   dwarf::UnwindRow Row = MaybeCurrentRow.has_value()
@@ -53,8 +47,7 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
   Table.push_back(Row);
 }
 
-std::optional<dwarf::CFIProgram>
-DWARFCFIState::convert(MCCFIInstruction Directive) {
+dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
   auto CFIP = dwarf::CFIProgram(
       /* CodeAlignmentFactor */ 1, /* DataAlignmentFactor */ 1,
       Context->getTargetTriple().getArch());

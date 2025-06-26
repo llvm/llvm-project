@@ -34,7 +34,7 @@ private:
   MCContext *Context;
   dwarf::UnwindTable::RowContainer Table;
 
-  std::optional<dwarf::CFIProgram> convert(MCCFIInstruction Directive);
+  dwarf::CFIProgram convert(MCCFIInstruction Directive);
 };
 
 } // namespace llvm
