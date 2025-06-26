@@ -9,10 +9,10 @@
 # The Python FFI interface is broken on AIX: https://bugs.python.org/issue38628.
 # XFAIL: target={{.*-aix.*}}
 
-# AArch64 and Hexagon have known test failures that need to be addressed.
+# Hexagon has known test failures that need to be addressed.
 # SystemZ has broken Python/FFI interface:
 # https://reviews.llvm.org/D52840#1265716
-# XFAIL: target={{(aarch64|hexagon|s390x)-.*}}
+# XFAIL: target={{(hexagon|s390x)-.*}}
 # python SEGVs on Linux/sparc64 when loading libclang.so.  Seems to be an FFI
 # issue, too.
 # XFAIL: target={{sparc.*-.*-linux.*}}
