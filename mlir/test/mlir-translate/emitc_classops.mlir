@@ -1,6 +1,6 @@
 // RUN: mlir-translate --mlir-to-cpp %s | FileCheck %s
 
-emitc.class @modelClass {
+emitc.class final @modelClass {
     emitc.field @fieldName0 : !emitc.array<1xf32> 
     emitc.field @fieldName1 : !emitc.array<1xf32> 
     emitc.func @execute() {
@@ -12,7 +12,7 @@ emitc.class @modelClass {
     }
 }
 
-// CHECK: class modelClass {
+// CHECK: class modelClass final {
 // CHECK-NEXT: public:
 // CHECK-NEXT:  float[1] fieldName0;
 // CHECK-NEXT:  float[1] fieldName1;
