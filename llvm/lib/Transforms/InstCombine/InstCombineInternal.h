@@ -436,8 +436,11 @@ private:
   Value *foldBooleanAndOr(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
                           bool IsLogical);
 
+  Value *foldDisjointOr(Value *LHS, Value *RHS, Instruction &I);
+
   Value *reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y, Instruction &I,
-                                 bool IsAnd, bool RHSIsLogical);
+                                 bool IsAnd, bool RHSIsLogical,
+                                 bool RHSIsDisjoint = false);
 
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
