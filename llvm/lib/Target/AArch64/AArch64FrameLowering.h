@@ -19,6 +19,11 @@
 
 namespace llvm {
 
+struct SVEStackSizes {
+  int64_t ZPRStackSize{0};
+  int64_t PPRStackSize{0};
+};
+
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()
@@ -145,10 +150,8 @@ private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       uint64_t StackBumpBytes) const;
 
-  int64_t estimateSVEStackObjectOffsets(MachineFrameInfo &MF) const;
-  int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
-                                      int &MinCSFrameIndex,
-                                      int &MaxCSFrameIndex) const;
+  SVEStackSizes estimateSVEStackObjectOffsets(MachineFunction &MF) const;
+  SVEStackSizes assignSVEStackObjectOffsets(MachineFunction &MF) const;
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
                                                 uint64_t StackBumpBytes) const;
   void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
@@ -164,6 +167,7 @@ private:
                           int64_t RealignmentPadding, StackOffset AllocSize,
                           bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
                           StackOffset InitialOffset, bool FollowupAllocs) const;
+
   /// Make a determination whether a Hazard slot is used and create it if
   /// needed.
   void determineStackHazardSlot(MachineFunction &MF,

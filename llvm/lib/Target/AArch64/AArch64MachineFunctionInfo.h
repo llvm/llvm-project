@@ -74,13 +74,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Amount of stack frame size, not including callee-saved registers.
   uint64_t LocalStackSize = 0;
 
-  /// The start and end frame indices for the SVE callee saves.
-  int MinSVECSFrameIndex = 0;
-  int MaxSVECSFrameIndex = 0;
-
   /// Amount of stack frame size used for saving callee-saved registers.
   unsigned CalleeSavedStackSize = 0;
-  unsigned SVECalleeSavedStackSize = 0;
+  unsigned ZPRCalleeSavedStackSize = 0;
+  unsigned PPRCalleeSavedStackSize = 0;
   bool HasCalleeSavedStackSize = false;
 
   /// Number of TLS accesses using the special (combinable)
@@ -136,9 +133,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SVE stack size (for predicates and data vectors) are maintained here
   /// rather than in FrameInfo, as the placement and Stack IDs are target
   /// specific.
-  uint64_t StackSizeSVE = 0;
+  uint64_t StackSizeZPR = 0;
+  uint64_t StackSizePPR = 0;
 
-  /// HasCalculatedStackSizeSVE indicates whether StackSizeSVE is valid.
+  /// HasCalculatedStackSizeSVE indicates whether StackSizeZPR/PPR is valid.
   bool HasCalculatedStackSizeSVE = false;
 
   /// Has a value when it is known whether or not the function uses a
@@ -299,14 +297,20 @@ public:
     TailCallReservedStack = bytes;
   }
 
-  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
-
-  void setStackSizeSVE(uint64_t S) {
+  void setStackSizeZPR(uint64_t S) {
     HasCalculatedStackSizeSVE = true;
-    StackSizeSVE = S;
+    StackSizeZPR = S;
   }
 
-  uint64_t getStackSizeSVE() const { return StackSizeSVE; }
+  void setStackSizePPR(uint64_t S) {
+    HasCalculatedStackSizeSVE = true;
+    StackSizePPR = S;
+  }
+
+  uint64_t getStackSizeZPR() const { return StackSizeZPR; }
+  uint64_t getStackSizePPR() const { return StackSizePPR; }
+
+  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
@@ -398,20 +402,25 @@ public:
   }
 
   // Saves the CalleeSavedStackSize for SVE vectors in 'scalable bytes'
-  void setSVECalleeSavedStackSize(unsigned Size) {
-    SVECalleeSavedStackSize = Size;
+  void setZPRCalleeSavedStackSize(unsigned Size) {
+    ZPRCalleeSavedStackSize = Size;
   }
+  unsigned getZPRCalleeSavedStackSize() const {
+    return ZPRCalleeSavedStackSize;
+  }
+
+  // Saves the CalleeSavedStackSize for SVE predicate vectors in 'scalable
+  // bytes'
+  void setPPRCalleeSavedStackSize(unsigned Size) {
+    PPRCalleeSavedStackSize = Size;
+  }
+  unsigned getPPRCalleeSavedStackSize() const {
+    return PPRCalleeSavedStackSize;
+  }
+
   unsigned getSVECalleeSavedStackSize() const {
-    return SVECalleeSavedStackSize;
+    return PPRCalleeSavedStackSize + ZPRCalleeSavedStackSize;
   }
-
-  void setMinMaxSVECSFrameIndex(int Min, int Max) {
-    MinSVECSFrameIndex = Min;
-    MaxSVECSFrameIndex = Max;
-  }
-
-  int getMinSVECSFrameIndex() const { return MinSVECSFrameIndex; }
-  int getMaxSVECSFrameIndex() const { return MaxSVECSFrameIndex; }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {
