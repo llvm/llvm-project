@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCMCAsmInfo.h"
-#include "PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -99,6 +98,66 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {PPC::S_U, "u"},
 };
 
+static std::optional<int64_t> evaluateAsInt64(uint16_t specifier,
+                                              int64_t Value) {
+  switch (specifier) {
+  case PPC::S_LO:
+    return Value & 0xffff;
+  case PPC::S_HI:
+    return (Value >> 16) & 0xffff;
+  case PPC::S_HA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case PPC::S_HIGH:
+    return (Value >> 16) & 0xffff;
+  case PPC::S_HIGHA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case PPC::S_HIGHER:
+    return (Value >> 32) & 0xffff;
+  case PPC::S_HIGHERA:
+    return ((Value + 0x8000) >> 32) & 0xffff;
+  case PPC::S_HIGHEST:
+    return (Value >> 48) & 0xffff;
+  case PPC::S_HIGHESTA:
+    return ((Value + 0x8000) >> 48) & 0xffff;
+  default:
+    return {};
+  }
+}
+
+bool PPC::evaluateAsConstant(const MCSpecifierExpr &Expr, int64_t &Res) {
+  MCValue Value;
+
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Value, nullptr))
+    return false;
+
+  if (!Value.isAbsolute())
+    return false;
+  auto Tmp = evaluateAsInt64(Expr.getSpecifier(), Value.getConstant());
+  if (!Tmp)
+    return false;
+  Res = *Tmp;
+  return true;
+}
+
+static bool evaluateAsRelocatable(const MCSpecifierExpr &Expr, MCValue &Res,
+                                  const MCAssembler *Asm) {
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  // The signedness of the result is dependent on the instruction operand. E.g.
+  // in addis 3,3,65535@l, 65535@l is signed. In the absence of information at
+  // parse time (!Asm), disable the folding.
+  std::optional<int64_t> MaybeInt =
+      evaluateAsInt64(Expr.getSpecifier(), Res.getConstant());
+  if (Res.isAbsolute() && MaybeInt) {
+    Res = MCValue::get(*MaybeInt);
+  } else {
+    Res.setSpecifier(Expr.getSpecifier());
+  }
+
+  return true;
+}
+
 PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   // FIXME: This is not always needed. For example, it is not needed in the
   // v2 abi.
@@ -146,7 +205,7 @@ void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
 bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
                                                 MCValue &Res,
                                                 const MCAssembler *Asm) const {
-  return PPC::evaluateAsRelocatableImpl(Expr, Res, Asm);
+  return evaluateAsRelocatable(Expr, Res, Asm);
 }
 
 void PPCXCOFFMCAsmInfo::anchor() {}
@@ -181,5 +240,5 @@ void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
 
 bool PPCXCOFFMCAsmInfo::evaluateAsRelocatableImpl(
     const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return PPC::evaluateAsRelocatableImpl(Expr, Res, Asm);
+  return evaluateAsRelocatable(Expr, Res, Asm);
 }
