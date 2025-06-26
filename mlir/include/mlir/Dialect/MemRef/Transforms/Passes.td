@@ -182,6 +182,19 @@ def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
   ];
 }
 
+def InferStaticShapesPass : Pass<"infer-static-shapes"> {
+  let summary = "Resolve memref.dim of result values";
+  let description = [{
+    The pass resolves memref.dim of result of operations that
+    implement the `InferShapedTypeOpInterface` or
+    `ReifyRankedShapedTypeOpInterface` in terms of shapes of its
+    operands.
+  }];
+  let dependentDialects = [
+    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+  ];
+}
+
 def ExpandStridedMetadataPass : Pass<"expand-strided-metadata"> {
   let summary = "Expand memref operations into easier to analyze constructs";
   let description = [{

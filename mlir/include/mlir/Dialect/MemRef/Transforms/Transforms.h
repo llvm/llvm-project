@@ -57,6 +57,10 @@ void populateResolveRankedShapedTypeResultDimsPatterns(
 /// terms of shapes of its input operands.
 void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
 
+/// Appends patterns that allow making ReifyRankedShapedTypeOpInterface ops
+/// shapes more static.
+void populateReifyToInferStaticShapePatterns(RewritePatternSet &patterns);
+
 /// Appends patterns for expanding memref operations that modify the metadata
 /// (sizes, offset, strides) of a memref into easier to analyze constructs.
 void populateExpandStridedMetadataPatterns(RewritePatternSet &patterns);

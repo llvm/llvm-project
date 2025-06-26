@@ -20,13 +20,22 @@
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
+
+#define DEBUG_TYPE "resolve-shaped-type"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 namespace mlir {
 namespace memref {
 #define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMSPASS
 #define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMSPASS
+#define GEN_PASS_DEF_INFERSTATICSHAPESPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -105,6 +114,99 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
   }
 };
 
+struct ReifyToInferStaticShapePattern
+    : public OpInterfaceRewritePattern<ReifyRankedShapedTypeOpInterface> {
+  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+
+  LogicalResult matchAndRewrite(ReifyRankedShapedTypeOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    LLVM_DEBUG(
+        { DBGS() << "ReifyToInferStaticShapePattern on " << op << "\n"; });
+
+    bool rewriteToMoreStatic = false;
+    ReifiedRankedShapedTypeDims reifiedResultShapes;
+    if (failed(reifyResultShapes(rewriter, op, reifiedResultShapes)) ||
+        reifiedResultShapes.empty()) {
+      LLVM_DEBUG({ DBGS() << "reifyResultShapes failed\n"; });
+      return failure();
+    }
+
+    SmallVector<Type> newTypes;
+    for (auto [t, reifiedShape] :
+         llvm::zip(op->getResultTypes(), reifiedResultShapes)) {
+      ShapedType st = dyn_cast<ShapedType>(t);
+      if (!st)
+        continue;
+
+      SmallVector<int64_t> newShape;
+      for (const auto &[s, ofr] :
+           llvm::zip_equal(st.getShape(), reifiedShape)) {
+        std::optional<int64_t> maybeCst = getConstantIntValue(ofr);
+        // Reification does not add static information, just use existing shape.
+        if (!maybeCst.has_value()) {
+          newShape.push_back(s);
+          continue;
+        }
+        int64_t cst = *maybeCst;
+        assert((ShapedType::isDynamic(s) || s == cst) &&
+               "constants must agree!");
+        newShape.push_back(cst);
+      }
+
+      if (newShape == st.getShape()) {
+        newTypes.push_back(t);
+        continue;
+      }
+
+      rewriteToMoreStatic = true;
+      Type newType = st.cloneWith(newShape, st.getElementType());
+      newTypes.push_back(newType);
+    }
+
+    LLVM_DEBUG({
+      DBGS() << "--oldTypes: " << llvm::interleaved_array(op->getResultTypes())
+             << " \n";
+      DBGS() << "--newTypes: " << llvm::interleaved_array(newTypes) << " \n";
+    });
+    if (!rewriteToMoreStatic) {
+      LLVM_DEBUG({ DBGS() << "not more static\n"; });
+      return failure();
+    }
+
+    // We now have newTypes that need to be turned to tensor::CastOp.
+    Location loc = op->getLoc();
+    SmallVector<Value> newResults;
+    Operation *newOp = rewriter.clone(*op);
+    for (auto [nt, oldVal] : llvm::zip(newTypes, op->getResults())) {
+      Type ot = oldVal.getType();
+      OpResult newResult = newOp->getResult(oldVal.getResultNumber());
+      if (ot == nt) {
+        newResults.push_back(newResult);
+        continue;
+      }
+      newResult.setType(nt);
+      if (isa<RankedTensorType>(nt)) {
+        newResults.push_back(
+            rewriter.create<tensor::CastOp>(loc, ot, newResult));
+      } else if (isa<MemRefType>(nt)) {
+        newResults.push_back(
+            rewriter.create<memref::CastOp>(loc, ot, newResult));
+      } else {
+        llvm_unreachable("expected RankedTensorType or MemRefType");
+      }
+    }
+
+    LLVM_DEBUG({
+      op->getParentOp()->dump();
+      DBGS() << "replace op " << *op << "\n";
+      DBGS() << "with newResults " << llvm::interleaved_array(newResults)
+             << "\n\n\n\n";
+    });
+    rewriter.replaceAllOpUsesWith(op, newResults);
+    return success();
+  }
+};
+
 /// Fold dim ops of iter_args to dim ops of their respective init args. E.g.:
 ///
 /// ```
@@ -175,6 +277,11 @@ struct ResolveShapedTypeResultDimsPass final
   void runOnOperation() override;
 };
 
+struct InferStaticShapesPass final
+    : public memref::impl::InferStaticShapesPassBase<InferStaticShapesPass> {
+  void runOnOperation() override;
+};
+
 } // namespace
 
 void memref::populateResolveRankedShapedTypeResultDimsPatterns(
@@ -192,6 +299,11 @@ void memref::populateResolveShapedTypeResultDimsPatterns(
       patterns.getContext());
 }
 
+void memref::populateReifyToInferStaticShapePatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ReifyToInferStaticShapePattern>(patterns.getContext());
+}
+
 void ResolveRankedShapeTypeResultDimsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
@@ -205,4 +317,18 @@ void ResolveShapedTypeResultDimsPass::runOnOperation() {
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
+}
+
+void InferStaticShapesPass::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+  patterns.add<ReifyToInferStaticShapePattern>(&getContext());
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+
+  SmallVector<Operation *> opsToSimplify;
+  getOperation()->walk([&](ReifyRankedShapedTypeOpInterface op) {
+    opsToSimplify.push_back(op);
+  });
+  (void)applyOpPatternsGreedily(opsToSimplify, frozenPatterns,
+                                GreedyRewriteConfig().setStrictness(
+                                    GreedyRewriteStrictness::ExistingOps));
 }
