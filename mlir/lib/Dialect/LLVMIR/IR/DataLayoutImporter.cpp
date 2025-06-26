@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-//#include "DataLayoutImporter.h"
-//#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Builders.h"
