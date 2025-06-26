@@ -1,28 +1,28 @@
 # REQUIRES: x86
 
-# Test that DTLTO options are a no-op if no thinLTO is performed.
+## Check that DTLTO options are a no-op if no thinLTO is performed.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
 RUN: opt t1.ll -o t1.o -O2
 RUN: opt t2.ll -o t2.o -O2
 
-# Common command-line arguments. Note that mock.py does not do any compilation;
-# instead, it simply writes the contents of the object files supplied on the
-# command line into the output object files in job order.
+## Common command-line arguments. Note that mock.py does not do any compilation;
+## instead, it simply writes the contents of the object files supplied on the
+## command line into the output object files in job order.
 RUN: echo "t1.o t2.o \
 RUN:   --thinlto-distributor=%python \
 RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
 RUN:   --thinlto-distributor-arg=no-exist1.o \
 RUN:   --thinlto-distributor-arg=no-exist2.o" > l.rsp
 
-# Check linking succeeds when all input files are Full LTO.
+## Check linking succeeds when all input files are Full LTO.
 RUN: ld.lld @l.rsp
 
 RUN: llc -filetype=obj t1.ll -o t1.o
 RUN: llc -filetype=obj t2.ll -o t2.o
 
-# Check linking succeeds when all input files are relocatable files.
+## Check linking succeeds when all input files are relocatable files.
 RUN: ld.lld @l.rsp
 
 #--- t1.ll

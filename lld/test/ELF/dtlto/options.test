@@ -1,16 +1,16 @@
 # REQUIRES: x86
 
-# Test that DTLTO options are passed correctly to the distributor and
-# remote compiler.
+## Test that DTLTO options are passed correctly to the distributor and
+## remote compiler.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
 RUN: opt -thinlto-bc foo.ll -o foo.o
 
-# Note: validate.py does not perform any compilation. Instead, it validates the
-# received JSON, pretty-prints the JSON and the supplied arguments, and then
-# exits with an error. This allows FileCheck directives to verify the
-# distributor inputs.
+## Note: validate.py does not perform any compilation. Instead, it validates the
+## received JSON, pretty-prints the JSON and the supplied arguments, and then
+## exits with an error. This allows FileCheck directives to verify the
+## distributor inputs.
 RUN: not ld.lld foo.o \
 RUN:   -o my.elf \
 RUN:   --thinlto-distributor=%python \

@@ -1,19 +1,19 @@
 # REQUIRES: x86
 
-# Test that DTLTO works with more than one LTO partition.
+## Test that DTLTO works with more than one LTO partition.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-# Compile bitcode.
+## Compile bitcode.
 RUN: llvm-as -o full.bc full.ll
 RUN: opt -thinlto-bc thin1.ll -o thin1.bc
 RUN: opt -thinlto-bc thin2.ll -o thin2.bc
 
-# Generate object files for mock.py to return.
+## Generate object files for mock.py to return.
 RUN: llc thin1.ll --filetype=obj -o thin1.o --relocation-model=pic
 RUN: llc thin2.ll --filetype=obj -o thin2.o --relocation-model=pic
 
-# Link with 3 LTO partitions.
+## Link with 3 LTO partitions.
 RUN: ld.lld full.bc thin1.bc thin2.bc \
 RUN:   --thinlto-distributor=%python \
 RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
@@ -22,8 +22,8 @@ RUN:   --thinlto-distributor-arg=thin2.o \
 RUN:   --save-temps \
 RUN:   --lto-partitions=3
 
-# DTLTO temporary object files include the task number and a PID component. The
-# task number should incorporate the LTO partition number.
+## DTLTO temporary object files include the task number and a PID component. The
+## task number should incorporate the LTO partition number.
 RUN: ls | sort | FileCheck %s
 CHECK: {{^}}thin1.3.[[PID:[a-zA-Z0-9_]+]].native.o{{$}}
 CHECK: {{^}}thin2.4.[[PID]].native.o{{$}}

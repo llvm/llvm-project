@@ -1,30 +1,30 @@
 # REQUIRES: x86
 
-# Check that DTLTO responds to --save-temps.
+## Check that DTLTO responds to --save-temps.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-# Generate ThinLTO bitcode files.
+## Generate ThinLTO bitcode.
 RUN: opt -thinlto-bc t1.ll -o t1.bc -O2
 
-# Generate object files for mock.py to return.
+## Generate object files for mock.py to return.
 RUN: llc t1.ll --filetype=obj -o t1.o --relocation-model=pic
 
-# Use a response file for common command-line arguments.
-# Note that mock.py does not perform any compilation; instead, it simply writes
-# the contents of the object files supplied on the command line into the output
-# object files in job order.
+## Use a response file for common command-line arguments.
+## Note that mock.py does not perform any compilation; instead, it simply writes
+## the contents of the object files supplied on the command line into the output
+## object files in job order.
 RUN: echo "t1.bc -o my.elf \
 RUN:   --thinlto-distributor=%python \
 RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
 RUN:   --thinlto-distributor-arg=t1.o" > l.rsp
 
-# Check that DTLTO temporary files are removed by default.
+## Check that DTLTO temporary files are removed by default.
 RUN: ld.lld @l.rsp
 RUN: ls | FileCheck %s --check-prefix=REMOVED
 REMOVED-NOT: .json
 
-# Check that DTLTO temporary files are retained with --save-temps.
+## Check that DTLTO temporary files are retained with --save-temps.
 RUN: ld.lld @l.rsp --save-temps
 RUN: ls | FileCheck %s --check-prefix=RETAINED
 RETAINED: my.[[#]].dist-file.json
