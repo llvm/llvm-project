@@ -87,57 +87,9 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-static const EnumEntry<SamplerFilter> SamplerFilterNames[] = {
-    {"MinMagMipPoint", SamplerFilter::MinMagMipPoint},
-    {"MinMagPointMipLinear", SamplerFilter::MinMagPointMipLinear},
-    {"MinPointMagLinearMipPoint", SamplerFilter::MinPointMagLinearMipPoint},
-    {"MinPointMagMipLinear", SamplerFilter::MinPointMagMipLinear},
-    {"MinLinearMagMipPoint", SamplerFilter::MinLinearMagMipPoint},
-    {"MinLinearMagPointMipLinear", SamplerFilter::MinLinearMagPointMipLinear},
-    {"MinMagLinearMipPoint", SamplerFilter::MinMagLinearMipPoint},
-    {"MinMagMipLinear", SamplerFilter::MinMagMipLinear},
-    {"Anisotropic", SamplerFilter::Anisotropic},
-    {"ComparisonMinMagMipPoint", SamplerFilter::ComparisonMinMagMipPoint},
-    {"ComparisonMinMagPointMipLinear",
-     SamplerFilter::ComparisonMinMagPointMipLinear},
-    {"ComparisonMinPointMagLinearMipPoint",
-     SamplerFilter::ComparisonMinPointMagLinearMipPoint},
-    {"ComparisonMinPointMagMipLinear",
-     SamplerFilter::ComparisonMinPointMagMipLinear},
-    {"ComparisonMinLinearMagMipPoint",
-     SamplerFilter::ComparisonMinLinearMagMipPoint},
-    {"ComparisonMinLinearMagPointMipLinear",
-     SamplerFilter::ComparisonMinLinearMagPointMipLinear},
-    {"ComparisonMinMagLinearMipPoint",
-     SamplerFilter::ComparisonMinMagLinearMipPoint},
-    {"ComparisonMinMagMipLinear", SamplerFilter::ComparisonMinMagMipLinear},
-    {"ComparisonAnisotropic", SamplerFilter::ComparisonAnisotropic},
-    {"MinimumMinMagMipPoint", SamplerFilter::MinimumMinMagMipPoint},
-    {"MinimumMinMagPointMipLinear", SamplerFilter::MinimumMinMagPointMipLinear},
-    {"MinimumMinPointMagLinearMipPoint",
-     SamplerFilter::MinimumMinPointMagLinearMipPoint},
-    {"MinimumMinPointMagMipLinear", SamplerFilter::MinimumMinPointMagMipLinear},
-    {"MinimumMinLinearMagMipPoint", SamplerFilter::MinimumMinLinearMagMipPoint},
-    {"MinimumMinLinearMagPointMipLinear",
-     SamplerFilter::MinimumMinLinearMagPointMipLinear},
-    {"MinimumMinMagLinearMipPoint", SamplerFilter::MinimumMinMagLinearMipPoint},
-    {"MinimumMinMagMipLinear", SamplerFilter::MinimumMinMagMipLinear},
-    {"MinimumAnisotropic", SamplerFilter::MinimumAnisotropic},
-    {"MaximumMinMagMipPoint", SamplerFilter::MaximumMinMagMipPoint},
-    {"MaximumMinMagPointMipLinear", SamplerFilter::MaximumMinMagPointMipLinear},
-    {"MaximumMinPointMagLinearMipPoint",
-     SamplerFilter::MaximumMinPointMagLinearMipPoint},
-    {"MaximumMinPointMagMipLinear", SamplerFilter::MaximumMinPointMagMipLinear},
-    {"MaximumMinLinearMagMipPoint", SamplerFilter::MaximumMinLinearMagMipPoint},
-    {"MaximumMinLinearMagPointMipLinear",
-     SamplerFilter::MaximumMinLinearMagPointMipLinear},
-    {"MaximumMinMagLinearMipPoint", SamplerFilter::MaximumMinMagLinearMipPoint},
-    {"MaximumMinMagMipLinear", SamplerFilter::MaximumMinMagMipLinear},
-    {"MaximumAnisotropic", SamplerFilter::MaximumAnisotropic},
-};
-
-static raw_ostream &operator<<(raw_ostream &OS, const SamplerFilter &Filter) {
-  printEnum(OS, Filter, ArrayRef(SamplerFilterNames));
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::SamplerFilter &Filter) {
+  printEnum(OS, Filter, dxbc::getSamplerFilters());
 
   return OS;
 }

@@ -194,7 +194,7 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
   StaticSampler Sampler;
   Sampler.Reg = {RegisterType::SReg, 0};
 
-  Sampler.Filter = SamplerFilter::ComparisonMinMagLinearMipPoint;
+  Sampler.Filter = llvm::dxbc::SamplerFilter::ComparisonMinMagLinearMipPoint;
   Sampler.AddressU = llvm::dxbc::TextureAddressMode::Mirror;
   Sampler.AddressV = llvm::dxbc::TextureAddressMode::Border;
   Sampler.AddressW = llvm::dxbc::TextureAddressMode::Clamp;
