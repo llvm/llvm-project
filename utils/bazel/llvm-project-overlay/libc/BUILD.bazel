@@ -299,24 +299,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "types_char32_t",
-    hdrs = ["hdr/types/char32_t.h"],
-    deps = [
-        ":hdr_uchar_overlay",
-    ],
-)
-
-libc_support_library(
-    name = "hdr_uchar_overlay",
-    hdrs = ["hdr/uchar_overlay.h"],
-)
-
-libc_support_library(
-    name = "types_char8_t",
-    hdrs = ["hdr/types/char8_t.h"],
-)
-
-libc_support_library(
     name = "types_clockid_t",
     hdrs = ["hdr/types/clockid_t.h"],
 )
@@ -352,11 +334,6 @@ libc_support_library(
     name = "types_lldiv_t",
     hdrs = ["hdr/types/lldiv_t.h"],
     deps = [":hdr_stdlib_overlay"],
-)
-
-libc_support_library(
-    name = "types_mbstate_t",
-    hdrs = ["hdr/types/mbstate_t.h"],
 )
 
 libc_support_library(
@@ -1685,6 +1662,16 @@ libc_support_library(
         ":__support_time_linux_abs_timeout",
         ":__support_time_linux_clock_conversion",
         ":hdr_time_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_wctype_utils",
+    hdrs = ["src/__support/wctype_utils.h"],
+    deps = [
+        ":__support_cpp_optional",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
     ],
 )
 
@@ -5730,16 +5717,6 @@ libc_function(
 )
 
 ############################## wchar targets ###############################
-
-libc_support_library(
-    name = "__support_wctype_utils",
-    hdrs = ["src/__support/wctype_utils.h"],
-    deps = [
-        ":__support_cpp_optional",
-        ":__support_macros_attributes",
-        ":__support_macros_config",
-    ],
-)
 
 libc_function(
     name = "btowc",
