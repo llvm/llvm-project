@@ -45,14 +45,16 @@ def check_no_enhanced_diagnostic(test, frame, var_name):
 
 class TestSwiftClosureVarNotCaptured(TestBase):
     def get_to_bkpt(self, bkpt_name):
-        return lldbutil.run_to_source_breakpoint(
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, bkpt_name, lldb.SBFileSpec("main.swift")
         )
+        target.BreakpointDelete(bkpt.GetID())
+        return (target, process, thread)
 
     @swiftTest
     def test_simple_closure(self):
         self.build()
-        (target, process, thread, bkpt) = self.get_to_bkpt("break_simple_closure")
+        (target, process, thread) = self.get_to_bkpt("break_simple_closure")
         check_not_captured_error(self, thread.frames[0], "var_in_foo", "func_1(arg:)")
         check_not_captured_error(self, thread.frames[0], "arg", "func_1(arg:)")
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
@@ -60,7 +62,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @swiftTest
     def test_nested_closure(self):
         self.build()
-        (target, process, thread, bkpt) = self.get_to_bkpt("break_double_closure_1")
+        (target, process, thread) = self.get_to_bkpt("break_double_closure_1")
         check_not_captured_error(self, thread.frames[0], "var_in_foo", "func_2(arg:)")
         check_not_captured_error(self, thread.frames[0], "arg", "func_2(arg:)")
         check_not_captured_error(
@@ -86,7 +88,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @skipIf(oslist=["windows", "linux"])
     def test_async_closure(self):
         self.build()
-        (target, process, thread, bkpt) = self.get_to_bkpt("break_async_closure_1")
+        (target, process, thread) = self.get_to_bkpt("break_async_closure_1")
         check_not_captured_error(self, thread.frames[0], "var_in_foo", "func_3(arg:)")
         check_not_captured_error(self, thread.frames[0], "arg", "func_3(arg:)")
         check_not_captured_error(
@@ -107,7 +109,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @swiftTest
     def test_ctor_class_closure(self):
         self.build()
-        (target, process, thread, bkpt) = self.get_to_bkpt("break_ctor_class")
+        (target, process, thread) = self.get_to_bkpt("break_ctor_class")
         check_not_captured_error(self, thread.frames[0], "input", "MY_STRUCT.init(input:)")
         check_not_captured_error(self, thread.frames[0], "find_me", "MY_STRUCT.init(input:)")
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
