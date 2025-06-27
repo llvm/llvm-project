@@ -9511,6 +9511,15 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
   CXXMethodDecl *Decl = SMOR.getMethod();
   FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
 
+  // P3074: default ctor and dtor for unions are not deleted, regardless of
+  // whether the underlying fields have non-trivial or deleted versions of those
+  // members
+  if (S.Context.getLangOpts().CPlusPlus26)
+    if (Field && Field->getParent()->isUnion() &&
+        (CSM == CXXSpecialMemberKind::DefaultConstructor ||
+         CSM == CXXSpecialMemberKind::Destructor))
+      return false;
+
   int DiagKind = -1;
 
   if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted)
@@ -9774,7 +9783,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
 
       // At least one member in each anonymous union must be non-const
       if (CSM == CXXSpecialMemberKind::DefaultConstructor &&
-          AllVariantFieldsAreConst && !FieldRecord->field_empty()) {
+          AllVariantFieldsAreConst && !FieldRecord->field_empty() &&
+          !S.Context.getLangOpts().CPlusPlus26) {
         if (Diagnose)
           S.Diag(FieldRecord->getLocation(),
                  diag::note_deleted_default_ctor_all_const)
@@ -9804,6 +9814,10 @@ bool SpecialMemberDeletionInfo::shouldDeleteForAllConstMembers() {
   // default constructor. Don't do that.
   if (CSM == CXXSpecialMemberKind::DefaultConstructor && inUnion() &&
       AllFieldsAreConst) {
+
+    if (S.Context.getLangOpts().CPlusPlus26)
+      return false;
+
     bool AnyFields = false;
     for (auto *F : MD->getParent()->fields())
       if ((AnyFields = !F->isUnnamedBitField()))

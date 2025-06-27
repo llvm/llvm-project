@@ -1,10 +1,11 @@
-// RUN: %clang_cc1 -verify -std=c++11 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -verify=expected,until26 -std=c++11 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -verify=expected -std=c++26 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
 
 struct NonTrivDtor {
   ~NonTrivDtor();
 };
 struct DeletedDtor {
-  ~DeletedDtor() = delete; // expected-note 5 {{deleted here}}
+  ~DeletedDtor() = delete; // expected-note 4+ {{deleted here}}
 };
 class InaccessibleDtor {
   ~InaccessibleDtor() = default;
@@ -16,28 +17,28 @@ class InaccessibleDtor {
 // destructor.
 union A1 {
   A1();
-  NonTrivDtor n; // expected-note {{destructor of 'A1' is implicitly deleted because variant field 'n' has a non-trivial destructor}}
+  NonTrivDtor n; // until26-note {{destructor of 'A1' is implicitly deleted because variant field 'n' has a non-trivial destructor}}
 };
-A1 a1; // expected-error {{deleted function}}
+A1 a1; // until26-error {{deleted function}}
 struct A2 {
   A2();
   union {
-    NonTrivDtor n; // expected-note {{because variant field 'n' has a non-trivial destructor}}
+    NonTrivDtor n; // until26-note {{because variant field 'n' has a non-trivial destructor}}
   };
 };
-A2 a2; // expected-error {{deleted function}}
+A2 a2; // until26-error {{deleted function}}
 union A3 {
   A3();
-  NonTrivDtor n[3]; // expected-note {{because variant field 'n' has a non-trivial destructor}}
+  NonTrivDtor n[3]; // until26-note {{because variant field 'n' has a non-trivial destructor}}
 };
-A3 a3; // expected-error {{deleted function}}
+A3 a3; // until26-error {{deleted function}}
 struct A4 {
   A4();
   union {
-    NonTrivDtor n[3]; // expected-note {{because variant field 'n' has a non-trivial destructor}}
+    NonTrivDtor n[3]; // until26-note {{because variant field 'n' has a non-trivial destructor}}
   };
 };
-A4 a4; // expected-error {{deleted function}}
+A4 a4; // until26-error {{deleted function}}
 
 // -- any of the non-static data members has class type M (or array thereof) and
 // M has a deleted or inaccessible destructor.
@@ -63,18 +64,18 @@ struct B4 {
 B4 b4; // expected-error {{deleted function}}
 union B5 {
   B5();
-  union { // expected-note-re {{because field 'B5::(anonymous union at {{.+}})' has a deleted destructor}}
-    DeletedDtor a; // expected-note {{because field 'a' has a deleted destructor}}
+  union { // until26-note-re {{because field 'B5::(anonymous union at {{.+}})' has a deleted destructor}}
+    DeletedDtor a; // until26-note {{because field 'a' has a deleted destructor}}
   };
 };
-B5 b5; // expected-error {{deleted function}}
+B5 b5; // until26-error {{deleted function}}
 union B6 {
   B6();
-  union { // expected-note-re {{because field 'B6::(anonymous union at {{.+}})' has a deleted destructor}}
-    InaccessibleDtor a; // expected-note {{because field 'a' has an inaccessible destructor}}
+  union { // until26-note-re {{because field 'B6::(anonymous union at {{.+}})' has a deleted destructor}}
+    InaccessibleDtor a; // until26-note {{because field 'a' has an inaccessible destructor}}
   };
 };
-B6 b6; // expected-error {{deleted function}}
+B6 b6; // until26-error {{deleted function}}
 
 // -- any direct or virtual base class has a deleted or inaccessible destructor.
 struct C1 : DeletedDtor { C1(); } c1; // expected-error {{deleted function}} expected-note {{base class 'DeletedDtor' has a deleted destructor}}

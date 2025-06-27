@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11 -Wno-deprecated-builtins -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,until26 %s -std=c++11 -Wno-deprecated-builtins -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -fsyntax-only -verify=expected %s -std=c++26 -Wno-deprecated-builtins -Wno-defaulted-function-deleted
 
 struct DefaultedDefCtor1 {};
 struct DefaultedDefCtor2 { DefaultedDefCtor2() = default; };
@@ -23,8 +24,8 @@ int n;
 
 // - X is a union-like class that has a variant member with a non-trivial
 // default constructor,
-union Deleted1a { UserProvidedDefCtor u; }; // expected-note {{default constructor of 'Deleted1a' is implicitly deleted because variant field 'u' has a non-trivial default constructor}}
-Deleted1a d1a; // expected-error {{implicitly-deleted default constructor}}
+union Deleted1a { UserProvidedDefCtor u; }; // until26-note {{default constructor of 'Deleted1a' is implicitly deleted because variant field 'u' has a non-trivial default constructor}}
+Deleted1a d1a; // until26-error {{implicitly-deleted default constructor}}
 union NotDeleted1a { DefaultedDefCtor1 nu; };
 NotDeleted1a nd1a;
 union NotDeleted1b { DefaultedDefCtor2 nu; };
@@ -86,19 +87,19 @@ NotDeleted3i nd3i;
 union Deleted4a {
   const int a;
   const int b;
-  const UserProvidedDefCtor c; // expected-note {{because variant field 'c' has a non-trivial default constructor}}
+  const UserProvidedDefCtor c; // until26-note {{because variant field 'c' has a non-trivial default constructor}}
 };
-Deleted4a d4a; // expected-error {{implicitly-deleted default constructor}}
+Deleted4a d4a; // until26-error {{implicitly-deleted default constructor}}
 union NotDeleted4a { const int a; int b; };
 NotDeleted4a nd4a;
 
 // - X is a non-union class and all members of any anonymous union member are of
 // const-qualified type (or array thereof),
 struct Deleted5a {
-  union { const int a; }; // expected-note {{because all data members of an anonymous union member are const-qualified}}
+  union { const int a; }; // until26-note {{because all data members of an anonymous union member are const-qualified}}
   union { int b; };
 };
-Deleted5a d5a; // expected-error {{implicitly-deleted default constructor}}
+Deleted5a d5a; // until26-error {{implicitly-deleted default constructor}}
 struct NotDeleted5a { union { const int a; int b; }; union { const int c; int d; }; };
 NotDeleted5a nd5a;
 

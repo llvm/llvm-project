@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,cxx26 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -922,7 +922,7 @@ namespace cwg667 { // cwg667: 8
 
   struct B { ~B() = delete; };
   union C { B b; };
-  static_assert(!__is_trivially_destructible(C), "");
+  static_assert(!__is_trivially_destructible(C), ""); // cxx26-error {{failed}}
 
   struct D { D(const D&) = delete; };
   struct E : D {};

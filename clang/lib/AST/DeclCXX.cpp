@@ -1217,6 +1217,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
     // those because they are always unnamed.
     bool IsZeroSize = Field->isZeroSize(Context);
 
+    // P3074
+    const bool TrivialUnion = Context.getLangOpts().CPlusPlus26 && isUnion();
+
     if (const auto *RecordTy = T->getAs<RecordType>()) {
       auto *FieldRec = cast<CXXRecordDecl>(RecordTy->getDecl());
       if (FieldRec->getDefinition()) {
@@ -1277,7 +1280,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //    -- for all the non-static data members of its class that are of
         //       class type (or array thereof), each such class has a trivial
         //       default constructor.
-        if (!FieldRec->hasTrivialDefaultConstructor())
+        if (!FieldRec->hasTrivialDefaultConstructor() && !TrivialUnion)
           data().HasTrivialSpecialMembers &= ~SMF_DefaultConstructor;
 
         // C++0x [class.copy]p13:
@@ -1315,9 +1318,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (!FieldRec->hasTrivialMoveAssignment())
           data().HasTrivialSpecialMembers &= ~SMF_MoveAssignment;
 
-        if (!FieldRec->hasTrivialDestructor())
+        if (!FieldRec->hasTrivialDestructor() && !TrivialUnion)
           data().HasTrivialSpecialMembers &= ~SMF_Destructor;
-        if (!FieldRec->hasTrivialDestructorForCall())
+        if (!FieldRec->hasTrivialDestructorForCall() && !TrivialUnion)
           data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
         if (!FieldRec->hasIrrelevantDestructor())
           data().HasIrrelevantDestructor = false;
