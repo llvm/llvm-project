@@ -143,6 +143,7 @@ static const OmpDirectiveSet topTargetSet{
     Directive::OMPD_target_teams_distribute_parallel_do_simd,
     Directive::OMPD_target_teams_distribute_simd,
     Directive::OMPD_target_teams_loop,
+    Directive::OMPD_target_teams_workdistribute,
 };
 
 static const OmpDirectiveSet allTargetSet{topTargetSet};
@@ -172,6 +173,7 @@ static const OmpDirectiveSet topTeamsSet{
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd,
     Directive::OMPD_teams_loop,
+    Directive::OMPD_teams_workdistribute,
 };
 
 static const OmpDirectiveSet bottomTeamsSet{
@@ -187,7 +189,14 @@ static const OmpDirectiveSet allTeamsSet{
         Directive::OMPD_target_teams_distribute_parallel_do_simd,
         Directive::OMPD_target_teams_distribute_simd,
         Directive::OMPD_target_teams_loop,
+        Directive::OMPD_target_teams_workdistribute,
     } | topTeamsSet,
+};
+
+static const OmpDirectiveSet allWorkdistributeSet{
+    Directive::OMPD_workdistribute,
+    Directive::OMPD_teams_workdistribute,
+    Directive::OMPD_target_teams_workdistribute,
 };
 
 //===----------------------------------------------------------------------===//
@@ -230,6 +239,9 @@ static const OmpDirectiveSet blockConstructSet{
     Directive::OMPD_taskgroup,
     Directive::OMPD_teams,
     Directive::OMPD_workshare,
+    Directive::OMPD_target_teams_workdistribute,
+    Directive::OMPD_teams_workdistribute,
+    Directive::OMPD_workdistribute,
 };
 
 static const OmpDirectiveSet loopConstructSet{
@@ -294,6 +306,7 @@ static const OmpDirectiveSet workShareSet{
         Directive::OMPD_scope,
         Directive::OMPD_sections,
         Directive::OMPD_single,
+        Directive::OMPD_workdistribute,
     } | allDoSet,
 };
 
@@ -376,6 +389,7 @@ static const OmpDirectiveSet nestedReduceWorkshareAllowedSet{
 };
 
 static const OmpDirectiveSet nestedTeamsAllowedSet{
+    Directive::OMPD_workdistribute,
     Directive::OMPD_distribute,
     Directive::OMPD_distribute_parallel_do,
     Directive::OMPD_distribute_parallel_do_simd,
