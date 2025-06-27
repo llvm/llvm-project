@@ -326,33 +326,6 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 }
 
 //===----------------------------------------------------------------------===//
-// workdistribute Construct
-//===----------------------------------------------------------------------===//
-
-def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
-  let summary = "workdistribute directive";
-  let description = [{
-    workdistribute divides execution of the enclosed structured block into
-    separate units of work, each executed only once by each
-    initial thread in the league.
-
-    ```
-    !$omp target teams
-        !$omp workdistribute
-                tmp = matmul(x, y)
-        !$omp end workdistribute
-        a = tmp(0, 0) ! there is no implicit barrier! the matmul hasnt completed!
-    !$omp end target teams workdistribute
-    ```
-
-  }];
-
-  let regions = (region AnyRegion:$region);
-
-  let assemblyFormat = "$region attr-dict";
-}
-
-//===----------------------------------------------------------------------===//
 // 2.8.2 Single Construct
 //===----------------------------------------------------------------------===//
 

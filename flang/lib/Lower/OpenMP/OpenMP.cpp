@@ -565,16 +565,6 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       });
       break;
 
-    case OMPD_teams_workdistribute:
-      cp.processThreadLimit(stmtCtx, hostInfo.ops);
-      [[fallthrough]];
-    case OMPD_target_teams_workdistribute:
-      cp.processNumTeams(stmtCtx, hostInfo.ops);
-      processSingleNestedIf([](Directive nestedDir) {
-        return topDistributeSet.test(nestedDir) || topLoopSet.test(nestedDir);
-      });
-      break;
-
     case OMPD_teams_distribute:
     case OMPD_teams_distribute_simd:
       cp.processThreadLimit(stmtCtx, hostInfo.ops);
@@ -2692,17 +2682,6 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
-static mlir::omp::WorkdistributeOp genWorkdistributeOp(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item) {
-  return genOpWithBody<mlir::omp::WorkdistributeOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
-                        llvm::omp::Directive::OMPD_workdistribute),
-      queue, item);
-}
-
 //===----------------------------------------------------------------------===//
 // Code generation functions for the standalone version of constructs that can
 // also be a leaf of a composite construct
@@ -3323,10 +3302,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     TODO(loc, "Unhandled loop directive (" +
                   llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
   }
-  case llvm::omp::Directive::OMPD_workdistribute:
-    newOp = genWorkdistributeOp(converter, symTable, semaCtx, eval, loc, queue,
-                                item);
-    break;
+  // case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
                            queue, item);

@@ -517,67 +517,6 @@ def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoMemoryEffect]> {
   let assemblyFormat = "type($intype) attr-dict";
 }
 
-def fir_OmpTargetAllocMemOp : fir_Op<"omp_target_allocmem",
-    [MemoryEffects<[MemAlloc<DefaultResource>]>, AttrSizedOperandSegments]> {
-  let summary = "allocate storage on an openmp device for an object of a given type";
-
-  let description = [{
-    Creates a heap memory reference suitable for storing a value of the
-    given type, T.  The heap refernce returned has type `!fir.heap<T>`.
-    The memory object is in an undefined state.  `allocmem` operations must
-    be paired with `freemem` operations to avoid memory leaks.
-
-    ```
-      %0 = fir.omp_target_allocmem !fir.array<10 x f32>
-    ```
-  }];
-
-  let arguments = (ins
-    Arg<AnyIntegerType>:$device,
-    TypeAttr:$in_type,
-    OptionalAttr<StrAttr>:$uniq_name,
-    OptionalAttr<StrAttr>:$bindc_name,
-    Variadic<AnyIntegerType>:$typeparams,
-    Variadic<AnyIntegerType>:$shape
-  );
-  let results = (outs fir_HeapType);
-
-  let extraClassDeclaration = [{
-    mlir::Type getAllocatedType();
-    bool hasLenParams() { return !getTypeparams().empty(); }
-    bool hasShapeOperands() { return !getShape().empty(); }
-    unsigned numLenParams() { return getTypeparams().size(); }
-    operand_range getLenParams() { return getTypeparams(); }
-    unsigned numShapeOperands() { return getShape().size(); }
-    operand_range getShapeOperands() { return getShape(); }
-    static mlir::Type getRefTy(mlir::Type ty);
-  }];
-}
-
-def fir_OmpTargetFreeMemOp : fir_Op<"omp_target_freemem",
-  [MemoryEffects<[MemFree]>]> {
-  let summary = "free a heap object";
-
-  let description = [{
-    Deallocates a heap memory reference that was allocated by an `allocmem`.
-    The memory object that is deallocated is placed in an undefined state
-    after `fir.freemem`.  Optimizations may treat the loading of an object
-    in the undefined state as undefined behavior.  This includes aliasing
-    references, such as the result of an `fir.embox`.Add commentMore actions
-
-    ```
-      %21 = fir.omp_target_allocmem !fir.type<ZT(p:i32){field:i32}>
-      ...
-      fir.omp_target_freemem %21 : !fir.heap<!fir.type<ZT>>
-    ```
-  }];
-
-  let arguments = (ins
-  Arg<AnyIntegerType, "", [MemFree]>:$device,
-  Arg<fir_HeapType, "", [MemFree]>:$heapref
-  );
-}
-
 //===----------------------------------------------------------------------===//
 // Terminator operations
 //===----------------------------------------------------------------------===//
