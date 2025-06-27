@@ -2075,12 +2075,13 @@ void CGDebugInfo::CollectRecordFields(
 
         // Bump field number for next field.
         ++fieldNo;
-      } else if (CGM.getCodeGenOpts().EmitCodeView) {
+      } else if (CGM.getCodeGenOpts().EmitCodeView ||
+                 record->hasAttr<StandaloneDebugAttr>()) {
         // Debug info for nested types is included in the member list only for
-        // CodeView.
+        // CodeView and types with the standalone_debug attribute.
         if (const auto *nestedType = dyn_cast<TypeDecl>(I)) {
           // MSVC doesn't generate nested type for anonymous struct/union.
-          if (isa<RecordDecl>(I) &&
+          if (CGM.getCodeGenOpts().EmitCodeView && isa<RecordDecl>(I) &&
               cast<RecordDecl>(I)->isAnonymousStructOrUnion())
             continue;
           if (!nestedType->isImplicit() &&
