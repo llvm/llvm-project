@@ -10103,6 +10103,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
+  if (LVL.hasUncountableEarlyExit() && UserIC != 1 &&
+      !VectorizerParams::isInterleaveForced()) {
+    UserIC = 1;
+    reportVectorizationInfo("Interleaving not supported for loops "
+                            "with uncountable early exits",
+                            "InterleaveEarlyExitDisabled", ORE, L);
+  }
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
