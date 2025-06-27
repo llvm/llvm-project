@@ -8204,6 +8204,7 @@ mlir::Value IntrinsicLibrary::genThisWarp(mlir::Type resultType,
   mlir::Value res = builder.create<fir::AllocaOp>(loc, resultType);
   mlir::Type i32Ty = builder.getI32Type();
 
+  // coalesced_group%size = 32
   mlir::Value size = builder.createIntegerConstant(loc, i32Ty, 32);
   auto sizeFieldName = recTy.getTypeList()[1].first;
   mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
@@ -8215,14 +8216,13 @@ mlir::Value IntrinsicLibrary::genThisWarp(mlir::Type resultType,
       loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
   builder.create<fir::StoreOp>(loc, size, sizeCoord);
 
+  // coalesced_group%rank = threadIdx.x & 31 + 1
   mlir::Value threadIdX = builder.create<mlir::NVVM::ThreadIdXOp>(loc, i32Ty);
   mlir::Value mask = builder.createIntegerConstant(loc, i32Ty, 31);
   mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-
   mlir::Value masked =
       builder.create<mlir::arith::AndIOp>(loc, threadIdX, mask);
   mlir::Value rank = builder.create<mlir::arith::AddIOp>(loc, masked, one);
-
   auto rankFieldName = recTy.getTypeList()[2].first;
   mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
   mlir::Value rankFieldIndex = builder.create<fir::FieldIndexOp>(
