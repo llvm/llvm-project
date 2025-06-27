@@ -966,7 +966,9 @@ public:
     // all unrolled iterations. Unrolling will add all copies of its original
     // operand as additional operands.
     AnyOf,
-    // Calculates the first active lane index of the vector predicate operand.
+    // Calculates the first active lane index of the vector predicate operands.
+    // It produces the lane index across all unrolled iterations. Unrolling will
+    // add all copies of its original operand as additional operands.
     FirstActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.
