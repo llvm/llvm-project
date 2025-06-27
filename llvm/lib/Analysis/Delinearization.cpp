@@ -494,7 +494,7 @@ static std::optional<APInt> tryIntoAPInt(const SCEV *S) {
 
 /// Collects the absolute values of constant steps for all induction variables.
 /// Returns true if we can prove that all step recurrences are constants and \p
-/// Expr is dividable by \p ElementSize. Each step recurrence is stored in \p
+/// Expr is divisible by \p ElementSize. Each step recurrence is stored in \p
 /// Steps after divided by \p ElementSize.
 static bool collectConstantAbsSteps(ScalarEvolution &SE, const SCEV *Expr,
                                     SmallVectorImpl<unsigned> &Steps,
@@ -567,7 +567,7 @@ static bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
   // in like Arr[UnknownSize][8][32] with elements of size 8 bytes, where Arr is
   // a base pointer.
   //
-  // TODO: Catch more cases, e.g., when a step recurrence is not dividable by
+  // TODO: Catch more cases, e.g., when a step recurrence is not divisible by
   // the next smaller one, like A[i][3*j].
   llvm::sort(Sizes.rbegin(), Sizes.rend());
   Sizes.erase(llvm::unique(Sizes), Sizes.end());
@@ -615,14 +615,11 @@ static bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
 /// subscript, so the caller should perform additional boundary checks if
 /// necessary.
 ///
-/// TODO: At the moment, this function can handle only simple cases. For
-/// example, we cannot handle a case where a step recurrence is not dividable by
-/// the next smaller step recurrence, e.g., A[i][3*j]. Furthermore, this
-/// function doesn't guarantee that the original array size is restored
-/// "correctly". For example, in the following case:
+/// Also note that this function doesn't guarantee that the original array size
+/// is restored "correctly". For example, in the following case:
 ///
-///  double A[42][4][32];
-///  double B[42][8][64];
+///  double A[42][4][64];
+///  double B[42][8][32];
 ///  for i
 ///    for j
 ///      for k
@@ -635,6 +632,10 @@ static bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
 ///
 /// The array sizes for both A and B will be computed as
 /// ArrayDecl[UnknownSize][4][64], which matches for A, but not for B.
+///
+/// TODO: At the moment, this function can handle only simple cases. For
+/// example, we cannot handle a case where a step recurrence is not divisible
+/// by the next smaller step recurrence, e.g., A[i][3*j].
 void llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                      SmallVectorImpl<const SCEV *> &Subscripts,
                                      SmallVectorImpl<const SCEV *> &Sizes,

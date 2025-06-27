@@ -199,7 +199,7 @@ exit:
 }
 
 ; Fail to delinearize because the step recurrence of the j-loop is not
-; dividable by that of the k-loop.
+; divisible by that of the k-loop.
 ;
 ; void f(int A[][8][32]) {
 ;   for (i = 0; i < 42; i++)
@@ -408,10 +408,10 @@ exit:
 ;       *((int *)((char *)A + i*256 + j*32 + k)) = 1;
 ; }
 
-; CHECK:      Delinearization on function non_dividable_by_element_size:
+; CHECK:      Delinearization on function non_divisible_by_element_size:
 ; CHECK:      AccessFunction: {{...}}0,+,256}<nuw><nsw><%for.i.header>,+,32}<nw><%for.j.header>,+,1}<nw><%for.k>
 ; CHECK-NEXT: failed to delinearize
-define void @non_dividable_by_element_size(ptr %a) {
+define void @non_divisible_by_element_size(ptr %a) {
 entry:
   br label %for.i.header
 
