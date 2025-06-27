@@ -49,6 +49,7 @@ class SymbolRegionValue : public SymbolData {
   const TypedValueRegion *R;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
   SymbolRegionValue(SymbolID sym, const TypedValueRegion *r)
       : SymbolData(ClassKind, sym), R(r) {
     assert(r);
@@ -91,6 +92,7 @@ class SymbolConjured : public SymbolData {
   const void *SymbolTag;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
   SymbolConjured(SymbolID sym, ConstCFGElementRef elem,
                  const LocationContext *lctx, QualType t, unsigned count,
                  const void *symbolTag)
@@ -146,6 +148,7 @@ class SymbolOverlyComplex final : public SymbolData {
   const SymExpr *OverlyComplicatedSymbol;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
 
   SymbolOverlyComplex(SymbolID Sym, const SymExpr *OverlyComplicatedSymbol)
       : SymbolData(ClassKind, Sym),
@@ -185,6 +188,7 @@ class SymbolDerived : public SymbolData {
   const TypedValueRegion *R;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
   SymbolDerived(SymbolID sym, SymbolRef parent, const TypedValueRegion *r)
       : SymbolData(ClassKind, sym), parentSymbol(parent), R(r) {
     assert(parent);
@@ -229,6 +233,7 @@ class SymbolExtent : public SymbolData {
   const SubRegion *R;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
   SymbolExtent(SymbolID sym, const SubRegion *r)
       : SymbolData(ClassKind, sym), R(r) {
     assert(r);
@@ -274,6 +279,7 @@ class SymbolMetadata : public SymbolData {
   const void *Tag;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
   SymbolMetadata(SymbolID sym, const MemRegion *r, const Stmt *s, QualType t,
                  const LocationContext *LCtx, unsigned count, const void *tag)
       : SymbolData(ClassKind, sym), R(r), S(s), T(t), LCtx(LCtx), Count(count),
@@ -340,6 +346,7 @@ class SymbolCast : public SymExpr {
   QualType ToTy;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
   SymbolCast(SymbolID Sym, const SymExpr *In, QualType From, QualType To)
       : SymExpr(ClassKind, Sym, computeComplexity(In, From, To)), Operand(In),
         FromTy(From), ToTy(To) {
@@ -387,6 +394,7 @@ class UnarySymExpr : public SymExpr {
   QualType T;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
   UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
                QualType T)
       : SymExpr(ClassKind, Sym, computeComplexity(In, Op, T)), Operand(In),
@@ -484,6 +492,7 @@ class BinarySymExprImpl : public BinarySymExpr {
   RHSTYPE RHS;
 
   friend class SymExprAllocator;
+  friend class SymbolManager;
   BinarySymExprImpl(SymbolID Sym, LHSTYPE lhs, BinaryOperator::Opcode op,
                     RHSTYPE rhs, QualType t)
       : BinarySymExpr(Sym, ClassKind, op, t,
@@ -728,18 +737,38 @@ public:
 // Returns a const pointer to T if T is a SymbolData, otherwise SymExpr.
 template <typename T, typename... Args, typename Ret>
 const Ret *SymbolManager::acquire(Args &&...args) {
-  llvm::FoldingSetNodeID profile;
-  T::Profile(profile, args...);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = Alloc.make<T>(std::forward<Args>(args)...);
-    DataSet.InsertNode(SD, InsertPos);
-    if (SD->complexity() > MaxCompComplexity) {
-      return cast<Ret>(acquire<SymbolOverlyComplex>(SD));
+  T Dummy(/*SymbolID=*/0, args...);
+  llvm::FoldingSetNodeID DummyProfile;
+  Dummy.Profile(DummyProfile);
+
+  if (Dummy.complexity() <= MaxCompComplexity) {
+    void *InsertPos;
+    SymExpr *SD = DataSet.FindNodeOrInsertPos(DummyProfile, InsertPos);
+    if (!SD) {
+      SD = Alloc.make<T>(args...);
+      DataSet.InsertNode(SD, InsertPos);
     }
+    return cast<Ret>(SD);
+  }
+  void *WrappedSymInsertPos;
+  SymExpr *WrappedSym =
+      DataSet.FindNodeOrInsertPos(DummyProfile, WrappedSymInsertPos);
+  if (!WrappedSym) {
+    WrappedSym = Alloc.make<T>(args...);
+    DataSet.InsertNode(WrappedSym, WrappedSymInsertPos);
   }
 
+  SymbolOverlyComplex OverlyComplexSym(/*SymbolID=*/0, WrappedSym);
+  llvm::FoldingSetNodeID OverlyComplexSymProfile;
+  OverlyComplexSym.Profile(OverlyComplexSymProfile);
+
+  void *OverlyComplexSymInsertPos;
+  SymExpr *SD = DataSet.FindNodeOrInsertPos(OverlyComplexSymProfile,
+                                            OverlyComplexSymInsertPos);
+  if (!SD) {
+    SD = Alloc.make<SymbolOverlyComplex>(WrappedSym);
+    DataSet.InsertNode(SD, OverlyComplexSymInsertPos);
+  }
   return cast<Ret>(SD);
 }
 

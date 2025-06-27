@@ -56,3 +56,38 @@ void hugelyOverComplicatedSymbol() {
 #undef HUNDRED_TIMES
 #undef TEN_TIMES
 }
+
+typedef unsigned long long __attribute__((aligned((8)))) u64a;
+u64a compress64(u64a x, u64a m) {
+  if ((x & m) == 0)
+      return 0;
+  x &= m;
+  u64a mk = ~m << 1;
+  for (unsigned i = 0; i < 6; i++) {
+    u64a mp = mk ^ (mk << 1);
+    mp ^= mp << 2;
+    mp ^= mp << 4;
+    mp ^= mp << 8;
+    mp ^= mp << 16;
+    mp ^= mp << 32;
+    u64a mv = mp & m;
+    m = (m ^ mv) | (mv >> (1 << i));
+    u64a t = x & mv;
+    x = (x ^ t) | (t >> (1 << i));
+    mk = mk & ~mp;
+  }
+  return x;
+}
+void storecompressed512_64bit(u64a *m, u64a *x) {
+  u64a v[8] = {
+    compress64(x[0], m[0]),
+    compress64(x[1], m[1]),
+    compress64(x[2], m[2]),
+    compress64(x[3], m[3]),
+    compress64(x[4], m[4]),
+    compress64(x[5], m[5]),
+    compress64(x[6], m[6]),
+    compress64(x[7], m[7]),
+  };
+  (void)v;
+}
