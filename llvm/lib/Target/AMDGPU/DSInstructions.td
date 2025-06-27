@@ -783,6 +783,19 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
 defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
 
+let SubtargetPredicate = isGFX1250Plus in {
+
+let WaveSizePredicate = isWave32, mayStore = 0 in {
+let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
+} // let OtherPredicates = [HasTransposeLoadF4F6Insts]
+defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
+defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
+} // let WaveSizePredicate = isWave32, mayStore = 0
+
+} // let SubtargetPredicate = isGFX1250Plus
+
 let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore = 0 in {
   defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", VReg_64>;
   defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", VReg_64>;
@@ -1332,6 +1345,11 @@ defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 defm DS_BPERMUTE_FI_B32   : DS_Real_gfx12<0x0cd>;
 
+defm DS_LOAD_TR4_B64      : DS_Real_gfx12<0x0fa>;
+defm DS_LOAD_TR6_B96      : DS_Real_gfx12<0x0fb>;
+defm DS_LOAD_TR16_B128    : DS_Real_gfx12<0x0fc>;
+defm DS_LOAD_TR8_B64      : DS_Real_gfx12<0x0fd>;
+
 defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
   "ds_bvh_stack_push4_pop1_rtn_b32", true>;
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
@@ -1344,6 +1362,10 @@ let AssemblerPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"ds_subrev_u64", "ds_rsub_u64">;
   def : AMDGPUMnemonicAlias<"ds_subrev_rtn_u64", "ds_rsub_rtn_u64">;
 }
+
+// Aliases that have existed since these instructions were introduced.
+def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1250Plus]>;
+def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250Plus]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

@@ -850,13 +850,38 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::AnyOf: {
-    Value *A = State.get(getOperand(0));
-    return Builder.CreateOrReduce(A);
+    Value *Res = State.get(getOperand(0));
+    for (VPValue *Op : drop_begin(operands()))
+      Res = Builder.CreateOr(Res, State.get(Op));
+    return Builder.CreateOrReduce(Res);
   }
   case VPInstruction::FirstActiveLane: {
-    Value *Mask = State.get(getOperand(0));
-    return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
-                                                true, Name);
+    if (getNumOperands() == 1) {
+      Value *Mask = State.get(getOperand(0));
+      return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
+                                                  true, Name);
+    }
+    // If there are multiple operands, create a chain of selects to pick the
+    // first operand with an active lane and add the number of lanes of the
+    // preceding operands.
+    Value *RuntimeVF =
+        getRuntimeVF(State.Builder, State.Builder.getInt64Ty(), State.VF);
+    unsigned LastOpIdx = getNumOperands() - 1;
+    Value *Res = nullptr;
+    for (int Idx = LastOpIdx; Idx >= 0; --Idx) {
+      Value *TrailingZeros = Builder.CreateCountTrailingZeroElems(
+          Builder.getInt64Ty(), State.get(getOperand(Idx)), true, Name);
+      Value *Current = Builder.CreateAdd(
+          Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
+      if (Res) {
+        Value *Cmp = Builder.CreateICmpNE(TrailingZeros, RuntimeVF);
+        Res = Builder.CreateSelect(Cmp, Current, Res);
+      } else {
+        Res = Current;
+      }
+    }
+
+    return Res;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
