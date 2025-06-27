@@ -1004,21 +1004,77 @@ Constant *DIDerivedType::getDiscriminantValue() const {
 
 DIDerivedType *DIDerivedType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
+<<<<<<< HEAD
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
     uint32_t AlignInBits, uint64_t OffsetInBits,
     std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
     std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
     StorageType Storage, bool ShouldCreate) {
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+    uint32_t AlignInBits, uint64_t OffsetInBits,
+    std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
+    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
+    StorageType Storage, bool ShouldCreate) {
+||||||||| 1984c7539ebe
+    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+    uint32_t AlignInBits, uint64_t OffsetInBits,
+    std::optional<unsigned> DWARFAddressSpace,
+    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
+=========
+    unsigned Line, Metadata *Scope, Metadata *BaseType, Metadata *SizeInBits,
+    uint32_t AlignInBits, Metadata *OffsetInBits,
+    std::optional<unsigned> DWARFAddressSpace,
+    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
+>>>>>>>>> Temporary merge branch 2
+=======
+    unsigned Line, Metadata *Scope, Metadata *BaseType, Metadata *SizeInBits,
+    uint32_t AlignInBits, Metadata *OffsetInBits,
+    std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
+    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
+>>>>>>> amd-debug
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                          AlignInBits, OffsetInBits, DWARFAddressSpace, MS, 
                          PtrAuthData, Flags, ExtraData, Annotations));
+<<<<<<< HEAD
   Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
   DEFINE_GETIMPL_STORE(DIDerivedType,
                        (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
                         DWARFAddressSpace, MS, PtrAuthData, Flags),
                        Ops);
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
+  DEFINE_GETIMPL_STORE(DIDerivedType,
+                       (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
+                        DWARFAddressSpace, MS, PtrAuthData, Flags),
+                       Ops);
+||||||||| 1984c7539ebe
+  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
+  DEFINE_GETIMPL_STORE(DIDerivedType,
+                       (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
+                        DWARFAddressSpace, PtrAuthData, Flags),
+                       Ops);
+=========
+  Metadata *Ops[] = {File,         Scope,    Name,      SizeInBits,
+                     OffsetInBits, BaseType, ExtraData, Annotations};
+  DEFINE_GETIMPL_STORE(
+      DIDerivedType,
+      (Tag, Line, AlignInBits, DWARFAddressSpace, PtrAuthData, Flags), Ops);
+>>>>>>>>> Temporary merge branch 2
+=======
+  Metadata *Ops[] = {File,         Scope,    Name,      SizeInBits,
+                     OffsetInBits, BaseType, ExtraData, Annotations};
+  DEFINE_GETIMPL_STORE(
+      DIDerivedType,
+      (Tag, Line, AlignInBits, DWARFAddressSpace, MS, PtrAuthData, Flags), Ops);
+>>>>>>> amd-debug
 }
 
 std::optional<DIDerivedType::PtrAuthData>

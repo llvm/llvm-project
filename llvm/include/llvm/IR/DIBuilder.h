@@ -295,12 +295,40 @@ namespace llvm {
     /// \param DWARFMemorySpace  DWARF memory space. (optional)
     /// \param Name              Pointer type name. (optional)
     /// \param Annotations       Member annotations.
+<<<<<<< HEAD
     LLVM_ABI DIDerivedType *
     createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
                       uint32_t AlignInBits = 0,
                       std::optional<unsigned> DWARFAddressSpace = std::nullopt,
                       dwarf::MemorySpace DWARFMemorySpace = dwarf::DW_MSPACE_LLVM_none,
                       StringRef Name = "", DINodeArray Annotations = nullptr);
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+    DIDerivedType *createPointerType(
+        DIType *PointeeTy, uint64_t SizeInBits, uint32_t AlignInBits = 0,
+        std::optional<unsigned> DWARFAddressSpace = std::nullopt,
+        dwarf::MemorySpace DWARFMemorySpace = dwarf::DW_MSPACE_LLVM_none,
+        StringRef Name = "", DINodeArray Annotations = nullptr);
+||||||||| 1984c7539ebe
+    DIDerivedType *
+    createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
+                      uint32_t AlignInBits = 0,
+                      std::optional<unsigned> DWARFAddressSpace = std::nullopt,
+                      StringRef Name = "", DINodeArray Annotations = nullptr);
+=========
+    LLVM_ABI DIDerivedType *
+    createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
+                      uint32_t AlignInBits = 0,
+                      std::optional<unsigned> DWARFAddressSpace = std::nullopt,
+                      StringRef Name = "", DINodeArray Annotations = nullptr);
+>>>>>>>>> Temporary merge branch 2
+=======
+    LLVM_ABI DIDerivedType *createPointerType(
+        DIType *PointeeTy, uint64_t SizeInBits, uint32_t AlignInBits = 0,
+        std::optional<unsigned> DWARFAddressSpace = std::nullopt,
+        dwarf::MemorySpace DWARFMemorySpace = dwarf::DW_MSPACE_LLVM_none,
+        StringRef Name = "", DINodeArray Annotations = nullptr);
+>>>>>>> amd-debug
 
     /// Create a __ptrauth qualifier.
     LLVM_ABI DIDerivedType *

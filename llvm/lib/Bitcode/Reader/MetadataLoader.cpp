@@ -1812,15 +1812,44 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (!MSpace)
       return MSpace.takeError();
 
+<<<<<<< HEAD
     IsDistinct = Record[0];
+||||||| merged common ancestors
+    IsDistinct = Record[0];
+||||||||| 1984c7539ebe
+    IsDistinct = Record[0];
+=========
+    IsDistinct = Record[0] & 1;
+    bool SizeIsMetadata = Record[0] & 2;
+>>>>>>>>> Temporary merge branch 2
+=======
+    IsDistinct = Record[0] & 1;
+    bool SizeIsMetadata = Record[0] & 2;
+>>>>>>> amd-debug
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIDerivedType,
                         (Context, Record[1], getMDString(Record[2]),
                          getMDOrNull(Record[3]), Record[4],
                          getDITypeRefOrNull(Record[5]),
+<<<<<<< HEAD
                          getDITypeRefOrNull(Record[6]), Record[7], Record[8],
                          Record[9], DWARFAddressSpace, *MSpace, PtrAuthData, Flags,
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+                         getDITypeRefOrNull(Record[6]), Record[7], Record[8],
+                         Record[9], DWARFAddressSpace, *MSpace, PtrAuthData, Flags,
+||||||||| 1984c7539ebe
+                         getDITypeRefOrNull(Record[6]), Record[7], Record[8],
+                         Record[9], DWARFAddressSpace, PtrAuthData, Flags,
+=========
+                         getDITypeRefOrNull(Record[6]), SizeInBits, Record[8],
+                         OffsetInBits, DWARFAddressSpace, PtrAuthData, Flags,
+>>>>>>>>> Temporary merge branch 2
+=======
+                         getDITypeRefOrNull(Record[6]), SizeInBits, Record[8],
+                         OffsetInBits, DWARFAddressSpace, *MSpace, PtrAuthData, Flags,
+>>>>>>> amd-debug
                          getDITypeRefOrNull(Record[11]), Annotations)),
         NextMetadataNo);
     NextMetadataNo++;

@@ -5673,11 +5673,40 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
         (unsigned)ptrAuthExtraDiscriminator.Val, ptrAuthIsaPointer.Val,
         ptrAuthAuthenticatesNullValues.Val);
 
+<<<<<<< HEAD
   Result = GET_OR_DISTINCT(DIDerivedType,
                            (Context, tag.Val, name.Val, file.Val, line.Val,
                             scope.Val, baseType.Val, size.Val, align.Val,
                             offset.Val, DWARFAddressSpace, memorySpace.val(), PtrAuthData,
                             flags.Val, extraData.Val, annotations.Val));
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+  Result = GET_OR_DISTINCT(DIDerivedType,
+                           (Context, tag.Val, name.Val, file.Val, line.Val,
+                            scope.Val, baseType.Val, size.Val, align.Val,
+                            offset.Val, DWARFAddressSpace, memorySpace.val(), PtrAuthData,
+                            flags.Val, extraData.Val, annotations.Val));
+||||||||| 1984c7539ebe
+  Result = GET_OR_DISTINCT(DIDerivedType,
+                           (Context, tag.Val, name.Val, file.Val, line.Val,
+                            scope.Val, baseType.Val, size.Val, align.Val,
+                            offset.Val, DWARFAddressSpace, PtrAuthData,
+                            flags.Val, extraData.Val, annotations.Val));
+=========
+  Result = GET_OR_DISTINCT(
+      DIDerivedType, (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val,
+                      baseType.Val, size.getValueAsMetadata(Context), align.Val,
+                      offset.getValueAsMetadata(Context), DWARFAddressSpace,
+                      PtrAuthData, flags.Val, extraData.Val, annotations.Val));
+>>>>>>>>> Temporary merge branch 2
+=======
+  Result = GET_OR_DISTINCT(
+      DIDerivedType, (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val,
+                      baseType.Val, size.getValueAsMetadata(Context), align.Val,
+                      offset.getValueAsMetadata(Context), DWARFAddressSpace,
+                      memorySpace.val(),
+                      PtrAuthData, flags.Val, extraData.Val, annotations.Val));
+>>>>>>> amd-debug
   return false;
 }
 

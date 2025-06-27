@@ -633,9 +633,29 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   MDNodeKeyImpl(const DIDerivedType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
+<<<<<<< HEAD
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
         OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
         DWARFAddressSpace(N->getDWARFAddressSpace()), DWARFMemorySpace(N->getDWARFMemorySpace()), 
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+        BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
+        OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
+        DWARFAddressSpace(N->getDWARFAddressSpace()), DWARFMemorySpace(N->getDWARFMemorySpace()), 
+||||||||| 1984c7539ebe
+        BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
+        OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
+        DWARFAddressSpace(N->getDWARFAddressSpace()),
+=========
+        BaseType(N->getRawBaseType()), SizeInBits(N->getRawSizeInBits()),
+        OffsetInBits(N->getRawOffsetInBits()), AlignInBits(N->getAlignInBits()),
+        DWARFAddressSpace(N->getDWARFAddressSpace()),
+>>>>>>>>> Temporary merge branch 2
+=======
+        BaseType(N->getRawBaseType()), SizeInBits(N->getRawSizeInBits()),
+        OffsetInBits(N->getRawOffsetInBits()), AlignInBits(N->getAlignInBits()),
+        DWARFAddressSpace(N->getDWARFAddressSpace()), DWARFMemorySpace(N->getDWARFMemorySpace()),
+>>>>>>> amd-debug
         PtrAuthData(N->getPtrAuthData()), Flags(N->getFlags()),
         ExtraData(N->getRawExtraData()), Annotations(N->getRawAnnotations()) {}
 

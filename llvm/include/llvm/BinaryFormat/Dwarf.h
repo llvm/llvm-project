@@ -1046,6 +1046,7 @@ LLVM_ABI unsigned getSubOperationEncoding(unsigned OpEncoding,
 LLVM_ABI unsigned getVirtuality(StringRef VirtualityString);
 LLVM_ABI unsigned getEnumKind(StringRef EnumKindString);
 LLVM_ABI unsigned getLanguage(StringRef LanguageString);
+LLVM_ABI unsigned getMemorySpace(StringRef LanguageString);
 LLVM_ABI unsigned getCallingConvention(StringRef LanguageString);
 LLVM_ABI unsigned getMemorySpace(StringRef LanguageString);
 LLVM_ABI unsigned getAttributeEncoding(StringRef EncodingString);

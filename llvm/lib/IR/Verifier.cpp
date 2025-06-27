@@ -1321,6 +1321,16 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
             "DWARF address space only applies to pointer or reference types",
             &N);
   }
+<<<<<<< HEAD
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+=======
+
+  auto *Size = N.getRawSizeInBits();
+  CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
+              isa<DIExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression");
+>>>>>>> amd-debug
 
   if (N.getDWARFMemorySpace() != dwarf::DW_MSPACE_LLVM_none) {
     CheckDI(N.getTag() == dwarf::DW_TAG_pointer_type ||

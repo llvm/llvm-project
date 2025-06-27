@@ -1390,6 +1390,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   for (Instruction &I : instructions(NewFunc)) {
     UpdateDbgRecordsOnInst(I);
 
+<<<<<<< HEAD
     auto *DII = dyn_cast<DbgInfoIntrinsic>(&I);
     if (!DII)
       continue;
@@ -1432,6 +1433,86 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
   for (auto *DII : DebugIntrinsicsToDelete)
     DII->eraseFromParent();
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+    auto *DII = dyn_cast<DbgInfoIntrinsic>(&I);
+    if (!DII)
+      continue;
+
+    // Point the intrinsic to a fresh label within the new function if the
+    // intrinsic was not inlined from some other function.
+    if (auto *DLI = dyn_cast<DbgLabelInst>(&I)) {
+      UpdateDbgLabel(DLI);
+      continue;
+    }
+
+    auto *DVI = cast<DbgVariableIntrinsic>(DII);
+    // If any of the used locations are invalid, delete the intrinsic.
+    if (any_of(DVI->location_ops(), IsInvalidLocation)) {
+      DebugIntrinsicsToDelete.push_back(DVI);
+      continue;
+    }
+    // DbgAssign intrinsics have an extra Value argument:
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
+        DAI && IsInvalidLocation(DAI->getAddress())) {
+      DebugIntrinsicsToDelete.push_back(DVI);
+      continue;
+    }
+    // If the variable was in the scope of the old function, i.e. it was not
+    // inlined, point the intrinsic to a fresh variable within the new function.
+    if (!DVI->getDebugLoc().getInlinedAt()) {
+      DILocalVariable *OldVar = DVI->getVariable();
+      DINode *&NewVar = RemappedMetadata[OldVar];
+      if (!NewVar) {
+        DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
+            *OldVar->getScope(), *NewSP, Ctx, Cache);
+        NewVar = DIB.createAutoVariable(
+            NewScope, OldVar->getName(), OldVar->getFile(), OldVar->getLine(),
+            OldVar->getType(), /*AlwaysPreserve=*/false, DINode::FlagZero,
+            OldVar->getDWARFMemorySpace(), OldVar->getAlignInBits());
+      }
+      DVI->setVariable(GetUpdatedDIVariable(DVI->getVariable()));
+    }
+  }
+
+  for (auto *DII : DebugIntrinsicsToDelete)
+    DII->eraseFromParent();
+||||||||| 1984c7539ebe
+    auto *DII = dyn_cast<DbgInfoIntrinsic>(&I);
+    if (!DII)
+      continue;
+
+    // Point the intrinsic to a fresh label within the new function if the
+    // intrinsic was not inlined from some other function.
+    if (auto *DLI = dyn_cast<DbgLabelInst>(&I)) {
+      UpdateDbgLabel(DLI);
+      continue;
+    }
+
+    auto *DVI = cast<DbgVariableIntrinsic>(DII);
+    // If any of the used locations are invalid, delete the intrinsic.
+    if (any_of(DVI->location_ops(), IsInvalidLocation)) {
+      DebugIntrinsicsToDelete.push_back(DVI);
+      continue;
+    }
+    // DbgAssign intrinsics have an extra Value argument:
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
+        DAI && IsInvalidLocation(DAI->getAddress())) {
+      DebugIntrinsicsToDelete.push_back(DVI);
+      continue;
+    }
+    // If the variable was in the scope of the old function, i.e. it was not
+    // inlined, point the intrinsic to a fresh variable within the new function.
+    if (!DVI->getDebugLoc().getInlinedAt())
+      DVI->setVariable(GetUpdatedDIVariable(DVI->getVariable()));
+  }
+
+  for (auto *DII : DebugIntrinsicsToDelete)
+    DII->eraseFromParent();
+=========
+>>>>>>>>> Temporary merge branch 2
+=======
+>>>>>>> amd-debug
   for (auto *DVR : DVRsToDelete)
     DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   DIB.finalizeSubprogram(NewSP);
