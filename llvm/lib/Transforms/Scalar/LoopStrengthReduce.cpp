@@ -6467,10 +6467,13 @@ struct SCEVDbgValueBuilder {
   /// Components of the expression are omitted if they are an identity function.
   /// Chain (non-affine) SCEVs are not supported.
   bool SCEVToValueExpr(const llvm::SCEVAddRecExpr &SAR, ScalarEvolution &SE) {
-    const SCEV *Start, *Stride;
-    [[maybe_unused]] bool Match =
-        match(&SAR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Stride)));
-    assert(Match && "Expected affine SCEV");
+    assert(SAR.isAffine() && "Expected affine SCEV");
+    // TODO: Is this check needed?
+    if (isa<SCEVAddRecExpr>(SAR.getStart()))
+      return false;
+
+    const SCEV *Start = SAR.getStart();
+    const SCEV *Stride = SAR.getStepRecurrence(SE);
 
     // Skip pushing arithmetic noops.
     if (!isIdentityFunction(llvm::dwarf::DW_OP_mul, Stride)) {
@@ -6535,10 +6538,14 @@ struct SCEVDbgValueBuilder {
   /// Components of the expression are omitted if they are an identity function.
   bool SCEVToIterCountExpr(const llvm::SCEVAddRecExpr &SAR,
                            ScalarEvolution &SE) {
-    const SCEV *Start, *Stride;
-    [[maybe_unused]] bool Match =
-        match(&SAR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Stride)));
-    assert(Match && "Expected affine SCEV");
+    assert(SAR.isAffine() && "Expected affine SCEV");
+    if (isa<SCEVAddRecExpr>(SAR.getStart())) {
+      LLVM_DEBUG(dbgs() << "scev-salvage: IV SCEV. Unsupported nested AddRec: "
+                        << SAR << '\n');
+      return false;
+    }
+    const SCEV *Start = SAR.getStart();
+    const SCEV *Stride = SAR.getStepRecurrence(SE);
 
     // Skip pushing arithmetic noops.
     if (!isIdentityFunction(llvm::dwarf::DW_OP_minus, Start)) {
