@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <variant>
 
@@ -136,6 +137,22 @@ using RootElement =
     std::variant<dxbc::RootFlags, RootConstants, RootDescriptor,
                  DescriptorTable, DescriptorTableClause, StaticSampler>;
 
+/// The following contains the serialization interface for root elements
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const RootConstants &Constants);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const DescriptorTableClause &Clause);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const RootDescriptor &Descriptor);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const StaticSampler &StaticSampler);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element);
+
+LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+
+/// The following contains the validation interface of root elements
 struct RangeInfo {
   const static uint32_t Unbounded = ~0u;
 
