@@ -98,6 +98,109 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+static const EnumEntry<SamplerFilter> SamplerFilterNames[] = {
+    {"MinMagMipPoint", SamplerFilter::MinMagMipPoint},
+    {"MinMagPointMipLinear", SamplerFilter::MinMagPointMipLinear},
+    {"MinPointMagLinearMipPoint", SamplerFilter::MinPointMagLinearMipPoint},
+    {"MinPointMagMipLinear", SamplerFilter::MinPointMagMipLinear},
+    {"MinLinearMagMipPoint", SamplerFilter::MinLinearMagMipPoint},
+    {"MinLinearMagPointMipLinear", SamplerFilter::MinLinearMagPointMipLinear},
+    {"MinMagLinearMipPoint", SamplerFilter::MinMagLinearMipPoint},
+    {"MinMagMipLinear", SamplerFilter::MinMagMipLinear},
+    {"Anisotropic", SamplerFilter::Anisotropic},
+    {"ComparisonMinMagMipPoint", SamplerFilter::ComparisonMinMagMipPoint},
+    {"ComparisonMinMagPointMipLinear",
+     SamplerFilter::ComparisonMinMagPointMipLinear},
+    {"ComparisonMinPointMagLinearMipPoint",
+     SamplerFilter::ComparisonMinPointMagLinearMipPoint},
+    {"ComparisonMinPointMagMipLinear",
+     SamplerFilter::ComparisonMinPointMagMipLinear},
+    {"ComparisonMinLinearMagMipPoint",
+     SamplerFilter::ComparisonMinLinearMagMipPoint},
+    {"ComparisonMinLinearMagPointMipLinear",
+     SamplerFilter::ComparisonMinLinearMagPointMipLinear},
+    {"ComparisonMinMagLinearMipPoint",
+     SamplerFilter::ComparisonMinMagLinearMipPoint},
+    {"ComparisonMinMagMipLinear", SamplerFilter::ComparisonMinMagMipLinear},
+    {"ComparisonAnisotropic", SamplerFilter::ComparisonAnisotropic},
+    {"MinimumMinMagMipPoint", SamplerFilter::MinimumMinMagMipPoint},
+    {"MinimumMinMagPointMipLinear", SamplerFilter::MinimumMinMagPointMipLinear},
+    {"MinimumMinPointMagLinearMipPoint",
+     SamplerFilter::MinimumMinPointMagLinearMipPoint},
+    {"MinimumMinPointMagMipLinear", SamplerFilter::MinimumMinPointMagMipLinear},
+    {"MinimumMinLinearMagMipPoint", SamplerFilter::MinimumMinLinearMagMipPoint},
+    {"MinimumMinLinearMagPointMipLinear",
+     SamplerFilter::MinimumMinLinearMagPointMipLinear},
+    {"MinimumMinMagLinearMipPoint", SamplerFilter::MinimumMinMagLinearMipPoint},
+    {"MinimumMinMagMipLinear", SamplerFilter::MinimumMinMagMipLinear},
+    {"MinimumAnisotropic", SamplerFilter::MinimumAnisotropic},
+    {"MaximumMinMagMipPoint", SamplerFilter::MaximumMinMagMipPoint},
+    {"MaximumMinMagPointMipLinear", SamplerFilter::MaximumMinMagPointMipLinear},
+    {"MaximumMinPointMagLinearMipPoint",
+     SamplerFilter::MaximumMinPointMagLinearMipPoint},
+    {"MaximumMinPointMagMipLinear", SamplerFilter::MaximumMinPointMagMipLinear},
+    {"MaximumMinLinearMagMipPoint", SamplerFilter::MaximumMinLinearMagMipPoint},
+    {"MaximumMinLinearMagPointMipLinear",
+     SamplerFilter::MaximumMinLinearMagPointMipLinear},
+    {"MaximumMinMagLinearMipPoint", SamplerFilter::MaximumMinMagLinearMipPoint},
+    {"MaximumMinMagMipLinear", SamplerFilter::MaximumMinMagMipLinear},
+    {"MaximumAnisotropic", SamplerFilter::MaximumAnisotropic},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS, const SamplerFilter &Filter) {
+  printEnum(OS, Filter, ArrayRef(SamplerFilterNames));
+
+  return OS;
+}
+
+static const EnumEntry<TextureAddressMode> TextureAddressModeNames[] = {
+    {"Wrap", TextureAddressMode::Wrap},
+    {"Mirror", TextureAddressMode::Mirror},
+    {"Clamp", TextureAddressMode::Clamp},
+    {"Border", TextureAddressMode::Border},
+    {"MirrorOnce", TextureAddressMode::MirrorOnce},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const TextureAddressMode &Address) {
+  printEnum(OS, Address, ArrayRef(TextureAddressModeNames));
+
+  return OS;
+}
+
+static const EnumEntry<ComparisonFunc> ComparisonFuncNames[] = {
+    {"Never", ComparisonFunc::Never},
+    {"Less", ComparisonFunc::Less},
+    {"Equal", ComparisonFunc::Equal},
+    {"LessEqual", ComparisonFunc::LessEqual},
+    {"Greater", ComparisonFunc::Greater},
+    {"NotEqual", ComparisonFunc::NotEqual},
+    {"GreaterEqual", ComparisonFunc::GreaterEqual},
+    {"Always", ComparisonFunc::Always},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const ComparisonFunc &CompFunc) {
+  printEnum(OS, CompFunc, ArrayRef(ComparisonFuncNames));
+
+  return OS;
+}
+
+static const EnumEntry<StaticBorderColor> StaticBorderColorNames[] = {
+    {"TransparentBlack", StaticBorderColor::TransparentBlack},
+    {"OpaqueBlack", StaticBorderColor::OpaqueBlack},
+    {"OpaqueWhite", StaticBorderColor::OpaqueWhite},
+    {"OpaqueBlackUint", StaticBorderColor::OpaqueBlackUint},
+    {"OpaqueWhiteUint", StaticBorderColor::OpaqueWhiteUint},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const StaticBorderColor &BorderColor) {
+  printEnum(OS, BorderColor, ArrayRef(StaticBorderColorNames));
+
+  return OS;
+}
+
 static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
     {"CBV", dxil::ResourceClass::CBuffer},
     {"SRV", dxil::ResourceClass::SRV},
@@ -108,6 +211,20 @@ static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   printEnum(OS, dxil::ResourceClass(llvm::to_underlying(Type)),
             ArrayRef(ResourceClassNames));
+
+  return OS;
+}
+
+static const EnumEntry<RootDescriptorFlags> RootDescriptorFlagNames[] = {
+    {"DataVolatile", RootDescriptorFlags::DataVolatile},
+    {"DataStaticWhileSetAtExecute",
+     RootDescriptorFlags::DataStaticWhileSetAtExecute},
+    {"DataStatic", RootDescriptorFlags::DataStatic},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const RootDescriptorFlags &Flags) {
+  printFlags(OS, Flags, ArrayRef(RootDescriptorFlagNames));
 
   return OS;
 }
@@ -170,9 +287,12 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
-  OS << Clause.Type << "(" << Clause.Reg
-     << ", numDescriptors = " << Clause.NumDescriptors
-     << ", space = " << Clause.Space << ", offset = ";
+  OS << Clause.Type << "(" << Clause.Reg << ", numDescriptors = ";
+  if (Clause.NumDescriptors == NumDescriptorsUnbounded)
+    OS << "unbounded";
+  else
+    OS << Clause.NumDescriptors;
+  OS << ", space = " << Clause.Space << ", offset = ";
   if (Clause.Offset == DescriptorTableOffsetAppend)
     OS << "DescriptorTableOffsetAppend";
   else
@@ -182,36 +302,70 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
   return OS;
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const RootDescriptor &Descriptor) {
+  ClauseType Type = ClauseType(llvm::to_underlying(Descriptor.Type));
+  OS << "Root" << Type << "(" << Descriptor.Reg
+     << ", space = " << Descriptor.Space
+     << ", visibility = " << Descriptor.Visibility
+     << ", flags = " << Descriptor.Flags << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
+  OS << "StaticSampler(" << Sampler.Reg << ", filter = " << Sampler.Filter
+     << ", addressU = " << Sampler.AddressU
+     << ", addressV = " << Sampler.AddressV
+     << ", addressW = " << Sampler.AddressW
+     << ", mipLODBias = " << Sampler.MipLODBias
+     << ", maxAnisotropy = " << Sampler.MaxAnisotropy
+     << ", comparisonFunc = " << Sampler.CompFunc
+     << ", borderColor = " << Sampler.BorderColor
+     << ", minLOD = " << Sampler.MinLOD << ", maxLOD = " << Sampler.MaxLOD
+     << ", space = " << Sampler.Space << ", visibility = " << Sampler.Visibility
+     << ")";
+  return OS;
+}
+
+namespace {
+
+// We use the OverloadVisit with std::visit to ensure the compiler catches if a
+// new RootElement variant type is added but it's operator<< or metadata
+// generation isn't handled.
+template <class... Ts> struct OverloadedVisit : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> OverloadedVisit(Ts...) -> OverloadedVisit<Ts...>;
+
+} // namespace
+
+raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
+  const auto Visitor = OverloadedVisit{
+      [&OS](const RootFlags &Flags) { OS << Flags; },
+      [&OS](const RootConstants &Constants) { OS << Constants; },
+      [&OS](const RootDescriptor &Descriptor) { OS << Descriptor; },
+      [&OS](const DescriptorTableClause &Clause) { OS << Clause; },
+      [&OS](const DescriptorTable &Table) { OS << Table; },
+      [&OS](const StaticSampler &Sampler) { OS << Sampler; },
+  };
+  std::visit(Visitor, Element);
+  return OS;
+}
+
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
-  OS << "RootElements{";
+  OS << " RootElements{";
   bool First = true;
   for (const RootElement &Element : Elements) {
     if (!First)
       OS << ",";
-    OS << " ";
-    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
-      OS << *Clause;
-    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
-      OS << *Table;
+    OS << " " << Element;
     First = false;
   }
   OS << "}";
 }
 
-namespace {
-
-// We use the OverloadBuild with std::visit to ensure the compiler catches if a
-// new RootElement variant type is added but it's metadata generation isn't
-// handled.
-template <class... Ts> struct OverloadedBuild : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> OverloadedBuild(Ts...) -> OverloadedBuild<Ts...>;
-
-} // namespace
-
 MDNode *MetadataBuilder::BuildRootSignature() {
-  const auto Visitor = OverloadedBuild{
+  const auto Visitor = OverloadedVisit{
       [this](const RootFlags &Flags) -> MDNode * {
         return BuildRootFlags(Flags);
       },
@@ -366,6 +520,8 @@ ResourceRange::getOverlapping(const RangeInfo &Info) const {
 const RangeInfo *ResourceRange::lookup(uint32_t X) const {
   return Intervals.lookup(X, nullptr);
 }
+
+void ResourceRange::clear() { return Intervals.clear(); }
 
 std::optional<const RangeInfo *> ResourceRange::insert(const RangeInfo &Info) {
   uint32_t LowerBound = Info.LowerBound;

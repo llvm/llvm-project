@@ -105,6 +105,12 @@ public:
   /// callee
   CIRGenCallee prepareConcreteCallee(CIRGenFunction &cgf) const;
 
+  CIRGenCalleeInfo getAbstractInfo() const {
+    assert(!cir::MissingFeatures::opCallVirtual());
+    assert(isOrdinary());
+    return abstractInfo;
+  }
+
   mlir::Operation *getFunctionPointer() const {
     assert(isOrdinary());
     return reinterpret_cast<mlir::Operation *>(kindOrFunctionPtr);
