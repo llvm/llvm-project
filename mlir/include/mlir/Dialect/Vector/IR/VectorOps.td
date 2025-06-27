@@ -1543,7 +1543,7 @@ def Vector_TransferReadOp :
   }];
 
   let builders = [
-    /// 1. Builder that sets padding to `padding` or poisson if not provided and
+    /// 1. Builder that sets padding to `padding` or poison if not provided and
     /// an empty mask (variant with attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
@@ -1551,7 +1551,7 @@ def Vector_TransferReadOp :
                    "std::optional<Value>":$padding,
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
-    /// 2. Builder that sets padding to `padding` or poisson if not provided and
+    /// 2. Builder that sets padding to `padding` or poison if not provided and
     /// an empty mask (variant without attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
@@ -1559,7 +1559,7 @@ def Vector_TransferReadOp :
                    "std::optional<Value>":$padding,
                    "AffineMap":$permutationMap,
                    CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-    /// 3. Builder that sets padding to `padding` or poisson if not provided and
+    /// 3. Builder that sets padding to `padding` or poison if not provided and
     /// permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
