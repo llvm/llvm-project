@@ -4967,12 +4967,26 @@ void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(
-    IntrinsicInst *Inst, Type *ExpectedType,
-    SmallVectorImpl<Instruction *> &NewInsts) const {
+Value *AArch64TTIImpl::getResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                                 Type *ExpectedType) const {
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
+  case Intrinsic::aarch64_neon_ld2:
+  case Intrinsic::aarch64_neon_ld3:
+  case Intrinsic::aarch64_neon_ld4:
+    if (Inst->getType() == ExpectedType)
+      return Inst;
+    return nullptr;
+  }
+}
+
+Value *
+AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                                  Type *ExpectedType) const {
+  switch (Inst->getIntrinsicID()) {
+  default:
+    return getResultFromMemIntrinsic(Inst, ExpectedType);
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4: {
@@ -4988,23 +5002,13 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(
         return nullptr;
     }
     Value *Res = PoisonValue::get(ExpectedType);
-    IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-        Inst->getContext(), ConstantFolder(),
-        IRBuilderCallbackInserter(
-            [&NewInsts](Instruction *I) { NewInsts.push_back(I); }));
-    Builder.SetInsertPoint(Inst);
+    IRBuilder<> Builder(Inst);
     for (unsigned i = 0, e = NumElts; i != e; ++i) {
       Value *L = Inst->getArgOperand(i);
       Res = Builder.CreateInsertValue(Res, L, i);
     }
     return Res;
   }
-  case Intrinsic::aarch64_neon_ld2:
-  case Intrinsic::aarch64_neon_ld3:
-  case Intrinsic::aarch64_neon_ld4:
-    if (Inst->getType() == ExpectedType)
-      return Inst;
-    return nullptr;
   }
 }
 

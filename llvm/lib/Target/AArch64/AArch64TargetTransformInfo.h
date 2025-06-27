@@ -270,9 +270,11 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
 
-  Value *getOrCreateResultFromMemIntrinsic(
-      IntrinsicInst *Inst, Type *ExpectedType,
-      SmallVectorImpl<Instruction *> &NewInsts) const override;
+  Value *getResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                   Type *ExpectedType) const override;
+
+  Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                           Type *ExpectedType) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) const override;
