@@ -458,6 +458,22 @@ public:
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
 
+  /// Returns the full path of the most appropriate SDK for the
+  /// specified 'module'. This function gets this path by parsing
+  /// debug-info (see \ref `GetSDKPathFromDebugInfo`).
+  ///
+  /// \param[in] module Module whose debug-info to parse for
+  ///                   which SDK it was compiled against.
+  ///
+  /// \returns If successful, returns the full path to an
+  ///          Xcode SDK.
+  virtual llvm::Expected<std::string>
+  ResolveSDKPathFromDebugInfo(Module &module) {
+    return llvm::createStringError(
+        llvm::formatv("{0} not implemented for '{1}' platform.",
+                      LLVM_PRETTY_FUNCTION, GetName()));
+  }
+
   /// Search CU for the SDK path the CUs was compiled against.
   ///
   /// \param[in] unit The CU

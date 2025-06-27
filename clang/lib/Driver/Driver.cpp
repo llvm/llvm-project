@@ -988,6 +988,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     if (CudaInstallation.isValid())
       CudaInstallation.WarnIfUnsupportedVersion();
     C.addOffloadDeviceToolChain(&TC, Action::OFK_Cuda);
+    OffloadArchs[&TC] = getOffloadArchs(C, C.getArgs(), Action::OFK_Cuda, &TC,
+                                        /*SpecificToolchain=*/true);
   } else if (IsHIP && !UseLLVMOffload) {
     if (auto *OMPTargetArg =
             C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
@@ -1004,6 +1006,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         getOffloadToolChain(C.getInputArgs(), Action::OFK_HIP, *HIPTriple,
                             C.getDefaultToolChain().getTriple());
     C.addOffloadDeviceToolChain(&TC, Action::OFK_HIP);
+
+    // TODO: Fix 'amdgcnspirv' handling with the new driver.
+    if (C.getInputArgs().hasFlag(options::OPT_offload_new_driver,
+                                 options::OPT_no_offload_new_driver, false))
+      OffloadArchs[&TC] = getOffloadArchs(C, C.getArgs(), Action::OFK_HIP, &TC,
+                                          /*SpecificToolchain=*/true);
   }
 
   if (IsCuda || IsHIP)
@@ -1069,11 +1077,30 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         auto &TC = getOffloadToolChain(C.getInputArgs(), Action::OFK_OpenMP, TT,
                                        C.getDefaultToolChain().getTriple());
         C.addOffloadDeviceToolChain(&TC, Action::OFK_OpenMP);
+        OffloadArchs[&TC] =
+            getOffloadArchs(C, C.getArgs(), Action::OFK_OpenMP, &TC,
+                            /*SpecificToolchain=*/true);
       }
     } else if (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
                ((!IsHIP && !IsCuda) || UseLLVMOffload)) {
       llvm::Triple AMDTriple("amdgcn-amd-amdhsa");
       llvm::Triple NVPTXTriple("nvptx64-nvidia-cuda");
+
+      for (StringRef A :
+           C.getInputArgs().getAllArgValues(options::OPT_offload_arch_EQ)) {
+        for (StringRef Arch : llvm::split(A, ",")) {
+          bool IsNVPTX = IsNVIDIAOffloadArch(
+              StringToOffloadArch(getProcessorFromTargetID(NVPTXTriple, Arch)));
+          bool IsAMDGPU = IsAMDOffloadArch(
+              StringToOffloadArch(getProcessorFromTargetID(AMDTriple, Arch)));
+          if (!IsNVPTX && !IsAMDGPU && !Arch.empty() &&
+              !Arch.equals_insensitive("native")) {
+            Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch)
+                << Arch;
+            return;
+          }
+        }
+      }
 
       // Attempt to deduce the offloading triple from the set of architectures.
       // We can only correctly deduce NVPTX / AMDGPU triples currently.
@@ -1081,28 +1108,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         auto &TC = getOffloadToolChain(C.getInputArgs(), Action::OFK_OpenMP, TT,
                                        C.getDefaultToolChain().getTriple());
 
-        llvm::DenseSet<StringRef> Archs =
-            getOffloadArchs(C, C.getArgs(), Action::OFK_OpenMP, &TC, true);
-        llvm::DenseSet<StringRef> ArchsForTarget;
-        for (StringRef Arch : Archs) {
-          bool IsNVPTX = IsNVIDIAOffloadArch(
-              StringToOffloadArch(getProcessorFromTargetID(NVPTXTriple, Arch)));
-          bool IsAMDGPU = IsAMDOffloadArch(
-              StringToOffloadArch(getProcessorFromTargetID(AMDTriple, Arch)));
-          if (!IsNVPTX && !IsAMDGPU && !Arch.equals_insensitive("native")) {
-            Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch)
-                << Arch;
-            return;
-          }
-
-          if (TT.isNVPTX() && IsNVPTX)
-            ArchsForTarget.insert(Arch);
-          else if (TT.isAMDGPU() && IsAMDGPU)
-            ArchsForTarget.insert(Arch);
-        }
-        if (!ArchsForTarget.empty()) {
+        llvm::SmallVector<StringRef> Archs =
+            getOffloadArchs(C, C.getArgs(), Action::OFK_OpenMP, &TC,
+                            /*SpecificToolchain=*/false);
+        if (!Archs.empty()) {
           C.addOffloadDeviceToolChain(&TC, Action::OFK_OpenMP);
-          KnownArchs[&TC] = ArchsForTarget;
+          OffloadArchs[&TC] = Archs;
         }
       }
 
@@ -1143,9 +1154,11 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     // going to create will depend on both.
     const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
     for (const auto &TT : UniqueSYCLTriplesVec) {
-      auto SYCLTC = &getOffloadToolChain(C.getInputArgs(), Action::OFK_SYCL, TT,
-                                         HostTC->getTriple());
-      C.addOffloadDeviceToolChain(SYCLTC, Action::OFK_SYCL);
+      auto &TC = getOffloadToolChain(C.getInputArgs(), Action::OFK_SYCL, TT,
+                                     HostTC->getTriple());
+      C.addOffloadDeviceToolChain(&TC, Action::OFK_SYCL);
+      OffloadArchs[&TC] = getOffloadArchs(C, C.getArgs(), Action::OFK_SYCL, &TC,
+                                          /*SpecificToolchain=*/true);
     }
   }
 
@@ -4703,20 +4716,22 @@ static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
                                         const llvm::Triple &Triple,
-                                        bool SuppressError = false) {
+                                        bool SpecificToolchain) {
   // Lookup the CUDA / HIP architecture string. Only report an error if we were
   // expecting the triple to be only NVPTX / AMDGPU.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
-  if (!SuppressError && Triple.isNVPTX() &&
+  if (Triple.isNVPTX() &&
       (Arch == OffloadArch::UNKNOWN || !IsNVIDIAOffloadArch(Arch))) {
-    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
-        << "CUDA" << ArchStr;
+    if (SpecificToolchain)
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "CUDA" << ArchStr;
     return StringRef();
-  } else if (!SuppressError && Triple.isAMDGPU() &&
+  } else if (Triple.isAMDGPU() &&
              (Arch == OffloadArch::UNKNOWN || !IsAMDOffloadArch(Arch))) {
-    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
-        << "HIP" << ArchStr;
+    if (SpecificToolchain)
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "HIP" << ArchStr;
     return StringRef();
   }
 
@@ -4725,13 +4740,9 @@ static StringRef getCanonicalArchString(Compilation &C,
 
   if (IsAMDOffloadArch(Arch)) {
     llvm::StringMap<bool> Features;
-    auto HIPTriple = getHIPOffloadTargetTriple(C.getDriver(), C.getInputArgs());
-    if (!HIPTriple)
-      return StringRef();
-    auto Arch = parseTargetID(*HIPTriple, ArchStr, &Features);
+    std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
     if (!Arch) {
       C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << ArchStr;
-      C.setContainsError();
       return StringRef();
     }
     return Args.MakeArgStringRef(getCanonicalTargetID(*Arch, Features));
@@ -4754,10 +4765,10 @@ getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
   return getConflictTargetIDCombination(ArchSet);
 }
 
-llvm::DenseSet<StringRef>
+llvm::SmallVector<StringRef>
 Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                         Action::OffloadKind Kind, const ToolChain *TC,
-                        bool SuppressError) const {
+                        bool SpecificToolchain) const {
   if (!TC)
     TC = &C.getDefaultToolChain();
 
@@ -4772,9 +4783,6 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                 : "--no-offload-arch");
   }
 
-  if (KnownArchs.contains(TC))
-    return KnownArchs.lookup(TC);
-
   llvm::DenseSet<StringRef> Archs;
   for (auto *Arg : C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind)) {
     // Add or remove the seen architectures in order of appearance. If an
@@ -4784,7 +4792,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         if (Arch == "native" || Arch.empty()) {
           auto GPUsOrErr = TC->getSystemGPUArchs(Args);
           if (!GPUsOrErr) {
-            if (SuppressError)
+            if (!SpecificToolchain)
               llvm::consumeError(GPUsOrErr.takeError());
             else
               TC->getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
@@ -4794,16 +4802,21 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           }
 
           for (auto ArchStr : *GPUsOrErr) {
-            Archs.insert(
+            StringRef CanonicalStr =
                 getCanonicalArchString(C, Args, Args.MakeArgString(ArchStr),
-                                       TC->getTriple(), SuppressError));
+                                       TC->getTriple(), SpecificToolchain);
+            if (!CanonicalStr.empty())
+              Archs.insert(CanonicalStr);
+            else if (SpecificToolchain)
+              return llvm::SmallVector<StringRef>();
           }
         } else {
-          StringRef ArchStr = getCanonicalArchString(
-              C, Args, Arch, TC->getTriple(), SuppressError);
-          if (ArchStr.empty())
-            return Archs;
-          Archs.insert(ArchStr);
+          StringRef CanonicalStr = getCanonicalArchString(
+              C, Args, Arch, TC->getTriple(), SpecificToolchain);
+          if (!CanonicalStr.empty())
+            Archs.insert(CanonicalStr);
+          else if (SpecificToolchain)
+            return llvm::SmallVector<StringRef>();
         }
       }
     } else if (Arg->getOption().matches(options::OPT_no_offload_arch_EQ)) {
@@ -4812,9 +4825,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           Archs.clear();
         } else {
           StringRef ArchStr = getCanonicalArchString(
-              C, Args, Arch, TC->getTriple(), SuppressError);
-          if (ArchStr.empty())
-            return Archs;
+              C, Args, Arch, TC->getTriple(), SpecificToolchain);
           Archs.erase(ArchStr);
         }
       }
@@ -4822,17 +4833,12 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   }
 
   if (auto ConflictingArchs =
-          getConflictOffloadArchCombination(Archs, TC->getTriple())) {
+          getConflictOffloadArchCombination(Archs, TC->getTriple()))
     C.getDriver().Diag(clang::diag::err_drv_bad_offload_arch_combo)
         << ConflictingArchs->first << ConflictingArchs->second;
-    C.setContainsError();
-  }
 
   // Skip filling defaults if we're just querying what is availible.
-  if (SuppressError)
-    return Archs;
-
-  if (Archs.empty()) {
+  if (SpecificToolchain && Archs.empty()) {
     if (Kind == Action::OFK_Cuda) {
       Archs.insert(OffloadArchToString(OffloadArch::CudaDefault));
     } else if (Kind == Action::OFK_HIP) {
@@ -4858,12 +4864,13 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         }
       }
     }
-  } else {
-    Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
-    Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
   }
+  Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
+  Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
 
-  return Archs;
+  SmallVector<StringRef> Sorted(Archs.begin(), Archs.end());
+  llvm::sort(Sorted);
+  return Sorted;
 }
 
 Action *Driver::BuildOffloadingActions(Compilation &C,
@@ -4927,10 +4934,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, StringRef>> TCAndArchs;
     for (const ToolChain *TC : ToolChains) {
-      llvm::DenseSet<StringRef> Arches = getOffloadArchs(C, Args, Kind, TC);
-      SmallVector<StringRef, 0> Sorted(Arches.begin(), Arches.end());
-      llvm::sort(Sorted);
-      for (StringRef Arch : Sorted) {
+      for (StringRef Arch : OffloadArchs.lookup(TC)) {
         TCAndArchs.push_back(std::make_pair(TC, Arch));
         DeviceActions.push_back(
             C.MakeAction<InputAction>(*InputArg, InputType, CUID));
