@@ -1965,7 +1965,12 @@ static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   return isa<CXXThrowExpr>(OnlyStmt);
 }
 
-void clang::inferNoReturnAttr(Sema &S, FunctionDecl *FD) {
+void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
+  auto *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
+    return;
+
+  auto *NonConstFD = const_cast<FunctionDecl *>(FD);
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
       Diags.isIgnored(diag::warn_suggest_noreturn_function, FD->getLocation()))
@@ -1973,7 +1978,7 @@ void clang::inferNoReturnAttr(Sema &S, FunctionDecl *FD) {
 
   if (!FD->hasAttr<NoReturnAttr>() && !FD->hasAttr<InferredNoReturnAttr>() &&
       isKnownToAlwaysThrow(FD)) {
-    FD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
+    NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
   }
 }
 
