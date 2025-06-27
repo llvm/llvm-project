@@ -1,7 +1,6 @@
 add_llvm_component_library(LLVMDWARFCFIChecker
   DWARFCFIAnalysis.cpp
   DWARFCFIFunctionFrameAnalyzer.cpp
-  DWARFCFIFunctionFrameReceiver.cpp
   DWARFCFIFunctionFrameStreamer.cpp
   DWARFCFIState.cpp
 
