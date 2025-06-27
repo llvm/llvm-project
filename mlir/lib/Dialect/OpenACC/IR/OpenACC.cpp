@@ -3218,6 +3218,53 @@ void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<RemoveConstantIfCondition<EnterDataOp>>(context);
 }
 
+void EnterDataOp::addAsyncOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  setAsyncAttr(mlir::UnitAttr::get(context));
+}
+
+void EnterDataOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  getAsyncOperandMutable().append(newValue);
+}
+
+void EnterDataOp::addWaitOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  setWaitAttr(mlir::UnitAttr::get(context));
+}
+
+void EnterDataOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  // if hasDevnum, the first value is the devnum. The 'rest' go into the
+  // operands list.
+  if (hasDevnum) {
+    getWaitDevnumMutable().append(newValues.front());
+    newValues = newValues.drop_front();
+  }
+
+  getWaitOperandsMutable().append(newValues);
+}
+
 //===----------------------------------------------------------------------===//
 // AtomicReadOp
 //===----------------------------------------------------------------------===//
