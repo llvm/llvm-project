@@ -42,7 +42,7 @@ endif()
 # Include the RPC server from the `libc` project.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
-if(OFFLOAD_ENABLE_EMISSARY_APIS)
+if(OFFLOAD_ENABLE_EMISSARY_APIS AND LIBOMPTARGET_BUILD_DEVICE_FORTRT)
   target_link_libraries(PluginCommon PRIVATE flang_rt.runtime
   -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
 endif()
