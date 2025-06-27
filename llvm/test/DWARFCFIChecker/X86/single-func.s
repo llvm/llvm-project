@@ -1,4 +1,5 @@
-# RUN: llvm-mc %s --validate-cfi --filetype=null
+# RUN: llvm-mc %s --validate-cfi --filetype=null 2>&1 \
+# RUN:   | FileCheck %s 
         .text
         .globl  f
         .type   f,@function

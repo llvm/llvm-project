@@ -1,4 +1,6 @@
-# RUN: llvm-mc %s --validate-cfi --filetype=null 2>&1
+# RUN: llvm-mc %s --validate-cfi --filetype=null 2>&1 \
+# RUN:   | FileCheck %s --allow-empty 
+# CHECK-NOT: warning:
 .text
         .globl  f
         .type   f, @function
