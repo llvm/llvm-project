@@ -1055,29 +1055,29 @@ def funnel_shift_overshift: GICombineRule<
 
 // Transform: fshl x, z, y | shl x, y -> fshl x, z, y
 // Transform: shl x, y | fshl x, z, y  -> fshl x, z, y
-// FIXME: TableGen didn't handle G_OR commutativity on its own, 
+// FIXME: TableGen didn't handle G_OR commutativity on its own,
 //        necessitating the use of !foreach to handle it manually.
 def funnel_shift_or_shift_to_funnel_shift_left_frags : GICombinePatFrag<
   (outs root: $dst, $out1, $out2), (ins),
-  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)],
            (pattern (G_FSHL $out1, $x, $z, $y), (G_SHL $out2, $x, $y), inst))>;
 def funnel_shift_or_shift_to_funnel_shift_left: GICombineRule<
-  (defs root:$root), 
+  (defs root:$root),
   (match (funnel_shift_or_shift_to_funnel_shift_left_frags $root, $out1, $out2)),
   (apply (GIReplaceReg $root, $out1))
 >;
 
 // Transform: fshr z, x, y | srl x, y -> fshr z, x, y
 // Transform: srl x, y | fshr z, x, y -> fshr z, x, y
-// FIXME: TableGen didn't handle G_OR commutativity on its own, 
+// FIXME: TableGen didn't handle G_OR commutativity on its own,
 //        necessitating the use of !foreach to handle it manually.
 def funnel_shift_or_shift_to_funnel_shift_right_frags : GICombinePatFrag<
   (outs root: $dst, $out1, $out2), (ins),
-  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)],
            (pattern (G_FSHR $out1, $z, $x, $y), (G_LSHR $out2, $x, $y), inst))>;
 def funnel_shift_or_shift_to_funnel_shift_right: GICombineRule<
-  (defs root:$root), 
-  (match (funnel_shift_or_shift_to_funnel_shift_right_frags $root, $out1, $out2)), 
+  (defs root:$root),
+  (match (funnel_shift_or_shift_to_funnel_shift_right_frags $root, $out1, $out2)),
   (apply (GIReplaceReg $root, $out1))
 >;
 
@@ -1132,6 +1132,14 @@ def double_icmp_zero_or_combine: GICombineRule<
                            MRI.getType(${s2}.getReg())); }]),
   (apply (G_OR $ordst, $s1, $s2),
          (G_ICMP $root, $p, $ordst, 0))
+>;
+
+// Transform ((X | (G_UBFX X, ...) | ...) == 0) (or != 0)
+// into a compare of a extract/mask of X
+def icmp_merged_bfx_combine: GICombineRule<
+  (defs root:$root),
+  (combine (G_ICMP $dst, $p, $src, 0):$root,
+           [{ return Helper.combineMergedBFXCompare(*${root}); }])
 >;
 
 def and_or_disjoint_mask : GICombineRule<
@@ -1204,7 +1212,7 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2, 
+def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2,
                                       udiv_by_const, sdiv_by_const,]>;
 
 def urem_by_const : GICombineRule<
@@ -1307,7 +1315,7 @@ def trunc_ssatu : GICombineRule<
 
 def trunc_usatu : GICombineRule<
   (defs root:$root),
-  (match (G_UMIN $min, $x, $y):$Min, 
+  (match (G_UMIN $min, $x, $y):$Min,
          (G_TRUNC $dst, $min):$root,
     [{ return Helper.matchTruncUSatU(*${root}, *${Min}); }]),
   (apply (G_TRUNC_USAT_U $dst, $x))>;
@@ -2155,8 +2163,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, lshr_of_trunc_of_lshr]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines,
+    truncsat_combines, lshr_of_trunc_of_lshr, icmp_merged_bfx_combine]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
