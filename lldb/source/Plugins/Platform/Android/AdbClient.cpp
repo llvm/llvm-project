@@ -130,14 +130,7 @@ const std::string &AdbClient::GetDeviceID() const { return m_device_id; }
 Status AdbClient::Connect() {
   Status error;
   m_conn = std::make_unique<ConnectionFileDescriptor>();
-  std::string port = "5037";
-  if (const char *env_port = std::getenv("ANDROID_ADB_SERVER_PORT")) {
-    port = env_port;
-  }
-  std::string uri = "connect://127.0.0.1:" + port;
-  m_conn->Connect(uri.c_str(), &error);
-
-  return error;
+  return ConnectToAdb(*m_conn);
 }
 
 Status AdbClient::GetDevices(DeviceIDList &device_list) {
@@ -241,6 +234,10 @@ Status AdbClient::SendDeviceMessage(const std::string &packet) {
 Status AdbClient::ReadMessage(std::vector<char> &message) {
   message.clear();
 
+  if (!m_conn) {
+    return Status::FromErrorString("No connection available");
+  }
+
   char buffer[5];
   buffer[4] = 0;
 
@@ -263,6 +260,10 @@ Status AdbClient::ReadMessageStream(std::vector<char> &message,
                                     milliseconds timeout) {
   auto start = steady_clock::now();
   message.clear();
+
+  if (!m_conn) {
+    return Status::FromErrorString("No connection available");
+  }
 
   Status error;
   lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
@@ -310,7 +311,7 @@ Status AdbClient::GetResponseError(const char *response_id) {
   return Status(std::string(&error_message[0], error_message.size()));
 }
 
-Status AdbClient::SwitchDeviceTransport() {
+Status AdbClient::SelectTargetDevice() {
   std::ostringstream msg;
   msg << "host:transport:" << m_device_id;
 
@@ -321,21 +322,8 @@ Status AdbClient::SwitchDeviceTransport() {
   return ReadResponseStatus();
 }
 
-Status AdbClient::StartSync() {
-  auto error = SwitchDeviceTransport();
-  if (error.Fail())
-    return Status::FromErrorStringWithFormat(
-        "Failed to switch to device transport: %s", error.AsCString());
 
-  error = Sync();
-  if (error.Fail())
-    return Status::FromErrorStringWithFormat("Sync failed: %s",
-                                             error.AsCString());
-
-  return error;
-}
-
-Status AdbClient::Sync() {
+Status AdbClient::EnterSyncMode() {
   auto error = SendMessage("sync:", false);
   if (error.Fail())
     return error;
@@ -344,6 +332,9 @@ Status AdbClient::Sync() {
 }
 
 Status AdbClient::ReadAllBytes(void *buffer, size_t size) {
+  if (!m_conn) {
+    return Status::FromErrorString("No connection available");
+  }
   return ::ReadAllBytes(*m_conn, buffer, size);
 }
 
@@ -351,10 +342,10 @@ Status AdbClient::internalShell(const char *command, milliseconds timeout,
                                 std::vector<char> &output_buf) {
   output_buf.clear();
 
-  auto error = SwitchDeviceTransport();
+  auto error = SelectTargetDevice();
   if (error.Fail())
     return Status::FromErrorStringWithFormat(
-        "Failed to switch to device transport: %s", error.AsCString());
+        "Failed to select target device: %s", error.AsCString());
 
   StreamString adb_command;
   adb_command.Printf("shell:%s", command);
@@ -417,32 +408,6 @@ Status AdbClient::ShellToFile(const char *command, milliseconds timeout,
   return Status();
 }
 
-// Returns a sync service for file operations.
-// This operation is thread-safe - each call creates an isolated sync service
-// with its own connection to avoid race conditions.
-std::unique_ptr<AdbClient::SyncService>
-AdbClient::GetSyncService(Status &error) {
-  std::lock_guard<std::mutex> lock(m_sync_mutex);
-
-  // Create a temporary AdbClient with its own connection for this sync service
-  // This avoids the race condition of multiple threads accessing the same
-  // connection
-  AdbClient temp_client(m_device_id);
-
-  // Connect and start sync on the temporary client
-  error = temp_client.Connect();
-  if (error.Fail())
-    return nullptr;
-
-  error = temp_client.StartSync();
-  if (error.Fail())
-    return nullptr;
-
-  // Move the connection from the temporary client to the sync service
-  std::unique_ptr<SyncService> sync_service;
-  sync_service.reset(new SyncService(std::move(temp_client.m_conn)));
-  return sync_service;
-}
 
 Status AdbClient::SyncService::internalPullFile(const FileSpec &remote_file,
                                                 const FileSpec &local_file) {
@@ -599,17 +564,23 @@ bool AdbClient::SyncService::IsConnected() const {
   return m_conn && m_conn->IsConnected();
 }
 
-AdbClient::SyncService::SyncService(std::unique_ptr<Connection> &&conn)
-    : m_conn(std::move(conn)) {}
+AdbClient::SyncService::SyncService(std::unique_ptr<Connection> conn, const std::string &device_id)
+    : m_conn(std::move(conn)), m_device_id(device_id) {}
 
 Status
 AdbClient::SyncService::executeCommand(const std::function<Status()> &cmd) {
-  if (!m_conn)
-    return Status::FromErrorString("SyncService is disconnected");
+  if (!m_conn || !m_conn->IsConnected()) {
+    Status reconnect_error = SetupSyncConnection(m_device_id);
+    if (reconnect_error.Fail()) {
+      return Status::FromErrorStringWithFormat(
+          "SyncService connection failed: %s", reconnect_error.AsCString());
+    }
+  }
 
   Status error = cmd();
-  if (error.Fail())
+  if (error.Fail()) {
     m_conn.reset();
+  }
 
   return error;
 }
@@ -683,4 +654,41 @@ Status AdbClient::SyncService::PullFileChunk(std::vector<char> &buffer,
 
 Status AdbClient::SyncService::ReadAllBytes(void *buffer, size_t size) {
   return ::ReadAllBytes(*m_conn, buffer, size);
+}
+
+Status AdbClient::SyncService::SetupSyncConnection(const std::string &device_id) {
+  if (!m_conn) {
+    m_conn = std::make_unique<ConnectionFileDescriptor>();
+  }
+  
+  AdbClient temp_client(device_id);
+  Status error = temp_client.ConnectToAdb(*m_conn);
+  if (error.Fail())
+    return error;
+
+  temp_client.m_conn = std::move(m_conn);
+  error = temp_client.SelectTargetDevice();
+  if (error.Fail()) {
+    m_conn = std::move(temp_client.m_conn);
+    return error;
+  }
+  
+  error = temp_client.EnterSyncMode();
+  if (error.Fail()) {
+    return error;
+  }
+  m_conn = std::move(temp_client.m_conn);
+  return error;
+}
+
+Status AdbClient::ConnectToAdb(Connection &conn) {
+  std::string port = "5037";
+  if (const char *env_port = std::getenv("ANDROID_ADB_SERVER_PORT")) {
+    port = env_port;
+  }
+  std::string uri = "connect://127.0.0.1:" + port;
+  
+  Status error;
+  conn.Connect(uri.c_str(), &error);
+  return error;
 }
