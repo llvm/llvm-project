@@ -161,9 +161,8 @@ void TelemetryManager::DispatchClientTelemetry(
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Cannot determine client_data from client-telemetry entry");
 
-  auto start_time = GetAsNanosec(dict, "start_time");
-  if (start_time.has_value())
-    client_info.start_time += start_time.value();
+  if (auto maybe_start_time = GetAsNanosec(dict, "start_time"))
+      client_info.start_time += *maybe_start_time;
 
   auto end_time = GetAsNanosec(dict, "end_time");
   if (end_time.has_value()) {
