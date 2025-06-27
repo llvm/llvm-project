@@ -657,7 +657,7 @@ void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
     P1689ModuleInfo RequiredModule;
     RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
     RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
-    MDC.RequiredStdCXXModules.push_back(RequiredModule);
+    MDC.RequiredStdCXXModules.push_back(std::move(RequiredModule));
     return;
   }
 
@@ -714,9 +714,8 @@ void ModuleDepCollectorPP::EndOfMainFile() {
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
-  if (MDC.Service.getFormat() == ScanningOutputFormat::P1689)
-    MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
-        MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
+  MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
+      MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
 
   for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(*I.second);
@@ -920,7 +919,7 @@ void ModuleDepCollectorPP::addAllSubmoduleDeps(
 
 void ModuleDepCollectorPP::addOneModuleDep(const Module *M, const ModuleID ID,
                                            ModuleDeps &MD) {
-  MD.ClangModuleDeps.push_back(ID);
+  MD.ClangModuleDeps.push_back(std::move(ID));
   if (MD.IsInStableDirectories)
     MD.IsInStableDirectories = MDC.ModularDeps[M]->IsInStableDirectories;
 }

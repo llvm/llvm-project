@@ -36,7 +36,7 @@ define dso_local float @t2(ptr nocapture %x) nounwind readonly ssp optsize {
 ;
 ; AVX-LABEL: t2:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsd2ss (%rcx), %xmm0, %xmm0
+; AVX-NEXT:    vcvtsd2ss (%rcx), %xmm5, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load double, ptr %x, align 8
@@ -93,7 +93,7 @@ define dso_local float @squirtf_size(ptr %x) nounwind optsize {
 ;
 ; AVX-LABEL: squirtf_size:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vsqrtss (%rcx), %xmm0, %xmm0
+; AVX-NEXT:    vsqrtss (%rcx), %xmm5, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %z = load float, ptr %x
@@ -114,7 +114,7 @@ define dso_local double @squirt_size(ptr %x) nounwind optsize {
 ;
 ; AVX-LABEL: squirt_size:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vsqrtsd (%rcx), %xmm0, %xmm0
+; AVX-NEXT:    vsqrtsd (%rcx), %xmm5, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %z = load double, ptr %x
@@ -199,8 +199,8 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB6_3: # %for.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    vcvtsi2ss %eax, %xmm4, %xmm2
-; AVX1-NEXT:    vcvtsi2ss %ecx, %xmm4, %xmm3
+; AVX1-NEXT:    vcvtsi2ss %eax, %xmm5, %xmm2
+; AVX1-NEXT:    vcvtsi2ss %ecx, %xmm5, %xmm3
 ; AVX1-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vaddss %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    incl %eax
@@ -226,9 +226,9 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; AVX512VL-NEXT:    .p2align 4
 ; AVX512VL-NEXT:  .LBB6_3: # %for.body
 ; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512VL-NEXT:    vcvtsi2ss %eax, %xmm3, %xmm2
+; AVX512VL-NEXT:    vcvtsi2ss %eax, %xmm5, %xmm2
 ; AVX512VL-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX512VL-NEXT:    vcvtsi2ss %ecx, %xmm3, %xmm2
+; AVX512VL-NEXT:    vcvtsi2ss %ecx, %xmm5, %xmm2
 ; AVX512VL-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    incl %eax
 ; AVX512VL-NEXT:    decl %ecx
@@ -358,8 +358,8 @@ define i64 @loopdep2(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB7_1: # %loop
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vcvtsi2sd %rcx, %xmm1, %xmm0
+; AVX-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX-NEXT:    vcvtsi2sd %rcx, %xmm5, %xmm0
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    #NO_APP
@@ -566,8 +566,8 @@ define dso_local void @loopdep3() {
 ; AVX-NEXT:  .LBB8_2: # %for.body3
 ; AVX-NEXT:    # Parent Loop BB8_1 Depth=1
 ; AVX-NEXT:    # => This Inner Loop Header: Depth=2
-; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vcvtsi2sdl (%r11), %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX-NEXT:    vcvtsi2sdl (%r11), %xmm5, %xmm0
 ; AVX-NEXT:    vmulsd (%rsi,%rdx), %xmm0, %xmm0
 ; AVX-NEXT:    vmulsd (%rsi,%r8), %xmm0, %xmm0
 ; AVX-NEXT:    vmulsd (%rsi,%r9), %xmm0, %xmm0
@@ -761,8 +761,8 @@ define dso_local double @inlineasmdep(i64 %arg) {
 ; AVX-NEXT:    #NO_APP
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    #NO_APP
-; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vcvtsi2sd %rcx, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vcvtsi2sd %rcx, %xmm3, %xmm0
 ; AVX-NEXT:    vmovaps (%rsp), %xmm6 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload

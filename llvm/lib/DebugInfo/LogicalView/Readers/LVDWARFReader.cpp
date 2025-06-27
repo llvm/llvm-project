@@ -172,6 +172,11 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     if (options().getAttributeProducer())
       CurrentElement->setProducer(dwarf::toStringRef(FormValue));
     break;
+  case dwarf::DW_AT_language:
+    if (options().getAttributeLanguage())
+      CurrentElement->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::dwarf::SourceLanguage>(GetAsUnsignedConstant())});
+    break;
   case dwarf::DW_AT_upper_bound:
     CurrentElement->setUpperBound(GetBoundValue(FormValue));
     break;
@@ -209,10 +214,11 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
         }
       }
       if (FoundLowPC) {
-        if (CurrentLowPC == MaxAddress)
+        if (CurrentLowPC == getTombstoneAddress())
           CurrentElement->setIsDiscarded();
-        // Consider the case of WebAssembly.
-        CurrentLowPC += WasmCodeSectionOffset;
+        else
+          // Consider the case of WebAssembly.
+          CurrentLowPC += WasmCodeSectionOffset;
         if (CurrentElement->isCompileUnit())
           setCUBaseAddress(CurrentLowPC);
       }
@@ -266,7 +272,8 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       DWARFAddressRangesVector Ranges = RangesOrError.get();
       for (DWARFAddressRange &Range : Ranges) {
         // This seems to be a tombstone for empty ranges.
-        if (Range.LowPC == Range.HighPC)
+        if ((Range.LowPC == Range.HighPC) ||
+            (Range.LowPC = getTombstoneAddress()))
           continue;
         // Store the real upper limit for the address range.
         if (UpdateHighAddress && Range.HighPC > 0)
@@ -587,8 +594,8 @@ std::string LVDWARFReader::getRegisterName(LVSmall Opcode,
     return {};
   };
   DumpOpts.GetNameForDWARFReg = GetRegName;
-  DWARFExpression::prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts,
-                                         Opcode, Operands);
+  DWARFExpressionPrinter::prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts,
+                                                Opcode, Operands);
   return Stream.str();
 }
 
@@ -623,6 +630,11 @@ Error LVDWARFReader::createScopes() {
       DwarfContext->getNumCompileUnits() ? DwarfContext->compile_units()
                                          : DwarfContext->dwo_compile_units();
   for (const std::unique_ptr<DWARFUnit> &CU : CompileUnits) {
+
+    // Take into account the address byte size for a correct 'tombstone'
+    // value identification.
+    setTombstoneAddress(
+        dwarf::computeTombstoneAddress(CU->getAddressByteSize()));
 
     // Deduction of index used for the line records.
     //

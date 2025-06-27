@@ -2164,6 +2164,7 @@ PathSensitiveBugReport::PathSensitiveBugReport(
     : BugReport(Kind::PathSensitive, bt, shortDesc, desc), ErrorNode(errorNode),
       ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
       UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
+  assert(ErrorNode && "The error node must be non-null!");
   assert(!isDependency(ErrorNode->getState()
                            ->getAnalysisManager()
                            .getCheckerManager()

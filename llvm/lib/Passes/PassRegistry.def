@@ -101,6 +101,7 @@ MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass())
 MODULE_PASS("lower-emutls", LowerEmuTLSPass())
 MODULE_PASS("lower-global-dtors", LowerGlobalDtorsPass())
 MODULE_PASS("lower-ifunc", LowerIFuncPass())
+MODULE_PASS("simplify-type-tests", SimplifyTypeTestsPass())
 MODULE_PASS("lowertypetests", LowerTypeTestsPass())
 MODULE_PASS("fatlto-cleanup", FatLtoCleanup())
 MODULE_PASS("pgo-force-function-attrs", PGOForceFunctionAttrsPass(PGOOpt ? PGOOpt->ColdOptType : PGOOptions::ColdFuncOpt::Default))
@@ -238,6 +239,43 @@ MODULE_PASS_WITH_PARAMS(
       return StructuralHashPrinterPass(errs(), Options);
     },
     parseStructuralHashPrinterPassOptions, "detailed;call-target-ignored")
+
+MODULE_PASS_WITH_PARAMS(
+    "default", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildPerModuleDefaultPipeline(L);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "thinlto-pre-link", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildThinLTOPreLinkDefaultPipeline(L);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "thinlto", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildThinLTODefaultPipeline(L, nullptr);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "lto-pre-link", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      if (PTO.UnifiedLTO) {
+        // When UnifiedLTO is enabled, use the ThinLTO pre-link pipeline. This
+        // avoids compile-time performance regressions and keeps the pre-link
+        // LTO pipeline "unified" for both LTO modes.
+        return buildThinLTOPreLinkDefaultPipeline(L);
+      }
+      return buildLTOPreLinkDefaultPipeline(L);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "lto", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildLTODefaultPipeline(L, nullptr);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
 
 #undef MODULE_PASS_WITH_PARAMS
 
@@ -671,7 +709,6 @@ LOOPNEST_PASS("no-op-loopnest", NoOpLoopNestPass())
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)
 #endif
 LOOP_ANALYSIS("ddg", DDGAnalysis())
-LOOP_ANALYSIS("hash-recognize", HashRecognizeAnalysis())
 LOOP_ANALYSIS("iv-users", IVUsersAnalysis())
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
 LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))

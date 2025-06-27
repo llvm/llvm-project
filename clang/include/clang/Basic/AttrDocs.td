@@ -396,9 +396,13 @@ any option of a multiversioned function is undefined.
   }];
 }
 
-def SYCLKernelDocs : Documentation {
+def DeviceKernelDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "device_kernel, sycl_kernel, nvptx_kernel, amdgpu_kernel, "
+                "kernel, __kernel";
   let Content = [{
+These attributes specify that the function represents a kernel for device offloading.
+The specific semantics depend on the offloading language, target, and attribute spelling.
 The ``sycl_kernel`` attribute specifies that a function template will be used
 to outline device code and to generate an OpenCL kernel.
 Here is a code example of the SYCL program, which demonstrates the compiler's
@@ -2930,7 +2934,7 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
-https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0
 https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf
   }];
 }
@@ -4392,8 +4396,6 @@ annotated parameter.
       addToSet(str, s); // Not detected.
     }
   }
-
-.. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
   }];
 }
 
@@ -4431,7 +4433,14 @@ destroy the object before returning. The lifetime of the copy of the parameter
 in the caller ends without a destructor call when the call begins.
 
 If a type is trivial for the purpose of calls, it is assumed to be trivially
-relocatable for the purpose of ``__is_trivially_relocatable``.
+relocatable for the purpose of ``__is_trivially_relocatable`` and
+``__builtin_is_cpp_trivially_relocatable``.
+When a type marked with ``[[trivial_abi]]`` is used as a function argument,
+the compiler may omit the call to the copy constructor.
+Thus, side effects of the copy constructor are potentially not performed.
+For example, objects that contain pointers to themselves or otherwise depend
+on their address (or the address or their subobjects) should not be declared
+``[[trivial_abi]]``.
 
 Attribute ``trivial_abi`` has no effect in the following cases:
 
@@ -8243,6 +8252,21 @@ and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
   }];
 }
 
+def VkConstantIdDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``vk::constant_id`` attribute specifies the id for a SPIR-V specialization
+constant. The attribute applies to const global scalar variables. The variable must be initialized with a C++11 constexpr.
+In SPIR-V, the
+variable will be replaced with an `OpSpecConstant` with the given id.
+The syntax is:
+
+.. code-block:: text
+
+  ``[[vk::constant_id(<Id>)]] const T Name = <Init>``
+}];
+}
+
 def RootSignatureDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8517,6 +8541,20 @@ The semantic on the field is ignored when not used as a parameter.
 This attribute is only supported in compute shaders.
 
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-dispatchthreadid
+  }];
+}
+
+def HLSLSV_PositionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_Position`` semantic, when applied to an input parameter in a pixel
+shader, contains the location of the pixel center (x, y) in screen space.
+This semantic can be applied to the parameter, or a field in a struct used
+as an input parameter.
+This attribute is supported as an input in pixel, hull, domain and mesh shaders.
+This attribute is supported as an output in vertex, geometry and domain shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
   }];
 }
 
@@ -9038,14 +9076,14 @@ def CoroLifetimeBoundDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
-to a coroutine return type (`CRT`_) (i.e.
+to a coroutine return type (`coro_return_type, coro_wrapper`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
 All parameters of a function are considered to be lifetime bound if the function returns a
 coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
 This lifetime bound analysis can be disabled for a coroutine wrapper or a coroutine by annotating the function
 with ``[[clang::coro_disable_lifetimebound]]`` function attribute .
-See `documentation`_ of ``[[clang::lifetimebound]]`` for details about lifetime bound analysis.
+See documentation of `lifetimebound`_ for details about lifetime bound analysis.
 
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
@@ -9105,9 +9143,6 @@ but do not pass them to the underlying coroutine or pass them by value.
   void use() {
     auto task = coro_wrapper(1); // use of temporary is fine as the argument is not lifetime bound.
   }
-
-.. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
-.. _`CRT`: https://clang.llvm.org/docs/AttributeReference.html#coro-return-type
 }];
 }
 

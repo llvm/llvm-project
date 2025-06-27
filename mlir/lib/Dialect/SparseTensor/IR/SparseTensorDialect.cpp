@@ -799,8 +799,7 @@ LogicalResult SparseTensorEncodingAttr::verify(
                             "before singleton level";
 
     auto *curCOOEnd = std::find_if_not(it, lvlTypes.end(), isSingletonLT);
-    if (!std::all_of(it, curCOOEnd,
-                     [](LevelType i) { return isSingletonLT(i); }))
+    if (!std::all_of(it, curCOOEnd, isSingletonLT))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
     // We can potentially support mixed SoA/AoS singleton levels.
@@ -833,8 +832,7 @@ LogicalResult SparseTensorEncodingAttr::verify(
       it != std::end(lvlTypes)) {
     if (it != lvlTypes.end() - 1)
       return emitError() << "expected n_out_of_m to be the last level type";
-    if (!std::all_of(lvlTypes.begin(), it,
-                     [](LevelType i) { return isDenseLT(i); }))
+    if (!std::all_of(lvlTypes.begin(), it, isDenseLT))
       return emitError() << "expected all dense lvlTypes "
                             "before a n_out_of_m level";
     if (dimToLvl && (dimToLvl.getNumDims() != dimToLvl.getNumResults())) {

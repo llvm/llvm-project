@@ -381,8 +381,9 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
     Findings.MissingIncludes.clear();
   if (SuppressUnused)
     Findings.UnusedIncludes.clear();
-  return issueIncludeCleanerDiagnostics(AST, Code, Findings, TFS,
-                                        Cfg.Diagnostics.Includes.IgnoreHeader);
+  return issueIncludeCleanerDiagnostics(
+      AST, Code, Findings, TFS, Cfg.Diagnostics.Includes.IgnoreHeader,
+      Cfg.Style.AngledHeaders, Cfg.Style.QuotedHeaders);
 }
 
 tidy::ClangTidyCheckFactories

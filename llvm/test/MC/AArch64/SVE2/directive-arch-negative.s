@@ -26,7 +26,7 @@ sm4e z0.s, z0.s, z0.s
 .arch armv9-a+sve2-sha3
 .arch armv9-a+nosve2-sha3
 rax1 z0.d, z0.d, z0.d
-// CHECK: error: instruction requires: sve2-sha3
+// CHECK: error: instruction requires: sve-sha3
 // CHECK-NEXT: rax1 z0.d, z0.d, z0.d
 
 .arch armv9-a+ssve-bitperm

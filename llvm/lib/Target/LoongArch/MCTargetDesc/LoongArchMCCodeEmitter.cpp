@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchFixupKinds.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -130,7 +130,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
   unsigned FixupKind = LoongArch::fixup_loongarch_invalid;
-  if (Kind == MCExpr::Target) {
+  if (Kind == MCExpr::Specifier) {
     const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
     FixupKind = LAExpr->getSpecifier();
     RelaxCandidate = LAExpr->getRelaxHint();

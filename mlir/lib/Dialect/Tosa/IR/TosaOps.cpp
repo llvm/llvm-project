@@ -1857,7 +1857,8 @@ LogicalResult tosa::MulOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::MulOp::verify() {
-  auto resElemType = getElementTypeOrSelf(getOutput());
+  const Value output = getOutput();
+  auto resElemType = getElementTypeOrSelf(output);
 
   // Verify if the element type among operands and result match tosa
   // specification.
@@ -1897,59 +1898,39 @@ LogicalResult tosa::MulOp::verify() {
   // Verify the op has same ranks for all main operands (excludes extra operands
   // such as shift of mul op, so this is the only difference with the built-in
   // `SameOperandsAndResultRank` trait) and results types, if known.
+  TypeRange operandTypes = getOperandTypes();
+  ShapedType aType = cast<ShapedType>(operandTypes[0]);
+  ShapedType bType = cast<ShapedType>(operandTypes[1]);
 
-  // delegate function that returns true if type is a shaped type with known
-  // rank
-  auto hasRank = [](const Type type) {
-    if (auto shaped_type = dyn_cast<ShapedType>(type))
-      return shaped_type.hasRank();
+  const bool aHasRank = aType.hasRank();
+  const bool bHasRank = bType.hasRank();
+  if (aHasRank && bHasRank) {
+    const int64_t aRank = aType.getRank();
+    const int64_t bRank = bType.getRank();
+    if (aRank != bRank)
+      return emitOpError("a and b operands don't have matching ranks, got ")
+             << aRank << " and " << bRank;
 
-    return false;
-  };
+    // check for broadcast compatible shapes
+    SmallVector<int64_t> resultShape;
+    if (!mlir::OpTrait::util::getBroadcastedShape(
+            aType.getShape(), bType.getShape(), resultShape))
+      return emitOpError("a and b operands don't have broadcast-compatible "
+                         "shapes, got ")
+             << aType << " and " << bType;
+  }
 
-  auto rankedOperandTypes =
-      llvm::to_vector(llvm::make_filter_range(getOperandTypes(), hasRank));
-
-  auto rankedResultTypes =
-      llvm::make_filter_range(getOperation()->getResultTypes(), hasRank);
-
-  // If all operands and results are unranked, then no further verification.
-  if (rankedOperandTypes.empty() && rankedResultTypes.empty())
+  ShapedType resultType = cast<ShapedType>(output.getType());
+  if (!resultType.hasRank())
     return success();
 
-  // delegate function that returns rank of shaped type with known rank
-  auto getRank = [](const Type type) {
-    return cast<ShapedType>(type).getRank();
-  };
-
-  auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
-                                          : getRank(*rankedResultTypes.begin());
-
-  for (size_t i = 0; i < 2; ++i) {
-    if (rank != getRank(rankedOperandTypes[i])) {
-      return emitOpError("operands don't have matching ranks");
-    }
-  }
-
-  for (const auto type : rankedResultTypes) {
-    if (rank != getRank(type)) {
-      return emitOpError("result type has different rank than operands");
-    }
-  }
-
-  // check for broadcast compatible shapes in first two operands (ignoring
-  // shift)
-
-  // delegate function that returns shape of shaped type
-  auto getShape = [](const Type type) {
-    return mlir::cast<ShapedType>(type).getShape();
-  };
-  SmallVector<int64_t> resultShape;
-  if (!mlir::OpTrait::util::getBroadcastedShape(getShape(rankedOperandTypes[0]),
-                                                getShape(rankedOperandTypes[1]),
-                                                resultShape)) {
-    return emitOpError("operands don't have broadcast-compatible shapes");
-  }
+  const int64_t resultRank = resultType.getRank();
+  if (aHasRank && resultRank != aType.getRank())
+    return emitOpError("result type has different rank than a, got ")
+           << resultRank << " vs " << aType.getRank();
+  if (bHasRank && resultRank != bType.getRank())
+    return emitOpError("result type has different rank than b, got ")
+           << resultRank << " vs " << bType.getRank();
 
   return success();
 }
@@ -2552,16 +2533,26 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
   }
 
   // Compute the output shape based on attributes: scale, offset, and border.
-  outputShape[1] =
+  const int64_t outputHeight =
       (((inputHeight - 1) * scaleInt[0] - offsetInt[0] + borderInt[0]) /
        scaleInt[1]) +
       1;
 
-  outputShape[2] =
+  const int64_t outputWidth =
       (((inputWidth - 1) * scaleInt[2] - offsetInt[1] + borderInt[1]) /
        scaleInt[3]) +
       1;
 
+  if (outputHeight < 0 || outputWidth < 0) {
+    return emitOptionalError(
+        location,
+        "calculated output height and width must be non-negative, "
+        "got height = ",
+        outputHeight, ", width = ", outputWidth);
+  }
+
+  outputShape[1] = outputHeight;
+  outputShape[2] = outputWidth;
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
 }
@@ -2692,6 +2683,73 @@ LogicalResult tosa::ScatterOp::verify() {
           .failed()) {
     return failure();
   }
+
+  const ShapeAdaptor valuesInShape(getValuesIn().getType());
+  const ShapeAdaptor indicesShape(getIndices().getType());
+  const ShapeAdaptor inputShape(getInput().getType());
+  const ShapeAdaptor outputShape(getValuesOut().getType());
+
+  int64_t N = ShapedType::kDynamic;
+  int64_t K = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+  if (valuesInShape.hasRank()) {
+    N = valuesInShape.getDimSize(0);
+    K = valuesInShape.getDimSize(1);
+    C = valuesInShape.getDimSize(2);
+  }
+  if (indicesShape.hasRank()) {
+    const int64_t indicesN = indicesShape.getDimSize(0);
+    W = indicesShape.getDimSize(1);
+    if (N == ShapedType::kDynamic)
+      N = indicesN;
+    else if (indicesN != ShapedType::kDynamic && N != indicesN)
+      return emitOpError() << "requires indices dimension 0 to have size " << N
+                           << ", got " << indicesN;
+  }
+  if (inputShape.hasRank()) {
+    const int64_t inputN = inputShape.getDimSize(0);
+    const int64_t inputW = inputShape.getDimSize(1);
+    const int64_t inputC = inputShape.getDimSize(2);
+    if (N == ShapedType::kDynamic)
+      N = inputN;
+    else if (inputN != ShapedType::kDynamic && N != inputN)
+      return emitOpError() << "requires input dimension 0 to have size " << N
+                           << ", got " << inputN;
+    if (W == ShapedType::kDynamic)
+      W = inputW;
+    else if (inputW != ShapedType::kDynamic && W != inputW)
+      return emitOpError() << "requires input dimension 1 to have size " << W
+                           << ", got " << inputW;
+
+    if (C == ShapedType::kDynamic)
+      C = inputC;
+    else if (inputC != ShapedType::kDynamic && C != inputC)
+      return emitOpError() << "requires input dimension 2 to have size " << C
+                           << ", got " << inputC;
+  }
+  if (outputShape.hasRank()) {
+    const int64_t outputN = outputShape.getDimSize(0);
+    const int64_t outputK = outputShape.getDimSize(1);
+    const int64_t outputC = outputShape.getDimSize(2);
+    if (N != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
+        N != outputN)
+      return emitOpError() << "requires values_out dimension 0 to have size "
+                           << N << ", got " << outputN;
+    if (K == ShapedType::kDynamic)
+      K = outputK;
+    else if (outputK != ShapedType::kDynamic && K != outputK)
+      return emitOpError() << "requires values_out dimension 1 to have size "
+                           << K << ", got " << outputK;
+    if (C != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
+        C != outputC)
+      return emitOpError() << "requires values_out dimension 2 to have size "
+                           << C << ", got " << outputC;
+  }
+  if (K != ShapedType::kDynamic && W != ShapedType::kDynamic && !(K >= W))
+    return emitOpError() << "requires dimensions K >= W, got K=" << K
+                         << " and W=" << W;
+
   return success();
 }
 

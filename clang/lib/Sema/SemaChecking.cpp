@@ -2364,6 +2364,17 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  // The 64-bit acquire, release, and no fence variants are AArch64 only.
+  case Builtin::BI_interlockedbittestandreset64_acq:
+  case Builtin::BI_interlockedbittestandreset64_rel:
+  case Builtin::BI_interlockedbittestandreset64_nf:
+  case Builtin::BI_interlockedbittestandset64_acq:
+  case Builtin::BI_interlockedbittestandset64_rel:
+  case Builtin::BI_interlockedbittestandset64_nf:
+    if (CheckBuiltinTargetInSupported(*this, TheCall, {llvm::Triple::aarch64}))
+      return ExprError();
+    break;
+
   case Builtin::BI__builtin_set_flt_rounds:
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
@@ -2648,8 +2659,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     bool IsDelete = BuiltinID == Builtin::BI__builtin_operator_delete;
     ExprResult Res =
         BuiltinOperatorNewDeleteOverloaded(TheCallResult, IsDelete);
-    if (Res.isInvalid())
-      CorrectDelayedTyposInExpr(TheCallResult.get());
     return Res;
   }
   case Builtin::BI__builtin_dump_struct:
@@ -10807,10 +10816,9 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
         return std::nullopt;
 
       // If the range was previously non-negative, we need an extra bit for the
-      // sign bit. If the range was not non-negative, we need an extra bit
-      // because the negation of the most-negative value is one bit wider than
-      // that value.
-      return IntRange(SubRange->Width + 1, false);
+      // sign bit. Otherwise, we need an extra bit because the negation of the
+      // most-negative value is one bit wider than that value.
+      return IntRange(std::min(SubRange->Width + 1, MaxWidth), false);
     }
 
     case UO_Not: {
@@ -10827,7 +10835,9 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
 
       // The width increments by 1 if the sub-expression cannot be negative
       // since it now can be.
-      return IntRange(SubRange->Width + (int)SubRange->NonNegative, false);
+      return IntRange(
+          std::min(SubRange->Width + (int)SubRange->NonNegative, MaxWidth),
+          false);
     }
 
     default:
@@ -11686,15 +11696,6 @@ static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
   }
 }
 
-static void CheckCommaOperand(Sema &S, Expr *E, QualType T, SourceLocation CC,
-                              bool ExtraCheckForImplicitConversion) {
-  E = E->IgnoreParenImpCasts();
-  AnalyzeImplicitConversions(S, E, CC);
-
-  if (ExtraCheckForImplicitConversion && E->getType() != T)
-    S.CheckImplicitConversion(E, T, CC);
-}
-
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
 static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
@@ -12057,10 +12058,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   // Strip vector types.
   if (isa<VectorType>(Source)) {
     if (Target->isSveVLSBuiltinType() &&
-        (Context.areCompatibleSveTypes(QualType(Target, 0),
-                                       QualType(Source, 0)) ||
-         Context.areLaxCompatibleSveTypes(QualType(Target, 0),
-                                          QualType(Source, 0))))
+        (ARM().areCompatibleSveTypes(QualType(Target, 0),
+                                     QualType(Source, 0)) ||
+         ARM().areLaxCompatibleSveTypes(QualType(Target, 0),
+                                        QualType(Source, 0))))
       return;
 
     if (Target->isRVVVLSBuiltinType() &&
@@ -12120,10 +12121,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     const Type *OriginalTarget = Context.getCanonicalType(T).getTypePtr();
     // Handle conversion from scalable to fixed when msve-vector-bits is
     // specified
-    if (Context.areCompatibleSveTypes(QualType(OriginalTarget, 0),
-                                      QualType(Source, 0)) ||
-        Context.areLaxCompatibleSveTypes(QualType(OriginalTarget, 0),
-                                         QualType(Source, 0)))
+    if (ARM().areCompatibleSveTypes(QualType(OriginalTarget, 0),
+                                    QualType(Source, 0)) ||
+        ARM().areLaxCompatibleSveTypes(QualType(OriginalTarget, 0),
+                                       QualType(Source, 0)))
       return;
 
     // If the vector cast is cast between two vectors of the same size, it is
@@ -12569,6 +12570,17 @@ struct AnalyzeImplicitConversionsWorkItem {
 };
 }
 
+static void CheckCommaOperand(
+    Sema &S, Expr *E, QualType T, SourceLocation CC,
+    bool ExtraCheckForImplicitConversion,
+    llvm::SmallVectorImpl<AnalyzeImplicitConversionsWorkItem> &WorkList) {
+  E = E->IgnoreParenImpCasts();
+  WorkList.push_back({E, CC, false});
+
+  if (ExtraCheckForImplicitConversion && E->getType() != T)
+    S.CheckImplicitConversion(E, T, CC);
+}
+
 /// Data recursive variant of AnalyzeImplicitConversions. Subexpressions
 /// that should be visited are added to WorkList.
 static void AnalyzeImplicitConversions(
@@ -12644,9 +12656,9 @@ static void AnalyzeImplicitConversions(
       /// how CheckConditionalOperand behaves; it's as-if the correct operand
       /// were directly used for the implicit conversion check.
       CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(),
-                        /*ExtraCheckForImplicitConversion=*/false);
+                        /*ExtraCheckForImplicitConversion=*/false, WorkList);
       CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(),
-                        /*ExtraCheckForImplicitConversion=*/true);
+                        /*ExtraCheckForImplicitConversion=*/true, WorkList);
       return;
     }
   }

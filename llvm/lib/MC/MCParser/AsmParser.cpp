@@ -1344,6 +1344,8 @@ const MCExpr *MCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
   // Recurse over the given expression, rebuilding it to apply the given variant
   // if there is exactly one symbol.
   switch (E->getKind()) {
+  case MCExpr::Specifier:
+    llvm_unreachable("cannot apply another specifier to MCSpecifierExpr");
   case MCExpr::Target:
   case MCExpr::Constant:
     return nullptr;

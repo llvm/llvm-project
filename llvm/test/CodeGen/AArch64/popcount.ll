@@ -652,11 +652,8 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; CHECKO0-LABEL: ctpop_into_extract:
 ; CHECKO0:       // %bb.0:
 ; CHECKO0-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECKO0-NEXT:    // implicit-def: $d1
-; CHECKO0-NEXT:    // implicit-def: $q0
-; CHECKO0-NEXT:    fmov d0, d1
-; CHECKO0-NEXT:    mov v0.s[0], w8
-; CHECKO0-NEXT:    fmov d2, d0
+; CHECKO0-NEXT:    // implicit-def: $d2
+; CHECKO0-NEXT:    fmov s2, w8
 ; CHECKO0-NEXT:    ldr d0, [x0]
 ; CHECKO0-NEXT:    fmov s1, s0
 ; CHECKO0-NEXT:    fmov w8, s1
@@ -709,12 +706,12 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; GISEL-LABEL: ctpop_into_extract:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    ldr d0, [x0]
-; GISEL-NEXT:    mov w9, #-1 // =0xffffffff
 ; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    mov v2.s[0], w9
 ; GISEL-NEXT:    mov w0, wzr
-; GISEL-NEXT:    fmov w10, s0
-; GISEL-NEXT:    fmov s1, w10
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    fmov s1, w9
+; GISEL-NEXT:    mov w9, #-1 // =0xffffffff
+; GISEL-NEXT:    fmov s2, w9
 ; GISEL-NEXT:    cnt v1.8b, v1.8b
 ; GISEL-NEXT:    uaddlv h1, v1.8b
 ; GISEL-NEXT:    mov v2.s[1], v1.s[0]
@@ -725,11 +722,8 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; GISELO0-LABEL: ctpop_into_extract:
 ; GISELO0:       // %bb.0:
 ; GISELO0-NEXT:    mov w8, #-1 // =0xffffffff
-; GISELO0-NEXT:    // implicit-def: $d1
-; GISELO0-NEXT:    // implicit-def: $q0
-; GISELO0-NEXT:    fmov d0, d1
-; GISELO0-NEXT:    mov v0.s[0], w8
-; GISELO0-NEXT:    fmov d2, d0
+; GISELO0-NEXT:    // implicit-def: $d2
+; GISELO0-NEXT:    fmov s2, w8
 ; GISELO0-NEXT:    ldr d0, [x0]
 ; GISELO0-NEXT:    fmov s1, s0
 ; GISELO0-NEXT:    fmov w8, s1
