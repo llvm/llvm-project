@@ -187,7 +187,7 @@ void LowerAllowCheckPass::printPipeline(
   bool printed = false;
   for (unsigned int cutoff : Opts.cutoffs) {
     if (cutoff > 0) {
-      if (i > 0)
+      if (printed)
         OS << ";";
       OS << "cutoffs[" << i << "]=" << cutoff;
       printed = true;

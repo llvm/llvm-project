@@ -2441,6 +2441,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (dsp.getAllSymbolsToPrivatize().contains(&sym))
       return;
 
+    // Skip parameters/constants as they do not need to be mapped.
+    if (semantics::IsNamedConstant(sym))
+      return;
+
     // These symbols are mapped individually in processHasDeviceAddr.
     if (llvm::is_contained(hasDeviceAddrSyms, &sym))
       return;

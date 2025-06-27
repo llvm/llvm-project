@@ -51,4 +51,5 @@ group("unittests") {
 # doesn't do this. This keeps the sync script happy.
 group("dummy_sources") {
   sources = [ "AllClangUnitTests.cpp" ]
+  not_needed(sources)
 }

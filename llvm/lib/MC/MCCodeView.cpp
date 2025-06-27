@@ -453,9 +453,8 @@ MCFragment *CodeViewContext::emitDefRange(
 static unsigned computeLabelDiff(const MCAssembler &Asm, const MCSymbol *Begin,
                                  const MCSymbol *End) {
   MCContext &Ctx = Asm.getContext();
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *BeginRef = MCSymbolRefExpr::create(Begin, Variant, Ctx),
-               *EndRef = MCSymbolRefExpr::create(End, Variant, Ctx);
+  const MCExpr *BeginRef = MCSymbolRefExpr::create(Begin, Ctx),
+               *EndRef = MCSymbolRefExpr::create(End, Ctx);
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, EndRef, BeginRef, Ctx);
   int64_t Result;
