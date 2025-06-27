@@ -429,7 +429,7 @@ protected:
 
   llvm::DenseMap<uint32_t, StringRef> SpecifierToName;
   llvm::StringMap<uint32_t> NameToSpecifier;
-  void initializeVariantKinds(ArrayRef<VariantKindDesc> Descs);
+  void initializeVariantKinds(ArrayRef<AtSpecifier> Descs);
 
 public:
   explicit MCAsmInfo();
