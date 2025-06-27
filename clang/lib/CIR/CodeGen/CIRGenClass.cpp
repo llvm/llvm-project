@@ -260,15 +260,16 @@ void CIRGenFunction::emitDelegateCXXConstructorCall(
 
 void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   const auto *assignOp = cast<CXXMethodDecl>(curGD.getDecl());
+  assert(assignOp->isCopyAssignmentOperator() ||
+         assignOp->isMoveAssignmentOperator());
   const Stmt *rootS = assignOp->getBody();
   assert(isa<CompoundStmt>(rootS) &&
          "Body of an implicit assignment operator should be compound stmt.");
   const auto *rootCS = cast<CompoundStmt>(rootS);
 
-  // LexicalScope Scope(*this, RootCS->getSourceRange());
-  // FIXME(cir): add all of the below under a new scope.
-
   assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::runCleanupsScope());
+
   // Classic codegen uses a special class to attempt to replace member
   // initializers with memcpy. We could possibly defer that to the
   // lowering or optimization phases to keep the memory accesses more
