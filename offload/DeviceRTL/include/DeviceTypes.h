@@ -136,6 +136,12 @@ struct omp_lock_t {
   void *Lock;
 };
 
+// see definition in openmp/runtime kmp.h
+typedef enum omp_severity_t {
+  severity_warning = 1,
+  severity_fatal = 2
+} omp_severity_t;
+
 using InterWarpCopyFnTy = void (*)(void *src, int32_t warp_num);
 using ShuffleReductFnTy = void (*)(void *rhsData, int16_t lane_id,
                                    int16_t lane_offset, int16_t shortCircuit);
