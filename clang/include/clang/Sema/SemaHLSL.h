@@ -32,6 +32,10 @@ class ParsedAttr;
 class Scope;
 class VarDecl;
 
+namespace hlsl {
+struct RootSignatureElement;
+}
+
 using llvm::dxil::ResourceClass;
 
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
@@ -130,9 +134,9 @@ public:
 
   /// Creates the Root Signature decl of the parsed Root Signature elements
   /// onto the AST and push it onto current Scope
-  void ActOnFinishRootSignatureDecl(
-      SourceLocation Loc, IdentifierInfo *DeclIdent,
-      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements);
+  void
+  ActOnFinishRootSignatureDecl(SourceLocation Loc, IdentifierInfo *DeclIdent,
+                               ArrayRef<hlsl::RootSignatureElement> Elements);
 
   // Returns true when D is invalid and a diagnostic was produced
   bool handleRootSignatureDecl(HLSLRootSignatureDecl *D, SourceLocation Loc);

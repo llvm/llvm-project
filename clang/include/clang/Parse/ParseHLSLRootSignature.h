@@ -26,10 +26,22 @@
 namespace clang {
 namespace hlsl {
 
+// Introduce a wrapper struct around the underlying RootElement. This structure
+// will retain extra clang diagnostic information that is not available in llvm.
+struct RootSignatureElement {
+  RootSignatureElement(llvm::hlsl::rootsig::RootElement Element)
+      : Element(Element) {}
+
+  const llvm::hlsl::rootsig::RootElement &getElement() const { return Element; }
+
+private:
+  llvm::hlsl::rootsig::RootElement Element;
+};
+
 class RootSignatureParser {
 public:
   RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
-                      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
+                      SmallVector<RootSignatureElement> &Elements,
                       StringLiteral *Signature, Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
@@ -201,7 +213,7 @@ private:
 
 private:
   llvm::dxbc::RootSignatureVersion Version;
-  SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
+  SmallVector<RootSignatureElement> &Elements;
   StringLiteral *Signature;
   RootSignatureLexer Lexer;
   Preprocessor &PP;

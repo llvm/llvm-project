@@ -19,7 +19,7 @@ using TokenKind = RootSignatureToken::Kind;
 
 RootSignatureParser::RootSignatureParser(
     llvm::dxbc::RootSignatureVersion Version,
-    SmallVector<RootElement> &Elements, StringLiteral *Signature,
+    SmallVector<RootSignatureElement> &Elements, StringLiteral *Signature,
     Preprocessor &PP)
     : Version(Version), Elements(Elements), Signature(Signature),
       Lexer(Signature->getString()), PP(PP), CurToken(0) {}
@@ -32,28 +32,28 @@ bool RootSignatureParser::parse() {
       auto Flags = parseRootFlags();
       if (!Flags.has_value())
         return true;
-      Elements.push_back(*Flags);
+      Elements.emplace_back(RootSignatureElement(*Flags));
     } else if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
       auto Constants = parseRootConstants();
       if (!Constants.has_value())
         return true;
-      Elements.push_back(*Constants);
+      Elements.emplace_back(RootSignatureElement(*Constants));
     } else if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
       auto Table = parseDescriptorTable();
       if (!Table.has_value())
         return true;
-      Elements.push_back(*Table);
+      Elements.emplace_back(RootSignatureElement(*Table));
     } else if (tryConsumeExpectedToken(
                    {TokenKind::kw_CBV, TokenKind::kw_SRV, TokenKind::kw_UAV})) {
       auto Descriptor = parseRootDescriptor();
       if (!Descriptor.has_value())
         return true;
-      Elements.push_back(*Descriptor);
+      Elements.emplace_back(RootSignatureElement(*Descriptor));
     } else if (tryConsumeExpectedToken(TokenKind::kw_StaticSampler)) {
       auto Sampler = parseStaticSampler();
       if (!Sampler.has_value())
         return true;
-      Elements.push_back(*Sampler);
+      Elements.emplace_back(RootSignatureElement(*Sampler));
     }
 
     // ',' denotes another element, otherwise, expected to be at end of stream
@@ -248,7 +248,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       auto Clause = parseDescriptorTableClause();
       if (!Clause.has_value())
         return std::nullopt;
-      Elements.push_back(*Clause);
+      Elements.push_back(RootSignatureElement(*Clause));
       Table.NumClauses++;
     } else if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
       // visibility = SHADER_VISIBILITY
