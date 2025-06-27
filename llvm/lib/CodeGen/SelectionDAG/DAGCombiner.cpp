@@ -17166,13 +17166,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     }
   }
 
-  auto isReassociable = [&Options](SDNode *N) {
-    return N->getFlags().hasAllowReassociation();
-  };
-
-  auto isContractableAndReassociableFMUL = [&isContractableFMUL,
-                                            &isReassociable](SDValue N) {
-    return isContractableFMUL(N) && isReassociable(N.getNode());
+  auto isContractableAndReassociableFMUL = [&isContractableFMUL](SDValue N) {
+    return isContractableFMUL(N) && N->getFlags().hasAllowReassociation();
   };
 
   auto isFusedOp = [&](SDValue N) {
@@ -17180,7 +17175,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   };
 
   // More folding opportunities when target permits.
-  if (Aggressive && isReassociable(N)) {
+  if (Aggressive && N->getFlags().hasAllowReassociation()) {
     bool CanFuse = N->getFlags().hasAllowContract();
     // fold (fsub (fma x, y, (fmul u, v)), z)
     //   -> (fma x, y (fma u, v, (fneg z)))
