@@ -575,8 +575,10 @@ LogicalResult acc::CreateOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  // this op is the entry part of copyout, so it also needs to allow all
+  // modifiers allowed on copyout.
   if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
-                                           acc::DataClauseModifier::alwaysout |
+                                           acc::DataClauseModifier::always |
                                            acc::DataClauseModifier::capture)))
     return failure();
   return success();
@@ -708,7 +710,7 @@ LogicalResult acc::DeleteOp::verify() {
   // allowed on either case.
   if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
                                            acc::DataClauseModifier::readonly |
-                                           acc::DataClauseModifier::alwaysin |
+                                           acc::DataClauseModifier::always |
                                            acc::DataClauseModifier::capture)))
     return failure();
   return success();
