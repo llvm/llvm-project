@@ -5254,17 +5254,21 @@ static mlir::ParseResult parseSpecifierList(
   if (failed(parser.parseLParen()))
     return mlir::failure();
 
+  llvm::SmallVector<bool> isByRefVec;
   llvm::SmallVector<mlir::SymbolRefAttr> spceifierSymbolVec;
   llvm::SmallVector<fir::ReduceAttr> attributes;
 
   if (failed(parser.parseCommaSeparatedList([&]() {
+        if (isReduce)
+          isByRefVec.push_back(
+              parser.parseOptionalKeyword("byref").succeeded());
+
         if (failed(parser.parseAttribute(spceifierSymbolVec.emplace_back())))
           return mlir::failure();
 
         if (isReduce &&
-            failed(parser.parseAttribute(attributes.emplace_back()))) {
+            failed(parser.parseAttribute(attributes.emplace_back())))
           return mlir::failure();
-        }
 
         if (parser.parseOperand(specifierOperands.emplace_back()) ||
             parser.parseArrow() ||
@@ -5300,6 +5304,13 @@ static mlir::ParseResult parseSpecifierList(
     if (parser.resolveOperand(std::get<0>(operandType),
                               std::get<1>(operandType), result.operands))
       return mlir::failure();
+
+  if (isReduce)
+    result.addAttribute(
+        fir::DoConcurrentLoopOp::getReduceByrefAttrName(result.name),
+        isByRefVec.empty()
+            ? nullptr
+            : mlir::DenseBoolArrayAttr::get(builder.getContext(), isByRefVec));
 
   llvm::SmallVector<mlir::Attribute> symbolAttrs(spceifierSymbolVec.begin(),
                                                  spceifierSymbolVec.end());
@@ -5411,11 +5422,15 @@ void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
   if (!getReduceVars().empty()) {
     p << " reduce(";
     llvm::interleaveComma(
-        llvm::zip_equal(getReduceSymsAttr(), getReduceAttrsAttr(),
-                        getReduceVars(), getRegionReduceArgs()),
+        llvm::zip_equal(getReduceByrefAttr().asArrayRef(), getReduceSymsAttr(),
+                        getReduceAttrsAttr(), getReduceVars(),
+                        getRegionReduceArgs()),
         p, [&](auto it) {
-          p << std::get<0>(it) << " " << std::get<1>(it) << " "
-            << std::get<2>(it) << " -> " << std::get<3>(it);
+          if (std::get<0>(it))
+            p << "byref ";
+
+          p << std::get<1>(it) << " " << std::get<2>(it) << " "
+            << std::get<3>(it) << " -> " << std::get<4>(it);
         });
     p << " : ";
     llvm::interleaveComma(getReduceVars(), p,
