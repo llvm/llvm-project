@@ -14,6 +14,36 @@
 #endif
 #endif
 
+/* Atomic access abstraction (since MSVC does not do C11 yet) */
+#if defined(_MSC_VER) && !defined(__clang__)
+#if !defined(IS_X86)
+#include <intrin.h>
+#endif
+#pragma warning(disable : 5105)
+#ifndef FORCEINLINE
+#define FORCEINLINE inline __forceinline
+#endif
+typedef volatile long atomic32_t;
+static FORCEINLINE int32_t atomic_load32(atomic32_t *src) { 
+  return _InterlockedOr(src, 0); 
+}
+static FORCEINLINE void atomic_store32(atomic32_t *dst, int32_t val) {
+  _InterlockedExchange(dst, val);
+}
+#else
+#include <stdatomic.h>
+#ifndef FORCEINLINE
+#define FORCEINLINE inline __attribute__((__always_inline__))
+#endif
+typedef volatile _Atomic(int32_t) atomic32_t;
+static FORCEINLINE int32_t atomic_load32(atomic32_t *src) {
+  return atomic_load_explicit(src, memory_order_relaxed);
+}
+static FORCEINLINE void atomic_store32(atomic32_t *dst, int32_t val) {
+  atomic_store_explicit(dst, val, memory_order_relaxed);
+}
+#endif
+
 #define MAYBE_UNUSED(x) (void)((x))
 
 #if defined(IS_X86)
@@ -76,7 +106,7 @@ enum cpu_feature {
 #if !defined(BLAKE3_TESTING)
 static /* Allow the variable to be controlled manually for testing */
 #endif
-    enum cpu_feature g_cpu_features = UNDEFINED;
+    atomic32_t g_cpu_features = UNDEFINED;
 
 LLVM_ATTRIBUTE_USED
 #if !defined(BLAKE3_TESTING)
@@ -84,9 +114,10 @@ static
 #endif
     enum cpu_feature
     get_cpu_features(void) {
-
-  if (g_cpu_features != UNDEFINED) {
-    return g_cpu_features;
+  enum cpu_feature _cpu_features;
+  _cpu_features = (enum cpu_feature)atomic_load32(&g_cpu_features);
+  if (_cpu_features != UNDEFINED) {
+    return _cpu_features;
   } else {
 #if defined(IS_X86)
     uint32_t regs[4] = {0};
@@ -125,10 +156,11 @@ static
         }
       }
     }
-    g_cpu_features = features;
+    atomic_store32(&g_cpu_features, (int32_t)features);
     return features;
 #else
     /* How to detect NEON? */
+    atomic_store32(&g_cpu_features, 0);
     return 0;
 #endif
   }
