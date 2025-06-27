@@ -552,7 +552,7 @@ struct LoopInterchange {
     // For the old pass manager CacheCost would be null.
     DenseMap<const Loop *, unsigned> CostMap;
     if (CC)
-      for (auto [Idx, Cost] : enumerate(CC->getLoopCosts()))
+      for (const auto &[Idx, Cost] : enumerate(CC->getLoopCosts()))
         CostMap[Cost.first] = Idx;
 
     // We try to achieve the globally optimal memory access for the loopnest,
@@ -1217,7 +1217,7 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
 
 /// Return true if we can vectorize the loop specified by \p LoopId.
 static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
-  for (auto Dep : DepMatrix) {
+  for (const auto &Dep : DepMatrix) {
     char Dir = Dep[LoopId];
     if (Dir != 'I' && Dir != '=')
       return false;
