@@ -238,8 +238,17 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
   const auto OperandType = Op.getExplicitOperandInfo().OperandType;
-  // TODO: Look into immediate values to be opcode specific for
-  // MRS, MSR, MSRpstatesvcrImm1, SYSLxt, SYSxt, UDF (illegal instruction)
+  //  FIXME: Implement opcode-specific immediate value handling for system
+  //  instructions:
+  //   - MRS/MSR: Use valid system register encodings (e.g., NZCV, FPCR, FPSR)
+  //   - MSRpstatesvcrImm1: Use valid PSTATE field encodings (e.g., SPSel,
+  //   DAIFSet)
+  //   - SYSLxt/SYSxt: Use valid system instruction encodings with proper
+  //   CRn/CRm/op values
+  //   - UDF: Use valid undefined instruction immediate ranges (0-65535)
+  //   Currently defaulting to immediate value 0, which may cause invalid
+  //   encodings or unreliable benchmark results for these system-level
+  //   instructions.
   switch (OperandType) {
   case MCOI::OperandType::OPERAND_UNKNOWN: {
     unsigned Opcode = Instr.getOpcode();
