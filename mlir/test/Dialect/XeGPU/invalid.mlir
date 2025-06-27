@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 // -----
-func.func @test_create_nd_tdesc_vc_1(%src: memref<24xf32>) {
+func.func @create_nd_tdesc_vc_1(%src: memref<24xf32>) {
   // expected-error@+1 {{Expecting the TensorDesc rank is not greater than the ranks of shape, strides, offsets or the memref source}}
   %1 = xegpu.create_nd_tdesc %src[0] : memref<24xf32> -> !xegpu.tensor_desc<8x16xf32>
   return

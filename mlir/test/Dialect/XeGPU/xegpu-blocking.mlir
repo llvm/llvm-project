@@ -449,12 +449,37 @@ gpu.module @test_kernel   {
 // -----
 #l = #xegpu.layout<inst_data = [8,32,16]>
 gpu.module @test_kernel {
+  // CHECK-LABEL: test_3d_block_tensor_desc
+  // CHECK-SAME: [[arg0:%.+]]: memref<1024x1024x1024xf16>, [[arg1:%.+]]: memref<1024x1024x1024xf16>, [[arg2:%.+]]: memref<1024x1024x1024xf16>
   gpu.func @test_3d_block_tensor_desc(%A: memref<1024x1024x1024xf16>, %B: memref<1024x1024x1024xf16>, %C: memref<1024x1024x1024xf16>) {
+    //CHECK: [[c24:%.*]] = arith.constant 24 : index
+    //CHECK: [[c8:%.*]] = arith.constant 8 : index
+    //CHECK: [[c16:%.*]] = arith.constant 16 : index
+    //CHECK: [[c0:%.*]] = arith.constant 0 : index
+    //CHECK: [[c32:%.*]] = arith.constant 32 : index
     %c0 = arith.constant 0 : index
     %c32 = arith.constant 32 : index
     %c1024 = arith.constant 1024 : index
+
+    //CHECK: [[block_id_x:%.*]] = gpu.block_id  x
+    //CHECK: [[m:%.*]] = arith.muli [[block_id_x]], [[c32]] : index
     %block_id_x = gpu.block_id x
     %m = arith.muli %block_id_x, %c32 : index
+
+    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[m]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
+    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[m]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
+    //CHECK: [[off1:%.*]] = arith.addi [[m]], [[c8]] : index
+    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off1]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
+    //CHECK: [[off2:%.*]] = arith.addi [[m]], [[c8]] : index
+    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off2]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
+    //CHECK: [[off3:%.*]] = arith.addi [[m]], [[c16]] : index
+    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off3]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
+    //CHECK: [[off4:%.*]] = arith.addi [[m]], [[c16]] : index
+    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off4]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
+    //CHECK: [[off5:%.*]] = arith.addi [[m]], [[c24]] : index
+    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off5]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
+    //CHECK: [[off6:%.*]] = arith.addi [[m]], [[c24]] : index
+    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off6]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
 
     %a_tdesc = xegpu.create_nd_tdesc %A[%m, %m, %c0] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<32x32x32xf16, #l>
     %b_tdesc = xegpu.create_nd_tdesc %B[%m, %m, %c0] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<32x32x32xf16, #l>

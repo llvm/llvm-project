@@ -543,8 +543,8 @@ LogicalResult UpdateOffsetOp::verify() {
   if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
-  auto expectedOffsetShape = getShapeOf(tdescTy);
-  auto offsetShape = getShapeOf(getOffsetsType());
+  SmallVector<int64_t> expectedOffsetShape = getShapeOf(tdescTy);
+  SmallVector<int64_t> offsetShape = getShapeOf(getOffsetsType());
   if (tdescTy.getChunkSize() > 1)
     expectedOffsetShape.pop_back();
 
