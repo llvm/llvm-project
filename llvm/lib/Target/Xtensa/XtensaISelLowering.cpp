@@ -903,7 +903,6 @@ static void GetFPBranchKind(ISD::CondCode Cond, unsigned &BrKind,
     break;
   default:
     llvm_unreachable("Invalid condition!");
-    break;
   }
 }
 
@@ -922,9 +921,9 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
     SDValue TargetCC = DAG.getConstant(BrOpcode, DL, MVT::i32);
 
     SDValue Res = DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
-                              FalseValue, TargetCC);
+                              FalseValue, TargetCC, Op->getFlags());
     return Res;
-  } else {
+  }
     assert(LHS.getValueType() == MVT::f32 &&
            "We expect MVT::f32 type of the LHS Operand in SELECT_CC");
     unsigned BrOpcode;
@@ -933,8 +932,8 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
     SDValue TargetCC = DAG.getConstant(CmpOpCode, DL, MVT::i32);
     SDValue TargetBC = DAG.getConstant(BrOpcode, DL, MVT::i32);
     return DAG.getNode(XtensaISD::SELECT_CC_FP, DL, Ty,
-                       {LHS, RHS, TrueValue, FalseValue, TargetCC, TargetBC});
-  }
+                       {LHS, RHS, TrueValue, FalseValue, TargetCC, TargetBC},
+                       Op->getFlags());
 }
 
 SDValue XtensaTargetLowering::LowerRETURNADDR(SDValue Op,
@@ -1562,8 +1561,8 @@ XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
   MBB->addSuccessor(CopyMBB);
   MBB->addSuccessor(SinkMBB);
 
-  if ((MI.getOpcode() == Xtensa::SELECT_CC_FP_FP) ||
-      (MI.getOpcode() == Xtensa::SELECT_CC_FP_INT)) {
+  if (MI.getOpcode() == Xtensa::SELECT_CC_FP_FP ||
+      MI.getOpcode() == Xtensa::SELECT_CC_FP_INT) {
     unsigned CmpKind = MI.getOperand(5).getImm();
     unsigned BrKind = MI.getOperand(6).getImm();
     MCPhysReg BReg = Xtensa::B0;

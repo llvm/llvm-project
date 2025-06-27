@@ -1334,7 +1334,8 @@ def cond_as_i32imm : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(N->get(), SDLoc(N), MVT::i32);
 }]>;
 
-def : Pat<(brcc cond:$cond, FPR:$s, FPR:$t,  bb:$target), (BRCC_FP (cond_as_i32imm $cond), FPR:$s, FPR:$t, bb:$target)>;
+def : Pat<(brcc cond:$cond, FPR:$s, FPR:$t,  bb:$target),
+                 (BRCC_FP (cond_as_i32imm $cond), FPR:$s, FPR:$t, bb:$target)>;
 
 //===----------------------------------------------------------------------===//
 // Region Protection feature instructions
