@@ -6,9 +6,22 @@
 define <4 x double> @shufflevector_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: shufflevector_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    movgr2fr.d $fa2, $a0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr1, 2
+; CHECK-NEXT:    movgr2fr.d $fa3, $a0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa2
+; CHECK-NEXT:    xvinsgr2vr.d $xr2, $a0, 0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa3
+; CHECK-NEXT:    xvinsgr2vr.d $xr2, $a0, 1
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
+; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr1, 3
+; CHECK-NEXT:    movgr2fr.d $fa1, $a0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    xvinsgr2vr.d $xr2, $a0, 2
+; CHECK-NEXT:    movfr2gr.d $a0, $fa1
+; CHECK-NEXT:    xvinsgr2vr.d $xr2, $a0, 3
 ; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret
 entry:

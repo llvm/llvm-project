@@ -27,7 +27,7 @@ class LowerAllowCheckPass : public PassInfoMixin<LowerAllowCheckPass> {
 public:
   struct Options {
     std::vector<unsigned int> cutoffs;
-    uint64_t runtime_check;
+    unsigned int runtime_check = 0;
   };
 
   explicit LowerAllowCheckPass(LowerAllowCheckPass::Options Opts)
