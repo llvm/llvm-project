@@ -399,10 +399,9 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
 }
 
 /// Converts an IntegerAttr to have the specified type if needed.
-/// This handles cases where constant attributes (e.g., from
-/// `llvm.mlir.constant`) have a different type than the target element type. If
-/// the input attribute is not an IntegerAttr or already has the correct type,
-/// returns it unchanged.
+/// This handles cases where constant attributes have a different type than the
+/// target element type. If the input attribute is not an IntegerAttr or already
+/// has the correct type, returns it unchanged.
 static Attribute convertIntegerAttr(Attribute attr, Type expectedType) {
   if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
     if (intAttr.getType() != expectedType)
@@ -2487,8 +2486,8 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
 
   auto destVecType = fromElementsOp.getDest().getType();
   auto destEltType = destVecType.getElementType();
-  // Constants from llvm.mlir.constant can have a different type than the return
-  // type. Convert them before creating the dense elements attribute.
+  // Constant attributes might have a different type than the return type.
+  // Convert them before creating the dense elements attribute.
   auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
     return convertIntegerAttr(attr, destEltType);
   });
