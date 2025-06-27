@@ -128,8 +128,8 @@ MCObjectStreamer::emitDwarfLocListOffsetPairEntry(int8_t OffsetPair,
                                                   const MCSymbol *Begin,
                                                   const MCSymbol *End,
                                                   StringRef EnumEle) {
-  // Heuristic: if we can emit one of the offsets as a constant now that
-  // that consumes less memory than creating a MCDwarfLocListOffsetPairFragment.
+  // Heuristic: if we can emit one of the offsets as a constant now, that
+  // consumes less memory than creating a MCDwarfLocListOffsetPairFragment.
   bool BeginOrEndInBaseFragment = Base->getFragment() == Begin->getFragment() ||
                                   Base->getFragment() == End->getFragment();
   // If the offset ulebs require linker-relaxable relocations then fall back to
