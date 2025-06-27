@@ -1590,12 +1590,17 @@ TYPE_PARSER(
         "TARGET DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
         "TARGET_DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
         "TARGET PARALLEL" >> pure(llvm::omp::Directive::OMPD_target_parallel),
+        "TARGET TEAMS WORKDISTRIBUTE" >>
+            pure(llvm::omp::Directive::OMPD_target_teams_workdistribute),
         "TARGET TEAMS" >> pure(llvm::omp::Directive::OMPD_target_teams),
         "TARGET" >> pure(llvm::omp::Directive::OMPD_target),
         "TASK"_id >> pure(llvm::omp::Directive::OMPD_task),
         "TASKGROUP" >> pure(llvm::omp::Directive::OMPD_taskgroup),
+        "TEAMS WORKDISTRIBUTE" >>
+            pure(llvm::omp::Directive::OMPD_teams_workdistribute),
         "TEAMS" >> pure(llvm::omp::Directive::OMPD_teams),
-        "WORKSHARE" >> pure(llvm::omp::Directive::OMPD_workshare))))
+        "WORKSHARE" >> pure(llvm::omp::Directive::OMPD_workshare),
+        "WORKDISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_workdistribute))))
 
 TYPE_PARSER(sourced(construct<OmpBeginBlockDirective>(
     sourced(Parser<OmpBlockDirective>{}), Parser<OmpClauseList>{})))
