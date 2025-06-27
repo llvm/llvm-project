@@ -4560,10 +4560,10 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       Ops.insert(&Ops[1], Builder.getInt32(/*SV_ALL*/ 31));
 
     // Predicates must match the main datatype.
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-      if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
+    for (Value *&Op : Ops)
+      if (auto PredTy = dyn_cast<llvm::VectorType>(Op->getType()))
         if (PredTy->getElementType()->isIntegerTy(1))
-          Ops[i] = EmitSVEPredicateCast(Ops[i], getSVEType(TypeFlags));
+          Op = EmitSVEPredicateCast(Op, getSVEType(TypeFlags));
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (TypeFlags.hasSplatOperand()) {
@@ -4936,10 +4936,10 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
   }
 
   // Predicates must match the main datatype.
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
+  for (Value *&Op : Ops)
+    if (auto PredTy = dyn_cast<llvm::VectorType>(Op->getType()))
       if (PredTy->getElementType()->isIntegerTy(1))
-        Ops[i] = EmitSVEPredicateCast(Ops[i], getSVEType(TypeFlags));
+        Op = EmitSVEPredicateCast(Op, getSVEType(TypeFlags));
 
   Function *F =
       TypeFlags.isOverloadNone()
@@ -6499,12 +6499,38 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   case clang::AArch64::BI_InterlockedAdd:
-  case clang::AArch64::BI_InterlockedAdd64: {
+  case clang::AArch64::BI_InterlockedAdd_acq:
+  case clang::AArch64::BI_InterlockedAdd_rel:
+  case clang::AArch64::BI_InterlockedAdd_nf:
+  case clang::AArch64::BI_InterlockedAdd64:
+  case clang::AArch64::BI_InterlockedAdd64_acq:
+  case clang::AArch64::BI_InterlockedAdd64_rel:
+  case clang::AArch64::BI_InterlockedAdd64_nf: {
     Address DestAddr = CheckAtomicAlignment(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(1));
+    llvm::AtomicOrdering Ordering;
+    switch (BuiltinID) {
+    case clang::AArch64::BI_InterlockedAdd:
+    case clang::AArch64::BI_InterlockedAdd64:
+      Ordering = llvm::AtomicOrdering::SequentiallyConsistent;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_acq:
+    case clang::AArch64::BI_InterlockedAdd64_acq:
+      Ordering = llvm::AtomicOrdering::Acquire;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_rel:
+    case clang::AArch64::BI_InterlockedAdd64_rel:
+      Ordering = llvm::AtomicOrdering::Release;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_nf:
+    case clang::AArch64::BI_InterlockedAdd64_nf:
+      Ordering = llvm::AtomicOrdering::Monotonic;
+      break;
+    default:
+      llvm_unreachable("missing builtin ID in switch!");
+    }
     AtomicRMWInst *RMWI =
-        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val,
-                                llvm::AtomicOrdering::SequentiallyConsistent);
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val, Ordering);
     return Builder.CreateAdd(RMWI, Val);
   }
   }
@@ -8036,8 +8062,8 @@ BuildVector(ArrayRef<llvm::Value*> Ops) {
   // If this is a constant vector, create a ConstantVector.
   if (AllConstants) {
     SmallVector<llvm::Constant*, 16> CstOps;
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-      CstOps.push_back(cast<Constant>(Ops[i]));
+    for (llvm::Value *Op : Ops)
+      CstOps.push_back(cast<Constant>(Op));
     return llvm::ConstantVector::get(CstOps);
   }
 

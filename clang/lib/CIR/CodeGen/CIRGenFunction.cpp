@@ -550,6 +550,15 @@ LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
   return makeAddrLValue(Address(val, align), ty, baseInfo);
 }
 
+LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
+                                                  QualType ty) {
+  LValueBaseInfo baseInfo;
+  CharUnits alignment = cgm.getNaturalTypeAlignment(ty, &baseInfo);
+  Address addr(val, convertTypeForMem(ty), alignment);
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(addr, ty, baseInfo);
+}
+
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
                                                      FunctionArgList &args) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());

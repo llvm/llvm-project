@@ -418,6 +418,7 @@ cc_library(
         "include/llvm/BinaryFormat/ELFRelocs/*.def",
     ]),
     deps = [
+        ":PPCTargetParser",
         ":Support",
         ":TargetParser",
     ],
@@ -1364,6 +1365,13 @@ td_library(
     ]),
 )
 
+td_library(
+    name = "PPCTargetTdFiles",
+    srcs = glob([
+        "lib/Target/PowerPC/**/*.td",
+    ]),
+)
+
 gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
@@ -1375,11 +1383,38 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "PPCGenTargetFeaturesGen",
+    tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/PPC.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":PPCTargetTdFiles",
+    ],
+)
+
+cc_library(
+    name = "PPCTargetParser",
+    srcs = ["lib/TargetParser/PPCTargetParser.cpp"],
+    hdrs = ["include/llvm/TargetParser/PPCTargetParser.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":PPCGenTargetFeaturesGen",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 cc_library(
     name = "TargetParser",
-    srcs = glob([
-        "lib/TargetParser/*.cpp",
-    ]) + select({
+    srcs = glob(
+        [
+            "lib/TargetParser/*.cpp",
+        ],
+        exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
+    ) + select({
         "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.inc",
         ]),

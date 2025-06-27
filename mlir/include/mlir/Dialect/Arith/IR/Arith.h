@@ -62,8 +62,8 @@ public:
 
   /// Build a constant int op that produces an integer of the specified type,
   /// which must be an integer type.
-  static void build(OpBuilder &builder, OperationState &result, int64_t value,
-                    Type type);
+  static void build(OpBuilder &builder, OperationState &result, Type type,
+                    int64_t value);
 
   /// Build a constant int op that produces an integer from an APInt
   static void build(OpBuilder &builder, OperationState &result, Type type,
@@ -83,8 +83,8 @@ public:
   static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
 
   /// Build a constant float op that produces a float of the specified type.
-  static void build(OpBuilder &builder, OperationState &result,
-                    const APFloat &value, FloatType type);
+  static void build(OpBuilder &builder, OperationState &result, FloatType type,
+                    const APFloat &value);
 
   inline APFloat value() {
     return cast<FloatAttr>(arith::ConstantOp::getValue()).getValue();

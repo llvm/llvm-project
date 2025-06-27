@@ -226,6 +226,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
       return "elf_iamcu";
     return "elf_i386";
   case llvm::Triple::aarch64:
+    if (T.isOSManagarm())
+      return "aarch64managarm";
     return "aarch64linux";
   case llvm::Triple::aarch64_be:
     return "aarch64linuxb";

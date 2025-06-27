@@ -571,7 +571,7 @@ func.func @tensor.pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
   // CHECK-DAG: %[[dim0:.*]] = memref.dim %[[m1]], %[[c0]]
   // CHECK-DAG: %[[dim1:.*]] = memref.dim %[[m1]], %[[c1]]
-  // CHECK-DAG: %[[size0:.*]] = affine.apply #[[$sum_map_1]]()[%[[h1]], %[[dim0]]]
+  // CHECK-DAG: %[[size0:.*]] = affine.apply #[[$sum_map_1]]()[%[[dim0]], %[[h1]]]
   // CHECK-DAG: %[[size1:.*]] = affine.apply #[[$sum_map_2]]()[%[[l2]], %[[h2]]]
   // CHECK:     %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) {{.*}} : memref<?x?xindex>
   // CHECK:     %[[alloc_t:.*]] = bufferization.to_tensor %[[alloc]]

@@ -362,6 +362,11 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
 
   computeKnownBits(Op0, DemandedElts, Known2, Q, Depth + 1);
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
+
+  if (!Add && NSW && !KnownOut.isNonNegative() &&
+      isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+          .value_or(false))
+    KnownOut.makeNonNegative();
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
@@ -3520,6 +3525,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
   if (!isa<Constant>(V) &&
       isKnownNonNullFromDominatingCondition(V, Q.CxtI, Q.DT))
     return true;
+
+  if (const Value *Stripped = stripNullTest(V))
+    return isKnownNonZero(Stripped, DemandedElts, Q, Depth);
 
   return false;
 }
@@ -7483,6 +7491,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::FCmp:
   case Instruction::GetElementPtr:
     return false;
+  case Instruction::AddrSpaceCast:
+    return true;
   default: {
     const auto *CE = dyn_cast<ConstantExpr>(Op);
     if (isa<CastInst>(Op) || (CE && CE->isCast()))
@@ -10169,4 +10179,27 @@ void llvm::findValuesAffectedByCondition(
       Worklist.push_back(X);
     }
   }
+}
+
+const Value *llvm::stripNullTest(const Value *V) {
+  // (X >> C) or/add (X & mask(C) != 0)
+  if (const auto *BO = dyn_cast<BinaryOperator>(V)) {
+    if (BO->getOpcode() == Instruction::Add ||
+        BO->getOpcode() == Instruction::Or) {
+      const Value *X;
+      const APInt *C1, *C2;
+      if (match(BO, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C1)),
+                              m_ZExt(m_SpecificICmp(
+                                  ICmpInst::ICMP_NE,
+                                  m_And(m_Deferred(X), m_LowBitMask(C2)),
+                                  m_Zero())))) &&
+          C2->popcount() == C1->getZExtValue())
+        return X;
+    }
+  }
+  return nullptr;
+}
+
+Value *llvm::stripNullTest(Value *V) {
+  return const_cast<Value *>(stripNullTest(const_cast<const Value *>(V)));
 }

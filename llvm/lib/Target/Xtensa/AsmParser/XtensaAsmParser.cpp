@@ -35,7 +35,9 @@ using namespace llvm;
 struct XtensaOperand;
 
 class XtensaAsmParser : public MCTargetAsmParser {
+  const MCRegisterInfo &MRI;
 
+  enum XtensaRegisterType { Xtensa_Generic, Xtensa_SR, Xtensa_UR };
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
   XtensaTargetStreamer &getTargetStreamer() {
@@ -64,11 +66,12 @@ class XtensaAsmParser : public MCTargetAsmParser {
   ParseStatus parseImmediate(OperandVector &Operands);
   ParseStatus
   parseRegister(OperandVector &Operands, bool AllowParens = false,
-                bool SR = false,
+                XtensaRegisterType SR = Xtensa_Generic,
                 Xtensa::RegisterAccessType RAType = Xtensa::REGISTER_EXCHANGE);
   ParseStatus parseOperandWithModifier(OperandVector &Operands);
   bool
-  parseOperand(OperandVector &Operands, StringRef Mnemonic, bool SR = false,
+  parseOperand(OperandVector &Operands, StringRef Mnemonic,
+               XtensaRegisterType SR = Xtensa_Generic,
                Xtensa::RegisterAccessType RAType = Xtensa::REGISTER_EXCHANGE);
   bool ParseInstructionWithSR(ParseInstructionInfo &Info, StringRef Name,
                               SMLoc NameLoc, OperandVector &Operands);
@@ -90,7 +93,8 @@ public:
 
   XtensaAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                   const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+      : MCTargetAsmParser(Options, STI, MII),
+        MRI(*Parser.getContext().getRegisterInfo()) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 
@@ -583,7 +587,8 @@ bool XtensaAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
 }
 
 ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
-                                           bool AllowParens, bool SR,
+                                           bool AllowParens,
+                                           XtensaRegisterType RegType,
                                            Xtensa::RegisterAccessType RAType) {
   SMLoc FirstS = getLoc();
   bool HadParens = false;
@@ -594,25 +599,32 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
   if (AllowParens && getLexer().is(AsmToken::LParen)) {
     size_t ReadCount = getLexer().peekTokens(Buf);
     if (ReadCount == 2 && Buf[1].getKind() == AsmToken::RParen) {
-      if ((Buf[0].getKind() == AsmToken::Integer) && (!SR))
+      if (Buf[0].getKind() == AsmToken::Integer && RegType == Xtensa_Generic)
         return ParseStatus::NoMatch;
       HadParens = true;
       getParser().Lex(); // Eat '('
     }
   }
 
-  unsigned RegNo = 0;
+  MCRegister RegNo = 0;
 
   switch (getLexer().getKind()) {
   default:
     return ParseStatus::NoMatch;
   case AsmToken::Integer:
-    if (!SR)
+    if (RegType == Xtensa_Generic)
       return ParseStatus::NoMatch;
-    RegName = getLexer().getTok().getString();
-    RegNo = MatchRegisterName(RegName);
-    if (RegNo == 0)
+
+    // Parse case when we expect UR register code as special case,
+    // because SR and UR registers may have the same number
+    // and such situation may lead to confilct
+    if (RegType == Xtensa_UR) {
+      int64_t RegCode = getLexer().getTok().getIntVal();
+      RegNo = Xtensa::getUserRegister(RegCode, MRI);
+    } else {
+      RegName = getLexer().getTok().getString();
       RegNo = MatchRegisterAltName(RegName);
+    }
     break;
   case AsmToken::Identifier:
     RegName = getLexer().getTok().getIdentifier();
@@ -689,7 +701,8 @@ ParseStatus XtensaAsmParser::parseOperandWithModifier(OperandVector &Operands) {
 /// from this information, adding to Operands.
 /// If operand was parsed, returns false, else true.
 bool XtensaAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic,
-                                   bool SR, Xtensa::RegisterAccessType RAType) {
+                                   XtensaRegisterType RegType,
+                                   Xtensa::RegisterAccessType RAType) {
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
   ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic);
@@ -703,7 +716,7 @@ bool XtensaAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic,
     return true;
 
   // Attempt to parse token as register
-  if (parseRegister(Operands, true, SR, RAType).isSuccess())
+  if (parseRegister(Operands, true, RegType, RAType).isSuccess())
     return false;
 
   // Attempt to parse token as an immediate
@@ -722,11 +735,9 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
                      : (Name[0] == 'r' ? Xtensa::REGISTER_READ
                                        : Xtensa::REGISTER_EXCHANGE);
 
-  if ((Name.starts_with("wsr.") || Name.starts_with("rsr.") ||
-       Name.starts_with("xsr.")) &&
-      (Name.size() > 4)) {
-    // Parse case when instruction name is concatenated with SR register
-    // name, like "wsr.sar a1"
+  if ((Name.size() > 4) && Name[3] == '.') {
+    // Parse case when instruction name is concatenated with SR/UR register
+    // name, like "wsr.sar a1" or "wur.fcr a1"
 
     // First operand is token for instruction
     Operands.push_back(XtensaOperand::createToken(Name.take_front(3), NameLoc));
@@ -762,7 +773,8 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
     }
 
     // Parse second operand
-    if (parseOperand(Operands, Name, true, RAType))
+    if (parseOperand(Operands, Name, Name[1] == 's' ? Xtensa_SR : Xtensa_UR,
+                     RAType))
       return true;
   }
 
@@ -780,7 +792,8 @@ bool XtensaAsmParser::parseInstruction(ParseInstructionInfo &Info,
                                        StringRef Name, SMLoc NameLoc,
                                        OperandVector &Operands) {
   if (Name.starts_with("wsr") || Name.starts_with("rsr") ||
-      Name.starts_with("xsr")) {
+      Name.starts_with("xsr") || Name.starts_with("rur") ||
+      Name.starts_with("wur")) {
     return ParseInstructionWithSR(Info, Name, NameLoc, Operands);
   }
 

@@ -298,8 +298,6 @@ void VETargetLowering::initSPUActions() {
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
-  if (TM.Options.ExceptionModel == ExceptionHandling::SjLj)
-    setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
   /// } SJLJ instructions
 
   // Intrinsic instructions
@@ -565,12 +563,8 @@ Register VETargetLowering::getRegisterByName(const char *RegName, LLT VT,
                      .Case("info", VE::SX17)  // Info area register
                      .Case("got", VE::SX15)   // Global offset table register
                      .Case("plt", VE::SX16) // Procedure linkage table register
-                     .Default(0);
-
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+                     .Default(Register());
+  return Reg;
 }
 
 //===----------------------------------------------------------------------===//
