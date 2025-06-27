@@ -166,8 +166,8 @@ private:
             std::get<parser::OmpBeginLoopDirective>(ompLoopCons->t);
         auto &beginLoopDirective =
             std::get<parser::OmpLoopDirective>(beginDirective.t);
-        if ((beginLoopDirective.v == llvm::omp::Directive::OMPD_unroll ||
-                beginLoopDirective.v == llvm::omp::Directive::OMPD_tile)) {
+        if (beginLoopDirective.v == llvm::omp::Directive::OMPD_unroll ||
+            beginLoopDirective.v == llvm::omp::Directive::OMPD_tile) {
           // iterate through the remaining block items to find the end directive
           // for the unroll/tile directive.
           parser::Block::iterator endIt;
@@ -188,18 +188,15 @@ private:
           }
           RewriteOpenMPLoopConstruct(*ompLoopCons, block, nextIt);
           auto &ompLoop =
-              std::get<std::optional<std::variant<parser::DoConstruct,
-                  common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t);
-          ompLoop = std::optional<std::variant<parser::DoConstruct,
-              common::Indirection<parser::OpenMPLoopConstruct>>>{
-              std::variant<parser::DoConstruct,
-                  common::Indirection<parser::OpenMPLoopConstruct>>{
+              std::get<std::optional<parser::NestedConstruct>>(x.t);
+          ompLoop = std::optional<parser::NestedConstruct>{
+              parser::NestedConstruct{
                   common::Indirection{std::move(*ompLoopCons)}}};
           nextIt = block.erase(nextIt);
         } else {
-          messages_.Say(dir.source,
-              "Only OpenMP Loop Transformation Constructs can be nested within OpenMPLoopConstruct's"_err_en_US,
-              parser::ToUpperCaseLetters(dir.source.ToString()));
+          messages_.Say(beginLoopDirective.source,
+              "Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs"_err_en_US,
+              parser::ToUpperCaseLetters(beginLoopDirective.source.ToString()));
         }
       } else {
         missingDoConstruct(dir);

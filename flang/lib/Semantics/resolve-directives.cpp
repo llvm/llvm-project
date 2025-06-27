@@ -1796,7 +1796,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
 
   if (beginDir.v == llvm::omp::Directive::OMPD_do) {
-    auto &optLoopCons = std::get<1>(x.t);
+    auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
     if (optLoopCons.has_value()) {
       if (const auto &doConstruct{
               std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
@@ -1965,7 +1965,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   bool hasCollapseClause{
       clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
 
-  auto &optLoopCons = std::get<1>(x.t);
+  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
   if (optLoopCons.has_value()) {
     if (const auto &outer{std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
       for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;
