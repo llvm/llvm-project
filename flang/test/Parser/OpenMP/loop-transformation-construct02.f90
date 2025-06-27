@@ -10,13 +10,13 @@ subroutine loop_transformation_construct
   integer :: y(I)
 
   !$omp do
-  !$omp unroll
   !$omp tile
+  !$omp unroll
   do i = 1, I
     y(i) = y(i) * 5
   end do
-  !$omp end tile
   !$omp end unroll
+  !$omp end tile
   !$omp end do
 end subroutine
 
@@ -27,11 +27,11 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | | OmpBeginLoopDirective
-!CHECK-PARSE-NEXT: | | | | | OmpLoopDirective -> llvm::omp::Directive = unroll
+!CHECK-PARSE-NEXT: | | | | | OmpLoopDirective -> llvm::omp::Directive = tile
 !CHECK-PARSE-NEXT: | | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | | | OmpBeginLoopDirective
-!CHECK-PARSE-NEXT: | | | | | | OmpLoopDirective -> llvm::omp::Directive = tile
+!CHECK-PARSE-NEXT: | | | | | | OmpLoopDirective -> llvm::omp::Directive = unroll
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | | DoConstruct
 !CHECK-PARSE-NEXT: | | | | | | NonLabelDoStmt
@@ -59,10 +59,10 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | | | | | | | | LiteralConstant -> IntLiteralConstant = '5'
 !CHECK-PARSE-NEXT: | | | | | | EndDoStmt ->
 !CHECK-PARSE-NEXT: | | | | | OmpEndLoopDirective
-!CHECK-PARSE-NEXT: | | | | | | OmpLoopDirective -> llvm::omp::Directive = tile
+!CHECK-PARSE-NEXT: | | | | | | OmpLoopDirective -> llvm::omp::Directive = unroll
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | OmpEndLoopDirective
-!CHECK-PARSE-NEXT: | | | | | OmpLoopDirective -> llvm::omp::Directive = unroll
+!CHECK-PARSE-NEXT: | | | | | OmpLoopDirective -> llvm::omp::Directive = tile
 !CHECK-PARSE-NEXT: | | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | OmpEndLoopDirective
 !CHECK-PARSE-NEXT: | | | | OmpLoopDirective -> llvm::omp::Directive = do
@@ -74,12 +74,12 @@ end subroutine
 !CHECK-UNPARSE-NEXT:  INTEGER x
 !CHECK-UNPARSE-NEXT:  INTEGER y(i)
 !CHECK-UNPARSE-NEXT: !$OMP DO
-!CHECK-UNPARSE-NEXT: !$OMP UNROLL
 !CHECK-UNPARSE-NEXT: !$OMP TILE
+!CHECK-UNPARSE-NEXT: !$OMP UNROLL
 !CHECK-UNPARSE-NEXT:  DO i=1_4,i
 !CHECK-UNPARSE-NEXT:    y(int(i,kind=8))=5_4*y(int(i,kind=8))
 !CHECK-UNPARSE-NEXT:  END DO
-!CHECK-UNPARSE-NEXT: !$OMP END TILE
 !CHECK-UNPARSE-NEXT: !$OMP END UNROLL
+!CHECK-UNPARSE-NEXT: !$OMP END TILE
 !CHECK-UNPARSE-NEXT: !$OMP END DO
 !CHECK-UNPARSE-NEXT: END SUBROUTINE

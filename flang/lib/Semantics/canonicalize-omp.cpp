@@ -107,12 +107,6 @@ private:
     return nullptr;
   }
 
-  void missingDoConstruct(parser::OmpLoopDirective &dir) {
-    messages_.Say(dir.source,
-        "A DO loop must follow the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(dir.source.ToString()));
-  }
-
   void RewriteOpenMPLoopConstruct(parser::OpenMPLoopConstruct &x,
       parser::Block &block, parser::Block::iterator it) {
     // Check the sequence of DoConstruct and OmpEndLoopDirective
@@ -132,6 +126,16 @@ private:
     parser::Block::iterator nextIt;
     auto &beginDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
     auto &dir{std::get<parser::OmpLoopDirective>(beginDir.t)};
+    auto missingDoConstruct = [](auto &dir, auto &messages_) {
+      messages_.Say(dir.source,
+          "A DO loop must follow the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(dir.source.ToString()));
+    };
+    auto tileUnrollError = [](auto &dir, auto &messages_) {
+      messages_.Say(dir.source,
+        "If a loop construct has been fully unrolled, it cannot then be tiled"_err_en_US,
+        parser::ToUpperCaseLetters(dir.source.ToString()));
+    };
 
     nextIt = it;
     while (++nextIt != block.end()) {
@@ -166,8 +170,9 @@ private:
             std::get<parser::OmpBeginLoopDirective>(ompLoopCons->t);
         auto &beginLoopDirective =
             std::get<parser::OmpLoopDirective>(beginDirective.t);
-        if (beginLoopDirective.v == llvm::omp::Directive::OMPD_unroll ||
-            beginLoopDirective.v == llvm::omp::Directive::OMPD_tile) {
+        if ((beginLoopDirective.v == llvm::omp::Directive::OMPD_unroll ||
+            beginLoopDirective.v == llvm::omp::Directive::OMPD_tile) &&
+            !(dir.v == llvm::omp::Directive::OMPD_unroll && beginLoopDirective.v == llvm::omp::Directive::OMPD_tile)) {
           // iterate through the remaining block items to find the end directive
           // for the unroll/tile directive.
           parser::Block::iterator endIt;
@@ -192,19 +197,33 @@ private:
               std::optional<parser::NestedConstruct>{parser::NestedConstruct{
                   common::Indirection{std::move(*ompLoopCons)}}};
           nextIt = block.erase(nextIt);
+        } else if (dir.v == llvm::omp::Directive::OMPD_unroll && beginLoopDirective.v == llvm::omp::Directive::OMPD_tile) {
+          // if a loop has been unrolled, the user can not then tile that loop as it has been unrolled
+          parser::OmpClauseList &unrollClauseList{std::get<parser::OmpClauseList>(beginDir.t)};
+          if (unrollClauseList.v.empty()) {
+            // if the clause list is empty for an unroll construct, we assume the loop is being fully unrolled
+            tileUnrollError(beginDir, messages_);
+          } else {
+            // parse the clauses for the unroll directive to find the full clause
+            for (auto clause{unrollClauseList.v.begin()}; clause != unrollClauseList.v.end(); ++clause) {
+              if(clause->Id() == llvm::omp::OMPC_full) {
+                tileUnrollError(beginLoopDirective, messages_);
+              }
+            }
+          }
         } else {
           messages_.Say(beginLoopDirective.source,
               "Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs"_err_en_US,
               parser::ToUpperCaseLetters(beginLoopDirective.source.ToString()));
         }
       } else {
-        missingDoConstruct(dir);
+        missingDoConstruct(dir, messages_);
       }
       // If we get here, we either found a loop, or issued an error message.
       return;
     }
     if (nextIt == block.end()) {
-      missingDoConstruct(dir);
+      missingDoConstruct(dir, messages_);
     }
   }
 

@@ -54,3 +54,33 @@ subroutine loop_transformation_construct3
   !ERROR: A DO loop must follow the TILE directive
   !$omp tile
 end subroutine
+
+subroutine loop_transformation_construct4
+  implicit none
+  integer :: i = 5
+  integer :: y
+  integer :: v(i)
+
+  !$omp do
+  !$omp unroll full
+  !ERROR: If a loop construct has been fully unrolled, it cannot then be tiled
+  !$omp tile
+  do x = 1, i
+    v(x) = x(x) * 2
+  end do
+end subroutine
+
+subroutine loop_transformation_construct5
+  implicit none
+  integer :: i = 5
+  integer :: y
+  integer :: v(i)
+
+  !$omp do
+  !$omp unroll
+  !ERROR: If a loop construct has been fully unrolled, it cannot then be tiled
+  !$omp tile
+  do x = 1, i
+    v(x) = x(x) * 2
+  end do
+end subroutine
