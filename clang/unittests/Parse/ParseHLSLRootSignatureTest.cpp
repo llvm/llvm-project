@@ -714,7 +714,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
 
 TEST_F(ParseHLSLRootSignatureTest, ValidVersion11Test) {
   // This test checks that the default values are set correctly
-  // when parsing with root signature version 1.0
+  // when parsing with root signature version 1.1
   const llvm::StringLiteral Source = R"cc(
     CBV(b0),
     SRV(t0),
