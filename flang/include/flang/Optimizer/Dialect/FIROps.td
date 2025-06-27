@@ -3667,10 +3667,10 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
   let summary = "declares a reduction kind";
   let description = [{
     Note: this operation is adapted from omp::DeclareReductionOp. There is a lot
-    duplication at the moment. TODO Combined both ops into one. See:
+    duplication at the moment. TODO Combine both ops into one. See:
     https://discourse.llvm.org/t/dialect-for-data-locality-sharing-specifiers-clauses-in-openmp-openacc-and-do-concurrent/86108.
 
-    Declares an `do concurrent` reduction. This requires two mandatory and three
+    Declares a `do concurrent` reduction. This requires two mandatory and three
     optional regions.
 
       1. The optional alloc region specifies how to allocate the thread-local

@@ -2117,10 +2117,9 @@ private:
     llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
     llvm::SmallVector<mlir::Attribute> nestReduceAttrs;
 
-    for (const auto &reduceOp : info.reduceOperatorList) {
+    for (const auto &reduceOp : info.reduceOperatorList)
       nestReduceAttrs.push_back(
           fir::ReduceAttr::get(builder->getContext(), reduceOp));
-    }
 
     llvm::SmallVector<mlir::Value> reduceVars;
     Fortran::lower::omp::ReductionProcessor rp;
@@ -2556,7 +2555,8 @@ private:
 
       builder->setInsertionPointToEnd(loopWrapperOp.getBody());
       auto loopOp = builder->create<fir::DoConcurrentLoopOp>(
-          loc, nestLBs, nestUBs, nestSts, nullptr, /*local_vars=*/std::nullopt,
+          loc, nestLBs, nestUBs, nestSts, /*loopAnnotation=*/nullptr,
+          /*local_vars=*/std::nullopt,
           /*local_syms=*/nullptr, /*reduce_vars=*/std::nullopt,
           /*reduce_byref=*/nullptr, /*reduce_syms=*/nullptr,
           /*reduce_attrs=*/nullptr);
