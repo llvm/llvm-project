@@ -204,7 +204,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   AssemblerDialect = 1;           // New-Style mnemonics.
   LCOMMDirectiveAlignmentType = LCOMM::ByteAlignment;
 
-  initializeVariantKinds(elfAtSpecifiers);
+  initializeAtSpecifiers(elfAtSpecifiers);
 }
 
 void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
@@ -240,7 +240,7 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
 
   UsesSetToEquateSymbol = true;
 
-  initializeVariantKinds(xcoffAtSpecifiers);
+  initializeAtSpecifiers(xcoffAtSpecifiers);
 }
 
 void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
