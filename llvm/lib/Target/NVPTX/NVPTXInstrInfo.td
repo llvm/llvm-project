@@ -184,6 +184,18 @@ class OneUse2<SDPatternOperator operator>
 class fpimm_pos_inf<ValueType vt>
     : FPImmLeaf<vt, [{ return Imm.isPosInfinity(); }]>;
 
+
+
+// Operands which can hold a Register or an Immediate.
+//
+// Unfortunately, since most register classes can hold multiple types, we must
+// use the 'Any' type for these.
+
+def RI1  : Operand<i1>;
+def RI16 : Operand<Any>;
+def RI32 : Operand<Any>;
+def RI64 : Operand<Any>;
+
 // Utility class to wrap up information about a register and DAG type for more
 // convenient iteration and parameterization
 class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm, SDNode imm_node,
@@ -2276,19 +2288,20 @@ let mayLoad=1, hasSideEffects=0 in {
   def LD_i64 : LD<B64>;
 }
 
-class ST<NVPTXRegClass regclass>
+class ST<DAGOperand O>
   : NVPTXInst<
     (outs),
-    (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Sign, i32imm:$toWidth, ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.${Sign:sign}$toWidth"
+    (ins O:$src,
+         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$toWidth,
+         ADDR:$addr),
+    "st${sem:sem}${scope:scope}${addsp:addsp}.b$toWidth"
     " \t[$addr], $src;", []>;
 
 let mayStore=1, hasSideEffects=0 in {
-  def ST_i8  : ST<B16>;
-  def ST_i16 : ST<B16>;
-  def ST_i32 : ST<B32>;
-  def ST_i64 : ST<B64>;
+  def ST_i8  : ST<RI16>;
+  def ST_i16 : ST<RI16>;
+  def ST_i32 : ST<RI32>;
+  def ST_i64 : ST<RI64>;
 }
 
 // The following is used only in and after vector elementizations.  Vector
@@ -2324,38 +2337,38 @@ let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i64 : LD_VEC<B64>;
 }
 
-multiclass ST_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
+multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
   def _v2 : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
-         LdStCode:$addsp, LdStCode:$Sign, i32imm:$fromWidth,
+    (ins O:$src1, O:$src2,
+         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth,
          ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.v2.${Sign:sign}$fromWidth "
+    "st${sem:sem}${scope:scope}${addsp:addsp}.v2.b$fromWidth "
     "\t[$addr], {{$src1, $src2}};", []>;
   def _v4 : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.v4.${Sign:sign}$fromWidth "
+    (ins O:$src1, O:$src2, O:$src3, O:$src4,
+         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth,
+         ADDR:$addr),
+    "st${sem:sem}${scope:scope}${addsp:addsp}.v4.b$fromWidth "
     "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
   if support_v8 then
     def _v8 : NVPTXInst<
       (outs),
-      (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-           regclass:$src5, regclass:$src6, regclass:$src7, regclass:$src8,
-           LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
-           i32imm:$fromWidth, ADDR:$addr),
-      "st${sem:sem}${scope:scope}${addsp:addsp}.v8.${Sign:sign}$fromWidth "
+      (ins O:$src1, O:$src2, O:$src3, O:$src4,
+           O:$src5, O:$src6, O:$src7, O:$src8,
+           LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth, 
+           ADDR:$addr),
+      "st${sem:sem}${scope:scope}${addsp:addsp}.v8.b$fromWidth "
       "\t[$addr], "
       "{{$src1, $src2, $src3, $src4, $src5, $src6, $src7, $src8}};", []>;
 }
 
 let mayStore=1, hasSideEffects=0 in {
-  defm STV_i8  : ST_VEC<B16>;
-  defm STV_i16 : ST_VEC<B16>;
-  defm STV_i32 : ST_VEC<B32, support_v8 = true>;
-  defm STV_i64 : ST_VEC<B64>;
+  defm STV_i8  : ST_VEC<RI16>;
+  defm STV_i16 : ST_VEC<RI16>;
+  defm STV_i32 : ST_VEC<RI32, support_v8 = true>;
+  defm STV_i64 : ST_VEC<RI64>;
 }
 
 //---- Conversion ----

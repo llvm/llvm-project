@@ -19,7 +19,7 @@
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {VE::S_HI32, "hi"},
     {VE::S_LO32, "lo"},
     {VE::S_PC_HI32, "pc_hi"},
@@ -55,7 +55,7 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple) {
 
   SupportsDebugInformation = true;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void VEELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
