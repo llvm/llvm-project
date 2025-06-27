@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "gtest/gtest.h"
 
 using namespace llvm::hlsl::rootsig;
