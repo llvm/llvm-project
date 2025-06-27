@@ -5871,6 +5871,55 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
       Op, [](ConstantFPSDNode *C) { return !C->isZero(); });
 }
 
+static bool isNonZeroShift(const SelectionDAG &DAG, const SDValue I,
+                           const KnownBits &KnownVal, unsigned Depth) {
+  auto ShiftOp = [&](const APInt &Lhs, const APInt &Rhs) {
+    switch (I.getOpcode()) {
+    case ISD::SHL:
+      return Lhs.shl(Rhs);
+    case ISD::SRL:
+      return Lhs.lshr(Rhs);
+    case ISD::SRA:
+      return Lhs.ashr(Rhs);
+    default:
+      llvm_unreachable("Unknown Shift Opcode");
+    }
+  };
+
+  auto InvShiftOp = [&](const APInt &Lhs, const APInt &Rhs) {
+    switch (I.getOpcode()) {
+    case ISD::SHL:
+      return Lhs.lshr(Rhs);
+    case ISD::SRA:
+    case ISD::SRL:
+      return Lhs.shl(Rhs);
+    default:
+      llvm_unreachable("Unknown Shift Opcode");
+    }
+  };
+
+  if (KnownVal.isUnknown())
+    return false;
+
+  KnownBits KnownCnt = DAG.computeKnownBits(I.getOperand(1), Depth + 1);
+  APInt MaxShift = KnownCnt.getMaxValue();
+  unsigned NumBits = KnownVal.getBitWidth();
+  if (MaxShift.uge(NumBits))
+    return false;
+
+  if (!ShiftOp(KnownVal.One, MaxShift).isZero())
+    return true;
+
+  // If all of the bits shifted out are known to be zero, and Val is known
+  // non-zero then at least one non-zero bit must remain.
+  if (InvShiftOp(KnownVal.Zero, NumBits - MaxShift)
+          .eq(InvShiftOp(APInt::getAllOnes(NumBits), NumBits - MaxShift)) &&
+      DAG.isKnownNeverZero(I.getOperand(0), Depth + 1))
+    return true;
+
+  return false;
+}
+
 bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
@@ -5906,9 +5955,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     if (ValKnown.One[0])
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
-    if (MaxCnt.ult(ValKnown.getBitWidth()) &&
-        !ValKnown.One.shl(MaxCnt).isZero())
+    if (isNonZeroShift(*this, Op, ValKnown, Depth))
       return true;
     break;
   }
@@ -5968,10 +6015,8 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
     if (ValKnown.isNegative())
       return true;
-    // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
-    if (MaxCnt.ult(ValKnown.getBitWidth()) &&
-        !ValKnown.One.lshr(MaxCnt).isZero())
+
+    if (isNonZeroShift(*this, Op, ValKnown, Depth))
       return true;
     break;
   }
