@@ -379,6 +379,7 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__waterfall__amdgp
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -1591,6 +1592,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdg
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v7
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v8
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[7:8]
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -1623,6 +1625,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdg
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v7
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v8
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[7:8]
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -3415,6 +3418,7 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__waterfall__amdgpu
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-TRUE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -3451,6 +3455,7 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__waterfall__amdgpu
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-TRUE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -3498,6 +3503,7 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__waterfall__amdgpu
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-FAKE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -3535,6 +3541,7 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__waterfall__amdgpu
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-FAKE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -5264,6 +5271,7 @@ define bfloat @buffer_fat_ptr_agent_atomic_fmax_ret_bf16__offset__waterfall__amd
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-TRUE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -5310,6 +5318,7 @@ define bfloat @buffer_fat_ptr_agent_atomic_fmax_ret_bf16__offset__waterfall__amd
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-TRUE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -5357,6 +5366,7 @@ define bfloat @buffer_fat_ptr_agent_atomic_fmax_ret_bf16__offset__waterfall__amd
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-FAKE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -5402,6 +5412,7 @@ define bfloat @buffer_fat_ptr_agent_atomic_fmax_ret_bf16__offset__waterfall__amd
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-FAKE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -6775,6 +6786,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fmax_ret_v2f16__offset__waterfall
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -6807,6 +6819,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fmax_ret_v2f16__offset__waterfall
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -7995,6 +8008,7 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
 ; GFX12-FAKE16-NEXT:    s_wait_alu 0xfffd
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v0, v6, v8, s4
@@ -8441,6 +8455,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-TRUE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -8492,6 +8507,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-TRUE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -8532,6 +8548,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-FAKE16-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -8582,6 +8599,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-FAKE16-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX12-FAKE16-NEXT:    s_and_b32 s0, vcc_lo, s0

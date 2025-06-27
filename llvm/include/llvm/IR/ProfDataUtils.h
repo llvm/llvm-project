@@ -21,6 +21,13 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+struct MDProfLabels {
+  static const char *BranchWeights;
+  static const char *ValueProfile;
+  static const char *FunctionEntryCount;
+  static const char *SyntheticFunctionEntryCount;
+  static const char *ExpectedBranchWeights;
+};
 
 /// Checks if an Instruction has MD_prof Metadata
 LLVM_ABI bool hasProfMD(const Instruction &I);
