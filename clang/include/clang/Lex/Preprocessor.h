@@ -350,8 +350,8 @@ private:
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
 
-  /// First pp-token in current translation unit.
-  std::optional<Token> FirstPPToken;
+  /// First pp-token source location in current translation unit.
+  SourceLocation FirstPPTokenLoc;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
@@ -1769,20 +1769,13 @@ public:
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
 
-  /// Whether the preprocessor already seen the first pp-token in main file.
-  bool hasSeenMainFileFirstPPToken() const { return FirstPPToken.has_value(); }
-
-  /// Record first pp-token and check if it has a Token::FirstPPToken flag.
-  void HandleMainFileFirstPPToken(const Token &Tok) {
-    if (!hasSeenMainFileFirstPPToken() && Tok.isFirstPPToken() &&
-        SourceMgr.isWrittenInMainFile(Tok.getLocation()))
-      FirstPPToken = Tok;
+  /// Get the start location of the first pp-token in main file.
+  SourceLocation getMainFileFirstPPTokenLoc() const {
+    assert(FirstPPTokenLoc.isValid() &&
+           "Did not see the first pp-token in the main file");
+    return FirstPPTokenLoc;
   }
 
-  Token getMainFileFirstPPToken() const {
-    assert(FirstPPToken && "First main file pp-token doesn't exists");
-    return *FirstPPToken;
-  }
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 

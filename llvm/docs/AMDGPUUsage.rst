@@ -1451,6 +1451,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    It is preferred over llvm.amdgcn.mov.dpp.`<type>` for future use.
                                                    `llvm.amdgcn.update.dpp.<type> <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
                                                    Should be equivalent to:
+
                                                    - `v_mov_b32 <dest> <old>`
                                                    - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
@@ -6032,7 +6033,7 @@ GFX6-GFX8
   available in dispatch packet. For M0, it is also possible to use maximum
   possible value of LDS for given target (0x7FFF for GFX6 and 0xFFFF for
   GFX7-GFX8).
-GFX9-GFX11
+GFX9 and later
   The M0 register is not used for range checking LDS accesses and so does not
   need to be initialized in the prolog.
 
@@ -16639,25 +16640,25 @@ scratch address space.
 
 On entry to a function:
 
-1.  SGPR0-3 contain a V# with the following properties (see
+#.  SGPR0-3 contain a V# with the following properties (see
     :ref:`amdgpu-amdhsa-kernel-prolog-private-segment-buffer`):
 
     * Base address pointing to the beginning of the wavefront scratch backing
       memory.
     * Swizzled with dword element size and stride of wavefront size elements.
 
-2.  The FLAT_SCRATCH register pair is setup. See
+#.  The FLAT_SCRATCH register pair is setup. See
     :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
-3.  GFX6-GFX8: M0 register set to the size of LDS in bytes. See
+#.  GFX6-GFX8: M0 register set to the size of LDS in bytes. See
     :ref:`amdgpu-amdhsa-kernel-prolog-m0`.
-4.  The EXEC register is set to the lanes active on entry to the function.
-5.  MODE register: *TBD*
-6.  VGPR0-31 and SGPR4-29 are used to pass function input arguments as described
+#.  The EXEC register is set to the lanes active on entry to the function.
+#.  MODE register: *TBD*
+#.  VGPR0-31 and SGPR4-29 are used to pass function input arguments as described
     below.
-7.  SGPR30-31 return address (RA). The code address that the function must
+#.  SGPR30-31 return address (RA). The code address that the function must
     return to when it completes. The value is undefined if the function is *no
     return*.
-8.  SGPR32 is used for the stack pointer (SP). It is an unswizzled scratch
+#.  SGPR32 is used for the stack pointer (SP). It is an unswizzled scratch
     offset relative to the beginning of the wavefront scratch backing memory.
 
     The unswizzled SP can be used with buffer instructions as an unswizzled SGPR
@@ -16694,19 +16695,19 @@ On entry to a function:
     arguments after the last local allocation and adjust SGPR32 to the address
     after the last local allocation.
 
-9.  All other registers are unspecified.
-10. Any necessary ``s_waitcnt`` has been performed to ensure memory is available
-    to the function.
-11. Use pass-by-reference (byref) in stead of pass-by-value (byval) for struct
-    arguments in C ABI. Callee is responsible for allocating stack memory and
-    copying the value of the struct if modified. Note that the backend still
-    supports byval for struct arguments.
+#. All other registers are unspecified.
+#. Any necessary ``s_waitcnt`` has been performed to ensure memory is available
+   to the function.
+#. Use pass-by-reference (byref) in stead of pass-by-value (byval) for struct
+   arguments in C ABI. Callee is responsible for allocating stack memory and
+   copying the value of the struct if modified. Note that the backend still
+   supports byval for struct arguments.
 
 On exit from a function:
 
-1.  VGPR0-31 and SGPR4-29 are used to pass function result arguments as
+#.  VGPR0-31 and SGPR4-29 are used to pass function result arguments as
     described below. Any registers used are considered clobbered registers.
-2.  The following registers are preserved and have the same value as on entry:
+#.  The following registers are preserved and have the same value as on entry:
 
     * FLAT_SCRATCH
     * EXEC
@@ -16741,10 +16742,10 @@ On exit from a function:
       preserved if it can be determined that the called function does not change
       their value.
 
-2.  The PC is set to the RA provided on entry.
-3.  MODE register: *TBD*.
-4.  All other registers are clobbered.
-5.  Any necessary ``s_waitcnt`` has been performed to ensure memory accessed by
+#.  The PC is set to the RA provided on entry.
+#.  MODE register: *TBD*.
+#.  All other registers are clobbered.
+#.  Any necessary ``s_waitcnt`` has been performed to ensure memory accessed by
     function is available to the caller.
 
 .. TODO::

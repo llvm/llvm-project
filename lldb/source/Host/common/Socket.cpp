@@ -69,7 +69,7 @@ SharedSocket::SharedSocket(const Socket *socket, Status &error) {
   m_fd = kInvalidFD;
 
   // Create a pipe to transfer WSAPROTOCOL_INFO to the child process.
-  error = m_socket_pipe.CreateNew(true);
+  error = m_socket_pipe.CreateNew();
   if (error.Fail())
     return;
 
