@@ -39,6 +39,10 @@ struct GCNRegPressure {
 
   void clear() { std::fill(&Value[0], &Value[ValueArraySize], 0); }
 
+  unsigned getMaxSGPR() const {
+    return std::max(getSGPRNum(), getSGPRTuplesWeight());
+  }
+
   /// \returns the SGPR32 pressure
   unsigned getSGPRNum() const { return Value[SGPR]; }
   /// \returns the aggregated ArchVGPR32, AccVGPR32 pressure dependent upon \p

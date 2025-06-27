@@ -1,0 +1,179 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-enable-hot-block-remat-aggressive-sgpr | FileCheck %s
+
+# Check that the loads have been moved to the use
+# CHECK: bb.0:
+# CHECK-NOT: S_LOAD_DWORDX4_IMM
+# CHECK: bb.2:
+# CHECK: %t0:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 0, 0
+# CHECK: KILL %t0
+# CHECK: %t2:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 16, 0
+# CHECK: KILL %t2
+# CHECK: %t4:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 32, 0
+# CHECK: KILL %t4
+# CHECK: %t6:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 48, 0
+# CHECK: KILL %t6
+# CHECK: %t8:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 64, 0
+# CHECK: KILL %t8
+# CHECK: %t10:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 80, 0
+# CHECK: KILL %t10
+# CHECK: %t12:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 96, 0
+# CHECK: KILL %t12
+# CHECK: %t14:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 112, 0
+# CHECK: KILL %t14
+# CHECK: %t16:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 128, 0
+# CHECK: KILL %t16
+# CHECK: %t18:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 144, 0
+# CHECK: KILL %t18
+# CHECK: %t20:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 160, 0
+# CHECK: KILL %t20
+# CHECK: %t22:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 176, 0
+# CHECK: KILL %t22
+# CHECK: %t24:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 192, 0
+# CHECK: KILL %t24
+# CHECK: %t26:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 208, 0
+# CHECK: KILL %t26
+# CHECK: %t28:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 224, 0
+# CHECK: KILL %t28
+# CHECK: %t30:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 240, 0
+# CHECK: KILL %t30
+# CHECK: %t32:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 256, 0
+# CHECK: KILL %t32
+# CHECK: %t34:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 272, 0
+# CHECK: KILL %t34
+# CHECK: %t36:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 288, 0
+# CHECK: KILL %t36
+# CHECK: %t38:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 304, 0
+# CHECK: KILL %t38
+# CHECK: %t40:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 320, 0
+# CHECK: KILL %t40
+# CHECK: %t42:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 336, 0
+# CHECK: KILL %t42
+# CHECK: %t44:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 352, 0
+# CHECK: KILL %t44
+# CHECK: %t46:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 368, 0
+# CHECK: KILL %t46
+# CHECK: %t48:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 384, 0
+# CHECK: KILL %t48
+# CHECK: %t50:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 400, 0
+# CHECK: KILL %t50
+# CHECK: %t52:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 416, 0
+# CHECK: KILL %t52
+# CHECK: %t54:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 432, 0
+# CHECK: KILL %t54
+# CHECK: %t56:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 448, 0
+# CHECK: KILL %t56
+# CHECK: %t58:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 464, 0
+# CHECK: KILL %t58
+# CHECK: %t60:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 480, 0
+# CHECK: KILL %t60
+# CHECK: %t62:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 496, 0
+# CHECK: KILL %t62
+
+
+--- |
+  define amdgpu_ps void @main() {
+    ret void
+  }
+...
+---
+name:            main
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    ; To inflate vgpr count
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %v1:vreg_1024 = IMPLICIT_DEF
+    %v2:vreg_1024 = IMPLICIT_DEF
+    %v3:vreg_1024 = IMPLICIT_DEF
+
+    %ptr:sgpr_64 = IMPLICIT_DEF
+
+    ; Defs
+    %t0:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 0, 0
+    %t2:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 16, 0
+    %t4:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 32, 0
+    %t6:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 48, 0
+    %t8:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 64, 0
+    %t10:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 80, 0
+    %t12:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 96, 0
+    %t14:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 112, 0
+    %t16:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 128, 0
+    %t18:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 144, 0
+    %t20:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 160, 0
+    %t22:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 176, 0
+    %t24:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 192, 0
+    %t26:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 208, 0
+    %t28:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 224, 0
+    %t30:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 240, 0
+    %t32:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 256, 0
+    %t34:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 272, 0
+    %t36:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 288, 0
+    %t38:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 304, 0
+    %t40:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 320, 0
+    %t42:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 336, 0
+    %t44:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 352, 0
+    %t46:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 368, 0
+    %t48:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 384, 0
+    %t50:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 400, 0
+    %t52:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 416, 0
+    %t54:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 432, 0
+    %t56:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 448, 0
+    %t58:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 464, 0
+    %t60:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 480, 0
+    %t62:sgpr_128 = S_LOAD_DWORDX4_IMM %ptr, 496, 0
+
+
+    ; Branch
+    %cmp:sreg_32_xm0 = V_CMP_GT_F32_e64 0, 0, 0, %v0.sub0, 0, implicit $exec, implicit $mode
+    $exec_lo = S_MOV_B32_term %cmp:sreg_32_xm0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:  
+    successors: %bb.2
+    S_BRANCH %bb.2
+
+  bb.2:
+    KILL %t0
+    KILL %t2
+    KILL %t4
+    KILL %t6
+    KILL %t8
+    KILL %t10
+    KILL %t12
+    KILL %t14
+    KILL %t16
+    KILL %t18
+    KILL %t20
+    KILL %t22
+    KILL %t24
+    KILL %t26
+    KILL %t28
+    KILL %t30
+    KILL %t32
+    KILL %t34
+    KILL %t36
+    KILL %t38
+    KILL %t40
+    KILL %t42
+    KILL %t44
+    KILL %t46
+    KILL %t48
+    KILL %t50
+    KILL %t52
+    KILL %t54
+    KILL %t56
+    KILL %t58
+    KILL %t60
+    KILL %t62
+
+
+    ; Some uses to inflate vgpr count
+    KILL %v0
+    KILL %v1
+    KILL %v2
+    KILL %v3
+    S_ENDPGM 0
+...
+    
