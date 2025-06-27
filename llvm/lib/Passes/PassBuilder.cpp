@@ -938,6 +938,19 @@ parseLowerAllowCheckPassOptions(StringRef Params) {
 
         Result.cutoffs[index] = cutoff;
       }
+    } else if (ParamName.starts_with("runtime_check")) {
+      StringRef ValueString;
+      std::tie(std::ignore, ValueString) = ParamName.split("=");
+      int runtime_check;
+      if (ValueString.getAsInteger(0, runtime_check)) {
+        return make_error<StringError>(
+            formatv("invalid LowerAllowCheck pass runtime_check parameter '{}' "
+                    "({})",
+                    ValueString, Params)
+                .str(),
+            inconvertibleErrorCode());
+      }
+      Result.runtime_check = runtime_check;
     } else {
       return make_error<StringError>(
           formatv("invalid LowerAllowCheck pass parameter '{}'", ParamName)
