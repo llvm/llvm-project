@@ -31,11 +31,8 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/un.h>
-#include <termios.h>
 #include <unistd.h>
 #endif
 
@@ -172,8 +169,7 @@ bool Socket::FindProtocolByScheme(const char *scheme,
 
 Socket::Socket(SocketProtocol protocol, bool should_close)
     : IOObject(eFDTypeSocket), m_protocol(protocol),
-      m_socket(kInvalidSocketValue),
-      m_should_close_fd(should_close) {}
+      m_socket(kInvalidSocketValue), m_should_close_fd(should_close) {}
 
 Socket::~Socket() { Close(); }
 
@@ -383,6 +379,7 @@ Status Socket::Close() {
   Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOGF(log, "%p Socket::Close (fd = %" PRIu64 ")",
             static_cast<void *>(this), static_cast<uint64_t>(m_socket));
+
   bool success = CloseSocket(m_socket) == 0;
   // A reference to a FD was passed in, set it to an invalid value
   m_socket = kInvalidSocketValue;

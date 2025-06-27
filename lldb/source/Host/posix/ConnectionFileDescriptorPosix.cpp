@@ -452,16 +452,14 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
       select_helper.SetTimeout(*timeout);
 
     // FIXME: Migrate to MainLoop.
+    select_helper.FDSetRead((lldb::socket_t)handle);
 #if defined(_WIN32)
-    if (const auto *sock = static_cast<Socket *>(m_io_sp.get()))
-      select_helper.FDSetRead((socket_t)sock->GetNativeSocket());
     // select() won't accept pipes on Windows.  The entire Windows codepath
     // needs to be converted over to using WaitForMultipleObjects and event
     // HANDLEs, but for now at least this will allow ::select() to not return
     // an error.
     const bool have_pipe_fd = false;
 #else
-    select_helper.FDSetRead(handle);
     const bool have_pipe_fd = pipe_fd >= 0;
 #endif
     if (have_pipe_fd)
@@ -496,12 +494,7 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
           break; // Lets keep reading to until we timeout
         }
       } else {
-#if defined(_WIN32)
-        if (const auto *sock = static_cast<Socket *>(m_io_sp.get());
-            select_helper.FDIsSetRead(sock->GetNativeSocket()))
-#else
-        if (select_helper.FDIsSetRead(handle))
-#endif
+        if (select_helper.FDIsSetRead((lldb::socket_t)handle))
           return eConnectionStatusSuccess;
 
         if (select_helper.FDIsSetRead(pipe_fd)) {

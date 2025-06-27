@@ -31,17 +31,19 @@ public:
 
   Status Run() override;
 
-  struct FdInfo {
-    FdInfo(intptr_t event, Callback callback)
-        : event(event), callback(callback) {}
-    virtual ~FdInfo() {}
+  class IOEvent {
+  public:
+    IOEvent(IOObject::WaitableHandle event) : m_event(event) {}
+    virtual ~IOEvent() {}
     virtual void WillPoll() {}
     virtual void DidPoll() {}
     virtual void Disarm() {}
-    intptr_t event;
-    Callback callback;
+    IOObject::WaitableHandle GetHandle() { return m_event; }
+
+  protected:
+    IOObject::WaitableHandle m_event;
   };
-  using FdInfoUP = std::unique_ptr<FdInfo>;
+  using IOEventUP = std::unique_ptr<IOEvent>;
 
 protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
@@ -51,7 +53,11 @@ protected:
 private:
   llvm::Expected<size_t> Poll();
 
-  llvm::DenseMap<IOObject::WaitableHandle, FdInfoUP> m_read_fds;
+  struct FdInfo {
+    IOEventUP event;
+    Callback callback;
+  };
+  llvm::DenseMap<IOObject::WaitableHandle, FdInfo> m_read_fds;
   void *m_interrupt_event;
 };
 
