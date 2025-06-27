@@ -1691,10 +1691,36 @@ static bool hasZeroDimVectors(Operation *op) {
          llvm::any_of(op->getResultTypes(), hasZeroDimVectorType);
 }
 
+/// vector.splat, and vector.shape_cast that just prepends 1's are
+/// special cases of vector.broadcast. This function returns true
+/// if \p op is one of these operations.
+static bool isBroadcastLike(Operation *op) {
+
+  if (isa<vector::BroadcastOp, SplatOp>(op))
+    return true;
+
+  // a shape_cast which just prepends 1's is broadcast-like.
+  auto shapeCast = dyn_cast<vector::ShapeCastOp>(op);
+  if (!shapeCast)
+    return false;
+
+  ArrayRef<int64_t> dstShape = shapeCast.getType().getShape();
+  ArrayRef<int64_t> srcShape = shapeCast.getSourceVectorType().getShape();
+
+  // A rank-reducing shape_cast cannot be broadcast-like.
+  if (srcShape.size() > dstShape.size())
+    return false;
+
+  bool isSuffix = (srcShape == dstShape.take_back(srcShape.size()));
+  return isSuffix;
+}
+
 /// Fold extractOp with scalar result coming from BroadcastOp or SplatOp.
-static Value foldExtractFromBroadcast(ExtractOp extractOp) {
+static Value foldExtractFromBroadcastLike(ExtractOp extractOp) {
+
   Operation *defOp = extractOp.getVector().getDefiningOp();
-  if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
+
+  if (!defOp || !isBroadcastLike(defOp))
     return Value();
 
   Value source = defOp->getOperand(0);
@@ -1721,14 +1747,22 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
           broadcastVecType.getShape().take_back(extractResultRank))
     return Value();
 
-  auto broadcastOp = cast<vector::BroadcastOp>(defOp);
-  int64_t broadcastDstRank = broadcastOp.getResultVectorType().getRank();
+  assert(defOp->getNumResults() == 1 && "all broadcast-like ops have 1 result");
+  auto dstType = dyn_cast<VectorType>(defOp->getResult(0).getType());
+  assert(dstType && "all broadcast-like ops have vector results");
+
+  int64_t broadcastDstRank = dstType.getRank();
 
   // Detect all the positions that come from "dim-1" broadcasting.
-  // These dimensions correspond to "dim-1" broadcasted dims; set the mathching
+  // These dimensions correspond to "dim-1" broadcasted dims; set the matching
   // extract position to `0` when extracting from the source operand.
-  llvm::SetVector<int64_t> broadcastedUnitDims =
-      broadcastOp.computeBroadcastedUnitDims();
+  auto broadcastedUnitDims = [&]() -> llvm::SetVector<int64_t> {
+    if (auto broadcastOp = dyn_cast<BroadcastOp>(defOp)) {
+      return broadcastOp.computeBroadcastedUnitDims();
+    }
+    return {};
+  }();
+
   SmallVector<OpFoldResult> extractPos(extractOp.getMixedPosition());
   OpBuilder b(extractOp.getContext());
   int64_t broadcastRankDiff = broadcastDstRank - broadcastSrcRank;
@@ -2163,7 +2197,7 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     return getResult();
   if (auto res = ExtractFromInsertTransposeChainState(*this).fold())
     return res;
-  if (auto res = foldExtractFromBroadcast(*this))
+  if (auto res = foldExtractFromBroadcastLike(*this))
     return res;
   if (auto res = foldExtractFromShuffle(*this))
     return res;
@@ -2181,7 +2215,7 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
 
 namespace {
 
-// Pattern to rewrite a ExtractOp(Broadcast) -> Broadcast.
+// Pattern to rewrite a ExtractOp(broadcast-like) -> Broadcast.
 class ExtractOpFromBroadcast final : public OpRewritePattern<ExtractOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -2189,7 +2223,8 @@ public:
   LogicalResult matchAndRewrite(ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
     Operation *defOp = extractOp.getVector().getDefiningOp();
-    if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
+
+    if (!defOp || !isBroadcastLike(defOp))
       return failure();
 
     Value source = defOp->getOperand(0);
