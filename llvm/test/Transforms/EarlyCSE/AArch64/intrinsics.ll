@@ -17,6 +17,8 @@ define <4 x i32> @test_cse(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n) {
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_0_EXTRACT]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_1_EXTRACT]] to <16 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <4 x i32>, <4 x i32> } poison, <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <4 x i32>, <4 x i32> } [[TMP2]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], 1
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], ptr [[A]])
 ; CHECK-NEXT:    [[CALL]] = call <4 x i32> @vaddq_s32(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]])
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
@@ -69,6 +71,8 @@ define <4 x i32> @test_cse2(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_0_EXTRACT]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_1_EXTRACT]] to <16 x i8>
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], ptr [[A]])
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <4 x i32>, <4 x i32> } poison, <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <4 x i32>, <4 x i32> } [[TMP2]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], 1
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], ptr [[A]])
 ; CHECK-NEXT:    [[CALL]] = call <4 x i32> @vaddq_s32(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]])
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1

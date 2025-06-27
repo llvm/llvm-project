@@ -983,9 +983,13 @@ public:
     return 0;
   }
 
-  virtual Value *getOrCreateResultFromMemIntrinsic(
-      IntrinsicInst *Inst, Type *ExpectedType,
-      SmallVectorImpl<Instruction *> &NewInsts) const {
+  virtual Value *getResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                           Type *ExpectedType) const {
+    return nullptr;
+  }
+
+  virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                                   Type *ExpectedType) const {
     return nullptr;
   }
 

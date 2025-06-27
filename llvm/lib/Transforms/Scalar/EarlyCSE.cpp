@@ -722,8 +722,6 @@ public:
   /// This is the current generation of the memory value.
   unsigned CurrentGeneration = 0;
 
-  SmallVector<Instruction *> TmpInstructions;
-
   /// Set up the EarlyCSE runner for a particular function.
   EarlyCSE(const DataLayout &DL, const TargetLibraryInfo &TLI,
            const TargetTransformInfo &TTI, DominatorTree &DT,
@@ -961,7 +959,7 @@ private:
                         const ParseMemoryInst &Later);
 
   Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType,
-                           SmallVectorImpl<Instruction *> &TmpInsts) const {
+                           bool Create) const {
     // TODO: We could insert relevant casts on type mismatch.
     // The load or the store's first operand.
     Value *V;
@@ -974,8 +972,8 @@ private:
         V = II->getOperand(0);
         break;
       default:
-        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType,
-                                                     TmpInsts);
+        return Create ? TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType)
+                      : TTI.getResultFromMemIntrinsic(II, ExpectedType);
       }
     } else {
       V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();
@@ -1259,10 +1257,9 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
 
   // For stores check the result values before checking memory generation
   // (otherwise isSameMemGeneration may crash).
-  Value *Result =
-      MemInst.isStore()
-          ? getOrCreateResult(Matching, Other->getType(), TmpInstructions)
-          : nullptr;
+  Value *Result = MemInst.isStore()
+                      ? getOrCreateResult(Matching, Other->getType(), false)
+                      : nullptr;
   if (MemInst.isStore() && InVal.DefInst != Result)
     return nullptr;
 
@@ -1283,7 +1280,7 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
     return nullptr;
 
   if (!Result)
-    Result = getOrCreateResult(Matching, Other->getType(), TmpInstructions);
+    Result = getOrCreateResult(Matching, Other->getType(), true);
   return Result;
 }
 
@@ -1836,11 +1833,6 @@ bool EarlyCSE::run() {
       nodesToProcess.pop_back();
     }
   } // while (!nodes...)
-
-  // Clean up temporary instructions.
-  for (Instruction *I : reverse(TmpInstructions))
-    if (I->use_empty())
-      I->eraseFromParent();
 
   return Changed;
 }
