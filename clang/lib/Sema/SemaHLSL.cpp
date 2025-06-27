@@ -1064,7 +1064,11 @@ SemaHLSL::ActOnStartRootSignatureDecl(StringRef Signature) {
 
 void SemaHLSL::ActOnFinishRootSignatureDecl(
     SourceLocation Loc, IdentifierInfo *DeclIdent,
-    SmallVector<llvm::hlsl::rootsig::RootElement> &Elements) {
+    ArrayRef<hlsl::RootSignatureElement> RootElements) {
+
+  SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
+  for (auto &RootSigElement : RootElements)
+    Elements.push_back(RootSigElement.getElement());
 
   auto *SignatureDecl = HLSLRootSignatureDecl::Create(
       SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,

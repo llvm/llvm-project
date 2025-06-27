@@ -19,33 +19,34 @@ using TokenKind = RootSignatureToken::Kind;
 
 RootSignatureParser::RootSignatureParser(
     llvm::dxbc::RootSignatureVersion Version,
-    SmallVector<RootElement> &Elements, StringLiteral *Signature,
+    SmallVector<RootSignatureElement> &Elements, StringLiteral *Signature,
     Preprocessor &PP)
     : Version(Version), Elements(Elements), Signature(Signature),
       Lexer(Signature->getString()), PP(PP), CurToken(0) {}
 
 bool RootSignatureParser::parse() {
-  // Iterate as many RootElements as possible
+  // Iterate as many RootSignatureElements as possible
   do {
+    std::optional<RootSignatureElement> Element = std::nullopt;
     if (tryConsumeExpectedToken(TokenKind::kw_RootFlags)) {
       auto Flags = parseRootFlags();
       if (!Flags.has_value())
         return true;
-      Elements.push_back(*Flags);
+      Element = RootSignatureElement(*Flags);
     }
 
     if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
       auto Constants = parseRootConstants();
       if (!Constants.has_value())
         return true;
-      Elements.push_back(*Constants);
+      Element = RootSignatureElement(*Constants);
     }
 
     if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
       auto Table = parseDescriptorTable();
       if (!Table.has_value())
         return true;
-      Elements.push_back(*Table);
+      Element = RootSignatureElement(*Table);
     }
 
     if (tryConsumeExpectedToken(
@@ -53,15 +54,19 @@ bool RootSignatureParser::parse() {
       auto Descriptor = parseRootDescriptor();
       if (!Descriptor.has_value())
         return true;
-      Elements.push_back(*Descriptor);
+      Element = RootSignatureElement(*Descriptor);
     }
 
     if (tryConsumeExpectedToken(TokenKind::kw_StaticSampler)) {
       auto Sampler = parseStaticSampler();
       if (!Sampler.has_value())
         return true;
-      Elements.push_back(*Sampler);
+      Element = RootSignatureElement(*Sampler);
     }
+
+    if (Element.has_value())
+      Elements.push_back(*Element);
+
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return consumeExpectedToken(TokenKind::end_of_stream,
@@ -256,7 +261,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       auto Clause = parseDescriptorTableClause();
       if (!Clause.has_value())
         return std::nullopt;
-      Elements.push_back(*Clause);
+      Elements.push_back(RootSignatureElement(*Clause));
       Table.NumClauses++;
     }
 
