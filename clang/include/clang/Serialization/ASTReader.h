@@ -464,8 +464,6 @@ public:
   using ModuleReverseIterator = ModuleManager::ModuleReverseIterator;
 
 private:
-  using LocSeq = SourceLocationSequence;
-
   /// The receiver of some callbacks invoked by ASTReader.
   std::unique_ptr<ASTReaderListener> Listener;
 
@@ -2445,18 +2443,16 @@ public:
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.
   std::pair<SourceLocation, unsigned>
-  ReadUntranslatedSourceLocation(RawLocEncoding Raw,
-                                 LocSeq *Seq = nullptr) const {
-    return SourceLocationEncoding::decode(Raw, Seq);
+  ReadUntranslatedSourceLocation(RawLocEncoding Raw) const {
+    return SourceLocationEncoding::decode(Raw);
   }
 
   /// Read a source location from raw form.
-  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
-                                    LocSeq *Seq = nullptr) const {
+  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw) const {
     if (!MF.ModuleOffsetMap.empty())
       ReadModuleOffsetMap(MF);
 
-    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
+    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw);
     ModuleFile *OwningModuleFile =
         ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
 
@@ -2484,9 +2480,9 @@ public:
 
   /// Read a source location.
   SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
-                                    const RecordDataImpl &Record, unsigned &Idx,
-                                    LocSeq *Seq = nullptr) {
-    return ReadSourceLocation(ModuleFile, Record[Idx++], Seq);
+                                    const RecordDataImpl &Record,
+                                    unsigned &Idx) {
+    return ReadSourceLocation(ModuleFile, Record[Idx++]);
   }
 
   /// Read a FileID.
@@ -2505,7 +2501,7 @@ public:
 
   /// Read a source range.
   SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
-                              unsigned &Idx, LocSeq *Seq = nullptr);
+                              unsigned &Idx);
 
   static llvm::BitVector ReadBitVector(const RecordData &Record,
                                        const StringRef Blob);

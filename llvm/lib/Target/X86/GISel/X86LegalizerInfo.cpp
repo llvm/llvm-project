@@ -97,10 +97,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS,  G_FCOSH,  G_FACOS,
-                               G_FSIN,   G_FSINH,   G_FASIN, G_FTAN,   G_FTANH,
-                               G_FATAN,  G_FATAN2,  G_FPOW,  G_FEXP,   G_FEXP2,
-                               G_FEXP10, G_FLOG,    G_FLOG2, G_FLOG10, G_FPOWI})
+  getActionDefinitionsBuilder(
+      {G_LROUND, G_LLROUND, G_FCOS,  G_FCOSH, G_FACOS,  G_FSIN,  G_FSINH,
+       G_FASIN,  G_FTAN,    G_FTANH, G_FATAN, G_FATAN2, G_FPOW,  G_FEXP,
+       G_FEXP2,  G_FEXP10,  G_FLOG,  G_FLOG2, G_FLOG10, G_FPOWI, G_FSINCOS})
       .libcall();
 
   getActionDefinitionsBuilder(G_FSQRT)
@@ -417,6 +417,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasAVX, {v8s32, v4s64})
       .legalFor(HasAVX512, {v16s32, v8s64})
       .legalFor(UseX87, {s80});
+
+  getActionDefinitionsBuilder(G_FABS)
+      .legalFor(UseX87 && !HasSSE2 && !HasSSE1, {s64, s80})
+      .lower();
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)

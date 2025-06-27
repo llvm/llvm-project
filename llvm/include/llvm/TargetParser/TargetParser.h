@@ -214,7 +214,7 @@ struct BasicSubtargetSubTypeKV {
   }
 };
 
-std::optional<llvm::StringMap<bool>>
+LLVM_ABI std::optional<llvm::StringMap<bool>>
 getCPUDefaultTargetFeatures(StringRef CPU,
                             ArrayRef<BasicSubtargetSubTypeKV> ProcDesc,
                             ArrayRef<BasicSubtargetFeatureKV> ProcFeatures);
