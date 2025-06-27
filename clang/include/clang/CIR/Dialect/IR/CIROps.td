@@ -2464,7 +2464,7 @@ def ComplexEqualOp : CIR_Op<"complex.eq", [Pure, SameTypeOperands]> {
 
   let summary = "Computes whether two complex values are equal";
   let description = [{
-   The `complex.equal` op takes two complex numbers and returns whether
+   The `cir.complex.eq` op takes two complex numbers and returns whether
    they are equal.
 
     ```mlir
@@ -2489,7 +2489,7 @@ def ComplexNotEqualOp : CIR_Op<"complex.neq", [Pure, SameTypeOperands]> {
 
   let summary = "Computes whether two complex values are not equal";
   let description = [{
-   The `complex.equal` op takes two complex numbers and returns whether
+   The `cir.complex.neq` op takes two complex numbers and returns whether
    they are not equal.
 
     ```mlir
