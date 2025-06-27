@@ -368,6 +368,9 @@ def AEABI_MEMCLR : RuntimeLibcall;
 def AEABI_MEMCLR4 : RuntimeLibcall;
 def AEABI_MEMCLR8 : RuntimeLibcall;
 
+// Hexagon calls
+def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
+
 //--------------------------------------------------------------------
 // Define implementation default libcalls
 //--------------------------------------------------------------------
@@ -1246,6 +1249,9 @@ def __hexagon_fast2_sqrtf : RuntimeLibcallImpl<SQRT_F32>;
 
 // This is the only fast library function for sqrtd.
 def __hexagon_fast2_sqrtdf2 : RuntimeLibcallImpl<SQRT_F64>;
+
+def __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
+    : RuntimeLibcallImpl<HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES>;
 
 //===----------------------------------------------------------------------===//
 // Mips16 Runtime Libcalls

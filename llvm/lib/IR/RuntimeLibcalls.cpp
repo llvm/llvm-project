@@ -584,6 +584,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
       setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_fast2_sqrtf);
     else
       setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_sqrtf);
+
+    setLibcallImpl(
+        RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES,
+        RTLIB::__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes);
   }
 
   if (TT.getArch() == Triple::ArchType::msp430)
