@@ -37,8 +37,8 @@ static cl::opt<bool> OptBisectVerbose(
     cl::desc("Show verbose output when opt-bisect-limit is set"), cl::Hidden,
     cl::init(true), cl::Optional);
 
-static void printBisectPassMessage(const StringRef &Name, int PassNum,
-                                   StringRef TargetDesc, bool Running) {
+static void printPassMessage(const StringRef &Name, int PassNum,
+                             StringRef TargetDesc, bool Running) {
   StringRef Status = Running ? "" : "NOT ";
   errs() << "BISECT: " << Status << "running pass "
          << "(" << PassNum << ") " << Name << " on " << TargetDesc << "\n";
@@ -51,7 +51,7 @@ bool OptBisect::shouldRunPass(const StringRef PassName,
   int CurBisectNum = ++LastBisectNum;
   bool ShouldRun = (BisectLimit == -1 || CurBisectNum <= BisectLimit);
   if (OptBisectVerbose)
-    printBisectPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
+    printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
   return ShouldRun;
 }
 
@@ -62,15 +62,15 @@ static OptDisable &getOptDisabler() {
   return OptDisabler;
 }
 
-static cl::opt<std::string> OptDisablePass(
-    "opt-disable", cl::Hidden, cl::init(""), cl::Optional,
-    cl::cb<void, std::string>([](std::string Passes) {
-      getOptDisabler().setDisabled(Passes);
+static cl::list<std::string> OptDisablePasses(
+    "opt-disable", cl::Hidden, cl::CommaSeparated, cl::Optional,
+    cl::cb<void, std::string>([](std::string Pass) {
+      getOptDisabler().setDisabled(Pass);
     }),
-    cl::desc("Optimization pass(es) to disable (comma separated)"));
+    cl::desc("Optimization pass(es) to disable (comma-separated list)"));
 
 static cl::opt<bool>
-    OptDisableVerbose("opt-disable-verbose",
+    OptDisableVerbose("opt-disable-enable-verbosity",
                       cl::desc("Show verbose output when opt-disable is set"),
                       cl::Hidden, cl::init(false), cl::Optional);
 
@@ -81,14 +81,8 @@ static void printDisablePassMessage(const StringRef &Name, StringRef TargetDesc,
          << TargetDesc << "\n";
 }
 
-void OptDisable::setDisabled(StringRef Passes) {
-  llvm::SmallVector<llvm::StringRef, 4> Tokens;
-
-  Passes.split(Tokens, ',', -1, false);
-
-  for (auto Token : Tokens) {
-    DisabledPasses.insert(Token.lower());
-  }
+void OptDisable::setDisabled(StringRef Pass) {
+  DisabledPasses.insert(Pass.lower());
 }
 
 bool OptDisable::shouldRunPass(const StringRef PassName,

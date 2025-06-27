@@ -90,7 +90,7 @@ private:
 class LLVM_ABI OptDisable : public OptPassGate {
 public:
   /// Default constructor. Initializes the state to empty set. The disabling
-  /// will be enabled by the cl::opt call-back when the command line option
+  /// will be enabled by the cl::list call-back when the command line option
   /// is processed.
   /// Clients should not instantiate this class directly.  All access should go
   /// through LLVMContext.
@@ -100,9 +100,10 @@ public:
 
   /// Checks the pass name to determine if the specified pass should run.
   ///
-  /// The method prints the name of the pass, and whether or not the pass
-  /// will be executed. It returns true if the pass should run, i.e. if
-  /// its name is was not provided via command line.
+  /// It returns true if the pass should run, i.e. if its name is was 
+  /// not provided via command line.
+  /// If -opt-disable-enable-verbosity is given, the method prints the 
+  /// name of the pass, and whether or not the pass will be executed.
   ///
   /// Most passes should not call this routine directly. Instead, it is called
   /// through helper routines provided by the base classes of the pass. For
@@ -112,7 +113,7 @@ public:
 
   /// Parses the command line argument to extract the names of the passes
   /// to be disabled. Multiple pass names can be provided with comma separation.
-  void setDisabled(StringRef Passes);
+  void setDisabled(StringRef Pass);
 
   /// isEnabled() should return true before calling shouldRunPass().
   bool isEnabled() const override { return !DisabledPasses.empty(); }
@@ -121,8 +122,8 @@ private:
   StringSet<> DisabledPasses = {};
 };
 
-/// Singleton instance of the OptBisect class, so multiple pass managers don't
-/// need to coordinate their uses of OptBisect.
+/// Singleton instance of the OptPassGate class, so multiple pass managers don't
+/// need to coordinate their uses of OptBisect and OptDisable.
 LLVM_ABI OptPassGate &getGlobalPassGate();
 
 } // end namespace llvm
