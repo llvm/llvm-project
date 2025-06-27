@@ -899,9 +899,10 @@ void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
   // Nothing to do.
 }
 
-void CGOpenMPRuntimeGPU::emitNumThreadsClause(CodeGenFunction &CGF,
-                                                llvm::Value *NumThreads,
-                                                SourceLocation Loc) {
+void CGOpenMPRuntimeGPU::emitNumThreadsClause(
+    CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+    OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
+    const Expr *Message) {
   // Nothing to do.
 }
 
@@ -1201,18 +1202,17 @@ void CGOpenMPRuntimeGPU::emitTeamsCall(CodeGenFunction &CGF,
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 }
 
-void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
-                                          SourceLocation Loc,
-                                          llvm::Function *OutlinedFn,
-                                          ArrayRef<llvm::Value *> CapturedVars,
-                                          const Expr *IfCond,
-                                          llvm::Value *NumThreads) {
+void CGOpenMPRuntimeGPU::emitParallelCall(
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
+    ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond,
+    llvm::Value *NumThreads, OpenMPNumThreadsClauseModifier NumThreadsModifier,
+    OpenMPSeverityClauseKind Severity, const Expr *Message) {
   if (!CGF.HaveInsertPoint())
     return;
 
-  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond,
-                        NumThreads](CodeGenFunction &CGF,
-                                    PrePostActionTy &Action) {
+  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond, NumThreads,
+                        NumThreadsModifier, Severity, Message](
+                           CodeGenFunction &CGF, PrePostActionTy &Action) {
     CGBuilderTy &Bld = CGF.Builder;
     llvm::Value *NumThreadsVal = NumThreads;
     llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
@@ -1260,21 +1260,30 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
     assert(IfCondVal && "Expected a value");
+    RuntimeFunction FnID = OMPRTL___kmpc_parallel_51;
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
-    llvm::Value *Args[] = {
-        RTLoc,
-        getThreadID(CGF, Loc),
-        IfCondVal,
-        NumThreadsVal,
-        llvm::ConstantInt::get(CGF.Int32Ty, -1),
-        FnPtr,
-        ID,
-        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
-                                   CGF.VoidPtrPtrTy),
-        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
-    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
-                        Args);
+    llvm::SmallVector<llvm::Value *, 10> Args(
+        {RTLoc, getThreadID(CGF, Loc), IfCondVal, NumThreadsVal,
+         llvm::ConstantInt::get(CGF.Int32Ty, -1), FnPtr, ID,
+         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
+                                    CGF.VoidPtrPtrTy),
+         llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())});
+    if (NumThreadsModifier == OMPC_NUMTHREADS_strict) {
+      FnID = OMPRTL___kmpc_parallel_60;
+      // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect
+      // is as if sev-level is fatal."
+      Args.append(
+          {llvm::ConstantInt::get(CGM.Int32Ty, true),
+           llvm::ConstantInt::get(CGM.Int32Ty,
+                                  Severity == OMPC_SEVERITY_warning ? 1 : 2)});
+      if (Message)
+        Args.push_back(CGF.EmitStringLiteralLValue(cast<StringLiteral>(Message))
+                           .getPointer(CGF));
+      else
+        Args.push_back(llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
+    }
+    CGF.EmitRuntimeCall(
+        OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
   };
 
   RegionCodeGenTy RCG(ParallelGen);
