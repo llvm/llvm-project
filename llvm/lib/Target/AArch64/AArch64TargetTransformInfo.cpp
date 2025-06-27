@@ -5617,7 +5617,8 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
       return LT.first;
 
     // mov zd.q, vn
-    if (isDUPFirstSegmentMask(Mask, Segments, SegmentElts))
+    if (ST->isSVEorStreamingSVEAvailable() &&
+        isDUPFirstSegmentMask(Mask, Segments, SegmentElts))
       return LT.first;
   }
 
