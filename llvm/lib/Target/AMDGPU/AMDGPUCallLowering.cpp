@@ -1474,7 +1474,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         // Get the callee from the original instruction, so it doesn't look like
         // this is an indirect call.
         Info.Callee = MachineOperand::CreateGA(
-            static_cast<GlobalValue *>(Info.CB->getOperand(0)), /*Offset=*/0);
+            cast<GlobalValue>(Info.CB->getOperand(0)), /*Offset=*/0);
         Info.OrigArgs.erase(Info.OrigArgs.begin());
         Info.IsVarArg = false;
         break;
