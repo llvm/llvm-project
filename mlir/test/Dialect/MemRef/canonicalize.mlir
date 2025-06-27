@@ -476,10 +476,10 @@ func.func @compose_collapse_of_expand_partially_dynamic(%arg0: memref<?xf16>, %a
 //  CHECK-SAME:   %[[ORIG_D2:.[a-zA-Z0-9]+]]
 //  CHECK-SAME:   %[[ORIG_D3:.[a-zA-Z0-9]+]]
 //   CHECK-DAG:   %[[C32:.+]] = arith.constant 32
-//       CHECK:   %[[NEW_D2:.+]] = arith.muli %[[ORIG_D3]], %[[C32]]
+//       CHECK:   %[[COLLAPSED_D2:.+]] = arith.muli %[[ORIG_D3]], %[[C32]]
 //       CHECK:   %[[RESULT:.+]] = memref.expand_shape %[[SRC]]
 //  CHECK-SAME:     [0, 1, 2]
-//  CHECK-SAME:     output_shape [8, %[[ORIG_D2]], %[[NEW_D2]]]
+//  CHECK-SAME:     output_shape [8, %[[ORIG_D2]], %[[COLLAPSED_D2]]]
 //       CHECK:   return %[[RESULT]]
 
 // -----

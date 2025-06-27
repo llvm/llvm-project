@@ -311,12 +311,13 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
       SmallVector<OpFoldResult> origOutputShape =
           expandOp.getMixedOutputShape();
       SmallVector<OpFoldResult> newOutputShape;
-      for (auto indices : collapseOp.getReassociationIndices()) {
+      for (const ReassociationIndices &indices :
+           collapseOp.getReassociationIndices()) {
         int64_t numStaticElems = 1;
         SmallVector<Value> dynamicSizes;
-        for (auto idx : indices) {
+        for (int64_t idx : indices) {
           OpFoldResult size = origOutputShape[idx];
-          if (auto maybeCst = getConstantIntValue(size)) {
+          if (std::optional<int64_t> maybeCst = getConstantIntValue(size)) {
             numStaticElems *= maybeCst.value();
             continue;
           }
@@ -327,10 +328,10 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
           continue;
         }
 
-        // There is at least one dynamic size, so we can intialize `result` to
+        // There is at least one dynamic size, so we can initialize `result` to
         // the first dynamic size.
         Value result = dynamicSizes[0];
-        for (auto v : llvm::drop_begin(dynamicSizes))
+        for (Value v : llvm::drop_begin(dynamicSizes))
           result = rewriter.create<arith::MulIOp>(loc, result, v);
         if (numStaticElems != 1) {
           result = rewriter.create<arith::MulIOp>(
