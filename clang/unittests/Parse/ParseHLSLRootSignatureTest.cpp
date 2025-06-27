@@ -647,7 +647,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
 
   ASSERT_FALSE(Parser.parse());
 
-  auto DefRootDescriptorFlag = RootDescriptorFlags::DataVolatile;
+  auto DefRootDescriptorFlag = llvm::dxbc::RootDescriptorFlags::DataVolatile;
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
@@ -663,8 +663,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
-  auto ValidNonSamplerFlags = DescriptorRangeFlags::DescriptorsVolatile |
-                              DescriptorRangeFlags::DataVolatile;
+  auto ValidNonSamplerFlags =
+      llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile |
+      llvm::dxbc::DescriptorRangeFlags::DataVolatile;
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
@@ -684,7 +685,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::DescriptorsVolatile);
+            llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -722,43 +723,43 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion11Test) {
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataStaticWhileSetAtExecute);
+            llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataStaticWhileSetAtExecute);
+            llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataVolatile);
+            llvm::dxbc::RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::DataStaticWhileSetAtExecute);
+            llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::DataStaticWhileSetAtExecute);
+            llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[5];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::DataVolatile);
+            llvm::dxbc::DescriptorRangeFlags::DataVolatile);
 
   Elem = Elements[6];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::None);
+            llvm::dxbc::DescriptorRangeFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
