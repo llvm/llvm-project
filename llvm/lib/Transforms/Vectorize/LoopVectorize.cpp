@@ -641,8 +641,6 @@ struct EpilogueLoopVectorizationInfo {
   unsigned EpilogueUF = 0;
   BasicBlock *MainLoopIterationCountCheck = nullptr;
   BasicBlock *EpilogueIterationCountCheck = nullptr;
-  BasicBlock *SCEVSafetyCheck = nullptr;
-  BasicBlock *MemSafetyCheck = nullptr;
   Value *TripCount = nullptr;
   Value *VectorTripCount = nullptr;
   VPlan &EpiloguePlan;
@@ -7514,18 +7512,21 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
   EPI.EpilogueIterationCountCheck->getTerminator()->replaceUsesOfWith(
       VecEpilogueIterationCountCheck, LoopScalarPreHeader);
 
+  // Retrieve blocks with SCEV and memory runtime checks, if they have been
+  // connected to the CFG, otherwise they are unused and will be deleted. Their
+  // terminators and phis using them need adjusting below.
   BasicBlock *SCEVCheckBlock = RTChecks.getSCEVCheckBlock();
-  if (SCEVCheckBlock && SCEVCheckBlock->hasNPredecessorsOrMore(1))
-    EPI.SCEVSafetyCheck = SCEVCheckBlock;
-
+  if (SCEVCheckBlock && pred_empty(SCEVCheckBlock))
+    SCEVCheckBlock = nullptr;
   BasicBlock *MemCheckBlock = RTChecks.getMemCheckBlock();
-  if (MemCheckBlock && MemCheckBlock->hasNPredecessorsOrMore(1))
-    EPI.MemSafetyCheck = MemCheckBlock;
-  if (EPI.SCEVSafetyCheck)
-    EPI.SCEVSafetyCheck->getTerminator()->replaceUsesOfWith(
+  if (MemCheckBlock && pred_empty(MemCheckBlock))
+    MemCheckBlock = nullptr;
+
+  if (SCEVCheckBlock)
+    SCEVCheckBlock->getTerminator()->replaceUsesOfWith(
         VecEpilogueIterationCountCheck, LoopScalarPreHeader);
-  if (EPI.MemSafetyCheck)
-    EPI.MemSafetyCheck->getTerminator()->replaceUsesOfWith(
+  if (MemCheckBlock)
+    MemCheckBlock->getTerminator()->replaceUsesOfWith(
         VecEpilogueIterationCountCheck, LoopScalarPreHeader);
 
   DT->changeImmediateDominator(LoopScalarPreHeader,
@@ -7552,10 +7553,10 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
         }))
       continue;
     Phi->removeIncomingValue(EPI.EpilogueIterationCountCheck);
-    if (EPI.SCEVSafetyCheck)
-      Phi->removeIncomingValue(EPI.SCEVSafetyCheck);
-    if (EPI.MemSafetyCheck)
-      Phi->removeIncomingValue(EPI.MemSafetyCheck);
+    if (SCEVCheckBlock)
+      Phi->removeIncomingValue(SCEVCheckBlock);
+    if (MemCheckBlock)
+      Phi->removeIncomingValue(MemCheckBlock);
   }
 
   replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
@@ -9273,7 +9274,7 @@ void LoopVectorizationPlanner::addRuntimeChecks(
   if (MemCheckBlock) {
     // VPlan-native path does not do any analysis for runtime checks
     // currently.
-    assert((!EnableVPlanNativePath || OrigLoop->begin() == OrigLoop->end()) &&
+    assert((!EnableVPlanNativePath || OrigLoop->isInnermost()) &&
            "Runtime checks are not supported for outer loops yet");
 
     if (CM.OptForSize) {
@@ -9294,6 +9295,7 @@ void LoopVectorizationPlanner::addRuntimeChecks(
     Checks.emplace_back(Plan.getOrAddLiveIn(MemCheckCond),
                         Plan.createVPIRBasicBlock(MemCheckBlock));
   }
+
   VPlanTransforms::connectCheckBlocks(
       Plan, Checks,
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()));

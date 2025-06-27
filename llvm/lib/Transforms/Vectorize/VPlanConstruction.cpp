@@ -591,8 +591,8 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
-// Likelyhood of bypassing the vectorized loop because SCEV assumptions or
-// memory runtime checks.
+// Likelyhood of bypassing the vectorized loop due to SCEV or memory runtime
+// checks.
 static constexpr uint32_t CheckBypassWeights[] = {1, 127};
 
 void VPlanTransforms::connectCheckBlocks(
