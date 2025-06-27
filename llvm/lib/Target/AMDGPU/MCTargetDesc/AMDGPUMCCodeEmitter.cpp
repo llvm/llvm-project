@@ -288,16 +288,12 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
                                     bool HasMandatoryLiteral) const {
   int64_t Imm;
   if (MO.isExpr()) {
-    const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
-    if (!C)
+    if (!MO.getExpr()->evaluateAsAbsolute(Imm))
       return (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
               OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64)
                  ? 254
                  : 255;
-
-    Imm = C->getValue();
   } else {
-
     assert(!MO.isDFPImm());
 
     if (!MO.isImm())
