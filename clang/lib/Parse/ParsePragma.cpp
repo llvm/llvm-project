@@ -1402,88 +1402,9 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
   return true;
 }
 
-NestedNameSpecifier *
-Parser::zOSParseIdentifier(StringRef PragmaName,
-                           const IdentifierInfo *IdentName) {
-  NestedNameSpecifier *NestedId = nullptr;
-  if (PP.getLangOpts().CPlusPlus) {
-    if (Tok.is(tok::coloncolon)) {
-      // Nothing to do.
-    } else if (Actions.CurContext->isNamespace()) {
-      auto *NS = cast<NamespaceDecl>(Actions.CurContext);
-      NestedId =
-          NestedNameSpecifier::Create(Actions.Context, NS->getIdentifier());
-      NestedId =
-          NestedNameSpecifier::Create(Actions.Context, NestedId, IdentName);
-      PP.Lex(Tok);
-    } else {
-      NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
-      PP.Lex(Tok);
-    }
-    while (Tok.is(tok::coloncolon)) {
-      PP.Lex(Tok);
-      if (Tok.isNot(tok::identifier)) {
-        PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
-            << PragmaName;
-        return nullptr;
-      }
-      IdentifierInfo *II = Tok.getIdentifierInfo();
-      NestedId = NestedNameSpecifier::Create(Actions.Context, NestedId, II);
-      PP.Lex(Tok);
-    }
-  } else {
-    NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
-    PP.Lex(Tok);
-  }
-  return NestedId;
-}
-
-bool Parser::zOSParseParameterList(
-    StringRef PragmaName, std::optional<SmallVector<QualType, 4>> &TypeList,
-    Qualifiers &CVQual) {
-  if (Tok.is(tok::l_paren)) {
-    TypeList = SmallVector<QualType, 4>();
-    PP.Lex(Tok);
-    while (Tok.isNot(tok::eof) && !Tok.is(tok::r_paren)) {
-      TypeResult TResult = ParseTypeName(nullptr);
-      if (!TResult.isInvalid()) {
-        QualType QT = TResult.get().get();
-        if (!QT.getTypePtr()->isVoidType()) {
-          TypeList->push_back(QT);
-        }
-      }
-      if (Tok.is(tok::comma) || Tok.is(tok::identifier))
-        PP.Lex(Tok);
-    }
-    if (Tok.is(tok::r_paren))
-      PP.Lex(Tok);
-    else {
-      // We ate the whole line trying to find the right paren of the parameter
-      // list.
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
-          << PragmaName;
-      return false;
-    }
-
-    if (TypeList.has_value())
-      while (Tok.is(tok::kw_const) || Tok.is(tok::kw_volatile)) {
-        if (Tok.is(tok::kw_const)) {
-          CVQual.addConst();
-        } else {
-          assert(Tok.is(tok::kw_volatile));
-          CVQual.addVolatile();
-        }
-        PP.Lex(Tok);
-      }
-  }
-  return true;
-}
-
 bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
   assert(Tok.is(PragmaKind));
 
-  bool IsPragmaExport = PragmaKind == tok::annot_pragma_export;
-  assert(IsPragmaExport);
   StringRef PragmaName = "export";
 
   using namespace clang::charinfo;
@@ -1524,11 +1445,8 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
 
     // Because export is also a C++ keyword, we also check for that.
     if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
-      IsPragmaExport = false;
       PragmaName = Tok.getIdentifierInfo()->getName();
-      if (PragmaName == "export")
-        IsPragmaExport = true;
-      else
+      if (PragmaName != "export")
         PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
             << PragmaName;
     } else if (Tok.isNot(tok::eof)) {

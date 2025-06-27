@@ -1336,30 +1336,38 @@ void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc) {
 
   NamedDecl *PrevDecl =
       LookupSingleName(TUScope, IdentId, NameLoc, LookupOrdinaryName);
-  if (PrevDecl && (isa<FunctionDecl>(PrevDecl) || isa<VarDecl>(PrevDecl))) {
-    if (PrevDecl->hasExternalFormalLinkage()) {
-      if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl)) {
-        if (FD->hasBody())
-          Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
-              << "export";
-        else
-          mergeVisibilityType(PrevDecl, NameLoc, VisibilityAttr::Default);
-      } else {
-        auto *VD = dyn_cast<VarDecl>(PrevDecl);
-        assert(VD);
-        if (VD->hasDefinition() == VarDecl::Definition)
-          Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
-              << "export";
-        else
-          mergeVisibilityType(PrevDecl, NameLoc, VisibilityAttr::Default);
-      }
-    } else
-      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
-    Label.Used = true;
-  }
-  if (!Label.Used) {
+  if (!PrevDecl) {
     PendingExportedNames[IdentId] = Label;
+    return;
   }
+
+  if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
+    if (getLangOpts().CPlusPlus && !FD->isExternC()) {
+      PendingExportedNames[IdentId] = Label;
+      return;
+    }
+    if (!FD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (FD->hasBody()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  } else if (auto *VD = dyn_cast<VarDecl>(PrevDecl->getCanonicalDecl())) {
+    if (!VD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (VD->hasDefinition() == VarDecl::Definition) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  }
+  mergeVisibilityType(PrevDecl->getCanonicalDecl(), NameLoc,
+                      VisibilityAttr::Default);
 }
 
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;

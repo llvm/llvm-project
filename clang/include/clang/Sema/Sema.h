@@ -2294,13 +2294,6 @@ public:
     bool Used;
   };
 
-  bool typeListMatchesSymbolLabel(FunctionDecl *FD,
-                                  const clang::Sema::SymbolLabel &Label);
-
-  /// tryLookupSymbolLabel try to look up a decl matching the nested
-  //  specifier with optional type list.
-  NamedDecl *tryLookupSymbolLabel(const clang::Sema::SymbolLabel &Label);
-
   bool isNamedDeclSameAsSymbolLabel(NamedDecl *D,
                                     clang::Sema::SymbolLabel &Label);
 

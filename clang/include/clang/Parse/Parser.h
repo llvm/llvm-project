@@ -7137,11 +7137,6 @@ private:
 
   void HandlePragmaAttribute();
 
-  NestedNameSpecifier *zOSParseIdentifier(StringRef PragmaName,
-                                          const IdentifierInfo *IdentName);
-  bool zOSParseParameterList(StringRef PragmaName,
-                             std::optional<SmallVector<QualType, 4>> &TypeList,
-                             Qualifiers &CVQual);
   bool zOSHandlePragmaHelper(tok::TokenKind);
 
   /// Handle the annotation token produced for

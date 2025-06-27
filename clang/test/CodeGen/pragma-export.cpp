@@ -64,6 +64,6 @@ void f10(int) {}
 // CHECK: define hidden void @f5a()
 // CHECK: define hidden void @_ZN2N02f5Ev()
 // CHECK: define hidden void @_ZN2N03f5aEv()
-// CHECK: define hidden void @f10(double noundef %0)
-// CHECK: define void @_Z3f10i(i32 noundef signext %0)
+// CHECK: define void @f10(double noundef %0)
+// CHECK: define hidden void @_Z3f10i(i32 noundef signext %0)
 

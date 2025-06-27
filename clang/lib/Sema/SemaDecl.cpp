@@ -7519,8 +7519,6 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
 // Checks if the given label matches the named declaration.
 bool Sema::isNamedDeclSameAsSymbolLabel(NamedDecl *D,
                                         Sema::SymbolLabel &Label) {
-  const DeclContext *Ctx = D->getDeclContext();
-
   // Check the name.
   if (Label.IdentId != D->getIdentifier())
     return false;
@@ -7528,7 +7526,6 @@ bool Sema::isNamedDeclSameAsSymbolLabel(NamedDecl *D,
   if (isa<VarDecl>(D))
     return true;
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    // All function parameters match if specified in pragma.
     if (!getLangOpts().CPlusPlus || FD->isExternC())
       return true;
   }
