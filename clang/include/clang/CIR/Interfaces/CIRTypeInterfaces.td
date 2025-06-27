@@ -53,4 +53,29 @@ def CIR_FPTypeInterface : TypeInterface<"FPTypeInterface"> {
   ];
 }
 
+def CIR_SizedTypeInterface : TypeInterface<"SizedTypeInterface"> {
+  let description = [{
+    Annotates types that have known size. Types that don't have a size are
+    abstract types and void.
+  }];
+  let cppNamespace = "::cir";
+  let methods = [
+    InterfaceMethod<[{
+        Returns true if this is a sized type. This mirrors sizedness from the
+        clang AST, where a type is sized if it has a known size.
+        By default type defining this interface returns true,
+        but this can be overridden if sizedness depends on properties of the type.
+        For example, whether a struct is not sized if it is incomplete.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isSized",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return true;
+      }]
+    >,
+  ];
+}
+
 #endif // CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD

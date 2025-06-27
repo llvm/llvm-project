@@ -139,18 +139,6 @@ public:
     return getType<cir::RecordType>(nameAttr, kind);
   }
 
-  bool isSized(mlir::Type ty) {
-    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType, cir::IntType,
-                  cir::FPTypeInterface, cir::ComplexType, cir::RecordType>(ty))
-      return true;
-
-    if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
-      return isSized(vt.getElementType());
-
-    assert(!cir::MissingFeatures::unsizedTypes());
-    return false;
-  }
-
   // Return true if the value is a null constant such as null pointer, (+0.0)
   // for floating-point or zero initializer
   bool isNullValue(mlir::Attribute attr) const {
