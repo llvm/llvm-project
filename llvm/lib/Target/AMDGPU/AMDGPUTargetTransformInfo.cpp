@@ -313,24 +313,6 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
-unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
-  // For certain 8 bit ops, we can pack a v4i8 into a single part
-  // (e.g. v4i8 shufflevectors -> v_perm v4i8, v4i8). Thus, we
-  // do not limit the numberOfParts for 8 bit vectors to the
-  // legalization costs of such. It is left up to other target
-  // queries (e.g. get*InstrCost) to decide the proper handling
-  // of 8 bit vectors.
-  if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(Tp)) {
-    if (ST->shouldCoerceIllegalTypes() &&
-        DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
-      unsigned ElCount = VTy->getElementCount().getFixedValue();
-      return std::max(UINT64_C(1), PowerOf2Ceil(ElCount / 4));
-    }
-  }
-
-  return BaseT::getNumberOfParts(Tp);
-}
-
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
   // registers. See getRegisterClassForType for the implementation.
@@ -362,11 +344,12 @@ unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
-
-  return (ST->shouldCoerceIllegalTypes() && ElemWidth == 8) ? 4
-         : (ElemWidth == 16)                                ? 2
-         : (ElemWidth == 32 && ST->hasPackedFP32Ops())      ? 2
-                                                            : 1;
+  // For a given width return the max 0number of elements that can be combined
+  // into a wider bit value:
+  return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
+         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+                                                       : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -1217,8 +1200,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   unsigned ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      (ScalarSize == 16 ||
-       (ScalarSize == 8 && ST->shouldCoerceIllegalTypes()))) {
+      (ScalarSize == 16 || ScalarSize == 8)) {
     // Larger vector widths may require additional instructions, but are
     // typically cheaper than scalarized versions.
     unsigned NumVectorElts = cast<FixedVectorType>(SrcTy)->getNumElements();
@@ -1526,4 +1508,31 @@ GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
 
   return AMDGPU::isShader(F->getCallingConv()) ? KnownIEEEMode::Off
                                                : KnownIEEEMode::On;
+}
+
+InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                            Align Alignment,
+                                            unsigned AddressSpace,
+                                            TTI::TargetCostKind CostKind,
+                                            TTI::OperandValueInfo OpInfo,
+                                            const Instruction *I) const {
+  if (VectorType *VecTy = dyn_cast<VectorType>(Src)) {
+    if ((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+        VecTy->getElementType()->isIntegerTy(8)) {
+      return divideCeil(DL.getTypeSizeInBits(VecTy) - 1,
+                        getLoadStoreVecRegBitWidth(AddressSpace));
+    }
+  }
+  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
+                                OpInfo, I);
+}
+
+unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
+  if (VectorType *VecTy = dyn_cast<VectorType>(Tp)) {
+    if (VecTy->getElementType()->isIntegerTy(8)) {
+      unsigned ElementCount = VecTy->getElementCount().getFixedValue();
+      return divideCeil(ElementCount - 1, 4);
+    }
+  }
+  return BaseT::getNumberOfParts(Tp);
 }

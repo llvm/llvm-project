@@ -800,11 +800,39 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
   }
 }
 
-// TODO: Create a helper that can receive a function to reduce repetition for
-// most blocks.
+// TODO: fix inconsistentent returning of errors in add callbacks.
+// Once that's fixed, we only need one handleSubBlock.
+template <typename InfoType, typename T, typename Callback>
+llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent,
+                                                  Callback Function) {
+  InfoType Info;
+  if (auto Err = readBlock(ID, &Info))
+    return Err;
+  Function(Parent, std::move(Info));
+  return llvm::Error::success();
+}
+
+template <typename InfoType, typename T, typename Callback>
+llvm::Error ClangDocBitcodeReader::handleTypeSubBlock(unsigned ID, T Parent,
+                                                      Callback Function) {
+  InfoType Info;
+  if (auto Err = readBlock(ID, &Info))
+    return Err;
+  if (auto Err = Function(Parent, std::move(Info)))
+    return Err;
+  return llvm::Error::success();
+}
+
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
   llvm::TimeTraceScope("Reducing infos", "readSubBlock");
+
+  static auto CreateAddFunc = [](auto AddFunc) {
+    return [AddFunc](auto Parent, auto Child) {
+      return AddFunc(Parent, std::move(Child));
+    };
+  };
+
   switch (ID) {
   // Blocks can only have certain types of sub blocks.
   case BI_COMMENT_BLOCK_ID: {
@@ -816,28 +844,16 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     return llvm::Error::success();
   }
   case BI_TYPE_BLOCK_ID: {
-    TypeInfo TI;
-    if (auto Err = readBlock(ID, &TI))
-      return Err;
-    if (auto Err = addTypeInfo(I, std::move(TI)))
-      return Err;
-    return llvm::Error::success();
+    return handleTypeSubBlock<TypeInfo>(
+        ID, I, CreateAddFunc(addTypeInfo<T, TypeInfo>));
   }
   case BI_FIELD_TYPE_BLOCK_ID: {
-    FieldTypeInfo TI;
-    if (auto Err = readBlock(ID, &TI))
-      return Err;
-    if (auto Err = addTypeInfo(I, std::move(TI)))
-      return Err;
-    return llvm::Error::success();
+    return handleTypeSubBlock<FieldTypeInfo>(
+        ID, I, CreateAddFunc(addTypeInfo<T, FieldTypeInfo>));
   }
   case BI_MEMBER_TYPE_BLOCK_ID: {
-    MemberTypeInfo TI;
-    if (auto Err = readBlock(ID, &TI))
-      return Err;
-    if (auto Err = addTypeInfo(I, std::move(TI)))
-      return Err;
-    return llvm::Error::success();
+    return handleTypeSubBlock<MemberTypeInfo>(
+        ID, I, CreateAddFunc(addTypeInfo<T, MemberTypeInfo>));
   }
   case BI_REFERENCE_BLOCK_ID: {
     Reference R;
@@ -848,81 +864,46 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     return llvm::Error::success();
   }
   case BI_FUNCTION_BLOCK_ID: {
-    FunctionInfo F;
-    if (auto Err = readBlock(ID, &F))
-      return Err;
-    addChild(I, std::move(F));
-    return llvm::Error::success();
+    return handleSubBlock<FunctionInfo>(
+        ID, I, CreateAddFunc(addChild<T, FunctionInfo>));
   }
   case BI_BASE_RECORD_BLOCK_ID: {
-    BaseRecordInfo BR;
-    if (auto Err = readBlock(ID, &BR))
-      return Err;
-    addChild(I, std::move(BR));
-    return llvm::Error::success();
+    return handleSubBlock<BaseRecordInfo>(
+        ID, I, CreateAddFunc(addChild<T, BaseRecordInfo>));
   }
   case BI_ENUM_BLOCK_ID: {
-    EnumInfo E;
-    if (auto Err = readBlock(ID, &E))
-      return Err;
-    addChild(I, std::move(E));
-    return llvm::Error::success();
+    return handleSubBlock<EnumInfo>(ID, I,
+                                    CreateAddFunc(addChild<T, EnumInfo>));
   }
   case BI_ENUM_VALUE_BLOCK_ID: {
-    EnumValueInfo EV;
-    if (auto Err = readBlock(ID, &EV))
-      return Err;
-    addChild(I, std::move(EV));
-    return llvm::Error::success();
+    return handleSubBlock<EnumValueInfo>(
+        ID, I, CreateAddFunc(addChild<T, EnumValueInfo>));
   }
   case BI_TEMPLATE_BLOCK_ID: {
-    TemplateInfo TI;
-    if (auto Err = readBlock(ID, &TI))
-      return Err;
-    addTemplate(I, std::move(TI));
-    return llvm::Error::success();
+    return handleSubBlock<TemplateInfo>(ID, I, CreateAddFunc(addTemplate<T>));
   }
   case BI_TEMPLATE_SPECIALIZATION_BLOCK_ID: {
-    TemplateSpecializationInfo TSI;
-    if (auto Err = readBlock(ID, &TSI))
-      return Err;
-    addTemplateSpecialization(I, std::move(TSI));
-    return llvm::Error::success();
+    return handleSubBlock<TemplateSpecializationInfo>(
+        ID, I, CreateAddFunc(addTemplateSpecialization<T>));
   }
   case BI_TEMPLATE_PARAM_BLOCK_ID: {
-    TemplateParamInfo TPI;
-    if (auto Err = readBlock(ID, &TPI))
-      return Err;
-    addTemplateParam(I, std::move(TPI));
-    return llvm::Error::success();
+    return handleSubBlock<TemplateParamInfo>(
+        ID, I, CreateAddFunc(addTemplateParam<T>));
   }
   case BI_TYPEDEF_BLOCK_ID: {
-    TypedefInfo TI;
-    if (auto Err = readBlock(ID, &TI))
-      return Err;
-    addChild(I, std::move(TI));
-    return llvm::Error::success();
+    return handleSubBlock<TypedefInfo>(ID, I,
+                                       CreateAddFunc(addChild<T, TypedefInfo>));
   }
   case BI_CONSTRAINT_BLOCK_ID: {
-    ConstraintInfo CI;
-    if (auto Err = readBlock(ID, &CI))
-      return Err;
-    addConstraint(I, std::move(CI));
-    return llvm::Error::success();
+    return handleSubBlock<ConstraintInfo>(ID, I,
+                                          CreateAddFunc(addConstraint<T>));
   }
   case BI_CONCEPT_BLOCK_ID: {
-    ConceptInfo CI;
-    if (auto Err = readBlock(ID, &CI))
-      return Err;
-    addChild(I, std::move(CI));
-    return llvm::Error::success();
+    return handleSubBlock<ConceptInfo>(ID, I,
+                                       CreateAddFunc(addChild<T, ConceptInfo>));
   }
   case BI_VAR_BLOCK_ID: {
-    VarInfo VI;
-    if (auto Err = readBlock(ID, &VI))
-      return Err;
-    addChild(I, std::move(VI));
-    return llvm::Error::success();
+    return handleSubBlock<VarInfo>(ID, I, CreateAddFunc(addChild<T, VarInfo>));
   }
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

@@ -1,5 +1,4 @@
 // RUN: %clang_tsan %s -o %t && %run %t | FileCheck %s
-// XFAIL: *
 
 #include "test.h"
 #include <assert.h>
