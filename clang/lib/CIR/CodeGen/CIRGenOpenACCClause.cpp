@@ -844,7 +844,7 @@ public:
   void VisitCopyClause(const OpenACCCopyClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
             var, mlir::acc::DataClause::acc_copy, clause.getModifierList(),
             /*structured=*/true,
@@ -861,7 +861,7 @@ public:
   void VisitCopyInClause(const OpenACCCopyInClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
             var, mlir::acc::DataClause::acc_copyin, clause.getModifierList(),
             /*structured=*/true,
@@ -878,7 +878,7 @@ public:
   void VisitCopyOutClause(const OpenACCCopyOutClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
             var, mlir::acc::DataClause::acc_copyout, clause.getModifierList(),
             /*structured=*/true,
@@ -895,7 +895,7 @@ public:
   void VisitCreateClause(const OpenACCCreateClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
             var, mlir::acc::DataClause::acc_create, clause.getModifierList(),
             /*structured=*/true,
@@ -911,7 +911,7 @@ public:
 
   void VisitUseDeviceClause(const OpenACCUseDeviceClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::HostDataOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::UseDeviceOp>(
             var, mlir::acc::DataClause::acc_use_device, {}, /*structured=*/true,
             /*implicit=*/false);
@@ -923,7 +923,7 @@ public:
   void VisitDevicePtrClause(const OpenACCDevicePtrClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::DevicePtrOp>(
             var, mlir::acc::DataClause::acc_deviceptr, {},
             /*structured=*/true,
@@ -940,7 +940,7 @@ public:
   void VisitNoCreateClause(const OpenACCNoCreateClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::NoCreateOp, mlir::acc::DeleteOp>(
             var, mlir::acc::DataClause::acc_no_create, {}, /*structured=*/true,
             /*implicit=*/false);
@@ -956,7 +956,7 @@ public:
   void VisitPresentClause(const OpenACCPresentClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
             var, mlir::acc::DataClause::acc_present, {}, /*structured=*/true,
             /*implicit=*/false);
@@ -972,7 +972,7 @@ public:
   void VisitAttachClause(const OpenACCAttachClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::AttachOp, mlir::acc::DetachOp>(
             var, mlir::acc::DataClause::acc_attach, {}, /*structured=*/true,
             /*implicit=*/false);
