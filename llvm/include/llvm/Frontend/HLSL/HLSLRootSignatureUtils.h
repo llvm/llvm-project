@@ -83,7 +83,7 @@ struct RangeInfo {
   // Information retained for diagnostics
   llvm::dxil::ResourceClass Class;
   uint32_t Space;
-  llvm::dxbc::ShaderVisibility Visibility;
+  dxbc::ShaderVisibility Visibility;
 };
 
 class ResourceRange {

@@ -107,7 +107,7 @@ struct StaticSampler {
   dxbc::TextureAddressMode AddressW = dxbc::TextureAddressMode::Wrap;
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16;
-  llvm::dxbc::ComparisonFunc CompFunc = llvm::dxbc::ComparisonFunc::LessEqual;
+  dxbc::ComparisonFunc CompFunc = dxbc::ComparisonFunc::LessEqual;
   dxbc::StaticBorderColor BorderColor = dxbc::StaticBorderColor::OpaqueWhite;
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
