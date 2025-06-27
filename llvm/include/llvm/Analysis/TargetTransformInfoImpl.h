@@ -1534,6 +1534,10 @@ public:
       ArrayRef<int> Mask = Shuffle->getShuffleMask();
       int NumSubElts, SubIndex;
 
+      // Treat undef/poison mask as free (no matter the length).
+      if (all_of(Mask, [](int M) { return M < 0; }))
+        return TTI::TCC_Free;
+
       // TODO: move more of this inside improveShuffleKindFromMask.
       if (Shuffle->changesLength()) {
         // Treat a 'subvector widening' as a free shuffle.
