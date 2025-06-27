@@ -620,6 +620,20 @@ public:
   Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN,
                              bool AllowMultipleUses = false);
 
+  /// Try to fold binary operators whose operands are simple interleaved
+  /// recurrences to a single recurrence. This is a common pattern in reduction
+  /// operations.
+  /// Example:
+  ///   %phi1 = phi [init1, %BB1], [%op1, %BB2]
+  ///   %phi2 = phi [init2, %BB1], [%op2, %BB2]
+  ///   %op1 = binop %phi1, constant1
+  ///   %op2 = binop %phi2, constant2
+  ///   %rdx = binop %op1, %op2
+  /// -->
+  ///   %phi_combined = phi [init_combined, %BB1], [%op_combined, %BB2]
+  ///   %rdx_combined = binop %phi_combined, constant_combined
+  Instruction *foldBinopWithRecurrence(BinaryOperator &BO);
+
   /// For a binary operator with 2 phi operands, try to hoist the binary
   /// operation before the phi. This can result in fewer instructions in
   /// patterns where at least one set of phi operands simplifies.
@@ -655,9 +669,6 @@ public:
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
   Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
-
-  /// Try to fold interleaved PHI reductions to a single PHI.
-  Instruction *foldPHIReduction(PHINode &PN);
 
   /// If the phi is within a phi web, which is formed by the def-use chain
   /// of phis and all the phis in the web are only used in the other phis.

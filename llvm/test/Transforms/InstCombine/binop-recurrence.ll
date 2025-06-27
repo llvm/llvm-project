@@ -9,8 +9,8 @@ define i8 @add_reassoc(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -43,8 +43,8 @@ define i8 @add_nuw(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add nuw i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add nuw i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -77,8 +77,8 @@ define i8 @add_op1_no_nuw(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -111,8 +111,8 @@ define i8 @add_op2_no_nuw(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -145,8 +145,8 @@ define i8 @add_rdx_no_nuw(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -179,8 +179,8 @@ define i8 @add_no_nsw(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -213,8 +213,8 @@ define i8 @add_nuw_nsw(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add nuw nsw i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add nuw nsw i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -247,8 +247,8 @@ define <16 x i8> @add_v16i8(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi <16 x i8> [ splat (i8 1), %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add <16 x i8> [[PN]], splat (i8 5)
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi <16 x i8> [ splat (i8 1), %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add <16 x i8> [[REDUCED_PHI]], splat (i8 5)
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -281,8 +281,8 @@ define <vscale x 16 x i8> @add_nxv16i8(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi <vscale x 16 x i8> [ splat (i8 1), %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add <vscale x 16 x i8> [[PN]], splat (i8 5)
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi <vscale x 16 x i8> [ splat (i8 1), %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add <vscale x 16 x i8> [[REDUCED_PHI]], splat (i8 5)
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -317,8 +317,8 @@ define i8 @mul_reassoc(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 2, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = mul i8 [[PN]], 12
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 2, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = mul i8 [[REDUCED_PHI]], 15
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -333,7 +333,7 @@ body:
   %pn = phi i8 [ 1, %entry ], [ %op1, %body ]
   %pn2 = phi i8 [ 2, %entry ], [ %op2, %body ]
   %op1 = mul i8 %pn, 3
-  %op2 = mul i8 %pn2, 4
+  %op2 = mul i8 %pn2, 5
   %i.next = add nuw nsw i32 %i, 1
   %cmp = icmp eq i32 %i.next, %n
   br i1 %cmp, label %exit, label %body
@@ -351,8 +351,8 @@ define i8 @mul_reassoc_no_nuw_no_nsw(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 2, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = mul i8 [[PN]], 12
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 2, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = mul i8 [[REDUCED_PHI]], 15
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -367,7 +367,7 @@ body:
   %pn = phi i8 [ 1, %entry ], [ %op1, %body ]
   %pn2 = phi i8 [ 2, %entry ], [ %op2, %body ]
   %op1 = mul nuw nsw i8 %pn, 3
-  %op2 = mul nuw nsw i8 %pn2, 4
+  %op2 = mul nuw nsw i8 %pn2, 5
   %i.next = add nuw nsw i32 %i, 1
   %cmp = icmp eq i32 %i.next, %n
   br i1 %cmp, label %exit, label %body
@@ -482,8 +482,8 @@ define i8 @xor_reassoc(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = xor i8 [[PN]], 4
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = xor i8 [[REDUCED_PHI]], 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -516,8 +516,8 @@ define float @fadd_reassoc_nsz(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi float [ 1.000000e+00, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = fadd reassoc nsz float [[PN]], 5.000000e+00
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi float [ 1.000000e+00, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = fadd reassoc nsz float [[REDUCED_PHI]], 5.000000e+00
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -550,8 +550,8 @@ define float @fmul_reassoc_nsz(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi float [ 2.000000e+00, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = fmul reassoc nsz float [[PN]], 1.200000e+01
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi float [ 2.000000e+00, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = fmul reassoc nsz float [[REDUCED_PHI]], 1.200000e+01
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -660,8 +660,8 @@ define i8 @add_op1_commuted(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -694,8 +694,8 @@ define i8 @add_op2_commuted(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -728,8 +728,8 @@ define i8 @add_rdx_commuted(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -762,8 +762,8 @@ define i8 @add_pn_commuted(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
@@ -796,8 +796,8 @@ define i8 @add_pn2_commuted(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = add i8 [[PN]], 5
+; CHECK-NEXT:    [[REDUCED_PHI:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[RDX]] = add i8 [[REDUCED_PHI]], 5
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
