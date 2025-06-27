@@ -52,7 +52,6 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -279,7 +278,7 @@ public:
 private:
   void createTypeInfoOpAndGlobal(Fortran::lower::AbstractConverter &converter,
                                  const TypeInfo &info) {
-    if (!::skipExternalRttiDefinition)
+    if (!converter.getLoweringOptions().getSkipExternalRttiDefinition())
       Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.symbol.get());
     createTypeInfoOp(converter, info);
   }
