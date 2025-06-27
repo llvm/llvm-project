@@ -231,6 +231,7 @@ protected:
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
+  bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
   bool HasPermlane16Swap = false;
@@ -689,13 +690,15 @@ public:
     return GFX10_BEncoding;
   }
 
+  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
+
+  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
+
   bool hasExportInsts() const {
-    return !hasGFX940Insts();
+    return !hasGFX940Insts() && !hasGFX1250Insts();
   }
 
-  bool hasVINTERPEncoding() const {
-    return GFX11Insts;
-  }
+  bool hasVINTERPEncoding() const { return GFX11Insts && !hasGFX1250Insts(); }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
@@ -1288,7 +1291,7 @@ public:
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
-  bool needsAlignedVGPRs() const { return GFX90AInsts; }
+  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return GFX11Insts; }
@@ -1369,6 +1372,8 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.

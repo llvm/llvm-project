@@ -614,14 +614,6 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
     }
   }
 
-  if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
-      !rd->hasAttr<FinalAttr>()) {
-    if (lowering.astRecordLayout.getNonVirtualSize() !=
-        lowering.astRecordLayout.getSize()) {
-      cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
-    }
-  }
-
   // Fill in the record *after* computing the base type.  Filling in the body
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout rd while laying D out as a base type.
@@ -781,10 +773,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
       !cirGenTypes.getCGModule().getCodeGenOpts().AAPCSBitfieldWidth)
     return;
 
-  for ([[maybe_unused]] auto &I : bitFields) {
-    assert(!cir::MissingFeatures::armComputeVolatileBitfields());
-    cirGenTypes.getCGModule().errorNYI("NYI AAPCS bit-fields");
-  }
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 }
 
 void CIRRecordLowering::accumulateBases(const CXXRecordDecl *cxxRecordDecl) {

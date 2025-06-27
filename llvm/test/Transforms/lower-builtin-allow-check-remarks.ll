@@ -1,6 +1,9 @@
 ; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-random-rate=1 -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-random-rate=0 -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s --check-prefixes=REMOVE
 
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-percentile-cutoff-hot=0 -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-percentile-cutoff-hot=1000000 -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s --check-prefixes=REMOVE
+
 ; CHECK: remark: <unknown>:0:0: Allowed check: Kind=test_check F=test_runtime BB=entry1
 ; CHECK: remark: <unknown>:0:0: Allowed check: Kind=7 F=test_ubsan BB=entry2
 

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEISelLowering.h"
-#include "MCTargetDesc/VEMCExpr.h"
+#include "MCTargetDesc/VEMCAsmInfo.h"
 #include "VECustomDAG.h"
 #include "VEInstrBuilder.h"
 #include "VEMachineFunctionInfo.h"
