@@ -1841,7 +1841,8 @@ public:
   ~VPHeaderPHIRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *B) {
+  static inline bool classof(const VPUser *U) {
+    auto *B = cast<VPRecipeBase>(U);
     return B->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
            B->getVPDefID() <= VPDef::VPLastHeaderPHISC;
   }
@@ -1849,6 +1850,10 @@ public:
     auto *B = V->getDefiningRecipe();
     return B && B->getVPDefID() >= VPRecipeBase::VPFirstHeaderPHISC &&
            B->getVPDefID() <= VPRecipeBase::VPLastHeaderPHISC;
+  }
+  static inline bool classof(const VPSingleDefRecipe *B) {
+    return B->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
+           B->getVPDefID() <= VPDef::VPLastHeaderPHISC;
   }
 
   /// Generate the phi nodes.
@@ -1911,7 +1916,7 @@ public:
     return R && classof(R);
   }
 
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
+  static inline bool classof(const VPSingleDefRecipe *R) {
     return classof(static_cast<const VPRecipeBase *>(R));
   }
 
@@ -2185,7 +2190,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
                              public VPUnrollPartAccessor<2> {
   /// Descriptor for the reduction.
-  const RecurrenceDescriptor &RdxDesc;
+  const RecurKind Kind;
 
   /// The phi is part of an in-loop reduction.
   bool IsInLoop;
@@ -2204,8 +2209,15 @@ public:
                        VPValue &Start, bool IsInLoop = false,
                        bool IsOrdered = false, unsigned VFScaleFactor = 1)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start),
-        RdxDesc(RdxDesc), IsInLoop(IsInLoop), IsOrdered(IsOrdered),
-        VFScaleFactor(VFScaleFactor) {
+        Kind(RdxDesc.getRecurrenceKind()), IsInLoop(IsInLoop),
+        IsOrdered(IsOrdered), VFScaleFactor(VFScaleFactor) {
+    assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
+  }
+  VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
+                       bool IsInLoop = false, bool IsOrdered = false,
+                       unsigned VFScaleFactor = 1)
+      : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
+        IsInLoop(IsInLoop), IsOrdered(IsOrdered), VFScaleFactor(VFScaleFactor) {
     assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
   }
 
@@ -2213,8 +2225,8 @@ public:
 
   VPReductionPHIRecipe *clone() override {
     auto *R = new VPReductionPHIRecipe(cast<PHINode>(getUnderlyingInstr()),
-                                       RdxDesc, *getOperand(0), IsInLoop,
-                                       IsOrdered, VFScaleFactor);
+                                       getRecurrenceKind(), *getOperand(0),
+                                       IsInLoop, IsOrdered, VFScaleFactor);
     R->addOperand(getBackedgeValue());
     return R;
   }
@@ -2233,9 +2245,7 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
-    return RdxDesc;
-  }
+  RecurKind getRecurrenceKind() const { return Kind; }
 
   /// Returns true, if the phi is part of an ordered reduction.
   bool isOrdered() const { return IsOrdered; }
