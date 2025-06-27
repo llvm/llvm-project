@@ -6065,24 +6065,23 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     RetTy = IntegerType::get(RetTy->getContext(), MinBWs[I]);
   auto *SE = PSE.getSE();
 
-  auto HasSingleCopyAfterVectorization = [this](Instruction *I,
-                                                ElementCount VF) -> bool {
-    if (VF.isScalar())
-      return true;
-
-    auto Scalarized = InstsToScalarize.find(VF);
-    assert(Scalarized != InstsToScalarize.end() &&
-           "VF not yet analyzed for scalarization profitability");
-    return !Scalarized->second.count(I) &&
-           llvm::all_of(I->users(), [&](User *U) {
-             auto *UI = cast<Instruction>(U);
-             return !Scalarized->second.count(UI);
-           });
-  };
-  (void)HasSingleCopyAfterVectorization;
-
   Type *VectorTy;
   if (isScalarAfterVectorization(I, VF)) {
+    [[maybe_unused]] auto HasSingleCopyAfterVectorization =
+        [this](Instruction *I, ElementCount VF) -> bool {
+      if (VF.isScalar())
+        return true;
+
+      auto Scalarized = InstsToScalarize.find(VF);
+      assert(Scalarized != InstsToScalarize.end() &&
+             "VF not yet analyzed for scalarization profitability");
+      return !Scalarized->second.count(I) &&
+             llvm::all_of(I->users(), [&](User *U) {
+               auto *UI = cast<Instruction>(U);
+               return !Scalarized->second.count(UI);
+             });
+    };
+
     // With the exception of GEPs and PHIs, after scalarization there should
     // only be one copy of the instruction generated in the loop. This is
     // because the VF is either 1, or any instructions that need scalarizing
@@ -6342,8 +6341,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     Type *ValTy = I->getOperand(0)->getType();
 
     if (canTruncateToMinimalBitwidth(I, VF)) {
-      Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
-      (void)Op0AsInstruction;
+      [[maybe_unused]] Instruction *Op0AsInstruction =
+          dyn_cast<Instruction>(I->getOperand(0));
       assert((!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
               MinBWs[I] == MinBWs[Op0AsInstruction]) &&
              "if both the operand and the compare are marked for "
@@ -7277,8 +7276,8 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
           RdxDesc.getRecurrenceKind())) {
-    Value *StartV = EpiRedResult->getOperand(1)->getLiveInIRValue();
-    (void)StartV;
+    [[maybe_unused]] Value *StartV =
+        EpiRedResult->getOperand(1)->getLiveInIRValue();
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
            "AnyOf expected to start with ICMP_NE");
@@ -7292,7 +7291,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
-    bool IsExpectedPattern =
+    [[maybe_unused]] bool IsExpectedPattern =
         match(MainResumeValue,
               m_Select(m_OneUse(m_Value(Cmp)), m_Specific(SentinelV),
                        m_Value(OrigResumeV))) &&
@@ -7300,7 +7299,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
                                    m_Value(CmpOp))) &&
          ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
-    (void)IsExpectedPattern;
     MainResumeValue = OrigResumeV;
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
@@ -8255,10 +8253,10 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   SmallVector<VPValue *, 4> Operands(R->operands());
   if (auto *PhiR = dyn_cast<VPWidenPHIRecipe>(R)) {
     VPBasicBlock *Parent = PhiR->getParent();
-    VPRegionBlock *LoopRegionOf = Parent->getEnclosingLoopRegion();
+    [[maybe_unused]] VPRegionBlock *LoopRegionOf =
+        Parent->getEnclosingLoopRegion();
     assert(LoopRegionOf && LoopRegionOf->getEntry() == Parent &&
            "Non-header phis should have been handled during predication");
-    (void)LoopRegionOf;
     auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
     assert(Operands.size() == 2 && "Must have 2 operands for header phis");
     if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, Range)))
