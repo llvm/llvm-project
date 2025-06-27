@@ -244,11 +244,9 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
 // [Theorem] A permutation of the loops in a perfect nest is legal if and only
 // if the direction matrix, after the same permutation is applied to its
 // columns, has no ">" direction as the leftmost non-"=" direction in any row.
-static std::optional<bool> isLexicographicallyPositive(std::vector<char> &DV,
-                                                       unsigned Begin,
-                                                       unsigned End) {
-  ArrayRef<char> DVRef(DV);
-  for (unsigned char Direction : DVRef.slice(Begin, End - Begin)) {
+static std::optional<bool>
+isLexicographicallyPositive(ArrayRef<char> DV, unsigned Begin, unsigned End) {
+  for (unsigned char Direction : DV.slice(Begin, End - Begin)) {
     if (Direction == '<')
       return true;
     if (Direction == '>' || Direction == '*')
@@ -309,18 +307,18 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
-static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
+static bool hasSupportedLoopDepth(ArrayRef<Loop *> LoopList,
                                   OptimizationRemarkEmitter &ORE) {
   unsigned LoopNestDepth = LoopList.size();
   if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
     LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
                       << ", the supported range is [" << MinLoopNestDepth
                       << ", " << MaxLoopNestDepth << "].\n");
-    Loop **OuterLoop = LoopList.begin();
+    Loop *OuterLoop = LoopList.front();
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
-                                      (*OuterLoop)->getStartLoc(),
-                                      (*OuterLoop)->getHeader())
+                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getHeader())
              << "Unsupported depth of loop nest, the supported range is ["
              << std::to_string(MinLoopNestDepth) << ", "
              << std::to_string(MaxLoopNestDepth) << "].\n";
@@ -377,7 +375,7 @@ public:
     return OuterInnerReductions;
   }
 
-  const SmallVectorImpl<PHINode *> &getInnerLoopInductions() const {
+  const ArrayRef<PHINode *> getInnerLoopInductions() const {
     return InnerLoopInductions;
   }
 

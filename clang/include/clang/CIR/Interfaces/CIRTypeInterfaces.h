@@ -6,17 +6,17 @@
 //
 //===---------------------------------------------------------------------===//
 //
-// Defines the interface to generically handle CIR floating-point types.
+// Defines cir type interfaces.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_H
-#define LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_H
+#ifndef CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_H
+#define CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_H
 
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
 
 /// Include the tablegen'd interface declarations.
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.h.inc"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h.inc"
 
-#endif // LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_H
+#endif // CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_H

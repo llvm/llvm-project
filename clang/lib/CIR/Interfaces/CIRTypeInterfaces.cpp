@@ -5,15 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Defines cir type interfaces.
+//
+//===----------------------------------------------------------------------===//
 
-#include <ext/hash_map>
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
-int main(int, char**)
-{
-    __gnu_cxx::hash_map<int, int> m;
-    m[1] = 1;
-    const __gnu_cxx::hash_map<int, int> &cm = m;
-    cm.find(1)->second = 2;  // error
+using namespace cir;
 
-  return 0;
-}
+/// Include the generated interfaces.
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.cpp.inc"

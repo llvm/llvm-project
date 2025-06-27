@@ -930,7 +930,9 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     CUresult Res = cuDriverGetVersion(&TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("CUDA Driver Version", TmpInt);
+      // For consistency with other drivers, store the version as a string
+      // rather than an integer
+      Info.add("CUDA Driver Version", std::to_string(TmpInt));
 
     Info.add("CUDA OpenMP Device Number", DeviceId);
 
