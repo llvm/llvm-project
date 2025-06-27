@@ -15,7 +15,7 @@
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
-include "clang/CIR/Interfaces/CIRFPTypeInterface.td"
+include "clang/CIR/Interfaces/CIRTypeInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 
@@ -82,7 +82,7 @@ def CIR_IntType : CIR_Type<"Int", "int",
 
 class CIR_FloatType<string name, string mnemonic> : CIR_Type<name, mnemonic, [
   DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
-  DeclareTypeInterfaceMethods<CIRFPTypeInterface>
+  DeclareTypeInterfaceMethods<CIR_FPTypeInterface>
 ]>;
 
 def CIR_Single : CIR_FloatType<"Single", "float"> {
