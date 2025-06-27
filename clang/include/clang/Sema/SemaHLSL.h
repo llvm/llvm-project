@@ -33,8 +33,23 @@ class Scope;
 class VarDecl;
 
 namespace hlsl {
-struct RootSignatureElement;
-}
+
+// Introduce a wrapper struct around the underlying RootElement. This structure
+// will retain extra clang diagnostic information that is not available in llvm.
+struct RootSignatureElement {
+  RootSignatureElement(SourceLocation Loc,
+                       llvm::hlsl::rootsig::RootElement Element)
+      : Loc(Loc), Element(Element) {}
+
+  const llvm::hlsl::rootsig::RootElement &getElement() const { return Element; }
+  const SourceLocation &getLocation() const { return Loc; }
+
+private:
+  SourceLocation Loc;
+  llvm::hlsl::rootsig::RootElement Element;
+};
+
+} // namespace hlsl
 
 using llvm::dxil::ResourceClass;
 
