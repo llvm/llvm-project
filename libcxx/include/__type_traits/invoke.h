@@ -73,7 +73,7 @@ struct __invoke_result_impl {};
 template <class... _Args>
 struct __invoke_result_impl<__void_t<__invoke_result_t<_Args...> >, _Args...> {
   using type _LIBCPP_NODEBUG = __invoke_result_t<_Args...>;
-}
+};
 
 template <class... _Args>
 using __invoke_result = __invoke_result_impl<void, _Args...>;
