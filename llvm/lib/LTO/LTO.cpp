@@ -1389,8 +1389,14 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   SmallVector<const char *> LibcallSymbols;
-  copy_if(Libcalls.getLibcallNames(), std::back_inserter(LibcallSymbols),
-          [](const char *Name) { return Name; });
+  ArrayRef<RTLIB::LibcallImpl> LibcallImpls = Libcalls.getLibcallImpls();
+  LibcallSymbols.reserve(LibcallImpls.size());
+
+  for (RTLIB::LibcallImpl Impl : LibcallImpls) {
+    if (Impl != RTLIB::Unsupported)
+      LibcallSymbols.push_back(Libcalls.getLibcallImplName(Impl));
+  }
+
   return LibcallSymbols;
 }
 
