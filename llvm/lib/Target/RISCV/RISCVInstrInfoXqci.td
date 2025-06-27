@@ -1304,6 +1304,14 @@ class QCScaledStPat<PatFrag StoreOp, RVInst Inst>
     : Pat<(StoreOp (i32 GPR:$rd), (AddrRegRegScale7 (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
           (Inst GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
 
+class QCIMVCCPat<CondCode Cond, QCIMVCC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3)>;
+
+class QCIMVCCIPat<CondCode Cond, QCIMVCCI Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$imm, GPRNoX0:$rs3)>;
+
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
 class BcciPat<CondCode Cond, QCIBranchInst_rii Inst, DAGOperand InTyImm>
     : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
@@ -1438,6 +1446,20 @@ def: Pat<(i32 (ctlz (not (i32 GPR:$rs1)))), (QC_CLO GPR:$rs1)>;
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 
+let Predicates = [HasVendorXqcicm, IsRV32] in {
+def : Pat<(select (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rd),(XLenVT GPRNoX0:$rs3)),
+          (QC_MVEQI GPRNoX0:$rd, GPRNoX0:$rs1, (XLenVT 0), GPRNoX0:$rs3)>;
+
+def : QCIMVCCPat <SETEQ,  QC_MVEQ>;
+def : QCIMVCCPat <SETNE,  QC_MVNE>;
+def : QCIMVCCPat <SETLT,  QC_MVLT>;
+def : QCIMVCCPat <SETULT, QC_MVLTU>;
+
+def : QCIMVCCIPat <SETEQ,  QC_MVEQI>;
+def : QCIMVCCIPat <SETNE,  QC_MVNEI>;
+def : QCIMVCCIPat <SETLT,  QC_MVLTI>;
+def : QCIMVCCIPat <SETULT, QC_MVLTUI>;
+}
 
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.
