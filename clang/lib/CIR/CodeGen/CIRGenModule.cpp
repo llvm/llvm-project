@@ -95,6 +95,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
+  SizeAlignInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
   // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
   UIntPtrTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
@@ -886,6 +887,65 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
 void CIRGenModule::updateCompletedType(const TagDecl *td) {
   // Make sure that this type is translated.
   genTypes.updateCompletedType(td);
+}
+
+void CIRGenModule::addReplacement(StringRef name, mlir::Operation *op) {
+  replacements[name] = op;
+}
+
+void CIRGenModule::replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF) {
+  std::optional<mlir::SymbolTable::UseRange> optionalUseRange =
+      oldF.getSymbolUses(theModule);
+  if (!optionalUseRange)
+    return;
+
+  for (const mlir::SymbolTable::SymbolUse &u : *optionalUseRange) {
+    // CallTryOp only shows up after FlattenCFG.
+    auto call = mlir::dyn_cast<cir::CallOp>(u.getUser());
+    if (!call)
+      continue;
+
+    for (const auto [argOp, fnArgType] :
+         llvm::zip(call.getArgs(), newF.getFunctionType().getInputs())) {
+      if (argOp.getType() == fnArgType)
+        continue;
+
+      // The purpose of this entire function is to insert bitcasts in the case
+      // where these types don't match, but I haven't seen a case where that
+      // happens.
+      errorNYI(call.getLoc(), "replace call with mismatched types");
+    }
+  }
+}
+
+void CIRGenModule::applyReplacements() {
+  for (auto &i : replacements) {
+    StringRef mangledName = i.first();
+    mlir::Operation *replacement = i.second;
+    mlir::Operation *entry = getGlobalValue(mangledName);
+    if (!entry)
+      continue;
+    assert(isa<cir::FuncOp>(entry) && "expected function");
+    auto oldF = cast<cir::FuncOp>(entry);
+    auto newF = dyn_cast<cir::FuncOp>(replacement);
+    if (!newF) {
+      // In classic codegen, this can be a global alias, a bitcast, or a GEP.
+      errorNYI(replacement->getLoc(), "replacement is not a function");
+      continue;
+    }
+
+    // LLVM has opaque pointer but CIR not. So we may have to handle these
+    // different pointer types when performing replacement.
+    replacePointerTypeArgs(oldF, newF);
+
+    // Replace old with new, but keep the old order.
+    if (oldF.replaceAllSymbolUses(newF.getSymNameAttr(), theModule).failed())
+      llvm_unreachable("internal error, cannot RAUW symbol");
+    if (newF) {
+      newF->moveBefore(oldF);
+      oldF->erase();
+    }
+  }
 }
 
 // TODO(CIR): this could be a common method between LLVM codegen.
@@ -1797,9 +1857,50 @@ CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
 
 void CIRGenModule::release() {
   emitDeferred();
+  applyReplacements();
 
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
+}
+
+void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
+                                      mlir::Operation *op, GlobalDecl aliasGD,
+                                      cir::FuncOp aliasee,
+                                      cir::GlobalLinkageKind linkage) {
+
+  auto *aliasFD = dyn_cast<FunctionDecl>(aliasGD.getDecl());
+  assert(aliasFD && "expected FunctionDecl");
+
+  // The aliasee function type is different from the alias one, this difference
+  // is specific to CIR because in LLVM the ptr types are already erased at this
+  // point.
+  const CIRGenFunctionInfo &fnInfo =
+      getTypes().arrangeCXXStructorDeclaration(aliasGD);
+  cir::FuncType fnType = getTypes().getFunctionType(fnInfo);
+
+  cir::FuncOp alias =
+      createCIRFunction(getLoc(aliasGD.getDecl()->getSourceRange()),
+                        mangledName, fnType, aliasFD);
+  alias.setAliasee(aliasee.getName());
+  alias.setLinkage(linkage);
+  // Declarations cannot have public MLIR visibility, just mark them private
+  // but this really should have no meaning since CIR should not be using
+  // this information to derive linkage information.
+  mlir::SymbolTable::setSymbolVisibility(
+      alias, mlir::SymbolTable::Visibility::Private);
+
+  // Alias constructors and destructors are always unnamed_addr.
+  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+
+  // Switch any previous uses to the alias.
+  if (op) {
+    errorNYI(aliasFD->getSourceRange(), "emitAliasForGlobal: previous uses");
+  } else {
+    // Name already set by createCIRFunction
+  }
+
+  // Finally, set up the alias with its proper name and attributes.
+  setCommonAttributes(aliasGD, alias);
 }
 
 mlir::Type CIRGenModule::convertType(QualType type) {

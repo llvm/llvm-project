@@ -2672,10 +2672,9 @@ def fallow_runtime_check_skip_hot_cutoff_EQ
     : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
       Group<f_clang_Group>,
       Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Exclude __allow_runtime_check for the top hottest code "
-               "responsible for "
-               "the given fraction of PGO counters "
-               "(0.0 [default] = skip none; 1/.0 = skip all). "
+      HelpText<"Exclude __builtin_allow_runtime_check for the top hottest "
+               "code responsible for the given fraction of PGO counters "
+               "(0.0 [default] = skip none; 1.0 = skip all). "
                "Argument format: <value>">;
 
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
