@@ -2132,9 +2132,8 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   //    A a = {1};
   // The bits of the unnamed bit-field in local variable a can be anything.
   const FieldDecl *FD = R->getDecl();
-  if (FD->isUnnamedBitField()) {
+  if (FD->isUnnamedBitField())
     return UndefinedVal();
-  }
 
   // If the containing record was initialized, try to get its constant value.
   QualType Ty = FD->getType();
