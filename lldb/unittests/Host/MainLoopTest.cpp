@@ -82,7 +82,7 @@ TEST_F(MainLoopTest, ReadObject) {
 TEST_F(MainLoopTest, ReadPipeObject) {
   Pipe pipe;
 
-  ASSERT_TRUE(pipe.CreateNew(false).Success());
+  ASSERT_TRUE(pipe.CreateNew().Success());
 
   MainLoop loop;
 
@@ -104,7 +104,7 @@ TEST_F(MainLoopTest, ReadPipeObject) {
 TEST_F(MainLoopTest, NoSpuriousPipeReads) {
   Pipe pipe;
 
-  ASSERT_TRUE(pipe.CreateNew(false).Success());
+  ASSERT_TRUE(pipe.CreateNew().Success());
 
   char X = 'X';
   size_t len = sizeof(X);
