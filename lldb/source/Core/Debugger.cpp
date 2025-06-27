@@ -16,6 +16,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/Core/ProtocolServer.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"

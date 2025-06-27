@@ -2252,6 +2252,13 @@ static void AddLibgcc(const ToolChain &TC, const Driver &D,
   if (LGT == LibGccType::SharedLibGcc ||
       (LGT == LibGccType::UnspecifiedLibGcc && D.CCCIsCXX()))
     CmdArgs.push_back("-lgcc");
+  // compiler-rt is needed after libgcc for flang on AArch64 for the
+  // __trampoline_setup symbol
+  if (D.IsFlangMode() && TC.getArch() == llvm::Triple::aarch64) {
+    CmdArgs.push_back("--as-needed");
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
+    CmdArgs.push_back("--no-as-needed");
+  }
 }
 
 void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,

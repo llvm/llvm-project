@@ -1292,8 +1292,8 @@ public:
 
   PredTransitions(CodeGenSchedModels &sm) : SchedModels(sm) {}
 
-  bool substituteVariantOperand(const SmallVectorImpl<unsigned> &RWSeq,
-                                bool IsRead, unsigned StartIdx);
+  bool substituteVariantOperand(ArrayRef<unsigned> RWSeq, bool IsRead,
+                                unsigned StartIdx);
 
   bool substituteVariants(const PredTransition &Trans);
 
@@ -1526,8 +1526,8 @@ void PredTransitions::pushVariant(const TransVariant &VInfo, bool IsRead) {
 // operand. StartIdx is an index into TransVec where partial results
 // starts. RWSeq must be applied to all transitions between StartIdx and the end
 // of TransVec.
-bool PredTransitions::substituteVariantOperand(
-    const SmallVectorImpl<unsigned> &RWSeq, bool IsRead, unsigned StartIdx) {
+bool PredTransitions::substituteVariantOperand(ArrayRef<unsigned> RWSeq,
+                                               bool IsRead, unsigned StartIdx) {
   bool Subst = false;
   // Visit each original RW within the current sequence.
   for (unsigned int RWI : RWSeq) {
@@ -1591,7 +1591,7 @@ bool PredTransitions::substituteVariants(const PredTransition &Trans) {
 }
 
 static void addSequences(CodeGenSchedModels &SchedModels,
-                         const SmallVectorImpl<SmallVector<unsigned, 4>> &Seqs,
+                         ArrayRef<SmallVector<unsigned, 4>> Seqs,
                          IdxVec &Result, bool IsRead) {
   for (const auto &S : Seqs)
     if (!S.empty())

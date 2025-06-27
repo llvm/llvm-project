@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEISelLowering.h"
-#include "MCTargetDesc/VEMCExpr.h"
+#include "MCTargetDesc/VEMCAsmInfo.h"
 #include "VECustomDAG.h"
 #include "VEInstrBuilder.h"
 #include "VEMachineFunctionInfo.h"
@@ -563,12 +563,8 @@ Register VETargetLowering::getRegisterByName(const char *RegName, LLT VT,
                      .Case("info", VE::SX17)  // Info area register
                      .Case("got", VE::SX15)   // Global offset table register
                      .Case("plt", VE::SX16) // Procedure linkage table register
-                     .Default(0);
-
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+                     .Default(Register());
+  return Reg;
 }
 
 //===----------------------------------------------------------------------===//

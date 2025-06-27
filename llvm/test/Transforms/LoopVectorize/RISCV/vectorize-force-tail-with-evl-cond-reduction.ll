@@ -25,11 +25,7 @@ define i32 @cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-LABEL: define i32 @cond_add(
 ; IF-EVL-OUTLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IF-EVL-OUTLOOP-NEXT:  entry:
-; IF-EVL-OUTLOOP-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-OUTLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; IF-EVL-OUTLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-OUTLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -84,11 +80,7 @@ define i32 @cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-LABEL: define i32 @cond_add(
 ; IF-EVL-INLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IF-EVL-INLOOP-NEXT:  entry:
-; IF-EVL-INLOOP-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-INLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-INLOOP-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; IF-EVL-INLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; IF-EVL-INLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-INLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-INLOOP:       vector.ph:
 ; IF-EVL-INLOOP-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-INLOOP-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 4
@@ -262,11 +254,7 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-LABEL: define i32 @cond_add_pred(
 ; IF-EVL-OUTLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
 ; IF-EVL-OUTLOOP-NEXT:  entry:
-; IF-EVL-OUTLOOP-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-OUTLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; IF-EVL-OUTLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-OUTLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -335,11 +323,7 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-LABEL: define i32 @cond_add_pred(
 ; IF-EVL-INLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
 ; IF-EVL-INLOOP-NEXT:  entry:
-; IF-EVL-INLOOP-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N]]
-; IF-EVL-INLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-INLOOP-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; IF-EVL-INLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; IF-EVL-INLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-INLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-INLOOP:       vector.ph:
 ; IF-EVL-INLOOP-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-INLOOP-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 4

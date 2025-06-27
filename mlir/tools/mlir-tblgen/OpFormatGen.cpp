@@ -1365,7 +1365,7 @@ if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
 auto &propStorage = prop.{0};
 auto {0}AttrName = StringAttr::get(ctx, "{0}");
 auto attr = dict.get({0}AttrName);
-usedKeys.insert(StringAttr::get(ctx, "{1}"));
+usedKeys.insert({0}AttrName);
 if (attr || /*isRequired=*/{1}) {{
   if (!attr) {{
     emitError() << "expected key entry for {0} in DictionaryAttr to set "

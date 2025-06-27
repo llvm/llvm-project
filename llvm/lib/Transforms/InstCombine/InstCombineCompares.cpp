@@ -1298,6 +1298,14 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
     // eq/ne (mul X, Y)) with (icmp eq/ne X/Y) and if X/Y is known non-zero that
     // will fold to a constant elsewhere.
   }
+
+  // (icmp eq/ne f(X), 0) -> (icmp eq/ne X, 0)
+  // where f(X) == 0 if and only if X == 0
+  if (ICmpInst::isEquality(Pred))
+    if (Value *Stripped = stripNullTest(Cmp.getOperand(0)))
+      return new ICmpInst(Pred, Stripped,
+                          Constant::getNullValue(Stripped->getType()));
+
   return nullptr;
 }
 
