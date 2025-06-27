@@ -2346,7 +2346,7 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
   }
 
   mlir::Type resTy = getTypeConverter()->convertType(op.getType());
-  auto newOp = createIntCast(
+  mlir::Value newOp = createIntCast(
       rewriter, val, mlir::cast<mlir::IntegerType>(resTy), info.getIsSigned());
   rewriter.replaceOp(op, newOp);
   return mlir::success();
