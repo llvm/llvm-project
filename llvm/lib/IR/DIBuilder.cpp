@@ -325,69 +325,15 @@ DIStringType *DIBuilder::createStringType(StringRef Name,
 }
 
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
-<<<<<<< HEAD
-  return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
-                            0, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, DINode::FlagZero);
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
-  return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
-                            0, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, DINode::FlagZero);
-||||||||| 1984c7539ebe
-  return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
-                            0, 0, std::nullopt, std::nullopt, DINode::FlagZero);
-=========
-  return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy,
-                            (uint64_t)0, 0, (uint64_t)0, std::nullopt,
-                            std::nullopt, DINode::FlagZero);
->>>>>>>>> Temporary merge branch 2
-=======
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy,
                             (uint64_t)0, 0, (uint64_t)0, std::nullopt, dwarf::DW_MSPACE_LLVM_none,
                             std::nullopt, DINode::FlagZero);
->>>>>>> amd-debug
 }
 
 DIDerivedType *DIBuilder::createPtrAuthQualifiedType(
     DIType *FromTy, unsigned Key, bool IsAddressDiscriminated,
     unsigned ExtraDiscriminator, bool IsaPointer,
     bool AuthenticatesNullValues) {
-<<<<<<< HEAD
-  return DIDerivedType::get(VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "",
-                            nullptr, 0, nullptr, FromTy, 0, 0, 0, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, 
-                            std::optional<DIDerivedType::PtrAuthData>(
-                                std::in_place, Key, IsAddressDiscriminated,
-                                ExtraDiscriminator, IsaPointer,
-                                AuthenticatesNullValues),
-                            DINode::FlagZero);
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
-  return DIDerivedType::get(VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "",
-                            nullptr, 0, nullptr, FromTy, 0, 0, 0, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, 
-                            std::optional<DIDerivedType::PtrAuthData>(
-                                std::in_place, Key, IsAddressDiscriminated,
-                                ExtraDiscriminator, IsaPointer,
-                                AuthenticatesNullValues),
-                            DINode::FlagZero);
-||||||||| 1984c7539ebe
-  return DIDerivedType::get(VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "",
-                            nullptr, 0, nullptr, FromTy, 0, 0, 0, std::nullopt,
-                            std::optional<DIDerivedType::PtrAuthData>(
-                                std::in_place, Key, IsAddressDiscriminated,
-                                ExtraDiscriminator, IsaPointer,
-                                AuthenticatesNullValues),
-                            DINode::FlagZero);
-=========
-  return DIDerivedType::get(
-      VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "", nullptr, 0, nullptr,
-      FromTy, (uint64_t)0, 0, (uint64_t)0, std::nullopt,
-      std::optional<DIDerivedType::PtrAuthData>(
-          std::in_place, Key, IsAddressDiscriminated, ExtraDiscriminator,
-          IsaPointer, AuthenticatesNullValues),
-      DINode::FlagZero);
->>>>>>>>> Temporary merge branch 2
-=======
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "", nullptr, 0, nullptr,
       FromTy, (uint64_t)0, 0, (uint64_t)0, std::nullopt,
@@ -396,7 +342,6 @@ DIDerivedType *DIBuilder::createPtrAuthQualifiedType(
           std::in_place, Key, IsAddressDiscriminated, ExtraDiscriminator,
           IsaPointer, AuthenticatesNullValues),
       DINode::FlagZero);
->>>>>>> amd-debug
 }
 
 DIDerivedType *
@@ -439,29 +384,9 @@ DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DINode::DIFlags Flags,
                                         DINodeArray Annotations) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
-<<<<<<< HEAD
-                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, 
-                            Flags, nullptr, Annotations);
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
-                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, 
-                            Flags, nullptr, Annotations);
-||||||||| 1984c7539ebe
-                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt, std::nullopt, Flags,
-                            nullptr, Annotations);
-=========
-                            LineNo, getNonCompileUnitScope(Context), Ty,
-                            (uint64_t)0, AlignInBits, (uint64_t)0, std::nullopt,
-                            std::nullopt, Flags, nullptr, Annotations);
->>>>>>>>> Temporary merge branch 2
-=======
                             LineNo, getNonCompileUnitScope(Context), Ty,
                             (uint64_t)0, AlignInBits, (uint64_t)0, std::nullopt, dwarf::DW_MSPACE_LLVM_none,
                             std::nullopt, Flags, nullptr, Annotations);
->>>>>>> amd-debug
 }
 
 DIDerivedType *
@@ -470,59 +395,19 @@ DIBuilder::createTemplateAlias(DIType *Ty, StringRef Name, DIFile *File,
                                DINodeArray TParams, uint32_t AlignInBits,
                                DINode::DIFlags Flags, DINodeArray Annotations) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_template_alias, Name, File,
-<<<<<<< HEAD
-                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none,
-                            std::nullopt, Flags,
-                            TParams.get(), Annotations);
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
-                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none,
-                            std::nullopt, Flags,
-                            TParams.get(), Annotations);
-||||||||| 1984c7539ebe
-                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt, std::nullopt, Flags,
-                            TParams.get(), Annotations);
-=========
-                            LineNo, getNonCompileUnitScope(Context), Ty,
-                            (uint64_t)0, AlignInBits, (uint64_t)0, std::nullopt,
-                            std::nullopt, Flags, TParams.get(), Annotations);
->>>>>>>>> Temporary merge branch 2
-=======
                             LineNo, getNonCompileUnitScope(Context), Ty,
                             (uint64_t)0, AlignInBits, (uint64_t)0, std::nullopt,
                             dwarf::DW_MSPACE_LLVM_none,
                             std::nullopt, Flags, TParams.get(), Annotations);
->>>>>>> amd-debug
 }
 
 DIDerivedType *DIBuilder::createFriend(DIType *Ty, DIType *FriendTy) {
   assert(Ty && "Invalid type!");
   assert(FriendTy && "Invalid friend type!");
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_friend, "", nullptr, 0, Ty,
-<<<<<<< HEAD
-                            FriendTy, 0, 0, 0, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, std::nullopt, DINode::FlagZero);
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
-                            FriendTy, 0, 0, 0, std::nullopt,
-                            dwarf::DW_MSPACE_LLVM_none, std::nullopt, DINode::FlagZero);
-||||||||| 1984c7539ebe
-                            FriendTy, 0, 0, 0, std::nullopt, std::nullopt,
-                            DINode::FlagZero);
-=========
-                            FriendTy, (uint64_t)0, 0, (uint64_t)0, std::nullopt,
-                            std::nullopt, DINode::FlagZero);
->>>>>>>>> Temporary merge branch 2
-=======
                             FriendTy, (uint64_t)0, 0, (uint64_t)0, std::nullopt,
                             dwarf::DW_MSPACE_LLVM_none,
                             std::nullopt, DINode::FlagZero);
->>>>>>> amd-debug
 }
 
 DIDerivedType *DIBuilder::createInheritance(DIType *Ty, DIType *BaseTy,
@@ -547,19 +432,6 @@ DIDerivedType *DIBuilder::createMemberType(
       std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, Flags, nullptr, Annotations);
 }
 
-<<<<<<< HEAD
-||||||| merged common ancestors
-DIDerivedType *DIBuilder::createMemberType(
-    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
-    Metadata *SizeInBits, uint32_t AlignInBits, Metadata *OffsetInBits,
-    DINode::DIFlags Flags, DIType *Ty, DINodeArray Annotations) {
-  return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
-                            LineNumber, getNonCompileUnitScope(Scope), Ty,
-                            SizeInBits, AlignInBits, OffsetInBits, std::nullopt,
-                            std::nullopt, Flags, nullptr, Annotations);
-}
-
-=======
 DIDerivedType *DIBuilder::createMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     Metadata *SizeInBits, uint32_t AlignInBits, Metadata *OffsetInBits,
@@ -571,7 +443,6 @@ DIDerivedType *DIBuilder::createMemberType(
                             std::nullopt, Flags, nullptr, Annotations);
 }
 
->>>>>>> amd-debug
 static ConstantAsMetadata *getConstantOrNull(Constant *C) {
   if (C)
     return ConstantAsMetadata::get(C);
@@ -597,8 +468,9 @@ DIDerivedType *DIBuilder::createVariantMemberType(DIScope *Scope,
                                                   Constant *Discriminant,
                                                   DIType *Ty) {
   auto *V = DICompositeType::get(VMContext, dwarf::DW_TAG_variant, {}, nullptr,
-                                 0, getNonCompileUnitScope(Scope), {}, 0, 0, 0,
-                                 DINode::FlagZero, Elements, 0, {}, nullptr);
+                                 0, getNonCompileUnitScope(Scope), {},
+                                 (uint64_t)0, 0, (uint64_t)0, DINode::FlagZero,
+                                 Elements, 0, {}, nullptr);
 
   trackIfUnresolved(V);
   return createVariantMemberType(Scope, {}, nullptr, 0, 0, 0, 0, Discriminant,
@@ -607,23 +479,6 @@ DIDerivedType *DIBuilder::createVariantMemberType(DIScope *Scope,
 
 DIDerivedType *DIBuilder::createBitFieldMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
-<<<<<<< HEAD
-||||||| merged common ancestors
-    Metadata *SizeInBits, Metadata *OffsetInBits, uint64_t StorageOffsetInBits,
-    DINode::DIFlags Flags, DIType *Ty, DINodeArray Annotations) {
-  Flags |= DINode::FlagBitField;
-  return DIDerivedType::get(
-      VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
-      getNonCompileUnitScope(Scope), Ty, SizeInBits, /*AlignInBits=*/0,
-      OffsetInBits, std::nullopt, std::nullopt, Flags,
-      ConstantAsMetadata::get(ConstantInt::get(IntegerType::get(VMContext, 64),
-                                               StorageOffsetInBits)),
-      Annotations);
-}
-
-DIDerivedType *DIBuilder::createBitFieldMemberType(
-    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
-=======
     Metadata *SizeInBits, Metadata *OffsetInBits, uint64_t StorageOffsetInBits,
     DINode::DIFlags Flags, DIType *Ty, DINodeArray Annotations) {
   Flags |= DINode::FlagBitField;
@@ -638,7 +493,6 @@ DIDerivedType *DIBuilder::createBitFieldMemberType(
 
 DIDerivedType *DIBuilder::createBitFieldMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
->>>>>>> amd-debug
     uint64_t SizeInBits, uint64_t OffsetInBits, uint64_t StorageOffsetInBits,
     DINode::DIFlags Flags, DIType *Ty, DINodeArray Annotations) {
   Flags |= DINode::FlagBitField;
@@ -658,30 +512,10 @@ DIBuilder::createStaticMemberType(DIScope *Scope, StringRef Name, DIFile *File,
                                   unsigned Tag, uint32_t AlignInBits) {
   Flags |= DINode::FlagStaticMember;
   return DIDerivedType::get(VMContext, Tag, Name, File, LineNumber,
-<<<<<<< HEAD
-                            getNonCompileUnitScope(Scope), Ty, 0, AlignInBits,
-                            0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, 
-                            Flags, getConstantOrNull(Val));
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
-                            getNonCompileUnitScope(Scope), Ty, 0, AlignInBits,
-                            0, std::nullopt, dwarf::DW_MSPACE_LLVM_none, std::nullopt, 
-                            Flags, getConstantOrNull(Val));
-||||||||| 1984c7539ebe
-                            getNonCompileUnitScope(Scope), Ty, 0, AlignInBits,
-                            0, std::nullopt, std::nullopt, Flags,
-                            getConstantOrNull(Val));
-=========
-                            getNonCompileUnitScope(Scope), Ty, (uint64_t)0,
-                            AlignInBits, (uint64_t)0, std::nullopt,
-                            std::nullopt, Flags, getConstantOrNull(Val));
->>>>>>>>> Temporary merge branch 2
-=======
                             getNonCompileUnitScope(Scope), Ty, (uint64_t)0,
                             AlignInBits, (uint64_t)0, std::nullopt,
                             dwarf::DW_MSPACE_LLVM_none,
                             std::nullopt, Flags, getConstantOrNull(Val));
->>>>>>> amd-debug
 }
 
 DIDerivedType *
@@ -758,6 +592,22 @@ DICompositeType *DIBuilder::createClassType(
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits,
       OffsetInBits, Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt,
       VTableHolder, cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier);
+  trackIfUnresolved(R);
+  return R;
+}
+
+DICompositeType *DIBuilder::createStructType(
+    DIScope *Context, StringRef Name, DIFile *File, unsigned LineNumber,
+    Metadata *SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+    DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
+    DIType *VTableHolder, StringRef UniqueIdentifier, DIType *Specification,
+    uint32_t NumExtraInhabitants) {
+  auto *R = DICompositeType::get(
+      VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
+      getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
+      Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt, VTableHolder,
+      nullptr, UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, Specification, NumExtraInhabitants);
   trackIfUnresolved(R);
   return R;
 }
