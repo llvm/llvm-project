@@ -1478,8 +1478,8 @@ let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 
 let Predicates = [HasVendorXqcicm, IsRV32] in {
-def : Pat<(select (XLenVT GPRNoX0:$cond), (XLenVT GPRNoX0:$a),(XLenVT GPRNoX0:$b)),
-          (QC_MVEQI GPRNoX0:$a, GPRNoX0:$cond, (XLenVT 0), GPRNoX0:$b)>;
+def : Pat<(select (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rd),(XLenVT GPRNoX0:$rs3)),
+          (QC_MVEQI GPRNoX0:$rd, GPRNoX0:$rs1, (XLenVT 0), GPRNoX0:$rs3)>;
 
 def : QCIMVCCPat <SETEQ,  QC_MVEQ>;
 def : QCIMVCCPat <SETNE,  QC_MVNE>;
