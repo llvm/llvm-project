@@ -475,14 +475,16 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
 LogicalResult GPURotateConversion::matchAndRewrite(
     gpu::RotateOp rotateOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto targetEnv = getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
+  const spirv::TargetEnv &targetEnv =
+      getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
   unsigned subgroupSize =
       targetEnv.getAttr().getResourceLimits().getSubgroupSize();
   IntegerAttr widthAttr;
   if (!matchPattern(rotateOp.getWidth(), m_Constant(&widthAttr)) ||
       widthAttr.getValue().getZExtValue() > subgroupSize)
     return rewriter.notifyMatchFailure(
-        rotateOp, "rotate width is larger than target subgroup size");
+        rotateOp,
+        "rotate width is not a constant or larger than target subgroup size");
 
   Location loc = rotateOp.getLoc();
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);

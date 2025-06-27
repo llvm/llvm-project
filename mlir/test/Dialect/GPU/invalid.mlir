@@ -521,7 +521,7 @@ func.func @rotate_unsupported_width(%arg0 : f32) {
 func.func @rotate_unsupported_offset(%arg0 : f32) {
   %offset = arith.constant 16 : i32
   %width = arith.constant 16 : i32
-  // expected-error@+1 {{op offset must be in the range [0, width)}}
+  // expected-error@+1 {{op offset must be in the range [0, 16)}}
   %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
   return
 }
@@ -531,7 +531,7 @@ func.func @rotate_unsupported_offset(%arg0 : f32) {
 func.func @rotate_unsupported_offset_minus(%arg0 : f32) {
   %offset = arith.constant -1 : i32
   %width = arith.constant 16 : i32
-  // expected-error@+1 {{op offset must be in the range [0, width)}}
+  // expected-error@+1 {{op offset must be in the range [0, 16)}}
   %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
   return
 }
