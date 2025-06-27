@@ -8,10 +8,10 @@
 // RUN:   %S/z3/Inputs/MockZ3_solver_check.cpp            \
 // RUN:   -o %t/MockZ3_solver_check.so
 
-// DEFINE: %{mocked_clang} =                              \
-// DEFINE: LD_PRELOAD="%t/MockZ3_solver_check.so"         \
-// DEFINE: %clang_analyze_cc1 %s -setup-static-analyzer   \
-// DEFINE:   -analyzer-config crosscheck-with-z3=true     \
+// DEFINE: %{mocked_clang} =                          \
+// DEFINE: LD_PRELOAD="%t/MockZ3_solver_check.so"     \
+// DEFINE: %clang_analyze_cc1 %s                      \
+// DEFINE:   -analyzer-config crosscheck-with-z3=true \
 // DEFINE:   -analyzer-checker=core
 
 // DEFINE: %{attempts} = -analyzer-config crosscheck-with-z3-max-attempts-per-query
