@@ -17,6 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [Debug, Release, MinSizeRel]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, windows-2025, macos-14]
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
