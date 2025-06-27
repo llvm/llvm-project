@@ -25768,6 +25768,21 @@ TEST_F(FormatTest, OperatorPassedAsAFunctionPtr) {
   verifyFormat("foo(operator, , -42);", Style);
 }
 
+TEST_F(FormatTest, LineSpliceWithTrailingWhitespace) {
+  auto Style = getLLVMStyle();
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  Style.UseTab = FormatStyle::UT_Never;
+
+  verifyFormat("int i;", "  \\  \n"
+                         "  int i;");
+  verifyFormat("#define FOO(args) \\\n"
+               "  struct a {};",
+               "#define FOO( args )   \\   \n"
+               "struct a{\\\t\t\t\n"
+               "  };",
+               Style);
+}
+
 TEST_F(FormatTest, WhitespaceSensitiveMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.WhitespaceSensitiveMacros.push_back("FOO");
