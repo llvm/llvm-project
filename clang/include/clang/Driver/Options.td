@@ -1572,7 +1572,7 @@ defm xl_pragma_pack : BoolFOption<"xl-pragma-pack",
           "Enable IBM XL #pragma pack handling">,
   NegFlag<SetFalse>>;
 def shared_libsan : Flag<["-"], "shared-libsan">,
-  HelpText<"Dynamically link the sanitizer runtime">;
+  HelpText<"Dynamically link the sanitizer runtime (Not supported for ASan on AIX)">;
 def static_libsan : Flag<["-"], "static-libsan">,
   HelpText<"Statically link the sanitizer runtime (Not supported for ASan, TSan or UBSan on darwin)">;
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
