@@ -2132,6 +2132,7 @@ def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
     ```
   }];
   let regions = (region AnyRegion:$region);
+  let hasVerifier = 1;
   let assemblyFormat = "$region attr-dict";
 }
 
