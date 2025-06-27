@@ -2526,12 +2526,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S1V2 = IRB.CreateAnd(S1, V2);
 
     Value *S = IRB.CreateOr({S1S2, V1S2, S1V2});
-    if (ClPreciseDisjointOr) {
-      auto *MaybeDisjoint = cast<PossiblyDisjointInst>(&I);
-      if (MaybeDisjoint->isDisjoint()) {
-        Value *V1V2 = IRB.CreateAnd(V1, V2);
-        S = IRB.CreateOr({S, V1V2});
-      }
+    if (ClPreciseDisjointOr && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
+      Value *V1V2 = IRB.CreateAnd(V1, V2);
+      S = IRB.CreateOr({S, V1V2});
     }
 
     setShadow(&I, S);
