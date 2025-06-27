@@ -9,7 +9,7 @@
 // UNSUPPORTED: no-threads, no-exceptions
 
 // ASan seems to try to create threadsm which obviouly doesn't work in this test.
-// UNSUPPORTED: asan
+// UNSUPPORTED: asan, hwsan
 
 // UNSUPPORTED: c++03
 
