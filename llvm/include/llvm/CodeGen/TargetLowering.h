@@ -5801,6 +5801,8 @@ public:
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;
+  SDValue foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
+                          const SDLoc &DL, DAGCombinerInfo &DCI) const;
   SDValue foldSetCCWithBinOp(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                              const SDLoc &DL, DAGCombinerInfo &DCI) const;
 
