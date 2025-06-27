@@ -38,6 +38,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -652,8 +653,13 @@ getLinkageAttribute(fir::FirOpBuilder &builder,
   // Runtime type info for a same derived type is identical in each compilation
   // unit. It desired to avoid having to link against module that only define a
   // type. Therefore the runtime type info is generated everywhere it is needed
-  // with `linkonce_odr` LLVM linkage.
-  if (var.isRuntimeTypeInfoData())
+  // with `linkonce_odr` LLVM linkage (unless the skipExternalRttiDefinition
+  // option is set, in which case one will need to link against objects of
+  // modules defining types). Builtin objects rtti is always generated because
+  // the builtin module is currently not compiled or part of the runtime.
+  if (var.isRuntimeTypeInfoData() &&
+      (!::skipExternalRttiDefinition ||
+       Fortran::semantics::IsFromBuiltinModule(var.getSymbol())))
     return builder.createLinkOnceODRLinkage();
   if (var.isModuleOrSubmoduleVariable())
     return {}; // external linkage
