@@ -1907,7 +1907,8 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
                                            SDValue &VOffset,
                                            SDValue &Offset,
                                            bool &ScaleOffset,
-                                           bool NeedIOffset) const {
+                                           bool NeedIOffset,
+                                           bool NeedScaleOffset) const {
   int64_t ImmOffset = 0;
   ScaleOffset = false;
 
@@ -1968,7 +1969,9 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     if (!LHS->isDivergent()) {
       // add (i64 sgpr), (*_extend (i32 vgpr))
       RHS = Addr.getOperand(1);
-      ScaleOffset = SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
+      if (NeedScaleOffset)
+        ScaleOffset =
+            SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
       if (SDValue ExtRHS =
               matchExtFromI32orI32(RHS, Subtarget->hasSignedGVSOffset(),
                                    CurDAG)) {
@@ -1980,7 +1983,9 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     RHS = Addr.getOperand(1);
     if (!SAddr && !RHS->isDivergent()) {
       // add (*_extend (i32 vgpr)), (i64 sgpr)
-      ScaleOffset = SelectScaleOffset(N, LHS, Subtarget->hasSignedGVSOffset());
+      if (NeedScaleOffset)
+        ScaleOffset =
+            SelectScaleOffset(N, LHS, Subtarget->hasSignedGVSOffset());
       if (SDValue ExtLHS =
               matchExtFromI32orI32(LHS, Subtarget->hasSignedGVSOffset(),
                                    CurDAG)) {
@@ -2112,6 +2117,24 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffset(SDNode *N,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetScaleOffset(SDNode *N,
+                                                    SDValue Addr,
+                                                    SDValue &SAddr,
+                                                    SDValue &VOffset,
+                                                    SDValue &CPol) const {
+  bool ScaleOffset;
+  SDValue DummyOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, DummyOffset, ScaleOffset,
+                         false, false))
+    return false;
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 1) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetM0(SDNode *N,
                                                       SDValue Addr,
                                                       SDValue &SAddr,
@@ -2147,6 +2170,21 @@ static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
   }
 
   return SAddr;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoScaleOffset(SDNode *N,
+                                           SDValue Addr,
+                                           SDValue &SAddr,
+                                           SDValue &VOffset,
+                                           SDValue &Offset,
+                                           SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset, true, false))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(0,
+                                   SDLoc(), MVT::i32);
+  return true;
 }
 
 // Match (32-bit SGPR base) + sext(imm offset)

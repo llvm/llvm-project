@@ -1165,7 +1165,7 @@ defm BUFFER_ATOMIC_SMAX_X2 : MUBUF_Pseudo_Atomics <
 defm BUFFER_ATOMIC_UMAX_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_umax_x2", VReg_64, i64
 >;
-defm BUFFER_ATOMIC_UMAX_U64_IN_B128 : MUBUF_Pseudo_Atomics <
+defm BUFFER_ATOMIC_MAX_U64_IN_B128 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_max_u64_in_b128", VReg_128, i128
 >;
 defm BUFFER_ATOMIC_AND_X2 : MUBUF_Pseudo_Atomics <
@@ -2717,8 +2717,10 @@ defm BUFFER_ATOMIC_COND_SUB_U32     : MUBUF_Real_Atomics_gfx13<0x47>;
 defm BUFFER_ATOMIC_PK_ADD_F16       : MUBUF_Real_Atomics_gfx13<0x4a>;
 defm BUFFER_ATOMIC_PK_ADD_BF16      : MUBUF_Real_Atomics_gfx13<0x4b>;
 defm BUFFER_ATOMIC_ADD_F32          : MUBUF_Real_Atomics_gfx13<0x54>;
+let AssemblerPredicate = HasAtomicMinMaxWithPayload in {
 defm BUFFER_ATOMIC_MIN_U64_IN_B128  : MUBUF_Real_Atomics_gfx13<0x79>;
-defm BUFFER_ATOMIC_UMAX_U64_IN_B128 : MUBUF_Real_Atomics_gfx13<0x7a>;
+defm BUFFER_ATOMIC_MAX_U64_IN_B128  : MUBUF_Real_Atomics_gfx13<0x7a>;
+}
 
 defm BUFFER_DISCARD_B32         : MUBUF_Real_Discard_gfx13<0x04c>;
 defm BUFFER_DISCARD_B128        : MUBUF_Real_Discard_gfx13<0x04d>;

@@ -5150,7 +5150,8 @@ AMDGPUInstructionSelector::selectScratchOffset(MachineOperand &Root) const {
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
                                              unsigned CPolBits,
-                                             bool NeedIOffset) const {
+                                             bool NeedIOffset,
+                                             bool NeedScaleOffset) const {
   Register Addr = Root.getReg();
   Register PtrBase;
   int64_t ConstOffset;
@@ -5239,8 +5240,9 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
 
       // It's possible voffset is an SGPR here, but the copy to VGPR will be
       // inserted later.
-      bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset,
-                                           Subtarget->hasSignedGVSOffset());
+      bool ScaleOffset =
+          NeedScaleOffset && selectScaleOffset(Root, PtrBaseOffset,
+                                              Subtarget->hasSignedGVSOffset());
       if (Register VOffset =
               matchExtendFromS32OrS32(PtrBaseOffset,
                                       Subtarget->hasSignedGVSOffset())) {
@@ -5307,6 +5309,11 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrNoScaleOffset(MachineOperand &Root) const {
+  return selectGlobalSAddr(Root, 0, true, false);
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddrCPol(MachineOperand &Root) const {
   const MachineInstr &I = *Root.getParent();
 
@@ -5340,6 +5347,17 @@ AMDGPUInstructionSelector::selectGlobalSAddrNoIOffset(
   auto PassedCPol =
       I.getOperand(I.getNumOperands() - 1).getImm() & ~AMDGPU::CPol::SCAL;
   return selectGlobalSAddr(Root, PassedCPol, false);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrNoIOffsetScaleOffset(
+    MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 1).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol, false, false);
 }
 
 InstructionSelector::ComplexRendererFns
