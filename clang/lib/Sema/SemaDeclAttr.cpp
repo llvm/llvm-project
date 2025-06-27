@@ -1225,7 +1225,7 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  S.Diag(AL.getLoc(), diag::err_attribute_preferred_name_arg_invalid)
+  S.Diag(AL.getLoc(), diag::err_attribute_not_typedef_for_specialization)
       << T << AL << CTD;
   if (const auto *TT = T->getAs<TypedefType>())
     S.Diag(TT->getDecl()->getLocation(), diag::note_entity_declared_at)
@@ -4146,7 +4146,7 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   if (CalleeFnProtoType->getNumParams() != EncodingIndices.size() - 1) {
-    S.Diag(AL.getLoc(), diag::err_callback_attribute_wrong_arg_count)
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_arg_count_for_func)
         << AL << QualType{CalleeFnProtoType, 0}
         << CalleeFnProtoType->getNumParams()
         << (unsigned)(EncodingIndices.size() - 1);
