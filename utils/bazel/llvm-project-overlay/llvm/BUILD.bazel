@@ -655,6 +655,7 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
         "utils/TableGen/Basic/SequenceToOffsetTable.h",
@@ -756,6 +757,14 @@ gentbl_cc_library(
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     deps = [":CommonTargetTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "runtime_libcalls_gen",
+    tbl_outs = {"include/llvm/IR/RuntimeLibcalls.inc": ["-gen-runtime-libcalls"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "include/llvm/IR/RuntimeLibcalls.td",
+    deps = [":IRTdFiles"],
 )
 
 gentbl_cc_library(
@@ -964,7 +973,6 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/IR/*.def",
-        "lib/IR/*.def",
     ]),
     deps = [
         ":BinaryFormat",
@@ -976,6 +984,7 @@ cc_library(
         ":config",
         ":intrinsic_enums_gen",
         ":intrinsics_impl_gen",
+        ":runtime_libcalls_gen",
     ],
 )
 
