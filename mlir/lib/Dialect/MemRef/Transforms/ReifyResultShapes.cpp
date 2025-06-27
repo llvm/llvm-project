@@ -40,7 +40,7 @@ mlir::memref::reifyOpResultShapes(RewriterBase &rewriter,
   ReifiedRankedShapedTypeDims reifiedResultShapes;
   if (failed(mlir::reifyResultShapes(rewriter, op, reifiedResultShapes)) ||
       reifiedResultShapes.empty()) {
-    return op.emitError() << "failed to get the reified shapes";
+    return op->emitWarning() << "failed to get the reified shapes";
   }
 
   bool modified = false;
@@ -133,12 +133,16 @@ struct ReifyResultShapesPass final
 
 void ReifyResultShapesPass::runOnOperation() {
   SmallVector<ReifyRankedShapedTypeOpInterface> ops;
-  getOperation()->walk(
-      [&](ReifyRankedShapedTypeOpInterface op) { ops.push_back(op); });
+  getOperation()->walk([&](ReifyRankedShapedTypeOpInterface op) {
+    // Some ops have rigid type checkers and need to update their operands.
+    // Only admit the ones that are explicitly supported for now.
+    if (!isa<tensor::PadOp, tensor::ConcatOp>(op.getOperation()))
+      return;
+    ops.push_back(op);
+  });
   IRRewriter rewriter(&getContext());
   for (ReifyRankedShapedTypeOpInterface op : ops) {
     rewriter.setInsertionPoint(op);
-    if (failed(memref::reifyOpResultShapes(rewriter, op)))
-      return signalPassFailure();
+    (void)memref::reifyOpResultShapes(rewriter, op);
   }
 }
