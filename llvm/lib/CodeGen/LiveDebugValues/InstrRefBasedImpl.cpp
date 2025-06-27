@@ -363,6 +363,7 @@ public:
     SmallVector<ResolvedDbgOp> ResolvedDbgOps;
     bool IsValueValid = true;
     unsigned LastUseBeforeDef = 0;
+    bool DbgLocAvailableAndIsEntryVal = false;
 
     // If every value used by the incoming DbgValue is available at block
     // entry, ResolvedDbgOps will contain the machine locations/constants for
@@ -416,6 +417,8 @@ public:
       // live range.
       LocIdx M = ValuesPreferredLoc->second.getLoc();
       ResolvedDbgOps.push_back(M);
+      if (Value.Properties.DIExpr->isEntryValue())
+        DbgLocAvailableAndIsEntryVal = true;
     }
 
     // If we cannot produce a valid value for the LiveIn value within this
@@ -429,6 +432,16 @@ public:
       return;
     }
 
+    auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
+    PendingDbgValues.push_back(
+        std::make_pair(VarID, &*MTracker->emitLoc(ResolvedDbgOps, Var, DILoc,
+                                                  Value.Properties)));
+
+    // If the location is available at block entry and is an entry value, skip
+    // tracking and recording thr transfer.
+    if (DbgLocAvailableAndIsEntryVal)
+      return;
+
     // The LiveIn value is available at block entry, begin tracking and record
     // the transfer.
     for (const ResolvedDbgOp &Op : ResolvedDbgOps)
@@ -438,10 +451,6 @@ public:
     auto Result = ActiveVLocs.insert(std::make_pair(VarID, NewValue));
     if (!Result.second)
       Result.first->second = NewValue;
-    auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
-    PendingDbgValues.push_back(
-        std::make_pair(VarID, &*MTracker->emitLoc(ResolvedDbgOps, Var, DILoc,
-                                                  Value.Properties)));
   }
 
   /// Load object with live-in variable values. \p mlocs contains the live-in
@@ -681,6 +690,16 @@ public:
 
     auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
 
+    // If the expression is a DW_OP_entry_value, emit the variable location
+    // as-is.
+    if (DIExpr->isEntryValue()) {
+      Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
+      MachineOperand MO = MachineOperand::CreateReg(Reg, false);
+      PendingDbgValues.push_back(std::make_pair(
+          VarID, &*emitMOLoc(MO, Var, {DIExpr, Prop.Indirect, false})));
+      return true;
+    }
+
     // Is the variable appropriate for entry values (i.e., is a parameter).
     if (!isEntryValueVariable(Var, DIExpr))
       return false;
@@ -707,7 +726,7 @@ public:
     DebugVariableID VarID = DVMap.getDVID(Var);
 
     // Ignore non-register locations, we don't transfer those.
-    if (MI.isUndefDebugValue() ||
+    if (MI.isUndefDebugValue() || MI.getDebugExpression()->isEntryValue() ||
         all_of(MI.debug_operands(),
                [](const MachineOperand &MO) { return !MO.isReg(); })) {
       auto It = ActiveVLocs.find(VarID);
