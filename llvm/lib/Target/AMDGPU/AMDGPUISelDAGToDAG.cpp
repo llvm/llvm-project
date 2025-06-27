@@ -2495,7 +2495,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDNode *N, SDValue Addr,
 
   SDValue N0, N1;
   // Extract the base and offset if possible.
-  if (CurDAG->isBaseWithConstantOffset(Addr) || Addr->isAnyAdd()) {
+  if (Addr->isAnyAdd() || CurDAG->isADDLike(Addr)) {
     N0 = Addr.getOperand(0);
     N1 = Addr.getOperand(1);
   } else if (getBaseWithOffsetUsingSplitOR(*CurDAG, Addr, N0, N1)) {

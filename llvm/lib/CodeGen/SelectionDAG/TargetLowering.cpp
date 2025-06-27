@@ -2982,8 +2982,8 @@ bool TargetLowering::SimplifyDemandedBits(
       Known = KnownBits::mul(KnownOp0, KnownOp1);
     } else { // Op.getOpcode() is either ISD::ADD, ISD::PTRADD, or ISD::SUB.
       Known = KnownBits::computeForAddSub(
-          Op->isAnyAdd(), Flags.hasNoSignedWrap(), Flags.hasNoUnsignedWrap(),
-          KnownOp0, KnownOp1);
+          Op.getOpcode() != ISD::SUB, Flags.hasNoSignedWrap(),
+          Flags.hasNoUnsignedWrap(), KnownOp0, KnownOp1);
     }
     break;
   }
