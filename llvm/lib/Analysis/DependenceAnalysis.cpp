@@ -2372,9 +2372,8 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
     banerjeeMIVtest(Src, Dst, Loops, Result);
 }
 
-
 // Given a product, e.g., 10*X*Y, returns the first constant operand,
-// in this case 10. If there is no constant part, returns NULL.
+// in this case 10. If there is no constant part, returns std::nullopt.
 static std::optional<APInt> getConstantPart(const SCEV *Expr) {
   if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
     return Constant->getAPInt();
