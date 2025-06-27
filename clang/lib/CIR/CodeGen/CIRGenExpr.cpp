@@ -326,12 +326,26 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
   return {};
 }
 
+RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
+  const CIRGenBitFieldInfo &info = lv.getBitFieldInfo();
+
+  // Get the output type.
+  mlir::Type resLTy = convertType(lv.getType());
+  Address ptr = lv.getBitFieldAddress();
+
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+
+  auto field = builder.createGetBitfield(getLoc(loc), resLTy, ptr.getPointer(),
+                                         ptr.getElementType(), info,
+                                         lv.isVolatile(), false);
+  assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
+  return RValue::get(field);
+}
+
 Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
                                                  const FieldDecl *field,
                                                  mlir::Type fieldType,
                                                  unsigned index) {
-  if (index == 0)
-    return base.getAddress();
   mlir::Location loc = getLoc(field->getLocation());
   cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
   cir::GetMemberOp sea = getBuilder().createGetMember(
@@ -494,10 +508,8 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   assert(!lv.getType()->isFunctionType());
   assert(!(lv.getType()->isConstantMatrixType()) && "not implemented");
 
-  if (lv.isBitField()) {
-    assert(!cir::MissingFeatures::getBitfieldOp());
-    return RValue::getIgnored();
-  }
+  if (lv.isBitField())
+    return emitLoadOfBitfieldLValue(lv, loc);
 
   if (lv.isSimple())
     return RValue::get(emitLoadOfScalar(lv, loc));

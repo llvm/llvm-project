@@ -248,6 +248,21 @@ public:
     return r;
   }
 
+  // bitfield lvalue
+  Address getBitFieldAddress() const {
+    return Address(getBitFieldPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getBitFieldPointer() const {
+    assert(isBitField());
+    return v;
+  }
+
+  const CIRGenBitFieldInfo &getBitFieldInfo() const {
+    assert(isBitField());
+    return *bitFieldInfo;
+  }
+
   /// Create a new object to represent a bit-field access.
   ///
   /// \param Addr - The base address of the bit-field sequence this
