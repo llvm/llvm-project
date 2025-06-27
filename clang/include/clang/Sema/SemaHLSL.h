@@ -139,7 +139,9 @@ public:
                                ArrayRef<hlsl::RootSignatureElement> Elements);
 
   // Returns true when D is invalid and a diagnostic was produced
-  bool handleRootSignatureDecl(HLSLRootSignatureDecl *D, SourceLocation Loc);
+  bool
+  handleRootSignatureElements(ArrayRef<hlsl::RootSignatureElement> Elements,
+                              SourceLocation Loc);
   void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
