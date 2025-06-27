@@ -1644,17 +1644,14 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
     Example:
 
     ```mlir
-    // Example with an attribute:
-    emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.opaque = "another_feature"}
     // Example with no attribute:
     emitc.field @fieldName0 : !emitc.array<1xf32>
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
-      OptionalAttr<AnyAttr>:$attrs);
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type);
 
-  let assemblyFormat = [{ $sym_name `:` $type ($attrs^)? attr-dict}];
+  let assemblyFormat = [{ $sym_name `:` $type attr-dict}];
 
   let hasVerifier = 1;
 }

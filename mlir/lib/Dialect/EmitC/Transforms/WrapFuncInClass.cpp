@@ -68,14 +68,12 @@ public:
         const mlir::Attribute namedAttribute =
             dictAttr.getNamed(attributeName)->getValue();
 
-        auto name =
-            cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(namedAttribute)[0]);
+        auto name = cast<mlir::StringAttr>(namedAttribute);
         bufferFieldAttrs.push_back(name);
       }
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
-      rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
-                                      nullptr);
+      rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr);
     }
 
     if (!bufferFieldAttrs.empty()) {
