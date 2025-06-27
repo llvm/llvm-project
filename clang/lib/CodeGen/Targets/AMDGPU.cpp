@@ -751,7 +751,7 @@ void CodeGenModule::handleAMDGPUWavesPerEUAttr(
                            "Min must be non-zero when Max is non-zero");
     assert(Min <= Max && "Min must be less than or equal to Max");
     // Do not add the attribute if min,max=0,0.
-    if (Min != 0) {
+    if (Max != 0) {
       std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
       F->addFnAttr("amdgpu-waves-per-eu", AttrVal);
     }

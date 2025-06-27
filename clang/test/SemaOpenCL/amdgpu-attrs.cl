@@ -60,6 +60,7 @@ __attribute__((amdgpu_num_vgpr(0))) kernel void kernel_num_vgpr_0() {}
 
 kernel __attribute__((amdgpu_flat_work_group_size(32, 64))) void kernel_flat_work_group_size_32_64() {}
 kernel __attribute__((amdgpu_waves_per_eu(2))) void kernel_waves_per_eu_2() {}
+kernel __attribute__((amdgpu_waves_per_eu(0, 4))) kernel void kernel_waves_per_eu_0_4() {}
 kernel __attribute__((amdgpu_waves_per_eu(2, 4))) void kernel_waves_per_eu_2_4() {}
 kernel __attribute__((amdgpu_num_sgpr(32))) void kernel_num_sgpr_32() {}
 kernel __attribute__((amdgpu_num_vgpr(64))) void kernel_num_vgpr_64() {}
