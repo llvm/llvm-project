@@ -559,6 +559,60 @@ define i32 @unrelated_ops5(i32 %in, i32 %in2, i32 %in3) {
   ret i32 %out
 }
 
+define i32 @unrelated_ops6(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops6(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
+; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %1 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %1, 72
+  %temp3 = or disjoint i32 %in3, %temp
+  %2 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %2, 72
+  %temp4 = or disjoint i32 %in2, %temp2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops7(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops7(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
+; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %1 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %1, 72
+  %temp3 = or disjoint i32 %in3, %temp
+  %2 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %2, 72
+  %temp4 = or disjoint i32 %temp2, %in2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops8(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops8(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
+; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %1 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %1, 72
+  %temp3 = or disjoint i32 %temp, %in3
+  %2 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %2, 72
+  %temp4 = or disjoint i32 %temp2, %in2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
 define i32 @unrelated_ops_nocombine(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-LABEL: @unrelated_ops_nocombine(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
