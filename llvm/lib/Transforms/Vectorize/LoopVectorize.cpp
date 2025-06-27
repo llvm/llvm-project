@@ -1768,15 +1768,14 @@ class GeneratedRTChecks {
   BasicBlock *SCEVCheckBlock = nullptr;
 
   /// The value representing the result of the generated SCEV checks. If it is
-  /// nullptr, either no SCEV checks have been generated or they have been used.
+  /// nullptr no SCEV checks have been generated.
   Value *SCEVCheckCond = nullptr;
 
   /// Basic block which contains the generated memory runtime checks, if any.
   BasicBlock *MemCheckBlock = nullptr;
 
   /// The value representing the result of the generated memory runtime checks.
-  /// If it is nullptr, either no memory runtime checks have been generated or
-  /// they have been used.
+  /// If it is nullptr no memory runtime checks have been generated.
   Value *MemRuntimeCheckCond = nullptr;
 
   /// True if any checks have been added.
@@ -1996,13 +1995,14 @@ public:
   ~GeneratedRTChecks() {
     SCEVExpanderCleaner SCEVCleaner(SCEVExp);
     SCEVExpanderCleaner MemCheckCleaner(MemCheckExp);
-    if (!SCEVCheckCond)
+    bool SCEVChecksUsed = !SCEVCheckBlock || !pred_empty(SCEVCheckBlock);
+    bool MemChecksUsed = !MemCheckBlock || !pred_empty(MemCheckBlock);
+    if (SCEVChecksUsed)
       SCEVCleaner.markResultUsed();
 
-    if (!MemRuntimeCheckCond)
+    if (MemChecksUsed) {
       MemCheckCleaner.markResultUsed();
-
-    if (MemRuntimeCheckCond) {
+    } else {
       auto &SE = *MemCheckExp.getSE();
       // Memory runtime check generation creates compares that use expanded
       // values. Remove them before running the SCEVExpanderCleaners.
@@ -2016,9 +2016,9 @@ public:
     MemCheckCleaner.cleanup();
     SCEVCleaner.cleanup();
 
-    if (SCEVCheckCond)
+    if (!SCEVChecksUsed)
       SCEVCheckBlock->eraseFromParent();
-    if (MemRuntimeCheckCond)
+    if (!MemChecksUsed)
       MemCheckBlock->eraseFromParent();
   }
 
@@ -2044,8 +2044,6 @@ public:
     if (AddBranchWeights)
       setBranchWeights(BI, SCEVCheckBypassWeights, /*IsExpected=*/false);
     ReplaceInstWithInst(SCEVCheckBlock->getTerminator(), &BI);
-    // Mark the check as used, to prevent it from being removed during cleanup.
-    SCEVCheckCond = nullptr;
     AddedAnyChecks = true;
     return SCEVCheckBlock;
   }
@@ -2074,8 +2072,6 @@ public:
     MemCheckBlock->getTerminator()->setDebugLoc(
         Pred->getTerminator()->getDebugLoc());
 
-    // Mark the check as used, to prevent it from being removed during cleanup.
-    MemRuntimeCheckCond = nullptr;
     AddedAnyChecks = true;
     return MemCheckBlock;
   }
@@ -7328,6 +7324,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
                            OrigLoop->getHeader()->getContext());
+  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
     VPlanTransforms::runPass(VPlanTransforms::addBranchWeightToMiddleTerminator,
@@ -9271,12 +9268,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
                                {PhiR, NewExitingVPV}, Flags, ExitDL);
     }
-    // Update all users outside the vector region.
-    OrigExitingVPV->replaceUsesWithIf(
-        FinalReductionResult, [FinalReductionResult](VPUser &User, unsigned) {
-          auto *Parent = cast<VPRecipeBase>(&User)->getParent();
-          return FinalReductionResult != &User && !Parent->getParent();
-        });
+    // Update all users outside the vector region. Also replace redundant
+    // ExtractLastElement.
+    for (auto *U : to_vector(OrigExitingVPV->users())) {
+      auto *Parent = cast<VPRecipeBase>(U)->getParent();
+      if (FinalReductionResult == U || Parent->getParent())
+        continue;
+      U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
+      if (match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                       m_VPValue())))
+        cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
+    }
 
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
     // with a boolean reduction phi node to check if the condition is true in
