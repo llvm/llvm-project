@@ -1,6 +1,6 @@
 # RUN: llvm-mc %s --validate-cfi --filetype=null 2>&1 \
 # RUN:   | FileCheck %s 
-# TODO: Should check no warnings are emitted but for now, the tool is naive and emiting warnings for evey change.
+# TODO: Should check no warnings are emitted but for now, the tool is naive and emitting warnings for every change.
         .text
         .type   _start,@function
         .globl  _start
