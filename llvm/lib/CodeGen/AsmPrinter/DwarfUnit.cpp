@@ -442,7 +442,8 @@ void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
   addBlock(Die, Attribute, Block->BestForm(), Block);
 }
 
-void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, unsigned Column, const DIFile *File) {
+void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, unsigned Column,
+                              const DIFile *File) {
   if (Line == 0)
     return;
 

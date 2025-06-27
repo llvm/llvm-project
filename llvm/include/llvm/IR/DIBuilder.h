@@ -901,7 +901,8 @@ namespace llvm {
     /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
     /// leads to a \a DISubprogram.
     LLVM_ABI DILabel *createLabel(DIScope *Scope, StringRef Name, DIFile *File,
-                                  unsigned LineNo, unsigned Column, bool IsArtificial,
+                                  unsigned LineNo, unsigned Column,
+                                  bool IsArtificial,
                                   std::optional<unsigned> CoroSuspendIdx,
                                   bool AlwaysPreserve = false);
 

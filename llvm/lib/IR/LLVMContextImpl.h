@@ -1333,11 +1333,16 @@ template <> struct MDNodeKeyImpl<DILabel> {
   bool IsArtificial;
   std::optional<unsigned> CoroSuspendIdx;
 
-  MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line, unsigned Column, bool IsArtificial, std::optional<unsigned> CoroSuspendIdx)
-      : Scope(Scope), Name(Name), File(File), Line(Line), Column(Column), IsArtificial(IsArtificial), CoroSuspendIdx(CoroSuspendIdx) {}
+  MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line,
+                unsigned Column, bool IsArtificial,
+                std::optional<unsigned> CoroSuspendIdx)
+      : Scope(Scope), Name(Name), File(File), Line(Line), Column(Column),
+        IsArtificial(IsArtificial), CoroSuspendIdx(CoroSuspendIdx) {}
   MDNodeKeyImpl(const DILabel *N)
       : Scope(N->getRawScope()), Name(N->getRawName()), File(N->getRawFile()),
-        Line(N->getLine()), Column(N->getColumn()), IsArtificial(N->isArtificial()), CoroSuspendIdx(N->getCoroSuspendIdx()) {}
+        Line(N->getLine()), Column(N->getColumn()),
+        IsArtificial(N->isArtificial()),
+        CoroSuspendIdx(N->getCoroSuspendIdx()) {}
 
   bool isKeyOf(const DILabel *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
@@ -1347,7 +1352,10 @@ template <> struct MDNodeKeyImpl<DILabel> {
   }
 
   /// Using name and line to get hash value. It should already be mostly unique.
-  unsigned getHashValue() const { return hash_combine(Scope, Name, Line, Column, IsArtificial, CoroSuspendIdx); }
+  unsigned getHashValue() const {
+    return hash_combine(Scope, Name, Line, Column, IsArtificial,
+                        CoroSuspendIdx);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DIExpression> {

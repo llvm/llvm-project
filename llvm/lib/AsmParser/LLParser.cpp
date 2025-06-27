@@ -6129,10 +6129,13 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  std::optional<unsigned> CoroSuspendIdx = coroSuspendIdx.Seen ? std::optional<unsigned>(coroSuspendIdx.Val) : std::nullopt;
+  std::optional<unsigned> CoroSuspendIdx =
+      coroSuspendIdx.Seen ? std::optional<unsigned>(coroSuspendIdx.Val)
+                          : std::nullopt;
 
   Result = GET_OR_DISTINCT(DILabel,
-                           (Context, scope.Val, name.Val, file.Val, line.Val, column.Val, isArtificial.Val, CoroSuspendIdx));
+                           (Context, scope.Val, name.Val, file.Val, line.Val,
+                            column.Val, isArtificial.Val, CoroSuspendIdx));
   return false;
 }
 

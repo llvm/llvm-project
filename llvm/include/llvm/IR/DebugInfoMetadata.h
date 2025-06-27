@@ -4115,18 +4115,18 @@ class DILabel : public DINode {
 
   static DILabel *getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
                           DIFile *File, unsigned Line, unsigned Column,
-                          bool IsArtificial, std::optional<unsigned> CoroSuspendIdx,
+                          bool IsArtificial,
+                          std::optional<unsigned> CoroSuspendIdx,
                           StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
                    Line, Column, IsArtificial, CoroSuspendIdx, Storage,
                    ShouldCreate);
   }
-  LLVM_ABI static DILabel *getImpl(LLVMContext &Context, Metadata *Scope,
-                                   MDString *Name, Metadata *File,
-                                   unsigned Line, unsigned Column,
-                                   bool IsArtificial, std::optional<unsigned> CoroSuspendIdx,
-                                   StorageType Storage,
-                                   bool ShouldCreate = true);
+  LLVM_ABI static DILabel *
+  getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name, Metadata *File,
+          unsigned Line, unsigned Column, bool IsArtificial,
+          std::optional<unsigned> CoroSuspendIdx, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDILabel cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),

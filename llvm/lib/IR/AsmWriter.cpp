@@ -2614,7 +2614,8 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printInt("column", N->getColumn());
   Printer.printBool("isArtificial", N->isArtificial(), false);
   if (N->getCoroSuspendIdx())
-    Printer.printInt("coroSuspendIdx", *N->getCoroSuspendIdx(), /* ShouldSkipZero */ false);
+    Printer.printInt("coroSuspendIdx", *N->getCoroSuspendIdx(),
+                     /* ShouldSkipZero */ false);
   Out << ")";
 }
 

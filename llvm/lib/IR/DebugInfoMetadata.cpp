@@ -1616,7 +1616,8 @@ std::optional<uint64_t> DIVariable::getSizeInBits() const {
 }
 
 DILabel::DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
-                 unsigned Column, bool IsArtificial, std::optional<unsigned> CoroSuspendIdx,
+                 unsigned Column, bool IsArtificial,
+                 std::optional<unsigned> CoroSuspendIdx,
                  ArrayRef<Metadata *> Ops)
     : DINode(C, DILabelKind, Storage, dwarf::DW_TAG_label, Ops) {
   this->SubclassData32 = Line;
@@ -1626,12 +1627,13 @@ DILabel::DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
 }
 DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                           Metadata *File, unsigned Line, unsigned Column,
-                          bool IsArtificial, std::optional<unsigned> CoroSuspendIdx,
+                          bool IsArtificial,
+                          std::optional<unsigned> CoroSuspendIdx,
                           StorageType Storage, bool ShouldCreate) {
   assert(Scope && "Expected scope");
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DILabel, (Scope, Name, File, Line, Column, IsArtificial,
-                                  CoroSuspendIdx));
+  DEFINE_GETIMPL_LOOKUP(
+      DILabel, (Scope, Name, File, Line, Column, IsArtificial, CoroSuspendIdx));
   Metadata *Ops[] = {Scope, Name, File};
   DEFINE_GETIMPL_STORE(DILabel, (Line, Column, IsArtificial, CoroSuspendIdx),
                        Ops);

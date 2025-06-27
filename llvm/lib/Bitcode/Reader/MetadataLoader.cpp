@@ -2260,9 +2260,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DILabel, (Context, getMDOrNull(Record[1]),
-                                  getMDString(Record[2]),
-                                  getMDOrNull(Record[3]), Line, Column, IsArtificial, CoroSuspendIdx)),
+        GET_OR_DISTINCT(DILabel,
+                        (Context, getMDOrNull(Record[1]),
+                         getMDString(Record[2]), getMDOrNull(Record[3]), Line,
+                         Column, IsArtificial, CoroSuspendIdx)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
