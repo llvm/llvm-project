@@ -168,7 +168,7 @@ public:
   // Check authenticated LR before tail calling.
   void emitPtrauthTailCallHardening(const MachineInstr *TC);
 
-  // Emit the sequence for AUT or AUTPAC.
+  // Emit the sequence for AUT, AUTPAC, or AUTRELLOADPAC.
   void emitPtrauthAuthResign(const MachineInstr *MI);
 
   // Emit the sequence to compute the discriminator.
@@ -2066,8 +2066,9 @@ void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
 }
 
 void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
-  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
-
+  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC ||
+                        MI->getOpcode() == AArch64::AUTRELLOADPAC;
+  const bool HasLoad = MI->getOpcode() == AArch64::AUTRELLOADPAC;
   // We expand AUT/AUTPAC into a sequence of the form
   //
   //      ; authenticate x16
@@ -2142,10 +2143,74 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
-  // That left us with trapping AUTs, and AUTPACs.
+  // That left us with trapping AUTs, and AUTPA/AUTRELLOADPACs.
   // Trapping AUTs don't need PAC: we're done.
   if (!IsAUTPAC)
     return;
+
+  if (HasLoad) {
+    int64_t Addend = MI->getOperand(6).getImm();
+    // incoming rawpointer in X16, X17 is not live at this point.
+    //   LDSRWpre x17, x16, simm9  ; note: x16+simm9 used later.
+    if (isInt<9>(Addend)) {
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWpre)
+                                       .addReg(AArch64::X16)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::X16)
+                                       .addImm(/*simm9:*/ Addend));
+    } else {
+      //   x16 = x16 + Addend computation has 2 variants
+      if (isUInt<24>(Addend)) {
+        // variant 1: add x16, x16, Addend >> shift12 ls shift12
+        // This can take upto 2 instructions.
+        for (int BitPos = 0; BitPos != 24 && (Addend >> BitPos); BitPos += 12) {
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXri)
+                                           .addReg(AArch64::X16)
+                                           .addReg(AArch64::X16)
+                                           .addImm((Addend >> BitPos) & 0xfff)
+                                           .addImm(AArch64_AM::getShifterImm(
+                                               AArch64_AM::LSL, BitPos)));
+        }
+      } else {
+        // variant 2: accumulate constant in X17 16 bits at a time, and add to
+        // X16 This can take 2-5 instructions.
+        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVZXi)
+                                         .addReg(AArch64::X17)
+                                         .addImm(Addend & 0xffff)
+                                         .addImm(AArch64_AM::getShifterImm(
+                                             AArch64_AM::LSL, 0)));
+
+        for (int Offset = 16; Offset < 64; Offset += 16) {
+          uint16_t Fragment = static_cast<uint16_t>(Addend >> Offset);
+          if (!Fragment)
+            continue;
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKXi)
+                                           .addReg(AArch64::X17)
+                                           .addReg(AArch64::X17)
+                                           .addImm(Fragment)
+                                           .addImm(/*shift:*/ Offset));
+        }
+        // addx x16, x16, x17
+        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
+                                         .addReg(AArch64::X16)
+                                         .addReg(AArch64::X16)
+                                         .addReg(AArch64::X17)
+                                         .addImm(0));
+      }
+      // ldrsw x17,x16(0)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWui)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::X16)
+                                       .addImm(0));
+    }
+    // addx x16, x16, x17
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
+                                     .addReg(AArch64::X16)
+                                     .addReg(AArch64::X16)
+                                     .addReg(AArch64::X17)
+                                     .addImm(0));
+
+  } /* HasLoad == true */
 
   auto PACKey = (AArch64PACKey::ID)MI->getOperand(3).getImm();
   uint64_t PACDisc = MI->getOperand(4).getImm();
@@ -2864,6 +2929,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case AArch64::AUT:
   case AArch64::AUTPAC:
+  case AArch64::AUTRELLOADPAC:
     emitPtrauthAuthResign(MI);
     return;
 
