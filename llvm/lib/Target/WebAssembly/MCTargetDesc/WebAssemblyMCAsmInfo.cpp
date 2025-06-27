@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCAsmInfo.h"
-#include "WebAssemblyMCExpr.h"
 #include "WebAssemblyMCTargetDesc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
