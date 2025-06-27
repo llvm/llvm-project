@@ -6451,26 +6451,26 @@ StringRef AMDGPUAsmParser::parseMnemonicSuffix(StringRef Name) {
   setForcedDPP(false);
   setForcedSDWA(false);
 
-  if (Name.ends_with("_e64_dpp")) {
+  if (Name.consume_back("_e64_dpp")) {
     setForcedDPP(true);
     setForcedEncodingSize(64);
-    return Name.substr(0, Name.size() - 8);
+    return Name;
   }
-  if (Name.ends_with("_e64")) {
+  if (Name.consume_back("_e64")) {
     setForcedEncodingSize(64);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_e32")) {
+  if (Name.consume_back("_e32")) {
     setForcedEncodingSize(32);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_dpp")) {
+  if (Name.consume_back("_dpp")) {
     setForcedDPP(true);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_sdwa")) {
+  if (Name.consume_back("_sdwa")) {
     setForcedSDWA(true);
-    return Name.substr(0, Name.size() - 5);
+    return Name;
   }
   return Name;
 }
