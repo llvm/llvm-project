@@ -2294,9 +2294,6 @@ public:
     bool Used;
   };
 
-  bool isNamedDeclSameAsSymbolLabel(NamedDecl *D,
-                                    clang::Sema::SymbolLabel &Label);
-
   llvm::DenseMap<IdentifierInfo *, SymbolLabel> PendingExportedNames;
 
   /// ActonPragmaExport - called on well-formed '\#pragma export'.

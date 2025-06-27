@@ -7516,23 +7516,6 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
   }
 }
 
-// Checks if the given label matches the named declaration.
-bool Sema::isNamedDeclSameAsSymbolLabel(NamedDecl *D,
-                                        Sema::SymbolLabel &Label) {
-  // Check the name.
-  if (Label.IdentId != D->getIdentifier())
-    return false;
-
-  if (isa<VarDecl>(D))
-    return true;
-  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    if (!getLangOpts().CPlusPlus || FD->isExternC())
-      return true;
-  }
-
-  return false;
-}
-
 void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
   if (PendingExportedNames.empty())
     return;
@@ -7542,7 +7525,11 @@ void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
   auto PendingName = PendingExportedNames.find(IdentName);
   if (PendingName != PendingExportedNames.end()) {
     auto &Label = PendingName->second;
-    if (!Label.Used && isNamedDeclSameAsSymbolLabel(NewD, Label)) {
+    if (!Label.Used) {
+      if (FunctionDecl *FD = dyn_cast<FunctionDecl>(NewD)) {
+        if (getLangOpts().CPlusPlus && !FD->isExternC())
+          return;
+      }
       Label.Used = true;
       if (NewD->hasExternalFormalLinkage())
         mergeVisibilityType(NewD, Label.NameLoc, VisibilityAttr::Default);
