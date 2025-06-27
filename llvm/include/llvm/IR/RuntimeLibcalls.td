@@ -882,7 +882,7 @@ def exp10f128 : RuntimeLibcallImpl<EXP10_F128>;
 def sinf128 : RuntimeLibcallImpl<SIN_F128>;
 def cosf128 : RuntimeLibcallImpl<COS_F128>;
 def tanf128 : RuntimeLibcallImpl<TAN_F128>;
-def tanhf128 : RuntimeLibcallImpl<TAN_F128>;
+def tanhf128 : RuntimeLibcallImpl<TANH_F128>;
 def sincosf128 : RuntimeLibcallImpl<SINCOS_F128>;
 def powf128 : RuntimeLibcallImpl<POW_F128>;
 def fminf128 : RuntimeLibcallImpl<FMIN_F128>;
