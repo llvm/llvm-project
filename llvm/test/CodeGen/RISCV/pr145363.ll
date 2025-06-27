@@ -9,7 +9,7 @@ define i32 @f(ptr %p) {
 ; CHECK-NEXT:    lw a0, 0(a0)
 ; CHECK-NEXT:    lui a1, 294471
 ; CHECK-NEXT:    addi a1, a1, 1064
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:    ret
   %load = load i32, ptr %p, align 4, !range !0
   %load2 = load i32, ptr %p, align 4
@@ -25,7 +25,7 @@ define i32 @test(ptr %p, i32 %x, ptr %q) {
 ; CHECK-NEXT:    lw a1, 0(a0)
 ; CHECK-NEXT:    lui a0, 294471
 ; CHECK-NEXT:    addi a0, a0, 1064
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    addw a0, a1, a0
 ; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    ret
   %load = load i32, ptr %p, align 4, !range !0
