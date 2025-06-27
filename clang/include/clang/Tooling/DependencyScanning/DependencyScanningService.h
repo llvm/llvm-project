@@ -15,6 +15,7 @@
 #include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/Chrono.h"
 
 namespace clang {
