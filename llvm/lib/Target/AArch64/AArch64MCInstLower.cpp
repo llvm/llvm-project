@@ -326,10 +326,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  AArch64MCExpr::Specifier RefKind;
-  RefKind = static_cast<AArch64MCExpr::Specifier>(RefFlags);
-  Expr = MCSpecifierExpr::create(Expr, RefKind, Ctx);
-
+  Expr = MCSpecifierExpr::create(Expr, RefFlags, Ctx);
   return MCOperand::createExpr(Expr);
 }
 
@@ -380,10 +377,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  auto RefKind = static_cast<AArch64MCExpr::Specifier>(RefFlags);
-  assert(RefKind != AArch64::S_INVALID && "Invalid relocation requested");
-  Expr = MCSpecifierExpr::create(Expr, RefKind, Ctx);
-
+  Expr = MCSpecifierExpr::create(Expr, RefFlags, Ctx);
   return MCOperand::createExpr(Expr);
 }
 
