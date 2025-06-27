@@ -37,13 +37,17 @@
 // CHECK-SAME:   space = 1, visibility = All, flags = DataStatic
 // CHECK-SAME: ),
 // CHECK-SAME: RootSRV(t0,
-// CHECK-SAME:   space = 0, visibility = All, flags = DataStaticWhileSetAtExecute
+// CHECK-SAME:   space = 0, visibility = All,
+// CHECK-V1_0-SAME: flags = DataVolatile
+// CHECK-V1_1-SAME: flags = DataStaticWhileSetAtExecute
 // CHECK-SAME: ),
 // CHECK-SAME: RootUAV(
 // CHECK-SAME:   u0, space = 0, visibility = All, flags = DataVolatile
 // CHECK-SAME: ),
 // CHECK-SAME: CBV(
-// CHECK-SAME:   b1, numDescriptors = 1, space = 0, offset = DescriptorTableOffsetAppend, flags = DataStaticWhileSetAtExecute
+// CHECK-SAME:   b1, numDescriptors = 1, space = 0, offset = DescriptorTableOffsetAppend,
+// CHECK-V1_0-SAME: flags = DescriptorsVolatile | DataVolatile
+// CHECK-V1_1-SAME: flags = DataStaticWhileSetAtExecute
 // CHECK-SAME: ),
 // CHECK-SAME: SRV(
 // CHECK-SAME:   t1, numDescriptors = 8, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
@@ -55,7 +59,9 @@
 // CHECK-SAME:   numClauses = 3, visibility = All
 // CHECK-SAME: ),
 // CHECK-SAME: Sampler(
-// CHECK-SAME:   s0, numDescriptors = 4, space = 1, offset = DescriptorTableOffsetAppend, flags = None
+// CHECK-SAME:   s0, numDescriptors = 4, space = 1, offset = DescriptorTableOffsetAppend,
+// CHECK-V1_1-SAME:  flags = DescriptorsVolatile
+// CHECK-V1_1-SAME:  flags = None
 // CHECK-SAME: ),
 // CHECK-SAME: DescriptorTable(
 // CHECK-SAME:   numClauses = 1, visibility = All
