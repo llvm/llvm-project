@@ -26268,9 +26268,41 @@ static SDValue removeRedundantInsertVectorElt(SDNode *N) {
   return ExtractVec;
 }
 
+static SDValue commuteInsertVectorEltFMul(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT && "Unexpected node!");
+  SDValue InsertVec = N->getOperand(0);
+  SDValue InsertVal = N->getOperand(1);
+  SDValue InsertIdx = N->getOperand(2);
+
+  // Only handle constant 0 insertion...
+  if (!(isNullConstant(InsertVal) || isNullFPConstant(InsertVal)))
+    return SDValue();
+  // ... into the result of an FMUL.
+  if (InsertVec.getOpcode() != ISD::FMUL)
+    return SDValue();
+
+  // Insert into the operand of FMUL instead.
+  SDValue FMulOp = InsertVec.getOperand(0);
+
+  if (!InsertVec.hasOneUse() || !FMulOp.hasOneUse())
+    return SDValue();
+
+  SDValue InsertOp =
+      DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), FMulOp.getValueType(),
+                  FMulOp, InsertVal, InsertIdx);
+  SDValue FMul =
+      DAG.getNode(ISD::FMUL, SDLoc(InsertVec), InsertVec.getValueType(),
+                  InsertOp, InsertVec.getOperand(1));
+  DAG.ReplaceAllUsesWith(N, &FMul);
+  return FMul;
+}
+
 static SDValue
 performInsertVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (SDValue Res = removeRedundantInsertVectorElt(N))
+    return Res;
+
+  if (SDValue Res = commuteInsertVectorEltFMul(N, DCI.DAG))
     return Res;
 
   return performPostLD1Combine(N, DCI, true);

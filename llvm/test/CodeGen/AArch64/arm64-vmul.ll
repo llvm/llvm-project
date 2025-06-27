@@ -1189,8 +1189,8 @@ define double @fmul_lane_d(double %A, <2 x double> %vec) nounwind {
 define <4 x float> @fmul_insert_zero(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: fmul_insert_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmul.4s v0, v0, v1
 ; CHECK-NEXT:    mov.s v0[3], wzr
+; CHECK-NEXT:    fmul.4s v0, v0, v1
 ; CHECK-NEXT:    ret
   %mul = fmul <4 x float> %A, %B
   %mul_set_lane = insertelement <4 x float> %mul, float 0.000000e+00, i64 3
