@@ -23,6 +23,7 @@ private:
     PERegisterInfo RegInfo;
     PEFrameLowering FrameLowering;
     PETargetLowering TLI;
+    SelectionDAGTargetInfo TSInfo;
 public:
     PESubtarget(const Triple &TT, StringRef CPU,
         StringRef Features, const TargetMachine &TM);
@@ -47,6 +48,9 @@ public:
     }
     const PETargetLowering *getTargetLowering() const override{
         return &TLI;
+    }
+    const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
+        return &TSInfo;
     }
 
 private:

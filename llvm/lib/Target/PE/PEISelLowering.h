@@ -15,9 +15,16 @@ namespace llvm {
 class PESubtarget;
 
 namespace PEISD {
-    enum NodeType : unsigned {
-        RET_GLUE
-    };
+enum NodeType : unsigned {
+  FIRST_NUMBER = ISD::BUILTIN_OP_END,
+  RET_GLUE,
+  Call,
+  HI,
+  LO,
+  DIV,
+  DIVR
+  // RET_GLUE
+};
 
 } // namespace PEISD
 
@@ -27,6 +34,9 @@ class PETargetLowering : public TargetLowering {
 public:
   explicit PETargetLowering(const TargetMachine &TM, const PESubtarget &STI);
   const PESubtarget &getSubtarget() const { return Subtarget; }
+
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,
@@ -38,7 +48,12 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
+  SDValue LowerCall(CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
+                         EVT VT) const override;
 };
 
 } // namespace llvm

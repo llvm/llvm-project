@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMPEDesc
   PEMCTargetDesc.cpp
   PEMCAsmInfo.cpp
   PEInstPrinter.cpp
+  PEMCExpr.cpp
   
   LINK_COMPONENTS
   MC

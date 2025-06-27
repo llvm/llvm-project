@@ -4,7 +4,6 @@
 namespace llvm {
 
 class Target;
-
 Target &getPETarget();
 
 } // end namespace llvm

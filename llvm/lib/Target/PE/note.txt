@@ -1,0 +1,111 @@
+
+1.
+SelectionDAGISel.cpp
+函数的入口：
+bool PEDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
+  Subtarget = &MF.getSubtarget<PESubtarget>();
+  return SelectionDAGISel::runOnMachineFunction(MF);
+}
+
+runOnMachineFunction是LLVM自己的类SelectionDAGISel虚函数，我们需要将其复写，但是SelectionDAGISel同样也有一个runOnMachineFunction的实现，通常我们在这里调用它本身的实现。
+
+2.
+SelectionDAGISel.cpp
+bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
+    ...
+    SelectAllBasicBlocks(Fn);
+    ...
+}
+
+3.
+SelectionDAGISel.cpp
+void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
+    1.FastISel（快速指令选择）初始化
+    2.以逆后序遍历顺序遍历函数的所有基本块，保证数据流正确
+    3.处理入口块参数
+    4.参数Lowering，这一步会调用CodeGenAndEmitDAG()先一步处理函数参数，把参数 Lowering 生成的 DAG 变成目标指令
+    5.处理调试信息
+    6.遍历所有基本块
+    for (const BasicBlock *LLVMBB : RPOT) {
+        先用FastISel优先处理，用 SelectionDAG 处理剩余指令
+
+        SelectBasicBlock(Begin, BI, HadTailCall);
+
+        处理异常块、stack protector、PHI 节点等特殊情况。
+    }
+
+}
+
+4.
+SelectionDAGISel.cpp
+void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
+                                        BasicBlock::const_iterator End,
+                                        bool &HadTailCall) {
+    ...
+    把一个 LLVM IR 基本块的指令序列 Lower 成 SelectionDAG 节点（DAG 图），进行指令选择（ISel），最终生成目标机器指令
+
+    在这里生成DAG图
+
+    CodeGenAndEmitDAG();
+}
+
+5.
+最为重要的函数，主要步骤包括：
+DAG 合并与优化
+对 SelectionDAG 进行若干次合并和优化（如 DAGCombine、类型合法化、向量合法化等）。
+
+类型和操作合法化
+把不被目标支持的类型和操作转换成目标支持的形式。
+
+指令选择
+用 TableGen 生成的 pattern-matching 代码，把 DAG 节点转换为目标机器指令（MachineInstr）。
+
+指令调度
+对生成的指令进行调度（如乱序、VLIW等目标会用到）。
+
+插入 MachineBasicBlock
+把最终的 MachineInstr 插入到当前的 MachineBasicBlock。
+
+清理 DAG
+清理 SelectionDAG，为下一个基本块或下一轮 Lowering 做准备。
+SelectionDAGISel.cpp
+void SelectionDAGISel::CodeGenAndEmitDAG() {
+
+    CurDAG->NewNodesMustHaveLegalTypes = false;//允许暂时存在非法类型，后序会做合法化
+
+    CurDAG->Combine(BeforeLegalizeTypes, getBatchAA(), OptLevel);//Combine1，第一次合并
+
+    Changed = CurDAG->LegalizeTypes();//类型合法化
+
+    CurDAG->NewNodesMustHaveLegalTypes = true;//此时只允许创建合法的类型
+
+    CurDAG->Combine(AfterLegalizeTypes, getBatchAA(), OptLevel);//Combine2，第二次合并
+
+    Changed = CurDAG->LegalizeVectors();//向量合法化 ，将 DAG 中的向量操作转换为目标支持的向量宽度或拆分为标量操作。
+
+    CurDAG->Combine(AfterLegalizeVectorOps, getBatchAA(), OptLevel);//Combine3，第三次合并
+
+    CurDAG->Legalize();//操作合法化 ：将 DAG 中所有操作转换为目标支持的操作（如把不支持的除法拆成移位和减法等）。
+
+    CurDAG->Combine(AfterLegalizeDAG, getBatchAA(), OptLevel);//Combine4，第四次合并
+
+    if (OptLevel != CodeGenOptLevel::None)
+    ComputeLiveOutVRegInfo();//优化级别不为 None 时，计算活跃虚拟寄存器信息，用于后续优化。
+
+    DoInstructionSelection();//指令选择 ，把 DAG 节点变成目标机器指令
+
+    Scheduler->Run(CurDAG, FuncInfo->MBB);//指令调度 ：对已选择的机器指令进行调度（如乱序、VLIW、流水线等）。
+
+    LastMBB = FuncInfo->MBB = Scheduler->EmitSchedule(FuncInfo->InsertPt);//生成最终的 MachineInstr 并插入到 MachineBasicBlock 中。
+
+
+}
+
+
+
+LLVM用户指南
+https://llvm.org/docs/UserGuides.html
+
+CPU0教程其实有vector type
+https://jonathan2251.github.io/lbd/othertype.html
+https://llvm.org/docs/LangRef.html#vector-type

@@ -1753,6 +1753,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   // nodes which can be deleted are those which have no uses and all other nodes
   // which would otherwise be added to the worklist by the first call to
   // getNextWorklistEntry are already present in it.
+
   for (SDNode &Node : DAG.allnodes())
     AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
 

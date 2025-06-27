@@ -12,9 +12,12 @@ Date: 4/1/2025
 #include "PEGenRegisterInfo.inc"
 
 namespace llvm{
-class PERegisterInfo : public PEGenRegisterInfo{
+class PESubtarget;
+class PERegisterInfo : public PEGenRegisterInfo
+{
+    const PESubtarget &STI;
 public:
-    PERegisterInfo();
+    PERegisterInfo(const PESubtarget &STI);
     ~PERegisterInfo();
 
     //实现codegen生成的虚函数
@@ -22,7 +25,7 @@ public:
 
     BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-    bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+    bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
         unsigned FIOperandNum,
         RegScavenger *RS = nullptr) const override;
 

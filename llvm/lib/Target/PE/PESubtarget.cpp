@@ -18,6 +18,7 @@ using namespace llvm;
 PESubtarget::PESubtarget(const Triple &TT, StringRef CPU,
     StringRef FS, const TargetMachine &TM) 
     : PEGenSubtargetInfo(TT,CPU,CPU,FS),
+    RegInfo(*this),
     FrameLowering(*this),
     TLI(TM,*this){
 }

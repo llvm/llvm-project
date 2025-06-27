@@ -378,6 +378,7 @@
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/Transforms/Utils/VectorToIntrinsic.h"
 #include <optional>
 
 using namespace llvm;

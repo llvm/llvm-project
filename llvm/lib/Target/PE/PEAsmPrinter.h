@@ -35,6 +35,7 @@ public:
 private: 
     bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
     bool lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
+    MCOperand lowerSymbolOperand(const MachineOperand &MO)const;
 
 private:
 

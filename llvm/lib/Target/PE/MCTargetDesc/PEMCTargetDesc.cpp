@@ -33,7 +33,7 @@ static MCAsmInfo *createPEMCAsmInfo(const MCRegisterInfo &MRI,
     }
 static MCRegisterInfo *createPEMCRegisterInfo(const Triple &TT) {
     MCRegisterInfo* X = new MCRegisterInfo();
-    InitPEMCRegisterInfo(X,PE::RA);
+    InitPEMCRegisterInfo(X,PE::RS4);//返回地址寄存器（或默认寄存器）。
     return X;
 }
 

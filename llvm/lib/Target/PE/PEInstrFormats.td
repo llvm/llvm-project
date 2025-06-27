@@ -21,3 +21,20 @@ class I<dag outs, dag ins,
               string asmstr, list<dag> pattern>
     : PEInst< outs, ins, asmstr, pattern> {
 }
+class U<dag outs, dag ins, 
+              string asmstr, list<dag> pattern>
+    : PEInst<outs, ins, asmstr, pattern> {
+  // 这里可以加U型特有的属性
+}
+class B<dag outs, dag ins, string asm, list<dag> pattern> : 
+			PEInst<outs, ins, asm, pattern> {
+
+      }
+class J<dag outs, dag ins, string asm, list<dag> pattern> : 
+			PEInst<outs, ins, asm, pattern> {
+
+      }
+class S<dag outs, dag ins, string asm, list<dag> pattern> : 
+			PEInst<outs, ins, asm, pattern> {
+
+      }

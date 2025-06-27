@@ -26,6 +26,7 @@
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/ModuleInliner.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/PEPass/PEVectorToIntrinsicPass.h"
 #include <optional>
 #include <vector>
 

@@ -85,6 +85,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case xcore:          return "xcore";
   case xtensa:         return "xtensa";
   case pe:             return "pe";
+  case M7004:          return "M7004"; // HYH
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -251,6 +252,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case xtensa:      return "xtensa";
 
   case pe:          return "pe";
+  case M7004: return "M7004"; // HYH
   }
 }
 
@@ -494,6 +496,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("dxil", dxil)
     .Case("xtensa", xtensa)
     .Case("pe", pe)
+    .Case("M7004", M7004) // HYH
     .Default(UnknownArch);
 }
 
@@ -641,6 +644,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
                  Triple::dxil)
           .Case("xtensa", Triple::xtensa)
           .Case("pe", Triple::pe)
+          .Case("M7004", Triple::M7004) // HYH
           .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
@@ -971,6 +975,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::renderscript32:
   case Triple::renderscript64:
   case Triple::pe:
+  case Triple::M7004: // HYH
   case Triple::riscv32:
   case Triple::riscv64:
   case Triple::shave:
@@ -1820,6 +1825,9 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::mips64el:
     T.setArch(Triple::mipsel, getSubArch());
     break;
+  case Triple::M7004: // HYH
+    T.setArch(Triple::M7004, getSubArch());
+    break;
   case Triple::nvptx64:        T.setArch(Triple::nvptx);   break;
   case Triple::ppc64:          T.setArch(Triple::ppc);     break;
   case Triple::ppc64le:        T.setArch(Triple::ppcle);   break;
@@ -1883,6 +1891,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::ve:
   case Triple::wasm64:
   case Triple::x86_64:
+  case Triple::M7004: // HYH
     // Already 64-bit.
     break;
 

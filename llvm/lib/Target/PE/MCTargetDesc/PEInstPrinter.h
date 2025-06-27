@@ -8,8 +8,8 @@ Date: 4/9/2025
 #ifndef PEINSTPRINTER_H
 #define PEINSTPRINTER_H
 
-#include "llvm/MC/MCInstPrinter.h"
 #include "MCTargetDesc/PEMCTargetDesc.h"
+#include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 class PEInstPrinter : public MCInstPrinter {
@@ -17,13 +17,13 @@ public:
   PEInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                 const MCRegisterInfo &MRI)
       : MCInstPrinter(MAI, MII, MRI) {}
-  
-  void printCustomAliasOperand(
-        const MCInst *MI, uint64_t Address, unsigned OpIdx,
-        unsigned PrintMethodIdx,
-        raw_ostream &OS);
 
-  std::pair<const char *, uint64_t> getMnemonic(const MCInst &MI) const;
+  void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
+                               unsigned OpIdx, unsigned PrintMethodIdx,
+                               raw_ostream &OS);
+  void printBranchOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  std::pair<const char *, uint64_t>
+  getMnemonic(const MCInst &MI) const override;
   void printInstruction(const MCInst *MI, uint64_t Address, raw_ostream &O);
   static const char *getRegisterName(MCRegister Reg);
 
@@ -36,6 +36,8 @@ public:
   bool printAliasInstr(const MCInst *MI, uint64_t Address, raw_ostream &OS);
 
   void PrintMemOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void PrintVMemOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void PrintPtrOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
 private:
   void printMemOperandRI(const MCInst *MI, unsigned OpNum, raw_ostream &O);
