@@ -95,9 +95,18 @@ class MY_STRUCT {
     }
     let dont_find_me = "hello"
   }
+
+  static func static_func(input_static: [Int]) {
+    let find_me_static = "hello"
+    let _ = input_static.map {
+      return $0  // break_static_member
+    }
+    let dont_find_me_static = "hello"
+  }
 }
 
 func_1(arg: 42)
 func_2(arg: 42)
 await func_3(arg: 42)
 let _ = MY_STRUCT(input: [1, 2])
+MY_STRUCT.static_func(input_static: [42])

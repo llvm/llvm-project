@@ -1513,7 +1513,7 @@ std::string SwiftLanguageRuntime::GetParentNameIfClosure(StringRef name) {
                                      Kind::ExplicitClosure};
   static const auto function_kinds = {Kind::ImplicitClosure,
                                       Kind::ExplicitClosure, Kind::Function,
-                                      Kind::Constructor};
+                                      Kind::Constructor, Kind::Static};
   auto *closure_node = swift_demangle::GetFirstChildOfKind(node, closure_kinds);
   auto *parent_func_node =
       swift_demangle::GetFirstChildOfKind(closure_node, function_kinds);

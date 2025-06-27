@@ -113,3 +113,20 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_not_captured_error(self, thread.frames[0], "input", "MY_STRUCT.init(input:)")
         check_not_captured_error(self, thread.frames[0], "find_me", "MY_STRUCT.init(input:)")
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
+
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "break_static_member", lldb.SBFileSpec("main.swift")
+        )
+        check_not_captured_error(
+            self,
+            thread.frames[0],
+            "input_static",
+            "static MY_STRUCT.static_func(input_static:)",
+        )
+        check_not_captured_error(
+            self,
+            thread.frames[0],
+            "find_me_static",
+            "static MY_STRUCT.static_func(input_static:)",
+        )
+        check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me_static")
