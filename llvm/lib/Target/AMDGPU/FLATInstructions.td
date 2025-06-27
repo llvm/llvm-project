@@ -1092,18 +1092,22 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 
   let WaveSizePredicate = isWave32 in {
-    let Mnemonic = "global_load_tr_b128" in
-    defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w32", VReg_128>;
-    let Mnemonic = "global_load_tr_b64" in
-    defm GLOBAL_LOAD_TR_B64_w32   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w32", VReg_64>;
-  }
-  let WaveSizePredicate = isWave64 in {
-    let Mnemonic = "global_load_tr_b128" in
-    defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
-    let Mnemonic = "global_load_tr_b64" in
-    defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
+    defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128", VReg_128>;
+    defm GLOBAL_LOAD_TR_B64_w32   : FLAT_Global_Load_Pseudo <"global_load_tr_b64", VReg_64>;
   }
 } // End SubtargetPredicate = isGFX12Plus
+
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
+  let Mnemonic = "global_load_tr_b128" in
+  defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
+  let Mnemonic = "global_load_tr_b64" in
+  defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
+}
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus in {
+  defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VReg_96>;
+  defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VReg_64>;
+}
 
 let SubtargetPredicate = isGFX10Plus in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
@@ -2809,6 +2813,13 @@ multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op,
   defm _SADDR : VFLAT_Real_gfx12<op, name>;
 }
 
+multiclass VGLOBAL_Real_AllAddr_gfx1200<bits<8> op> {
+  let AssemblerPredicate = isGFX12Not12_50 in {
+    defm "" : VFLAT_Real_gfx12<op>;
+    defm _SADDR : VFLAT_Real_gfx12<op>;
+  }
+}
+
 multiclass VGLOBAL_Real_AllAddr_gfx12_w64<bits<8> op,
                                        string name = get_FLAT_ps<NAME>.Mnemonic> :
   VFLAT_Aliases_gfx12<name> {
@@ -2951,8 +2962,8 @@ defm GLOBAL_ATOMIC_FMIN            : VGLOBAL_Real_Atomics_gfx12<0x051, "global_a
 defm GLOBAL_ATOMIC_FMAX            : VGLOBAL_Real_Atomics_gfx12<0x052, "global_atomic_max_num_f32", "global_atomic_max_f32">;
 defm GLOBAL_ATOMIC_ADD_F32         : VGLOBAL_Real_Atomics_gfx12<0x056>;
 
-defm GLOBAL_LOAD_TR_B128_w32       : VGLOBAL_Real_AllAddr_gfx12<0x057>;
-defm GLOBAL_LOAD_TR_B64_w32        : VGLOBAL_Real_AllAddr_gfx12<0x058>;
+defm GLOBAL_LOAD_TR_B128_w32       : VGLOBAL_Real_AllAddr_gfx1200<0x057>;
+defm GLOBAL_LOAD_TR_B64_w32        : VGLOBAL_Real_AllAddr_gfx1200<0x058>;
 
 defm GLOBAL_LOAD_TR_B128_w64       : VGLOBAL_Real_AllAddr_gfx12_w64<0x057>;
 defm GLOBAL_LOAD_TR_B64_w64        : VGLOBAL_Real_AllAddr_gfx12_w64<0x058>;
@@ -2991,6 +3002,60 @@ defm SCRATCH_STORE_SHORT_D16_HI    : VSCRATCH_Real_AllAddr_gfx12<0x25, "scratch_
 
 defm SCRATCH_LOAD_BLOCK            : VSCRATCH_Real_AllAddr_gfx12<0x53>;
 defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;
+
+//===----------------------------------------------------------------------===//
+// GFX1250
+//===----------------------------------------------------------------------===//
+
+multiclass VFLAT_Real_gfx1250<bits<8> op,
+                              string name = get_FLAT_ps<NAME>.Mnemonic> {
+  defvar ps = !cast<FLAT_Pseudo>(NAME);
+  def _gfx1250 : VFLAT_Real<op, ps, name>,
+                 SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1250> {
+    let AssemblerPredicate = isGFX125xOnly;
+    let DecoderNamespace = "GFX1250";
+
+    let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
+  }
+}
+
+multiclass VFLAT_Aliases_gfx1250<string name> {
+  defvar ps = get_FLAT_ps<NAME>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX125xOnly]>;
+}
+
+multiclass VFLAT_Real_Base_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Aliases_gfx1250<name> {
+  defm "" : VFLAT_Real_gfx1250<op, name>;
+}
+
+multiclass VFLAT_Real_RTN_gfx1250<bits<8> op, string name> {
+  defm _RTN : VFLAT_Real_gfx1250<op, name>;
+}
+
+multiclass VFLAT_Real_SADDR_gfx1250<bits<8> op, string name> {
+  defm _SADDR : VFLAT_Real_gfx1250<op, name>;
+}
+
+multiclass VFLAT_Real_SADDR_RTN_gfx1250<bits<8> op, string name> {
+  defm _SADDR_RTN : VFLAT_Real_gfx1250<op, name>;
+}
+
+multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Real_Base_gfx1250<op, name>,
+  VFLAT_Real_SADDR_gfx1250<op, name>;
+
+multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Real_AllAddr_gfx1250<op, name>,
+  VFLAT_Real_RTN_gfx1250<op, name>,
+  VFLAT_Real_SADDR_RTN_gfx1250<op, name>;
+
+defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128">;
+defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64">;
+
+defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx1250<0x073>;
+defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx1250<0x074>;
 
 def True16D16Table : GenericTable {
   let FilterClass = "True16D16Table";
