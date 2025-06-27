@@ -395,7 +395,7 @@ static cl::opt<bool> UseWiderVFIfCallVariantsPresent(
     cl::desc("Try wider VFs if they enable the use of vector variants"));
 
 static cl::opt<bool> EnableEarlyExitVectorization(
-    "enable-early-exit-vectorization", cl::init(false), cl::Hidden,
+    "enable-early-exit-vectorization", cl::init(true), cl::Hidden,
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
@@ -1768,15 +1768,14 @@ class GeneratedRTChecks {
   BasicBlock *SCEVCheckBlock = nullptr;
 
   /// The value representing the result of the generated SCEV checks. If it is
-  /// nullptr, either no SCEV checks have been generated or they have been used.
+  /// nullptr no SCEV checks have been generated.
   Value *SCEVCheckCond = nullptr;
 
   /// Basic block which contains the generated memory runtime checks, if any.
   BasicBlock *MemCheckBlock = nullptr;
 
   /// The value representing the result of the generated memory runtime checks.
-  /// If it is nullptr, either no memory runtime checks have been generated or
-  /// they have been used.
+  /// If it is nullptr no memory runtime checks have been generated.
   Value *MemRuntimeCheckCond = nullptr;
 
   /// True if any checks have been added.
@@ -1996,13 +1995,14 @@ public:
   ~GeneratedRTChecks() {
     SCEVExpanderCleaner SCEVCleaner(SCEVExp);
     SCEVExpanderCleaner MemCheckCleaner(MemCheckExp);
-    if (!SCEVCheckCond)
+    bool SCEVChecksUsed = !SCEVCheckBlock || !pred_empty(SCEVCheckBlock);
+    bool MemChecksUsed = !MemCheckBlock || !pred_empty(MemCheckBlock);
+    if (SCEVChecksUsed)
       SCEVCleaner.markResultUsed();
 
-    if (!MemRuntimeCheckCond)
+    if (MemChecksUsed) {
       MemCheckCleaner.markResultUsed();
-
-    if (MemRuntimeCheckCond) {
+    } else {
       auto &SE = *MemCheckExp.getSE();
       // Memory runtime check generation creates compares that use expanded
       // values. Remove them before running the SCEVExpanderCleaners.
@@ -2016,9 +2016,9 @@ public:
     MemCheckCleaner.cleanup();
     SCEVCleaner.cleanup();
 
-    if (SCEVCheckCond)
+    if (!SCEVChecksUsed)
       SCEVCheckBlock->eraseFromParent();
-    if (MemRuntimeCheckCond)
+    if (!MemChecksUsed)
       MemCheckBlock->eraseFromParent();
   }
 
@@ -2044,8 +2044,6 @@ public:
     if (AddBranchWeights)
       setBranchWeights(BI, SCEVCheckBypassWeights, /*IsExpected=*/false);
     ReplaceInstWithInst(SCEVCheckBlock->getTerminator(), &BI);
-    // Mark the check as used, to prevent it from being removed during cleanup.
-    SCEVCheckCond = nullptr;
     AddedAnyChecks = true;
     return SCEVCheckBlock;
   }
@@ -2074,8 +2072,6 @@ public:
     MemCheckBlock->getTerminator()->setDebugLoc(
         Pred->getTerminator()->getDebugLoc());
 
-    // Mark the check as used, to prevent it from being removed during cleanup.
-    MemRuntimeCheckCond = nullptr;
     AddedAnyChecks = true;
     return MemCheckBlock;
   }
@@ -6069,24 +6065,23 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     RetTy = IntegerType::get(RetTy->getContext(), MinBWs[I]);
   auto *SE = PSE.getSE();
 
-  auto HasSingleCopyAfterVectorization = [this](Instruction *I,
-                                                ElementCount VF) -> bool {
-    if (VF.isScalar())
-      return true;
-
-    auto Scalarized = InstsToScalarize.find(VF);
-    assert(Scalarized != InstsToScalarize.end() &&
-           "VF not yet analyzed for scalarization profitability");
-    return !Scalarized->second.count(I) &&
-           llvm::all_of(I->users(), [&](User *U) {
-             auto *UI = cast<Instruction>(U);
-             return !Scalarized->second.count(UI);
-           });
-  };
-  (void)HasSingleCopyAfterVectorization;
-
   Type *VectorTy;
   if (isScalarAfterVectorization(I, VF)) {
+    [[maybe_unused]] auto HasSingleCopyAfterVectorization =
+        [this](Instruction *I, ElementCount VF) -> bool {
+      if (VF.isScalar())
+        return true;
+
+      auto Scalarized = InstsToScalarize.find(VF);
+      assert(Scalarized != InstsToScalarize.end() &&
+             "VF not yet analyzed for scalarization profitability");
+      return !Scalarized->second.count(I) &&
+             llvm::all_of(I->users(), [&](User *U) {
+               auto *UI = cast<Instruction>(U);
+               return !Scalarized->second.count(UI);
+             });
+    };
+
     // With the exception of GEPs and PHIs, after scalarization there should
     // only be one copy of the instruction generated in the loop. This is
     // because the VF is either 1, or any instructions that need scalarizing
@@ -6346,8 +6341,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     Type *ValTy = I->getOperand(0)->getType();
 
     if (canTruncateToMinimalBitwidth(I, VF)) {
-      Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
-      (void)Op0AsInstruction;
+      [[maybe_unused]] Instruction *Op0AsInstruction =
+          dyn_cast<Instruction>(I->getOperand(0));
       assert((!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
               MinBWs[I] == MinBWs[Op0AsInstruction]) &&
              "if both the operand and the compare are marked for "
@@ -7281,8 +7276,8 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
           RdxDesc.getRecurrenceKind())) {
-    Value *StartV = EpiRedResult->getOperand(1)->getLiveInIRValue();
-    (void)StartV;
+    [[maybe_unused]] Value *StartV =
+        EpiRedResult->getOperand(1)->getLiveInIRValue();
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
            "AnyOf expected to start with ICMP_NE");
@@ -7296,7 +7291,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
-    bool IsExpectedPattern =
+    [[maybe_unused]] bool IsExpectedPattern =
         match(MainResumeValue,
               m_Select(m_OneUse(m_Value(Cmp)), m_Specific(SentinelV),
                        m_Value(OrigResumeV))) &&
@@ -7304,7 +7299,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
                                    m_Value(CmpOp))) &&
          ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
-    (void)IsExpectedPattern;
     MainResumeValue = OrigResumeV;
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
@@ -8259,10 +8253,10 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   SmallVector<VPValue *, 4> Operands(R->operands());
   if (auto *PhiR = dyn_cast<VPWidenPHIRecipe>(R)) {
     VPBasicBlock *Parent = PhiR->getParent();
-    VPRegionBlock *LoopRegionOf = Parent->getEnclosingLoopRegion();
+    [[maybe_unused]] VPRegionBlock *LoopRegionOf =
+        Parent->getEnclosingLoopRegion();
     assert(LoopRegionOf && LoopRegionOf->getEntry() == Parent &&
            "Non-header phis should have been handled during predication");
-    (void)LoopRegionOf;
     auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
     assert(Operands.size() == 2 && "Must have 2 operands for header phis");
     if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, Range)))
@@ -10107,6 +10101,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
+  if (LVL.hasUncountableEarlyExit() && UserIC != 1 &&
+      !VectorizerParams::isInterleaveForced()) {
+    UserIC = 1;
+    reportVectorizationInfo("Interleaving not supported for loops "
+                            "with uncountable early exits",
+                            "InterleaveEarlyExitDisabled", ORE, L);
+  }
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);

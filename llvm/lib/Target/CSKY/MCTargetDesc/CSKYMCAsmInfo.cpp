@@ -18,7 +18,7 @@
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {CSKYMCExpr::VK_GOT, "GOT"},       {CSKYMCExpr::VK_GOTOFF, "GOTOFF"},
     {CSKYMCExpr::VK_PLT, "PLT"},       {CSKYMCExpr::VK_TLSGD, "TLSGD"},
     {CSKYMCExpr::VK_TLSLDM, "TLSLDM"}, {CSKYMCExpr::VK_TPOFF, "TPOFF"},
@@ -36,5 +36,5 @@ CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple) {
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
