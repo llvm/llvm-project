@@ -3086,43 +3086,11 @@ static SPIRVType *getCoopMatrType(const TargetExtType *ExtensionType,
       ExtensionType->getIntParameter(3), true);
 }
 
-static SPIRVType *
-getImageType(const TargetExtType *ExtensionType,
-             const SPIRV::AccessQualifier::AccessQualifier Qualifier,
-             MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR) {
-  assert(ExtensionType->getNumTypeParameters() == 1 &&
-         "SPIR-V image builtin type must have sampled type parameter!");
-  const SPIRVType *SampledType =
-      GR->getOrCreateSPIRVType(ExtensionType->getTypeParameter(0), MIRBuilder,
-                               SPIRV::AccessQualifier::ReadWrite, true);
-  assert((ExtensionType->getNumIntParameters() == 7 ||
-          ExtensionType->getNumIntParameters() == 6) &&
-         "Invalid number of parameters for SPIR-V image builtin!");
-
-  SPIRV::AccessQualifier::AccessQualifier accessQualifier =
-      SPIRV::AccessQualifier::None;
-  if (ExtensionType->getNumIntParameters() == 7) {
-    accessQualifier = Qualifier == SPIRV::AccessQualifier::WriteOnly
-                          ? SPIRV::AccessQualifier::WriteOnly
-                          : SPIRV::AccessQualifier::AccessQualifier(
-                                ExtensionType->getIntParameter(6));
-  }
-
-  // Create or get an existing type from GlobalRegistry.
-  return GR->getOrCreateOpTypeImage(
-      MIRBuilder, SampledType,
-      SPIRV::Dim::Dim(ExtensionType->getIntParameter(0)),
-      ExtensionType->getIntParameter(1), ExtensionType->getIntParameter(2),
-      ExtensionType->getIntParameter(3), ExtensionType->getIntParameter(4),
-      SPIRV::ImageFormat::ImageFormat(ExtensionType->getIntParameter(5)),
-      accessQualifier);
-}
-
 static SPIRVType *getSampledImageType(const TargetExtType *OpaqueType,
                                       MachineIRBuilder &MIRBuilder,
                                       SPIRVGlobalRegistry *GR) {
-  SPIRVType *OpaqueImageType = getImageType(
-      OpaqueType, SPIRV::AccessQualifier::ReadOnly, MIRBuilder, GR);
+  SPIRVType *OpaqueImageType = GR->getImageType(
+      OpaqueType, SPIRV::AccessQualifier::ReadOnly, MIRBuilder);
   // Create or get an existing type from GlobalRegistry.
   return GR->getOrCreateOpTypeSampledImage(OpaqueImageType, MIRBuilder);
 }
@@ -3293,7 +3261,7 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
 
     switch (TypeRecord->Opcode) {
     case SPIRV::OpTypeImage:
-      TargetType = getImageType(BuiltinType, AccessQual, MIRBuilder, GR);
+      TargetType = GR->getImageType(BuiltinType, AccessQual, MIRBuilder);
       break;
     case SPIRV::OpTypePipe:
       TargetType = getPipeType(BuiltinType, MIRBuilder, GR);
