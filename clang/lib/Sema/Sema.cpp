@@ -2434,9 +2434,12 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
     OpenMP().popOpenMPFunctionRegion(Scope.get());
 
   // Issue any analysis-based warnings.
-  if (WP && D)
+  if (WP && D) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      inferNoReturnAttr(*this, const_cast<FunctionDecl *>(FD));
+    }
     AnalysisWarnings.IssueWarnings(*WP, Scope.get(), D, BlockType);
-  else
+  } else
     for (const auto &PUD : Scope->PossiblyUnreachableDiags)
       Diag(PUD.Loc, PUD.PD);
 

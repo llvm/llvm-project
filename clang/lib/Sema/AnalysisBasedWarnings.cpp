@@ -624,34 +624,8 @@ struct CheckFallThroughDiagnostics {
   }
 };
 
-// FIXME: This is a shallow best-effort check. Currently, we only handle
-// cases where the function body consists of a single `throw` expression,
-// possibly wrapped in an `ExprWithCleanups`. We do not perform general
-// control-flow analysis or handle more complex throwing patterns.
-// Consider expanding this to handle more cases in the future.
-bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
-  if (!FD->hasBody())
-    return false;
-  const Stmt *Body = FD->getBody();
-  const Stmt *OnlyStmt = nullptr;
-
-  if (const auto *Compound = dyn_cast<CompoundStmt>(Body)) {
-    if (Compound->size() != 1)
-      return false; // More than one statement, can't be known to always throw.
-    OnlyStmt = *Compound->body_begin();
-  } else {
-    OnlyStmt = Body;
-  }
-
-  // Unwrap ExprWithCleanups if necessary.
-  if (const auto *EWC = dyn_cast<ExprWithCleanups>(OnlyStmt)) {
-    OnlyStmt = EWC->getSubExpr();
-  }
-  // Check if the only statement is a throw expression.
-  return isa<CXXThrowExpr>(OnlyStmt);
-}
-
 } // anonymous namespace
+
 /// CheckFallThroughForBody - Check that we don't fall off the end of a
 /// function that should return a value.  Check that we don't fall off the end
 /// of a noreturn function.  We assume that functions and blocks not marked
@@ -669,7 +643,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
       ReturnsVoid = CBody->getFallthroughHandler() != nullptr;
     else
       ReturnsVoid = FD->getReturnType()->isVoidType();
-    HasNoReturn = FD->isNoReturn();
+    HasNoReturn = FD->isNoReturn() || FD->hasAttr<InferredNoReturnAttr>();
   }
   else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     ReturnsVoid = MD->getReturnType()->isVoidType();
@@ -719,7 +693,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
           }
           if (const auto *CE = dyn_cast<CallExpr>(LastStmt)) {
             if (const FunctionDecl *Callee = CE->getDirectCallee();
-                Callee && isKnownToAlwaysThrow(Callee)) {
+                Callee && Callee->hasAttr<InferredNoReturnAttr>()) {
               return; // Don't warn about fall-through.
             }
           }
