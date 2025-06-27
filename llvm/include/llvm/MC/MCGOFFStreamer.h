@@ -13,6 +13,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 
 namespace llvm {
+class GOFFObjectWriter;
 
 class MCGOFFStreamer : public MCObjectStreamer {
 public:
@@ -23,6 +24,8 @@ public:
                          std::move(Emitter)) {}
 
   ~MCGOFFStreamer() override;
+
+  GOFFObjectWriter &getWriter();
 
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return false;

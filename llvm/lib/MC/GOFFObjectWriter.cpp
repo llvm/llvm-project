@@ -223,33 +223,21 @@ void GOFFOstream::finalizeRecord() {
 }
 
 namespace {
-
-class GOFFObjectWriter : public MCObjectWriter {
-  // The target specific GOFF writer instance.
-  std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
-
-  // The stream used to write the GOFF records.
+class GOFFWriter {
   GOFFOstream OS;
 
-public:
-  GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
-                   raw_pwrite_stream &OS)
-      : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
-
-  ~GOFFObjectWriter() override {}
-
-  // Write GOFF records.
   void writeHeader();
   void writeEnd();
 
-  // Implementation of the MCObjectWriter interface.
-  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override {}
-  uint64_t writeObject() override;
+public:
+  GOFFWriter(raw_pwrite_stream &OS);
+  uint64_t writeObject();
 };
-} // end anonymous namespace
+} // namespace
 
-void GOFFObjectWriter::writeHeader() {
+GOFFWriter::GOFFWriter(raw_pwrite_stream &OS) : OS(OS) {}
+
+void GOFFWriter::writeHeader() {
   OS.newRecord(GOFF::RT_HDR);
   OS.write_zeros(1);       // Reserved
   OS.writebe<uint32_t>(0); // Target Hardware Environment
@@ -263,7 +251,7 @@ void GOFFObjectWriter::writeHeader() {
   OS.write_zeros(6);       // Reserved
 }
 
-void GOFFObjectWriter::writeEnd() {
+void GOFFWriter::writeEnd() {
   uint8_t F = GOFF::END_EPR_None;
   uint8_t AMODE = 0;
   uint32_t ESDID = 0;
@@ -281,7 +269,7 @@ void GOFFObjectWriter::writeEnd() {
   OS.writebe<uint32_t>(ESDID); // ESDID (of entry point)
 }
 
-uint64_t GOFFObjectWriter::writeObject() {
+uint64_t GOFFWriter::writeObject() {
   writeHeader();
   writeEnd();
 
@@ -292,6 +280,17 @@ uint64_t GOFFObjectWriter::writeObject() {
                     << " logical records.");
 
   return OS.getWrittenSize();
+}
+
+GOFFObjectWriter::GOFFObjectWriter(
+    std::unique_ptr<MCGOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
+    : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
+
+GOFFObjectWriter::~GOFFObjectWriter() {}
+
+uint64_t GOFFObjectWriter::writeObject() {
+  uint64_t Size = GOFFWriter(OS).writeObject();
+  return Size;
 }
 
 std::unique_ptr<MCObjectWriter>
