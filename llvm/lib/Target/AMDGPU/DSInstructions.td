@@ -786,10 +786,10 @@ defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32
 let SubtargetPredicate = isGFX1250Plus in {
 
 let WaveSizePredicate = isWave32, mayStore = 0 in {
-let SubtargetPredicate = HasTransposeLoadF4F6Insts in {
+let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
 defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
-} // let SubtargetPredicate = HasTransposeLoadF4F6Insts
+} // let OtherPredicates = [HasTransposeLoadF4F6Insts]
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
 } // let WaveSizePredicate = isWave32, mayStore = 0
