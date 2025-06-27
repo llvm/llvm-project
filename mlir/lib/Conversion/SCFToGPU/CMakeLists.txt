@@ -22,3 +22,5 @@ add_mlir_conversion_library(MLIRSCFToGPU
   MLIRSideEffectInterfaces
   MLIRTransforms
   )
+
+set_target_properties(obj.MLIRSCFToGPU PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

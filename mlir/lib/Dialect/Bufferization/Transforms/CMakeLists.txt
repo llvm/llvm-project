@@ -42,3 +42,5 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRViewLikeInterface
   MLIRSupport
 )
+
+set_target_properties(obj.MLIRBufferizationTransforms PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

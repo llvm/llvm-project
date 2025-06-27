@@ -17,3 +17,4 @@ add_mlir_library(MLIRDebug
   MLIRObservers
 )
 
+set_target_properties(obj.MLIRDebug PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

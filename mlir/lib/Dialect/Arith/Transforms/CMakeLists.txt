@@ -36,3 +36,4 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRValueBoundsOpInterface
   MLIRVectorDialect
   )
+set_target_properties(obj.MLIRArithTransforms PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

@@ -17,3 +17,5 @@ add_mlir_conversion_library(MLIRLLVMCommonConversion
   MLIRSupport
   MLIRTransforms
   )
+
+set_target_properties(obj.MLIRLLVMCommonConversion PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

@@ -61,7 +61,7 @@ public:
 
 ASTConsumer *ASTConsumer::Instance = nullptr;
 
-class PPCallbacks : public clang::PPCallbacks {
+class UnityPPCallbacks : public clang::PPCallbacks {
   clang::Preprocessor &PP;
   clang::SourceManager &SM;
 
@@ -70,10 +70,11 @@ class PPCallbacks : public clang::PPCallbacks {
   std::set<std::string> DefinedMacros;
 
 public:
-  PPCallbacks(clang::Preprocessor &PP) : PP(PP), SM(PP.getSourceManager()) {}
+  UnityPPCallbacks(clang::Preprocessor &PP)
+      : PP(PP), SM(PP.getSourceManager()) {}
 
   static void Register(clang::Preprocessor &PP) {
-    PP.addPPCallbacks(std::make_unique<PPCallbacks>(PP));
+    PP.addPPCallbacks(std::make_unique<UnityPPCallbacks>(PP));
   }
 
   void
@@ -134,6 +135,10 @@ public:
                  const std::vector<std::string> &args) override {
     return true;
   }
+
+  JumboFrontendAction::ActionType getActionType() override {
+    return AddBeforeMainAction;
+  }
 };
 
 class PragmaJumbo : public clang::PragmaHandler {
@@ -152,7 +157,7 @@ public:
       return;
     }
 
-    PPCallbacks::Register(PP);
+    UnityPPCallbacks::Register(PP);
   }
 };
 
