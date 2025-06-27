@@ -1063,48 +1063,37 @@ SemaHLSL::ActOnStartRootSignatureDecl(StringRef Signature) {
 
 void SemaHLSL::ActOnFinishRootSignatureDecl(
     SourceLocation Loc, IdentifierInfo *DeclIdent,
-    SmallVector<llvm::hlsl::rootsig::RootElement> &Elements) {
+    ArrayRef<hlsl::RootSignatureElement> RootElements) {
+
+  if (handleRootSignatureElements(RootElements, Loc))
+    return;
+
+  SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
+  for (auto &RootSigElement : RootElements)
+    Elements.push_back(RootSigElement.getElement());
 
   auto *SignatureDecl = HLSLRootSignatureDecl::Create(
       SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,
       DeclIdent, SemaRef.getLangOpts().HLSLRootSigVer, Elements);
 
-  if (handleRootSignatureDecl(SignatureDecl, Loc))
-    return;
-
   SignatureDecl->setImplicit();
   SemaRef.PushOnScopeChains(SignatureDecl, SemaRef.getCurScope());
 }
 
-bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
-                                       SourceLocation Loc) {
-  // The following conducts analysis on resource ranges to detect and report
-  // any overlaps in resource ranges.
-  //
-  // A resource range overlaps with another resource range if they have:
-  // - equivalent ResourceClass (SRV, UAV, CBuffer, Sampler)
-  // - equivalent resource space
-  // - overlapping visbility
-  //
-  // The following algorithm is implemented in the following steps:
-  //
-  // 1. Collect RangeInfo from relevant RootElements:
-  //   - RangeInfo will retain the interval, ResourceClass, Space and Visibility
-  // 2. Sort the RangeInfo's such that they are grouped together by
-  //  ResourceClass and Space (GroupT defined below)
-  // 3. Iterate through the collected RangeInfos by their groups
-  //   - For each group we will have a ResourceRange for each visibility
-  //   - As we iterate through we will:
-  //      A: Insert the current RangeInfo into the corresponding Visibility
-  //   ResourceRange
-  //      B: Check for overlap with any overlapping Visibility ResourceRange
+bool SemaHLSL::handleRootSignatureElements(
+    ArrayRef<hlsl::RootSignatureElement> Elements, SourceLocation Loc) {
   using RangeInfo = llvm::hlsl::rootsig::RangeInfo;
-  using ResourceRange = llvm::hlsl::rootsig::ResourceRange;
-  using GroupT = std::pair<ResourceClass, /*Space*/ uint32_t>;
+  using OverlappingRanges = llvm::hlsl::rootsig::OverlappingRanges;
+
+  // Introduce a mapping from the collected RangeInfos back to the
+  // RootSignatureElement that will retain its diagnostics info
+  llvm::DenseMap<size_t, const hlsl::RootSignatureElement *> InfoIndexMap;
+  size_t InfoIndex = 0;
 
   // 1. Collect RangeInfos
   llvm::SmallVector<RangeInfo> Infos;
-  for (const llvm::hlsl::rootsig::RootElement &Elem : D->getRootElements()) {
+  for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
+    const llvm::hlsl::rootsig::RootElement &Elem = RootSigElem.getElement();
     if (const auto *Descriptor =
             std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
       RangeInfo Info;
@@ -1115,6 +1104,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
           llvm::dxil::ResourceClass(llvm::to_underlying(Descriptor->Type));
       Info.Space = Descriptor->Space;
       Info.Visibility = Descriptor->Visibility;
+
+      Info.Index = InfoIndex++;
+      InfoIndexMap[Info.Index] = &RootSigElem;
       Infos.push_back(Info);
     } else if (const auto *Constants =
                    std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
@@ -1125,6 +1117,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Class = llvm::dxil::ResourceClass::CBuffer;
       Info.Space = Constants->Space;
       Info.Visibility = Constants->Visibility;
+
+      Info.Index = InfoIndex++;
+      InfoIndexMap[Info.Index] = &RootSigElem;
       Infos.push_back(Info);
     } else if (const auto *Sampler =
                    std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
@@ -1135,6 +1130,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Class = llvm::dxil::ResourceClass::Sampler;
       Info.Space = Sampler->Space;
       Info.Visibility = Sampler->Visibility;
+
+      Info.Index = InfoIndex++;
+      InfoIndexMap[Info.Index] = &RootSigElem;
       Infos.push_back(Info);
     } else if (const auto *Clause =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
@@ -1149,7 +1147,10 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
 
       Info.Class = Clause->Type;
       Info.Space = Clause->Space;
+
       // Note: Clause does not hold the visibility this will need to
+      Info.Index = InfoIndex++;
+      InfoIndexMap[Info.Index] = &RootSigElem;
       Infos.push_back(Info);
     } else if (const auto *Table =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
@@ -1165,44 +1166,16 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
     }
   }
 
-  // 2. Sort the RangeInfo's by their GroupT to form groupings
-  std::sort(Infos.begin(), Infos.end(), [](RangeInfo A, RangeInfo B) {
-    return std::tie(A.Class, A.Space) < std::tie(B.Class, B.Space);
-  });
-
-  // 3. First we will init our state to track:
-  if (Infos.size() == 0)
-    return false; // No ranges to overlap
-  GroupT CurGroup = {Infos[0].Class, Infos[0].Space};
-  bool HadOverlap = false;
-
-  // Create a ResourceRange for each Visibility
-  ResourceRange::MapT::Allocator Allocator;
-  std::array<ResourceRange, 8> Ranges = {
-      ResourceRange(Allocator), // All
-      ResourceRange(Allocator), // Vertex
-      ResourceRange(Allocator), // Hull
-      ResourceRange(Allocator), // Domain
-      ResourceRange(Allocator), // Geometry
-      ResourceRange(Allocator), // Pixel
-      ResourceRange(Allocator), // Amplification
-      ResourceRange(Allocator), // Mesh
-  };
-
-  // Reset the ResourceRanges for when we iterate through a new group
-  auto ClearRanges = [&Ranges]() {
-    for (ResourceRange &Range : Ranges)
-      Range.clear();
-  };
-
   // Helper to report diagnostics
-  auto ReportOverlap = [this, Loc, &HadOverlap](const RangeInfo *Info,
-                                                const RangeInfo *OInfo) {
-    HadOverlap = true;
+  auto ReportOverlap = [this, InfoIndexMap](OverlappingRanges Overlap) {
+    const RangeInfo *Info = Overlap.A;
+    const RangeInfo *OInfo = Overlap.B;
     auto CommonVis = Info->Visibility == llvm::dxbc::ShaderVisibility::All
                          ? OInfo->Visibility
                          : Info->Visibility;
-    this->Diag(Loc, diag::err_hlsl_resource_range_overlap)
+    const hlsl::RootSignatureElement *Elem = InfoIndexMap.at(Info->Index);
+    SourceLocation InfoLoc = Elem->getLocation();
+    this->Diag(InfoLoc, diag::err_hlsl_resource_range_overlap)
         << llvm::to_underlying(Info->Class) << Info->LowerBound
         << /*unbounded=*/(Info->UpperBound == RangeInfo::Unbounded)
         << Info->UpperBound << llvm::to_underlying(OInfo->Class)
@@ -1211,42 +1184,12 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
         << OInfo->UpperBound << Info->Space << CommonVis;
   };
 
-  // 3: Iterate through collected RangeInfos
-  for (const RangeInfo &Info : Infos) {
-    GroupT InfoGroup = {Info.Class, Info.Space};
-    // Reset our ResourceRanges when we enter a new group
-    if (CurGroup != InfoGroup) {
-      ClearRanges();
-      CurGroup = InfoGroup;
-    }
+  llvm::SmallVector<OverlappingRanges> Overlaps =
+      llvm::hlsl::rootsig::findOverlappingRanges(Infos);
+  for (OverlappingRanges Overlap : Overlaps)
+    ReportOverlap(Overlap);
 
-    // 3A: Insert range info into corresponding Visibility ResourceRange
-    ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Visibility)];
-    if (std::optional<const RangeInfo *> Overlapping = VisRange.insert(Info))
-      ReportOverlap(&Info, Overlapping.value());
-
-    // 3B: Check for overlap in all overlapping Visibility ResourceRanges
-    //
-    // If the range that we are inserting has ShaderVisiblity::All it needs to
-    // check for an overlap in all other visibility types as well.
-    // Otherwise, the range that is inserted needs to check that it does not
-    // overlap with ShaderVisibility::All.
-    //
-    // OverlapRanges will be an ArrayRef to all non-all visibility
-    // ResourceRanges in the former case and it will be an ArrayRef to just the
-    // all visiblity ResourceRange in the latter case.
-    ArrayRef<ResourceRange> OverlapRanges =
-        Info.Visibility == llvm::dxbc::ShaderVisibility::All
-            ? ArrayRef<ResourceRange>{Ranges}.drop_front()
-            : ArrayRef<ResourceRange>{Ranges}.take_front();
-
-    for (const ResourceRange &Range : OverlapRanges)
-      if (std::optional<const RangeInfo *> Overlapping =
-              Range.getOverlapping(Info))
-        ReportOverlap(&Info, Overlapping.value());
-  }
-
-  return HadOverlap;
+  return Overlaps.size() != 0;
 }
 
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {

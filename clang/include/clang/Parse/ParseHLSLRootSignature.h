@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Lex/LexHLSLRootSignature.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/SemaHLSL.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,7 +28,7 @@ namespace hlsl {
 
 class RootSignatureParser {
 public:
-  RootSignatureParser(SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
+  RootSignatureParser(SmallVector<RootSignatureElement> &Elements,
                       RootSignatureLexer &Lexer, clang::Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
@@ -187,7 +188,7 @@ private:
   bool tryConsumeExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
 
 private:
-  SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
+  SmallVector<RootSignatureElement> &Elements;
   RootSignatureLexer &Lexer;
 
   clang::Preprocessor &PP;
