@@ -2436,6 +2436,11 @@ getNewSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
   return BI->getOperand(0);
 }
 
+static bool getNewDIConversionOps(const DataLayout &DL, Type *SourceTy,
+                                  Type *DestTy,
+                                  std::optional<DIBasicType::Signedness> Sign,
+                                  SmallVectorImpl<DIOp::Variant> &Ops);
+
 /// This is a port of getSalvageOpsForGEP() to DIOp-based DIExpressions.
 static Value *
 getNewSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
@@ -2459,12 +2464,17 @@ getNewSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
     AdditionalValues.push_back(Offset.first);
     assert(Offset.second.isStrictlyPositive() &&
            "Expected strictly positive multiplier for offset.");
+    Ops.push_back(DIOp::Arg(CurrentLocOps++, Offset.first->getType()));
+    // Add a conversion operation if the gep offset operand has a different
+    // integer width than the pointer size.
+    if (!getNewDIConversionOps(DL, Offset.first->getType(), IntPtrTy,
+                               DIBasicType::Signedness::Signed, Ops))
+      return nullptr;
     ConstantInt *ConstOffset =
         ConstantInt::get(IntPtrTy, Offset.second.getZExtValue());
-    DIOp::Variant NewOps[] = {
-        DIOp::Arg(CurrentLocOps++, ConstOffset->getType()),
-        DIOp::Constant(ConstOffset), DIOp::Mul(), DIOp::Add()};
-    Ops.append(std::begin(NewOps), std::end(NewOps));
+    Ops.push_back(DIOp::Constant(ConstOffset));
+    Ops.push_back(DIOp::Mul());
+    Ops.push_back(DIOp::Add());
   }
 
   Ops.emplace_back(DIOp::Constant(

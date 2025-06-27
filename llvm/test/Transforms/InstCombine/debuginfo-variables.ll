@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=debugify,instcombine -S | FileCheck %s
-
 ; RUN: opt < %s -passes=debugify,instcombine --debugify-diop-diexprs -S | FileCheck %s --check-prefix DIOP-DBGINFO
 
 declare void @escape32(i32)
@@ -191,14 +190,14 @@ define void @test_gep(ptr %A) {
   ret void
 }
 
-define void @test_gep_var_offset(ptr %A, i64 %B, i64 %C) {
+define void @test_gep_var_offset(ptr %A, i64 %B, i8 %C) {
 ; CHECK-LABEL: @test_gep_var_offset(
-; CHECK-NEXT:  #dbg_value(!DIArgList(ptr %A, i64 %B, i64 %C), {{.*}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 8, DW_OP_mul, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_constu, 2, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst, 88, DW_OP_stack_value),
+; CHECK-NEXT:  #dbg_value(!DIArgList(ptr %A, i64 %B, i8 %C), {{.*}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 8, DW_OP_mul, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_constu, 2, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst, 88, DW_OP_stack_value),
 
 ; DIOP-DBGINFO-LABEL: @test_gep_var_offset(
-; DIOP-DBGINFO-NEXT:  #dbg_value(!DIArgList(ptr %A, i64 %B, i64 %C), {{.*}}, !DIExpression(DIOpArg(0, ptr), DIOpReinterpret(i64), DIOpArg(1, i64), DIOpConstant(i64 8), DIOpMul(), DIOpAdd(), DIOpArg(2, i64), DIOpConstant(i64 2), DIOpMul(), DIOpAdd(), DIOpConstant(i64 88), DIOpAdd(), DIOpReinterpret(ptr)),
+; DIOP-DBGINFO-NEXT:  #dbg_value(!DIArgList(ptr %A, i64 %B, i8 %C), {{.*}}, !DIExpression(DIOpArg(0, ptr), DIOpReinterpret(i64), DIOpArg(1, i64), DIOpConstant(i64 8), DIOpMul(), DIOpAdd(), DIOpArg(2, i8), DIOpSExt(i64), DIOpConstant(i64 2), DIOpMul(), DIOpAdd(), DIOpConstant(i64 88), DIOpAdd(), DIOpReinterpret(ptr)),
 
   ; This is the following expression in infix: i64(A) + B*8 + C*2 + 88
-  %1 = getelementptr %struct.S, ptr %A, i32 1, i32 1, i64 %B, i32 0, i64 %C
+  %1 = getelementptr %struct.S, ptr %A, i32 1, i32 1, i64 %B, i32 0, i8 %C
   ret void
 }

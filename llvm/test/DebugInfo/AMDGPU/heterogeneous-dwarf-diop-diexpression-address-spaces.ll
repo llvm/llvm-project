@@ -102,6 +102,14 @@ define void @test_noop_convert(ptr addrspace(1) %p1) #0 !dbg !34 {
   ret void, !dbg !37
 }
 
+define void @test_noassert(ptr addrspace(1) %p1) #0 !dbg !38 {
+  ; Verify that this doesn't assert.
+    #dbg_value(ptr addrspace(1) %p1, !40, !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpConvert(ptr), DIOpReinterpret(i64), DIOpConstant(i64 1), DIOpAdd(), DIOpFragment(0, 32)), !41)
+    #dbg_value(i32 0, !40, !DIExpression(DIOpArg(0, i32), DIOpFragment(32, 16)), !41)
+    #dbg_value(i32 0, !40, !DIExpression(DW_OP_LLVM_poisoned, DW_OP_LLVM_fragment, 48, 16), !41)
+  ret void, !dbg !41
+}
+
 attributes #0 = { "frame-pointer"="all" }
 
 ; CHECK: [[PTR_AS_3]]: DW_TAG_pointer_type
@@ -160,3 +168,7 @@ attributes #0 = { "frame-pointer"="all" }
 !35 = !{!36}
 !36 = !DILocalVariable(name: "not_divergent", scope: !34, file: !1, line: 1, type: !14)
 !37 = !DILocation(line: 1, column: 1, scope: !34)
+!38 = distinct !DISubprogram(name: "test_noassert", linkageName: "test_noassert", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !39)
+!39 = !{!40}
+!40 = !DILocalVariable(name: "frags", scope: !38, file: !1, line: 1, type: !14)
+!41 = !DILocation(line: 1, column: 1, scope: !38)

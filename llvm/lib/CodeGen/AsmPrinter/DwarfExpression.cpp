@@ -526,6 +526,8 @@ bool DwarfExpression::addExpression(
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
 
+  if (!IsImplemented)
+    return false;
   IsPoisonedExpr = false;
 
   std::optional<DIExpression::ExprOperand> PrevConvertOp;
