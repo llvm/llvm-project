@@ -45,10 +45,13 @@ void PreferStaticOverAnonymousNamespaceCheck::registerMatchers(
             unless(isInMacro()), isDefinition());
 
   if (AllowMemberFunctionsInClass) {
-    Finder->addMatcher(functionDecl(IsDefinitionInAnonymousNamespace,
-                                    unless(hasParent(cxxRecordDecl())))
-                           .bind("function"),
-                       this);
+    Finder->addMatcher(
+        functionDecl(IsDefinitionInAnonymousNamespace,
+                     unless(anyOf(hasParent(cxxRecordDecl()),
+                                  hasParent(functionTemplateDecl(
+                                      hasParent(cxxRecordDecl()))))))
+            .bind("function"),
+        this);
   } else
     Finder->addMatcher(
         functionDecl(IsDefinitionInAnonymousNamespace).bind("function"), this);
