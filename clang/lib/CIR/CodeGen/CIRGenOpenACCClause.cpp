@@ -939,7 +939,7 @@ public:
 
   void VisitNoCreateClause(const OpenACCNoCreateClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp>) {
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::NoCreateOp, mlir::acc::DeleteOp>(
             var, mlir::acc::DataClause::acc_no_create, {}, /*structured=*/true,
@@ -947,9 +947,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. data remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitNoCreateClause");
     }
   }
 
