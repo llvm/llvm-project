@@ -28,6 +28,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Parse/ParseHLSLRootSignature.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -1066,6 +1067,9 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
     SourceLocation Loc, IdentifierInfo *DeclIdent,
     ArrayRef<hlsl::RootSignatureElement> RootElements) {
 
+  if (handleRootSignatureElements(RootElements, Loc))
+    return;
+
   SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
   for (auto &RootSigElement : RootElements)
     Elements.push_back(RootSigElement.getElement());
@@ -1074,15 +1078,12 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
       SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,
       DeclIdent, SemaRef.getLangOpts().HLSLRootSigVer, Elements);
 
-  if (handleRootSignatureDecl(SignatureDecl, Loc))
-    return;
-
   SignatureDecl->setImplicit();
   SemaRef.PushOnScopeChains(SignatureDecl, SemaRef.getCurScope());
 }
 
-bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
-                                       SourceLocation Loc) {
+bool SemaHLSL::handleRootSignatureElements(
+    ArrayRef<hlsl::RootSignatureElement> Elements, SourceLocation Loc) {
   // The following conducts analysis on resource ranges to detect and report
   // any overlaps in resource ranges.
   //
@@ -1107,9 +1108,15 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
   using ResourceRange = llvm::hlsl::rootsig::ResourceRange;
   using GroupT = std::pair<ResourceClass, /*Space*/ uint32_t>;
 
+  // Introduce a mapping from the collected RangeInfos back to the
+  // RootSignatureElement that will retain its diagnostics info
+  llvm::DenseMap<size_t, const hlsl::RootSignatureElement *> InfoIndexMap;
+  size_t InfoIndex = 0;
+
   // 1. Collect RangeInfos
   llvm::SmallVector<RangeInfo> Infos;
-  for (const llvm::hlsl::rootsig::RootElement &Elem : D->getRootElements()) {
+  for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
+    const llvm::hlsl::rootsig::RootElement &Elem = RootSigElem.getElement();
     if (const auto *Descriptor =
             std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
       RangeInfo Info;
@@ -1120,6 +1127,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
           llvm::dxil::ResourceClass(llvm::to_underlying(Descriptor->Type));
       Info.Space = Descriptor->Space;
       Info.Visibility = Descriptor->Visibility;
+
+      Info.Index = InfoIndex++;
+      InfoIndexMap[Info.Index] = &RootSigElem;
       Infos.push_back(Info);
     } else if (const auto *Constants =
                    std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
@@ -1130,6 +1140,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Class = llvm::dxil::ResourceClass::CBuffer;
       Info.Space = Constants->Space;
       Info.Visibility = Constants->Visibility;
+
+      Info.Index = InfoIndex++;
+      InfoIndexMap[Info.Index] = &RootSigElem;
       Infos.push_back(Info);
     } else if (const auto *Sampler =
                    std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
@@ -1140,6 +1153,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Class = llvm::dxil::ResourceClass::Sampler;
       Info.Space = Sampler->Space;
       Info.Visibility = Sampler->Visibility;
+
+      Info.Index = InfoIndex++;
+      InfoIndexMap[Info.Index] = &RootSigElem;
       Infos.push_back(Info);
     } else if (const auto *Clause =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
@@ -1154,7 +1170,10 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
 
       Info.Class = Clause->Type;
       Info.Space = Clause->Space;
+
       // Note: Clause does not hold the visibility this will need to
+      Info.Index = InfoIndex++;
+      InfoIndexMap[Info.Index] = &RootSigElem;
       Infos.push_back(Info);
     } else if (const auto *Table =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
@@ -1201,13 +1220,15 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
   };
 
   // Helper to report diagnostics
-  auto ReportOverlap = [this, Loc, &HadOverlap](const RangeInfo *Info,
+  auto ReportOverlap = [this, InfoIndexMap, &HadOverlap](const RangeInfo *Info,
                                                 const RangeInfo *OInfo) {
     HadOverlap = true;
     auto CommonVis = Info->Visibility == llvm::dxbc::ShaderVisibility::All
                          ? OInfo->Visibility
                          : Info->Visibility;
-    this->Diag(Loc, diag::err_hlsl_resource_range_overlap)
+    const hlsl::RootSignatureElement *Elem = InfoIndexMap.at(Info->Index);
+    SourceLocation InfoLoc = Elem->getLocation();
+    this->Diag(InfoLoc, diag::err_hlsl_resource_range_overlap)
         << llvm::to_underlying(Info->Class) << Info->LowerBound
         << /*unbounded=*/(Info->UpperBound == RangeInfo::Unbounded)
         << Info->UpperBound << llvm::to_underlying(OInfo->Class)
