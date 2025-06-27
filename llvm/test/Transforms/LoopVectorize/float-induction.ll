@@ -1705,7 +1705,7 @@ define i32 @float_induction_with_dbg_on_fadd(ptr %dst) {
 ; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; VEC1_INTERL2:       middle.block:
-; VEC1_INTERL2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; VEC1_INTERL2-NEXT:    br label [[EXIT:%.*]]
 ; VEC1_INTERL2:       scalar.ph:
 ; VEC1_INTERL2-NEXT:    br label [[LOOP:%.*]]
 ; VEC1_INTERL2:       loop:

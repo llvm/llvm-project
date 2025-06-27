@@ -10262,6 +10262,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           L, PSE, LI, DT, TLI, TTI, AC, ORE, ElementCount::getFixed(1),
           ElementCount::getFixed(1), IC, &CM, BFI, PSI, Checks, BestPlan);
 
+        // TODO: Move to general VPlan pipeline once epilogue loops are also supported.
+        VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount, BestPlan, VF.Width, IC, PSE);
+
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
@@ -10329,24 +10332,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                                VF.MinProfitableTripCount, IC, &CM, BFI, PSI,
                                Checks, BestPlan);
-
-        // Materialize vector trip counts for constants early if it can simply
-        // be computed as (Original TC / VF * UF) * VF * UF.
-        if (BestPlan.hasScalarTail() &&
-            !CM.requiresScalarEpilogue(VF.Width.isVector())) {
-          VPValue *TC = BestPlan.getTripCount();
-          if (TC->isLiveIn()) {
-            ScalarEvolution &SE = *PSE.getSE();
-            auto *TCScev = SE.getSCEV(TC->getLiveInIRValue());
-            const SCEV *VFxUF =
-                SE.getElementCount(TCScev->getType(), VF.Width * IC);
-            auto VecTCScev =
-                SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
-            if (auto *NewC = dyn_cast<SCEVConstant>(VecTCScev))
-              BestPlan.getVectorTripCount().setUnderlyingValue(
-                  NewC->getValue());
-          }
-        }
+        // TODO: Move to general VPlan pipeline once epilogue loops are also supported.
+        VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount, BestPlan, VF.Width, IC, PSE);
 
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;

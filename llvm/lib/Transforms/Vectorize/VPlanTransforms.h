@@ -222,6 +222,11 @@ struct VPlanTransforms {
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
 
+   // Materialize vector trip counts for constants early if it can simply be computed as (Original TC / VF * UF) * VF * UF.
+  static void materializeVectorTripCount(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE);
+
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
   /// elements, if all transformed interleave groups access the full vector
