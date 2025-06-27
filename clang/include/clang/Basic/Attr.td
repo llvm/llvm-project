@@ -990,6 +990,13 @@ def AnalyzerNoReturn : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def InferredNoReturn : InheritableAttr {
+  let Spellings = []; 
+  let SemaHandler = 0;
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [InternalOnly];
+}
+
 def Annotate : InheritableParamOrStmtAttr {
   let Spellings = [Clang<"annotate">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
