@@ -955,9 +955,11 @@ Status ProcessGDBRemote::HandleConnectionRequest(const GPUActions &gpu_action) {
     return Status::FromErrorString("invalid platform for target needed for "
                                    "connecting to process");
 
-  ProcessSP process_sp = platform_sp->ConnectProcess(
+  // We wait for the process to fully stop before we can query or alter it via
+  // GPUActions.
+  ProcessSP process_sp = platform_sp->ConnectProcessSynchronous(
       connection_info.connect_url, GetPluginNameStatic(), debugger,
-      gpu_target_sp.get(), error);
+      *debugger.GetAsyncOutputStream(), gpu_target_sp.get(), error);
   if (error.Fail())
     return error;
   if (!process_sp)
