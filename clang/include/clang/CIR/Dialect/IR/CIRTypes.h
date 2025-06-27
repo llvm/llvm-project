@@ -26,6 +26,15 @@ struct RecordTypeStorage;
 
 bool isValidFundamentalIntWidth(unsigned width);
 
+/// Returns true if the type is a CIR sized type.
+///
+/// Types are sized if they implement SizedTypeInterface and
+/// return true from its method isSized.
+///
+/// Unsized types are those that do not have a size, such as
+/// void, or abstract types.
+bool isSized(mlir::Type ty);
+
 } // namespace cir
 
 //===----------------------------------------------------------------------===//
