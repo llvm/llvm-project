@@ -7364,6 +7364,7 @@ static bool sinkSelectOperand(const TargetTransformInfo *TTI, Value *V) {
 }
 
 /// Returns true if a SelectInst should be turned into an explicit branch.
+/// Uses IfConversion-style cost analysis to make the decision.
 static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
                                                 const TargetLowering *TLI,
                                                 SelectInst *SI) {
@@ -7371,37 +7372,100 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
   if (!TLI->isPredictableSelectExpensive())
     return false;
 
-  // FIXME: This should use the same heuristics as IfConversion to determine
-  // whether a select is better represented as a branch.
+  // Use IfConversion-style cost analysis to determine profitability.
+  // This incorporates instruction costs, branch probabilities, and
+  // target-specific profitability analysis similar to IfConversion.
 
-  // If metadata tells us that the select condition is obviously predictable,
-  // then we want to replace the select with a branch.
-  uint64_t TrueWeight, FalseWeight;
-  if (extractBranchWeights(*SI, TrueWeight, FalseWeight)) {
+  // Get branch probability information if available
+  uint64_t TrueWeight = 1, FalseWeight = 1;
+  bool HasWeights = extractBranchWeights(*SI, TrueWeight, FalseWeight);
+
+  BranchProbability TrueProbability = BranchProbability::getUnknown();
+  if (HasWeights && (TrueWeight + FalseWeight) > 0) {
+    TrueProbability = BranchProbability::getBranchProbability(
+        TrueWeight, TrueWeight + FalseWeight);
+  }
+
+  // Analyze instruction costs similar to IfConversion's cost model
+  InstructionCost SelectCost =
+      TTI->getCFInstrCost(Instruction::Select, TTI::TCK_SizeAndLatency);
+
+  // Estimate branch cost including potential misprediction penalty
+  InstructionCost BranchCost =
+      TTI->getCFInstrCost(Instruction::Br, TTI::TCK_SizeAndLatency);
+
+  // Factor in predictability - highly predictable branches are cheaper
+  if (HasWeights) {
     uint64_t Max = std::max(TrueWeight, FalseWeight);
     uint64_t Sum = TrueWeight + FalseWeight;
-    if (Sum != 0) {
+    if (Sum > 0) {
       auto Probability = BranchProbability::getBranchProbability(Max, Sum);
-      if (Probability > TTI->getPredictableBranchThreshold())
-        return true;
+      if (Probability > TTI->getPredictableBranchThreshold()) {
+        // Highly predictable - reduce effective branch cost
+        BranchCost = BranchCost / 2;
+      } else {
+        // Unpredictable - add misprediction penalty
+        BranchCost += TTI->getBranchMispredictPenalty();
+      }
+    }
+  } else {
+    // No branch weight info - assume unpredictable, add misprediction penalty
+    BranchCost += TTI->getBranchMispredictPenalty();
+  }
+
+  // Consider operand costs - expensive operands benefit from branching
+  // as they can be sunk to avoid speculative execution
+  InstructionCost TrueOpCost = 0, FalseOpCost = 0;
+  if (sinkSelectOperand(TTI, SI->getTrueValue())) {
+    if (auto *TrueInst = dyn_cast<Instruction>(SI->getTrueValue())) {
+      TrueOpCost = TTI->getInstructionCost(
+          TrueInst, TargetTransformInfo::TCK_SizeAndLatency);
+    }
+  }
+  if (sinkSelectOperand(TTI, SI->getFalseValue())) {
+    if (auto *FalseInst = dyn_cast<Instruction>(SI->getFalseValue())) {
+      FalseOpCost = TTI->getInstructionCost(
+          FalseInst, TargetTransformInfo::TCK_SizeAndLatency);
     }
   }
 
+  // If we have expensive operands that can be sunk, branching is beneficial
+  InstructionCost SinkBenefit = 0;
+  if (HasWeights && (TrueWeight + FalseWeight) > 0) {
+    // Weight the benefit by probability of avoiding the expensive operand
+    if (TrueOpCost > 0) {
+      auto FalseProbability = BranchProbability::getBranchProbability(
+          FalseWeight, TrueWeight + FalseWeight);
+      SinkBenefit += TrueOpCost * FalseProbability.getNumerator() /
+                     FalseProbability.getDenominator();
+    }
+    if (FalseOpCost > 0) {
+      SinkBenefit += FalseOpCost * TrueProbability.getNumerator() /
+                     TrueProbability.getDenominator();
+    }
+  } else {
+    // No probability info - assume 50/50 distribution
+    SinkBenefit = (TrueOpCost + FalseOpCost) / 2;
+  }
+
+  // Check if condition has multiple uses (similar to IfConversion's checks)
   CmpInst *Cmp = dyn_cast<CmpInst>(SI->getCondition());
+  if (!Cmp || !Cmp->hasOneUse()) {
+    // Multiple uses mean the condition will be live anyway,
+    // reducing the benefit of branching
+    return SinkBenefit > SelectCost;
+  }
 
-  // If a branch is predictable, an out-of-order CPU can avoid blocking on its
-  // comparison condition. If the compare has more than one use, there's
-  // probably another cmov or setcc around, so it's not worth emitting a branch.
-  if (!Cmp || !Cmp->hasOneUse())
-    return false;
+  // Final cost comparison: Branch is profitable if total branch cost
+  // (including condition computation) is less than select cost minus
+  // the benefit from sinking expensive operands
+  InstructionCost ConditionCost =
+      TTI->getInstructionCost(Cmp, TargetTransformInfo::TCK_SizeAndLatency);
 
-  // If either operand of the select is expensive and only needed on one side
-  // of the select, we should form a branch.
-  if (sinkSelectOperand(TTI, SI->getTrueValue()) ||
-      sinkSelectOperand(TTI, SI->getFalseValue()))
-    return true;
+  InstructionCost TotalBranchCost = BranchCost + ConditionCost;
+  InstructionCost EffectiveSelectCost = SelectCost - SinkBenefit;
 
-  return false;
+  return TotalBranchCost < EffectiveSelectCost;
 }
 
 /// If \p isTrue is true, return the true value of \p SI, otherwise return
