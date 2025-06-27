@@ -222,7 +222,6 @@ C Language Changes
 
     char buf1[3] = "foo"; // -Wunterminated-string-initialization
     char buf2[3] = "flarp"; // -Wexcess-initializers
-    char buf3[3] = "fo\0";  // This is fine, no warning.
 
   This diagnostic can be suppressed by adding the new ``nonstring`` attribute
   to the field or variable being initialized. #GH137705
