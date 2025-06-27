@@ -656,7 +656,6 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
   Type *ResultTy = VectorType::get(Int32Ty, IsVector ? 4 : 2, false);
   Value *Val = PoisonValue::get(ResultTy);
 
-  // Handle double type(s)
   Type *SplitElementTy = Int32Ty;
   if (IsVector)
     SplitElementTy = VectorType::get(SplitElementTy, 2, false);
@@ -684,10 +683,8 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
   }
 
   if (IsVector) {
-    // For vector doubles, use shuffle to create the final vector
     Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
   } else {
-    // For scalar doubles, insert the elements
     Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
     Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
   }
