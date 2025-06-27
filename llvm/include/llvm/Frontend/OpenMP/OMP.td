@@ -2206,7 +2206,8 @@ def OMP_TargetTeams : Directive<[Spelling<"target teams">]> {
   let leafConstructs = [OMP_Target, OMP_Teams];
   let category = CA_Executable;
 }
-def OMP_TargetTeamsDistribute : Directive<[Spelling<"target teams distribute">]> {
+def OMP_TargetTeamsDistribute
+    : Directive<[Spelling<"target teams distribute">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
