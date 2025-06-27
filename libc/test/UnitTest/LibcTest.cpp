@@ -26,6 +26,9 @@
 #include "src/time/clock.h"
 extern "C" clock_t clock() noexcept { return LIBC_NAMESPACE::clock(); }
 #define LIBC_TEST_USE_CLOCK
+#else
+#include <time.h>
+extern "C" [[gnu::weak]] clock_t clock() noexcept { return 0; }
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
