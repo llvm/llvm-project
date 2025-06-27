@@ -42,9 +42,9 @@
 ; x86_64-apple-darwin: @y2 = internal constant ptr @x1
 ; x86_64-apple-darwin: @y3 = internal constant ptr @x0
 ; x86_64-apple-darwin: @load_relative_2.table.rel = private unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @y3 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y2 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y1 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y0 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32)], align 4
-; x86_64-apple-darwin: @b0 = private unnamed_addr constant [8 x i8] c"00000000"
-; x86_64-apple-darwin: @b1 = private unnamed_addr constant [8 x i8] c"11111111"
-; x86_64-apple-darwin: @b2 = private unnamed_addr constant [8 x i8] c"22222222"
+; x86_64-apple-darwin: @b0 = private constant [8 x i8] c"00000000"
+; x86_64-apple-darwin: @b1 = private constant [8 x i8] c"11111111"
+; x86_64-apple-darwin: @b2 = private constant [8 x i8] c"22222222"
 ; x86_64-apple-darwin: @load_relative_3.table.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @b0, i64 8) to i64), i64 ptrtoint (ptr @load_relative_3.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @b1, i64 8) to i64), i64 ptrtoint (ptr @load_relative_3.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @b2, i64 8) to i64), i64 ptrtoint (ptr @load_relative_3.table.rel to i64)) to i32)], align 4
 ;.
 ; aarch64: @a0 = private constant i32 0
@@ -60,9 +60,9 @@
 ; aarch64: @y2 = internal constant ptr @x1
 ; aarch64: @y3 = internal constant ptr @x0
 ; aarch64: @load_relative_2.table.rel = private unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @y3 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y2 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y1 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y0 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32)], align 4
-; aarch64: @b0 = private unnamed_addr constant [8 x i8] c"00000000"
-; aarch64: @b1 = private unnamed_addr constant [8 x i8] c"11111111"
-; aarch64: @b2 = private unnamed_addr constant [8 x i8] c"22222222"
+; aarch64: @b0 = private constant [8 x i8] c"00000000"
+; aarch64: @b1 = private constant [8 x i8] c"11111111"
+; aarch64: @b2 = private constant [8 x i8] c"22222222"
 ; aarch64: @load_relative_3.table.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @b0, i64 8) to i64), i64 ptrtoint (ptr @load_relative_3.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @b1, i64 8) to i64), i64 ptrtoint (ptr @load_relative_3.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @b2, i64 8) to i64), i64 ptrtoint (ptr @load_relative_3.table.rel to i64)) to i32)], align 4
 ;.
 ; x86_64: @a0 = private unnamed_addr constant i32 0
